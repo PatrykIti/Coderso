@@ -157,6 +157,9 @@ export interface ServerContext {
 ```ts
 export interface HookContext {
   requestId: string;
+  method?: string;
+  path?: string;
+  locale?: string;
   session?: { id: string; userId: string };
   user?: { id: string; email: string; roles: string[] };
   ip?: string;
@@ -284,6 +287,7 @@ export interface HttpAPI {
 ```ts
 export interface AssetsAPI {
   getUrl(path: string): string;
+  getPublicPath(path: string): string;
 }
 ```
 
@@ -291,6 +295,7 @@ Usage:
 
 ```ts
 const iconUrl = ctx.assets.getUrl("icon.png");
+const iconPath = ctx.assets.getPublicPath("icon.png");
 ```
 
 ---

@@ -36,6 +36,11 @@ Community/Church:
 - Donations
 - Staff
 
+Business/Media:
+- Pricing
+- Jobs/Careers
+- Press/Media
+
 ## Content Type fields
 
 Fields sa definiowane jako JSON schema.
@@ -322,6 +327,56 @@ Staff:
     { "name": "photo", "type": "image" },
     { "name": "email", "type": "text" },
     { "name": "phone", "type": "text" }
+  ]
+}
+```
+
+Pricing:
+
+```json
+{
+  "name": "Pricing",
+  "slug": "pricing",
+  "fields": [
+    { "name": "name", "type": "text", "required": true },
+    { "name": "price", "type": "text" },
+    { "name": "period", "type": "text" },
+    { "name": "features", "type": "richtext" },
+    { "name": "ctaLabel", "type": "text" },
+    { "name": "ctaUrl", "type": "text" }
+  ]
+}
+```
+
+Jobs/Careers:
+
+```json
+{
+  "name": "Job",
+  "slug": "jobs",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "location", "type": "text" },
+    { "name": "type", "type": "select", "options": ["full-time","part-time","contract","internship"] },
+    { "name": "description", "type": "richtext" },
+    { "name": "applyUrl", "type": "text" },
+    { "name": "publishedAt", "type": "date" }
+  ]
+}
+```
+
+Press/Media:
+
+```json
+{
+  "name": "Press Item",
+  "slug": "press",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "source", "type": "text" },
+    { "name": "link", "type": "text" },
+    { "name": "publishedAt", "type": "date" },
+    { "name": "summary", "type": "text" }
   ]
 }
 ```
