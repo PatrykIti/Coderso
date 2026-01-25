@@ -45,7 +45,10 @@ store/tests/unit/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# store
+bun add fflate
+```
 
 ---
 

@@ -44,7 +44,10 @@ tests/unit/media/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# core
+bun add @aws-sdk/client-s3 @azure/storage-blob
+```
 
 ---
 

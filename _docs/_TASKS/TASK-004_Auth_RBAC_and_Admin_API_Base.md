@@ -49,7 +49,10 @@ tests/unit/auth/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# core
+bun add @node-rs/argon2
+```
 
 ---
 

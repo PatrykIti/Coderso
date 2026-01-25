@@ -37,7 +37,10 @@ store/tests/unit/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# store
+bun add @node-rs/argon2 otplib
+```
 
 ---
 

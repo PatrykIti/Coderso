@@ -41,7 +41,10 @@ tests/unit/sdk/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# packages/sdk
+bun --cwd packages/sdk add -d typescript
+```
 
 ---
 

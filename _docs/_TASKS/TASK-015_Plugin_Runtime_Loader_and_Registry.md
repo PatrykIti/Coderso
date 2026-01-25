@@ -46,7 +46,10 @@ tests/unit/plugins/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# core
+bun add semver
+```
 
 ---
 

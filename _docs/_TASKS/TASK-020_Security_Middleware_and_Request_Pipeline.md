@@ -39,7 +39,10 @@ tests/unit/security/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# core
+bun add ajv
+```
 
 ---
 

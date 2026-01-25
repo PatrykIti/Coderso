@@ -40,7 +40,10 @@ tests/unit/store/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# core
+bun add @noble/ed25519 canonicalize fflate
+```
 
 ---
 

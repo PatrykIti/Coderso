@@ -38,7 +38,10 @@ store/tests/unit/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# store
+bun add @noble/ed25519 canonicalize
+```
 
 ---
 
