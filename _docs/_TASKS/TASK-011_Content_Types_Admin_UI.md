@@ -49,6 +49,12 @@ tests/unit/contentUi/
 
 Schema fields: text, richtext, number, boolean, select, media, relation.
 
+Rules:
+- Field `name` is unique per content type.
+- `name` uses `snake_case` or `kebab-case` (pick one and enforce).
+- Required fields cannot have empty default.
+- Relation fields require target type slug.
+
 Example field definition:
 
 ```json
@@ -76,6 +82,7 @@ Example field definition:
 
 - Create, edit, delete content types.
 - Validate schema on save (client + server).
+- Lock delete if content type has entries (confirm with double step).
 
 **Implementation Checklist:**
 
@@ -93,6 +100,7 @@ Example field definition:
 - List entries per content type.
 - Filters by status (draft/published).
 - Search by title/slug.
+- Bulk actions: delete, publish (optional in v1).
 
 **Implementation Checklist:**
 
@@ -109,6 +117,7 @@ Example field definition:
 - Form generated from schema.
 - Draft save and publish buttons.
 - Preview token flow.
+- Autosave draft (debounced).
 
 **Implementation Checklist:**
 
@@ -124,6 +133,7 @@ Example field definition:
 - [ ] `tests/unit/contentUi/schemaBuilder.test.tsx` creates valid schema.
 - [ ] `tests/unit/contentUi/entryEditor.test.tsx` renders fields correctly.
 - [ ] `tests/integration/ui/contentTypes.test.tsx` saves and publishes.
+- [ ] `tests/integration/ui/contentTypes.test.tsx` prevents invalid field names.
 
 ---
 

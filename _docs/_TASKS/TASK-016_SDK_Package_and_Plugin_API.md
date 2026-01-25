@@ -52,6 +52,11 @@ Exports:
 - `@core/sdk/client`
 - `@core/sdk/shared`
 
+Rules:
+- ESM only (`type: "module"`).
+- Ship type declarations for all exports.
+- Keep API surface stable and versioned.
+
 Example helper:
 
 ```ts
@@ -77,6 +82,7 @@ export function definePlugin(register: (ctx: ServerContext) => void) {
 
 - Hook handlers receive `(payload, ctx)`.
 - Assets API returns URL and public path.
+- Provide `permissions` and `settings` APIs in both server and client context.
 
 Example:
 
@@ -110,6 +116,10 @@ export type HookContext = {
 - Bind assets API to plugin public path.
 - Expose SettingsAPI/StorageAPI with scoped keys.
 
+Rules:
+- Scope storage keys by plugin name to avoid collisions.
+- Enforce permissions check on server routes registered by plugin.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -123,6 +133,7 @@ export type HookContext = {
 - [ ] `tests/unit/sdk/exports.test.ts` verifies SDK exports.
 - [ ] `tests/unit/sdk/assets.test.ts` returns versioned URLs.
 - [ ] `tests/unit/sdk/hookContext.test.ts` verifies HookContext shape.
+- [ ] `tests/unit/sdk/storageScope.test.ts` enforces plugin scoping.
 
 ---
 
@@ -137,6 +148,7 @@ export type HookContext = {
 - `tests/unit/sdk/exports.test.ts`
 - `tests/unit/sdk/assets.test.ts`
 - `tests/unit/sdk/hookContext.test.ts`
+- `tests/unit/sdk/storageScope.test.ts`
 
 ---
 

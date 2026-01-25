@@ -52,6 +52,14 @@ Tables:
 - `menus` (id, name, location)
 - `menu_items` (id, menu_id, label, href, page_id, order_index, parent_id)
 
+Constraints:
+- `menus.name` unique.
+- `menus.location` unique when set (e.g. `primary`, `footer`).
+- `menu_items.menu_id` FK with cascade delete.
+- `menu_items.parent_id` must reference item in the same menu.
+- `menu_items` must have exactly one of `href` or `page_id`.
+- `order_index` integer, stable ordering inside same parent.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -80,6 +88,11 @@ function buildTree(items) {
 }
 ```
 
+Rules:
+- Detect cycles and reject invalid trees.
+- Orphaned items (parent missing) become root items.
+- Preserve relative order when `order_index` ties.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -100,6 +113,11 @@ Endpoints:
 - `PATCH /menus/:id`
 - `PUT /menus/:id/items`
 - `DELETE /menus/:id`
+
+Validation:
+- `items` is full replace; missing items are deleted.
+- Reject cycles and invalid parent references.
+- Ensure `href` or `page_id` exists, not both.
 
 Example payload (update items):
 
@@ -129,6 +147,7 @@ UI:
 - List menus.
 - Edit menu items (drag reorder, nesting).
 - Save changes via API.
+- Inline validation (missing label, invalid link).
 
 **Implementation Checklist:**
 
@@ -142,7 +161,9 @@ UI:
 ## Testing Requirements
 
 - [ ] `tests/unit/menus/menuService.test.ts` builds correct tree.
+- [ ] `tests/unit/menus/menuService.test.ts` rejects cycles.
 - [ ] `tests/integration/routes/menus.test.ts` covers CRUD endpoints.
+- [ ] `tests/integration/routes/menus.test.ts` rejects invalid payload.
 - [ ] UI test verifies reorder payload.
 
 ---

@@ -45,6 +45,7 @@ store/tests/unit/
 
 - Users with roles: author, maintainer, admin.
 - Password hashing and reset flow.
+- Use argon2id for password hashes.
 
 **Implementation Checklist:**
 
@@ -61,6 +62,7 @@ store/tests/unit/
 
 - Token scoped to plugin name.
 - Rotation and revoke.
+- Store only token hash in DB.
 
 Example token payload:
 
@@ -87,6 +89,7 @@ Example token payload:
 
 - Enforce 2FA for author/maintainer roles.
 - Store 2FA enrollment status.
+- Use TOTP (RFC 6238) for v1.
 
 **Implementation Checklist:**
 
@@ -100,6 +103,7 @@ Example token payload:
 
 - [ ] `store/tests/unit/tokenService.test.ts` verifies scope.
 - [ ] `store/tests/integration/auth.test.ts` blocks publish without 2FA.
+- [ ] `store/tests/integration/auth.test.ts` rejects invalid token hash.
 
 ---
 

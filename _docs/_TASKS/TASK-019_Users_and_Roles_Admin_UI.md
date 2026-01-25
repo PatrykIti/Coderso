@@ -46,6 +46,7 @@ tests/unit/authUi/
 - List users.
 - Create/edit users.
 - Assign roles.
+- Prevent deleting the last admin user.
 
 **Implementation Checklist:**
 
@@ -62,6 +63,7 @@ tests/unit/authUi/
 
 - Create/edit roles.
 - Configure permissions (checkbox list).
+- Provide "select all" for admin role.
 
 Example role payload:
 
@@ -86,6 +88,7 @@ Example role payload:
 - [ ] `tests/unit/authUi/usersUi.test.tsx` creates and edits users.
 - [ ] `tests/unit/authUi/rolesUi.test.tsx` updates permissions.
 - [ ] `tests/integration/ui/roles.test.tsx` enforces RBAC in UI.
+- [ ] `tests/integration/ui/users.test.tsx` blocks deleting last admin.
 
 ---
 
@@ -98,6 +101,7 @@ Example role payload:
 - `tests/unit/authUi/usersUi.test.tsx`
 - `tests/unit/authUi/rolesUi.test.tsx`
 - `tests/integration/ui/roles.test.tsx`
+- `tests/integration/ui/users.test.tsx`
 
 ---
 

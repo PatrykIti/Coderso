@@ -49,6 +49,11 @@ Tables (example):
 - `plugin_versions` (plugin_id, version, metadata, checksum, scan_status)
 - `revocations` (plugin_id, version, reason, created_at)
 
+Rules:
+- `plugins.name` unique.
+- `plugin_versions` unique on `(plugin_id, version)`.
+- Store `download_url` and `metadata_sig` for quick reads.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -69,6 +74,10 @@ Tables (example):
 - `GET /plugins/:name/versions/:version/download`
 - `GET /revocations.json`
 
+Rules:
+- Add cache headers for metadata (short TTL) and downloads (long TTL).
+- `revocations.json` returns only active revocations.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -84,6 +93,7 @@ Tables (example):
 
 - Canonicalize JSON before signing.
 - Use ed25519 for detached signatures.
+- Store key id used to sign (`keyId`).
 
 Example:
 
@@ -104,6 +114,7 @@ const signature = signEd25519(payload, privateKey);
 
 - [ ] `store/tests/unit/signingService.test.ts` validates signatures.
 - [ ] `store/tests/integration/publicRoutes.test.ts` validates endpoints.
+- [ ] `store/tests/integration/publicRoutes.test.ts` returns cache headers.
 
 ---
 

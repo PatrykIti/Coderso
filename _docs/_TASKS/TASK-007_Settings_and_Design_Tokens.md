@@ -63,6 +63,11 @@ export const settings = pgTable("settings", {
 });
 ```
 
+Rules:
+- Keys are namespaced (e.g. `site.*`, `design.tokens`, `media.*`).
+- Reject unknown keys unless explicitly allowlisted.
+- Values are validated per key (type-safe).
+
 Service example:
 
 ```ts
@@ -100,6 +105,11 @@ Example payload:
 }
 ```
 
+Rules:
+- `PATCH /settings` accepts a map of keys -> values and writes atomically.
+- Reject unknown keys and invalid value types.
+- Return merged view for `GET /settings` (with defaults applied).
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -117,6 +127,7 @@ Rules:
 - Start from theme defaults.
 - Merge `settings["design.tokens"]` overrides.
 - Emit CSS variables in SSR layout and admin preview.
+- Cache merged tokens in memory and invalidate on update.
 
 Example:
 
@@ -146,6 +157,7 @@ UI:
 - Global settings page (site name, locale, etc.).
 - Design tokens editor with live preview.
 - Save token overrides to `settings["design.tokens"]`.
+- Reset to defaults button (clears overrides).
 
 **Implementation Checklist:**
 
@@ -161,6 +173,7 @@ UI:
 - [ ] `tests/unit/settings/settingsService.test.ts` CRUD for settings.
 - [ ] `tests/unit/settings/tokenService.test.ts` merges defaults + overrides.
 - [ ] `tests/integration/routes/settings.test.ts` validates endpoints.
+- [ ] `tests/integration/routes/settings.test.ts` rejects invalid keys.
 
 ---
 

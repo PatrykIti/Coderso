@@ -45,6 +45,7 @@ tests/unit/storeUi/
 
 - List plugins with filters and search.
 - Plugin detail view (version, scans, permissions).
+- Show compatibility with current core version.
 
 **Implementation Checklist:**
 
@@ -62,6 +63,7 @@ tests/unit/storeUi/
 - Install modal with version selector.
 - Update flow with security warning for non-security releases.
 - Enable/disable buttons.
+- Show last update timestamp and status.
 
 Example install request:
 
@@ -88,6 +90,7 @@ await fetch("/admin/api/plugins/install", {
 
 - Default policy: auto-security.
 - Per-plugin overrides (manual/auto-security).
+- Explain policy in UI tooltip.
 
 **Implementation Checklist:**
 
@@ -101,6 +104,7 @@ await fetch("/admin/api/plugins/install", {
 
 - [ ] `tests/unit/storeUi/storeList.test.tsx` renders list.
 - [ ] `tests/integration/ui/plugins.test.tsx` installs and updates plugin.
+- [ ] `tests/integration/ui/plugins.test.tsx` blocks incompatible version.
 
 ---
 

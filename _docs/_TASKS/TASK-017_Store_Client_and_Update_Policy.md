@@ -54,6 +54,10 @@ Endpoints:
 - `GET /plugins/:name/versions/:version/download`
 - `GET /revocations.json`
 
+Rules:
+- Use timeouts and retries (exponential backoff).
+- Cache metadata for short TTL (e.g. 5 min).
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -68,6 +72,7 @@ Endpoints:
 
 - Verify ed25519 signature for `metadata.json`.
 - Verify SHA256 checksum for ZIP.
+- Verify `coreVersion` and `apiVersion` compatibility before install.
 
 Example:
 
@@ -93,6 +98,7 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 - Unpack into `plugins-runtime/<name>/<version>`.
 - Atomically switch active version.
 - Store integrity metadata in registry.
+- Validate required files exist (`dist/server.mjs`, optional `dist/client.mjs`).
 
 **Implementation Checklist:**
 
@@ -111,6 +117,7 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 - Default: `auto-security`.
 - Auto-apply only releases with `release.type=security`.
 - Normal releases require manual confirm in admin.
+- Record update source (auto vs manual) in audit logs.
 
 **Implementation Checklist:**
 
@@ -126,6 +133,7 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 
 - Pull `revocations.json` on interval (e.g. hourly).
 - Disable revoked plugins and surface warning in admin.
+- Emit audit event when revoked.
 
 **Implementation Checklist:**
 

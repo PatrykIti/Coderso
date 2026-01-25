@@ -70,6 +70,12 @@ tests/unit/widgets/
 
 Define widget contract and registration API.
 
+Rules:
+- `type` uses `kebab-case` for core widgets.
+- Plugin widgets must prefix with plugin name (e.g. `seo-boost.timeline`).
+- `variants` cannot be empty.
+- `schema` must be JSON schema (draft-07 compatible).
+
 Example:
 
 ```ts
@@ -110,6 +116,11 @@ export function registerWidget(def: WidgetDefinition) {
 
 Validate `block.data` with JSON schema per widget and merge defaults.
 
+Rules:
+- Reject unknown widget types early.
+- Ensure `variant` is allowed for the widget.
+- Do not persist `editor` metadata into `published_data`.
+
 Example:
 
 ```ts
@@ -134,6 +145,11 @@ function normalizeBlock(block: Block) {
 **Status:** To Do
 
 Use schema and variants from `_docs/_WIDGETS/HERO.md`.
+
+Steps:
+1) Define `heroSchema` and `heroDefaults`.
+2) Implement renderer using tokens (colors, spacing).
+3) Implement Wizard/Visual/Advanced editors.
 
 Example registration:
 
@@ -163,6 +179,11 @@ registerWidget({
 
 Use schema and variants from `_docs/_WIDGETS/TIMELINE.md`.
 
+Steps:
+1) Use `steps[]` model for milestones.
+2) Render horizontal/vertical variants.
+3) Editor validates min items.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -177,6 +198,11 @@ Use schema and variants from `_docs/_WIDGETS/TIMELINE.md`.
 **Status:** To Do
 
 Use schema and variants from `_docs/_WIDGETS/COMPARE_TIMELINE.md`.
+
+Steps:
+1) Render dual tracks with optional highlighted segments.
+2) Support dashed guides and labels.
+3) Editor enforces both tracks have aligned step counts.
 
 **Implementation Checklist:**
 
@@ -193,6 +219,11 @@ Use schema and variants from `_docs/_WIDGETS/COMPARE_TIMELINE.md`.
 
 Use schema and variants from `_docs/_WIDGETS/NEWSLETTER.md`.
 
+Steps:
+1) Render form with validation feedback.
+2) Support optional success message state.
+3) Ensure accessibility (label, aria).
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -207,6 +238,11 @@ Use schema and variants from `_docs/_WIDGETS/NEWSLETTER.md`.
 **Status:** To Do
 
 Use schema and variants from `_docs/_WIDGETS/CONTACT.md`.
+
+Steps:
+1) Render contact form + optional address block.
+2) Map fields to submission payload.
+3) Use design tokens for spacing/typography.
 
 **Implementation Checklist:**
 
@@ -223,6 +259,11 @@ Use schema and variants from `_docs/_WIDGETS/CONTACT.md`.
 
 Use schema and variants from `_docs/_WIDGETS/NAVIGATION.md`.
 
+Steps:
+1) Resolve menu by location or menu id.
+2) Support mobile toggle variant.
+3) Use `menuService` to fetch tree.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -238,6 +279,11 @@ Use schema and variants from `_docs/_WIDGETS/NAVIGATION.md`.
 
 Use schema and variants from `_docs/_WIDGETS/FOOTER.md`.
 
+Steps:
+1) Render columns with menu or links.
+2) Support simple and multi-column variants.
+3) Use tokens for background and text.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -252,6 +298,11 @@ Use schema and variants from `_docs/_WIDGETS/FOOTER.md`.
 **Status:** To Do
 
 Render blocks with layout and visibility metadata.
+
+Rules:
+- Apply `layout.container` to wrapper width.
+- Apply `layout.padding` and `layout.margin` via tokens.
+- Skip render if `visibility.enabled` is false.
 
 Example:
 
@@ -279,6 +330,7 @@ function WidgetRenderer({ block }: { block: Block }) {
 - [ ] `tests/unit/widgets/hero.test.tsx` renders hero defaults.
 - [ ] `tests/unit/widgets/timeline.test.tsx` renders timeline defaults.
 - [ ] `tests/unit/widgets/compareTimeline.test.tsx` renders compare timeline.
+- [ ] `tests/unit/widgets/renderer.test.tsx` renders MissingWidget fallback.
 
 ---
 
@@ -306,6 +358,7 @@ function WidgetRenderer({ block }: { block: Block }) {
 - `tests/unit/widgets/hero.test.tsx`
 - `tests/unit/widgets/timeline.test.tsx`
 - `tests/unit/widgets/compareTimeline.test.tsx`
+- `tests/unit/widgets/renderer.test.tsx`
 
 ---
 

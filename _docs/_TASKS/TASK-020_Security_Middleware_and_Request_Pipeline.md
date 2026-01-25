@@ -47,6 +47,7 @@ tests/unit/security/
 
 - Generate request ID per request.
 - Add to logs and response headers.
+- Use UUIDv4 format.
 
 **Implementation Checklist:**
 
@@ -63,6 +64,7 @@ tests/unit/security/
 - CSRF token endpoint: `GET /auth/csrf`.
 - Validate `X-CSRF-Token` for POST/PUT/PATCH/DELETE.
 - CORS allow only admin origin.
+- Allow `OPTIONS` preflight.
 
 Example check:
 
@@ -88,6 +90,7 @@ if (!token || token !== session.csrfToken) {
 
 - Per-IP rate limit for login and admin API.
 - Security headers: CSP, X-Frame-Options, X-Content-Type-Options.
+- Use in-memory store for v1 (replaceable).
 
 **Implementation Checklist:**
 
@@ -104,6 +107,7 @@ if (!token || token !== session.csrfToken) {
 
 - Validate payloads with JSON schema.
 - Reject unknown fields.
+- Normalize validation errors to standard API error format.
 
 **Implementation Checklist:**
 
@@ -118,6 +122,7 @@ if (!token || token !== session.csrfToken) {
 - [ ] `tests/unit/security/csrf.test.ts` rejects missing token.
 - [ ] `tests/unit/security/rateLimit.test.ts` blocks repeated login attempts.
 - [ ] `tests/integration/routes/securityHeaders.test.ts` verifies headers.
+- [ ] `tests/integration/routes/cors.test.ts` allows only admin origin.
 
 ---
 
@@ -132,6 +137,7 @@ if (!token || token !== session.csrfToken) {
 - `tests/unit/security/csrf.test.ts`
 - `tests/unit/security/rateLimit.test.ts`
 - `tests/integration/routes/securityHeaders.test.ts`
+- `tests/integration/routes/cors.test.ts`
 
 ---
 

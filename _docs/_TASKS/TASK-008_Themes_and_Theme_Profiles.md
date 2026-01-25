@@ -54,6 +54,8 @@ Rules:
 - Theme package lives in `/themes/<name>`.
 - Each theme has `theme.json` + templates + styles.
 - Registry indexes themes at boot.
+- Validate `theme.json` schema (name, version, tokens, templates list).
+- Ignore invalid themes and log warnings.
 
 Example loader:
 
@@ -80,6 +82,11 @@ function loadThemes(themeDir: string): ThemeMeta[] {
 **Status:** To Do
 
 Profiles map paths to pages without duplicating page data.
+
+Rules:
+- Only one active profile at a time (transactional update).
+- `path` is unique per profile.
+- Path normalization (leading `/`, no trailing `/` except root).
 
 Example:
 
@@ -115,6 +122,10 @@ Resolution:
 1. Theme template
 2. Plugin view
 3. Core default
+
+Rules:
+- Cache resolved templates per request (avoid disk re-check).
+- Fallback to 404 template if none found.
 
 Example resolver:
 
@@ -171,6 +182,7 @@ UI:
 - Theme list (installed).
 - Theme profile list with activate action.
 - Profile editor (tokens + routes).
+- Route editor validates paths and duplicate routes.
 
 **Implementation Checklist:**
 
@@ -185,6 +197,7 @@ UI:
 
 - [ ] `tests/unit/themes/registry.test.ts` loads theme.json.
 - [ ] `tests/unit/themes/resolver.test.ts` enforces resolution order.
+- [ ] `tests/unit/themes/profileService.test.ts` enforces single active profile.
 - [ ] `tests/integration/routes/themes.test.ts` validates endpoints.
 
 ---
@@ -200,6 +213,7 @@ UI:
 - `admin/ui/themes/ThemeProfileEditor.tsx`
 - `tests/unit/themes/registry.test.ts`
 - `tests/unit/themes/resolver.test.ts`
+- `tests/unit/themes/profileService.test.ts`
 - `tests/integration/routes/themes.test.ts`
 
 ---

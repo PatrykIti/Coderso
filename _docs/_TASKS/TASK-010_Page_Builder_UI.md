@@ -54,6 +54,11 @@ tests/unit/pageBuilder/
 - Drag and drop reorder.
 - Duplicate and delete blocks.
 
+Rules:
+- Ensure unique `id` per block.
+- Use `widgetRegistry` to list available widgets.
+- Unknown widget type shows placeholder + warning.
+
 Example block creation:
 
 ```ts
@@ -83,6 +88,7 @@ const newBlock: Block = {
 
 - Wizard asks minimal questions and sets variant.
 - On finish, switch to Visual mode.
+- Store wizard progress in `editor` metadata only.
 
 **Implementation Checklist:**
 
@@ -98,6 +104,7 @@ const newBlock: Block = {
 
 - Variant picker with previews.
 - Show only fields relevant to chosen variant.
+- Persist chosen variant to block data.
 
 **Implementation Checklist:**
 
@@ -113,6 +120,7 @@ const newBlock: Block = {
 
 - Layout panel for spacing, margins, container width.
 - Per-device visibility toggles.
+- Only allow tokens defined in `PAGE_MODEL.md`.
 
 **Implementation Checklist:**
 
@@ -130,6 +138,7 @@ const newBlock: Block = {
 - Save draft via `PATCH /pages/:id`.
 - Publish via `POST /pages/:id/publish`.
 - Warn about unsaved changes.
+- Strip `editor` metadata before publish.
 
 **Implementation Checklist:**
 
@@ -145,6 +154,8 @@ const newBlock: Block = {
 - [ ] `tests/unit/pageBuilder/blockList.test.tsx` add/reorder/delete blocks.
 - [ ] `tests/unit/pageBuilder/wizardFlow.test.tsx` wizard sets variant.
 - [ ] `tests/integration/ui/pageBuilder.test.tsx` save + publish flow.
+- [ ] `tests/unit/pageBuilder/advancedPanel.test.tsx` validates layout tokens.
+- [ ] `tests/unit/pageBuilder/unsavedChanges.test.tsx` warns on navigate.
 
 ---
 
@@ -162,6 +173,8 @@ const newBlock: Block = {
 - `admin/ui/pages/builder/LayoutPanel.tsx`
 - `tests/unit/pageBuilder/blockList.test.tsx`
 - `tests/unit/pageBuilder/wizardFlow.test.tsx`
+- `tests/unit/pageBuilder/advancedPanel.test.tsx`
+- `tests/unit/pageBuilder/unsavedChanges.test.tsx`
 - `tests/integration/ui/pageBuilder.test.tsx`
 
 ---

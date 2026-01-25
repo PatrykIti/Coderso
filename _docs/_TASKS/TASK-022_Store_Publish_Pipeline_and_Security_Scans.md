@@ -54,6 +54,7 @@ store/tests/unit/
 - `POST /publish` (authenticated).
 - Accept ZIP + plugin.json + metadata.
 - Validate `apiVersion`, `coreVersion`, `entry`.
+- Reject if version already exists.
 
 **Implementation Checklist:**
 
@@ -74,6 +75,7 @@ store/tests/unit/
 - License scan (whitelist).
 - Bundle analysis for duplicate React/ReactDOM.
 - CSS lint to flag hardcoded colors.
+- Record scan report per version.
 
 Example scan result:
 
@@ -101,6 +103,7 @@ Example scan result:
 
 - `scanStatus=failed` blocks publish.
 - `scanStatus=warning` requires manual approval.
+- `scanStatus=passed` auto-publishes.
 
 **Implementation Checklist:**
 
@@ -115,6 +118,7 @@ Example scan result:
 - [ ] `store/tests/unit/validator.test.ts` rejects invalid manifest.
 - [ ] `store/tests/unit/scans.test.ts` detects duplicate React.
 - [ ] `store/tests/integration/publish.test.ts` blocks failed scan.
+- [ ] `store/tests/integration/publish.test.ts` enforces unique version.
 
 ---
 

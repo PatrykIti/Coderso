@@ -52,6 +52,11 @@ tests/unit/plugins/
 Registry keeps install state, enabled flag, version, last error, and
 permissions.
 
+Rules:
+- Store `api_version`, `core_version`, `installed_at`, `updated_at`.
+- `last_error` holds last runtime error (truncated).
+- `status` values: installed, disabled, error.
+
 Example:
 
 ```ts
@@ -106,6 +111,7 @@ Rules:
 - Load ESM from `plugins-runtime/<name>/<version>/dist/server.mjs`.
 - Call `register(ctx)` only after compatibility checks.
 - Disallow side effects at import time (best effort).
+- Validate `plugin.json` manifest on load.
 
 Example:
 
@@ -130,6 +136,10 @@ await mod.default(serverContext);
 Expose plugin public assets under:
 `/plugins/<name>/<version>/...`.
 
+Rules:
+- Block path traversal (sanitize path).
+- Cache headers for immutable assets.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -147,6 +157,7 @@ Expose plugin public assets under:
 - Error guard for hooks/routes; log and continue.
 - Auto-disable plugin after N errors.
 - Watchdog/timeouts for hook execution.
+- Track error counts per plugin in memory + persist to DB.
 
 Example:
 
@@ -175,6 +186,10 @@ async function runWithTimeout<T>(work: Promise<T>, ms: number) {
 Wrap plugin UI with error boundaries and show fallback when a plugin
 throws in admin UI.
 
+Fallback:
+- Display plugin name and version.
+- Provide "disable plugin" button.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -190,6 +205,7 @@ throws in admin UI.
 - [ ] `tests/unit/plugins/registry.test.ts` toggles enabled state.
 - [ ] `tests/integration/plugins/safeMode.test.ts` loads core without plugins.
 - [ ] `tests/integration/plugins/autoDisable.test.ts` disables on error.
+- [ ] `tests/integration/plugins/assets.test.ts` serves public assets.
 
 ---
 
@@ -206,6 +222,7 @@ throws in admin UI.
 - `tests/unit/plugins/compat.test.ts`
 - `tests/integration/plugins/safeMode.test.ts`
 - `tests/integration/plugins/autoDisable.test.ts`
+- `tests/integration/plugins/assets.test.ts`
 
 ---
 

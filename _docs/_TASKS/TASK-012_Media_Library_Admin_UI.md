@@ -44,6 +44,7 @@ tests/unit/mediaUi/
 - Drag and drop upload.
 - Filter by type (image, pdf, other).
 - Pagination and search.
+- Show upload progress and error state.
 
 Example upload call:
 
@@ -69,6 +70,7 @@ await fetch("/admin/api/media", { method: "POST", body: form });
 - Edit title, alt, caption.
 - Copy URL.
 - Delete asset with confirm dialog.
+- Preview image or file icon.
 
 **Implementation Checklist:**
 
@@ -83,6 +85,7 @@ await fetch("/admin/api/media", { method: "POST", body: form });
 
 - [ ] `tests/unit/mediaUi/mediaLibrary.test.tsx` renders list and upload.
 - [ ] `tests/integration/ui/media.test.tsx` updates metadata and deletes.
+- [ ] `tests/integration/ui/media.test.tsx` shows error for oversized file.
 
 ---
 

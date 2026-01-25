@@ -48,6 +48,11 @@ tests/unit/search/
 
 Add full-text indexes and trigram indexes.
 
+Notes:
+- Enable `pg_trgm` extension for trigram search.
+- Use `simple` dictionary for locale-neutral admin search.
+- Prefer `plainto_tsquery` to avoid injection.
+
 Example SQL:
 
 ```sql
@@ -69,6 +74,11 @@ CREATE INDEX media_search_idx ON media USING GIN (to_tsvector('simple', title ||
 **Status:** To Do
 
 Implement `GET /search?q=...` and `search` params on list endpoints.
+
+Rules:
+- Minimum query length 2.
+- Return grouped results with `type` and `id`.
+- Add limit and pagination.
 
 Example query:
 
@@ -95,6 +105,7 @@ LIMIT 10;
 - Global search bar in admin layout.
 - Result grouping by type.
 - Keyboard navigation.
+- Highlight query matches.
 
 **Implementation Checklist:**
 
@@ -110,6 +121,7 @@ LIMIT 10;
 - [ ] `tests/unit/search/searchService.test.ts` returns matches.
 - [ ] `tests/integration/routes/search.test.ts` validates endpoints.
 - [ ] UI test verifies keyboard navigation.
+- [ ] `tests/integration/routes/search.test.ts` enforces min length.
 
 ---
 

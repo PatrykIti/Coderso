@@ -65,6 +65,11 @@ async function logAudit(event: {
 }
 ```
 
+Rules:
+- Do not log secrets or tokens in metadata.
+- Use consistent `action` naming (`domain.action`).
+- Store `ip` and `userAgent` when available.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -85,6 +90,7 @@ Events (v1):
 - plugins.install
 - plugins.update
 - plugins.disable
+ - settings.update
 
 **Implementation Checklist:**
 
@@ -101,6 +107,7 @@ Events (v1):
 
 - `GET /audit` endpoint (read-only).
 - Admin UI list with filters (action, date, user).
+- Export to CSV (optional).
 
 **Implementation Checklist:**
 
@@ -116,6 +123,7 @@ Events (v1):
 - [ ] `tests/unit/audit/auditService.test.ts` logs events.
 - [ ] `tests/integration/routes/audit.test.ts` returns ordered list.
 - [ ] UI test validates filters.
+- [ ] `tests/unit/audit/auditService.test.ts` rejects sensitive metadata.
 
 ---
 
