@@ -108,6 +108,14 @@ router.get("/plugins/:name", async (req) => {
 });
 ```
 
+Download sketch:
+
+```ts
+router.get("/plugins/:name/versions/:version/download", async (req) => {
+  return streamFile(getZipPath(req.params.name, req.params.version));
+});
+```
+
 ---
 
 ### TASK-021-03_Metadata_signing

@@ -84,6 +84,15 @@ export async function listAudit(limit = 50) {
 }
 ```
 
+Redaction sketch:
+
+```ts
+function sanitizeMetadata(meta: Record<string, any>) {
+  const { token, password, ...rest } = meta;
+  return rest;
+}
+```
+
 ---
 
 ### TASK-014-02_Hook_audit_into_core_actions

@@ -109,6 +109,16 @@ Editor sketch:
 />
 ```
 
+API call sketch:
+
+```ts
+await fetch("/admin/api/content-types", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+  body: JSON.stringify({ name, slug, schema }),
+});
+```
+
 ---
 
 ### TASK-011-03_Entry_list_UI

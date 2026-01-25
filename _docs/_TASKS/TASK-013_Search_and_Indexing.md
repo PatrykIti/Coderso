@@ -111,6 +111,16 @@ export async function searchAll(q: string) {
 }
 ```
 
+Route sketch:
+
+```ts
+router.get("/search", requirePermission("content:read"), async (req) => {
+  const q = req.query.q ?? "";
+  const items = await searchAll(q);
+  return json({ items });
+});
+```
+
 ---
 
 ### TASK-013-03_Admin_UI_search
@@ -133,6 +143,12 @@ UI sketch:
 
 ```tsx
 <SearchBar value={q} onChange={setQ} onSubmit={() => runSearch(q)} />
+```
+
+Results sketch:
+
+```tsx
+<SearchResults groups={groupByType(results)} />
 ```
 
 ---

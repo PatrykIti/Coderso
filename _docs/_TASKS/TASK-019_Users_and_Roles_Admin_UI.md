@@ -61,6 +61,16 @@ UI sketch:
 <UserEditor user={user} onSave={(next) => saveUser(next)} />
 ```
 
+Save user sketch:
+
+```ts
+await fetch("/admin/api/users", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+  body: JSON.stringify(user),
+});
+```
+
 ---
 
 ### TASK-019-02_Roles_UI
@@ -91,6 +101,22 @@ UI sketch:
 
 ```tsx
 <RoleEditor role={role} onSave={(next) => saveRole(next)} />
+```
+
+Save role sketch:
+
+```ts
+await fetch("/admin/api/roles", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+  body: JSON.stringify(role),
+});
+```
+
+Role list sketch:
+
+```tsx
+<RoleList items={roles} onSelect={setSelected} />
 ```
 
 ---

@@ -96,6 +96,25 @@ export function getThemeByName(name: string) {
 }
 ```
 
+Theme service sketch:
+
+```ts
+export function listThemes() {
+  return Array.from(registry.values());
+}
+```
+
+Registry scan sketch:
+
+```ts
+export async function scanThemes() {
+  for (const dir of await listDirs(THEMES_DIR)) {
+    const meta = await readThemeJson(dir);
+    if (isValidTheme(meta)) registry.set(meta.name, meta);
+  }
+}
+```
+
 ---
 
 ### TASK-008-02_Theme_profiles_and_routes
@@ -140,6 +159,17 @@ export async function activateProfile(profileId: string) {
   await db.transaction(async (tx) => {
     await tx.update(themeProfiles).set({ isActive: false });
     await tx.update(themeProfiles).set({ isActive: true }).where(eq(themeProfiles.id, profileId));
+  });
+}
+```
+
+Routes update sketch:
+
+```ts
+export async function setRoutes(profileId: string, routes: RouteInput[]) {
+  return db.transaction(async (tx) => {
+    await tx.delete(themeRoutes).where(eq(themeRoutes.profileId, profileId));
+    await tx.insert(themeRoutes).values(routes.map((r) => ({ ...r, profileId })));
   });
 }
 ```
@@ -221,6 +251,14 @@ router.post("/theme-profiles/:id/activate", requirePermission("themes:write"), a
 });
 ```
 
+Theme list sketch:
+
+```ts
+router.get("/themes", async () => {
+  return json({ items: listThemes() });
+});
+```
+
 ---
 
 ### TASK-008-05_Admin_UI_for_themes
@@ -249,6 +287,21 @@ UI sketch:
 />
 ```
 
+Profile routes UI sketch:
+
+```tsx
+<RouteEditor
+  routes={routes}
+  onChange={setRoutes}
+/>
+```
+
+Theme list sketch:
+
+```tsx
+<ThemeList items={themes} onSelect={setSelected} />
+```
+
 ---
 
 ## Testing Requirements
@@ -257,6 +310,16 @@ UI sketch:
 - [ ] `tests/unit/themes/resolver.test.ts` enforces resolution order.
 - [ ] `tests/unit/themes/profileService.test.ts` enforces single active profile.
 - [ ] `tests/integration/routes/themes.test.ts` validates endpoints.
+
+Test sketch (profileService.test.ts):
+
+```ts
+it("activates only one profile", async () => {
+  await activateProfile(profileA);
+  await activateProfile(profileB);
+  expect(await isActive(profileA)).toBe(false);
+});
+```
 
 ---
 

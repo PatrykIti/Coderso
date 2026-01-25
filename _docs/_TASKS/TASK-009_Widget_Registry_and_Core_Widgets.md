@@ -204,6 +204,27 @@ export const heroSchema = {
 };
 ```
 
+Hero renderer sketch:
+
+```tsx
+export function HeroBlock({ data }) {
+  return (
+    <section>
+      <h1>{data.headline}</h1>
+      {data.subhead && <p>{data.subhead}</p>}
+    </section>
+  );
+}
+```
+
+Hero editor sketch:
+
+```tsx
+export function HeroEditor({ value, onChange }) {
+  return <Input value={value.headline} onChange={(e) => onChange({ ...value, headline: e.target.value })} />;
+}
+```
+
 ---
 
 ### TASK-009-04_Timeline_widget
@@ -217,12 +238,28 @@ Steps:
 2) Render horizontal/vertical variants.
 3) Editor validates min items.
 
+Timeline renderer sketch:
+
+```tsx
+export function TimelineBlock({ data }) {
+  return <ol>{data.steps.map((s) => <li key={s.id}>{s.label}</li>)}</ol>;
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
 | --- | --- |
 | `core/widgets/core/timeline.tsx` | renderer + schema |
 | `core/ui/widgets/editors/TimelineEditor.tsx` | wizard/visual/advanced |
+
+Timeline editor sketch:
+
+```tsx
+export function TimelineEditor({ value, onChange }) {
+  return <Textarea value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} />;
+}
+```
 
 ---
 
@@ -237,12 +274,28 @@ Steps:
 2) Support dashed guides and labels.
 3) Editor enforces both tracks have aligned step counts.
 
+Compare timeline renderer sketch:
+
+```tsx
+export function CompareTimelineBlock({ data }) {
+  return <div>{data.tracks.map((t) => <div key={t.id}>{t.label}</div>)}</div>;
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
 | --- | --- |
 | `core/widgets/core/compareTimeline.tsx` | renderer + schema |
 | `core/ui/widgets/editors/CompareTimelineEditor.tsx` | wizard/visual/advanced |
+
+Compare editor sketch:
+
+```tsx
+export function CompareTimelineEditor({ value, onChange }) {
+  return <Input value={value.heading} onChange={(e) => onChange({ ...value, heading: e.target.value })} />;
+}
+```
 
 ---
 
@@ -257,12 +310,28 @@ Steps:
 2) Support optional success message state.
 3) Ensure accessibility (label, aria).
 
+Newsletter renderer sketch:
+
+```tsx
+export function NewsletterBlock() {
+  return <form><input type="email" /><button>Sign up</button></form>;
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
 | --- | --- |
 | `core/widgets/core/newsletter.tsx` | renderer + schema |
 | `core/ui/widgets/editors/NewsletterEditor.tsx` | wizard/visual/advanced |
+
+Newsletter editor sketch:
+
+```tsx
+export function NewsletterEditor({ value, onChange }) {
+  return <Input value={value.placeholder} onChange={(e) => onChange({ ...value, placeholder: e.target.value })} />;
+}
+```
 
 ---
 
@@ -277,12 +346,28 @@ Steps:
 2) Map fields to submission payload.
 3) Use design tokens for spacing/typography.
 
+Contact renderer sketch:
+
+```tsx
+export function ContactBlock({ data }) {
+  return <form>{data.fields.map((f) => <input key={f.id} />)}</form>;
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
 | --- | --- |
 | `core/widgets/core/contact.tsx` | renderer + schema |
 | `core/ui/widgets/editors/ContactEditor.tsx` | wizard/visual/advanced |
+
+Contact editor sketch:
+
+```tsx
+export function ContactEditor({ value, onChange }) {
+  return <Input value={value.emailTo} onChange={(e) => onChange({ ...value, emailTo: e.target.value })} />;
+}
+```
 
 ---
 
@@ -297,12 +382,28 @@ Steps:
 2) Support mobile toggle variant.
 3) Use `menuService` to fetch tree.
 
+Navigation renderer sketch:
+
+```tsx
+export function NavigationBlock({ items }) {
+  return <nav>{items.map((i) => <a key={i.id} href={i.href}>{i.label}</a>)}</nav>;
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
 | --- | --- |
 | `core/widgets/core/navigation.tsx` | renderer + schema |
 | `core/ui/widgets/editors/NavigationEditor.tsx` | wizard/visual/advanced |
+
+Navigation editor sketch:
+
+```tsx
+export function NavigationEditor({ value, onChange }) {
+  return <Select value={value.menuId} onValueChange={(menuId) => onChange({ ...value, menuId })} />;
+}
+```
 
 ---
 
@@ -317,12 +418,28 @@ Steps:
 2) Support simple and multi-column variants.
 3) Use tokens for background and text.
 
+Footer renderer sketch:
+
+```tsx
+export function FooterBlock({ columns }) {
+  return <footer>{columns.map((c) => <div key={c.id}>{c.title}</div>)}</footer>;
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
 | --- | --- |
 | `core/widgets/core/footer.tsx` | renderer + schema |
 | `core/ui/widgets/editors/FooterEditor.tsx` | wizard/visual/advanced |
+
+Footer editor sketch:
+
+```tsx
+export function FooterEditor({ value, onChange }) {
+  return <Input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} />;
+}
+```
 
 ---
 

@@ -132,6 +132,24 @@ await downloadToFile(url, tmpZip);
 await unzip(tmpZip, targetDir);
 ```
 
+Atomic switch sketch:
+
+```ts
+const nextDir = path.join(PLUGINS_DIR, name, version);
+await fs.rename(nextDir, activeDir);
+```
+
+Install service sketch:
+
+```ts
+export async function installPlugin(name: string, version: string) {
+  const meta = await fetchMetadata(name, version);
+  await verify(meta);
+  await downloadAndUnpack(meta);
+  await registerPlugin(meta);
+}
+```
+
 ---
 
 ### TASK-017-04_Update_policy
@@ -142,6 +160,12 @@ await unzip(tmpZip, targetDir);
 - Auto-apply only releases with `release.type=security`.
 - Normal releases require manual confirm in admin.
 - Record update source (auto vs manual) in audit logs.
+
+Policy sketch:
+
+```ts
+if (release.type !== "security" && policy === "auto-security") return { skipped: true };
+```
 
 **Implementation Checklist:**
 

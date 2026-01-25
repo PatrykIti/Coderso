@@ -60,6 +60,23 @@ Store list sketch:
 <StoreList items={plugins} onSelect={setSelected} />
 ```
 
+Fetch list sketch:
+
+```ts
+const res = await fetch("/admin/api/store/plugins");
+const data = await res.json();
+setPlugins(data.items);
+```
+
+Store detail sketch:
+
+```tsx
+<StoreDetail
+  plugin={selected}
+  onInstall={(version) => installPlugin(selected.name, version)}
+/>
+```
+
 ---
 
 ### TASK-018-02_Install_and_update_actions
@@ -95,6 +112,12 @@ Detail sketch:
   plugin={plugin}
   onUpdate={() => updatePlugin(plugin.name)}
 />
+```
+
+Update call sketch:
+
+```ts
+await fetch(`/admin/api/plugins/${name}/update`, { method: "POST", headers: { "X-CSRF-Token": csrf } });
 ```
 
 ---

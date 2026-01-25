@@ -145,6 +145,14 @@ export async function loadPlugin(entryPath: string, ctx: ServerContext) {
 }
 ```
 
+Compat sketch:
+
+```ts
+export function isCompatible(meta) {
+  return semver.satisfies(CORE_VERSION, meta.coreVersion);
+}
+```
+
 ---
 
 ### TASK-015-04_Assets_mapping
@@ -206,6 +214,16 @@ Error guard sketch:
 ```ts
 export async function runPluginSafe(fn: () => Promise<void>) {
   try { await fn(); } catch (err) { logPluginError(err); }
+}
+```
+
+Plugin manager sketch:
+
+```ts
+export async function loadAllPlugins() {
+  if (process.env.PLUGINS_SAFE_MODE === "1") return [];
+  const installed = await listPlugins();
+  return Promise.all(installed.filter(p => p.enabled).map(loadPluginEntry));
 }
 ```
 

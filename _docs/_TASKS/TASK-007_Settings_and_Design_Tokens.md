@@ -149,6 +149,15 @@ export const setSettingSchema = {
 };
 ```
 
+Route sketch:
+
+```ts
+router.patch("/settings/:key", requirePermission("settings:write"), async (req) => {
+  await setSetting(req.params.key, req.body.value);
+  return json({ ok: true });
+});
+```
+
 ---
 
 ### TASK-007-03_Design_token_pipeline
@@ -191,6 +200,14 @@ export function mergeTokens(defaults: Tokens, overrides?: Tokens): Tokens {
 }
 ```
 
+Token CSS sketch:
+
+```ts
+export function toCssVariables(tokens: Tokens) {
+  return `:root{--color-primary:${tokens.colors.primary};}`;
+}
+```
+
 ---
 
 ### TASK-007-04_Admin_UI_for_settings_and_tokens
@@ -220,6 +237,15 @@ UI sketch:
 />
 ```
 
+Settings page sketch:
+
+```tsx
+<SettingsPage
+  values={settings}
+  onSave={(next) => saveSettings(next)}
+/>
+```
+
 ---
 
 ## Testing Requirements
@@ -228,6 +254,15 @@ UI sketch:
 - [ ] `tests/unit/settings/tokenService.test.ts` merges defaults + overrides.
 - [ ] `tests/integration/routes/settings.test.ts` validates endpoints.
 - [ ] `tests/integration/routes/settings.test.ts` rejects invalid keys.
+
+Test sketch (settings.test.ts):
+
+```ts
+it("rejects unknown key", async () => {
+  const res = await api.patch("/settings/unknown.key", { value: "x" });
+  expect(res.status).toBe(400);
+});
+```
 
 ---
 

@@ -69,6 +69,18 @@ Upload sketch:
 />
 ```
 
+Upload helper sketch:
+
+```ts
+async function uploadFiles(files: File[]) {
+  for (const file of files) {
+    const form = new FormData();
+    form.append("file", file);
+    await fetch("/admin/api/media", { method: "POST", body: form });
+  }
+}
+```
+
 ---
 
 ### TASK-012-02_Media_detail_and_metadata
@@ -94,6 +106,22 @@ Metadata sketch:
   item={selected}
   onSave={(next) => updateMedia(selected.id, next)}
 />
+```
+
+Grid sketch:
+
+```tsx
+<MediaGrid items={items} onSelect={setSelected} />
+```
+
+Metadata update sketch:
+
+```ts
+await fetch(`/admin/api/media/${id}`, {
+  method: "PATCH",
+  headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+  body: JSON.stringify({ title, alt, caption }),
+});
 ```
 
 ---

@@ -116,6 +116,13 @@ export async function runScans(zip) {
 }
 ```
 
+CSS lint sketch:
+
+```ts
+const HEX_COLOR = /#([0-9a-fA-F]{3}){1,2}/g;
+if (HEX_COLOR.test(cssText)) addWarning("Hardcoded color detected");
+```
+
 ---
 
 ### TASK-022-03_Review_workflow

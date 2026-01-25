@@ -166,6 +166,29 @@ Example payload (update items):
 | `core/server/routes/menuRoutes.ts` | CRUD + reorder |
 | `core/server/validation/menuSchemas.ts` | request validation |
 
+Route sketch:
+
+```ts
+router.put("/menus/:id/items", requirePermission("menus:write"), async (req) => {
+  validate(menuItemsSchema, req.body);
+  await updateMenuItems(req.params.id, req.body.items);
+  return json({ ok: true });
+});
+```
+
+Schema sketch (menu create):
+
+```ts
+export const menuCreateSchema = {
+  type: "object",
+  required: ["name", "location"],
+  properties: {
+    name: { type: "string" },
+    location: { type: "string" },
+  },
+  additionalProperties: false,
+};
+```
 Validation sketch (JSON schema):
 
 ```ts
@@ -233,6 +256,15 @@ UI sketch:
 - [ ] `tests/integration/routes/menus.test.ts` covers CRUD endpoints.
 - [ ] `tests/integration/routes/menus.test.ts` rejects invalid payload.
 - [ ] UI test verifies reorder payload.
+
+Test sketch (menus.test.ts):
+
+```ts
+it("rejects both href and pageId", async () => {
+  const res = await api.put(`/menus/${id}/items`, { items: [{ label: "X", href: "/", pageId: "p1" }] });
+  expect(res.status).toBe(400);
+});
+```
 
 ---
 

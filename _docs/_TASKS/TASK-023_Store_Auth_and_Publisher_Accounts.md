@@ -101,6 +101,15 @@ export async function createToken(pluginName: string) {
 }
 ```
 
+Route sketch:
+
+```ts
+router.post("/tokens", requireRole("maintainer"), async (req) => {
+  const token = await createToken(req.body.plugin);
+  return json({ token });
+});
+```
+
 ---
 
 ### TASK-023-03_2FA_requirements

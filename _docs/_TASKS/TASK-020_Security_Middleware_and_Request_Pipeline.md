@@ -77,6 +77,16 @@ export function requestId(req, res, next) {
 - CORS allow only admin origin.
 - Allow `OPTIONS` preflight.
 
+CSRF token sketch:
+
+```ts
+router.get("/auth/csrf", async (req) => {
+  const token = randomToken();
+  await saveCsrfToken(req.session.id, token);
+  return json({ token });
+});
+```
+
 Example check:
 
 ```ts
@@ -124,6 +134,19 @@ Headers sketch:
 ```ts
 res.setHeader("x-frame-options", "DENY");
 res.setHeader("x-content-type-options", "nosniff");
+```
+
+Rate limit sketch:
+
+```ts
+const buckets = new Map();
+export function rateLimit(req, res, next) {
+  const key = req.ip;
+  const hits = buckets.get(key) ?? 0;
+  if (hits > MAX_REQ) return res.status(429).end();
+  buckets.set(key, hits + 1);
+  next();
+}
 ```
 
 ---

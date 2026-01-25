@@ -90,6 +90,19 @@ function BlockList({ blocks, onReorder }) {
 }
 ```
 
+Toolbar sketch:
+
+```tsx
+function BlockToolbar({ onDuplicate, onDelete }) {
+  return (
+    <div>
+      <button onClick={onDuplicate}>Duplicate</button>
+      <button onClick={onDelete}>Delete</button>
+    </div>
+  );
+}
+```
+
 ---
 
 ### TASK-010-02_Wizard_flow
@@ -167,6 +180,14 @@ Layout panel sketch:
 />
 ```
 
+Block settings sketch:
+
+```tsx
+function BlockSettings({ block, onChange }) {
+  return <AdvancedPanel value={block.layout} onChange={(layout) => onChange({ ...block, layout })} />;
+}
+```
+
 ---
 
 ### TASK-010-05_Save_and_publish
@@ -193,6 +214,12 @@ await fetch(`/admin/api/pages/${id}`, {
   headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
   body: JSON.stringify({ data: stripEditor(blocks) }),
 });
+```
+
+Page list sketch:
+
+```tsx
+<PageList items={pages} onOpen={(id) => navigate(`/pages/${id}`)} />
 ```
 
 ---

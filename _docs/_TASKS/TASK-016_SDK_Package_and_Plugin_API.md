@@ -65,6 +65,14 @@ export function definePlugin(register: (ctx: ServerContext) => void) {
 }
 ```
 
+Client helper sketch:
+
+```ts
+export function defineAdmin(register: (ctx: ClientContext) => void) {
+  return register;
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -73,6 +81,31 @@ export function definePlugin(register: (ctx: ServerContext) => void) {
 | `packages/sdk/src/server.ts` | definePlugin + types |
 | `packages/sdk/src/client.ts` | defineAdmin + types |
 | `packages/sdk/src/shared.ts` | shared types |
+
+Package.json sketch:
+
+```json
+{
+  "name": "@core/sdk",
+  "type": "module",
+  "exports": {
+    "./server": "./dist/server.js",
+    "./client": "./dist/client.js",
+    "./shared": "./dist/shared.js"
+  }
+}
+```
+
+tsconfig sketch:
+
+```json
+{
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "dist"
+  }
+}
+```
 
 Shared types sketch:
 
@@ -116,6 +149,15 @@ Hooks API sketch:
 
 ```ts
 export type HookHandler<T> = (payload: T, ctx: HookContext) => void;
+```
+
+Assets API sketch:
+
+```ts
+export interface AssetsAPI {
+  getUrl(path: string): string;
+  getPublicPath(path: string): string;
+}
 ```
 
 ---
