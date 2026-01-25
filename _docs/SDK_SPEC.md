@@ -27,6 +27,7 @@ integracji z core.
 - `@core/sdk` jest wersjonowane semverem razem z core.
 - Major `@core/sdk` mapuje sie na `apiVersion`.
 - Minor/patch musza byc wstecznie kompatybilne.
+- `react` i `react-dom` musza pasowac do wersji core (ten sam major).
 
 ---
 
@@ -56,6 +57,7 @@ Zasady:
 - plugin deklaruje je jako `peerDependencies`.
 - core dostarcza runtime implementacje.
 - w `peerDependencies` uzywamy pakietu `@core/sdk` (subpath exports).
+- wersje peerDependencies musza byc zgodne z wersja core.
 
 Przyklad `package.json` (skrot):
 
@@ -265,7 +267,7 @@ export interface HttpAPI {
 ## Kontrakty runtime
 
 - `register(ctx)` powinno byc idempotentne.
-- Import modułu nie powinien wykonywac logiki (tylko deklaracje).
+- Import modulu nie powinien wykonywac logiki (tylko deklaracje).
 - Wszystkie rejestracje powinny korzystac z SDK.
 
 ---

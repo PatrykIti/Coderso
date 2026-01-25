@@ -3,11 +3,17 @@
 - `ARCHITECTURE.md` - architecture and system rules
 - `CMS_SPEC.md` - CMS scope and overview
 - `CMS_API.md` - admin API endpoints
+- `CONTENT_TYPES_SPEC.md` - collections and content types
 - `DATA_MODEL.md` - database schema overview
+- `DESIGN_TOKENS.md` - design tokens and theming
+- `MEDIA_SPEC.md` - media storage and uploads
 - `PAGE_MODEL.md` - page builder JSON model
+- `PREVIEW_SPEC.md` - draft preview flow
 - `ORM_SPEC.md` - ORM choice and configuration
 - `AUTH_SPEC.md` - authentication and sessions
 - `RBAC_SPEC.md` - roles and permissions
+- `SEARCH_SPEC.md` - search and indexing
+- `AUDIT_SPEC.md` - audit logs
 - `SECURITY_SPEC.md` - baseline security middleware
 - `SDK_SPEC.md` - plugin SDK contract
 - `STORE_SPEC.md` - store + security pipeline

@@ -111,6 +111,7 @@ Minimalny zestaw:
 - CVE dla zaleznosci (na podstawie SBOM).
 - Secrets scanning (klucze, tokeny, hasla).
 - License scanning (whitelist licencji).
+- Peer dependency check (react/react-dom zgodne z core).
 
 Dodatkowe reguly (heurystyki):
 - Wykrywanie `eval`, `new Function`, dynamicznych importow z user input.

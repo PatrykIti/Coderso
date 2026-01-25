@@ -21,11 +21,17 @@ Poza zakresem v1:
 ## Dokumenty powiazane
 
 - `DATA_MODEL.md`
+- `CONTENT_TYPES_SPEC.md`
+- `DESIGN_TOKENS.md`
+- `MEDIA_SPEC.md`
 - `PAGE_MODEL.md`
+- `PREVIEW_SPEC.md`
 - `ORM_SPEC.md`
 - `AUTH_SPEC.md`
 - `RBAC_SPEC.md`
 - `CMS_API.md`
+- `SEARCH_SPEC.md`
+- `AUDIT_SPEC.md`
 - `SECURITY_SPEC.md`
 - `WIDGETS.md`
 
@@ -65,6 +71,11 @@ Zakres v1:
 - metadata: alt, title, caption.
 - foldery logiczne (tagowanie) opcjonalnie.
 
+Storage:
+- domyslnie lokalny filesystem.
+- mozliwosc przelaczenia na external storage (S3/Azure).
+- szczegoly: `MEDIA_SPEC.md`.
+
 ---
 
 ## Menus
@@ -72,6 +83,44 @@ Zakres v1:
 - menu locations (np. `primary`, `footer`).
 - menu items z nestingiem.
 - menu item moze wskazywac na page lub URL.
+
+---
+
+## Content types (kolekcje)
+
+- Definicje schematow danych dla kolekcji (np. blog).
+- Entries z statusami draft/published.
+- Szczegoly: `CONTENT_TYPES_SPEC.md`.
+
+---
+
+## Preview (draft)
+
+- Podglad draft bez publikacji.
+- Tokenized preview URL z TTL.
+- Szczegoly: `PREVIEW_SPEC.md`.
+
+---
+
+## Search / indexing
+
+- Wyszukiwanie w adminie (pages, entries, media).
+- Wykorzystanie indeksow Postgres.
+- Szczegoly: `SEARCH_SPEC.md`.
+
+---
+
+## Audit logs
+
+- Minimalne logowanie kluczowych zdarzen admina.
+- Szczegoly: `AUDIT_SPEC.md`.
+
+---
+
+## Design tokens
+
+- Wspolny system tokenow dla core i pluginow.
+- Szczegoly: `DESIGN_TOKENS.md`.
 
 ---
 

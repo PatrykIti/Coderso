@@ -39,3 +39,8 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 
 - Permissions gate na API core.
 - Pluginy nie maja bezposredniego dostepu do DB.
+
+## Operational safety
+
+- Safe mode uruchamia core bez pluginow, aby odzyskac panel admina.
+- Error boundaries w admin UI izoluje bledy pluginow.

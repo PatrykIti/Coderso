@@ -23,6 +23,7 @@ Przyklady:
 - users:write
 - roles:read
 - roles:write
+- audit:read
 
 ## Default roles
 
@@ -53,6 +54,7 @@ Viewer:
 - Settings: settings:read/write
 - Plugins/Store: plugins:read/manage + store:browse
 - Users/Roles: users:read/write + roles:read/write
+- Audit: audit:read
 
 ## Enforcement
 

@@ -59,6 +59,44 @@ Note (v2+):
 - `page_revisions` z duzymi JSONB moze szybko rosnac. Warto dodac pruning
   starych rewizji i/lub kompresje danych.
 
+## Content types
+
+`content_types`
+- id (uuid, pk)
+- name
+- slug (unique)
+- schema (jsonb)
+- created_at
+- updated_at
+
+`content_entries`
+- id (uuid, pk)
+- type_id (fk content_types)
+- slug
+- title
+- status (draft|published)
+- data (jsonb)
+- created_at
+- updated_at
+- published_at
+
+`content_revisions`
+- id (uuid, pk)
+- entry_id (fk content_entries)
+- version (int)
+- data (jsonb)
+- created_at
+- created_by (fk users)
+
+## Preview
+
+`preview_tokens`
+- id (uuid, pk)
+- page_id (fk pages)
+- token_hash
+- expires_at
+- created_at
+
 ## Media
 
 `media`
@@ -99,6 +137,17 @@ Note (v2+):
 - value (jsonb)
 - updated_at
 
+## Audit logs
+
+`audit_logs`
+- id (uuid, pk)
+- actor_id (fk users)
+- action (string)
+- target_type (string)
+- target_id (string)
+- metadata (jsonb)
+- created_at
+
 ## Plugins
 
 `plugins`
@@ -135,6 +184,10 @@ Note (v2+):
 
 - pages.slug
 - pages.status
+- content_entries.slug
+- content_entries.status
 - media.created_at
 - menu_items.menu_id
 - sessions.user_id
+- audit_logs.created_at
+- preview_tokens.token_hash

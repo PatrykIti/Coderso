@@ -52,11 +52,17 @@ znajduja sie w `STORE_SPEC.md`.
 Zakres CMS, model danych, auth i security opisane sa w:
 - `CMS_SPEC.md`
 - `CMS_API.md`
+- `CONTENT_TYPES_SPEC.md`
 - `DATA_MODEL.md`
+- `DESIGN_TOKENS.md`
+- `MEDIA_SPEC.md`
 - `ORM_SPEC.md`
+- `PAGE_MODEL.md`
+- `PREVIEW_SPEC.md`
 - `AUTH_SPEC.md`
 - `RBAC_SPEC.md`
-- `PAGE_MODEL.md`
+- `SEARCH_SPEC.md`
+- `AUDIT_SPEC.md`
 - `SECURITY_SPEC.md`
 
 ---
@@ -434,6 +440,7 @@ Cel:
 - Watcher Tailwinda dziala po stronie autora pluginu (dev) lub store (build).
 - Safelist w konfiguracji pluginu zapewnia klasy dynamiczne (np. `bg-${color}-500`).
 - W prod core nie uruchamia tailwindcss.
+- Design tokens sa preferowanym sposobem stylowania w pluginach.
 
 ---
 

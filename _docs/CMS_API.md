@@ -61,6 +61,7 @@ Permissions: `content:read`, `content:write`, `content:publish`
 - `PATCH /pages/:id`
 - `POST /pages/:id/publish`
 - `POST /pages/:id/unpublish`
+- `POST /pages/:id/preview`
 - `GET /pages/:id/revisions`
 - `POST /pages/:id/revisions/:revisionId/restore`
 
@@ -102,6 +103,24 @@ Permissions: `menus:read`, `menus:write`
 
 ---
 
+## Content types and entries
+
+Permissions: `content:read`, `content:write`, `content:publish`
+
+- `GET /content-types`
+- `POST /content-types`
+- `PATCH /content-types/:id`
+- `DELETE /content-types/:id`
+
+- `GET /content/:type/entries`
+- `POST /content/:type/entries`
+- `GET /content/:type/entries/:id`
+- `PATCH /content/:type/entries/:id`
+- `POST /content/:type/entries/:id/publish`
+- `POST /content/:type/entries/:id/unpublish`
+
+---
+
 ## Settings
 
 Permissions: `settings:read`, `settings:write`
@@ -132,6 +151,22 @@ Permissions: `store:browse`
 
 - `GET /store/plugins`
 - `GET /store/plugins/:name`
+
+---
+
+## Search
+
+Permissions: `content:read`, `media:read`
+
+- `GET /search?q=...`
+
+---
+
+## Audit logs
+
+Permissions: `audit:read`
+
+- `GET /audit`
 
 ---
 

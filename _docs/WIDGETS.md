@@ -89,3 +89,4 @@ Kazdy widget powinien zdefiniowac:
 - Minimalna liczba pol w Wizard.
 - Visual pokazuje realny preview (miniatury lub skeletony).
 - Advanced zapewnia kontrole nad spacing i typografia.
+- Widgety powinny uzywac design tokens (`DESIGN_TOKENS.md`).
