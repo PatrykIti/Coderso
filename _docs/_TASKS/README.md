@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 23 tasks
+- **To Do:** 24 tasks
 - **In Progress:** 0
 - **Done:** 0 tasks
 
@@ -61,6 +61,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
 
 ---
 

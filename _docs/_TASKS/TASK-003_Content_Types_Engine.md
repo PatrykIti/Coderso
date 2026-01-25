@@ -53,6 +53,13 @@ tests/unit/content/
 
 Define tables in `core/db/schema.ts`.
 
+Constraints and indexes:
+- `content_types.slug` unique.
+- `content_entries` unique on `(type_id, slug)`.
+- `content_entries.status` index.
+- `content_entries.title` index (search).
+- `content_revisions.entry_id` index.
+
 Schema example:
 
 ```ts
@@ -94,6 +101,11 @@ export const contentEntries = pgTable("content_entries", {
 Validate content type schema and entry data with JSON schema validator
 (e.g. Ajv).
 
+Rules:
+- Cache compiled validators per content type (in-memory map).
+- Rebuild validator on content type update.
+- Reject unknown fields (strict mode).
+
 Example:
 
 ```ts
@@ -117,6 +129,11 @@ if (!validate(entry.data)) {
 **Status:** To Do
 
 Implement revision creation and publish workflow.
+
+Steps:
+1) On publish, create revision from current entry data.
+2) Update status to `published` and set `published_at`.
+3) If publish fails, keep entry in draft state (transaction).
 
 Service example:
 
@@ -160,6 +177,7 @@ Endpoints:
 Validation:
 - Validate schema on content type create/update.
 - Validate entry data on create/update/publish.
+- Ensure slug uniqueness per content type.
 
 **Implementation Checklist:**
 

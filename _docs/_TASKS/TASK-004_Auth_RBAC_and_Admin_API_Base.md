@@ -57,6 +57,11 @@ tests/unit/auth/
 
 Implement password hashing and session creation.
 
+Rules:
+- Use argon2id for password hashing (see `AUTH_SPEC.md`).
+- Store only session token hash (sha256) in DB.
+- Session TTL default 14 days (configurable).
+
 Example:
 
 ```ts
@@ -87,6 +92,12 @@ setCookie("session", token, { httpOnly: true, secure: true, sameSite: "strict" }
 
 Middleware attaches user to request context.
 
+Steps:
+1) Read session cookie.
+2) Hash token and fetch session.
+3) Reject if expired or revoked.
+4) Load user and attach to request context.
+
 Example:
 
 ```ts
@@ -112,6 +123,10 @@ export async function requireAuth(req, res, next) {
 **Status:** To Do
 
 Permission checks per request.
+
+Rules:
+- Permissions are merged from all roles.
+- `*` grants all permissions (admin).
 
 Example:
 
@@ -140,6 +155,14 @@ export function requirePermission(permission: string) {
 
 Implement login/logout/me endpoints and base router with error format.
 
+Error format:
+
+```json
+{
+  "error": { "code": "auth_failed", "message": "Invalid credentials" }
+}
+```
+
 Endpoints:
 - `POST /auth/login`
 - `POST /auth/logout`
@@ -163,6 +186,7 @@ Endpoints:
 - [ ] `tests/unit/auth/sessionService.test.ts` creates/revokes sessions.
 - [ ] `tests/unit/auth/rbac.test.ts` verifies permission checks.
 - [ ] `tests/integration/routes/auth.test.ts` covers login/logout/me.
+- [ ] `tests/integration/routes/auth.test.ts` rejects invalid credentials.
 
 ---
 

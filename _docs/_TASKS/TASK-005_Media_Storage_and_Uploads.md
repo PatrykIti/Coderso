@@ -18,6 +18,7 @@ S3/Azure. Provide metadata storage and admin API endpoints.
 - Adapter interface with local, S3, Azure implementations.
 - Upload validation (size + MIME).
 - Media table integration.
+- Config via env vars from `MEDIA_SPEC.md`.
 
 ---
 
@@ -80,6 +81,10 @@ await writeFile(join(MEDIA_DIR, key), fileBuffer);
 return { key, url: `/media/${key}` };
 ```
 
+Config:
+- `MEDIA_DIR` (default `/data/media`)
+- `MEDIA_BASE_URL` (optional CDN)
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -96,6 +101,9 @@ return { key, url: `/media/${key}` };
 Notes:
 - Bucket + prefix per environment.
 - Public URL via CDN or signed URLs (configurable).
+
+Env:
+- `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`
 
 Example (pseudo):
 
@@ -119,6 +127,9 @@ return { key, url: `https://${cdnHost}/${key}` };
 Notes:
 - Container per environment.
 - Public URL via CDN or blob URL (configurable).
+
+Env:
+- `AZURE_CONTAINER`, `AZURE_ACCOUNT`, `AZURE_KEY`
 
 Example (pseudo):
 
@@ -145,6 +156,7 @@ Endpoint:
 Validation:
 - size limit
 - MIME whitelist
+- Optional AV scan (plugin hook)
 
 **Implementation Checklist:**
 
@@ -160,6 +172,7 @@ Validation:
 - [ ] `tests/unit/media/localAdapter.test.ts` writes file and returns URL.
 - [ ] `tests/unit/media/mediaService.test.ts` creates DB record.
 - [ ] `tests/integration/routes/media.test.ts` validates upload endpoint.
+- [ ] `tests/integration/routes/media.test.ts` rejects disallowed MIME.
 
 ---
 

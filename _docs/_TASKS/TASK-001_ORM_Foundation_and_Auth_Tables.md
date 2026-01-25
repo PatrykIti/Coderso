@@ -50,6 +50,12 @@ tests/unit/db/
 
 Set up Drizzle with postgres.js and config for migrations.
 
+Steps:
+1) Add `DATABASE_URL` to `.env.example`.
+2) Create `core/db/client.ts` with postgres.js + drizzle client.
+3) Add `core/db/drizzle.config.ts` for drizzle-kit.
+4) Verify connection with a simple query (manual smoke test).
+
 Example `core/db/client.ts`:
 
 ```ts
@@ -74,6 +80,13 @@ export default {
 } satisfies Config;
 ```
 
+Commands (local):
+
+```bash
+bunx drizzle-kit generate --config core/db/drizzle.config.ts
+bunx drizzle-kit migrate --config core/db/drizzle.config.ts
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -89,6 +102,14 @@ export default {
 **Status:** To Do
 
 Define users, roles, user_roles, sessions in `core/db/schema.ts`.
+
+Constraints and indexes:
+- `users.email` unique.
+- `roles.name` unique.
+- `user_roles` composite PK (user_id, role_id).
+- `sessions.token_hash` indexed (and unique if using random tokens).
+- `sessions.expires_at` indexed for cleanup jobs.
+- Foreign keys with cascade delete for `user_roles`.
 
 Example snippet:
 
@@ -140,6 +161,10 @@ export const sessions = pgTable("sessions", {
 
 Add seed script for initial admin role + user (optional for local dev).
 
+Inputs:
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD` from env for local seed.
+- Use argon2id to hash password (see `AUTH_SPEC.md`).
+
 Example `core/db/seed.ts`:
 
 ```ts
@@ -167,6 +192,7 @@ export async function seedAdmin() {
 | --- | --- |
 | `core/db/seed.ts` | Seed admin role/user |
 | `core/services/auth/userService.ts` | Optional helper for seed |
+| `.env.example` | `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
 
 ---
 
@@ -175,6 +201,7 @@ export async function seedAdmin() {
 - [ ] `tests/unit/db/schema.test.ts` validates tables and constraints.
 - [ ] `tests/unit/db/seed.test.ts` verifies seed inserts role + user.
 - [ ] `tests/integration/db/migrations.test.ts` verifies migrations apply.
+- [ ] `tests/integration/db/sessionIndexes.test.ts` ensures token hash index exists.
 
 ---
 
@@ -187,6 +214,7 @@ export async function seedAdmin() {
 - `tests/unit/db/schema.test.ts`
 - `tests/unit/db/seed.test.ts`
 - `tests/integration/db/migrations.test.ts`
+- `tests/integration/db/sessionIndexes.test.ts`
 
 ---
 

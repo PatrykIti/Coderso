@@ -51,6 +51,13 @@ tests/unit/pages/
 
 Define `pages`, `page_revisions`, and `preview_tokens` in `core/db/schema.ts`.
 
+Constraints and indexes:
+- `pages.slug` unique.
+- `pages.status` index.
+- `page_revisions.page_id` index.
+- `preview_tokens.token_hash` unique + index.
+- `preview_tokens.expires_at` index for cleanup.
+
 Schema example:
 
 ```ts
@@ -82,6 +89,11 @@ export const pages = pgTable("pages", {
 
 Implement revision creation and publish workflow in services.
 
+Steps:
+1) On publish, create revision with current draft data.
+2) Update page `published_data`, `status`, and `published_at`.
+3) Wrap in DB transaction to avoid partial writes.
+
 Service example:
 
 ```ts
@@ -110,6 +122,11 @@ async function publishPage(pageId: string, userId: string) {
 **Status:** To Do
 
 Create and validate preview tokens with TTL. Use token hashing.
+
+Rules:
+- Store only a hash of the token (sha256).
+- Accept preview if token hash matches and `expires_at` > now.
+- One-time use optional (flag for v1.1).
 
 Example:
 
@@ -150,6 +167,7 @@ Endpoints:
 Validation:
 - Validate `data` against `PAGE_MODEL.md`.
 - Reject unknown fields.
+- Ensure `slug` is unique.
 
 **Implementation Checklist:**
 
@@ -165,6 +183,7 @@ Validation:
 - [ ] `tests/unit/pages/pageService.test.ts` covers CRUD.
 - [ ] `tests/unit/pages/revisionService.test.ts` creates and restores revisions.
 - [ ] `tests/unit/pages/previewService.test.ts` validates token TTL.
+- [ ] `tests/unit/pages/previewService.test.ts` rejects expired token.
 - [ ] `tests/integration/routes/pages.test.ts` covers admin endpoints.
 
 ---
