@@ -42,6 +42,11 @@ Nie-cele:
 Szczegoly API dla autorow pluginow znajduja sie w osobnym dokumencie:
 `SDK_SPEC.md`. To jest jedyny dozwolony interfejs integracji pluginu z core.
 
+## Dokumentacja Store
+
+Specyfikacja store, pipeline publikacji i wymagania bezpieczenstwa
+znajduja sie w `STORE_SPEC.md`.
+
 ---
 
 ## Kluczowe decyzje architektoniczne
