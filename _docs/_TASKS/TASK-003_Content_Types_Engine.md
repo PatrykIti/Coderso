@@ -45,7 +45,10 @@ tests/unit/content/
 
 ## Commands (if needed)
 
-No new dependencies.
+```bash
+# core
+bun add ajv
+```
 
 ---
 

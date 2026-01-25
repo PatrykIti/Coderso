@@ -15,6 +15,13 @@
       "when": 1769374397128,
       "tag": "0001_productive_jazinda",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769375695210,
+      "tag": "0002_ambitious_gamora",
+      "breakpoints": true
     }
   ]
 }

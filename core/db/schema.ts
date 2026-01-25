@@ -113,3 +113,54 @@ export const previewTokens = pgTable(
     expiresAtIdx: index("preview_tokens_expires_at_idx").on(t.expiresAt),
   })
 );
+
+export const contentTypes = pgTable("content_types", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  schema: jsonb("schema").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const contentEntries = pgTable(
+  "content_entries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    typeId: uuid("type_id")
+      .notNull()
+      .references(() => contentTypes.id, { onDelete: "cascade" }),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    status: text("status").notNull().default("draft"),
+    data: jsonb("data").notNull(),
+    publishedAt: timestamp("published_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    typeSlugIdx: uniqueIndex("content_entries_type_slug_idx").on(
+      t.typeId,
+      t.slug
+    ),
+    statusIdx: index("content_entries_status_idx").on(t.status),
+    titleIdx: index("content_entries_title_idx").on(t.title),
+  })
+);
+
+export const contentRevisions = pgTable(
+  "content_revisions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => contentEntries.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    data: jsonb("data").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdBy: uuid("created_by").references(() => users.id),
+  },
+  (t) => ({
+    entryIdIdx: index("content_revisions_entry_id_idx").on(t.entryId),
+  })
+);
