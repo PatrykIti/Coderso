@@ -33,11 +33,25 @@ Zasada:
 - To pozwala tworzyc "front 1" i "front 2" bez nadpisywania contentu.
 - Profile nie kopiuja danych stron - wskazuja na istniejace pages.
 
+Przyklad:
+- Profil A: `/` -> page_id=homeA, `/kontakt` -> page_id=contactA
+- Profil B: `/` -> page_id=homeB, `/kontakt` -> page_id=contactB
+
+Domyslne route mapping:
+- `/` (home)
+- `/blog` (content type index)
+- `/blog/:slug` (content entry)
+
 ## Template resolution order
 
 1. Theme template
 2. Plugin view (jesli dostepny)
 3. Core default
+
+Conflict rules:
+- Theme template zawsze wygrywa (explicit override).
+- Plugin view uzywane, gdy theme nie dostarcza template.
+- Core default jest fallbackiem.
 
 ## Admin UI
 

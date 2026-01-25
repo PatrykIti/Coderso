@@ -56,6 +56,138 @@ Przyklady typow:
 }
 ```
 
+## Example schemas (v1)
+
+News:
+
+```json
+{
+  "name": "News",
+  "slug": "news",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "summary", "type": "text" },
+    { "name": "body", "type": "richtext" },
+    { "name": "cover", "type": "image" },
+    { "name": "publishedAt", "type": "datetime" }
+  ]
+}
+```
+
+Events:
+
+```json
+{
+  "name": "Event",
+  "slug": "events",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "startAt", "type": "datetime", "required": true },
+    { "name": "endAt", "type": "datetime" },
+    { "name": "location", "type": "text" },
+    { "name": "description", "type": "richtext" },
+    { "name": "cover", "type": "image" }
+  ]
+}
+```
+
+Sermons:
+
+```json
+{
+  "name": "Sermon",
+  "slug": "sermons",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "speaker", "type": "text" },
+    { "name": "date", "type": "date" },
+    { "name": "audio", "type": "file" },
+    { "name": "notes", "type": "richtext" }
+  ]
+}
+```
+
+Services:
+
+```json
+{
+  "name": "Service",
+  "slug": "services",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "summary", "type": "text" },
+    { "name": "body", "type": "richtext" },
+    { "name": "icon", "type": "image" },
+    { "name": "order", "type": "number" }
+  ]
+}
+```
+
+Case studies:
+
+```json
+{
+  "name": "Case Study",
+  "slug": "case-studies",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "client", "type": "text" },
+    { "name": "industry", "type": "text" },
+    { "name": "challenge", "type": "richtext" },
+    { "name": "solution", "type": "richtext" },
+    { "name": "results", "type": "richtext" },
+    { "name": "cover", "type": "image" }
+  ]
+}
+```
+
+Donations:
+
+```json
+{
+  "name": "Donation",
+  "slug": "donations",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "goal", "type": "number" },
+    { "name": "collected", "type": "number" },
+    { "name": "description", "type": "richtext" },
+    { "name": "ctaLabel", "type": "text" },
+    { "name": "ctaUrl", "type": "text" }
+  ]
+}
+```
+
+Documents:
+
+```json
+{
+  "name": "Document",
+  "slug": "documents",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "file", "type": "file", "required": true },
+    { "name": "category", "type": "select", "options": ["forms", "reports", "other"] },
+    { "name": "publishedAt", "type": "date" }
+  ]
+}
+```
+
+Mass schedule:
+
+```json
+{
+  "name": "Mass Schedule",
+  "slug": "mass-schedule",
+  "fields": [
+    { "name": "day", "type": "select", "options": ["mon","tue","wed","thu","fri","sat","sun"] },
+    { "name": "time", "type": "text" },
+    { "name": "location", "type": "text" },
+    { "name": "note", "type": "text" }
+  ]
+}
+```
+
 ## Entry status
 
 - draft
