@@ -1,0 +1,17 @@
+{
+  "name": "@nextless/core",
+  "scripts": {
+    "dev": "echo core dev",
+    "lint": "echo core lint",
+    "test": "echo core test"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "postgres": "^3.4.8",
+    "@node-rs/argon2": "1.8.3"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.6",
+    "drizzle-kit": "^0.31.8"
+  }
+}

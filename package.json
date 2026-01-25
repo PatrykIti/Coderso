@@ -1,0 +1,19 @@
+{
+  "name": "nextless",
+  "private": true,
+  "workspaces": [
+    "core",
+    "store",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n core,store -c blue,magenta \"bun --cwd core dev\" \"bun --cwd store dev\"",
+    "dev:core": "bun --cwd core dev",
+    "dev:store": "bun --cwd store dev",
+    "lint": "bun --cwd core lint && bun --cwd store lint",
+    "test": "bun --cwd core test && bun --cwd store test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

@@ -1,0 +1,1 @@
+{"name": "@nextless/store", "scripts": {"dev": "echo store dev", "lint": "echo store lint", "test": "echo store test"}, "dependencies": {}}

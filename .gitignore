@@ -1,0 +1,10 @@
+node_modules/
+dist/
+core/dist/
+store/dist/
+.env
+.env.*
+/plugins-runtime/
+/data/
+coverage/
+.DS_Store
