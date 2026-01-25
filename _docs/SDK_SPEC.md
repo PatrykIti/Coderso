@@ -165,6 +165,11 @@ export interface HookContext {
   ip?: string;
   userAgent?: string;
 }
+
+Locale rules:
+- primary z ustawien core (site locale)
+- fallback z `Accept-Language` (jesli ustawienie nie istnieje)
+- ostatecznie `en`
 ```
 
 ```ts
