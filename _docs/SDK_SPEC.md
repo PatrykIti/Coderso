@@ -105,6 +105,11 @@ export default definePlugin((ctx) => {
     handler: async (req) => new Response("ok"),
   });
 });
+
+function onSave(payload, hookCtx) {
+  const userId = hookCtx.user?.id;
+  // Use hookCtx for request/user context.
+}
 ```
 
 Client:
@@ -140,6 +145,7 @@ export interface ServerContext {
   config: ConfigAPI;
   hooks: HooksAPI;
   routes: RoutesAPI;
+  assets: AssetsAPI;
   permissions: PermissionsAPI;
   settings: SettingsAPI;
   storage: StorageAPI;
@@ -149,11 +155,21 @@ export interface ServerContext {
 ### HooksAPI
 
 ```ts
+export interface HookContext {
+  requestId: string;
+  session?: { id: string; userId: string };
+  user?: { id: string; email: string; roles: string[] };
+  ip?: string;
+  userAgent?: string;
+}
+```
+
+```ts
 export interface HooksAPI {
-  addAction(name: string, fn: (...args: any[]) => void): void;
-  addFilter(name: string, fn: (value: any, ...args: any[]) => any): void;
-  removeAction(name: string, fn: (...args: any[]) => void): void;
-  removeFilter(name: string, fn: (value: any, ...args: any[]) => any): void;
+  addAction<T>(name: string, fn: (payload: T, ctx: HookContext) => void): void;
+  addFilter<T>(name: string, fn: (value: T, ctx: HookContext) => T): void;
+  removeAction<T>(name: string, fn: (payload: T, ctx: HookContext) => void): void;
+  removeFilter<T>(name: string, fn: (value: T, ctx: HookContext) => T): void;
 }
 ```
 
@@ -213,6 +229,7 @@ export interface ClientContext {
   };
   ui: AdminUIAPI;
   blocks: BlocksAPI;
+  assets: AssetsAPI;
   permissions: PermissionsAPI;
   settings: SettingsAPI;
   http: HttpAPI;
@@ -262,6 +279,20 @@ export interface HttpAPI {
 }
 ```
 
+### AssetsAPI
+
+```ts
+export interface AssetsAPI {
+  getUrl(path: string): string;
+}
+```
+
+Usage:
+
+```ts
+const iconUrl = ctx.assets.getUrl("icon.png");
+```
+
 ---
 
 ## Kontrakty runtime
@@ -269,6 +300,7 @@ export interface HttpAPI {
 - `register(ctx)` powinno byc idempotentne.
 - Import modulu nie powinien wykonywac logiki (tylko deklaracje).
 - Wszystkie rejestracje powinny korzystac z SDK.
+- Hook handlers zawsze dostaja `HookContext` jako drugi argument.
 
 ---
 

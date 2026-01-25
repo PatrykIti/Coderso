@@ -350,9 +350,11 @@ API core:
 - addFilter(name, fn)
 
 Przyklady:
-- addAction("content:save", fn)
-- addFilter("render:html", fn)
-- addAction("admin:menu", fn)
+- addAction("content:save", (payload, ctx) => {})
+- addFilter("render:html", (html, ctx) => html)
+- addAction("admin:menu", (payload, ctx) => {})
+
+Hook handler zawsze dostaje `ctx` (request/session/user) jako drugi argument.
 
 ---
 
@@ -430,6 +432,8 @@ Cel:
 - `/plugins-runtime/<name>/<version>/public` mapowane na
   `/plugins/<name>/<version>/...`
 - Cache-Control dla assetow statycznych (long cache).
+- Plugin powinien generowac URL przez `ctx.assets.getUrl("...")` zamiast
+  hardcode sciezek.
 
 ---
 

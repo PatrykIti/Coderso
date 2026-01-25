@@ -13,22 +13,28 @@ Cel: wspierac kolekcje danych poza Pages (np. blog, case studies).
 ## Default content types (core)
 
 Przykladowy zestaw dla stron firmowych, blogowych i parafii:
-- Blog post / News
+
+Universal:
+- News / Blog
+- Announcements
 - Events
-- Services
-- Case study
-- Team member
-- Testimonials
+- Documents
 - FAQ
 - Gallery
 - Locations
-- Sermons (parafia)
-- Mass schedule (parafia)
-- Donations
-- Announcements
-- Documents
-- Staff
 - Schedules
+
+Business/Services:
+- Services
+- Case Study
+- Team Member
+- Testimonials
+
+Community/Church:
+- Sermons
+- Mass Schedule
+- Donations
+- Staff
 
 ## Content Type fields
 
@@ -38,8 +44,8 @@ Przyklady typow:
 - select, multiselect
 - image, file
 - relation (do innego typu)
- - date, datetime
- - seo (title, description)
+- date, datetime
+- seo (title, description)
 
 ## Example schema (summary)
 
@@ -58,6 +64,8 @@ Przyklady typow:
 
 ## Example schemas (v1)
 
+### Universal
+
 News:
 
 ```json
@@ -70,6 +78,21 @@ News:
     { "name": "body", "type": "richtext" },
     { "name": "cover", "type": "image" },
     { "name": "publishedAt", "type": "datetime" }
+  ]
+}
+```
+
+Announcements:
+
+```json
+{
+  "name": "Announcement",
+  "slug": "announcements",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "body", "type": "richtext" },
+    { "name": "publishedAt", "type": "datetime" },
+    { "name": "priority", "type": "select", "options": ["low","normal","high"] }
   ]
 }
 ```
@@ -91,21 +114,85 @@ Events:
 }
 ```
 
-Sermons:
+Documents:
 
 ```json
 {
-  "name": "Sermon",
-  "slug": "sermons",
+  "name": "Document",
+  "slug": "documents",
   "fields": [
     { "name": "title", "type": "text", "required": true },
-    { "name": "speaker", "type": "text" },
-    { "name": "date", "type": "date" },
-    { "name": "audio", "type": "file" },
-    { "name": "notes", "type": "richtext" }
+    { "name": "file", "type": "file", "required": true },
+    { "name": "category", "type": "select", "options": ["forms", "reports", "policies", "other"] },
+    { "name": "publishedAt", "type": "date" },
+    { "name": "summary", "type": "text" }
   ]
 }
 ```
+
+FAQ:
+
+```json
+{
+  "name": "FAQ",
+  "slug": "faq",
+  "fields": [
+    { "name": "question", "type": "text", "required": true },
+    { "name": "answer", "type": "richtext", "required": true },
+    { "name": "order", "type": "number" }
+  ]
+}
+```
+
+Gallery items:
+
+```json
+{
+  "name": "Gallery Item",
+  "slug": "gallery",
+  "fields": [
+    { "name": "title", "type": "text" },
+    { "name": "image", "type": "image", "required": true },
+    { "name": "category", "type": "text" },
+    { "name": "order", "type": "number" }
+  ]
+}
+```
+
+Locations:
+
+```json
+{
+  "name": "Location",
+  "slug": "locations",
+  "fields": [
+    { "name": "name", "type": "text", "required": true },
+    { "name": "address", "type": "text" },
+    { "name": "city", "type": "text" },
+    { "name": "mapUrl", "type": "text" },
+    { "name": "phone", "type": "text" }
+  ]
+}
+```
+
+Schedules:
+
+```json
+{
+  "name": "Schedule",
+  "slug": "schedules",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "day", "type": "select", "options": ["mon","tue","wed","thu","fri","sat","sun"] },
+    { "name": "startAt", "type": "time" },
+    { "name": "endAt", "type": "time" },
+    { "name": "location", "type": "text" },
+    { "name": "note", "type": "text" }
+  ]
+}
+```
+
+### Business/Services
 
 Services:
 
@@ -118,6 +205,7 @@ Services:
     { "name": "summary", "type": "text" },
     { "name": "body", "type": "richtext" },
     { "name": "icon", "type": "image" },
+    { "name": "features", "type": "richtext" },
     { "name": "order", "type": "number" }
   ]
 }
@@ -141,49 +229,18 @@ Case studies:
 }
 ```
 
-Donations:
+Team members:
 
 ```json
 {
-  "name": "Donation",
-  "slug": "donations",
+  "name": "Team Member",
+  "slug": "team",
   "fields": [
-    { "name": "title", "type": "text", "required": true },
-    { "name": "goal", "type": "number" },
-    { "name": "collected", "type": "number" },
-    { "name": "description", "type": "richtext" },
-    { "name": "ctaLabel", "type": "text" },
-    { "name": "ctaUrl", "type": "text" }
-  ]
-}
-```
-
-Documents:
-
-```json
-{
-  "name": "Document",
-  "slug": "documents",
-  "fields": [
-    { "name": "title", "type": "text", "required": true },
-    { "name": "file", "type": "file", "required": true },
-    { "name": "category", "type": "select", "options": ["forms", "reports", "other"] },
-    { "name": "publishedAt", "type": "date" }
-  ]
-}
-```
-
-Mass schedule:
-
-```json
-{
-  "name": "Mass Schedule",
-  "slug": "mass-schedule",
-  "fields": [
-    { "name": "day", "type": "select", "options": ["mon","tue","wed","thu","fri","sat","sun"] },
-    { "name": "time", "type": "text" },
-    { "name": "location", "type": "text" },
-    { "name": "note", "type": "text" }
+    { "name": "name", "type": "text", "required": true },
+    { "name": "title", "type": "text" },
+    { "name": "bio", "type": "richtext" },
+    { "name": "photo", "type": "image" },
+    { "name": "email", "type": "text" }
   ]
 }
 ```
@@ -203,81 +260,52 @@ Testimonials:
 }
 ```
 
-Team members:
+### Community/Church
+
+Sermons:
 
 ```json
 {
-  "name": "Team Member",
-  "slug": "team",
-  "fields": [
-    { "name": "name", "type": "text", "required": true },
-    { "name": "title", "type": "text" },
-    { "name": "bio", "type": "richtext" },
-    { "name": "photo", "type": "image" },
-    { "name": "email", "type": "text" }
-  ]
-}
-```
-
-Locations:
-
-```json
-{
-  "name": "Location",
-  "slug": "locations",
-  "fields": [
-    { "name": "name", "type": "text", "required": true },
-    { "name": "address", "type": "text" },
-    { "name": "city", "type": "text" },
-    { "name": "mapUrl", "type": "text" },
-    { "name": "phone", "type": "text" }
-  ]
-}
-```
-
-Gallery items:
-
-```json
-{
-  "name": "Gallery Item",
-  "slug": "gallery",
-  "fields": [
-    { "name": "title", "type": "text" },
-    { "name": "image", "type": "image", "required": true },
-    { "name": "category", "type": "text" },
-    { "name": "order", "type": "number" }
-  ]
-}
-```
-
-Announcements:
-
-```json
-{
-  "name": "Announcement",
-  "slug": "announcements",
+  "name": "Sermon",
+  "slug": "sermons",
   "fields": [
     { "name": "title", "type": "text", "required": true },
-    { "name": "body", "type": "richtext" },
-    { "name": "publishedAt", "type": "datetime" },
-    { "name": "priority", "type": "select", "options": ["low","normal","high"] }
+    { "name": "speaker", "type": "text" },
+    { "name": "date", "type": "date" },
+    { "name": "audio", "type": "file" },
+    { "name": "notes", "type": "richtext" }
   ]
 }
 ```
 
-Schedules:
+Mass schedule:
 
 ```json
 {
-  "name": "Schedule",
-  "slug": "schedules",
+  "name": "Mass Schedule",
+  "slug": "mass-schedule",
   "fields": [
-    { "name": "title", "type": "text", "required": true },
     { "name": "day", "type": "select", "options": ["mon","tue","wed","thu","fri","sat","sun"] },
-    { "name": "startAt", "type": "time" },
-    { "name": "endAt", "type": "time" },
+    { "name": "time", "type": "text" },
     { "name": "location", "type": "text" },
     { "name": "note", "type": "text" }
+  ]
+}
+```
+
+Donations:
+
+```json
+{
+  "name": "Donation",
+  "slug": "donations",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "goal", "type": "number" },
+    { "name": "collected", "type": "number" },
+    { "name": "description", "type": "richtext" },
+    { "name": "ctaLabel", "type": "text" },
+    { "name": "ctaUrl", "type": "text" }
   ]
 }
 ```
@@ -294,39 +322,6 @@ Staff:
     { "name": "photo", "type": "image" },
     { "name": "email", "type": "text" },
     { "name": "phone", "type": "text" }
-  ]
-}
-```
-
-Documents (extended):
-
-```json
-{
-  "name": "Document",
-  "slug": "documents",
-  "fields": [
-    { "name": "title", "type": "text", "required": true },
-    { "name": "file", "type": "file", "required": true },
-    { "name": "category", "type": "select", "options": ["forms", "reports", "policies", "other"] },
-    { "name": "publishedAt", "type": "date" },
-    { "name": "summary", "type": "text" }
-  ]
-}
-```
-
-Services (advanced):
-
-```json
-{
-  "name": "Service",
-  "slug": "services",
-  "fields": [
-    { "name": "title", "type": "text", "required": true },
-    { "name": "summary", "type": "text" },
-    { "name": "body", "type": "richtext" },
-    { "name": "icon", "type": "image" },
-    { "name": "features", "type": "richtext" },
-    { "name": "order", "type": "number" }
   ]
 }
 ```
