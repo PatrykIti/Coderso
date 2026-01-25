@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Core/Plugins
 **Estimated Effort:** Large
-**Dependencies:** TASK-001, TASK-004
+**Dependencies:** TASK-001, TASK-004, TASK-024
 **Status:** To Do
 
 ---

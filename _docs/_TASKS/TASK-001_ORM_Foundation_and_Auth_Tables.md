@@ -56,6 +56,10 @@ Steps:
 3) Add root scripts to route `dev`, `lint`, and `test` into workspace apps.
 4) Add root `.gitignore` with runtime and build outputs.
 
+Notes:
+- `core/package.json` must define `dev`, `lint`, `test`.
+- `store/package.json` must define `dev`, `lint`, `test`.
+
 Example root `package.json`:
 
 ```json
