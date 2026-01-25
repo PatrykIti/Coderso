@@ -27,7 +27,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 0 tasks
+- **To Do:** 23 tasks
 - **In Progress:** 0
 - **Done:** 0 tasks
 
@@ -37,6 +37,29 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-001 | ORM Foundation and Auth Tables | High | Medium | Drizzle + auth tables |
+| TASK-002 | Pages, Revisions, and Preview | High | Medium | Pages + revisions + preview |
+| TASK-003 | Content Types Engine | High | Large | Dynamic content schemas |
+| TASK-004 | Auth, RBAC, and Admin API Base | High | Large | Sessions + RBAC + REST base |
+| TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
+| TASK-006 | Menus and Navigation | Medium | Medium | Menu CRUD + admin UI |
+| TASK-007 | Settings and Design Tokens | Medium | Medium | Global settings + tokens |
+| TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
+| TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
+| TASK-010 | Page Builder UI | High | Large | Wizard/Visual/Advanced |
+| TASK-011 | Content Types Admin UI | High | Large | Schema builder + entries |
+| TASK-012 | Media Library Admin UI | Medium | Medium | Uploads + metadata UI |
+| TASK-013 | Search and Indexing | Medium | Medium | Admin search + DB indexes |
+| TASK-014 | Audit Logs | Medium | Medium | Audit events + UI |
+| TASK-015 | Plugin Runtime Loader and Registry | High | Large | Runtime load + safe mode |
+| TASK-016 | SDK Package and Plugin API | High | Large | @core/sdk package |
+| TASK-017 | Store Client and Update Policy | High | Large | Signatures + updates |
+| TASK-018 | Plugin Store Admin UI | Medium | Medium | Store browse + install |
+| TASK-019 | Users and Roles Admin UI | Medium | Medium | Users + roles UI |
+| TASK-020 | Security Middleware and Request Pipeline | High | Medium | CSRF + rate limit |
+| TASK-021 | Store Backend Core | High | Large | Public API + signing |
+| TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
+| TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
 
 ---
 
