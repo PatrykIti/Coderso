@@ -24,6 +24,11 @@ Przykladowy zestaw dla stron firmowych, blogowych i parafii:
 - Locations
 - Sermons (parafia)
 - Mass schedule (parafia)
+- Donations
+- Announcements
+- Documents
+- Staff
+- Schedules
 
 ## Content Type fields
 
@@ -60,7 +65,13 @@ Przyklady typow:
 
 - Core dostarcza bazowe widoki listy i szczegolu.
 - Theme moze nadpisac wyglad per content type.
+- Plugin moze dostarczyc wlasny view (opcjonalnie).
 - Page builder moze osadzac listy entries jako blok.
+
+Resolution order:
+1. Theme template
+2. Plugin view (jesli dostepny)
+3. Core default
 
 ## API
 
@@ -72,3 +83,4 @@ Admin API w `CMS_API.md`:
 
 Plugin moze rejestrowac nowe content types (v1.1).
 Plugin moze dodac wlasne field types (v1.1).
+Plugin moze dodac automatyzacje (workflow hooks) powiazane z content types (v1.1).

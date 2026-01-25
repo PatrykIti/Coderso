@@ -126,6 +126,15 @@ Storage:
 
 ---
 
+## Themes
+
+- Theme definiuje szablony i wyglad.
+- Theme profile pozwala zapisac rozne warianty wygladu (front 1, front 2).
+- Aktywny jest jeden profil na raz.
+- Szczegoly: `THEMES_SPEC.md`.
+
+---
+
 ## Settings
 
 Typy:

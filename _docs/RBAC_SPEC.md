@@ -24,6 +24,8 @@ Przyklady:
 - roles:read
 - roles:write
 - audit:read
+- themes:read
+- themes:write
 
 ## Default roles
 
@@ -39,6 +41,10 @@ Editor:
 - menus:read
 - menus:write
 - settings:read
+
+Theme access:
+- themes:read (admin only by default)
+- themes:write (admin only)
 
 Viewer:
 - content:read

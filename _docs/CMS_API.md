@@ -155,6 +155,20 @@ Permissions: `store:browse`
 
 ---
 
+## Themes
+
+Permissions: `themes:read`, `themes:write`
+
+- `GET /themes`
+- `POST /themes/activate`
+- `GET /theme-profiles`
+- `POST /theme-profiles`
+- `PATCH /theme-profiles/:id`
+- `POST /theme-profiles/:id/activate`
+- `PUT /theme-profiles/:id/routes`
+
+---
+
 ## Search
 
 Permissions: `content:read`, `media:read`

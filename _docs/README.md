@@ -12,6 +12,7 @@
 - `ORM_SPEC.md` - ORM choice and configuration
 - `AUTH_SPEC.md` - authentication and sessions
 - `RBAC_SPEC.md` - roles and permissions
+- `THEMES_SPEC.md` - themes and theme profiles
 - `SEARCH_SPEC.md` - search and indexing
 - `AUDIT_SPEC.md` - audit logs
 - `SECURITY_SPEC.md` - baseline security middleware

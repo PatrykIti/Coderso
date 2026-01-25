@@ -61,6 +61,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - `PREVIEW_SPEC.md`
 - `AUTH_SPEC.md`
 - `RBAC_SPEC.md`
+- `THEMES_SPEC.md`
 - `SEARCH_SPEC.md`
 - `AUDIT_SPEC.md`
 - `SECURITY_SPEC.md`

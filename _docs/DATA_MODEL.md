@@ -135,6 +135,31 @@ Note (v2+):
 - order_index
 - parent_id (fk menu_items, nullable)
 
+## Themes
+
+`themes`
+- id (uuid, pk)
+- name (unique)
+- version
+- active (bool)
+- created_at
+
+`theme_profiles`
+- id (uuid, pk)
+- name
+- theme_id (fk themes)
+- tokens (jsonb)
+- settings (jsonb)
+- is_active (bool)
+- created_at
+- updated_at
+
+`theme_routes`
+- id (uuid, pk)
+- theme_profile_id (fk theme_profiles)
+- path
+- page_id (fk pages)
+
 ## Settings
 
 `settings`
@@ -193,6 +218,9 @@ Note (v2+):
 - content_entries.status
 - media.created_at
 - menu_items.menu_id
+- themes.name
+- theme_profiles.theme_id
+- theme_routes.theme_profile_id
 - sessions.user_id
 - audit_logs.created_at
 - preview_tokens.token_hash
