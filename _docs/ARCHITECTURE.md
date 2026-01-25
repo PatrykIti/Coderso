@@ -47,6 +47,15 @@ Szczegoly API dla autorow pluginow znajduja sie w osobnym dokumencie:
 Specyfikacja store, pipeline publikacji i wymagania bezpieczenstwa
 znajduja sie w `STORE_SPEC.md`.
 
+## Dokumentacja CMS
+
+Zakres CMS, model danych, auth i security opisane sa w:
+- `CMS_SPEC.md`
+- `DATA_MODEL.md`
+- `ORM_SPEC.md`
+- `AUTH_SPEC.md`
+- `SECURITY_SPEC.md`
+
 ---
 
 ## Kluczowe decyzje architektoniczne
@@ -106,7 +115,7 @@ usuniecie z registry -> usuniecie katalogu -> cleanup assets
 
 ### 4) Polityka update i rollback (v1)
 
-Update mode (default: manual):
+Update mode (default: auto-security):
 - manual: update tylko po akcji admina
 - auto-security: auto update tylko dla patch z flaga security
 - auto-all: auto update dla kazdej zgodnej wersji
@@ -487,7 +496,7 @@ Przykladowe zmienne:
 - PLUGIN_VERIFY_STRICT=true
 - PLUGINS_LOAD_STRATEGY=eager
 - PLUGIN_KEEP_VERSIONS=2
-- PLUGIN_UPDATE_MODE=manual|auto-security|auto-all
+- PLUGIN_UPDATE_MODE=auto-security
 
 ---
 

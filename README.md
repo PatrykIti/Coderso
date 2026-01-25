@@ -8,6 +8,11 @@ Primary docs live in `_docs/`:
 
 - `AGENTS.md` - agent guidelines
 - `_docs/ARCHITECTURE.md` - core architecture and system rules
+- `_docs/CMS_SPEC.md` - CMS scope and overview
+- `_docs/DATA_MODEL.md` - database schema overview
+- `_docs/ORM_SPEC.md` - ORM choice and configuration
+- `_docs/AUTH_SPEC.md` - authentication and sessions
+- `_docs/SECURITY_SPEC.md` - baseline security middleware
 - `_docs/README.md` - docs index
 - `_docs/SDK_SPEC.md` - plugin SDK contract
 - `_docs/STORE_SPEC.md` - store + security pipeline
