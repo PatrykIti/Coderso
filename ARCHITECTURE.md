@@ -1,132 +1,173 @@
 # WordPress-like CMS na Bun + React (core build + runtime pluginy)
 
-## CEL PROJEKTU
+Dokument jest wzorcem technicznym. Na jego podstawie rozpisujemy taski
+dla core, store i pluginow.
 
-Zbudować nowoczesny CMS / sklep internetowy z doświadczeniem developerskim jak Next.js
-oraz doświadczeniem użytkownika jak WordPress.
+## Cel projektu
 
-### Założenia
+Zbudowac nowoczesny CMS / sklep internetowy z doswiadczeniem developerskim
+jak Next.js oraz doswiadczeniem uzytkownika jak WordPress.
 
-- React + TypeScript
-- shadcn/ui
-- Tailwind CSS
-- instalacja pluginów z panelu (bez rebuilda core)
-- brak redeployu przy instalacji pluginów
-- core budowany produkcyjnie (client + SSR)
-- pluginy dostarczane jako prebuilt paczki ze store
+## Zakres i nie-cele
 
-### Czego NIE używamy
+Zakres:
+- Core SSR + admin w React.
+- Pluginy instalowane runtime bez rebuilda core.
+- Store z prebuilt paczkami pluginow.
+- Curation + skany bezpieczenstwa po stronie store.
 
-- Next.js
-- PHP jako runtime
-- Vite dev server w produkcji
-- runtime-build całej aplikacji
+Nie-cele:
+- Uruchamianie nieufnego kodu w sandboxie (brak izolacji procesowej).
+- Vite dev server w produkcji.
+- Runtime-build calej aplikacji.
 
-### Czego używamy
+## Zalozenia techniczne i operacyjne
 
-- Bun (runtime)
-- Vite (dev + build)
-- React
+- Hosting typu VM/container z mozliwoscia zapisu na dysk.
+- Persistent storage dla `plugins-runtime`.
+- Dostep do sieci z core do store (download paczek).
+- Core budowany w CI/CD (dist/client + dist/server).
+- Pluginy dostarczane jako ESM bundlowane paczki (bez TS/TSX w runtime).
+
+## Terminologia
+
+- Core: glowna aplikacja (SSR + admin).
+- Plugin: rozszerzenie funkcji core (server + admin).
+- Store: serwis dystrybucji pluginow, skanow i podpisow.
+- Registry: stan zainstalowanych pluginow w DB.
+- Runtime storage: katalog `plugins-runtime` z paczkami pluginow.
 
 ---
 
-## KLUCZOWA DECYZJA ARCHITEKTONICZNA (WYBRANY MODEL)
+## Kluczowe decyzje architektoniczne
 
-Hybryda:
-
-- Core ma klasyczny build produkcyjny (Vite SSR: client + server).
-- Pluginy są prebuilt po stronie dev/store i ładowane runtime.
+- Core budowany produkcyjnie (Vite SSR: client + server).
+- Pluginy prebuilt po stronie dev/store.
 - Instalacja pluginu = download + verify + unpack + register + load.
-- Brak rebuilda core i brak redeployu przy instalacji pluginów.
-
-To zachowuje UX WordPressa (plugin działa od razu), bez uruchamiania Vite w prod.
-
----
-
-## WYSOKOPOZIOMOWA ARCHITEKTURA (PROD)
-
-Browser
-↓
-Bun HTTP Server
-↓
-SSR Renderer (dist/server z buildu core)
-↓
-Plugin Loader (runtime)
-↓
-Dynamic import ESM (dist/server.mjs)
-↓
-Module Cache (ESM cache)
-
-Statyczne zasoby:
-
-- dist/client (core)
-- dist/* pluginów (client + CSS)
+- Brak rebuilda core i brak redeployu przy instalacji pluginow.
+- Trust by curation: store skanuje i podpisuje paczki.
+- Brak sandboxu: plugin dziala w tym samym procesie co core.
 
 ---
 
-## TRYB DEV
+## Schematy
 
-- Vite dev server w middleware mode dla core (HMR).
-- Pluginy w dev budowane lokalnie przez autora (nie przez core).
+### 1) Kontekst systemu (prod)
+
+[Browser]
+   |
+   v
+[Bun HTTP Server]
+   |-- SSR renderer (dist/server)
+   |-- Admin UI (dist/client)
+   |-- Plugin loader (registry)
+   |-- Static assets (dist/client + plugins dist)
+   v
+[DB] <-> [plugins-runtime]
+   ^
+   |
+[Store API] (list, download, signature, revocation)
+
+### 2) Build pipeline
+
+Core (CI/CD):
+source -> vite build (client) -> dist/client
+source -> vite build --ssr -> dist/server
+
+Plugin (dev/store):
+source -> build (server ESM + client ESM + CSS) -> paczka ZIP
+store -> skany + podpis -> publikacja
+
+### 3) Lifecycle pluginu
+
+Install:
+store list -> download -> verify -> unpack -> register -> load
+
+Update:
+download nowej wersji -> verify -> unpack obok -> switch version -> (opcjonalny rollback)
+
+Disable:
+wylaczenie w registry -> hooki nieaktywne -> UI ukryte
+
+Uninstall:
+usuniecie z registry -> usuniecie katalogu -> cleanup assets
 
 ---
 
-## STRUKTURA REPOZYTORIUM
+## Struktura repozytorium (docelowa)
 
 /core
-  /server
-    app.ts
-    router.ts
-    hooks.ts
-    plugin-loader.ts
-
-  /admin
-    AdminApp.tsx
-    menu.ts
-    registry.ts
-
-  /ui
-    components/
-    blocks/
+  /server               (Bun HTTP, SSR, routing)
+  /admin                (Admin app)
+  /ui                   (shared UI)
+  /sdk                  (publiczny SDK dla pluginow)
+  /plugins              (loader, registry, permissions)
+  /store                (klient store + weryfikacja podpisu)
+  /schemas              (JSON schema manifestu)
+  /db                   (migracje, modele)
+  /config               (konfiguracja + defaulty)
 
 /themes
   /default
 
-/plugins-runtime      (NIE W GIT!)
-  /seo-boost
-    /1.0.0
-  /payments-stripe
-    /2.3.1
+/dist                   (output build)
+  /client
+  /server
+
+/plugins-runtime        (NIE W GIT!)
+  /seo-boost/1.0.0
+  /payments-stripe/2.3.1
 
 /data
   plugins.db
 
 ---
 
-## PLUGIN = PREBUILT PACZKA ZE STORE
+## Core build (Vite SSR)
 
-Plugin nie jest częścią repozytorium.
-Plugin jest publikowany w store jako gotowe artefakty.
+Wymagane outputy:
+- dist/client: assety klienta (admin + public).
+- dist/server: entry SSR dla Bun.
 
-### Struktura paczki pluginu
+Oczekiwana konfiguracja build:
+- `vite build --outDir dist/client`
+- `vite build --outDir dist/server --ssr src/entry-server.tsx`
 
-/plugin.json
-/dist/
-  server.mjs
-  client.mjs
-  style.css
-/public/ (opcjonalnie)
+Core nie kompiluje pluginow w runtime.
 
 ---
 
-## PLUGIN MANIFEST
+## Specyfikacja paczki pluginu
 
-plugin.json
+Format: ZIP
+
+Wymagane pliki:
+/plugin.json
+/dist/server.mjs          (ESM, server runtime)
+/dist/client.mjs          (ESM, admin/editor UI)
+/dist/style.css           (CSS pluginu)
+
+Opcjonalne:
+/public/                  (statyczne assety pluginu)
+
+Wymagania build:
+- ESM, bez TS/TSX w runtime.
+- Wszelkie zaleznosci zewnatrz bundlowane.
+- Dozwolone externale (v1):
+  - react
+  - react-dom
+  - @core/sdk
+- Brak `node_modules` w paczce.
+
+---
+
+## Manifest pluginu (plugin.json)
 
 {
   "name": "seo-boost",
   "version": "1.0.0",
   "apiVersion": "1",
+  "coreVersion": ">=0.1.0 <0.2.0",
   "entry": {
     "server": "dist/server.mjs",
     "client": "dist/client.mjs",
@@ -137,100 +178,113 @@ plugin.json
     "content:write",
     "admin:ui"
   ],
+  "metadata": {
+    "title": "SEO Boost",
+    "description": "Meta tagi i sitemap",
+    "author": "Acme",
+    "homepage": "https://example.com"
+  },
   "integrity": {
     "sha256": "..."
   }
 }
 
-Podpis i metadane zaufania są dostarczane przez store (nie przez sam plugin).
+Weryfikacja:
+- core sprawdza `apiVersion`, `coreVersion`, `integrity`.
+- podpis i metadane zaufania dostarcza store (oddzielnie od plugin.json).
 
 ---
 
-## BUILD PLUGINU (PO STRONIE DEV/STORE)
+## Store i pipeline publikacji
 
-- Dev buduje plugin do ESM (server + client + CSS).
-- Artefakty są publikowane w store.
-- Store wykonuje skany (SAST, CVE, licencje), podpisuje paczkę i wystawia hash.
-- Core nie buduje pluginu, tylko weryfikuje i ładuje gotowe pliki.
+Pipeline po stronie store:
+1. Dev publikuje paczke ZIP.
+2. Store wykonuje skany (SAST, CVE, licencje).
+3. Store podpisuje paczke i publikuje metadata.
 
----
+Minimalne API store:
+- GET /plugins (lista)
+- GET /plugins/:name (detale)
+- GET /plugins/:name/versions/:version/metadata
+- GET /plugins/:name/versions/:version/download
+- GET /revocations.json
 
-## INSTALACJA PLUGINU (BEZ REBUILD CORE)
-
-1. Admin wybiera plugin w zakładce Store.
-2. Core pobiera paczkę (server-side).
-3. Weryfikacja podpisu i checksum.
-4. Rozpakowanie do /plugins-runtime/<name>/<version>.
-5. Zapis w DB:
-   - enabled = true
-   - version
-   - permissions
-   - entrypointy
-   - hash/signature
-6. Runtime ładuje moduł serwera:
-
-await import("file:///plugins-runtime/seo-boost/1.0.0/dist/server.mjs")
-
-7. Plugin rejestruje hooki i rozszerzenia UI.
-
-Brak restartu.
-Brak rebuilda core.
-Brak redeployu.
+Weryfikacja podpisu:
+- core posiada publiczny klucz store.
+- signature dostarczana jako plik lub header (standard do ustalenia).
 
 ---
 
-## RUNTIME LOADER (SERVER)
+## Instalacja pluginu (core)
 
-- Loader wykonuje import ESM na `dist/server.mjs`.
-- Moduły są cache’owane przez ESM cache.
-- Wyłączenie pluginu = usunięcie z registry (moduł zostaje w cache, ale hooki nie są wywoływane).
-- Zmiana wersji = nowa ścieżka w import (cache per wersja).
+Algorytm:
+1. Pobranie paczki do temp.
+2. Weryfikacja signature + sha256.
+3. Rozpakowanie do temp.
+4. Walidacja manifestu (schema + wersje).
+5. Atomowy move do /plugins-runtime/<name>/<version>.
+6. Rejestracja w DB (enabled=true).
+7. Runtime load (import server.mjs).
 
----
-
-## SYSTEM HOOKÓW (WORDPRESS STYLE)
-
-Core udostępnia:
-
-addAction(name, fn)
-addFilter(name, fn)
-
-Przykłady:
-
-addAction("content:save", fn)
-addFilter("render:html", fn)
-addAction("admin:menu", fn)
-
-Plugin w server.mjs:
-
-export default function register() {
-  addAction("content:save", onSave)
-}
+Zasady:
+- Instalacja nie przebudowuje core.
+- W razie bledu -> cleanup i status "failed".
 
 ---
 
-## ADMIN UI (PLUGINY)
+## Runtime loader (server)
 
-Plugin może:
+Zachowanie:
+- Loader importuje `dist/server.mjs` dla kazdego aktywnego pluginu.
+- ESM cache utrzymuje moduły per wersja.
+- Zmiana wersji = zmiana sciezki -> nowy import.
+- Disable = usuniecie z registry (hooki nie sa wywolywane).
 
-- dodać pozycję menu
-- dodać stronę ustawień
-- dodać widget dashboardu
+Kontrakt pluginu (server):
+- eksport `default function register(ctx)`.
+- brak efektow ubocznych przy imporcie (logika tylko w register).
+
+---
+
+## Admin UI loader (client)
+
+Zachowanie:
+- dynamiczny import `dist/client.mjs` tylko dla aktywnych pluginow.
+- dolaczenie `dist/style.css` do strony admina.
+
+Kontrakt pluginu (client):
+- eksport `registerAdmin(ctx)` oraz `registerBlocks(ctx)` (v1).
+
+---
+
+## System hookow (server)
 
 API core:
+- addAction(name, fn)
+- addFilter(name, fn)
 
-registerAdminPage({ path, title, component })
-registerDashboardWidget(...)
-registerSettingsSection(...)
-
-Loader UI:
-
-- dynamic import `dist/client.mjs`
-- dołączenie `dist/style.css`
+Przyklady:
+- addAction("content:save", fn)
+- addFilter("render:html", fn)
+- addAction("admin:menu", fn)
 
 ---
 
-## BLOKI / KOMPONENTY TREŚCI
+## Admin UI (pluginy)
+
+API core (SDK):
+- registerAdminPage({ path, title, component })
+- registerDashboardWidget(...)
+- registerSettingsSection(...)
+
+Plugin moze:
+- dodac pozycje menu
+- dodac strone ustawien
+- dodac widget dashboardu
+
+---
+
+## Bloki / komponenty tresci
 
 Edytor oparty o JSON schema.
 
@@ -243,34 +297,125 @@ registerBlock({
   editor
 })
 
-Blok pojawia się natychmiast w CMS.
+Blok pojawia sie natychmiast w CMS.
 
 ---
 
-## TAILWIND CSS – WAŻNE
+## Routing pluginow (server)
 
-Tailwind NIE jest generowany per request.
+Wersja v1:
+- Pluginy rejestruja endpointy pod prefiksem
+  `/api/plugins/<plugin-name>/*`.
+- Rejestracja przez SDK:
+  registerRoute({ method, path, handler })
 
-Zasada:
-- plugin dostarcza skompilowany CSS w dist/style.css
-- core nie przebudowuje Tailwinda przy instalacji pluginu
-
----
-
-## BEZPIECZEŃSTWO (TRUST BY CURATION)
-
-- Store wykonuje skany bezpieczeństwa i CVE przed publikacją.
-- Paczki są podpisane, core weryfikuje podpis i hash.
-- Brak sandboxu: plugin działa w tym samym procesie co core.
-- Permissions w manifestach są warstwą logiczną, nie izolacją.
-- Mechanizm revocation: lista zablokowanych wersji pluginów.
+Cel:
+- webhooki (platnosci, integracje).
+- brak kolizji z core.
 
 ---
 
-## DEPLOY
+## Public assets pluginu
 
-Core aplikacji:
-- deploy przez Git / CI
+- `/plugins-runtime/<name>/<version>/public` mapowane na
+  `/plugins/<name>/<version>/...`
+- Cache-Control dla assetow statycznych (long cache).
+
+---
+
+## Tailwind CSS
+
+- Tailwind NIE jest generowany per request.
+- Plugin dostarcza skompilowany CSS w `dist/style.css`.
+- Core nie przebudowuje Tailwinda przy instalacji pluginu.
+
+---
+
+## Bezpieczenstwo (trust by curation)
+
+- Store wykonuje skany bezpieczenstwa i CVE.
+- Paczki sa podpisane, core weryfikuje podpis i hash.
+- Brak sandboxu: plugin dziala w tym samym procesie co core.
+- Permissions w manifestach sa warstwa logiczna, nie izolacja.
+- Revocation: lista zablokowanych wersji pluginow.
+
+---
+
+## Model uprawnien (v1)
+
+Przyklady:
+- content:read
+- content:write
+- admin:ui
+- payments:write
+- settings:read
+- settings:write
+
+Zasady:
+- Plugin deklaruje permissions w manifest.
+- Admin akceptuje permissions przy instalacji.
+- Core moze blokowac wywolania API bez zgody.
+
+---
+
+## Dane i schema (DB)
+
+Tabela `plugins` (przykladowa):
+- id
+- name
+- version
+- apiVersion
+- enabled
+- status (installed|enabled|disabled|failed)
+- permissions (json)
+- entry (json)
+- integrity (json)
+- signature (text)
+- installedAt
+- updatedAt
+- lastError
+
+Tabela `plugin_settings`:
+- pluginName
+- key
+- value
+
+---
+
+## Konfiguracja (env)
+
+Przykladowe zmienne:
+- PLUGINS_DIR=/plugins-runtime
+- STORE_BASE_URL=https://store.example.com
+- STORE_PUBLIC_KEY=...
+- PLUGIN_MAX_SIZE_MB=50
+- PLUGIN_DOWNLOAD_TIMEOUT_MS=30000
+- PLUGIN_VERIFY_STRICT=true
+
+---
+
+## Observability
+
+Wymagane:
+- logi instalacji (download, verify, unpack, load).
+- logi bledow pluginow z wersja i nazwa.
+- metryki: czas instalacji, czas load, liczba failed.
+
+---
+
+## Performance
+
+- Load pluginow przy starcie lub lazy (on-demand).
+- CSS pluginow ladowany tylko w adminie.
+- Cache assets pluginow z długim TTL.
+- Importy per wersja (ESM cache).
+
+---
+
+## Deploy
+
+Core:
+- deploy przez Git/CI
 - build produkcyjny (Vite SSR)
 
 Pluginy:
@@ -279,23 +424,22 @@ Pluginy:
 - brak redeployu po instalacji
 
 Po deployu:
-- registry pluginów ładowane z DB
-- runtime ładuje aktywne pluginy z /plugins-runtime
+- registry pluginow ladowane z DB
+- runtime laduje aktywne pluginy z /plugins-runtime
 
 ---
 
-## PODSUMOWANIE
+## Znane ryzyka
 
-TAK:
-- pluginy prebuilt
-- instalacja w panelu
-- runtime load (bez rebuilda core)
-- UX jak WordPress
+- Plugin w tym samym procesie co core (brak izolacji).
+- Bledy w pluginie moga psuc requesty (potrzebne defensive coding).
+- Koniecznosc stabilnego SDK i wersjonowania API.
 
-NIE:
-- klasyczny Next.js
-- Vite dev server w produkcji
-- runtime-build core
+---
 
-To jest realna architektura do zbudowania
-WordPressa 2.0 w świecie Reacta.
+## Decyzje do potwierdzenia (taski arch)
+
+- Standard podpisu (np. ed25519) i sposob dostarczania signature.
+- Dokladna lista externali do bundlowania pluginow.
+- Polityka update (auto/manual, rollback).
+- Strategia load (eager vs lazy).
