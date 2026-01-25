@@ -23,10 +23,10 @@ Build admin UI to manage users and roles in core.
 ## Architecture
 
 ```
-admin/ui/users/
+core/admin/ui/users/
   UserList.tsx
   UserEditor.tsx
-admin/ui/roles/
+core/admin/ui/roles/
   RoleList.tsx
   RoleEditor.tsx
 
@@ -52,8 +52,8 @@ tests/unit/authUi/
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/users/UserList.tsx` | list + actions |
-| `admin/ui/users/UserEditor.tsx` | editor form |
+| `core/admin/ui/users/UserList.tsx` | list + actions |
+| `core/admin/ui/users/UserEditor.tsx` | editor form |
 
 UI sketch:
 
@@ -94,8 +94,8 @@ Example role payload:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/roles/RoleList.tsx` | list + actions |
-| `admin/ui/roles/RoleEditor.tsx` | editor form |
+| `core/admin/ui/roles/RoleList.tsx` | list + actions |
+| `core/admin/ui/roles/RoleEditor.tsx` | editor form |
 
 UI sketch:
 
@@ -132,10 +132,10 @@ Role list sketch:
 
 ## New Files to Create
 
-- `admin/ui/users/UserList.tsx`
-- `admin/ui/users/UserEditor.tsx`
-- `admin/ui/roles/RoleList.tsx`
-- `admin/ui/roles/RoleEditor.tsx`
+- `core/admin/ui/users/UserList.tsx`
+- `core/admin/ui/users/UserEditor.tsx`
+- `core/admin/ui/roles/RoleList.tsx`
+- `core/admin/ui/roles/RoleEditor.tsx`
 - `tests/unit/authUi/usersUi.test.tsx`
 - `tests/unit/authUi/rolesUi.test.tsx`
 - `tests/integration/ui/roles.test.tsx`

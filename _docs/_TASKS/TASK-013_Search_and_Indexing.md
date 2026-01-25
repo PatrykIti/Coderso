@@ -30,7 +30,7 @@ core/server/routes/
   searchRoutes.ts
 core/db/migrations/
   search_indexes.sql
-admin/ui/search/
+core/admin/ui/search/
   SearchBar.tsx
   SearchResults.tsx
 
@@ -136,8 +136,8 @@ router.get("/search", requirePermission("content:read"), async (req) => {
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/search/SearchBar.tsx` | search input |
-| `admin/ui/search/SearchResults.tsx` | results list |
+| `core/admin/ui/search/SearchBar.tsx` | search input |
+| `core/admin/ui/search/SearchResults.tsx` | results list |
 
 UI sketch:
 
@@ -167,8 +167,8 @@ Results sketch:
 - `core/services/search/searchService.ts`
 - `core/server/routes/searchRoutes.ts`
 - `core/db/migrations/search_indexes.sql`
-- `admin/ui/search/SearchBar.tsx`
-- `admin/ui/search/SearchResults.tsx`
+- `core/admin/ui/search/SearchBar.tsx`
+- `core/admin/ui/search/SearchResults.tsx`
 - `tests/unit/search/searchService.test.ts`
 - `tests/integration/routes/search.test.ts`
 

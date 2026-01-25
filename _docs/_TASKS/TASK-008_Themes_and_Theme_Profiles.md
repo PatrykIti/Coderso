@@ -33,7 +33,7 @@ core/services/themes/
   themeProfileService.ts
 core/server/routes/
   themeRoutes.ts
-admin/ui/themes/
+core/admin/ui/themes/
   ThemeList.tsx
   ThemeProfileEditor.tsx
 
@@ -275,8 +275,8 @@ UI:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/themes/ThemeList.tsx` | list installed themes |
-| `admin/ui/themes/ThemeProfileEditor.tsx` | profile edit UI |
+| `core/admin/ui/themes/ThemeList.tsx` | list installed themes |
+| `core/admin/ui/themes/ThemeProfileEditor.tsx` | profile edit UI |
 
 UI sketch:
 
@@ -330,8 +330,8 @@ it("activates only one profile", async () => {
 - `core/services/themes/themeService.ts`
 - `core/services/themes/themeProfileService.ts`
 - `core/server/routes/themeRoutes.ts`
-- `admin/ui/themes/ThemeList.tsx`
-- `admin/ui/themes/ThemeProfileEditor.tsx`
+- `core/admin/ui/themes/ThemeList.tsx`
+- `core/admin/ui/themes/ThemeProfileEditor.tsx`
 - `tests/unit/themes/registry.test.ts`
 - `tests/unit/themes/resolver.test.ts`
 - `tests/unit/themes/profileService.test.ts`

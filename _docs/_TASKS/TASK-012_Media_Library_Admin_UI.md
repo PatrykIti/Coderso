@@ -23,7 +23,7 @@ Build the media library UI for uploads, browsing, and metadata edits.
 ## Architecture
 
 ```
-admin/ui/media/
+core/admin/ui/media/
   MediaLibrary.tsx
   MediaGrid.tsx
   MediaDetail.tsx
@@ -58,8 +58,8 @@ await fetch("/admin/api/media", { method: "POST", body: form });
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/media/MediaLibrary.tsx` | list + upload |
-| `admin/ui/media/UploadDropzone.tsx` | drag and drop |
+| `core/admin/ui/media/MediaLibrary.tsx` | list + upload |
+| `core/admin/ui/media/UploadDropzone.tsx` | drag and drop |
 
 Upload sketch:
 
@@ -96,8 +96,8 @@ async function uploadFiles(files: File[]) {
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/media/MediaDetail.tsx` | metadata editor |
-| `admin/ui/media/MediaGrid.tsx` | grid + select |
+| `core/admin/ui/media/MediaDetail.tsx` | metadata editor |
+| `core/admin/ui/media/MediaGrid.tsx` | grid + select |
 
 Metadata sketch:
 
@@ -136,10 +136,10 @@ await fetch(`/admin/api/media/${id}`, {
 
 ## New Files to Create
 
-- `admin/ui/media/MediaLibrary.tsx`
-- `admin/ui/media/MediaGrid.tsx`
-- `admin/ui/media/MediaDetail.tsx`
-- `admin/ui/media/UploadDropzone.tsx`
+- `core/admin/ui/media/MediaLibrary.tsx`
+- `core/admin/ui/media/MediaGrid.tsx`
+- `core/admin/ui/media/MediaDetail.tsx`
+- `core/admin/ui/media/UploadDropzone.tsx`
 - `tests/unit/mediaUi/mediaLibrary.test.tsx`
 - `tests/integration/ui/media.test.tsx`
 

@@ -24,15 +24,16 @@ our UI component baseline and integrates design tokens.
 ## Architecture
 
 ```
-admin/
-  styles/
-    globals.css
-  components/
-    ui/
-  lib/
-    utils.ts
-components.json
-vite.config.ts
+/core
+  /admin
+    /styles
+      globals.css
+    /components
+      /ui
+    /lib
+      utils.ts
+  components.json
+  vite.config.ts
 
 tests/unit/ui/
   button.test.tsx
@@ -50,9 +51,9 @@ Install Tailwind v4 with Vite plugin (docs).
 
 Steps:
 1) Install `tailwindcss@latest` and `@tailwindcss/vite@latest`.
-2) Add `tailwindcss()` plugin to `vite.config.ts`.
-3) Add alias `@` -> `./admin` in `vite.config.ts` and `tsconfig.json`.
-4) Add Tailwind import to `admin/styles/globals.css`.
+2) Add `tailwindcss()` plugin to `core/vite.config.ts`.
+3) Add alias `@` -> `./admin` in `core/vite.config.ts` and `core/tsconfig.json`.
+4) Add Tailwind import to `core/admin/styles/globals.css`.
 5) Verify dev server compiles without PostCSS config.
 
 Commands:
@@ -61,7 +62,7 @@ Commands:
 bun add -d tailwindcss@latest @tailwindcss/vite@latest
 ```
 
-Update `vite.config.ts`:
+Update `core/vite.config.ts`:
 
 ```ts
 import path from "path";
@@ -79,7 +80,7 @@ export default defineConfig({
 });
 ```
 
-Update `tsconfig.json` path alias:
+Update `core/tsconfig.json` path alias:
 
 ```json
 {
@@ -92,7 +93,7 @@ Update `tsconfig.json` path alias:
 }
 ```
 
-Update CSS entry (v4 uses @import):
+Update CSS entry (v4 uses @import) in `core/admin/styles/globals.css`:
 
 ```css
 @import "tailwindcss";
@@ -102,10 +103,10 @@ Update CSS entry (v4 uses @import):
 
 | File | What to Add |
 | --- | --- |
-| `vite.config.ts` | tailwindcss() plugin + alias |
-| `admin/styles/globals.css` | `@import "tailwindcss";` |
-| `tsconfig.json` | `@/*` path alias |
-| `admin/styles/globals.css` | base layer + tokens |
+| `core/vite.config.ts` | tailwindcss() plugin + alias |
+| `core/admin/styles/globals.css` | `@import "tailwindcss";` |
+| `core/tsconfig.json` | `@/*` path alias |
+| `core/admin/styles/globals.css` | base layer + tokens |
 
 ---
 
@@ -126,7 +127,8 @@ Commands:
 bun dlx shadcn@latest init
 ```
 
-Expected `components.json` (example):
+Expected `core/components.json` (example).
+Note: paths are relative to `/core` (so `admin/styles/globals.css` lives in `core/admin/styles/globals.css`).
 
 ```json
 {
@@ -156,9 +158,9 @@ Expected `components.json` (example):
 
 | File | What to Add |
 | --- | --- |
-| `components.json` | shadcn config |
-| `admin/lib/utils.ts` | `cn` helper (from shadcn) |
-| `admin/components/ui/*` | generated components |
+| `core/components.json` | shadcn config |
+| `core/admin/lib/utils.ts` | `cn` helper (from shadcn) |
+| `core/admin/components/ui/*` | generated components |
 
 ---
 
@@ -190,7 +192,7 @@ Example:
 
 | File | What to Add |
 | --- | --- |
-| `admin/styles/globals.css` | token mapping to shadcn vars |
+| `core/admin/styles/globals.css` | token mapping to shadcn vars |
 
 ---
 
@@ -214,7 +216,7 @@ bun dlx shadcn@latest add button input select dropdown-menu dialog textarea chec
 
 | File | What to Add |
 | --- | --- |
-| `admin/components/ui/*` | installed components |
+| `core/admin/components/ui/*` | installed components |
 
 ---
 
@@ -224,7 +226,7 @@ bun dlx shadcn@latest add button input select dropdown-menu dialog textarea chec
 
 Add shared UI helpers and base styles for Admin UI.
 
-Example `admin/lib/utils.ts` (cn helper):
+Example `core/admin/lib/utils.ts` (cn helper):
 
 ```ts
 import { clsx, type ClassValue } from "clsx";
@@ -235,7 +237,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 ```
 
-Example `admin/styles/globals.css` (minimal base):
+Example `core/admin/styles/globals.css` (minimal base):
 
 ```css
 @import "tailwindcss";
@@ -259,8 +261,8 @@ Example `admin/styles/globals.css` (minimal base):
 
 | File | What to Add |
 | --- | --- |
-| `admin/lib/utils.ts` | `cn` helper |
-| `admin/styles/globals.css` | base styles + tokens |
+| `core/admin/lib/utils.ts` | `cn` helper |
+| `core/admin/styles/globals.css` | base styles + tokens |
 
 ---
 
@@ -270,7 +272,7 @@ Example `admin/styles/globals.css` (minimal base):
 
 Add a simple admin UI screen to verify components render correctly.
 
-Example `admin/ui/debug/UiPreview.tsx`:
+Example `core/admin/ui/debug/UiPreview.tsx`:
 
 ```tsx
 import { Button } from "@/components/ui/button";
@@ -290,7 +292,7 @@ export function UiPreview() {
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/debug/UiPreview.tsx` | preview screen |
+| `core/admin/ui/debug/UiPreview.tsx` | preview screen |
 
 ---
 
@@ -305,11 +307,11 @@ export function UiPreview() {
 
 ## New Files to Create
 
-- `components.json`
-- `admin/styles/globals.css`
-- `admin/lib/utils.ts`
-- `admin/components/ui/*`
-- `admin/ui/debug/UiPreview.tsx`
+- `core/components.json`
+- `core/admin/styles/globals.css`
+- `core/admin/lib/utils.ts`
+- `core/admin/components/ui/*`
+- `core/admin/ui/debug/UiPreview.tsx`
 - `tests/unit/ui/button.test.tsx`
 - `tests/unit/ui/themeTokens.test.ts`
 - `tests/unit/ui/utils.test.ts`

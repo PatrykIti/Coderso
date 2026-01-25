@@ -15,6 +15,9 @@ Implement the runtime plugin registry and loader. Plugins are loaded from
 `plugins-runtime` without rebuilding core. Provide safe mode, error
 isolation, and auto-disable on repeated failures.
 
+Prereq:
+- Ensure `/plugins-runtime` is in `.gitignore` (see TASK-001-00).
+
 **Goals:**
 - Registry for installed plugins.
 - Runtime load/unload with ESM entrypoints.
@@ -32,7 +35,7 @@ core/plugins/
   compat.ts
 core/server/middleware/
   pluginErrorGuard.ts
-admin/ui/plugins/
+core/admin/ui/plugins/
   PluginErrorBoundary.tsx
 
 tests/unit/plugins/
@@ -271,7 +274,7 @@ Fallback:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/plugins/PluginErrorBoundary.tsx` | error boundary |
+| `core/admin/ui/plugins/PluginErrorBoundary.tsx` | error boundary |
 
 Error boundary sketch:
 
@@ -301,7 +304,7 @@ Error boundary sketch:
 - `core/plugins/pluginManager.ts`
 - `core/plugins/compat.ts`
 - `core/server/middleware/pluginErrorGuard.ts`
-- `admin/ui/plugins/PluginErrorBoundary.tsx`
+- `core/admin/ui/plugins/PluginErrorBoundary.tsx`
 - `tests/unit/plugins/registry.test.ts`
 - `tests/unit/plugins/loader.test.ts`
 - `tests/unit/plugins/compat.test.ts`

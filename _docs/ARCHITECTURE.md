@@ -171,12 +171,19 @@ Client:
   /server               (Bun HTTP, SSR, routing)
   /admin                (Admin app)
   /ui                   (shared UI)
-  /sdk                  (publiczny SDK dla pluginow)
   /plugins              (loader, registry, permissions)
   /store                (klient store + weryfikacja podpisu)
   /schemas              (JSON schema manifestu)
   /db                   (migracje, modele)
   /config               (konfiguracja + defaulty)
+
+/packages
+  /sdk                  (publiczny SDK dla pluginow)
+
+/store                  (backend Store)
+  /server
+  /db
+  /services
 
 /themes
   /default

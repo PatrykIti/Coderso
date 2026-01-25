@@ -24,12 +24,12 @@ schema builder, entry forms, and publish/preview actions.
 ## Architecture
 
 ```
-admin/ui/content-types/
+core/admin/ui/content-types/
   ContentTypeList.tsx
   ContentTypeEditor.tsx
   SchemaBuilder.tsx
   FieldEditor.tsx
-admin/ui/entries/
+core/admin/ui/entries/
   EntryList.tsx
   EntryEditor.tsx
   FieldRenderer.tsx
@@ -71,8 +71,8 @@ Example field definition:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/content-types/SchemaBuilder.tsx` | schema builder UI |
-| `admin/ui/content-types/FieldEditor.tsx` | field config |
+| `core/admin/ui/content-types/SchemaBuilder.tsx` | schema builder UI |
+| `core/admin/ui/content-types/FieldEditor.tsx` | field config |
 
 Schema builder sketch:
 
@@ -97,8 +97,8 @@ Schema builder sketch:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/content-types/ContentTypeList.tsx` | list view |
-| `admin/ui/content-types/ContentTypeEditor.tsx` | editor view |
+| `core/admin/ui/content-types/ContentTypeList.tsx` | list view |
+| `core/admin/ui/content-types/ContentTypeEditor.tsx` | editor view |
 
 Editor sketch:
 
@@ -134,7 +134,7 @@ await fetch("/admin/api/content-types", {
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/entries/EntryList.tsx` | list + filters |
+| `core/admin/ui/entries/EntryList.tsx` | list + filters |
 
 List sketch:
 
@@ -160,8 +160,8 @@ List sketch:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/entries/EntryEditor.tsx` | entry editor |
-| `admin/ui/entries/FieldRenderer.tsx` | schema-based inputs |
+| `core/admin/ui/entries/EntryEditor.tsx` | entry editor |
+| `core/admin/ui/entries/FieldRenderer.tsx` | schema-based inputs |
 
 Field renderer sketch:
 
@@ -186,13 +186,13 @@ function FieldRenderer({ field, value, onChange }) {
 
 ## New Files to Create
 
-- `admin/ui/content-types/ContentTypeList.tsx`
-- `admin/ui/content-types/ContentTypeEditor.tsx`
-- `admin/ui/content-types/SchemaBuilder.tsx`
-- `admin/ui/content-types/FieldEditor.tsx`
-- `admin/ui/entries/EntryList.tsx`
-- `admin/ui/entries/EntryEditor.tsx`
-- `admin/ui/entries/FieldRenderer.tsx`
+- `core/admin/ui/content-types/ContentTypeList.tsx`
+- `core/admin/ui/content-types/ContentTypeEditor.tsx`
+- `core/admin/ui/content-types/SchemaBuilder.tsx`
+- `core/admin/ui/content-types/FieldEditor.tsx`
+- `core/admin/ui/entries/EntryList.tsx`
+- `core/admin/ui/entries/EntryEditor.tsx`
+- `core/admin/ui/entries/FieldRenderer.tsx`
 - `tests/unit/contentUi/schemaBuilder.test.tsx`
 - `tests/unit/contentUi/entryEditor.test.tsx`
 - `tests/integration/ui/contentTypes.test.tsx`

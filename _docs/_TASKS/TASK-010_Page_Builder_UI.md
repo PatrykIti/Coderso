@@ -24,7 +24,7 @@ Wizard/Visual/Advanced configuration flow for widgets.
 ## Architecture
 
 ```
-admin/ui/pages/
+core/admin/ui/pages/
   PageList.tsx
   PageEditor.tsx
   builder/
@@ -77,8 +77,8 @@ const newBlock: Block = {
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/pages/builder/BlockList.tsx` | list + drag reorder |
-| `admin/ui/pages/builder/WidgetPicker.tsx` | add block UI |
+| `core/admin/ui/pages/builder/BlockList.tsx` | list + drag reorder |
+| `core/admin/ui/pages/builder/WidgetPicker.tsx` | add block UI |
 
 Block list sketch:
 
@@ -117,7 +117,7 @@ function BlockToolbar({ onDuplicate, onDelete }) {
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/pages/builder/WizardPanel.tsx` | wizard UI |
+| `core/admin/ui/pages/builder/WizardPanel.tsx` | wizard UI |
 
 Wizard sketch:
 
@@ -142,7 +142,7 @@ Wizard sketch:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/pages/builder/VisualPanel.tsx` | visual editor |
+| `core/admin/ui/pages/builder/VisualPanel.tsx` | visual editor |
 
 Visual sketch:
 
@@ -168,8 +168,8 @@ Visual sketch:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/pages/builder/AdvancedPanel.tsx` | advanced controls |
-| `admin/ui/pages/builder/LayoutPanel.tsx` | layout tokens |
+| `core/admin/ui/pages/builder/AdvancedPanel.tsx` | advanced controls |
+| `core/admin/ui/pages/builder/LayoutPanel.tsx` | layout tokens |
 
 Layout panel sketch:
 
@@ -203,8 +203,8 @@ function BlockSettings({ block, onChange }) {
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/pages/PageEditor.tsx` | save/publish actions |
-| `admin/ui/pages/PageList.tsx` | list + status |
+| `core/admin/ui/pages/PageEditor.tsx` | save/publish actions |
+| `core/admin/ui/pages/PageList.tsx` | list + status |
 
 Save sketch:
 
@@ -236,16 +236,16 @@ Page list sketch:
 
 ## New Files to Create
 
-- `admin/ui/pages/PageList.tsx`
-- `admin/ui/pages/PageEditor.tsx`
-- `admin/ui/pages/builder/BlockList.tsx`
-- `admin/ui/pages/builder/BlockToolbar.tsx`
-- `admin/ui/pages/builder/BlockSettings.tsx`
-- `admin/ui/pages/builder/WizardPanel.tsx`
-- `admin/ui/pages/builder/VisualPanel.tsx`
-- `admin/ui/pages/builder/AdvancedPanel.tsx`
-- `admin/ui/pages/builder/WidgetPicker.tsx`
-- `admin/ui/pages/builder/LayoutPanel.tsx`
+- `core/admin/ui/pages/PageList.tsx`
+- `core/admin/ui/pages/PageEditor.tsx`
+- `core/admin/ui/pages/builder/BlockList.tsx`
+- `core/admin/ui/pages/builder/BlockToolbar.tsx`
+- `core/admin/ui/pages/builder/BlockSettings.tsx`
+- `core/admin/ui/pages/builder/WizardPanel.tsx`
+- `core/admin/ui/pages/builder/VisualPanel.tsx`
+- `core/admin/ui/pages/builder/AdvancedPanel.tsx`
+- `core/admin/ui/pages/builder/WidgetPicker.tsx`
+- `core/admin/ui/pages/builder/LayoutPanel.tsx`
 - `tests/unit/pageBuilder/blockList.test.tsx`
 - `tests/unit/pageBuilder/wizardFlow.test.tsx`
 - `tests/unit/pageBuilder/advancedPanel.test.tsx`

@@ -24,10 +24,10 @@ managing updates.
 ## Architecture
 
 ```
-admin/ui/store/
+core/admin/ui/store/
   StoreList.tsx
   StoreDetail.tsx
-admin/ui/plugins/
+core/admin/ui/plugins/
   PluginList.tsx
   PluginDetail.tsx
 
@@ -51,8 +51,8 @@ tests/unit/storeUi/
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/store/StoreList.tsx` | list + search |
-| `admin/ui/store/StoreDetail.tsx` | plugin details |
+| `core/admin/ui/store/StoreList.tsx` | list + search |
+| `core/admin/ui/store/StoreDetail.tsx` | plugin details |
 
 Store list sketch:
 
@@ -102,8 +102,8 @@ await fetch("/admin/api/plugins/install", {
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/plugins/PluginList.tsx` | installed list |
-| `admin/ui/plugins/PluginDetail.tsx` | actions |
+| `core/admin/ui/plugins/PluginList.tsx` | installed list |
+| `core/admin/ui/plugins/PluginDetail.tsx` | actions |
 
 Detail sketch:
 
@@ -134,7 +134,7 @@ await fetch(`/admin/api/plugins/${name}/update`, { method: "POST", headers: { "X
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/plugins/PluginDetail.tsx` | policy toggle |
+| `core/admin/ui/plugins/PluginDetail.tsx` | policy toggle |
 
 ---
 
@@ -148,10 +148,10 @@ await fetch(`/admin/api/plugins/${name}/update`, { method: "POST", headers: { "X
 
 ## New Files to Create
 
-- `admin/ui/store/StoreList.tsx`
-- `admin/ui/store/StoreDetail.tsx`
-- `admin/ui/plugins/PluginList.tsx`
-- `admin/ui/plugins/PluginDetail.tsx`
+- `core/admin/ui/store/StoreList.tsx`
+- `core/admin/ui/store/StoreDetail.tsx`
+- `core/admin/ui/plugins/PluginList.tsx`
+- `core/admin/ui/plugins/PluginDetail.tsx`
 - `tests/unit/storeUi/storeList.test.tsx`
 - `tests/integration/ui/plugins.test.tsx`
 

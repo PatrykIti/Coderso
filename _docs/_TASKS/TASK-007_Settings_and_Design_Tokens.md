@@ -34,7 +34,7 @@ core/server/routes/
   settingsRoutes.ts
 core/server/validation/
   settingsSchemas.ts
-admin/ui/settings/
+core/admin/ui/settings/
   SettingsPage.tsx
   DesignTokensEditor.tsx
 core/ui/theme/
@@ -224,8 +224,8 @@ UI:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/settings/SettingsPage.tsx` | settings form |
-| `admin/ui/settings/DesignTokensEditor.tsx` | token editor |
+| `core/admin/ui/settings/SettingsPage.tsx` | settings form |
+| `core/admin/ui/settings/DesignTokensEditor.tsx` | token editor |
 
 UI sketch:
 
@@ -273,8 +273,8 @@ it("rejects unknown key", async () => {
 - `core/server/routes/settingsRoutes.ts`
 - `core/server/validation/settingsSchemas.ts`
 - `core/ui/theme/tokenCss.ts`
-- `admin/ui/settings/SettingsPage.tsx`
-- `admin/ui/settings/DesignTokensEditor.tsx`
+- `core/admin/ui/settings/SettingsPage.tsx`
+- `core/admin/ui/settings/DesignTokensEditor.tsx`
 - `tests/unit/settings/settingsService.test.ts`
 - `tests/unit/settings/tokenService.test.ts`
 - `tests/integration/routes/settings.test.ts`

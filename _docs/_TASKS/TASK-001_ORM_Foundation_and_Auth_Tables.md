@@ -44,6 +44,48 @@ tests/unit/db/
 
 ## Sub-Tasks
 
+### TASK-001-00_Monorepo_scaffold
+
+**Status:** To Do
+
+Initialize the monorepo scaffold for Bun workspaces.
+
+Steps:
+1) Create root `package.json` with `private: true`.
+2) Add `workspaces` for `core`, `store`, and `packages/*`.
+3) Add root `.gitignore` with runtime and build outputs.
+
+Example root `package.json`:
+
+```json
+{
+  "name": "nextless",
+  "private": true,
+  "workspaces": ["core", "store", "packages/*"]
+}
+```
+
+Example `.gitignore` (minimal):
+
+```
+node_modules/
+dist/
+core/dist/
+store/dist/
+.env
+.env.*
+/plugins-runtime/
+/data/
+coverage/
+```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `package.json` | workspaces for core/store/packages |
+| `.gitignore` | ignore build outputs and runtime plugin storage |
+
 ### TASK-001-01_Initialize_Drizzle_client_and_config
 
 **Status:** To Do
@@ -245,6 +287,8 @@ it("users table has email column", () => {
 
 ## New Files to Create
 
+- `package.json`
+- `.gitignore`
 - `core/db/client.ts`
 - `core/db/drizzle.config.ts`
 - `core/db/seed.ts`

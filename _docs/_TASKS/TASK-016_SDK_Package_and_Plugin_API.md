@@ -77,6 +77,7 @@ export function defineAdmin(register: (ctx: ClientContext) => void) {
 
 | File | What to Add |
 | --- | --- |
+| `package.json` | workspaces config for `core`, `store`, `packages/*` |
 | `packages/sdk/package.json` | exports map |
 | `packages/sdk/src/server.ts` | definePlugin + types |
 | `packages/sdk/src/client.ts` | defineAdmin + types |
@@ -93,6 +94,14 @@ Package.json sketch:
     "./client": "./dist/client.js",
     "./shared": "./dist/shared.js"
   }
+}
+```
+
+Root workspace sketch:
+
+```json
+{
+  "workspaces": ["core", "store", "packages/*"]
 }
 ```
 

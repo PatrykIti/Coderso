@@ -32,7 +32,7 @@ core/server/routes/
   menuRoutes.ts
 core/server/validation/
   menuSchemas.ts
-admin/ui/menus/
+core/admin/ui/menus/
   MenuList.tsx
   MenuEditor.tsx
 
@@ -234,8 +234,8 @@ UI:
 
 | File | What to Add |
 | --- | --- |
-| `admin/ui/menus/MenuList.tsx` | list view |
-| `admin/ui/menus/MenuEditor.tsx` | drag and drop editor |
+| `core/admin/ui/menus/MenuList.tsx` | list view |
+| `core/admin/ui/menus/MenuEditor.tsx` | drag and drop editor |
 
 UI sketch:
 
@@ -274,8 +274,8 @@ it("rejects both href and pageId", async () => {
 - `core/services/menus/treeBuilder.ts`
 - `core/server/routes/menuRoutes.ts`
 - `core/server/validation/menuSchemas.ts`
-- `admin/ui/menus/MenuList.tsx`
-- `admin/ui/menus/MenuEditor.tsx`
+- `core/admin/ui/menus/MenuList.tsx`
+- `core/admin/ui/menus/MenuEditor.tsx`
 - `tests/unit/menus/menuService.test.ts`
 - `tests/integration/routes/menus.test.ts`
 

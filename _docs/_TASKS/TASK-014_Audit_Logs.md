@@ -28,7 +28,7 @@ core/services/audit/
   auditService.ts
 core/server/routes/
   auditRoutes.ts
-admin/ui/audit/
+core/admin/ui/audit/
   AuditList.tsx
 
 tests/unit/audit/
@@ -131,7 +131,7 @@ Events (v1):
 | File | What to Add |
 | --- | --- |
 | `core/server/routes/auditRoutes.ts` | audit endpoint |
-| `admin/ui/audit/AuditList.tsx` | audit UI |
+| `core/admin/ui/audit/AuditList.tsx` | audit UI |
 
 Route sketch:
 
@@ -163,7 +163,7 @@ UI sketch:
 
 - `core/services/audit/auditService.ts`
 - `core/server/routes/auditRoutes.ts`
-- `admin/ui/audit/AuditList.tsx`
+- `core/admin/ui/audit/AuditList.tsx`
 - `tests/unit/audit/auditService.test.ts`
 - `tests/integration/routes/audit.test.ts`
 
