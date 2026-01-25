@@ -250,6 +250,87 @@ Gallery items:
 }
 ```
 
+Announcements:
+
+```json
+{
+  "name": "Announcement",
+  "slug": "announcements",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "body", "type": "richtext" },
+    { "name": "publishedAt", "type": "datetime" },
+    { "name": "priority", "type": "select", "options": ["low","normal","high"] }
+  ]
+}
+```
+
+Schedules:
+
+```json
+{
+  "name": "Schedule",
+  "slug": "schedules",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "day", "type": "select", "options": ["mon","tue","wed","thu","fri","sat","sun"] },
+    { "name": "startAt", "type": "time" },
+    { "name": "endAt", "type": "time" },
+    { "name": "location", "type": "text" },
+    { "name": "note", "type": "text" }
+  ]
+}
+```
+
+Staff:
+
+```json
+{
+  "name": "Staff",
+  "slug": "staff",
+  "fields": [
+    { "name": "name", "type": "text", "required": true },
+    { "name": "role", "type": "text" },
+    { "name": "photo", "type": "image" },
+    { "name": "email", "type": "text" },
+    { "name": "phone", "type": "text" }
+  ]
+}
+```
+
+Documents (extended):
+
+```json
+{
+  "name": "Document",
+  "slug": "documents",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "file", "type": "file", "required": true },
+    { "name": "category", "type": "select", "options": ["forms", "reports", "policies", "other"] },
+    { "name": "publishedAt", "type": "date" },
+    { "name": "summary", "type": "text" }
+  ]
+}
+```
+
+Services (advanced):
+
+```json
+{
+  "name": "Service",
+  "slug": "services",
+  "fields": [
+    { "name": "title", "type": "text", "required": true },
+    { "name": "summary", "type": "text" },
+    { "name": "body", "type": "richtext" },
+    { "name": "icon", "type": "image" },
+    { "name": "features", "type": "richtext" },
+    { "name": "order", "type": "number" }
+  ]
+}
+```
+
 ## Entry status
 
 - draft
