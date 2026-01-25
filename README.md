@@ -12,6 +12,7 @@ Primary docs live in `_docs/`:
 - `_docs/SDK_SPEC.md` - plugin SDK contract
 - `_docs/STORE_SPEC.md` - store + security pipeline
 - `_docs/WIDGETS.md` - core widgets and configuration model
+- `_docs/_WIDGETS/README.md` - widgets index and per-widget docs
 - `_docs/_TASKS/README.md` - tasks index
 - `_docs/_CHANGELOG/README.md` - changelog index
 

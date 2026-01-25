@@ -15,7 +15,8 @@ stosowany rowniez przez widgety z pluginow i addonow.
 
 Wymagane:
 - Hero section
-- Flexible timeline/compare (bez dat; porownanie etapow/procesu)
+- Timeline (bez dat; etapy/proces w formie osi)
+- Compare timeline (porownanie dwoch procesow na jednej osi)
 - Newsletter signup
 - Kontakt (formularz + dane kontaktowe)
 - Menu/Nawigacja
@@ -28,7 +29,7 @@ Wymagane:
 Kazdy widget musi wspierac 3 tryby konfiguracji:
 
 1) Wizard (kreator)
-- Pytania prowadza uzytkownika do wyboru wariantu.
+- Pytania prowadza uzytkownika do wyboru wariantu (auto).
 - Minimalna liczba pol.
 - Na koncu zapis do wspolnego modelu danych widgetu.
 
@@ -44,6 +45,20 @@ Zasady:
 - Kazdy tryb mapuje do tego samego modelu danych.
 - Uzytkownik moze w kazdej chwili przelaczyc sie na Advanced.
 - Przejscie do Advanced nie resetuje danych.
+
+---
+
+## Dokumentacja widgetow
+
+Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
+
+- `_docs/_WIDGETS/HERO.md`
+- `_docs/_WIDGETS/TIMELINE.md`
+- `_docs/_WIDGETS/COMPARE_TIMELINE.md`
+- `_docs/_WIDGETS/NEWSLETTER.md`
+- `_docs/_WIDGETS/CONTACT.md`
+- `_docs/_WIDGETS/NAVIGATION.md`
+- `_docs/_WIDGETS/FOOTER.md`
 
 ---
 
@@ -63,13 +78,3 @@ Kazdy widget powinien zdefiniowac:
 - Minimalna liczba pol w Wizard.
 - Visual pokazuje realny preview (miniatury lub skeletony).
 - Advanced zapewnia kontrole nad spacing i typografia.
-
----
-
-## Przyklad: Hero section (warianty)
-
-- centered: tytul + opis + CTA
-- split: tekst + obraz obok
-- media-left: obraz po lewej, tekst po prawej
-
-Kazdy wariant ma wlasne pola, ale zapisuje do wspolnego modelu.

@@ -49,6 +49,10 @@ Opcjonalne / rekomendowane:
     "scanStatus": "passed",
     "scanAt": "2025-01-01T00:00:00Z"
   },
+  "release": {
+    "type": "normal",
+    "channel": "stable"
+  },
   "signature": {
     "keyId": "store-2025-01"
   }
@@ -159,6 +163,12 @@ Skutki:
 - Semver dla pluginow.
 - Store blokuje publikacje, jesli `coreVersion` nie spelnia polityki.
 - Store wymaga `apiVersion` zgodnego ze `SDK_SPEC.md`.
+- Release type:
+  - `normal` (domyslnie)
+  - `security` (uzywane przez auto-security update)
+- Release channel:
+  - `stable` (domyslnie)
+  - opcjonalnie `beta` / `alpha` w przyszlosci
 
 ---
 

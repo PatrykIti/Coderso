@@ -106,10 +106,16 @@ usuniecie z registry -> usuniecie katalogu -> cleanup assets
 
 ### 4) Polityka update i rollback (v1)
 
-Update (manual):
+Update mode (default: manual):
+- manual: update tylko po akcji admina
+- auto-security: auto update tylko dla patch z flagą security
+- auto-all: auto update dla kazdej zgodnej wersji
+
+Update (manual/auto):
 - download nowej wersji do temp
 - verify podpisu + checksum
 - unpack do nowego katalogu wersji
+- check: apiVersion, coreVersion, revocations
 - smoke-load: import `dist/server.mjs` w try/catch
 - switch aktywnej wersji atomowo w registry
 
@@ -120,6 +126,9 @@ Rollback:
 Retention:
 - domyslnie trzymamy 2 ostatnie wersje (configurable)
 - starsze wersje usuwane po udanym update
+
+Pinning:
+- admin moze "pin" wersje, aby blokowac auto update
 
 ---
 
@@ -364,7 +373,8 @@ Pierwsza wersja core musi zawierac podstawowe widgety, ktore pozwalaja
 zbudowac pelnoprawna, zaawansowana strone (np. typu mabudo.pl):
 
 - hero section
-- elastyczny "timeline/compare" (bez dat; porownanie/etapy w formie osi)
+- timeline (bez dat; etapy/proces w formie osi)
+- compare timeline (porownanie dwoch procesow na jednej osi)
 - newsletter
 - kontakt
 - menu/nawigacja
@@ -476,7 +486,7 @@ Przykladowe zmienne:
 - PLUGIN_VERIFY_STRICT=true
 - PLUGINS_LOAD_STRATEGY=eager
 - PLUGIN_KEEP_VERSIONS=2
-- PLUGIN_UPDATE_MODE=manual
+- PLUGIN_UPDATE_MODE=manual|auto-security|auto-all
 
 ---
 
