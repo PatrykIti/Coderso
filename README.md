@@ -2,12 +2,16 @@
 
 ## Index
 
+Start here. This README is the main index for the repo.
+
 Primary docs live in `_docs/`:
 
+- `AGENTS.md` - agent guidelines
 - `_docs/ARCHITECTURE.md` - core architecture and system rules
 - `_docs/README.md` - docs index
 - `_docs/SDK_SPEC.md` - plugin SDK contract
 - `_docs/STORE_SPEC.md` - store + security pipeline
+- `_docs/WIDGETS.md` - core widgets and configuration model
 - `_docs/_TASKS/README.md` - tasks index
 - `_docs/_CHANGELOG/README.md` - changelog index
 

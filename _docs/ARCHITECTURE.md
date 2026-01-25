@@ -358,6 +358,29 @@ Blok pojawia sie natychmiast w CMS.
 
 ---
 
+## Widgety (core v1)
+
+Pierwsza wersja core musi zawierac podstawowe widgety, ktore pozwalaja
+zbudowac pelnoprawna, zaawansowana strone (np. typu mabudo.pl):
+
+- hero section
+- elastyczny "timeline/compare" (bez dat; porownanie/etapy w formie osi)
+- newsletter
+- kontakt
+- menu/nawigacja
+- stopka
+
+Wymagany model konfiguracji (dla wszystkich widgetow, pluginow i addonow):
+- Wizard: kreator pytan, wybor wariantu i szybka konfiguracja.
+- Visual: wybieranie wariantu na podstawie podgladu blokow,
+  z polami tylko dla danego wariantu.
+- Advanced: pelna konfiguracja, spacing, marginesy, opcje layoutu.
+- Zawsze mozna przejsc do Advanced po wstepnej konfiguracji.
+
+Szczegoly: `WIDGETS.md`.
+
+---
+
 ## Routing pluginow (server)
 
 Wersja v1:
