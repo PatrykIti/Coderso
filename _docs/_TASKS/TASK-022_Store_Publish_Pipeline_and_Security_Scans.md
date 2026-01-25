@@ -43,6 +43,10 @@ store/tests/unit/
   scans.test.ts
 ```
 
+## Commands (if needed)
+
+No new dependencies.
+
 ---
 
 ## Sub-Tasks

@@ -35,6 +35,10 @@ tests/unit/authUi/
   usersUi.test.tsx
 ```
 
+## Commands (if needed)
+
+No new dependencies.
+
 ---
 
 ## Sub-Tasks

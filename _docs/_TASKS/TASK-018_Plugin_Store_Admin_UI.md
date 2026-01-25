@@ -35,6 +35,10 @@ tests/unit/storeUi/
   storeList.test.tsx
 ```
 
+## Commands (if needed)
+
+No new dependencies.
+
 ---
 
 ## Sub-Tasks

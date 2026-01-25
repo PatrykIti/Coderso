@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 24 tasks
+- **To Do:** 23 tasks
 - **In Progress:** 0
-- **Done:** 0 tasks
+- **Done:** 1 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-001 | ORM Foundation and Auth Tables | High | Medium | Drizzle + auth tables |
 | TASK-002 | Pages, Revisions, and Preview | High | Medium | Pages + revisions + preview |
 | TASK-003 | Content Types Engine | High | Large | Dynamic content schemas |
 | TASK-004 | Auth, RBAC, and Admin API Base | High | Large | Sessions + RBAC + REST base |
@@ -75,3 +74,4 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-001 | ORM Foundation and Auth Tables | High | Medium | Drizzle + auth tables |

@@ -4,8 +4,7 @@
 **Priority:** High
 **Category:** Core/DB
 **Estimated Effort:** Medium
-**Dependencies:** None
-**Status:** To Do
+**Status:** ✅ **Done** (2026-01-25)
 
 ---
 

@@ -44,6 +44,10 @@ tests/unit/plugins/
   compat.test.ts
 ```
 
+## Commands (if needed)
+
+No new dependencies.
+
 ---
 
 ## Sub-Tasks

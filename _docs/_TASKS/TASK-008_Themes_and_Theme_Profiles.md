@@ -42,6 +42,10 @@ tests/unit/themes/
   resolver.test.ts
 ```
 
+## Commands (if needed)
+
+No new dependencies.
+
 ---
 
 ## Sub-Tasks

@@ -45,6 +45,10 @@ tests/unit/settings/
   tokenService.test.ts
 ```
 
+## Commands (if needed)
+
+No new dependencies.
+
 ---
 
 ## Sub-Tasks
