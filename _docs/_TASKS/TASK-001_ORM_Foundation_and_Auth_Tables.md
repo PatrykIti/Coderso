@@ -54,11 +54,13 @@ Steps:
 1) Create root `package.json` with `private: true`.
 2) Add `workspaces` for `core`, `store`, and `packages/*`.
 3) Add root scripts to route `dev`, `lint`, and `test` into workspace apps.
-4) Add root `.gitignore` with runtime and build outputs.
+4) Add `concurrently` as a root dev dependency for aggregated `dev`.
+5) Add root `.gitignore` with runtime and build outputs.
 
 Notes:
 - `core/package.json` must define `dev`, `lint`, `test`.
 - `store/package.json` must define `dev`, `lint`, `test`.
+- Install `concurrently` in root before using `bun dev`.
 
 Example root `package.json`:
 
@@ -68,12 +70,22 @@ Example root `package.json`:
   "private": true,
   "workspaces": ["core", "store", "packages/*"],
   "scripts": {
+    "dev": "concurrently -n core,store -c blue,magenta \"bun --cwd core dev\" \"bun --cwd store dev\"",
     "dev:core": "bun --cwd core dev",
     "dev:store": "bun --cwd store dev",
     "lint": "bun --cwd core lint && bun --cwd store lint",
     "test": "bun --cwd core test && bun --cwd store test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
   }
 }
+```
+
+Commands (root):
+
+```bash
+bun add -d concurrently
 ```
 
 Example `.gitignore` (minimal):
@@ -94,7 +106,7 @@ coverage/
 
 | File | What to Add |
 | --- | --- |
-| `package.json` | workspaces for core/store/packages + root scripts |
+| `package.json` | workspaces for core/store/packages + root scripts + concurrently |
 | `.gitignore` | ignore build outputs and runtime plugin storage |
 
 ### TASK-001-01_Initialize_Drizzle_client_and_config
