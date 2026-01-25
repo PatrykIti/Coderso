@@ -28,6 +28,7 @@ Project Change Log.
 | 001 | 2026-01-25 | ORM foundation and auth tables | Core/DB |
 | 002 | 2026-01-25 | Pages, revisions, and preview | CMS/Pages |
 | 003 | 2026-01-25 | Content types engine | CMS/Content |
+| 004 | 2026-01-25 | Auth, RBAC, and admin API base | Core/Auth |
 
 
 ---
