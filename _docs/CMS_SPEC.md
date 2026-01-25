@@ -54,7 +54,7 @@ Zasady:
 - publikacja kopiuje dane z draft do published.
 - publikacja tworzy revision.
 - rollback do revision przywraca dane.
-- v2: rozważyć pruning starych rewizji i/lub kompresje JSONB.
+- v2: rozwazyc pruning starych rewizji i/lub kompresje JSONB.
 
 ---
 
@@ -111,3 +111,12 @@ Widoki:
 - Plugins store
 
 UI ma byc spojne z modelem Wizard/Visual/Advanced dla widgetow.
+
+---
+
+## API strategy
+
+- REST admin API (`/admin/api`).
+- Internal service layer w core (moduly serwisowe, bez publicznego endpointu).
+- Admin UI komunikuje sie po HTTPS w ramach tej samej domeny
+  (session cookie + CSRF).

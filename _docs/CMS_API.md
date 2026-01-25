@@ -16,6 +16,11 @@ Opis podstawowego API admina. Wszystkie endpointy sa po stronie core.
   - `4xx` dla bledow walidacji i auth
   - `5xx` dla bledow serwera
 
+Access:
+- Login endpoint jest publiczny.
+- Pozostale endpointy wymagaja auth (session cookie).
+- Admin UI komunikuje sie po HTTPS w tej samej domenie.
+
 Przyklad error:
 
 ```json

@@ -13,6 +13,7 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - X-Content-Type-Options
   - X-Frame-Options
   - Referrer-Policy
+- HTTPS w produkcji (HSTS zalecany).
 
 ## Input validation
 
