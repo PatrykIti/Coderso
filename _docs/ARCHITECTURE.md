@@ -528,8 +528,45 @@ Po deployu:
 
 ---
 
-## Znane ryzyka
+## Znane ryzyka i mitygacje
 
-- Plugin w tym samym procesie co core (brak izolacji).
-- Bledy w pluginie moga psuc requesty (potrzebne defensive coding).
-- Koniecznosc stabilnego SDK i wersjonowania API.
+### 1. React Dependency Hell (Singleton Problem)
+Ryzyko:
+- Plugin laduje wlasna kopie `react` lub `react-dom` w `node_modules`.
+- Powoduje to blad "Invalid Hook Call Warning" lub bledy kontekstu (Context API).
+- Core i plugin musza wspoldzielic DOKLADNIE te sama instancje Reacta.
+
+Mitygacja:
+- Rygorystyczne `externals` w konfiguracji bundlera pluginu (zdefiniowane w `SDK_SPEC.md`).
+- Linting w Store: odrzucenie paczki, jesli zawiera `react` w bundle.
+- Runtime check: core sprawdza, czy plugin nie nadpisuje globalnych symboli Reacta.
+
+### 2. Stabilnosc procesu (Shared Process)
+Ryzyko:
+- Plugin dziala w tym samym watku/procesie co Core (brak izolacji V8/WASM).
+- `while(true)` lub wyciek pamieci w pluginie "zabija" caly serwer.
+- Nieobsluzony wyjatek w `render()` pluginu moze polozyc caly SSR.
+
+Mitygacja:
+- **Safe Mode**: Uruchomienie serwera z flaga `--safe` wylacza ladowanie pluginow, umozliwiajac wejscie do panelu i wylaczenie wadliwego pluginu.
+- **Error Boundaries**: Core owija widgety i strony pluginow w React Error Boundary, aby blad renderowania nie sypal calym UI.
+- **Timeouts**: Limity czasu na wykonanie hookow server-side (jesli mozliwe w Bun/Node bez workerow).
+
+### 3. Ograniczenia stylowania (Tailwind JIT)
+Ryzyko:
+- Plugin uzywa klasy `bg-[#123abc]`, ktora nie istnieje w CSS Core.
+- Tailwind JIT dziala tylko w czasie budowania Core.
+
+Mitygacja:
+- Plugin musi dostarczyc wlasny CSS (`dist/style.css`) dla niestandardowych stylow.
+- Plugin powinien uzywac systemu stylow/zmiennych Core (Design Tokens) zamiast hardcodowanych wartosci.
+- Safelisting: Autor pluginu musi zadbac o wygenerowanie uzywanych klas w swoim CSS buildzie.
+
+### 4. Bezpieczenstwo danych
+Ryzyko:
+- Plugin ma dostep do `globalThis` i moze teoretycznie czytac pamiec procesu (env vars, keys).
+
+Mitygacja:
+- Model "Trust by Curation" (Store).
+- Audyt kodu (manual/automated) przed publikacja.
+- Brak sandboxu to swiadomy trade-off dla wydajnosci i DX w v1.

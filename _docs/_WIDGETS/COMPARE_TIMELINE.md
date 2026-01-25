@@ -11,15 +11,17 @@ Przyklad: tradycyjna budowa vs budowa z firma.
 
 ## Variants (v1)
 
-- dual-track (dwie linie, wspolna os)
-- dual-track-highlight (z wyroznionymi segmentami)
+- dual-track (dwie linie, wspolna os i etykiety etapow)
+- dual-track-highlight (z wyroznionymi segmentami na wybranym torze)
 
 ## Wizard flow (v1)
 
 - Pytanie 1: Nazwy torow (np. "Tradycyjna budowa" / "Z nami")
 - Pytanie 2: Etapy osi (3-6)
-- Pytanie 3: Czy wyroznic segmenty? (tak/nie)
-- Pytanie 4: Ktory tor jest priorytetem (kolor akcentu)
+- Pytanie 3: Markery na torze A (wybor etapow)
+- Pytanie 4: Markery na torze B (wybor etapow)
+- Pytanie 5: Czy wyroznic segmenty? (tak/nie)
+- Pytanie 6: Ktory tor jest priorytetem (kolor akcentu)
 
 ## Visual mode
 
@@ -31,7 +33,8 @@ Przyklad: tradycyjna budowa vs budowa z firma.
 - axis: lista etapow (etykieta, opis opcjonalny)
 - tracks: nazwy, markery, segmenty
 - highlight: kolor, styl labeli
-- layout: spacing miedzy torami
+- guides: enabled, style
+- layout: spacing miedzy torami, labelPosition
 
 ## Data model (summary)
 
@@ -54,6 +57,7 @@ Przyklad: tradycyjna budowa vs budowa z firma.
       "segments": [{ "from": 1, "to": 2, "label": "string" }]
     }
   ],
+  "guides": { "enabled": true, "style": "dashed" },
   "style": {
     "highlightColor": "amber"
   }

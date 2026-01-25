@@ -10,15 +10,17 @@ Elastyczna os procesu bez dat. Uzywana do pokazania etapow lub krokow.
 
 ## Variants (v1)
 
-- horizontal (domyslny)
-- vertical
-- compact (zredukowane opisy, tylko tytuly)
+- milestones (domyslny; linia + markery + etykiety nad osia)
+- cards (kroki jako karty przy osi)
+- compact (kropki + krotkie etykiety)
 
 ## Wizard flow (v1)
 
 - Pytanie 1: Ile etapow? (3-8)
-- Pytanie 2: Uklad (horizontal / vertical)
-- Pytanie 3: Styl (klasyczny / kompakt)
+- Pytanie 2: Wariant (milestones / cards / compact)
+- Pytanie 3: Uklad (horizontal / vertical)
+- Pytanie 4: Etykiety (nad / pod osia)
+- Pytanie 5: Linie pomocnicze (tak/nie)
 
 Wizard generuje liste etapow z placeholderami.
 
@@ -30,7 +32,8 @@ Wizard generuje liste etapow z placeholderami.
 ## Advanced options (v1)
 
 - steps: title, description, icon, accent
-- layout: orientation, align, spacing
+- layout: orientation, align, spacing, labelPosition
+- guides: enabled, style
 - line: style, thickness, markerSize
 - background: color
 
@@ -38,11 +41,12 @@ Wizard generuje liste etapow z placeholderami.
 
 ```json
 {
-  "variant": "horizontal",
+  "variant": "milestones",
   "steps": [
     { "title": "string", "description": "string", "icon": "string" }
   ],
-  "layout": { "orientation": "horizontal", "align": "center" },
+  "layout": { "orientation": "horizontal", "align": "center", "labelPosition": "top" },
+  "guides": { "enabled": true, "style": "dashed" },
   "style": { "lineStyle": "solid", "markerSize": "md" }
 }
 ```

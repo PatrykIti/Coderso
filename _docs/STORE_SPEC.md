@@ -107,6 +107,7 @@ Opcjonalnie:
 
 Minimalny zestaw:
 - SAST (np. reguly Semgrep na ESM bundlach).
+- **Bundle Analysis**: Wykrywanie zduplikowanych bibliotek core (React, ReactDOM) wewnatrz bundle pluginu.
 - CVE dla zaleznosci (na podstawie SBOM).
 - Secrets scanning (klucze, tokeny, hasla).
 - License scanning (whitelist licencji).
