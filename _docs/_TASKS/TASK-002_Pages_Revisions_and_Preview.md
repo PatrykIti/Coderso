@@ -115,6 +115,27 @@ async function publishPage(pageId: string, userId: string) {
 | `core/services/pages/pageService.ts` | CRUD for pages |
 | `core/services/pages/revisionService.ts` | create/list/restore revisions |
 
+Page service sketch:
+
+```ts
+export async function createPage(input) {
+  return db.insert(pages).values({
+    title: input.title,
+    slug: input.slug,
+    status: "draft",
+    currentData: input.data,
+  }).returning();
+}
+```
+
+Revision service sketch:
+
+```ts
+export async function listRevisions(pageId: string) {
+  return db.select().from(pageRevisions).where(eq(pageRevisions.pageId, pageId));
+}
+```
+
 ---
 
 ### TASK-002-03_Preview_token_flow
@@ -147,6 +168,17 @@ await db.insert(previewTokens).values({
 | `core/services/pages/previewService.ts` | create/validate/expire tokens |
 | `core/db/schema.ts` | preview_tokens table |
 
+Preview service sketch:
+
+```ts
+export async function validateToken(token: string) {
+  const hashValue = hash(token);
+  const row = await db.select().from(previewTokens).where(eq(previewTokens.tokenHash, hashValue));
+  if (!row[0] || row[0].expiresAt < new Date()) return null;
+  return row[0];
+}
+```
+
 ---
 
 ### TASK-002-04_Pages_admin_API_endpoints
@@ -176,6 +208,30 @@ Validation:
 | `core/server/routes/pageRoutes.ts` | route handlers |
 | `core/server/validation/pageSchemas.ts` | JSON schema validation |
 
+Route sketch:
+
+```ts
+router.post("/pages/:id/publish", requirePermission("content:publish"), async (req) => {
+  await publishPage(req.params.id, req.user.id);
+  return json({ ok: true });
+});
+```
+
+Schema sketch:
+
+```ts
+export const pageCreateSchema = {
+  type: "object",
+  required: ["title", "slug", "data"],
+  properties: {
+    title: { type: "string" },
+    slug: { type: "string" },
+    data: { type: "object" },
+  },
+  additionalProperties: false,
+};
+```
+
 ---
 
 ## Testing Requirements
@@ -185,6 +241,16 @@ Validation:
 - [ ] `tests/unit/pages/previewService.test.ts` validates token TTL.
 - [ ] `tests/unit/pages/previewService.test.ts` rejects expired token.
 - [ ] `tests/integration/routes/pages.test.ts` covers admin endpoints.
+
+Test sketch (previewService.test.ts):
+
+```ts
+it("rejects expired token", async () => {
+  const token = await createExpiredToken();
+  const res = await validateToken(token);
+  expect(res).toBeNull();
+});
+```
 
 ---
 

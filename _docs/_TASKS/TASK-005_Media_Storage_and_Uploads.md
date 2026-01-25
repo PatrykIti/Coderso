@@ -61,6 +61,11 @@ export interface MediaStorageAdapter {
 }
 ```
 
+Adapter rules:
+- `put` returns storage key and public URL.
+- `getPublicUrl` is deterministic and does not perform I/O.
+- `key` must be safe for URLs (no spaces).
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -81,6 +86,15 @@ await writeFile(join(MEDIA_DIR, key), fileBuffer);
 return { key, url: `/media/${key}` };
 ```
 
+Local adapter sketch:
+
+```ts
+export async function put(file: File) {
+  const key = buildKey(file.name);
+  await writeFile(join(MEDIA_DIR, key), await file.arrayBuffer());
+  return { key, url: `${BASE_URL}/media/${key}` };
+}
+```
 Config:
 - `MEDIA_DIR` (default `/data/media`)
 - `MEDIA_BASE_URL` (optional CDN)
@@ -91,6 +105,21 @@ Config:
 | --- | --- |
 | `core/services/media/storage/local.ts` | local adapter |
 | `core/services/media/mediaService.ts` | store metadata |
+
+Media service sketch:
+
+```ts
+export async function upload(file: File) {
+  const stored = await adapter.put(file);
+  const [row] = await db.insert(media).values({
+    key: stored.key,
+    url: stored.url,
+    title: file.name,
+    mime: file.type,
+  }).returning();
+  return row;
+}
+```
 
 ---
 
@@ -112,6 +141,11 @@ await s3.putObject({ Bucket: bucket, Key: key, Body: fileBuffer, ContentType: mi
 return { key, url: `https://${cdnHost}/${key}` };
 ```
 
+S3 adapter sketch:
+
+```ts
+await s3.putObject({ Bucket: bucket, Key: key, Body: buffer, ContentType: mime });
+```
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -138,6 +172,11 @@ await blobClient.uploadData(fileBuffer, { blobHTTPHeaders: { blobContentType: mi
 return { key, url: `${cdnHost}/${key}` };
 ```
 
+Azure adapter sketch:
+
+```ts
+await blobClient.uploadData(buffer, { blobHTTPHeaders: { blobContentType: mime } });
+```
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -158,6 +197,16 @@ Validation:
 - MIME whitelist
 - Optional AV scan (plugin hook)
 
+Route sketch:
+
+```ts
+router.post("/media", requirePermission("media:write"), async (req) => {
+  const file = await parseMultipart(req);
+  const saved = await mediaService.upload(file);
+  return json(saved);
+});
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -173,6 +222,15 @@ Validation:
 - [ ] `tests/unit/media/mediaService.test.ts` creates DB record.
 - [ ] `tests/integration/routes/media.test.ts` validates upload endpoint.
 - [ ] `tests/integration/routes/media.test.ts` rejects disallowed MIME.
+
+Test sketch (mediaService.test.ts):
+
+```ts
+it("stores media metadata", async () => {
+  const item = await upload(fakeFile("photo.jpg", "image/jpeg"));
+  expect(item.url).toContain("/media/");
+});
+```
 
 ---
 

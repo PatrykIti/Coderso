@@ -77,12 +77,31 @@ await createSession(userId, tokenHash(token), ttl);
 setCookie("session", token, { httpOnly: true, secure: true, sameSite: "strict" });
 ```
 
+Session fields:
+- `ip` and `user_agent` recorded on login.
+- `revoked_at` set on logout.
+- Update `users.last_login_at` on successful login.
+
 **Implementation Checklist:**
 
 | File | What to Add |
 | --- | --- |
 | `core/services/auth/password.ts` | hash + verify helpers |
 | `core/services/auth/sessionService.ts` | create/revoke/find sessions |
+
+Session service sketch:
+
+```ts
+export async function createSession(input) {
+  return db.insert(sessions).values({
+    userId: input.userId,
+    tokenHash: input.tokenHash,
+    ip: input.ip,
+    userAgent: input.userAgent,
+    expiresAt: input.expiresAt,
+  }).returning();
+}
+```
 
 ---
 
@@ -116,6 +135,15 @@ export async function requireAuth(req, res, next) {
 | `core/server/middleware/auth.ts` | requireAuth + optionalAuth |
 | `core/services/auth/userService.ts` | getUser helpers |
 
+User service sketch:
+
+```ts
+export async function getUser(id: string) {
+  const [user] = await db.select().from(users).where(eq(users.id, id));
+  return user ?? null;
+}
+```
+
 ---
 
 ### TASK-004-03_RBAC_middleware
@@ -146,6 +174,15 @@ export function requirePermission(permission: string) {
 | --- | --- |
 | `core/server/middleware/rbac.ts` | requirePermission |
 | `core/services/auth/roleService.ts` | role lookup + permission merge |
+
+Role service sketch:
+
+```ts
+export async function getUserPermissions(userId: string) {
+  const roles = await db.select().from(userRoles).where(eq(userRoles.userId, userId));
+  return mergePermissions(roles);
+}
+```
 
 ---
 
@@ -178,6 +215,15 @@ Endpoints:
 | `core/server/errorHandler.ts` | standard error format |
 | `core/server/validation/authSchemas.ts` | login payload schema |
 
+Auth routes sketch:
+
+```ts
+router.post("/auth/login", async (req) => {
+  const user = await login(req.body.email, req.body.password, req.ip, req.ua);
+  return json({ user });
+});
+```
+
 ---
 
 ## Testing Requirements
@@ -187,6 +233,17 @@ Endpoints:
 - [ ] `tests/unit/auth/rbac.test.ts` verifies permission checks.
 - [ ] `tests/integration/routes/auth.test.ts` covers login/logout/me.
 - [ ] `tests/integration/routes/auth.test.ts` rejects invalid credentials.
+
+Test sketch (sessionService.test.ts):
+
+```ts
+it("revokes session", async () => {
+  const session = await createSession({ userId, tokenHash, expiresAt });
+  await revokeSession(session.id);
+  const loaded = await getSessionById(session.id);
+  expect(loaded.revokedAt).not.toBeNull();
+});
+```
 
 ---
 

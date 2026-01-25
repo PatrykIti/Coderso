@@ -67,6 +67,10 @@ const sql = postgres(process.env.DATABASE_URL!, { max: 10 });
 export const db = drizzle(sql, { schema });
 ```
 
+Client options:
+- `max` pool size based on env (e.g. `DB_POOL_MAX`).
+- `idle_timeout` for serverless not required (VM only).
+
 Example `core/db/drizzle.config.ts`:
 
 ```ts
@@ -94,6 +98,7 @@ bunx drizzle-kit migrate --config core/db/drizzle.config.ts
 | `core/db/client.ts` | Drizzle client with postgres.js |
 | `core/db/drizzle.config.ts` | Migration config |
 | `.env.example` | `DATABASE_URL` placeholder |
+| `.env.example` | `DB_POOL_MAX` |
 
 ---
 
@@ -118,9 +123,11 @@ export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  name: text("name"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastLoginAt: timestamp("last_login_at"),
 });
 
 export const roles = pgTable("roles", {
@@ -141,9 +148,25 @@ export const sessions = pgTable("sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().references(() => users.id),
   tokenHash: text("token_hash").notNull(),
+  ip: text("ip"),
+  userAgent: text("user_agent"),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  revokedAt: timestamp("revoked_at"),
 });
+```
+
+Indexes sketch:
+
+```ts
+export const sessions = pgTable(
+  "sessions",
+  { /* columns */ },
+  (t) => ({
+    tokenHashIdx: uniqueIndex("sessions_token_hash_idx").on(t.tokenHash),
+    expiresAtIdx: index("sessions_expires_at_idx").on(t.expiresAt),
+  })
+);
 ```
 
 **Implementation Checklist:**
@@ -186,6 +209,11 @@ export async function seedAdmin() {
 }
 ```
 
+Seed flow:
+1) Skip if `ADMIN_EMAIL` is empty.
+2) If user exists, do not create duplicates.
+3) Ensure admin role exists, then attach user to it.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -202,6 +230,16 @@ export async function seedAdmin() {
 - [ ] `tests/unit/db/seed.test.ts` verifies seed inserts role + user.
 - [ ] `tests/integration/db/migrations.test.ts` verifies migrations apply.
 - [ ] `tests/integration/db/sessionIndexes.test.ts` ensures token hash index exists.
+
+Test sketch (schema.test.ts):
+
+```ts
+import { users } from "@/core/db/schema";
+
+it("users table has email column", () => {
+  expect(users.email.name).toBe("email");
+});
+```
 
 ---
 

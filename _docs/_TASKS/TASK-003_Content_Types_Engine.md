@@ -92,6 +92,17 @@ export const contentEntries = pgTable("content_entries", {
 | `core/db/schema.ts` | content_types, content_entries, content_revisions |
 | `core/db/migrations/*` | migration files |
 
+Schema sketch (revisions):
+
+```ts
+export const contentRevisions = pgTable("content_revisions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  entryId: uuid("entry_id").notNull().references(() => contentEntries.id),
+  data: jsonb("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+```
+
 ---
 
 ### TASK-003-02_Entry_validation
@@ -121,6 +132,17 @@ if (!validate(entry.data)) {
 | --- | --- |
 | `core/services/content/validation.ts` | schema validator wrapper |
 | `core/server/validation/contentSchemas.ts` | request payload schemas |
+
+Validator sketch:
+
+```ts
+const validatorCache = new Map<string, ValidateFunction>();
+
+export function getValidator(typeId: string, schema: any) {
+  if (!validatorCache.has(typeId)) validatorCache.set(typeId, ajv.compile(schema));
+  return validatorCache.get(typeId)!;
+}
+```
 
 ---
 
@@ -155,6 +177,19 @@ async function publishEntry(entryId: string, userId: string) {
 | `core/services/content/entryService.ts` | CRUD + publish + revisions |
 | `core/services/content/typeService.ts` | CRUD for content types |
 
+Entry service sketch:
+
+```ts
+export async function createEntry(typeId: string, input) {
+  return db.insert(contentEntries).values({
+    typeId,
+    title: input.title,
+    slug: input.slug,
+    data: input.data,
+  }).returning();
+}
+```
+
 ---
 
 ### TASK-003-04_Content_types_admin_API_endpoints
@@ -186,6 +221,15 @@ Validation:
 | `core/server/routes/contentTypeRoutes.ts` | content type endpoints |
 | `core/server/routes/contentEntryRoutes.ts` | entry endpoints |
 
+Route sketch:
+
+```ts
+router.post("/content-types", requirePermission("content:write"), async (req) => {
+  const created = await createContentType(req.body);
+  return json(created);
+});
+```
+
 ---
 
 ## Testing Requirements
@@ -194,6 +238,14 @@ Validation:
 - [ ] `tests/unit/content/typeService.test.ts` creates/updates schemas.
 - [ ] `tests/unit/content/entryService.test.ts` publishes and revisions.
 - [ ] `tests/integration/routes/contentTypes.test.ts` validates API.
+
+Test sketch (validation.test.ts):
+
+```ts
+it("rejects entry with missing required field", async () => {
+  await expect(createEntry(typeId, { data: {} })).rejects.toThrow();
+});
+```
 
 ---
 
