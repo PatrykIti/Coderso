@@ -106,6 +106,7 @@ Note (v2+):
 
 `media`
 - id (uuid, pk)
+- key (storage key)
 - url
 - type (image|file)
 - mime_type
@@ -141,7 +142,7 @@ Note (v2+):
 - id (uuid, pk)
 - name (unique)
 - version
-- active (bool)
+- is_active (bool)
 - created_at
 
 `theme_profiles`
@@ -185,6 +186,7 @@ Note (v2+):
 - name
 - version
 - api_version
+- core_version
 - enabled
 - status
 - permissions (json)

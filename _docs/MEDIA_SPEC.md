@@ -5,6 +5,7 @@
 - Storage lokalny w core (filesystem) - v1.
 - Publiczne serwowanie plikow przez core.
 - V1 wspiera adaptery: local, S3, Azure.
+- `media.key` przechowuje storage key do usuwania i przenoszenia plikow.
 
 ## Local storage
 

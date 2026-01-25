@@ -98,8 +98,10 @@ Schema sketch (revisions):
 export const contentRevisions = pgTable("content_revisions", {
   id: uuid("id").defaultRandom().primaryKey(),
   entryId: uuid("entry_id").notNull().references(() => contentEntries.id),
+  version: integer("version").notNull(),
   data: jsonb("data").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
 });
 ```
 
@@ -170,6 +172,10 @@ async function publishEntry(entryId: string, userId: string) {
 }
 ```
 
+Revision versioning:
+- Use `max(version) + 1` per entry.
+- Store `created_by` as the actor.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -187,6 +193,21 @@ export async function createEntry(typeId: string, input) {
     slug: input.slug,
     data: input.data,
   }).returning();
+}
+```
+
+Create revision sketch:
+
+```ts
+export async function createEntryRevision(entryId: string, data: any, userId: string) {
+  const [{ max }] = await db.select({ max: max(contentRevisions.version) })
+    .from(contentRevisions).where(eq(contentRevisions.entryId, entryId));
+  return db.insert(contentRevisions).values({
+    entryId,
+    version: (max ?? 0) + 1,
+    data,
+    createdBy: userId,
+  });
 }
 ```
 
@@ -214,6 +235,26 @@ Validation:
 - Validate entry data on create/update/publish.
 - Ensure slug uniqueness per content type.
 
+Preview:
+- `POST /content/:type/entries/:id/preview` uses preview token flow from
+  `core/services/pages/previewService.ts` (shared).
+
+---
+
+### TASK-003-05_Entry_preview_tokens
+
+**Status:** To Do
+
+Use the shared preview token service (from TASK-002) for content entries.
+
+Preview sketch:
+
+```ts
+export async function createEntryPreview(entryId: string) {
+  return createPreviewToken({ targetType: "content", targetId: entryId });
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -238,6 +279,7 @@ router.post("/content-types", requirePermission("content:write"), async (req) =>
 - [ ] `tests/unit/content/typeService.test.ts` creates/updates schemas.
 - [ ] `tests/unit/content/entryService.test.ts` publishes and revisions.
 - [ ] `tests/integration/routes/contentTypes.test.ts` validates API.
+- [ ] `tests/unit/content/entryService.test.ts` creates preview tokens for entries.
 
 Test sketch (validation.test.ts):
 

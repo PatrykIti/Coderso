@@ -74,6 +74,19 @@ export const pages = pgTable("pages", {
 });
 ```
 
+Page revisions schema:
+
+```ts
+export const pageRevisions = pgTable("page_revisions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  pageId: uuid("page_id").notNull().references(() => pages.id),
+  version: integer("version").notNull(),
+  data: jsonb("data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
+});
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -108,6 +121,10 @@ async function publishPage(pageId: string, userId: string) {
 }
 ```
 
+Revision versioning:
+- Use `max(version) + 1` per page.
+- Store `created_by` as the actor.
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -133,6 +150,22 @@ Revision service sketch:
 ```ts
 export async function listRevisions(pageId: string) {
   return db.select().from(pageRevisions).where(eq(pageRevisions.pageId, pageId));
+}
+```
+
+Create revision sketch:
+
+```ts
+export async function createRevision(pageId: string, data: any, userId: string) {
+  const [{ max }] = await db.select({ max: max(pageRevisions.version) })
+    .from(pageRevisions).where(eq(pageRevisions.pageId, pageId));
+  const nextVersion = (max ?? 0) + 1;
+  return db.insert(pageRevisions).values({
+    pageId,
+    version: nextVersion,
+    data,
+    createdBy: userId,
+  });
 }
 ```
 

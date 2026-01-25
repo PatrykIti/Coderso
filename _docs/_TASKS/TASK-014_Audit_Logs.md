@@ -68,7 +68,7 @@ async function logAudit(event: {
 Rules:
 - Do not log secrets or tokens in metadata.
 - Use consistent `action` naming (`domain.action`).
-- Store `ip` and `userAgent` when available.
+- Store `ip` and `userAgent` inside `metadata` when available.
 
 **Implementation Checklist:**
 

@@ -36,7 +36,7 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 - Nigdy nie logujemy tokenow/hasel.
 - ENV tylko po stronie serwera.
 
-## Audit logs (v1.1)
+## Audit logs (v1.0)
 
 - Logowanie zdarzen admin: login, publish, plugin install.
 

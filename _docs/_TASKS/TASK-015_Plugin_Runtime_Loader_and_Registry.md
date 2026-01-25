@@ -73,6 +73,33 @@ async function setPluginEnabled(name: string, enabled: boolean) {
 | `core/plugins/registry.ts` | registry CRUD |
 | `core/db/schema.ts` | plugins + plugin_settings tables |
 
+Plugin schema sketch:
+
+```ts
+export const plugins = pgTable("plugins", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: text("name").notNull().unique(),
+  version: text("version").notNull(),
+  apiVersion: text("api_version").notNull(),
+  coreVersion: text("core_version").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  status: text("status").notNull().default("installed"),
+  permissions: jsonb("permissions").notNull(),
+  entry: jsonb("entry").notNull(),
+  integrity: jsonb("integrity").notNull(),
+  signature: text("signature"),
+  installedAt: timestamp("installed_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  lastError: text("last_error"),
+});
+
+export const pluginSettings = pgTable("plugin_settings", {
+  pluginName: text("plugin_name").notNull(),
+  key: text("key").notNull(),
+  value: jsonb("value").notNull(),
+});
+```
+
 Registry sketch:
 
 ```ts

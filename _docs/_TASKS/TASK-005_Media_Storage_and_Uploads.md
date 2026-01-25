@@ -46,6 +46,45 @@ tests/unit/media/
 
 ## Sub-Tasks
 
+### TASK-005-00_Media_table_schema
+
+**Status:** To Do
+
+Define `media` table aligned with `DATA_MODEL.md`.
+
+Schema sketch:
+
+```ts
+export const media = pgTable("media", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull(),
+  url: text("url").notNull(),
+  type: text("type").notNull(),
+  mimeType: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  alt: text("alt"),
+  title: text("title"),
+  caption: text("caption"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
+});
+```
+
+Notes:
+- `key` stores adapter storage key for delete/lookup.
+- If we decide to avoid `key`, update `DATA_MODEL.md` accordingly.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/db/schema.ts` | media table |
+| `core/db/migrations/*` | migration files |
+
+---
+
 ### TASK-005-01_Storage_adapter_interface
 
 **Status:** To Do
@@ -115,7 +154,9 @@ export async function upload(file: File) {
     key: stored.key,
     url: stored.url,
     title: file.name,
-    mime: file.type,
+    mimeType: file.type,
+    type: file.type.startsWith("image/") ? "image" : "file",
+    size: file.size,
   }).returning();
   return row;
 }
