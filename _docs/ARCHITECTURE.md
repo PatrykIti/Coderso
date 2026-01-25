@@ -104,6 +104,38 @@ usuniecie z registry -> usuniecie katalogu -> cleanup assets
 
 ---
 
+### 4) Polityka update i rollback (v1)
+
+Update (manual):
+- download nowej wersji do temp
+- verify podpisu + checksum
+- unpack do nowego katalogu wersji
+- smoke-load: import `dist/server.mjs` w try/catch
+- switch aktywnej wersji atomowo w registry
+
+Rollback:
+- automatyczny rollback do poprzedniej wersji, jesli smoke-load fail
+- manualny rollback z panelu admina
+
+Retention:
+- domyslnie trzymamy 2 ostatnie wersje (configurable)
+- starsze wersje usuwane po udanym update
+
+---
+
+### 5) Strategia ladowania pluginow (v1)
+
+Server:
+- domyslnie eager load wszystkich aktywnych pluginow przy starcie
+- opcjonalny lazy load przez `PLUGINS_LOAD_STRATEGY=lazy`
+  (ladowanie przy pierwszym uzyciu hooka/route)
+
+Client:
+- lazy load UI pluginu przy wejscu na jego strone admina
+- CSS pluginu dolaczany tylko gdy UI pluginu jest aktywne
+
+---
+
 ## Struktura repozytorium (docelowa)
 
 /core
@@ -166,7 +198,11 @@ Wymagania build:
 - Dozwolone externale (v1):
   - react
   - react-dom
-  - @core/sdk
+  - react/jsx-runtime
+  - react/jsx-dev-runtime
+  - @core/sdk/server
+  - @core/sdk/client
+  - @core/sdk/shared
 - Brak `node_modules` w paczce.
 
 ---
@@ -205,6 +241,15 @@ Weryfikacja:
 
 ---
 
+## Wersjonowanie SDK i kompatybilnosc
+
+- `apiVersion` w manifest mapuje sie na major `@core/sdk`.
+- `coreVersion` definiuje zakres kompatybilnych wersji core.
+- Core odrzuca pluginy z niekompatybilnym `apiVersion` lub `coreVersion`.
+- Szczegoly: `SDK_SPEC.md`.
+
+---
+
 ## Store i pipeline publikacji
 
 Pipeline po stronie store:
@@ -216,12 +261,14 @@ Minimalne API store:
 - GET /plugins (lista)
 - GET /plugins/:name (detale)
 - GET /plugins/:name/versions/:version/metadata
+- GET /plugins/:name/versions/:version/metadata.sig
 - GET /plugins/:name/versions/:version/download
 - GET /revocations.json
 
 Weryfikacja podpisu:
 - core posiada publiczny klucz store.
-- signature dostarczana jako plik lub header (standard do ustalenia).
+- signature dostarczana jako `metadata.sig` (ed25519, base64).
+- szczegoly podpisu: `STORE_SPEC.md`.
 
 ---
 
@@ -404,6 +451,9 @@ Przykladowe zmienne:
 - PLUGIN_MAX_SIZE_MB=50
 - PLUGIN_DOWNLOAD_TIMEOUT_MS=30000
 - PLUGIN_VERIFY_STRICT=true
+- PLUGINS_LOAD_STRATEGY=eager
+- PLUGIN_KEEP_VERSIONS=2
+- PLUGIN_UPDATE_MODE=manual
 
 ---
 
@@ -411,6 +461,7 @@ Przykladowe zmienne:
 
 Wymagane:
 - logi instalacji (download, verify, unpack, load).
+- logi update/rollback (version switch, failure reason).
 - logi bledow pluginow z wersja i nazwa.
 - metryki: czas instalacji, czas load, liczba failed.
 
@@ -418,9 +469,10 @@ Wymagane:
 
 ## Performance
 
-- Load pluginow przy starcie lub lazy (on-demand).
+- Server: eager load aktywnych pluginow (default), lazy opcjonalnie.
+- Client: lazy load UI pluginu na zadanie.
 - CSS pluginow ladowany tylko w adminie.
-- Cache assets pluginow z długim TTL.
+- Cache assets pluginow z dlugim TTL.
 - Importy per wersja (ESM cache).
 
 ---
@@ -447,12 +499,3 @@ Po deployu:
 - Plugin w tym samym procesie co core (brak izolacji).
 - Bledy w pluginie moga psuc requesty (potrzebne defensive coding).
 - Koniecznosc stabilnego SDK i wersjonowania API.
-
----
-
-## Decyzje do potwierdzenia (taski arch)
-
-- Standard podpisu (np. ed25519) i sposob dostarczania signature.
-- Dokladna lista externali do bundlowania pluginow.
-- Polityka update (auto/manual, rollback).
-- Strategia load (eager vs lazy).

@@ -24,6 +24,9 @@ integracji z core.
 - `plugin.json` musi deklarowac `apiVersion`.
 - Core odrzuca pluginy z niekompatybilnym `apiVersion`.
 - Zmiany breaking -> nowa wartosc `apiVersion`.
+- `@core/sdk` jest wersjonowane semverem razem z core.
+- Major `@core/sdk` mapuje sie na `apiVersion`.
+- Minor/patch musza byc wstecznie kompatybilne.
 
 ---
 
@@ -35,6 +38,39 @@ ESM only:
 - `@core/sdk/shared` (typy wspolne)
 
 SDK dostarczane przez core jako dependency runtime (externals).
+
+---
+
+## External dependencies (must be external)
+
+Plugin bundle nie moze zawierac ponizszych paczek (external):
+- react
+- react-dom
+- react/jsx-runtime
+- react/jsx-dev-runtime
+- @core/sdk/server
+- @core/sdk/client
+- @core/sdk/shared
+
+Zasady:
+- plugin deklaruje je jako `peerDependencies`.
+- core dostarcza runtime implementacje.
+- w `peerDependencies` uzywamy pakietu `@core/sdk` (subpath exports).
+
+Przyklad `package.json` (skrot):
+
+```json
+{
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "@core/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@core/sdk": "^1.0.0"
+  }
+}
+```
 
 ---
 

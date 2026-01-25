@@ -48,6 +48,9 @@ Opcjonalne / rekomendowane:
   "security": {
     "scanStatus": "passed",
     "scanAt": "2025-01-01T00:00:00Z"
+  },
+  "signature": {
+    "keyId": "store-2025-01"
   }
 }
 ```
@@ -55,6 +58,33 @@ Opcjonalne / rekomendowane:
 Podpis:
 - `metadata.json` jest podpisany kluczem store.
 - podpis dostarczany jako `metadata.sig` (detached).
+
+---
+
+## Format metadanych i podpisu
+
+Pliki wersji:
+- `metadata.json`
+- `metadata.sig` (detached, base64)
+- paczka ZIP (download)
+
+Canonicalization `metadata.json` (do podpisu):
+- UTF-8
+- klucze posortowane leksykograficznie
+- bez dodatkowych bialych znakow (minified)
+
+Podpis:
+- algorytm ed25519
+- podpis liczony na canonical `metadata.json`
+- `metadata.sig` to base64 z surowego podpisu (64 bajty)
+- core weryfikuje podpis kluczem `STORE_PUBLIC_KEY`
+
+Checksum:
+- `checksum.sha256` to hash surowych bajtow ZIP
+- core weryfikuje checksum po pobraniu paczki
+
+Opcjonalnie:
+- `package.sig` (podpis paczki ZIP) jako dodatkowa warstwa.
 
 ---
 
@@ -110,6 +140,7 @@ Skutki:
 - Prywatny klucz w HSM lub usludze signing.
 - Publiczny klucz w core (konfiguracja).
 - Core weryfikuje podpis `metadata.json` + `checksum`.
+- `metadata.json` moze zawierac `keyId` dla rotacji kluczy.
 
 ---
 
