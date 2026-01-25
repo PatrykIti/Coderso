@@ -37,6 +37,11 @@ Nie-cele:
 - Registry: stan zainstalowanych pluginow w DB.
 - Runtime storage: katalog `plugins-runtime` z paczkami pluginow.
 
+## Dokumentacja SDK
+
+Szczegoly API dla autorow pluginow znajduja sie w osobnym dokumencie:
+`SDK_SPEC.md`. To jest jedyny dozwolony interfejs integracji pluginu z core.
+
 ---
 
 ## Kluczowe decyzje architektoniczne
@@ -328,6 +333,9 @@ Cel:
 - Tailwind NIE jest generowany per request.
 - Plugin dostarcza skompilowany CSS w `dist/style.css`.
 - Core nie przebudowuje Tailwinda przy instalacji pluginu.
+- Watcher Tailwinda dziala po stronie autora pluginu (dev) lub store (build).
+- Safelist w konfiguracji pluginu zapewnia klasy dynamiczne (np. `bg-${color}-500`).
+- W prod core nie uruchamia tailwindcss.
 
 ---
 
