@@ -35,7 +35,7 @@ core/services/pages/
 
 ## Sub-Tasks
 
-### TASK-002-1: Define page tables
+### TASK-002-01_Define_page_tables
 
 **Status:** To Do
 
@@ -61,7 +61,7 @@ Add:
 
 ---
 
-### TASK-002-2: Publish and revision services
+### TASK-002-02_Publish_and_revision_services
 
 **Status:** To Do
 
@@ -81,7 +81,7 @@ async function publishPage(pageId: string, userId: string) {
 
 ---
 
-### TASK-002-3: Preview token flow
+### TASK-002-03_Preview_token_flow
 
 **Status:** To Do
 
@@ -96,6 +96,27 @@ await db.insert(previewTokens).values({
   expiresAt: addMinutes(new Date(), 60),
 });
 ```
+
+---
+
+### TASK-002-04_Pages_admin_API_endpoints
+
+**Status:** To Do
+
+Endpoints:
+- `GET /pages`
+- `POST /pages`
+- `GET /pages/:id`
+- `PATCH /pages/:id`
+- `POST /pages/:id/publish`
+- `POST /pages/:id/unpublish`
+- `POST /pages/:id/preview`
+- `GET /pages/:id/revisions`
+- `POST /pages/:id/revisions/:revisionId/restore`
+
+Validation:
+- Validate `data` against `PAGE_MODEL.md`.
+- Reject unknown fields in payloads.
 
 ---
 

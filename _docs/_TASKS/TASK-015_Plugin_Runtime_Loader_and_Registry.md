@@ -39,7 +39,7 @@ admin/ui/plugins/
 
 ## Sub-Tasks
 
-### TASK-015-1: Plugin registry service
+### TASK-015-01_Plugin_registry_service
 
 **Status:** To Do
 
@@ -57,7 +57,7 @@ async function setPluginEnabled(name: string, enabled: boolean) {
 
 ---
 
-### TASK-015-2: Plugin settings storage
+### TASK-015-02_Plugin_settings_storage
 
 **Status:** To Do
 
@@ -78,7 +78,7 @@ async function setPluginSetting(pluginName: string, key: string, value: unknown)
 
 ---
 
-### TASK-015-3: Runtime loader (server)
+### TASK-015-03_Runtime_loader_server
 
 **Status:** To Do
 
@@ -96,7 +96,7 @@ await mod.default(serverContext);
 
 ---
 
-### TASK-015-4: Assets mapping
+### TASK-015-04_Assets_mapping
 
 **Status:** To Do
 
@@ -107,7 +107,7 @@ Add helper for assets URL in SDK (see TASK-016).
 
 ---
 
-### TASK-015-5: Safe mode and error handling
+### TASK-015-05_Safe_mode_and_error_handling
 
 **Status:** To Do
 
@@ -129,7 +129,7 @@ async function runWithTimeout<T>(work: Promise<T>, ms: number) {
 
 ---
 
-### TASK-015-6: Admin UI error boundaries
+### TASK-015-06_Admin_UI_error_boundaries
 
 **Status:** To Do
 

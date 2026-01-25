@@ -41,7 +41,7 @@ store/server/routes/
 
 ## Sub-Tasks
 
-### TASK-022-1: Publish endpoint
+### TASK-022-01_Publish_endpoint
 
 **Status:** To Do
 
@@ -51,7 +51,7 @@ store/server/routes/
 
 ---
 
-### TASK-022-2: Scan pipeline
+### TASK-022-02_Scan_pipeline
 
 **Status:** To Do
 
@@ -75,7 +75,7 @@ Example scan result:
 
 ---
 
-### TASK-022-3: Review workflow
+### TASK-022-03_Review_workflow
 
 **Status:** To Do
 

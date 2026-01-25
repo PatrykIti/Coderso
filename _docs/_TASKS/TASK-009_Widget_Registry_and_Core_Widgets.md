@@ -51,7 +51,7 @@ core/ui/widgets/
 
 ## Sub-Tasks
 
-### TASK-009-1: Widget registry
+### TASK-009-01_Widget_registry
 
 **Status:** To Do
 
@@ -85,7 +85,7 @@ export function registerWidget(def: WidgetDefinition) {
 
 ---
 
-### TASK-009-2: Schema validation and defaults
+### TASK-009-02_Schema_validation_and_defaults
 
 **Status:** To Do
 
@@ -105,7 +105,7 @@ function normalizeBlock(block: Block) {
 
 ---
 
-### TASK-009-3: Implement core widgets
+### TASK-009-03_Implement_core_widgets
 
 **Status:** To Do
 
@@ -133,7 +133,7 @@ registerWidget({
 
 ---
 
-### TASK-009-4: Widget renderer pipeline
+### TASK-009-04_Widget_renderer_pipeline
 
 **Status:** To Do
 

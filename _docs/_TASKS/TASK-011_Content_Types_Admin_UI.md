@@ -37,7 +37,7 @@ admin/ui/entries/
 
 ## Sub-Tasks
 
-### TASK-011-1: Schema builder UI
+### TASK-011-01_Schema_builder_UI
 
 **Status:** To Do
 
@@ -57,7 +57,7 @@ Example field definition:
 
 ---
 
-### TASK-011-2: Content type CRUD UI
+### TASK-011-02_Content_type_CRUD_UI
 
 **Status:** To Do
 
@@ -66,7 +66,17 @@ Example field definition:
 
 ---
 
-### TASK-011-3: Entry editor UI
+### TASK-011-03_Entry_list_UI
+
+**Status:** To Do
+
+- List entries per content type.
+- Filters by status (draft/published).
+- Search by title/slug.
+
+---
+
+### TASK-011-04_Entry_editor_UI
 
 **Status:** To Do
 

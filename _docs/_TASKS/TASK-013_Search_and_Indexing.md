@@ -37,7 +37,7 @@ admin/ui/search/
 
 ## Sub-Tasks
 
-### TASK-013-1: DB indexes and tsvector
+### TASK-013-01_DB_indexes_and_tsvector
 
 **Status:** To Do
 
@@ -53,7 +53,7 @@ CREATE INDEX media_search_idx ON media USING GIN (to_tsvector('simple', title ||
 
 ---
 
-### TASK-013-2: Search service and endpoints
+### TASK-013-02_Search_service_and_endpoints
 
 **Status:** To Do
 
@@ -70,7 +70,7 @@ LIMIT 10;
 
 ---
 
-### TASK-013-3: Admin UI search
+### TASK-013-03_Admin_UI_search
 
 **Status:** To Do
 

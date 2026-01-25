@@ -42,7 +42,7 @@ core/ui/themes/
 
 ## Sub-Tasks
 
-### TASK-008-1: Theme registry and loader
+### TASK-008-01_Theme_registry_and_loader
 
 **Status:** To Do
 
@@ -64,7 +64,7 @@ function loadThemes(themeDir: string): ThemeMeta[] {
 
 ---
 
-### TASK-008-2: Theme profiles and routes
+### TASK-008-02_Theme_profiles_and_routes
 
 **Status:** To Do
 
@@ -91,7 +91,7 @@ Enforce only one active profile at a time.
 
 ---
 
-### TASK-008-3: Template resolution order
+### TASK-008-03_Template_resolution_order
 
 **Status:** To Do
 
@@ -120,7 +120,7 @@ function resolveTemplate(input: {
 
 ---
 
-### TASK-008-4: Admin API for themes
+### TASK-008-04_Admin_API_for_themes
 
 **Status:** To Do
 
@@ -135,7 +135,7 @@ Endpoints:
 
 ---
 
-### TASK-008-5: Admin UI for themes
+### TASK-008-05_Admin_UI_for_themes
 
 **Status:** To Do
 

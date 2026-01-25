@@ -36,7 +36,7 @@ admin/ui/audit/
 
 ## Sub-Tasks
 
-### TASK-014-1: Audit log service
+### TASK-014-01_Audit_log_service
 
 **Status:** To Do
 
@@ -64,7 +64,7 @@ async function logAudit(event: {
 
 ---
 
-### TASK-014-2: Hook audit into core actions
+### TASK-014-02_Hook_audit_into_core_actions
 
 **Status:** To Do
 
@@ -79,7 +79,7 @@ Events (v1):
 
 ---
 
-### TASK-014-3: Admin API and UI
+### TASK-014-03_Admin_API_and_UI
 
 **Status:** To Do
 

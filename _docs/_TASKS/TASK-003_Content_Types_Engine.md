@@ -35,7 +35,7 @@ core/services/content/
 
 ## Sub-Tasks
 
-### TASK-003-1: Schema for content types and entries
+### TASK-003-01_Schema_for_content_types_and_entries
 
 **Status:** To Do
 
@@ -58,7 +58,7 @@ Tables to include:
 
 ---
 
-### TASK-003-2: Entry validation
+### TASK-003-02_Entry_validation
 
 **Status:** To Do
 
@@ -77,7 +77,7 @@ if (!validate(entry.data)) {
 
 ---
 
-### TASK-003-3: Publish and revisions for entries
+### TASK-003-03_Publish_and_revisions_for_entries
 
 **Status:** To Do
 
@@ -93,6 +93,29 @@ async function publishEntry(entryId: string, userId: string) {
   });
 }
 ```
+
+---
+
+### TASK-003-04_Content_types_admin_API_endpoints
+
+**Status:** To Do
+
+Endpoints:
+- `GET /content-types`
+- `POST /content-types`
+- `PATCH /content-types/:id`
+- `DELETE /content-types/:id`
+- `GET /content/:type/entries`
+- `POST /content/:type/entries`
+- `GET /content/:type/entries/:id`
+- `PATCH /content/:type/entries/:id`
+- `POST /content/:type/entries/:id/preview`
+- `POST /content/:type/entries/:id/publish`
+- `POST /content/:type/entries/:id/unpublish`
+
+Validation:
+- Validate content type schema on create/update.
+- Validate entry data against schema on create/update/publish.
 
 ---
 

@@ -36,7 +36,7 @@ store/server/routes/
 
 ## Sub-Tasks
 
-### TASK-023-1: Publisher accounts
+### TASK-023-01_Publisher_accounts
 
 **Status:** To Do
 
@@ -45,7 +45,7 @@ store/server/routes/
 
 ---
 
-### TASK-023-2: Publish tokens
+### TASK-023-02_Publish_tokens
 
 **Status:** To Do
 
@@ -64,7 +64,7 @@ Example token payload:
 
 ---
 
-### TASK-023-3: 2FA requirements
+### TASK-023-03_2FA_requirements
 
 **Status:** To Do
 

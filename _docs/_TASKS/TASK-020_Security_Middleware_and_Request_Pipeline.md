@@ -37,7 +37,7 @@ core/server/validation/
 
 ## Sub-Tasks
 
-### TASK-020-1: Request ID and logging
+### TASK-020-01_Request_ID_and_logging
 
 **Status:** To Do
 
@@ -46,7 +46,7 @@ core/server/validation/
 
 ---
 
-### TASK-020-2: CSRF and CORS
+### TASK-020-02_CSRF_and_CORS
 
 **Status:** To Do
 
@@ -65,7 +65,7 @@ if (!token || token !== session.csrfToken) {
 
 ---
 
-### TASK-020-3: Rate limiting and headers
+### TASK-020-03_Rate_limiting_and_headers
 
 **Status:** To Do
 
@@ -74,7 +74,7 @@ if (!token || token !== session.csrfToken) {
 
 ---
 
-### TASK-020-4: Input validation
+### TASK-020-04_Input_validation
 
 **Status:** To Do
 

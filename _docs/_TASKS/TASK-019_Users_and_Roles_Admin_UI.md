@@ -35,7 +35,7 @@ admin/ui/roles/
 
 ## Sub-Tasks
 
-### TASK-019-1: Users UI
+### TASK-019-01_Users_UI
 
 **Status:** To Do
 
@@ -45,7 +45,7 @@ admin/ui/roles/
 
 ---
 
-### TASK-019-2: Roles UI
+### TASK-019-02_Roles_UI
 
 **Status:** To Do
 

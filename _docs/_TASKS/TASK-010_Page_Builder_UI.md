@@ -40,7 +40,7 @@ admin/ui/pages/
 
 ## Sub-Tasks
 
-### TASK-010-1: Block list and ordering
+### TASK-010-01_Block_list_and_ordering
 
 **Status:** To Do
 
@@ -64,7 +64,7 @@ const newBlock: Block = {
 
 ---
 
-### TASK-010-2: Wizard flow
+### TASK-010-02_Wizard_flow
 
 **Status:** To Do
 
@@ -73,7 +73,7 @@ const newBlock: Block = {
 
 ---
 
-### TASK-010-3: Visual mode
+### TASK-010-03_Visual_mode
 
 **Status:** To Do
 
@@ -82,7 +82,7 @@ const newBlock: Block = {
 
 ---
 
-### TASK-010-4: Advanced mode
+### TASK-010-04_Advanced_mode
 
 **Status:** To Do
 
@@ -91,7 +91,7 @@ const newBlock: Block = {
 
 ---
 
-### TASK-010-5: Save and publish
+### TASK-010-05_Save_and_publish
 
 **Status:** To Do
 

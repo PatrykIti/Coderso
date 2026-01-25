@@ -36,7 +36,7 @@ admin/ui/plugins/
 
 ## Sub-Tasks
 
-### TASK-018-1: Store browser UI
+### TASK-018-01_Store_browser_UI
 
 **Status:** To Do
 
@@ -45,7 +45,7 @@ admin/ui/plugins/
 
 ---
 
-### TASK-018-2: Install and update actions
+### TASK-018-02_Install_and_update_actions
 
 **Status:** To Do
 
@@ -65,7 +65,7 @@ await fetch("/admin/api/plugins/install", {
 
 ---
 
-### TASK-018-3: Update policy controls
+### TASK-018-03_Update_policy_controls
 
 **Status:** To Do
 

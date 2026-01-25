@@ -39,7 +39,7 @@ core/server/routes/
 
 ## Sub-Tasks
 
-### TASK-005-1: Storage adapter interface
+### TASK-005-01_Storage_adapter_interface
 
 **Status:** To Do
 
@@ -56,7 +56,7 @@ export interface MediaStorageAdapter {
 
 ---
 
-### TASK-005-2: Local storage implementation
+### TASK-005-02_Local_storage_implementation
 
 **Status:** To Do
 
@@ -70,7 +70,41 @@ return { key, url: `/media/${key}` };
 
 ---
 
-### TASK-005-3: Upload endpoint
+### TASK-005-03_S3_storage_implementation
+
+**Status:** To Do
+
+Notes:
+- Bucket + prefix per environment.
+- Public URL via CDN or signed URLs (configurable).
+
+Example (pseudo):
+
+```ts
+await s3.putObject({ Bucket: bucket, Key: key, Body: fileBuffer, ContentType: mime });
+return { key, url: `https://${cdnHost}/${key}` };
+```
+
+---
+
+### TASK-005-04_Azure_storage_implementation
+
+**Status:** To Do
+
+Notes:
+- Container per environment.
+- Public URL via CDN or blob URL (configurable).
+
+Example (pseudo):
+
+```ts
+await blobClient.uploadData(fileBuffer, { blobHTTPHeaders: { blobContentType: mime } });
+return { key, url: `${cdnHost}/${key}` };
+```
+
+---
+
+### TASK-005-05_Upload_endpoint
 
 **Status:** To Do
 

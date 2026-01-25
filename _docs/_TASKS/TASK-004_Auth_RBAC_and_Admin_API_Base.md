@@ -40,7 +40,7 @@ core/services/auth/
 
 ## Sub-Tasks
 
-### TASK-004-1: Password hashing and sessions
+### TASK-004-01_Password_hashing_and_sessions
 
 **Status:** To Do
 
@@ -61,7 +61,7 @@ setCookie("session", token, { httpOnly: true, secure: true, sameSite: "strict" }
 
 ---
 
-### TASK-004-2: Auth middleware
+### TASK-004-02_Auth_middleware
 
 **Status:** To Do
 
@@ -78,7 +78,7 @@ export async function requireAuth(req, res, next) {
 
 ---
 
-### TASK-004-3: RBAC middleware
+### TASK-004-03_RBAC_middleware
 
 **Status:** To Do
 
@@ -96,7 +96,7 @@ export function requirePermission(permission: string) {
 
 ---
 
-### TASK-004-4: REST admin API base
+### TASK-004-04_REST_admin_API_base
 
 **Status:** To Do
 

@@ -38,7 +38,7 @@ admin/ui/menus/
 
 ## Sub-Tasks
 
-### TASK-006-1: Menu schema and service
+### TASK-006-01_Menu_schema_and_service
 
 **Status:** To Do
 
@@ -59,7 +59,7 @@ function buildTree(items) {
 
 ---
 
-### TASK-006-2: Admin API endpoints
+### TASK-006-02_Admin_API_endpoints
 
 **Status:** To Do
 
@@ -84,7 +84,7 @@ Example payload (update items):
 
 ---
 
-### TASK-006-3: Admin UI
+### TASK-006-03_Admin_UI
 
 **Status:** To Do
 

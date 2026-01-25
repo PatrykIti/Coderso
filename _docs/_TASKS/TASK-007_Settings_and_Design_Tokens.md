@@ -41,7 +41,7 @@ core/ui/theme/
 
 ## Sub-Tasks
 
-### TASK-007-1: Settings schema and service
+### TASK-007-01_Settings_schema_and_service
 
 **Status:** To Do
 
@@ -73,7 +73,7 @@ async function setSetting<T>(key: string, value: T) {
 
 ---
 
-### TASK-007-2: Settings admin API
+### TASK-007-02_Settings_admin_API
 
 **Status:** To Do
 
@@ -94,7 +94,7 @@ Example payload:
 
 ---
 
-### TASK-007-3: Design token pipeline
+### TASK-007-03_Design_token_pipeline
 
 **Status:** To Do
 
@@ -125,7 +125,7 @@ function buildTokenCss(tokens: Tokens) {
 
 ---
 
-### TASK-007-4: Admin UI for settings and tokens
+### TASK-007-04_Admin_UI_for_settings_and_tokens
 
 **Status:** To Do
 

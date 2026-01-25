@@ -38,7 +38,7 @@ core/plugins/
 
 ## Sub-Tasks
 
-### TASK-016-1: SDK package exports
+### TASK-016-01_SDK_package_exports
 
 **Status:** To Do
 
@@ -57,7 +57,7 @@ export function definePlugin(register: (ctx: ServerContext) => void) {
 
 ---
 
-### TASK-016-2: Hook context and assets helpers
+### TASK-016-02_Hook_context_and_assets_helpers
 
 **Status:** To Do
 
@@ -81,7 +81,7 @@ export type HookContext = {
 
 ---
 
-### TASK-016-3: Runtime bindings in core
+### TASK-016-03_Runtime_bindings_in_core
 
 **Status:** To Do
 

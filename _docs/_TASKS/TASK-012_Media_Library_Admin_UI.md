@@ -33,7 +33,7 @@ admin/ui/media/
 
 ## Sub-Tasks
 
-### TASK-012-1: Media list and upload UI
+### TASK-012-01_Media_list_and_upload_UI
 
 **Status:** To Do
 
@@ -51,7 +51,7 @@ await fetch("/admin/api/media", { method: "POST", body: form });
 
 ---
 
-### TASK-012-2: Media detail and metadata
+### TASK-012-02_Media_detail_and_metadata
 
 **Status:** To Do
 

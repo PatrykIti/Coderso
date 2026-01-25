@@ -35,7 +35,7 @@ core/db/
 
 ## Sub-Tasks
 
-### TASK-001-1: Initialize Drizzle client and config
+### TASK-001-01_Initialize_Drizzle_client_and_config
 
 **Status:** To Do
 
@@ -60,7 +60,7 @@ export const db = drizzle(sql);
 
 ---
 
-### TASK-001-2: Define auth tables
+### TASK-001-02_Define_auth_tables
 
 **Status:** To Do
 
@@ -89,7 +89,7 @@ Tables to include:
 
 ---
 
-### TASK-001-3: Seed initial admin role (optional)
+### TASK-001-03_Seed_initial_admin_role_optional
 
 **Status:** To Do
 

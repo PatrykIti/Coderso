@@ -37,7 +37,7 @@ store/server/routes/
 
 ## Sub-Tasks
 
-### TASK-021-1: Store DB schema
+### TASK-021-01_Store_DB_schema
 
 **Status:** To Do
 
@@ -48,7 +48,7 @@ Tables (example):
 
 ---
 
-### TASK-021-2: Public API endpoints
+### TASK-021-02_Public_API_endpoints
 
 **Status:** To Do
 
@@ -61,7 +61,7 @@ Tables (example):
 
 ---
 
-### TASK-021-3: Metadata signing
+### TASK-021-03_Metadata_signing
 
 **Status:** To Do
 

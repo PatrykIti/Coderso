@@ -38,7 +38,7 @@ core/plugins/
 
 ## Sub-Tasks
 
-### TASK-017-1: Store client
+### TASK-017-01_Store_client
 
 **Status:** To Do
 
@@ -52,7 +52,7 @@ Endpoints:
 
 ---
 
-### TASK-017-2: Signature and checksum verification
+### TASK-017-02_Signature_and_checksum_verification
 
 **Status:** To Do
 
@@ -69,7 +69,7 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 
 ---
 
-### TASK-017-3: Install and update flow
+### TASK-017-03_Install_and_update_flow
 
 **Status:** To Do
 
@@ -80,7 +80,7 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 
 ---
 
-### TASK-017-4: Update policy
+### TASK-017-04_Update_policy
 
 **Status:** To Do
 
@@ -90,7 +90,7 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 
 ---
 
-### TASK-017-5: Revocation checks
+### TASK-017-05_Revocation_checks
 
 **Status:** To Do
 
