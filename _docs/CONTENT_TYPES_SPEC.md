@@ -188,6 +188,68 @@ Mass schedule:
 }
 ```
 
+Testimonials:
+
+```json
+{
+  "name": "Testimonial",
+  "slug": "testimonials",
+  "fields": [
+    { "name": "author", "type": "text", "required": true },
+    { "name": "role", "type": "text" },
+    { "name": "quote", "type": "richtext", "required": true },
+    { "name": "avatar", "type": "image" }
+  ]
+}
+```
+
+Team members:
+
+```json
+{
+  "name": "Team Member",
+  "slug": "team",
+  "fields": [
+    { "name": "name", "type": "text", "required": true },
+    { "name": "title", "type": "text" },
+    { "name": "bio", "type": "richtext" },
+    { "name": "photo", "type": "image" },
+    { "name": "email", "type": "text" }
+  ]
+}
+```
+
+Locations:
+
+```json
+{
+  "name": "Location",
+  "slug": "locations",
+  "fields": [
+    { "name": "name", "type": "text", "required": true },
+    { "name": "address", "type": "text" },
+    { "name": "city", "type": "text" },
+    { "name": "mapUrl", "type": "text" },
+    { "name": "phone", "type": "text" }
+  ]
+}
+```
+
+Gallery items:
+
+```json
+{
+  "name": "Gallery Item",
+  "slug": "gallery",
+  "fields": [
+    { "name": "title", "type": "text" },
+    { "name": "image", "type": "image", "required": true },
+    { "name": "category", "type": "text" },
+    { "name": "order", "type": "number" }
+  ]
+}
+```
+
 ## Entry status
 
 - draft
