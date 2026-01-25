@@ -5,6 +5,10 @@
 Porownanie dwoch procesow na wspolnej osi bez dat.
 Przyklad: tradycyjna budowa vs budowa z firma.
 
+## Widget ID
+
+`compare-timeline`
+
 ## Variants (v1)
 
 - dual-track (dwie linie, wspolna os)

@@ -4,6 +4,10 @@
 
 Zbieranie leadow przez prosty formularz zapisu.
 
+## Widget ID
+
+`newsletter`
+
 ## Variants (v1)
 
 - inline (input + button w jednej linii)

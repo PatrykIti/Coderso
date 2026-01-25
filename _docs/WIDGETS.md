@@ -11,6 +11,17 @@ stosowany rowniez przez widgety z pluginow i addonow.
 
 ---
 
+## Design Philosophy (Idioto-odpornosc + Power User)
+
+System widgetow zostal zaprojektowany, aby rozwiazac odwieczny konflikt miedzy "latwym" a "elastycznym".
+
+1. **Wizard-First**: Uzytkownik nietechniczny NIE moze zepsuc layoutu. Odpowiada tylko na proste pytania (np. "Gdzie ma byc zdjecie?").
+2. **Visual Feedback**: Decyzje podejmowane sa na podstawie tego co widac, a nie abstrakcyjnych nazw ustawien.
+3. **Progressive Disclosure**: Opcje zaawansowane (marginesy, paddingi) sa ukryte, dopoki uzytkownik swiadomie ich nie zazada. To chroni UI przed "rozjechaniem" przez przypadkowe klikniecia.
+4. **Consistency**: Wymuszamy ten sam model konfiguracji na pluginach, aby uzytkownik nie musial uczyc sie obslugi kazdego widgetu od nowa.
+
+---
+
 ## Lista widgetow w core v1
 
 Wymagane:

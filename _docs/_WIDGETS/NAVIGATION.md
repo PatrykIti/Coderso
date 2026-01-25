@@ -4,6 +4,10 @@
 
 Menu i nawigacja strony z linkami i logo.
 
+## Widget ID
+
+`navigation`
+
 ## Variants (v1)
 
 - simple (logo + linki)

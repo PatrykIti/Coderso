@@ -4,6 +4,10 @@
 
 Stopka strony z linkami, danymi i social.
 
+## Widget ID
+
+`footer`
+
 ## Variants (v1)
 
 - columns-2

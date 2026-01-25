@@ -4,6 +4,10 @@
 
 Pierwszy ekran strony z glownym przekazem, CTA i opcjonalnym media.
 
+## Widget ID
+
+`hero`
+
 ## Variants (v1)
 
 - centered (tytul + opis + CTA, wszystko na srodku)

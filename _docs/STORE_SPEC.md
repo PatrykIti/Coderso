@@ -113,7 +113,7 @@ Minimalny zestaw:
 
 Dodatkowe reguly (heurystyki):
 - Wykrywanie `eval`, `new Function`, dynamicznych importow z user input.
-- Próby dostepu do `child_process` i `fs` (notyfikacja).
+- Proby dostepu do `child_process` i `fs` (notyfikacja).
 - Wykrywanie "beaconing" (nieznane endpointy).
 
 Skutki:

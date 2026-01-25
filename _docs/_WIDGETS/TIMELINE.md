@@ -4,6 +4,10 @@
 
 Elastyczna os procesu bez dat. Uzywana do pokazania etapow lub krokow.
 
+## Widget ID
+
+`timeline`
+
 ## Variants (v1)
 
 - horizontal (domyslny)

@@ -4,6 +4,10 @@
 
 Sekcja kontaktu z formularzem i danymi firmy.
 
+## Widget ID
+
+`contact`
+
 ## Variants (v1)
 
 - form-left (formularz po lewej, dane po prawej)

@@ -108,8 +108,9 @@ usuniecie z registry -> usuniecie katalogu -> cleanup assets
 
 Update mode (default: manual):
 - manual: update tylko po akcji admina
-- auto-security: auto update tylko dla patch z flagą security
+- auto-security: auto update tylko dla patch z flaga security
 - auto-all: auto update dla kazdej zgodnej wersji
+  - auto-security wymaga `release.type=security` w metadata
 
 Update (manual/auto):
 - download nowej wersji do temp
@@ -302,7 +303,7 @@ Zasady:
 
 Zachowanie:
 - Loader importuje `dist/server.mjs` dla kazdego aktywnego pluginu.
-- ESM cache utrzymuje moduły per wersja.
+- ESM cache utrzymuje moduly per wersja.
 - Zmiana wersji = zmiana sciezki -> nowy import.
 - Disable = usuniecie z registry (hooki nie sa wywolywane).
 
