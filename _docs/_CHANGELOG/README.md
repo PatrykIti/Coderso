@@ -1,0 +1,31 @@
+# Changelog
+
+Project Change Log.
+
+## Workflow
+1. Create a new changelog file in `_docs/_CHANGELOG/` using the naming rules below.
+2. Add a row to the **Index** table with No., Date, Title, Type.
+3. Include related task IDs in the changelog entry.
+
+## File naming
+- Format: `{N}-{YYYY-MM-DD}-short-title.md`
+- Example: `1-2025-11-22-project-init-and-rpc.md`
+- `N` increments by 1 and is never reused.
+
+## Entry format (minimum)
+- Title line with No. and short title.
+- `Date`, `Version`, `Tasks`.
+- Sections for Key Changes (grouped by area).
+- Keep entries concise and user-facing.
+
+## Reference
+- See `EXAMPLE_CHANGELOG.md` for a full example.
+
+## Index
+
+| No. | Date | Title | Type |
+|-----|------|-------|------|
+
+
+---
+*Details of changes are in the linked files.*
