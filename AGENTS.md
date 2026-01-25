@@ -7,4 +7,5 @@ Follow these rules when working in this repo:
 - Keep clean architecture and best practices; follow YAGNI, SOLID, DRY, KISS.
 - Keep solutions logically consistent and simple for end users.
 - Every code change must include unit tests; run all relevant checks/tests.
+- Fix lint/typecheck warnings (e.g., `any`) instead of ignoring; treat as potential security risks.
 - Documentation may be in Polish, but code, code comments, and coding style must be in English.

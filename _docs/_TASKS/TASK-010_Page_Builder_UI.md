@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/PageBuilder
 **Estimated Effort:** Large
-**Dependencies:** TASK-002, TASK-009
+**Dependencies:** TASK-002, TASK-009, TASK-024
 **Status:** To Do
 
 ---

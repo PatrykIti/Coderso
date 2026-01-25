@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** CMS/Auth
 **Estimated Effort:** Medium
-**Dependencies:** TASK-004
+**Dependencies:** TASK-004, TASK-024
 **Status:** To Do
 
 ---

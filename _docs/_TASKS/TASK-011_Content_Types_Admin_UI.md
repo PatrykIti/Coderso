@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** CMS/ContentTypes
 **Estimated Effort:** Large
-**Dependencies:** TASK-003, TASK-004
+**Dependencies:** TASK-003, TASK-004, TASK-024
 **Status:** To Do
 
 ---

@@ -53,7 +53,8 @@ Initialize the monorepo scaffold for Bun workspaces.
 Steps:
 1) Create root `package.json` with `private: true`.
 2) Add `workspaces` for `core`, `store`, and `packages/*`.
-3) Add root `.gitignore` with runtime and build outputs.
+3) Add root scripts to route `dev`, `lint`, and `test` into workspace apps.
+4) Add root `.gitignore` with runtime and build outputs.
 
 Example root `package.json`:
 
@@ -61,7 +62,13 @@ Example root `package.json`:
 {
   "name": "nextless",
   "private": true,
-  "workspaces": ["core", "store", "packages/*"]
+  "workspaces": ["core", "store", "packages/*"],
+  "scripts": {
+    "dev:core": "bun --cwd core dev",
+    "dev:store": "bun --cwd store dev",
+    "lint": "bun --cwd core lint && bun --cwd store lint",
+    "test": "bun --cwd core test && bun --cwd store test"
+  }
 }
 ```
 
@@ -83,7 +90,7 @@ coverage/
 
 | File | What to Add |
 | --- | --- |
-| `package.json` | workspaces for core/store/packages |
+| `package.json` | workspaces for core/store/packages + root scripts |
 | `.gitignore` | ignore build outputs and runtime plugin storage |
 
 ### TASK-001-01_Initialize_Drizzle_client_and_config
