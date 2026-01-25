@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 001 | 2026-01-25 | ORM foundation and auth tables | Core/DB |
+| 002 | 2026-01-25 | Pages, revisions, and preview | CMS/Pages |
 
 
 ---
