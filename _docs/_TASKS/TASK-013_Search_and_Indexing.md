@@ -67,6 +67,12 @@ CREATE INDEX media_search_idx ON media USING GIN (to_tsvector('simple', title ||
 | --- | --- |
 | `core/db/migrations/search_indexes.sql` | indexes and triggers |
 
+Migration sketch:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+```
+
 ---
 
 ### TASK-013-02_Search_service_and_endpoints
@@ -96,6 +102,15 @@ LIMIT 10;
 | `core/services/search/searchService.ts` | search queries |
 | `core/server/routes/searchRoutes.ts` | search endpoints |
 
+Service sketch:
+
+```ts
+export async function searchAll(q: string) {
+  if (q.length < 2) return [];
+  return db.execute(sql`SELECT id, title, 'page' AS type FROM pages WHERE ...`);
+}
+```
+
 ---
 
 ### TASK-013-03_Admin_UI_search
@@ -113,6 +128,12 @@ LIMIT 10;
 | --- | --- |
 | `admin/ui/search/SearchBar.tsx` | search input |
 | `admin/ui/search/SearchResults.tsx` | results list |
+
+UI sketch:
+
+```tsx
+<SearchBar value={q} onChange={setQ} onSubmit={() => runSearch(q)} />
+```
 
 ---
 

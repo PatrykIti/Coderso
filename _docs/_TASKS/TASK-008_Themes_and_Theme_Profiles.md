@@ -68,12 +68,33 @@ function loadThemes(themeDir: string): ThemeMeta[] {
 }
 ```
 
+Example `theme.json`:
+
+```json
+{
+  "name": "default",
+  "version": "1.0.0",
+  "tokens": {
+    "colors": { "primary": "#111" }
+  },
+  "templates": ["page", "content", "error"]
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
 | --- | --- |
 | `core/themes/registry.ts` | theme scanning + cache |
 | `core/services/themes/themeService.ts` | list themes |
+
+Registry sketch:
+
+```ts
+export function getThemeByName(name: string) {
+  return registry.get(name) ?? null;
+}
+```
 
 ---
 
@@ -112,6 +133,17 @@ await setThemeRoutes(profileId, [
 | `core/services/themes/themeProfileService.ts` | CRUD + activate |
 | `core/db/schema.ts` | theme_profiles, theme_routes |
 
+Profile service sketch:
+
+```ts
+export async function activateProfile(profileId: string) {
+  await db.transaction(async (tx) => {
+    await tx.update(themeProfiles).set({ isActive: false });
+    await tx.update(themeProfiles).set({ isActive: true }).where(eq(themeProfiles.id, profileId));
+  });
+}
+```
+
 ---
 
 ### TASK-008-03_Template_resolution_order
@@ -145,6 +177,14 @@ function resolveTemplate(input: {
 }
 ```
 
+Resolver sketch:
+
+```ts
+export function resolveTemplateOr404(input) {
+  return resolveTemplate(input) ?? "core/templates/404.tsx";
+}
+```
+
 **Implementation Checklist:**
 
 | File | What to Add |
@@ -172,6 +212,15 @@ Endpoints:
 | --- | --- |
 | `core/server/routes/themeRoutes.ts` | theme endpoints |
 
+Route handler sketch:
+
+```ts
+router.post("/theme-profiles/:id/activate", requirePermission("themes:write"), async (req) => {
+  await activateProfile(req.params.id);
+  return json({ ok: true });
+});
+```
+
 ---
 
 ### TASK-008-05_Admin_UI_for_themes
@@ -190,6 +239,15 @@ UI:
 | --- | --- |
 | `admin/ui/themes/ThemeList.tsx` | list installed themes |
 | `admin/ui/themes/ThemeProfileEditor.tsx` | profile edit UI |
+
+UI sketch:
+
+```tsx
+<ThemeProfileEditor
+  profile={profile}
+  onSave={(next) => saveProfile(profile.id, next)}
+/>
+```
 
 ---
 

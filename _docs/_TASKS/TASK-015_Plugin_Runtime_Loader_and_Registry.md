@@ -73,6 +73,14 @@ async function setPluginEnabled(name: string, enabled: boolean) {
 | `core/plugins/registry.ts` | registry CRUD |
 | `core/db/schema.ts` | plugins + plugin_settings tables |
 
+Registry sketch:
+
+```ts
+export async function listPlugins() {
+  return db.select().from(plugins).orderBy(plugins.name);
+}
+```
+
 ---
 
 ### TASK-015-02_Plugin_settings_storage
@@ -127,6 +135,16 @@ await mod.default(serverContext);
 | `core/plugins/loader.ts` | dynamic import + register |
 | `core/plugins/compat.ts` | apiVersion/coreVersion checks |
 
+Loader sketch:
+
+```ts
+export async function loadPlugin(entryPath: string, ctx: ServerContext) {
+  const mod = await import(entryPath);
+  if (typeof mod.default !== "function") throw new Error("Missing register()");
+  await mod.default(ctx);
+}
+```
+
 ---
 
 ### TASK-015-04_Assets_mapping
@@ -146,6 +164,12 @@ Rules:
 | --- | --- |
 | `core/plugins/loader.ts` | map public assets |
 | `core/server/router.ts` | static route for plugin assets |
+
+Assets guard sketch:
+
+```ts
+if (path.includes("..")) return new Response("Invalid path", { status: 400 });
+```
 
 ---
 
@@ -177,6 +201,14 @@ async function runWithTimeout<T>(work: Promise<T>, ms: number) {
 | `core/plugins/pluginManager.ts` | safe mode + auto-disable |
 | `core/server/middleware/pluginErrorGuard.ts` | error isolation |
 
+Error guard sketch:
+
+```ts
+export async function runPluginSafe(fn: () => Promise<void>) {
+  try { await fn(); } catch (err) { logPluginError(err); }
+}
+```
+
 ---
 
 ### TASK-015-06_Admin_UI_error_boundaries
@@ -195,6 +227,14 @@ Fallback:
 | File | What to Add |
 | --- | --- |
 | `admin/ui/plugins/PluginErrorBoundary.tsx` | error boundary |
+
+Error boundary sketch:
+
+```tsx
+<PluginErrorBoundary plugin={plugin}>
+  <PluginPage />
+</PluginErrorBoundary>
+```
 
 ---
 

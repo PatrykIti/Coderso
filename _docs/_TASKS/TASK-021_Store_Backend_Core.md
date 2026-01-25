@@ -61,6 +61,20 @@ Rules:
 | `store/db/schema.ts` | plugins, plugin_versions, revocations |
 | `store/db/migrations/*` | migration files |
 
+Schema sketch:
+
+```ts
+export const pluginVersions = pgTable("plugin_versions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  pluginId: uuid("plugin_id").notNull(),
+  version: text("version").notNull(),
+  metadata: jsonb("metadata").notNull(),
+  checksum: text("checksum").notNull(),
+  scanStatus: text("scan_status").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+```
+
 ---
 
 ### TASK-021-02_Public_API_endpoints
@@ -85,6 +99,15 @@ Rules:
 | `store/server/routes/publicRoutes.ts` | public routes |
 | `store/services/pluginService.ts` | list + fetch |
 
+Route sketch:
+
+```ts
+router.get("/plugins/:name", async (req) => {
+  const plugin = await getPlugin(req.params.name);
+  return json(plugin);
+});
+```
+
 ---
 
 ### TASK-021-03_Metadata_signing
@@ -107,6 +130,15 @@ const signature = signEd25519(payload, privateKey);
 | File | What to Add |
 | --- | --- |
 | `store/services/signingService.ts` | signing helpers |
+
+Signing sketch:
+
+```ts
+export function signMetadata(meta) {
+  const payload = canonicalizeJson(meta);
+  return signEd25519(payload, PRIVATE_KEY);
+}
+```
 
 ---
 

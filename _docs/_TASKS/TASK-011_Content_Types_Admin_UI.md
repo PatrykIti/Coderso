@@ -74,6 +74,15 @@ Example field definition:
 | `admin/ui/content-types/SchemaBuilder.tsx` | schema builder UI |
 | `admin/ui/content-types/FieldEditor.tsx` | field config |
 
+Schema builder sketch:
+
+```tsx
+<SchemaBuilder
+  fields={fields}
+  onChange={setFields}
+/>
+```
+
 ---
 
 ### TASK-011-02_Content_type_CRUD_UI
@@ -90,6 +99,15 @@ Example field definition:
 | --- | --- |
 | `admin/ui/content-types/ContentTypeList.tsx` | list view |
 | `admin/ui/content-types/ContentTypeEditor.tsx` | editor view |
+
+Editor sketch:
+
+```tsx
+<ContentTypeEditor
+  schema={schema}
+  onSave={() => saveType(schema)}
+/>
+```
 
 ---
 
@@ -108,6 +126,15 @@ Example field definition:
 | --- | --- |
 | `admin/ui/entries/EntryList.tsx` | list + filters |
 
+List sketch:
+
+```tsx
+<EntryList
+  items={entries}
+  onFilterChange={setFilters}
+/>
+```
+
 ---
 
 ### TASK-011-04_Entry_editor_UI
@@ -125,6 +152,16 @@ Example field definition:
 | --- | --- |
 | `admin/ui/entries/EntryEditor.tsx` | entry editor |
 | `admin/ui/entries/FieldRenderer.tsx` | schema-based inputs |
+
+Field renderer sketch:
+
+```tsx
+function FieldRenderer({ field, value, onChange }) {
+  if (field.type === "text") return <Input value={value} onChange={onChange} />;
+  if (field.type === "boolean") return <Checkbox checked={value} onChange={onChange} />;
+  return null;
+}
+```
 
 ---
 

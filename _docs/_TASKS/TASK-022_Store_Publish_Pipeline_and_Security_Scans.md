@@ -63,6 +63,16 @@ store/tests/unit/
 | `store/server/routes/publishRoutes.ts` | publish endpoint |
 | `store/services/publishService.ts` | orchestrate pipeline |
 
+Publish flow sketch:
+
+```ts
+const zip = await readUpload(req);
+const manifest = await readManifest(zip);
+await validateManifest(manifest);
+const report = await runScans(zip);
+return saveVersion(manifest, report);
+```
+
 ---
 
 ### TASK-022-02_Scan_pipeline
@@ -95,6 +105,17 @@ Example scan result:
 | `store/pipeline/validator.ts` | manifest validation |
 | `store/pipeline/scanners/*.ts` | scanners |
 
+Scan sketch:
+
+```ts
+export async function runScans(zip) {
+  return {
+    sast: await scanSast(zip),
+    secrets: await scanSecrets(zip),
+  };
+}
+```
+
 ---
 
 ### TASK-022-03_Review_workflow
@@ -110,6 +131,14 @@ Example scan result:
 | File | What to Add |
 | --- | --- |
 | `store/services/publishService.ts` | scan status logic |
+
+Status rules sketch:
+
+```ts
+if (report.hasFailures) return { scanStatus: "failed" };
+if (report.hasWarnings) return { scanStatus: "warning" };
+return { scanStatus: "passed" };
+```
 
 ---
 

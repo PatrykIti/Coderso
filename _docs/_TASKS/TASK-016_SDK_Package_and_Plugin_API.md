@@ -74,6 +74,12 @@ export function definePlugin(register: (ctx: ServerContext) => void) {
 | `packages/sdk/src/client.ts` | defineAdmin + types |
 | `packages/sdk/src/shared.ts` | shared types |
 
+Shared types sketch:
+
+```ts
+export type PluginMeta = { name: string; version: string };
+```
+
 ---
 
 ### TASK-016-02_Hook_context_and_assets_helpers
@@ -106,6 +112,12 @@ export type HookContext = {
 | `packages/sdk/src/server.ts` | HooksAPI types |
 | `packages/sdk/src/shared.ts` | HookContext type |
 
+Hooks API sketch:
+
+```ts
+export type HookHandler<T> = (payload: T, ctx: HookContext) => void;
+```
+
 ---
 
 ### TASK-016-03_Runtime_bindings_in_core
@@ -125,6 +137,19 @@ Rules:
 | File | What to Add |
 | --- | --- |
 | `core/plugins/sdkRuntime.ts` | runtime context factory |
+
+Runtime context sketch:
+
+```ts
+export function createServerContext(plugin) {
+  return {
+    apiVersion: "1",
+    plugin,
+    settings: createSettingsApi(plugin.name),
+    assets: createAssetsApi(plugin),
+  };
+}
+```
 
 ---
 

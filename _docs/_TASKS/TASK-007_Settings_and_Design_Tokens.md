@@ -84,6 +84,24 @@ async function getSetting<T>(key: string): Promise<T | null> {
 | `core/db/schema.ts` | settings table |
 | `core/services/settings/settingsService.ts` | get/set/delete |
 
+Service sketch:
+
+```ts
+const ALLOWED_KEYS = new Set([
+  "site.name",
+  "site.locale",
+  "design.tokens",
+]);
+
+export async function setSetting(key: string, value: unknown) {
+  if (!ALLOWED_KEYS.has(key)) throw new Error("Unknown setting key");
+  await db.insert(settings).values({ key, value }).onConflictDoUpdate({
+    target: settings.key,
+    set: { value, updatedAt: new Date() },
+  });
+}
+```
+
 ---
 
 ### TASK-007-02_Settings_admin_API
@@ -117,6 +135,20 @@ Rules:
 | `core/server/routes/settingsRoutes.ts` | settings endpoints |
 | `core/server/validation/settingsSchemas.ts` | validation rules |
 
+Validation sketch:
+
+```ts
+export const setSettingSchema = {
+  type: "object",
+  required: ["key", "value"],
+  properties: {
+    key: { type: "string" },
+    value: {},
+  },
+  additionalProperties: false,
+};
+```
+
 ---
 
 ### TASK-007-03_Design_token_pipeline
@@ -147,6 +179,18 @@ function buildTokenCss(tokens) {
 | `core/services/theme/tokenService.ts` | merge + resolve tokens |
 | `core/ui/theme/tokenCss.ts` | css output helper |
 
+Token service sketch:
+
+```ts
+export function mergeTokens(defaults: Tokens, overrides?: Tokens): Tokens {
+  return {
+    ...defaults,
+    colors: { ...defaults.colors, ...overrides?.colors },
+    spacing: { ...defaults.spacing, ...overrides?.spacing },
+  };
+}
+```
+
 ---
 
 ### TASK-007-04_Admin_UI_for_settings_and_tokens
@@ -165,6 +209,16 @@ UI:
 | --- | --- |
 | `admin/ui/settings/SettingsPage.tsx` | settings form |
 | `admin/ui/settings/DesignTokensEditor.tsx` | token editor |
+
+UI sketch:
+
+```tsx
+<DesignTokensEditor
+  value={tokens}
+  onChange={setTokens}
+  onReset={resetToDefaults}
+/>
+```
 
 ---
 

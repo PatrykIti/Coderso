@@ -54,6 +54,16 @@ store/tests/unit/
 | `store/db/schema.ts` | users + roles |
 | `store/services/authService.ts` | login + roles |
 
+Auth sketch:
+
+```ts
+export async function login(email: string, password: string) {
+  const user = await findUserByEmail(email);
+  if (!verifyPassword(user.passwordHash, password)) throw new Error("invalid");
+  return createSession(user.id);
+}
+```
+
 ---
 
 ### TASK-023-02_Publish_tokens
@@ -81,6 +91,16 @@ Example token payload:
 | `store/services/tokenService.ts` | create/revoke tokens |
 | `store/server/routes/authRoutes.ts` | token endpoints |
 
+Token sketch:
+
+```ts
+export async function createToken(pluginName: string) {
+  const raw = randomToken();
+  await saveTokenHash(hash(raw), pluginName);
+  return raw;
+}
+```
+
 ---
 
 ### TASK-023-03_2FA_requirements
@@ -96,6 +116,14 @@ Example token payload:
 | File | What to Add |
 | --- | --- |
 | `store/services/authService.ts` | 2FA enforcement |
+
+2FA sketch:
+
+```ts
+if (user.requires2fa && !verifyTotp(code, user.totpSecret)) {
+  throw new Error("2fa_required");
+}
+```
 
 ---
 

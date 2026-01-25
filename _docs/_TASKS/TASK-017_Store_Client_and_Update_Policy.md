@@ -64,6 +64,14 @@ Rules:
 | --- | --- |
 | `core/store/client.ts` | HTTP client + responses |
 
+Client sketch:
+
+```ts
+export async function fetchMetadata(name: string, version: string) {
+  return fetchJson(`${STORE_URL}/plugins/${name}/versions/${version}/metadata`);
+}
+```
+
 ---
 
 ### TASK-017-02_Signature_and_checksum_verification
@@ -88,6 +96,15 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 | --- | --- |
 | `core/store/verifier.ts` | signature + checksum helpers |
 
+Verifier sketch:
+
+```ts
+export function verifyMetadata(meta, sig, key) {
+  const payload = canonicalizeJson(meta);
+  return verifyEd25519(payload, sig, key);
+}
+```
+
 ---
 
 ### TASK-017-03_Install_and_update_flow
@@ -107,6 +124,13 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 | `core/store/downloader.ts` | download + unzip |
 | `core/store/updater.ts` | install/update logic |
 | `core/plugins/installService.ts` | integrate with registry |
+
+Downloader sketch:
+
+```ts
+await downloadToFile(url, tmpZip);
+await unzip(tmpZip, targetDir);
+```
 
 ---
 

@@ -108,6 +108,14 @@ export function registerWidget(def: WidgetDefinition) {
 | --- | --- |
 | `core/widgets/registry.ts` | widget registry + lookup |
 
+Registry sketch:
+
+```ts
+export function listWidgets() {
+  return Array.from(widgetRegistry.values());
+}
+```
+
 ---
 
 ### TASK-009-02_Schema_validation_and_defaults
@@ -137,6 +145,17 @@ function normalizeBlock(block: Block) {
 | File | What to Add |
 | --- | --- |
 | `core/widgets/validator.ts` | schema validation + normalization |
+
+Validator sketch:
+
+```ts
+export function validateBlock(block: Block) {
+  const def = widgetRegistry.get(block.type);
+  if (!def) throw new Error("Unknown widget");
+  if (!def.variants.includes(block.variant)) throw new Error("Invalid variant");
+  return normalizeBlock(block);
+}
+```
 
 ---
 
@@ -170,6 +189,20 @@ registerWidget({
 | --- | --- |
 | `core/widgets/core/hero.tsx` | renderer + schema |
 | `core/ui/widgets/editors/HeroEditor.tsx` | wizard/visual/advanced |
+
+Hero schema sketch:
+
+```ts
+export const heroSchema = {
+  type: "object",
+  required: ["headline"],
+  properties: {
+    headline: { type: "string" },
+    subhead: { type: "string" },
+    primaryCta: { type: "object" },
+  },
+};
+```
 
 ---
 
@@ -320,6 +353,14 @@ function WidgetRenderer({ block }: { block: Block }) {
 | File | What to Add |
 | --- | --- |
 | `core/widgets/renderers/widgetRenderer.tsx` | runtime renderer |
+
+Renderer sketch:
+
+```tsx
+export function MissingWidget({ type }: { type: string }) {
+  return <div className="border p-4">Missing widget: {type}</div>;
+}
+```
 
 ---
 

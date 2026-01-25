@@ -55,6 +55,17 @@ tests/unit/security/
 | --- | --- |
 | `core/server/middleware/requestId.ts` | request id middleware |
 
+Request ID sketch:
+
+```ts
+export function requestId(req, res, next) {
+  const id = crypto.randomUUID();
+  req.context.requestId = id;
+  res.setHeader("x-request-id", id);
+  next();
+}
+```
+
 ---
 
 ### TASK-020-02_CSRF_and_CORS
@@ -82,6 +93,15 @@ if (!token || token !== session.csrfToken) {
 | `core/server/middleware/csrf.ts` | CSRF validation |
 | `core/server/middleware/cors.ts` | CORS rules |
 
+CORS sketch:
+
+```ts
+export function cors(req, res, next) {
+  res.setHeader("access-control-allow-origin", ADMIN_ORIGIN);
+  next();
+}
+```
+
 ---
 
 ### TASK-020-03_Rate_limiting_and_headers
@@ -99,6 +119,13 @@ if (!token || token !== session.csrfToken) {
 | `core/server/middleware/rateLimit.ts` | rate limiting |
 | `core/server/middleware/securityHeaders.ts` | headers |
 
+Headers sketch:
+
+```ts
+res.setHeader("x-frame-options", "DENY");
+res.setHeader("x-content-type-options", "nosniff");
+```
+
 ---
 
 ### TASK-020-04_Input_validation
@@ -114,6 +141,15 @@ if (!token || token !== session.csrfToken) {
 | File | What to Add |
 | --- | --- |
 | `core/server/validation/schemaValidator.ts` | validation helpers |
+
+Validator sketch:
+
+```ts
+export function validate(schema, payload) {
+  const ok = ajv.validate(schema, payload);
+  if (!ok) throw new ValidationError(ajv.errors);
+}
+```
 
 ---
 

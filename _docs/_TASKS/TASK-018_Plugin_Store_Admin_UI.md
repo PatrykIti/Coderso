@@ -54,6 +54,12 @@ tests/unit/storeUi/
 | `admin/ui/store/StoreList.tsx` | list + search |
 | `admin/ui/store/StoreDetail.tsx` | plugin details |
 
+Store list sketch:
+
+```tsx
+<StoreList items={plugins} onSelect={setSelected} />
+```
+
 ---
 
 ### TASK-018-02_Install_and_update_actions
@@ -81,6 +87,15 @@ await fetch("/admin/api/plugins/install", {
 | --- | --- |
 | `admin/ui/plugins/PluginList.tsx` | installed list |
 | `admin/ui/plugins/PluginDetail.tsx` | actions |
+
+Detail sketch:
+
+```tsx
+<PluginDetail
+  plugin={plugin}
+  onUpdate={() => updatePlugin(plugin.name)}
+/>
+```
 
 ---
 

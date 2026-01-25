@@ -55,6 +55,12 @@ tests/unit/authUi/
 | `admin/ui/users/UserList.tsx` | list + actions |
 | `admin/ui/users/UserEditor.tsx` | editor form |
 
+UI sketch:
+
+```tsx
+<UserEditor user={user} onSave={(next) => saveUser(next)} />
+```
+
 ---
 
 ### TASK-019-02_Roles_UI
@@ -80,6 +86,12 @@ Example role payload:
 | --- | --- |
 | `admin/ui/roles/RoleList.tsx` | list + actions |
 | `admin/ui/roles/RoleEditor.tsx` | editor form |
+
+UI sketch:
+
+```tsx
+<RoleEditor role={role} onSave={(next) => saveRole(next)} />
+```
 
 ---
 

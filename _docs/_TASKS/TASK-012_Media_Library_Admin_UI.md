@@ -61,6 +61,14 @@ await fetch("/admin/api/media", { method: "POST", body: form });
 | `admin/ui/media/MediaLibrary.tsx` | list + upload |
 | `admin/ui/media/UploadDropzone.tsx` | drag and drop |
 
+Upload sketch:
+
+```tsx
+<UploadDropzone
+  onUpload={(files) => uploadFiles(files)}
+/>
+```
+
 ---
 
 ### TASK-012-02_Media_detail_and_metadata
@@ -78,6 +86,15 @@ await fetch("/admin/api/media", { method: "POST", body: form });
 | --- | --- |
 | `admin/ui/media/MediaDetail.tsx` | metadata editor |
 | `admin/ui/media/MediaGrid.tsx` | grid + select |
+
+Metadata sketch:
+
+```tsx
+<MediaDetail
+  item={selected}
+  onSave={(next) => updateMedia(selected.id, next)}
+/>
+```
 
 ---
 

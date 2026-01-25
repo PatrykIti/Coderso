@@ -67,6 +67,20 @@ Constraints:
 | `core/db/schema.ts` | menus + menu_items tables |
 | `core/db/migrations/*` | migration files |
 
+Schema sketch (menu_items):
+
+```ts
+export const menuItems = pgTable("menu_items", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  menuId: uuid("menu_id").notNull().references(() => menus.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  href: text("href"),
+  pageId: uuid("page_id"),
+  orderIndex: integer("order_index").notNull().default(0),
+  parentId: uuid("parent_id"),
+});
+```
+
 ---
 
 ### TASK-006-02_Tree_builder_and_service
@@ -99,6 +113,21 @@ Rules:
 | --- | --- |
 | `core/services/menus/menuService.ts` | CRUD + reorder |
 | `core/services/menus/treeBuilder.ts` | nested tree helper |
+
+Service sketch:
+
+```ts
+export async function updateMenuItems(menuId: string, items: MenuItemInput[]) {
+  return db.transaction(async (tx) => {
+    await tx.delete(menuItems).where(eq(menuItems.menuId, menuId));
+    await tx.insert(menuItems).values(items.map((i, index) => ({
+      ...i,
+      menuId,
+      orderIndex: i.orderIndex ?? index,
+    })));
+  });
+}
+```
 
 ---
 
@@ -137,6 +166,35 @@ Example payload (update items):
 | `core/server/routes/menuRoutes.ts` | CRUD + reorder |
 | `core/server/validation/menuSchemas.ts` | request validation |
 
+Validation sketch (JSON schema):
+
+```ts
+export const menuItemsSchema = {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["label"],
+        properties: {
+          id: { type: "string" },
+          label: { type: "string" },
+          href: { type: "string" },
+          pageId: { type: "string" },
+          parentId: { type: ["string", "null"] },
+          orderIndex: { type: "number" },
+        },
+        oneOf: [
+          { required: ["href"], not: { required: ["pageId"] } },
+          { required: ["pageId"], not: { required: ["href"] } },
+        ],
+      },
+    },
+  },
+};
+```
+
 ---
 
 ### TASK-006-04_Admin_UI
@@ -155,6 +213,16 @@ UI:
 | --- | --- |
 | `admin/ui/menus/MenuList.tsx` | list view |
 | `admin/ui/menus/MenuEditor.tsx` | drag and drop editor |
+
+UI sketch:
+
+```tsx
+<MenuEditor
+  items={items}
+  onChange={setItems}
+  onSave={() => saveMenuItems(menuId, items)}
+/>
+```
 
 ---
 

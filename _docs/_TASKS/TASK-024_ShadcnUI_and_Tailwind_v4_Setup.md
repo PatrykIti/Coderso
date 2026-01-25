@@ -48,6 +48,13 @@ tests/unit/ui/
 
 Install Tailwind v4 with Vite plugin (docs).
 
+Steps:
+1) Install `tailwindcss@latest` and `@tailwindcss/vite@latest`.
+2) Add `tailwindcss()` plugin to `vite.config.ts`.
+3) Add alias `@` -> `./admin` in `vite.config.ts` and `tsconfig.json`.
+4) Add Tailwind import to `admin/styles/globals.css`.
+5) Verify dev server compiles without PostCSS config.
+
 Commands:
 
 ```bash
@@ -98,6 +105,7 @@ Update CSS entry (v4 uses @import):
 | `vite.config.ts` | tailwindcss() plugin + alias |
 | `admin/styles/globals.css` | `@import "tailwindcss";` |
 | `tsconfig.json` | `@/*` path alias |
+| `admin/styles/globals.css` | base layer + tokens |
 
 ---
 
@@ -106,6 +114,11 @@ Update CSS entry (v4 uses @import):
 **Status:** To Do
 
 Initialize shadcn/ui with Bun CLI.
+
+Rules:
+- Use latest CLI: `bun dlx shadcn@latest`.
+- `rsc` must be `false` (Admin UI is client-only).
+- `cssVariables` must be `true` to align with design tokens.
 
 Commands:
 
@@ -155,14 +168,21 @@ Expected `components.json` (example):
 
 Map `DESIGN_TOKENS.md` to CSS variables used by shadcn and Tailwind.
 
+Rules:
+- Map core tokens to shadcn variables in `:root`.
+- Keep mapping minimal and stable (do not rename variables in UI code).
+- Use `@layer base` for CSS variables and body defaults.
+
 Example:
 
 ```css
+@layer base {
 :root {
   --background: var(--color-bg);
   --foreground: var(--color-text);
   --primary: var(--color-primary);
   --primary-foreground: var(--color-bg);
+}
 }
 ```
 
@@ -180,10 +200,14 @@ Example:
 
 Install baseline UI components used across Admin UI.
 
+Core components (v1):
+- button, input, select, dropdown-menu, dialog
+- textarea, checkbox, tabs, toast, tooltip
+
 Commands:
 
 ```bash
-bun dlx shadcn@latest add button input select dropdown-menu dialog
+bun dlx shadcn@latest add button input select dropdown-menu dialog textarea checkbox tabs toast tooltip
 ```
 
 **Implementation Checklist:**
@@ -194,10 +218,88 @@ bun dlx shadcn@latest add button input select dropdown-menu dialog
 
 ---
 
+### TASK-024-05_Core_ui_helpers_and_styles
+
+**Status:** To Do
+
+Add shared UI helpers and base styles for Admin UI.
+
+Example `admin/lib/utils.ts` (cn helper):
+
+```ts
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+Example `admin/styles/globals.css` (minimal base):
+
+```css
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: var(--color-bg);
+    --foreground: var(--color-text);
+    --primary: var(--color-primary);
+    --primary-foreground: var(--color-bg);
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+  }
+}
+```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/lib/utils.ts` | `cn` helper |
+| `admin/styles/globals.css` | base styles + tokens |
+
+---
+
+### TASK-024-06_Verify_component_usage
+
+**Status:** To Do
+
+Add a simple admin UI screen to verify components render correctly.
+
+Example `admin/ui/debug/UiPreview.tsx`:
+
+```tsx
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export function UiPreview() {
+  return (
+    <div className="space-y-4 p-6">
+      <Button>Primary</Button>
+      <Input placeholder="Type here" />
+    </div>
+  );
+}
+```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/debug/UiPreview.tsx` | preview screen |
+
+---
+
 ## Testing Requirements
 
 - [ ] `tests/unit/ui/button.test.tsx` renders shadcn Button.
 - [ ] `tests/unit/ui/themeTokens.test.ts` validates CSS variables.
+- [ ] `tests/unit/ui/utils.test.ts` validates `cn` helper output.
+- [ ] `tests/integration/ui/preview.test.tsx` renders UI preview page.
 
 ---
 
@@ -207,8 +309,11 @@ bun dlx shadcn@latest add button input select dropdown-menu dialog
 - `admin/styles/globals.css`
 - `admin/lib/utils.ts`
 - `admin/components/ui/*`
+- `admin/ui/debug/UiPreview.tsx`
 - `tests/unit/ui/button.test.tsx`
 - `tests/unit/ui/themeTokens.test.ts`
+- `tests/unit/ui/utils.test.ts`
+- `tests/integration/ui/preview.test.tsx`
 
 ---
 

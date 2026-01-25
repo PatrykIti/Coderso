@@ -76,6 +76,14 @@ Rules:
 | --- | --- |
 | `core/services/audit/auditService.ts` | log + list |
 
+Service sketch:
+
+```ts
+export async function listAudit(limit = 50) {
+  return db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(limit);
+}
+```
+
 ---
 
 ### TASK-014-02_Hook_audit_into_core_actions
@@ -115,6 +123,21 @@ Events (v1):
 | --- | --- |
 | `core/server/routes/auditRoutes.ts` | audit endpoint |
 | `admin/ui/audit/AuditList.tsx` | audit UI |
+
+Route sketch:
+
+```ts
+router.get("/audit", requirePermission("audit:read"), async () => {
+  const items = await listAudit(100);
+  return json({ items });
+});
+```
+
+UI sketch:
+
+```tsx
+<AuditList items={items} onFilterChange={setFilters} />
+```
 
 ---
 

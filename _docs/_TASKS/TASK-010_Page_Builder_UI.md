@@ -80,6 +80,16 @@ const newBlock: Block = {
 | `admin/ui/pages/builder/BlockList.tsx` | list + drag reorder |
 | `admin/ui/pages/builder/WidgetPicker.tsx` | add block UI |
 
+Block list sketch:
+
+```tsx
+function BlockList({ blocks, onReorder }) {
+  return blocks.map((block, index) => (
+    <BlockToolbar key={block.id} index={index} />
+  ));
+}
+```
+
 ---
 
 ### TASK-010-02_Wizard_flow
@@ -96,6 +106,15 @@ const newBlock: Block = {
 | --- | --- |
 | `admin/ui/pages/builder/WizardPanel.tsx` | wizard UI |
 
+Wizard sketch:
+
+```tsx
+<WizardPanel
+  widget={widget}
+  onComplete={(variant, data) => setBlock({ ...block, variant, data })}
+/>
+```
+
 ---
 
 ### TASK-010-03_Visual_mode
@@ -111,6 +130,16 @@ const newBlock: Block = {
 | File | What to Add |
 | --- | --- |
 | `admin/ui/pages/builder/VisualPanel.tsx` | visual editor |
+
+Visual sketch:
+
+```tsx
+<VisualPanel
+  variants={widget.variants}
+  selected={block.variant}
+  onSelect={(v) => setBlock({ ...block, variant: v })}
+/>
+```
 
 ---
 
@@ -129,6 +158,15 @@ const newBlock: Block = {
 | `admin/ui/pages/builder/AdvancedPanel.tsx` | advanced controls |
 | `admin/ui/pages/builder/LayoutPanel.tsx` | layout tokens |
 
+Layout panel sketch:
+
+```tsx
+<LayoutPanel
+  value={block.layout}
+  onChange={(layout) => setBlock({ ...block, layout })}
+/>
+```
+
 ---
 
 ### TASK-010-05_Save_and_publish
@@ -146,6 +184,16 @@ const newBlock: Block = {
 | --- | --- |
 | `admin/ui/pages/PageEditor.tsx` | save/publish actions |
 | `admin/ui/pages/PageList.tsx` | list + status |
+
+Save sketch:
+
+```ts
+await fetch(`/admin/api/pages/${id}`, {
+  method: "PATCH",
+  headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+  body: JSON.stringify({ data: stripEditor(blocks) }),
+});
+```
 
 ---
 
