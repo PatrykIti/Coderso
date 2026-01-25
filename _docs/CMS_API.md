@@ -116,6 +116,7 @@ Permissions: `content:read`, `content:write`, `content:publish`
 - `POST /content/:type/entries`
 - `GET /content/:type/entries/:id`
 - `PATCH /content/:type/entries/:id`
+- `POST /content/:type/entries/:id/preview`
 - `POST /content/:type/entries/:id/publish`
 - `POST /content/:type/entries/:id/unpublish`
 

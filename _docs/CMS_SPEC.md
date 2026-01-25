@@ -91,6 +91,8 @@ Storage:
 - Definicje schematow danych dla kolekcji (np. blog).
 - Entries z statusami draft/published.
 - Szczegoly: `CONTENT_TYPES_SPEC.md`.
+- Content types sa tworzone w panelu admina (schema builder).
+- Brak migracji tabel, dane w JSONB.
 
 ---
 
@@ -142,6 +144,14 @@ Storage:
 
 - Plugin rejestruje bloki, admin pages, routes.
 - Core przechowuje stan pluginow w `plugins` i `plugin_settings`.
+
+---
+
+## Users (admin vs public)
+
+- V1 dotyczy uzytkownikow panelu admina (admin/editor/viewer).
+- Publiczni uzytkownicy (np. portal klienta) beda realizowani przez pluginy
+  lub jako modul v1.1+.
 
 ---
 

@@ -2,6 +2,9 @@
 
 Zakres: auth do panelu admina i API admina.
 
+Poza zakresem v1:
+- konta uzytkownikow publicznych (frontend). To zapewniaja pluginy lub v1.1+.
+
 ## Login
 
 - Email + haslo.

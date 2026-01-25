@@ -20,6 +20,11 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 - JSON schema validation dla payloadow admin API.
 - Odrzucenie nadmiarowych pol (strict).
 
+## Internal service layer
+
+- Internal layer nie jest publiczny, ale wciaz wymaga walidacji i RBAC.
+- Brak bezposredniego dostepu z zewnatrz.
+
 ## File uploads
 
 - Limit size per file.
@@ -44,3 +49,5 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 
 - Safe mode uruchamia core bez pluginow, aby odzyskac panel admina.
 - Error boundaries w admin UI izoluje bledy pluginow.
+- Auto-disable pluginu po przekroczeniu progu bledow (configurable).
+- Watchdog/timeouts dla hookow i renderowania server-side.

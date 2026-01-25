@@ -88,11 +88,16 @@ Note (v2+):
 - created_at
 - created_by (fk users)
 
+Note (v2+):
+- `content_revisions` z duzymi JSONB moze szybko rosnac. Warto dodac pruning
+  starych rewizji i/lub kompresje danych.
+
 ## Preview
 
 `preview_tokens`
 - id (uuid, pk)
-- page_id (fk pages)
+- target_type (page|content)
+- target_id (uuid)
 - token_hash
 - expires_at
 - created_at
@@ -191,3 +196,5 @@ Note (v2+):
 - sessions.user_id
 - audit_logs.created_at
 - preview_tokens.token_hash
+- preview_tokens.target_type
+- preview_tokens.target_id

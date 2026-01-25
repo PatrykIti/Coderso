@@ -8,6 +8,8 @@ niestandardowych klas Tailwind w runtime.
 - Tokeny sa expose jako CSS variables w `:root`.
 - Pluginy powinny uzywac tokenow zamiast hardcode kolorow.
 - Wszelkie niestandardowe style pluginu musza byc w `dist/style.css`.
+- Core dostarcza domyslne wartosci tokenow w theme (np. `/themes/default`).
+- Admin moze zmieniac wartosci tokenow na poziomie global settings.
 
 ## Token groups (v1)
 
@@ -23,6 +25,18 @@ niestandardowych klas Tailwind w runtime.
 - Pluginy nie polegaja na `bg-[#123456]` bezposrednio.
 - Dla dynamicznych klas plugin uzywa safelist w swoim buildzie.
 
+Przyklad mapowania w tailwind.config:
+
+```js
+theme: {
+  colors: {
+    primary: "var(--color-primary)",
+    secondary: "var(--color-secondary)",
+    accent: "var(--color-accent)"
+  }
+}
+```
+
 ## Example usage
 
 ```css
@@ -33,3 +47,8 @@ niestandardowych klas Tailwind w runtime.
   border-radius: var(--radius-md);
 }
 ```
+
+## Token compliance (store)
+
+- Store moze flagowac hardcode kolorow w CSS pluginu.
+- Preferowane jest uzywanie tokenow dla spojnosc i kompatybilnosci.

@@ -117,6 +117,7 @@ Dodatkowe reguly (heurystyki):
 - Wykrywanie `eval`, `new Function`, dynamicznych importow z user input.
 - Proby dostepu do `child_process` i `fs` (notyfikacja).
 - Wykrywanie "beaconing" (nieznane endpointy).
+- CSS lint: wykrywanie hardcode kolorow (hex/rgb) zamiast tokenow.
 
 Skutki:
 - `scanStatus=failed` blokuje publikacje.

@@ -2,9 +2,9 @@
 
 ## Default
 
-- Storage lokalny w core (filesystem).
+- Storage lokalny w core (filesystem) - v1.
 - Publiczne serwowanie plikow przez core.
-- Konfiguracja pozwala przelaczyc na external storage (S3, Azure).
+- V1 wspiera adaptery: local, S3, Azure.
 
 ## Local storage
 

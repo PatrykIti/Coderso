@@ -569,7 +569,9 @@ Ryzyko:
 Mitygacja:
 - **Safe Mode**: Uruchomienie serwera z flaga `--safe` wylacza ladowanie pluginow, umozliwiajac wejscie do panelu i wylaczenie wadliwego pluginu.
 - **Error Boundaries**: Core owija widgety i strony pluginow w React Error Boundary, aby blad renderowania nie sypal calym UI.
-- **Timeouts**: Limity czasu na wykonanie hookow server-side (jesli mozliwe w Bun/Node bez workerow).
+- **Timeouts**: Limity czasu na wykonanie hookow server-side (jesli mozliwe bez workerow).
+- **Auto-disable**: Po przekroczeniu progu bledow plugin jest automatycznie wylaczany (z logiem i audytem).
+- **Watchdog**: Monitoruje timeouts/wyjatki i oznacza plugin jako unhealthy.
 
 ### 3. Ograniczenia stylowania (Tailwind JIT)
 Ryzyko:

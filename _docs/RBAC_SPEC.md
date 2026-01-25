@@ -46,6 +46,11 @@ Viewer:
 - menus:read
 - settings:read
 
+Notes:
+- `audit:read` tylko dla Admin.
+- Role sa konfigurowalne w panelu admina.
+- RBAC dotyczy uzytkownikow admina (nie publicznych).
+
 ## UI mapping (v1)
 
 - Pages: content:read/write/publish
