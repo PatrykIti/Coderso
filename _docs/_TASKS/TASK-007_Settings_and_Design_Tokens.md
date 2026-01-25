@@ -28,13 +28,21 @@ and plugins.
 core/db/schema.ts
 core/services/settings/
   settingsService.ts
+core/services/theme/
+  tokenService.ts
 core/server/routes/
   settingsRoutes.ts
-core/ui/settings/
+core/server/validation/
+  settingsSchemas.ts
+admin/ui/settings/
   SettingsPage.tsx
   DesignTokensEditor.tsx
 core/ui/theme/
   tokenCss.ts
+
+tests/unit/settings/
+  settingsService.test.ts
+  tokenService.test.ts
 ```
 
 ---
@@ -62,14 +70,14 @@ async function getSetting<T>(key: string): Promise<T | null> {
   const row = await db.select().from(settings).where(eq(settings.key, key));
   return row[0]?.value ?? null;
 }
-
-async function setSetting<T>(key: string, value: T) {
-  await db.insert(settings).values({ key, value }).onConflictDoUpdate({
-    target: settings.key,
-    set: { value, updatedAt: new Date() },
-  });
-}
 ```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/db/schema.ts` | settings table |
+| `core/services/settings/settingsService.ts` | get/set/delete |
 
 ---
 
@@ -92,6 +100,13 @@ Example payload:
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/routes/settingsRoutes.ts` | settings endpoints |
+| `core/server/validation/settingsSchemas.ts` | validation rules |
+
 ---
 
 ### TASK-007-03_Design_token_pipeline
@@ -106,22 +121,20 @@ Rules:
 Example:
 
 ```ts
-type Tokens = {
-  colors: { primary: string; secondary: string; accent: string };
-  neutrals: { bg: string; surface: string; text: string };
-};
-
-function buildTokenCss(tokens: Tokens) {
+function buildTokenCss(tokens) {
   return `:root{` +
     `--color-primary:${tokens.colors.primary};` +
     `--color-secondary:${tokens.colors.secondary};` +
-    `--color-accent:${tokens.colors.accent};` +
-    `--color-bg:${tokens.neutrals.bg};` +
-    `--color-surface:${tokens.neutrals.surface};` +
-    `--color-text:${tokens.neutrals.text};` +
   `}`;
 }
 ```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/theme/tokenService.ts` | merge + resolve tokens |
+| `core/ui/theme/tokenCss.ts` | css output helper |
 
 ---
 
@@ -129,24 +142,46 @@ function buildTokenCss(tokens: Tokens) {
 
 **Status:** To Do
 
-UI needs:
+UI:
 - Global settings page (site name, locale, etc.).
 - Design tokens editor with live preview.
 - Save token overrides to `settings["design.tokens"]`.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/settings/SettingsPage.tsx` | settings form |
+| `admin/ui/settings/DesignTokensEditor.tsx` | token editor |
 
 ---
 
 ## Testing Requirements
 
-- [ ] Settings CRUD (get/set/delete) works and persists in DB.
-- [ ] Token CSS reflects defaults + overrides.
-- [ ] Invalid keys or invalid token values are rejected by validation.
+- [ ] `tests/unit/settings/settingsService.test.ts` CRUD for settings.
+- [ ] `tests/unit/settings/tokenService.test.ts` merges defaults + overrides.
+- [ ] `tests/integration/routes/settings.test.ts` validates endpoints.
+
+---
+
+## New Files to Create
+
+- `core/services/settings/settingsService.ts`
+- `core/services/theme/tokenService.ts`
+- `core/server/routes/settingsRoutes.ts`
+- `core/server/validation/settingsSchemas.ts`
+- `core/ui/theme/tokenCss.ts`
+- `admin/ui/settings/SettingsPage.tsx`
+- `admin/ui/settings/DesignTokensEditor.tsx`
+- `tests/unit/settings/settingsService.test.ts`
+- `tests/unit/settings/tokenService.test.ts`
+- `tests/integration/routes/settings.test.ts`
 
 ---
 
 ## Documentation Updates Required
 
-- `_docs/DESIGN_TOKENS.md` (token merge order and storage key).
+- `_docs/DESIGN_TOKENS.md` (merge order and storage key).
 - `_docs/CMS_API.md` (settings endpoints).
 - `_docs/DATA_MODEL.md` (if schema changes).
 

@@ -28,9 +28,14 @@ core/services/search/
   searchService.ts
 core/server/routes/
   searchRoutes.ts
+core/db/migrations/
+  search_indexes.sql
 admin/ui/search/
   SearchBar.tsx
   SearchResults.tsx
+
+tests/unit/search/
+  searchService.test.ts
 ```
 
 ---
@@ -41,7 +46,7 @@ admin/ui/search/
 
 **Status:** To Do
 
-Add tsvector columns or computed expressions for pages, entries, and media.
+Add full-text indexes and trigram indexes.
 
 Example SQL:
 
@@ -50,6 +55,12 @@ CREATE INDEX pages_search_idx ON pages USING GIN (to_tsvector('simple', title ||
 CREATE INDEX entries_search_idx ON content_entries USING GIN (to_tsvector('simple', title || ' ' || slug));
 CREATE INDEX media_search_idx ON media USING GIN (to_tsvector('simple', title || ' ' || alt));
 ```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/db/migrations/search_indexes.sql` | indexes and triggers |
 
 ---
 
@@ -68,6 +79,13 @@ WHERE to_tsvector('simple', title || ' ' || slug) @@ plainto_tsquery('simple', $
 LIMIT 10;
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/search/searchService.ts` | search queries |
+| `core/server/routes/searchRoutes.ts` | search endpoints |
+
 ---
 
 ### TASK-013-03_Admin_UI_search
@@ -78,13 +96,32 @@ LIMIT 10;
 - Result grouping by type.
 - Keyboard navigation.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/search/SearchBar.tsx` | search input |
+| `admin/ui/search/SearchResults.tsx` | results list |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Search returns matches for pages, entries, and media.
-- [ ] Empty query returns empty response.
-- [ ] Search is fast for large datasets.
+- [ ] `tests/unit/search/searchService.test.ts` returns matches.
+- [ ] `tests/integration/routes/search.test.ts` validates endpoints.
+- [ ] UI test verifies keyboard navigation.
+
+---
+
+## New Files to Create
+
+- `core/services/search/searchService.ts`
+- `core/server/routes/searchRoutes.ts`
+- `core/db/migrations/search_indexes.sql`
+- `admin/ui/search/SearchBar.tsx`
+- `admin/ui/search/SearchResults.tsx`
+- `tests/unit/search/searchService.test.ts`
+- `tests/integration/routes/search.test.ts`
 
 ---
 

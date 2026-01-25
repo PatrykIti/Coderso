@@ -30,6 +30,9 @@ admin/ui/store/
 admin/ui/plugins/
   PluginList.tsx
   PluginDetail.tsx
+
+tests/unit/storeUi/
+  storeList.test.tsx
 ```
 
 ---
@@ -42,6 +45,13 @@ admin/ui/plugins/
 
 - List plugins with filters and search.
 - Plugin detail view (version, scans, permissions).
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/store/StoreList.tsx` | list + search |
+| `admin/ui/store/StoreDetail.tsx` | plugin details |
 
 ---
 
@@ -63,6 +73,13 @@ await fetch("/admin/api/plugins/install", {
 });
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/plugins/PluginList.tsx` | installed list |
+| `admin/ui/plugins/PluginDetail.tsx` | actions |
+
 ---
 
 ### TASK-018-03_Update_policy_controls
@@ -72,13 +89,29 @@ await fetch("/admin/api/plugins/install", {
 - Default policy: auto-security.
 - Per-plugin overrides (manual/auto-security).
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/plugins/PluginDetail.tsx` | policy toggle |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Install calls `POST /plugins/install`.
-- [ ] Update calls `POST /plugins/:name/update`.
-- [ ] Policy changes persist to plugin settings.
+- [ ] `tests/unit/storeUi/storeList.test.tsx` renders list.
+- [ ] `tests/integration/ui/plugins.test.tsx` installs and updates plugin.
+
+---
+
+## New Files to Create
+
+- `admin/ui/store/StoreList.tsx`
+- `admin/ui/store/StoreDetail.tsx`
+- `admin/ui/plugins/PluginList.tsx`
+- `admin/ui/plugins/PluginDetail.tsx`
+- `tests/unit/storeUi/storeList.test.tsx`
+- `tests/integration/ui/plugins.test.tsx`
 
 ---
 

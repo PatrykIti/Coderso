@@ -30,6 +30,9 @@ core/server/routes/
   auditRoutes.ts
 admin/ui/audit/
   AuditList.tsx
+
+tests/unit/audit/
+  auditService.test.ts
 ```
 
 ---
@@ -62,6 +65,12 @@ async function logAudit(event: {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/audit/auditService.ts` | log + list |
+
 ---
 
 ### TASK-014-02_Hook_audit_into_core_actions
@@ -77,6 +86,13 @@ Events (v1):
 - plugins.update
 - plugins.disable
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/audit/auditService.ts` | helpers for events |
+| `core/server/routes/*` | log on actions |
+
 ---
 
 ### TASK-014-03_Admin_API_and_UI
@@ -86,13 +102,30 @@ Events (v1):
 - `GET /audit` endpoint (read-only).
 - Admin UI list with filters (action, date, user).
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/routes/auditRoutes.ts` | audit endpoint |
+| `admin/ui/audit/AuditList.tsx` | audit UI |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Login/logout creates audit entries.
-- [ ] Publish action creates audit entry.
-- [ ] Audit endpoint returns ordered results.
+- [ ] `tests/unit/audit/auditService.test.ts` logs events.
+- [ ] `tests/integration/routes/audit.test.ts` returns ordered list.
+- [ ] UI test validates filters.
+
+---
+
+## New Files to Create
+
+- `core/services/audit/auditService.ts`
+- `core/server/routes/auditRoutes.ts`
+- `admin/ui/audit/AuditList.tsx`
+- `tests/unit/audit/auditService.test.ts`
+- `tests/integration/routes/audit.test.ts`
 
 ---
 

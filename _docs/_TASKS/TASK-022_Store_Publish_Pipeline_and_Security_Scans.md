@@ -35,6 +35,12 @@ store/pipeline/
     cssLint.ts
 store/server/routes/
   publishRoutes.ts
+store/services/
+  publishService.ts
+
+store/tests/unit/
+  validator.test.ts
+  scans.test.ts
 ```
 
 ---
@@ -48,6 +54,13 @@ store/server/routes/
 - `POST /publish` (authenticated).
 - Accept ZIP + plugin.json + metadata.
 - Validate `apiVersion`, `coreVersion`, `entry`.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/server/routes/publishRoutes.ts` | publish endpoint |
+| `store/services/publishService.ts` | orchestrate pipeline |
 
 ---
 
@@ -73,6 +86,13 @@ Example scan result:
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/pipeline/validator.ts` | manifest validation |
+| `store/pipeline/scanners/*.ts` | scanners |
+
 ---
 
 ### TASK-022-03_Review_workflow
@@ -82,13 +102,36 @@ Example scan result:
 - `scanStatus=failed` blocks publish.
 - `scanStatus=warning` requires manual approval.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/services/publishService.ts` | scan status logic |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Invalid manifest blocks publish.
-- [ ] Duplicate React triggers bundle scan warning.
-- [ ] Secrets scan detects embedded keys.
+- [ ] `store/tests/unit/validator.test.ts` rejects invalid manifest.
+- [ ] `store/tests/unit/scans.test.ts` detects duplicate React.
+- [ ] `store/tests/integration/publish.test.ts` blocks failed scan.
+
+---
+
+## New Files to Create
+
+- `store/pipeline/validator.ts`
+- `store/pipeline/scanners/sast.ts`
+- `store/pipeline/scanners/cve.ts`
+- `store/pipeline/scanners/secrets.ts`
+- `store/pipeline/scanners/license.ts`
+- `store/pipeline/scanners/bundleAnalysis.ts`
+- `store/pipeline/scanners/cssLint.ts`
+- `store/services/publishService.ts`
+- `store/server/routes/publishRoutes.ts`
+- `store/tests/unit/validator.test.ts`
+- `store/tests/unit/scans.test.ts`
+- `store/tests/integration/publish.test.ts`
 
 ---
 

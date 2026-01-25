@@ -29,6 +29,10 @@ admin/ui/users/
 admin/ui/roles/
   RoleList.tsx
   RoleEditor.tsx
+
+tests/unit/authUi/
+  rolesUi.test.tsx
+  usersUi.test.tsx
 ```
 
 ---
@@ -42,6 +46,13 @@ admin/ui/roles/
 - List users.
 - Create/edit users.
 - Assign roles.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/users/UserList.tsx` | list + actions |
+| `admin/ui/users/UserEditor.tsx` | editor form |
 
 ---
 
@@ -61,13 +72,32 @@ Example role payload:
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/roles/RoleList.tsx` | list + actions |
+| `admin/ui/roles/RoleEditor.tsx` | editor form |
+
 ---
 
 ## Testing Requirements
 
-- [ ] User create/edit persists.
-- [ ] Role update affects permission checks.
-- [ ] Users without permission cannot access screens.
+- [ ] `tests/unit/authUi/usersUi.test.tsx` creates and edits users.
+- [ ] `tests/unit/authUi/rolesUi.test.tsx` updates permissions.
+- [ ] `tests/integration/ui/roles.test.tsx` enforces RBAC in UI.
+
+---
+
+## New Files to Create
+
+- `admin/ui/users/UserList.tsx`
+- `admin/ui/users/UserEditor.tsx`
+- `admin/ui/roles/RoleList.tsx`
+- `admin/ui/roles/RoleEditor.tsx`
+- `tests/unit/authUi/usersUi.test.tsx`
+- `tests/unit/authUi/rolesUi.test.tsx`
+- `tests/integration/ui/roles.test.tsx`
 
 ---
 

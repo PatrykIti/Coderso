@@ -30,6 +30,9 @@ store/services/
   tokenService.ts
 store/server/routes/
   authRoutes.ts
+
+store/tests/unit/
+  tokenService.test.ts
 ```
 
 ---
@@ -42,6 +45,13 @@ store/server/routes/
 
 - Users with roles: author, maintainer, admin.
 - Password hashing and reset flow.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/db/schema.ts` | users + roles |
+| `store/services/authService.ts` | login + roles |
 
 ---
 
@@ -62,6 +72,13 @@ Example token payload:
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/services/tokenService.ts` | create/revoke tokens |
+| `store/server/routes/authRoutes.ts` | token endpoints |
+
 ---
 
 ### TASK-023-03_2FA_requirements
@@ -71,13 +88,28 @@ Example token payload:
 - Enforce 2FA for author/maintainer roles.
 - Store 2FA enrollment status.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/services/authService.ts` | 2FA enforcement |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Token scope prevents publishing to other plugins.
-- [ ] Revoked token is rejected.
-- [ ] 2FA required for publish action when enabled.
+- [ ] `store/tests/unit/tokenService.test.ts` verifies scope.
+- [ ] `store/tests/integration/auth.test.ts` blocks publish without 2FA.
+
+---
+
+## New Files to Create
+
+- `store/services/authService.ts`
+- `store/services/tokenService.ts`
+- `store/server/routes/authRoutes.ts`
+- `store/tests/unit/tokenService.test.ts`
+- `store/tests/integration/auth.test.ts`
 
 ---
 

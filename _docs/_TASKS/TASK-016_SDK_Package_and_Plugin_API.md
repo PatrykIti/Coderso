@@ -26,12 +26,17 @@ runtime bindings. This defines the public contract for plugins.
 ```
 packages/sdk/
   package.json
+  tsconfig.json
   src/
     server.ts
     client.ts
     shared.ts
 core/plugins/
   sdkRuntime.ts
+
+tests/unit/sdk/
+  exports.test.ts
+  assets.test.ts
 ```
 
 ---
@@ -54,6 +59,15 @@ export function definePlugin(register: (ctx: ServerContext) => void) {
   return register;
 }
 ```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `packages/sdk/package.json` | exports map |
+| `packages/sdk/src/server.ts` | definePlugin + types |
+| `packages/sdk/src/client.ts` | defineAdmin + types |
+| `packages/sdk/src/shared.ts` | shared types |
 
 ---
 
@@ -79,23 +93,50 @@ export type HookContext = {
 };
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `packages/sdk/src/server.ts` | HooksAPI types |
+| `packages/sdk/src/shared.ts` | HookContext type |
+
 ---
 
 ### TASK-016-03_Runtime_bindings_in_core
 
 **Status:** To Do
 
-- Provide actual implementations for ServerContext and ClientContext.
+- Provide implementations for ServerContext and ClientContext.
 - Bind assets API to plugin public path.
 - Expose SettingsAPI/StorageAPI with scoped keys.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/plugins/sdkRuntime.ts` | runtime context factory |
 
 ---
 
 ## Testing Requirements
 
-- [ ] Type tests verify SDK exports.
-- [ ] Hook handlers receive HookContext.
-- [ ] Assets API returns versioned URLs.
+- [ ] `tests/unit/sdk/exports.test.ts` verifies SDK exports.
+- [ ] `tests/unit/sdk/assets.test.ts` returns versioned URLs.
+- [ ] `tests/unit/sdk/hookContext.test.ts` verifies HookContext shape.
+
+---
+
+## New Files to Create
+
+- `packages/sdk/package.json`
+- `packages/sdk/tsconfig.json`
+- `packages/sdk/src/server.ts`
+- `packages/sdk/src/client.ts`
+- `packages/sdk/src/shared.ts`
+- `core/plugins/sdkRuntime.ts`
+- `tests/unit/sdk/exports.test.ts`
+- `tests/unit/sdk/assets.test.ts`
+- `tests/unit/sdk/hookContext.test.ts`
 
 ---
 

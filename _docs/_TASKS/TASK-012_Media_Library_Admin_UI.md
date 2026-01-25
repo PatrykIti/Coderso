@@ -27,6 +27,10 @@ admin/ui/media/
   MediaLibrary.tsx
   MediaGrid.tsx
   MediaDetail.tsx
+  UploadDropzone.tsx
+
+tests/unit/mediaUi/
+  mediaLibrary.test.tsx
 ```
 
 ---
@@ -49,6 +53,13 @@ form.append("file", file);
 await fetch("/admin/api/media", { method: "POST", body: form });
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/media/MediaLibrary.tsx` | list + upload |
+| `admin/ui/media/UploadDropzone.tsx` | drag and drop |
+
 ---
 
 ### TASK-012-02_Media_detail_and_metadata
@@ -59,13 +70,30 @@ await fetch("/admin/api/media", { method: "POST", body: form });
 - Copy URL.
 - Delete asset with confirm dialog.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/media/MediaDetail.tsx` | metadata editor |
+| `admin/ui/media/MediaGrid.tsx` | grid + select |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Upload returns new media item in list.
-- [ ] Metadata edits persist.
-- [ ] Delete removes asset from list.
+- [ ] `tests/unit/mediaUi/mediaLibrary.test.tsx` renders list and upload.
+- [ ] `tests/integration/ui/media.test.tsx` updates metadata and deletes.
+
+---
+
+## New Files to Create
+
+- `admin/ui/media/MediaLibrary.tsx`
+- `admin/ui/media/MediaGrid.tsx`
+- `admin/ui/media/MediaDetail.tsx`
+- `admin/ui/media/UploadDropzone.tsx`
+- `tests/unit/mediaUi/mediaLibrary.test.tsx`
+- `tests/integration/ui/media.test.tsx`
 
 ---
 

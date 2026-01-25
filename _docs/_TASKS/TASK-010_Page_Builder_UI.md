@@ -34,6 +34,12 @@ admin/ui/pages/
     WizardPanel.tsx
     VisualPanel.tsx
     AdvancedPanel.tsx
+    WidgetPicker.tsx
+    LayoutPanel.tsx
+
+tests/unit/pageBuilder/
+  blockList.test.tsx
+  wizardFlow.test.tsx
 ```
 
 ---
@@ -62,6 +68,13 @@ const newBlock: Block = {
 };
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/pages/builder/BlockList.tsx` | list + drag reorder |
+| `admin/ui/pages/builder/WidgetPicker.tsx` | add block UI |
+
 ---
 
 ### TASK-010-02_Wizard_flow
@@ -70,6 +83,12 @@ const newBlock: Block = {
 
 - Wizard asks minimal questions and sets variant.
 - On finish, switch to Visual mode.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/pages/builder/WizardPanel.tsx` | wizard UI |
 
 ---
 
@@ -80,6 +99,12 @@ const newBlock: Block = {
 - Variant picker with previews.
 - Show only fields relevant to chosen variant.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/pages/builder/VisualPanel.tsx` | visual editor |
+
 ---
 
 ### TASK-010-04_Advanced_mode
@@ -88,6 +113,13 @@ const newBlock: Block = {
 
 - Layout panel for spacing, margins, container width.
 - Per-device visibility toggles.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/pages/builder/AdvancedPanel.tsx` | advanced controls |
+| `admin/ui/pages/builder/LayoutPanel.tsx` | layout tokens |
 
 ---
 
@@ -99,14 +131,38 @@ const newBlock: Block = {
 - Publish via `POST /pages/:id/publish`.
 - Warn about unsaved changes.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/pages/PageEditor.tsx` | save/publish actions |
+| `admin/ui/pages/PageList.tsx` | list + status |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Blocks can be added, reordered, and deleted.
-- [ ] Wizard writes valid `data` for the widget schema.
-- [ ] Mode switch preserves data (no reset).
-- [ ] Save and publish calls succeed with valid payload.
+- [ ] `tests/unit/pageBuilder/blockList.test.tsx` add/reorder/delete blocks.
+- [ ] `tests/unit/pageBuilder/wizardFlow.test.tsx` wizard sets variant.
+- [ ] `tests/integration/ui/pageBuilder.test.tsx` save + publish flow.
+
+---
+
+## New Files to Create
+
+- `admin/ui/pages/PageList.tsx`
+- `admin/ui/pages/PageEditor.tsx`
+- `admin/ui/pages/builder/BlockList.tsx`
+- `admin/ui/pages/builder/BlockToolbar.tsx`
+- `admin/ui/pages/builder/BlockSettings.tsx`
+- `admin/ui/pages/builder/WizardPanel.tsx`
+- `admin/ui/pages/builder/VisualPanel.tsx`
+- `admin/ui/pages/builder/AdvancedPanel.tsx`
+- `admin/ui/pages/builder/WidgetPicker.tsx`
+- `admin/ui/pages/builder/LayoutPanel.tsx`
+- `tests/unit/pageBuilder/blockList.test.tsx`
+- `tests/unit/pageBuilder/wizardFlow.test.tsx`
+- `tests/integration/ui/pageBuilder.test.tsx`
 
 ---
 

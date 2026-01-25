@@ -27,22 +27,45 @@ navigation and footer widgets.
 core/db/schema.ts
 core/services/menus/
   menuService.ts
+  treeBuilder.ts
 core/server/routes/
   menuRoutes.ts
+core/server/validation/
+  menuSchemas.ts
 admin/ui/menus/
   MenuList.tsx
   MenuEditor.tsx
+
+tests/unit/menus/
+  menuService.test.ts
 ```
 
 ---
 
 ## Sub-Tasks
 
-### TASK-006-01_Menu_schema_and_service
+### TASK-006-01_Menu_schema
 
 **Status:** To Do
 
-Example (service helper):
+Tables:
+- `menus` (id, name, location)
+- `menu_items` (id, menu_id, label, href, page_id, order_index, parent_id)
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/db/schema.ts` | menus + menu_items tables |
+| `core/db/migrations/*` | migration files |
+
+---
+
+### TASK-006-02_Tree_builder_and_service
+
+**Status:** To Do
+
+Example tree builder:
 
 ```ts
 function buildTree(items) {
@@ -57,9 +80,16 @@ function buildTree(items) {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/menus/menuService.ts` | CRUD + reorder |
+| `core/services/menus/treeBuilder.ts` | nested tree helper |
+
 ---
 
-### TASK-006-02_Admin_API_endpoints
+### TASK-006-03_Admin_API_endpoints
 
 **Status:** To Do
 
@@ -82,24 +112,51 @@ Example payload (update items):
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/routes/menuRoutes.ts` | CRUD + reorder |
+| `core/server/validation/menuSchemas.ts` | request validation |
+
 ---
 
-### TASK-006-03_Admin_UI
+### TASK-006-04_Admin_UI
 
 **Status:** To Do
 
 UI:
-- list menus
-- edit menu items (drag reorder, nesting)
-- save changes via API
+- List menus.
+- Edit menu items (drag reorder, nesting).
+- Save changes via API.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/menus/MenuList.tsx` | list view |
+| `admin/ui/menus/MenuEditor.tsx` | drag and drop editor |
 
 ---
 
 ## Testing Requirements
 
-- [ ] Create menu and items.
-- [ ] Reorder and nesting preserved.
-- [ ] API returns tree structure.
+- [ ] `tests/unit/menus/menuService.test.ts` builds correct tree.
+- [ ] `tests/integration/routes/menus.test.ts` covers CRUD endpoints.
+- [ ] UI test verifies reorder payload.
+
+---
+
+## New Files to Create
+
+- `core/services/menus/menuService.ts`
+- `core/services/menus/treeBuilder.ts`
+- `core/server/routes/menuRoutes.ts`
+- `core/server/validation/menuSchemas.ts`
+- `admin/ui/menus/MenuList.tsx`
+- `admin/ui/menus/MenuEditor.tsx`
+- `tests/unit/menus/menuService.test.ts`
+- `tests/integration/routes/menus.test.ts`
 
 ---
 

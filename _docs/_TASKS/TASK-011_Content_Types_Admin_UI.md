@@ -28,9 +28,15 @@ admin/ui/content-types/
   ContentTypeList.tsx
   ContentTypeEditor.tsx
   SchemaBuilder.tsx
+  FieldEditor.tsx
 admin/ui/entries/
   EntryList.tsx
   EntryEditor.tsx
+  FieldRenderer.tsx
+
+tests/unit/contentUi/
+  schemaBuilder.test.tsx
+  entryEditor.test.tsx
 ```
 
 ---
@@ -55,6 +61,13 @@ Example field definition:
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/content-types/SchemaBuilder.tsx` | schema builder UI |
+| `admin/ui/content-types/FieldEditor.tsx` | field config |
+
 ---
 
 ### TASK-011-02_Content_type_CRUD_UI
@@ -63,6 +76,13 @@ Example field definition:
 
 - Create, edit, delete content types.
 - Validate schema on save (client + server).
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/content-types/ContentTypeList.tsx` | list view |
+| `admin/ui/content-types/ContentTypeEditor.tsx` | editor view |
 
 ---
 
@@ -74,6 +94,12 @@ Example field definition:
 - Filters by status (draft/published).
 - Search by title/slug.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/entries/EntryList.tsx` | list + filters |
+
 ---
 
 ### TASK-011-04_Entry_editor_UI
@@ -84,13 +110,35 @@ Example field definition:
 - Draft save and publish buttons.
 - Preview token flow.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/entries/EntryEditor.tsx` | entry editor |
+| `admin/ui/entries/FieldRenderer.tsx` | schema-based inputs |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Create content type with valid schema.
-- [ ] Entry editor renders correct fields and saves data.
-- [ ] Publish and preview actions call correct API endpoints.
+- [ ] `tests/unit/contentUi/schemaBuilder.test.tsx` creates valid schema.
+- [ ] `tests/unit/contentUi/entryEditor.test.tsx` renders fields correctly.
+- [ ] `tests/integration/ui/contentTypes.test.tsx` saves and publishes.
+
+---
+
+## New Files to Create
+
+- `admin/ui/content-types/ContentTypeList.tsx`
+- `admin/ui/content-types/ContentTypeEditor.tsx`
+- `admin/ui/content-types/SchemaBuilder.tsx`
+- `admin/ui/content-types/FieldEditor.tsx`
+- `admin/ui/entries/EntryList.tsx`
+- `admin/ui/entries/EntryEditor.tsx`
+- `admin/ui/entries/FieldRenderer.tsx`
+- `tests/unit/contentUi/schemaBuilder.test.tsx`
+- `tests/unit/contentUi/entryEditor.test.tsx`
+- `tests/integration/ui/contentTypes.test.tsx`
 
 ---
 

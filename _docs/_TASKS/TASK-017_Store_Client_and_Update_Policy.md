@@ -32,6 +32,10 @@ core/store/
   updater.ts
 core/plugins/
   installService.ts
+
+tests/unit/store/
+  verifier.test.ts
+  updater.test.ts
 ```
 
 ---
@@ -50,6 +54,12 @@ Endpoints:
 - `GET /plugins/:name/versions/:version/download`
 - `GET /revocations.json`
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/client.ts` | HTTP client + responses |
+
 ---
 
 ### TASK-017-02_Signature_and_checksum_verification
@@ -67,6 +77,12 @@ verifyEd25519(metaBytes, signature, storePublicKey);
 verifySha256(zipBytes, metadata.checksum.sha256);
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/verifier.ts` | signature + checksum helpers |
+
 ---
 
 ### TASK-017-03_Install_and_update_flow
@@ -78,6 +94,14 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 - Atomically switch active version.
 - Store integrity metadata in registry.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/downloader.ts` | download + unzip |
+| `core/store/updater.ts` | install/update logic |
+| `core/plugins/installService.ts` | integrate with registry |
+
 ---
 
 ### TASK-017-04_Update_policy
@@ -88,6 +112,12 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 - Auto-apply only releases with `release.type=security`.
 - Normal releases require manual confirm in admin.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/updater.ts` | policy checks |
+
 ---
 
 ### TASK-017-05_Revocation_checks
@@ -97,14 +127,35 @@ verifySha256(zipBytes, metadata.checksum.sha256);
 - Pull `revocations.json` on interval (e.g. hourly).
 - Disable revoked plugins and surface warning in admin.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/store/client.ts` | revocation fetch |
+| `core/plugins/installService.ts` | disable revoked |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Invalid signature blocks install.
-- [ ] Checksum mismatch blocks install.
-- [ ] Auto-security updates apply only security releases.
-- [ ] Revoked plugin is disabled on refresh.
+- [ ] `tests/unit/store/verifier.test.ts` rejects invalid signature.
+- [ ] `tests/unit/store/updater.test.ts` handles auto-security policy.
+- [ ] `tests/integration/store/install.test.ts` installs plugin from ZIP.
+- [ ] `tests/integration/store/revocations.test.ts` disables revoked plugin.
+
+---
+
+## New Files to Create
+
+- `core/store/client.ts`
+- `core/store/verifier.ts`
+- `core/store/downloader.ts`
+- `core/store/updater.ts`
+- `core/plugins/installService.ts`
+- `tests/unit/store/verifier.test.ts`
+- `tests/unit/store/updater.test.ts`
+- `tests/integration/store/install.test.ts`
+- `tests/integration/store/revocations.test.ts`
 
 ---
 

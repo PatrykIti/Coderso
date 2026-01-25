@@ -31,6 +31,10 @@ core/server/middleware/
   cors.ts
 core/server/validation/
   schemaValidator.ts
+
+tests/unit/security/
+  csrf.test.ts
+  rateLimit.test.ts
 ```
 
 ---
@@ -43,6 +47,12 @@ core/server/validation/
 
 - Generate request ID per request.
 - Add to logs and response headers.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/middleware/requestId.ts` | request id middleware |
 
 ---
 
@@ -63,6 +73,13 @@ if (!token || token !== session.csrfToken) {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/middleware/csrf.ts` | CSRF validation |
+| `core/server/middleware/cors.ts` | CORS rules |
+
 ---
 
 ### TASK-020-03_Rate_limiting_and_headers
@@ -71,6 +88,13 @@ if (!token || token !== session.csrfToken) {
 
 - Per-IP rate limit for login and admin API.
 - Security headers: CSP, X-Frame-Options, X-Content-Type-Options.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/middleware/rateLimit.ts` | rate limiting |
+| `core/server/middleware/securityHeaders.ts` | headers |
 
 ---
 
@@ -81,13 +105,33 @@ if (!token || token !== session.csrfToken) {
 - Validate payloads with JSON schema.
 - Reject unknown fields.
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/validation/schemaValidator.ts` | validation helpers |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Missing CSRF token returns 403.
-- [ ] Rate limiter blocks repeated login attempts.
-- [ ] Security headers present on responses.
+- [ ] `tests/unit/security/csrf.test.ts` rejects missing token.
+- [ ] `tests/unit/security/rateLimit.test.ts` blocks repeated login attempts.
+- [ ] `tests/integration/routes/securityHeaders.test.ts` verifies headers.
+
+---
+
+## New Files to Create
+
+- `core/server/middleware/requestId.ts`
+- `core/server/middleware/csrf.ts`
+- `core/server/middleware/cors.ts`
+- `core/server/middleware/rateLimit.ts`
+- `core/server/middleware/securityHeaders.ts`
+- `core/server/validation/schemaValidator.ts`
+- `tests/unit/security/csrf.test.ts`
+- `tests/unit/security/rateLimit.test.ts`
+- `tests/integration/routes/securityHeaders.test.ts`
 
 ---
 

@@ -28,6 +28,7 @@ against JSON schemas.
 ```
 core/widgets/
   registry.ts
+  validator.ts
   renderers/
     widgetRenderer.tsx
   core/
@@ -42,9 +43,21 @@ core/ui/widgets/
   editors/
     HeroEditor.tsx
     TimelineEditor.tsx
+    CompareTimelineEditor.tsx
+    NewsletterEditor.tsx
+    ContactEditor.tsx
+    NavigationEditor.tsx
+    FooterEditor.tsx
   wizard/
   visual/
   advanced/
+
+tests/unit/widgets/
+  registry.test.ts
+  validator.test.ts
+  hero.test.tsx
+  timeline.test.tsx
+  compareTimeline.test.tsx
 ```
 
 ---
@@ -55,7 +68,7 @@ core/ui/widgets/
 
 **Status:** To Do
 
-Define a widget contract and registration API.
+Define widget contract and registration API.
 
 Example:
 
@@ -83,14 +96,19 @@ export function registerWidget(def: WidgetDefinition) {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/registry.ts` | widget registry + lookup |
+
 ---
 
 ### TASK-009-02_Schema_validation_and_defaults
 
 **Status:** To Do
 
-- Validate `block.data` with JSON schema per widget.
-- Merge defaults on create and on schema migrations.
+Validate `block.data` with JSON schema per widget and merge defaults.
 
 Example:
 
@@ -103,37 +121,133 @@ function normalizeBlock(block: Block) {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/validator.ts` | schema validation + normalization |
+
 ---
 
-### TASK-009-03_Implement_core_widgets
+### TASK-009-03_Hero_widget
 
 **Status:** To Do
 
-Implement renderers and editors for:
-- hero
-- timeline
-- compare-timeline
-- newsletter
-- contact
-- navigation
-- footer
+Use schema and variants from `_docs/_WIDGETS/HERO.md`.
 
-Example widget definition (hero):
+Example registration:
 
 ```ts
 registerWidget({
   type: "hero",
   variants: ["centered", "split", "media-left"],
-  schema: { type: "object", properties: { headline: { type: "string" } } },
-  defaults: { headline: "New headline", subhead: "" },
+  schema: heroSchema,
+  defaults: heroDefaults,
   editor: { wizard: HeroWizard, visual: HeroVisual, advanced: HeroAdvanced },
   render: HeroBlock,
 });
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/core/hero.tsx` | renderer + schema |
+| `core/ui/widgets/editors/HeroEditor.tsx` | wizard/visual/advanced |
+
 ---
 
-### TASK-009-04_Widget_renderer_pipeline
+### TASK-009-04_Timeline_widget
+
+**Status:** To Do
+
+Use schema and variants from `_docs/_WIDGETS/TIMELINE.md`.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/core/timeline.tsx` | renderer + schema |
+| `core/ui/widgets/editors/TimelineEditor.tsx` | wizard/visual/advanced |
+
+---
+
+### TASK-009-05_Compare_timeline_widget
+
+**Status:** To Do
+
+Use schema and variants from `_docs/_WIDGETS/COMPARE_TIMELINE.md`.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/core/compareTimeline.tsx` | renderer + schema |
+| `core/ui/widgets/editors/CompareTimelineEditor.tsx` | wizard/visual/advanced |
+
+---
+
+### TASK-009-06_Newsletter_widget
+
+**Status:** To Do
+
+Use schema and variants from `_docs/_WIDGETS/NEWSLETTER.md`.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/core/newsletter.tsx` | renderer + schema |
+| `core/ui/widgets/editors/NewsletterEditor.tsx` | wizard/visual/advanced |
+
+---
+
+### TASK-009-07_Contact_widget
+
+**Status:** To Do
+
+Use schema and variants from `_docs/_WIDGETS/CONTACT.md`.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/core/contact.tsx` | renderer + schema |
+| `core/ui/widgets/editors/ContactEditor.tsx` | wizard/visual/advanced |
+
+---
+
+### TASK-009-08_Navigation_widget
+
+**Status:** To Do
+
+Use schema and variants from `_docs/_WIDGETS/NAVIGATION.md`.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/core/navigation.tsx` | renderer + schema |
+| `core/ui/widgets/editors/NavigationEditor.tsx` | wizard/visual/advanced |
+
+---
+
+### TASK-009-09_Footer_widget
+
+**Status:** To Do
+
+Use schema and variants from `_docs/_WIDGETS/FOOTER.md`.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/core/footer.tsx` | renderer + schema |
+| `core/ui/widgets/editors/FooterEditor.tsx` | wizard/visual/advanced |
+
+---
+
+### TASK-009-10_Widget_renderer_pipeline
 
 **Status:** To Do
 
@@ -150,21 +264,55 @@ function WidgetRenderer({ block }: { block: Block }) {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/widgets/renderers/widgetRenderer.tsx` | runtime renderer |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Registry rejects duplicate widget types.
-- [ ] Schema validation rejects invalid data.
-- [ ] Core widgets render with default data.
-- [ ] Unknown widget type renders a safe fallback.
+- [ ] `tests/unit/widgets/registry.test.ts` rejects duplicates.
+- [ ] `tests/unit/widgets/validator.test.ts` validates defaults.
+- [ ] `tests/unit/widgets/hero.test.tsx` renders hero defaults.
+- [ ] `tests/unit/widgets/timeline.test.tsx` renders timeline defaults.
+- [ ] `tests/unit/widgets/compareTimeline.test.tsx` renders compare timeline.
+
+---
+
+## New Files to Create
+
+- `core/widgets/registry.ts`
+- `core/widgets/validator.ts`
+- `core/widgets/renderers/widgetRenderer.tsx`
+- `core/widgets/core/hero.tsx`
+- `core/widgets/core/timeline.tsx`
+- `core/widgets/core/compareTimeline.tsx`
+- `core/widgets/core/newsletter.tsx`
+- `core/widgets/core/contact.tsx`
+- `core/widgets/core/navigation.tsx`
+- `core/widgets/core/footer.tsx`
+- `core/ui/widgets/editors/HeroEditor.tsx`
+- `core/ui/widgets/editors/TimelineEditor.tsx`
+- `core/ui/widgets/editors/CompareTimelineEditor.tsx`
+- `core/ui/widgets/editors/NewsletterEditor.tsx`
+- `core/ui/widgets/editors/ContactEditor.tsx`
+- `core/ui/widgets/editors/NavigationEditor.tsx`
+- `core/ui/widgets/editors/FooterEditor.tsx`
+- `tests/unit/widgets/registry.test.ts`
+- `tests/unit/widgets/validator.test.ts`
+- `tests/unit/widgets/hero.test.tsx`
+- `tests/unit/widgets/timeline.test.tsx`
+- `tests/unit/widgets/compareTimeline.test.tsx`
 
 ---
 
 ## Documentation Updates Required
 
 - `_docs/WIDGETS.md` (registry contract).
-- `_docs/_WIDGETS/*.md` (if widget schemas change).
+- `_docs/_WIDGETS/*.md` (if schemas change).
 - `_docs/PAGE_MODEL.md` (block normalization rules).
 
 ---

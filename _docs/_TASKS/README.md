@@ -17,6 +17,7 @@ Task board for project work. Keep task files and this board in sync.
 - Required fields: Priority, Category, Estimated Effort, Dependencies, Status.
 - Required sections: Overview, Sub-Tasks, Testing Requirements, Documentation Updates Required.
 - Optional sections: Architecture, Implementation Order, New Files to Create.
+- Detail level: match `EXAMPLE_TASK.md` (explicit files/paths, example code or payloads, testing checklist with unit tests, and planned docs/changelog).
 
 ## Status rules
 - Use: To Do, In Progress, Done.

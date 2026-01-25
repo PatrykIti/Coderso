@@ -31,6 +31,9 @@ store/services/
   signingService.ts
 store/server/routes/
   publicRoutes.ts
+
+store/tests/unit/
+  signingService.test.ts
 ```
 
 ---
@@ -46,6 +49,13 @@ Tables (example):
 - `plugin_versions` (plugin_id, version, metadata, checksum, scan_status)
 - `revocations` (plugin_id, version, reason, created_at)
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/db/schema.ts` | plugins, plugin_versions, revocations |
+| `store/db/migrations/*` | migration files |
+
 ---
 
 ### TASK-021-02_Public_API_endpoints
@@ -58,6 +68,13 @@ Tables (example):
 - `GET /plugins/:name/versions/:version/metadata.sig`
 - `GET /plugins/:name/versions/:version/download`
 - `GET /revocations.json`
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/server/routes/publicRoutes.ts` | public routes |
+| `store/services/pluginService.ts` | list + fetch |
 
 ---
 
@@ -75,13 +92,30 @@ const payload = canonicalizeJson(metadata);
 const signature = signEd25519(payload, privateKey);
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `store/services/signingService.ts` | signing helpers |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Metadata signatures validate with public key.
-- [ ] Revocations endpoint returns active revocations.
-- [ ] Download endpoint streams ZIP correctly.
+- [ ] `store/tests/unit/signingService.test.ts` validates signatures.
+- [ ] `store/tests/integration/publicRoutes.test.ts` validates endpoints.
+
+---
+
+## New Files to Create
+
+- `store/db/schema.ts`
+- `store/db/migrations/*`
+- `store/services/pluginService.ts`
+- `store/services/signingService.ts`
+- `store/server/routes/publicRoutes.ts`
+- `store/tests/unit/signingService.test.ts`
+- `store/tests/integration/publicRoutes.test.ts`
 
 ---
 

@@ -33,6 +33,12 @@ core/services/media/
   mediaService.ts
 core/server/routes/
   mediaRoutes.ts
+core/server/validation/
+  mediaSchemas.ts
+
+tests/unit/media/
+  localAdapter.test.ts
+  mediaService.test.ts
 ```
 
 ---
@@ -54,6 +60,12 @@ export interface MediaStorageAdapter {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/media/storage/adapter.ts` | adapter interface |
+
 ---
 
 ### TASK-005-02_Local_storage_implementation
@@ -67,6 +79,13 @@ const key = `${yyyy}/${mm}/${uuid}.${ext}`;
 await writeFile(join(MEDIA_DIR, key), fileBuffer);
 return { key, url: `/media/${key}` };
 ```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/media/storage/local.ts` | local adapter |
+| `core/services/media/mediaService.ts` | store metadata |
 
 ---
 
@@ -85,6 +104,12 @@ await s3.putObject({ Bucket: bucket, Key: key, Body: fileBuffer, ContentType: mi
 return { key, url: `https://${cdnHost}/${key}` };
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/media/storage/s3.ts` | S3 adapter |
+
 ---
 
 ### TASK-005-04_Azure_storage_implementation
@@ -102,6 +127,12 @@ await blobClient.uploadData(fileBuffer, { blobHTTPHeaders: { blobContentType: mi
 return { key, url: `${cdnHost}/${key}` };
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/media/storage/azure.ts` | Azure adapter |
+
 ---
 
 ### TASK-005-05_Upload_endpoint
@@ -115,19 +146,41 @@ Validation:
 - size limit
 - MIME whitelist
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/routes/mediaRoutes.ts` | upload + CRUD endpoints |
+| `core/server/validation/mediaSchemas.ts` | request validation |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Upload rejects invalid MIME.
-- [ ] Local storage writes file and returns public URL.
-- [ ] DB metadata record created.
+- [ ] `tests/unit/media/localAdapter.test.ts` writes file and returns URL.
+- [ ] `tests/unit/media/mediaService.test.ts` creates DB record.
+- [ ] `tests/integration/routes/media.test.ts` validates upload endpoint.
+
+---
+
+## New Files to Create
+
+- `core/services/media/storage/adapter.ts`
+- `core/services/media/storage/local.ts`
+- `core/services/media/storage/s3.ts`
+- `core/services/media/storage/azure.ts`
+- `core/services/media/mediaService.ts`
+- `core/server/routes/mediaRoutes.ts`
+- `core/server/validation/mediaSchemas.ts`
+- `tests/unit/media/localAdapter.test.ts`
+- `tests/unit/media/mediaService.test.ts`
+- `tests/integration/routes/media.test.ts`
 
 ---
 
 ## Documentation Updates Required
 
-- `_docs/MEDIA_SPEC.md` (if adapter API changes).
+- `_docs/MEDIA_SPEC.md` (adapter API and storage notes).
 - `_docs/CMS_API.md` (upload endpoint behavior).
 
 ---

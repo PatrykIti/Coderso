@@ -12,12 +12,13 @@
 ## Overview
 
 Implement core page storage with revisions and preview tokens. This enables
-draft/publish flow and WordPress-like preview for pages.
+Draft/Publish flow and WordPress-like preview for pages.
 
 **Goals:**
-- Pages table with current/published data.
+- Pages table with current and published data.
 - Revisions history.
 - Preview tokens with TTL.
+- Admin API for pages and revisions.
 
 ---
 
@@ -29,6 +30,15 @@ core/services/pages/
   pageService.ts
   revisionService.ts
   previewService.ts
+core/server/routes/
+  pageRoutes.ts
+core/server/validation/
+  pageSchemas.ts
+
+tests/unit/pages/
+  pageService.test.ts
+  previewService.test.ts
+  revisionService.test.ts
 ```
 
 ---
@@ -38,6 +48,8 @@ core/services/pages/
 ### TASK-002-01_Define_page_tables
 
 **Status:** To Do
+
+Define `pages`, `page_revisions`, and `preview_tokens` in `core/db/schema.ts`.
 
 Schema example:
 
@@ -55,15 +67,20 @@ export const pages = pgTable("pages", {
 });
 ```
 
-Add:
-- `page_revisions`
-- `preview_tokens` (target_type=page)
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/db/schema.ts` | pages, page_revisions, preview_tokens |
+| `core/db/migrations/*` | migration files |
 
 ---
 
 ### TASK-002-02_Publish_and_revision_services
 
 **Status:** To Do
+
+Implement revision creation and publish workflow in services.
 
 Service example:
 
@@ -79,13 +96,22 @@ async function publishPage(pageId: string, userId: string) {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/pages/pageService.ts` | CRUD for pages |
+| `core/services/pages/revisionService.ts` | create/list/restore revisions |
+
 ---
 
 ### TASK-002-03_Preview_token_flow
 
 **Status:** To Do
 
-Token example:
+Create and validate preview tokens with TTL. Use token hashing.
+
+Example:
 
 ```ts
 const token = crypto.randomUUID();
@@ -96,6 +122,13 @@ await db.insert(previewTokens).values({
   expiresAt: addMinutes(new Date(), 60),
 });
 ```
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/pages/previewService.ts` | create/validate/expire tokens |
+| `core/db/schema.ts` | preview_tokens table |
 
 ---
 
@@ -116,15 +149,37 @@ Endpoints:
 
 Validation:
 - Validate `data` against `PAGE_MODEL.md`.
-- Reject unknown fields in payloads.
+- Reject unknown fields.
+
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/routes/pageRoutes.ts` | route handlers |
+| `core/server/validation/pageSchemas.ts` | JSON schema validation |
 
 ---
 
 ## Testing Requirements
 
-- [ ] Publish flow creates revision and sets `published_data`.
-- [ ] Preview token validation works and expires by TTL.
-- [ ] Revisions list returns ordered history.
+- [ ] `tests/unit/pages/pageService.test.ts` covers CRUD.
+- [ ] `tests/unit/pages/revisionService.test.ts` creates and restores revisions.
+- [ ] `tests/unit/pages/previewService.test.ts` validates token TTL.
+- [ ] `tests/integration/routes/pages.test.ts` covers admin endpoints.
+
+---
+
+## New Files to Create
+
+- `core/services/pages/pageService.ts`
+- `core/services/pages/revisionService.ts`
+- `core/services/pages/previewService.ts`
+- `core/server/routes/pageRoutes.ts`
+- `core/server/validation/pageSchemas.ts`
+- `tests/unit/pages/pageService.test.ts`
+- `tests/unit/pages/revisionService.test.ts`
+- `tests/unit/pages/previewService.test.ts`
+- `tests/integration/routes/pages.test.ts`
 
 ---
 
@@ -132,16 +187,17 @@ Validation:
 
 - `_docs/PREVIEW_SPEC.md` (if token format changes).
 - `_docs/PAGE_MODEL.md` (if structure changes).
+- `_docs/CMS_API.md` (pages endpoints details).
 
 ---
 
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-pages-revisions-preview.md`
-- Notes: pages schema, revisions, preview tokens.
+- Notes: pages schema, revisions, preview tokens, admin API.
 
 ---
 
 ## Additional Docs
 
-- `_docs/CMS_API.md` (preview endpoint behavior).
+- `_docs/CMS_SPEC.md`

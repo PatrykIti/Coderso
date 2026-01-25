@@ -33,9 +33,13 @@ core/services/themes/
   themeProfileService.ts
 core/server/routes/
   themeRoutes.ts
-core/ui/themes/
+admin/ui/themes/
   ThemeList.tsx
   ThemeProfileEditor.tsx
+
+tests/unit/themes/
+  registry.test.ts
+  resolver.test.ts
 ```
 
 ---
@@ -62,6 +66,13 @@ function loadThemes(themeDir: string): ThemeMeta[] {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/themes/registry.ts` | theme scanning + cache |
+| `core/services/themes/themeService.ts` | list themes |
+
 ---
 
 ### TASK-008-02_Theme_profiles_and_routes
@@ -87,7 +98,12 @@ await setThemeRoutes(profileId, [
 ]);
 ```
 
-Enforce only one active profile at a time.
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/services/themes/themeProfileService.ts` | CRUD + activate |
+| `core/db/schema.ts` | theme_profiles, theme_routes |
 
 ---
 
@@ -118,6 +134,12 @@ function resolveTemplate(input: {
 }
 ```
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/themes/resolver.ts` | template resolution |
+
 ---
 
 ### TASK-008-04_Admin_API_for_themes
@@ -133,6 +155,12 @@ Endpoints:
 - `POST /theme-profiles/:id/activate`
 - `PUT /theme-profiles/:id/routes`
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `core/server/routes/themeRoutes.ts` | theme endpoints |
+
 ---
 
 ### TASK-008-05_Admin_UI_for_themes
@@ -144,20 +172,41 @@ UI:
 - Theme profile list with activate action.
 - Profile editor (tokens + routes).
 
+**Implementation Checklist:**
+
+| File | What to Add |
+| --- | --- |
+| `admin/ui/themes/ThemeList.tsx` | list installed themes |
+| `admin/ui/themes/ThemeProfileEditor.tsx` | profile edit UI |
+
 ---
 
 ## Testing Requirements
 
-- [ ] Theme registry loads `theme.json` correctly.
-- [ ] Only one theme profile can be active.
-- [ ] Route mapping returns expected page for a profile.
-- [ ] Template resolution follows the specified order.
+- [ ] `tests/unit/themes/registry.test.ts` loads theme.json.
+- [ ] `tests/unit/themes/resolver.test.ts` enforces resolution order.
+- [ ] `tests/integration/routes/themes.test.ts` validates endpoints.
+
+---
+
+## New Files to Create
+
+- `core/themes/registry.ts`
+- `core/themes/resolver.ts`
+- `core/services/themes/themeService.ts`
+- `core/services/themes/themeProfileService.ts`
+- `core/server/routes/themeRoutes.ts`
+- `admin/ui/themes/ThemeList.tsx`
+- `admin/ui/themes/ThemeProfileEditor.tsx`
+- `tests/unit/themes/registry.test.ts`
+- `tests/unit/themes/resolver.test.ts`
+- `tests/integration/routes/themes.test.ts`
 
 ---
 
 ## Documentation Updates Required
 
-- `_docs/THEMES_SPEC.md` (if admin flow changes).
+- `_docs/THEMES_SPEC.md` (admin flow changes).
 - `_docs/CMS_API.md` (theme endpoints details).
 - `_docs/DESIGN_TOKENS.md` (token overrides with profiles).
 
