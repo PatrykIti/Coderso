@@ -20,6 +20,7 @@ Access:
 - Login endpoint jest publiczny.
 - Pozostale endpointy wymagaja auth (session cookie).
 - Admin UI komunikuje sie po HTTPS w tej samej domenie.
+- Internal service layer to modul w core, bez publicznego endpointu.
 
 Przyklad error:
 
