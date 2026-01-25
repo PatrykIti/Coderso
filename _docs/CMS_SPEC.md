@@ -21,8 +21,11 @@ Poza zakresem v1:
 ## Dokumenty powiazane
 
 - `DATA_MODEL.md`
+- `PAGE_MODEL.md`
 - `ORM_SPEC.md`
 - `AUTH_SPEC.md`
+- `RBAC_SPEC.md`
+- `CMS_API.md`
 - `SECURITY_SPEC.md`
 - `WIDGETS.md`
 
@@ -51,6 +54,7 @@ Zasady:
 - publikacja kopiuje dane z draft do published.
 - publikacja tworzy revision.
 - rollback do revision przywraca dane.
+- v2: rozważyć pruning starych rewizji i/lub kompresje JSONB.
 
 ---
 

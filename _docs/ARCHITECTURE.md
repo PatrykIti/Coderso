@@ -51,9 +51,12 @@ znajduja sie w `STORE_SPEC.md`.
 
 Zakres CMS, model danych, auth i security opisane sa w:
 - `CMS_SPEC.md`
+- `CMS_API.md`
 - `DATA_MODEL.md`
 - `ORM_SPEC.md`
 - `AUTH_SPEC.md`
+- `RBAC_SPEC.md`
+- `PAGE_MODEL.md`
 - `SECURITY_SPEC.md`
 
 ---

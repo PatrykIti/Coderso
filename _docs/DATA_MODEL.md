@@ -55,6 +55,10 @@ Opis docelowego modelu danych CMS. Typy sa pogladowe.
 - created_at
 - created_by (fk users)
 
+Note (v2+):
+- `page_revisions` z duzymi JSONB moze szybko rosnac. Warto dodac pruning
+  starych rewizji i/lub kompresje danych.
+
 ## Media
 
 `media`
