@@ -8,3 +8,4 @@ store/dist/
 /data/
 coverage/
 .DS_Store
+.tmp

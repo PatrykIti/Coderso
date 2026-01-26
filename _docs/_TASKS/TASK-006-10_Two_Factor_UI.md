@@ -5,7 +5,7 @@
 **Category:** Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-004, TASK-020, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -60,4 +60,3 @@ recovery codes section.
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-two-factor-ui.md`
-

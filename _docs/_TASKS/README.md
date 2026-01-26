@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 36 tasks
+- **To Do:** 29 tasks
 - **In Progress:** 0
-- **Done:** 1 tasks
+- **Done:** 8 tasks
 
 ---
 
@@ -42,7 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-003 | Content Types Engine | High | Large | Dynamic content schemas |
 | TASK-004 | Auth, RBAC, and Admin API Base | High | Large | Sessions + RBAC + REST base |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
-| TASK-006 | Menus and Navigation | Medium | Medium | Menu CRUD + admin UI |
 | TASK-006-01 | Dashboard UI | Medium | Medium | HTML -> shadcn conversion |
 | TASK-006-02 | Menu Editor UI | Medium | Medium | HTML -> shadcn conversion |
 | TASK-006-03 | Media Library UI | Medium | Medium | HTML -> shadcn conversion |
@@ -51,12 +50,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-006-06 | Page List UI | Medium | Medium | HTML -> shadcn conversion |
 | TASK-006-07 | Page Editor UI | High | Large | HTML -> shadcn conversion |
 | TASK-006-08 | Design Tokens UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-09 | Login UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-10 | Two Factor UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-11 | Reset Password UI | Medium | Small | HTML -> shadcn conversion |
-| TASK-006-12 | Set Password UI | Medium | Small | HTML -> shadcn conversion |
 | TASK-006-13 | Users and Roles UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-007 | Settings and Design Tokens | Medium | Medium | Global settings + tokens |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
 | TASK-010 | Page Builder UI | High | Large | Wizard/Visual/Advanced |
@@ -73,7 +67,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
 
 ---
 
@@ -88,3 +81,10 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-001 | ORM Foundation and Auth Tables | High | Medium | Drizzle + auth tables |
+| TASK-006 | Menus and Navigation | Medium | Medium | Menu CRUD + admin UI |
+| TASK-007 | Settings and Design Tokens | Medium | Medium | Global settings + tokens |
+| TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
+| TASK-006-09 | Login UI | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-10 | Two Factor UI | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-11 | Reset Password UI | Medium | Small | HTML -> shadcn conversion |
+| TASK-006-12 | Set Password UI | Medium | Small | HTML -> shadcn conversion |

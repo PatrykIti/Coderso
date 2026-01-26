@@ -5,7 +5,7 @@
 **Category:** Admin UI
 **Estimated Effort:** Small
 **Dependencies:** TASK-004, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -57,4 +57,3 @@ Build the reset password request screen with email input and security note.
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-reset-password-ui.md`
-
