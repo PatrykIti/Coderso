@@ -36,6 +36,13 @@
       "when": 1769410824386,
       "tag": "0004_chunky_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1769425870647,
+      "tag": "0005_nosy_swordsman",
+      "breakpoints": true
     }
   ]
 }

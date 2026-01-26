@@ -136,6 +136,11 @@ Note (v2+):
 - order_index
 - parent_id (fk menu_items, nullable)
 
+Zasady:
+- `menus.location` unikalny, gdy ustawiony (np. primary, footer).
+- `menu_items` musi miec dokladnie jedno z `href` lub `page_id`.
+- `parent_id` referencjonuje element w tym samym menu.
+
 ## Themes
 
 `themes`

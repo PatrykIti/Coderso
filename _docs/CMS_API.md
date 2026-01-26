@@ -101,6 +101,24 @@ Permissions: `menus:read`, `menus:write`
 - `PUT /menus/:id/items`
 - `DELETE /menus/:id`
 
+Create menu payload:
+
+```json
+{ "name": "Primary", "location": "primary" }
+```
+
+Update menu items payload:
+
+```json
+{
+  "items": [
+    { "id": "1", "label": "Home", "href": "/", "orderIndex": 0, "parentId": null },
+    { "id": "2", "label": "About", "href": "/about", "orderIndex": 1, "parentId": null },
+    { "id": "3", "label": "Team", "pageId": "page-uuid", "parentId": "2" }
+  ]
+}
+```
+
 ---
 
 ## Content types and entries

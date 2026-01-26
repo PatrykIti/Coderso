@@ -32,6 +32,7 @@ Project Change Log.
 | 005 | 2026-01-25 | Media storage and uploads | CMS/Media |
 | 006 | 2026-01-25 | Settings and design tokens | CMS/Settings |
 | 007 | 2026-01-25 | Shadcn UI and Tailwind v4 setup | Admin/UI |
+| 008 | 2026-01-25 | Menus and navigation | CMS/Menus |
 
 
 ---

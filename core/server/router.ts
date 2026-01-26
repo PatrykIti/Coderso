@@ -23,7 +23,7 @@ export type CookieOptions = {
 export type RouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 
 export type RouteDefinition = {
-  method: "GET" | "POST" | "PATCH" | "DELETE";
+  method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
   path: string;
   handlers: RouteHandler[];
 };
@@ -33,6 +33,7 @@ export type Router = {
   get: (path: string, ...handlers: RouteHandler[]) => void;
   post: (path: string, ...handlers: RouteHandler[]) => void;
   patch: (path: string, ...handlers: RouteHandler[]) => void;
+  put: (path: string, ...handlers: RouteHandler[]) => void;
   delete: (path: string, ...handlers: RouteHandler[]) => void;
 };
 
@@ -49,6 +50,7 @@ export function createRouter(): Router {
     get: add("GET"),
     post: add("POST"),
     patch: add("PATCH"),
+    put: add("PUT"),
     delete: add("DELETE"),
   };
 }
