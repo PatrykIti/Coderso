@@ -34,6 +34,7 @@ Project Change Log.
 | 007 | 2026-01-25 | Shadcn UI and Tailwind v4 setup | Admin/UI |
 | 008 | 2026-01-25 | Menus and navigation | CMS/Menus |
 | 009 | 2026-01-26 | Auth UI foundations | Admin/UI |
+| 010 | 2026-01-26 | Admin shell wrappers and navigation scaffolding | Admin/UI |
 
 
 ---
