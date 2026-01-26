@@ -86,6 +86,11 @@ TASK-011, TASK-012, TASK-018, TASK-019).
 - `TASK-006-06_Page_List_UI.md`
 - `TASK-006-07_Page_Editor_UI.md`
 - `TASK-006-08_Design_Tokens_UI.md`
+- `TASK-006-09_Login_UI.md`
+- `TASK-006-10_Two_Factor_UI.md`
+- `TASK-006-11_Reset_Password_UI.md`
+- `TASK-006-12_Set_Password_UI.md`
+- `TASK-006-13_Users_and_Roles_UI.md`
 
 ## Commands (if needed)
 
