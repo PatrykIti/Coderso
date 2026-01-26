@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>B2B Architecture Services</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecc8",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#10221f",
+                        "text-main": "#0d1b19",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .grayscale-img {
+            filter: grayscale(100%);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main dark:text-gray-100 antialiased overflow-x-hidden">
+<!-- Navbar -->
+<header class="sticky top-0 z-50 w-full border-b border-[#e7f3f1] dark:border-white/10 bg-[#f8fcfb]/90 dark:bg-background-dark/90 backdrop-blur-md">
+<div class="px-4 md:px-10 py-3 flex items-center justify-between max-w-[1280px] mx-auto">
+<div class="flex items-center gap-4 text-text-main dark:text-white">
+<div class="size-8 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-3xl">architecture</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">Studio Name</h2>
+</div>
+<div class="hidden md:flex items-center gap-9">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Services</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Case Studies</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Process</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Contact</a>
+</div>
+<button class="flex items-center justify-center rounded-lg h-10 px-4 bg-primary text-[#0d1b19] text-sm font-bold tracking-[0.015em] hover:bg-primary/90 transition-colors">
+<span class="truncate">Get a Quote</span>
+</button>
+</div>
+</header>
+<!-- Hero Section -->
+<section class="relative flex min-h-[600px] flex-col justify-center overflow-hidden">
+<!-- Background Image with Grayscale & Overlay -->
+<div class="absolute inset-0 z-0 grayscale-img bg-cover bg-center bg-no-repeat" data-alt="Modern high-rise office building facade from a low angle perspective in black and white" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBLFGgxjZg3gKEgNKqPG1wvxN4tE43xSiRpW170ipVi_hqf3dIQOCa_9ByYzYkYmjFtJqcbVgc-IZ8F6KNDiqniRIfgWDywWCwFT7jt_jzAi2_2M8Tou_n7Dd9ugDZKTSeqTY72pRcHLv6-GZiW9dNC0ywZ4CJG7aCo4JTR1z_pG1Ah0aAgX2lQ67FB470TB_HjNWf2d1XT0GY_WlXcsFuWhKBK5OkI90Wm1ldJE0Vq9k0Rxsjza2NsZ1LLwfTV6bV-Xkcgok1b6cMB");'>
+</div>
+<div class="absolute inset-0 z-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent"></div>
+<div class="relative z-10 w-full max-w-[1280px] mx-auto px-4 md:px-10 py-20">
+<div class="max-w-2xl flex flex-col gap-6">
+<h1 class="text-white text-5xl md:text-7xl font-black leading-tight tracking-[-0.033em]">
+                    Architektura <br/><span class="text-primary">dla Biznesu</span>
+</h1>
+<h2 class="text-gray-200 text-lg md:text-xl font-normal leading-relaxed max-w-xl">
+                    Scalable design solutions for developers and investors focusing on high ROI and sustainable community integration.
+                </h2>
+<div class="flex flex-col sm:flex-row gap-4 mt-4">
+<button class="flex items-center justify-center rounded-lg h-12 px-8 bg-primary text-[#0d1b19] text-base font-bold tracking-[0.015em] hover:bg-white hover:text-black transition-all">
+                        Consult Your Project
+                    </button>
+<button class="flex items-center justify-center rounded-lg h-12 px-8 bg-white/10 backdrop-blur-sm border border-white/20 text-white text-base font-bold tracking-[0.015em] hover:bg-white hover:text-black transition-all">
+                        View Portfolio
+                    </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Trusted By Logos -->
+<section class="border-b border-gray-200 dark:border-white/5 bg-white dark:bg-background-dark py-10">
+<div class="max-w-[1280px] mx-auto px-4 md:px-10">
+<p class="text-center text-sm font-medium text-gray-400 mb-6 uppercase tracking-widest">Trusted by industry leaders</p>
+<div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-60 grayscale">
+<!-- Placeholder logos -->
+<div class="flex items-center gap-2 text-xl font-bold text-gray-600 dark:text-gray-400"><span class="material-symbols-outlined">apartment</span> NEXUS</div>
+<div class="flex items-center gap-2 text-xl font-bold text-gray-600 dark:text-gray-400"><span class="material-symbols-outlined">domain</span> ESTATIO</div>
+<div class="flex items-center gap-2 text-xl font-bold text-gray-600 dark:text-gray-400"><span class="material-symbols-outlined">corporate_fare</span> URBANCORP</div>
+<div class="flex items-center gap-2 text-xl font-bold text-gray-600 dark:text-gray-400"><span class="material-symbols-outlined">location_city</span> METROBUILD</div>
+<div class="flex items-center gap-2 text-xl font-bold text-gray-600 dark:text-gray-400"><span class="material-symbols-outlined">foundation</span> SOLIDBASE</div>
+</div>
+</div>
+</section>
+<!-- Expertise Section -->
+<section class="py-20 md:py-28 bg-background-light dark:bg-background-dark">
+<div class="max-w-[1280px] mx-auto px-4 md:px-10">
+<div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+<div>
+<h2 class="text-3xl md:text-4xl font-bold text-text-main dark:text-white tracking-tight mb-4">Our Expertise</h2>
+<p class="text-gray-600 dark:text-gray-400 max-w-xl text-lg">
+                        Specialized architectural services tailored to maximize investment potential and functional efficiency.
+                    </p>
+</div>
+<a class="text-primary font-bold flex items-center gap-1 hover:gap-2 transition-all" href="#">
+                    View all services <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Card 1 -->
+<div class="group bg-white dark:bg-[#1a2c29] p-6 rounded-xl shadow-sm hover:shadow-lg transition-all border border-transparent hover:border-primary/20 flex flex-col h-full">
+<div class="h-48 w-full rounded-lg bg-gray-100 dark:bg-gray-800 mb-6 overflow-hidden relative grayscale group-hover:grayscale-0 transition-all duration-500">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Modern residential housing estate rendering with green spaces" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAxcdj-rm2z_Ktzp7oHPNdPeqmosi8YXrV_HoTyFqW6j8lmoiaDl7JLmS4c6IYsJpNwKUmgkqwKRMXsV5TGfKrnFtT0RtpXtqpThQrecPSUpWNLzlkwJIlCE17on2yaQABmtqiwteyZ7FWh6YkRU_0r0EoLhZfkv9BV27z089__Ui8xcR_Tc9egkstxauPX-T5H_6fPhU3FMB-h0lcCkVzCHPGe6Puk9W1_svQwzpm9Vhg84GtIvUhMV9CYZXqILYelZJIWH2nuKdAg");'></div>
+</div>
+<div class="flex items-center gap-3 mb-3">
+<span class="p-2 rounded-md bg-primary/10 text-primary material-symbols-outlined">home_work</span>
+<h3 class="text-xl font-bold text-text-main dark:text-white">Housing Estates</h3>
+</div>
+<p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">
+                        Optimized Useable Floor Area (PUM) designs to maximize investment potential while maintaining living quality.
+                    </p>
+<a class="inline-flex items-center text-sm font-bold text-text-main dark:text-white group-hover:text-primary transition-colors" href="#">
+                        Learn more <span class="material-symbols-outlined text-sm ml-1">chevron_right</span>
+</a>
+</div>
+<!-- Card 2 -->
+<div class="group bg-white dark:bg-[#1a2c29] p-6 rounded-xl shadow-sm hover:shadow-lg transition-all border border-transparent hover:border-primary/20 flex flex-col h-full">
+<div class="h-48 w-full rounded-lg bg-gray-100 dark:bg-gray-800 mb-6 overflow-hidden relative grayscale group-hover:grayscale-0 transition-all duration-500">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Interior of a modern commercial office space with glass walls" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuB2-q6w4k5qGPFwjDduWxXZoxP33u5Bbv9Zi7mzJUhzK0YCq1lHy79-wLBlGWRsoZpimFq6phN9_qUJn41DLwxfQ_9ZAvMvQlGqQNUmRSmGIs2j7aZmNvxmN2XBSaR0zYnFbIO2AgYpofOd3Yye17oEbVA-6zjSCNYaSSs1UB_Q627jWfUm619j5Ko9KphJXFGe8xK5_rZpqKNrhrrETb8EKgkww7gm9G1T7VePKPtYXM_fTAjhJT4jRbviDjLbOzzF4MPHCZmkJ0hf");'></div>
+</div>
+<div class="flex items-center gap-3 mb-3">
+<span class="p-2 rounded-md bg-primary/10 text-primary material-symbols-outlined">storefront</span>
+<h3 class="text-xl font-bold text-text-main dark:text-white">Commercial Spaces</h3>
+</div>
+<p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">
+                        Functional design for retail and office environments that enhances workflow and customer experience.
+                    </p>
+<a class="inline-flex items-center text-sm font-bold text-text-main dark:text-white group-hover:text-primary transition-colors" href="#">
+                        Learn more <span class="material-symbols-outlined text-sm ml-1">chevron_right</span>
+</a>
+</div>
+<!-- Card 3 -->
+<div class="group bg-white dark:bg-[#1a2c29] p-6 rounded-xl shadow-sm hover:shadow-lg transition-all border border-transparent hover:border-primary/20 flex flex-col h-full">
+<div class="h-48 w-full rounded-lg bg-gray-100 dark:bg-gray-800 mb-6 overflow-hidden relative grayscale group-hover:grayscale-0 transition-all duration-500">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Aerial view of urban city planning layout map" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAphw4X7noAs7ha2APlm5C9VG8EieZ1wCpGNvXwZ62nY9cq5YqAOPBIethZ0_W7jajJ2L7h4x9iU7m4rz7oWDuu0Kvfhv3VHOVvufMtFKBWmxJBPbnQSL2t9v5UMrFHfBVFd3Vgdd7i2Kx6ZPQcHS1lxadEe0C38PhSCmdKAjh9dFwF9b-5qCIvJ1huMq-PTCs-s2gPOOSePEwSAnEyNtdKGZq4L3zVBtbQRcySTyg03L7xW8gh-Po8iojNLPhCn3dm9KrCxupJEBST");'></div>
+</div>
+<div class="flex items-center gap-3 mb-3">
+<span class="p-2 rounded-md bg-primary/10 text-primary material-symbols-outlined">map</span>
+<h3 class="text-xl font-bold text-text-main dark:text-white">Urban Planning</h3>
+</div>
+<p class="text-gray-600 dark:text-gray-400 mb-6 flex-grow">
+                        Sustainable community integration strategies for large-scale developments and public spaces.
+                    </p>
+<a class="inline-flex items-center text-sm font-bold text-text-main dark:text-white group-hover:text-primary transition-colors" href="#">
+                        Learn more <span class="material-symbols-outlined text-sm ml-1">chevron_right</span>
+</a>
+</div>
+</div>
+</div>
+</section>
+<!-- Partnership Process -->
+<section class="py-20 bg-white dark:bg-[#0d1b19] border-y border-gray-100 dark:border-white/5">
+<div class="max-w-[1280px] mx-auto px-4 md:px-10">
+<div class="text-center mb-16">
+<span class="text-primary font-bold text-sm tracking-widest uppercase mb-2 block">Workflow</span>
+<h2 class="text-3xl md:text-4xl font-bold text-text-main dark:text-white">Partnership Process</h2>
+</div>
+<div class="relative">
+<!-- Connecting Line (Desktop) -->
+<div class="hidden md:block absolute top-12 left-0 w-full h-0.5 bg-gray-100 dark:bg-white/10 z-0"></div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-8 relative z-10">
+<!-- Step 1 -->
+<div class="flex flex-col items-center text-center group">
+<div class="w-24 h-24 rounded-full bg-white dark:bg-[#1a2c29] border-2 border-gray-100 dark:border-white/10 flex items-center justify-center mb-6 group-hover:border-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-4xl text-gray-400 group-hover:text-primary transition-colors">search</span>
+</div>
+<h3 class="text-lg font-bold mb-2 text-text-main dark:text-white">1. Discovery</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 px-4">Initial consultation to define investment goals and site potential.</p>
+</div>
+<!-- Step 2 -->
+<div class="flex flex-col items-center text-center group">
+<div class="w-24 h-24 rounded-full bg-white dark:bg-[#1a2c29] border-2 border-gray-100 dark:border-white/10 flex items-center justify-center mb-6 group-hover:border-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-4xl text-gray-400 group-hover:text-primary transition-colors">design_services</span>
+</div>
+<h3 class="text-lg font-bold mb-2 text-text-main dark:text-white">2. Design</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 px-4">Concept development with focus on PUM maximization and aesthetics.</p>
+</div>
+<!-- Step 3 -->
+<div class="flex flex-col items-center text-center group">
+<div class="w-24 h-24 rounded-full bg-white dark:bg-[#1a2c29] border-2 border-gray-100 dark:border-white/10 flex items-center justify-center mb-6 group-hover:border-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-4xl text-gray-400 group-hover:text-primary transition-colors">description</span>
+</div>
+<h3 class="text-lg font-bold mb-2 text-text-main dark:text-white">3. Permit</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 px-4">Handling all bureaucratic procedures to secure building permits swiftly.</p>
+</div>
+<!-- Step 4 -->
+<div class="flex flex-col items-center text-center group">
+<div class="w-24 h-24 rounded-full bg-white dark:bg-[#1a2c29] border-2 border-gray-100 dark:border-white/10 flex items-center justify-center mb-6 group-hover:border-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-4xl text-gray-400 group-hover:text-primary transition-colors">engineering</span>
+</div>
+<h3 class="text-lg font-bold mb-2 text-text-main dark:text-white">4. Execution</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400 px-4">Technical project delivery and supervision during construction.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Case Studies with ROI -->
+<section class="py-20 md:py-28 bg-background-light dark:bg-background-dark">
+<div class="max-w-[1280px] mx-auto px-4 md:px-10">
+<h2 class="text-3xl md:text-4xl font-bold text-text-main dark:text-white mb-12">Proven Results</h2>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<!-- Case Study 1 -->
+<div class="flex flex-col bg-white dark:bg-[#1a2c29] rounded-xl overflow-hidden shadow-sm">
+<div class="h-64 bg-gray-200 grayscale-img hover:grayscale-0 transition-all duration-500 bg-cover bg-center" data-alt="Modern glass office building facade detail" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAUja60MPQe-brzHKyIqt9D88grlC__3akv6CGH1To0MWP6DFc0VdPtVWkekGdpB_D4QMf5tEay-VqBp9VyKLNU5zLYiVPOxw_8fu_rvsoy5vlZu75E2g31N_G6_LaDCu953-xNP73Z4Ws3hEGVbfpu8FjGqxjrP5m2kX6JdHQg8auh-eoqJT-y4ORI9XyP1DY72zrXseLknRsqdMVq27NCKy4EVxigsA2JLwS3lio7U9tebbb0u2UkBLK4KCiaRqOyHYrqcOpPId3N");'>
+</div>
+<div class="p-8">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Commercial / Warsaw</p>
+<h3 class="text-2xl font-bold text-text-main dark:text-white">Skyline Office Complex</h3>
+</div>
+<span class="bg-primary/20 text-text-main dark:text-primary px-3 py-1 rounded-full text-xs font-bold">Completed 2023</span>
+</div>
+<p class="text-gray-600 dark:text-gray-400 mb-8">Redesign of a legacy structure into a class-A office building, increasing leaseable area significantly.</p>
+<div class="grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-white/5 pt-6">
+<div>
+<span class="block text-3xl font-black text-primary">+22%</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">ROI Increase</span>
+</div>
+<div>
+<span class="block text-3xl font-black text-primary">€12M</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">Asset Value Added</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Case Study 2 -->
+<div class="flex flex-col bg-white dark:bg-[#1a2c29] rounded-xl overflow-hidden shadow-sm">
+<div class="h-64 bg-gray-200 grayscale-img hover:grayscale-0 transition-all duration-500 bg-cover bg-center" data-alt="Large residential apartment complex with balconies" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDFzXkBthW36ix3peYz31R5xifpb0KoMW7cQ97H5fpTarvUJ4AHI73SryeG0Km90A0aIVxFuH5g-Y5T5Sh4lMTnzSkAaJdi-tjDEzyItwGb_rzRVmEai2N1Cgp_b_vdniEvxuDU_3JNAVLSQWqRsZdyzD_KLjetQktuiziaS6vWhwaMkiGE55gM80lrDFR-BBoIURTo-S5yqF_iol3RVRkCpGf58izCKAfSDk7j76pKymETLbmrwYEe8x3SJ_v_BNbdQ3ehZEeSDi3p");'>
+</div>
+<div class="p-8">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Residential / Krakow</p>
+<h3 class="text-2xl font-bold text-text-main dark:text-white">Green Haven Estate</h3>
+</div>
+<span class="bg-primary/20 text-text-main dark:text-primary px-3 py-1 rounded-full text-xs font-bold">Completed 2022</span>
+</div>
+<p class="text-gray-600 dark:text-gray-400 mb-8">Large scale residential development focusing on modular construction to reduce costs.</p>
+<div class="grid grid-cols-2 gap-4 border-t border-gray-100 dark:border-white/5 pt-6">
+<div>
+<span class="block text-3xl font-black text-primary">-15%</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">Construction Costs</span>
+</div>
+<div>
+<span class="block text-3xl font-black text-primary">350+</span>
+<span class="text-sm text-gray-500 dark:text-gray-400">Units Delivered</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Lead Capture Form -->
+<section class="py-20 bg-[#0d1b19] relative overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center opacity-10" data-alt="Abstract architectural blueprint drawing background" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBLm2InaaDiQylWX0kBut7d881d7RpIU9w372DrtApjedvmJToyDfw2uza42wg8Oj6XLaIQDFfw2z14cYZz9xXyVw10b9MzuKIOhY9-wZBhFkGy8etObGiWOi-YhcHmBCOaXpkSIur-0GsDodK54yPhWnvejHAi2cHr-AK7EXX0DLXV98naZxsN6slWZ0LaB8r0tIeg5TdTwTOcMlz-khXQT7IVXaK--RfxrzuHB_mqwcWbfp4b5LlEcooe25QDVWLHXxQKsLFr43Qe");'></div>
+<div class="max-w-[1280px] mx-auto px-4 md:px-10 relative z-10">
+<div class="flex flex-col lg:flex-row gap-16 items-center">
+<div class="flex-1 text-white">
+<h2 class="text-4xl md:text-5xl font-bold leading-tight mb-6">Let's discuss your next investment.</h2>
+<p class="text-gray-300 text-lg mb-8 max-w-lg">
+                        Get a free preliminary analysis of your plot's potential and a consultation with our lead architect.
+                    </p>
+<ul class="space-y-4">
+<li class="flex items-center gap-3">
+<span class="flex items-center justify-center size-6 rounded-full bg-primary text-[#0d1b19] material-symbols-outlined text-sm">check</span>
+<span class="text-gray-200">PUM / GLA Analysis</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="flex items-center justify-center size-6 rounded-full bg-primary text-[#0d1b19] material-symbols-outlined text-sm">check</span>
+<span class="text-gray-200">Preliminary Cost Estimation</span>
+</li>
+<li class="flex items-center gap-3">
+<span class="flex items-center justify-center size-6 rounded-full bg-primary text-[#0d1b19] material-symbols-outlined text-sm">check</span>
+<span class="text-gray-200">Timeline Projection</span>
+</li>
+</ul>
+</div>
+<div class="w-full max-w-md bg-white dark:bg-[#1a2c29] p-8 rounded-xl shadow-2xl">
+<form class="flex flex-col gap-5">
+<h3 class="text-xl font-bold text-text-main dark:text-white mb-2">Request Consultation</h3>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1">Full Name</label>
+<input class="w-full h-11 px-4 rounded-lg bg-gray-50 dark:bg-background-dark border border-gray-200 dark:border-white/10 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="John Doe" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1">Company Name</label>
+<input class="w-full h-11 px-4 rounded-lg bg-gray-50 dark:bg-background-dark border border-gray-200 dark:border-white/10 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="Architecture Inc." type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
+<input class="w-full h-11 px-4 rounded-lg bg-gray-50 dark:bg-background-dark border border-gray-200 dark:border-white/10 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all" placeholder="john@company.com" type="email"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase mb-1">Investment Scale</label>
+<div class="relative">
+<select class="w-full h-11 px-4 rounded-lg bg-gray-50 dark:bg-background-dark border border-gray-200 dark:border-white/10 text-text-main dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none appearance-none transition-all">
+<option>Select Budget Range</option>
+<option>€1M - €5M</option>
+<option>€5M - €20M</option>
+<option>€20M+</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 text-gray-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<button class="mt-4 flex items-center justify-center rounded-lg h-12 w-full bg-primary text-[#0d1b19] text-base font-bold tracking-[0.015em] hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20" type="button">
+                            Submit Request
+                        </button>
+</form>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="bg-white dark:bg-background-dark border-t border-gray-200 dark:border-white/10 pt-16 pb-8">
+<div class="max-w-[1280px] mx-auto px-4 md:px-10">
+<div class="flex flex-col md:flex-row justify-between gap-12 mb-16">
+<div class="max-w-xs">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary text-3xl">architecture</span>
+<h2 class="text-xl font-bold text-text-main dark:text-white">Studio Name</h2>
+</div>
+<p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                        Architectural excellence for the modern world. We design spaces that inspire, function, and return value.
+                    </p>
+<div class="flex gap-4 text-gray-400">
+<a class="hover:text-primary" href="#"><span class="material-symbols-outlined">mail</span></a>
+<a class="hover:text-primary" href="#"><span class="material-symbols-outlined">call</span></a>
+<a class="hover:text-primary" href="#"><span class="material-symbols-outlined">pin_drop</span></a>
+</div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-8 md:gap-16">
+<div class="flex flex-col gap-4">
+<h4 class="font-bold text-text-main dark:text-white">Services</h4>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Housing Estates</a>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Commercial</a>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Urban Planning</a>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Interior Design</a>
+</div>
+<div class="flex flex-col gap-4">
+<h4 class="font-bold text-text-main dark:text-white">Company</h4>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">About Us</a>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Careers</a>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Contact</a>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Privacy Policy</a>
+</div>
+<div class="flex flex-col gap-4">
+<h4 class="font-bold text-text-main dark:text-white">Resources</h4>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Blog</a>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">Case Studies</a>
+<a class="text-sm text-gray-500 hover:text-primary transition-colors" href="#">ROI Calculator</a>
+</div>
+</div>
+</div>
+<div class="border-t border-gray-100 dark:border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-xs text-gray-400">© 2023 Studio Name. All rights reserved.</p>
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+<span class="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider">Powered by</span>
+<span class="text-xs font-bold text-text-main dark:text-white tracking-tight">PCITI</span>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

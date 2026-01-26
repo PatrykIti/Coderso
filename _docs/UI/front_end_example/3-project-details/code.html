@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Modern Barn NV-01 - Modern Studio</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecc8",
+                        "primary-dark": "#0fbda0",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#10221f",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#162e2a",
+                        "text-main": "#0d1b19",
+                        "text-secondary": "#4c9a8d",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"],
+                        "sans": ["Public Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for gallery if needed */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-display antialiased transition-colors duration-300">
+<!-- Top Navigation -->
+<div class="w-full bg-surface-light dark:bg-surface-dark border-b border-[#e7f3f1] dark:border-white/10 sticky top-0 z-50">
+<div class="max-w-[1280px] mx-auto px-4 lg:px-10">
+<header class="flex items-center justify-between h-20">
+<div class="flex items-center gap-8">
+<!-- Logo -->
+<a class="flex items-center gap-3 group" href="#">
+<div class="size-8 text-primary transition-transform group-hover:scale-110">
+<svg fill="currentColor" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4 4H17.3334V17.3334H30.6666V30.6666H44V44H4V4Z"></path>
+</svg>
+</div>
+<h2 class="text-text-main dark:text-white text-xl font-bold tracking-tight">Modern Studio</h2>
+</a>
+<!-- Desktop Nav -->
+<nav class="hidden lg:flex items-center gap-8 ml-8">
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Projekty</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Realizacje</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">O nas</a>
+<a class="text-sm font-medium hover:text-primary transition-colors" href="#">Kontakt</a>
+</nav>
+</div>
+<div class="flex items-center gap-4 lg:gap-6">
+<!-- Search Bar -->
+<label class="hidden md:flex flex-col w-64 h-10">
+<div class="flex w-full h-full items-stretch rounded-lg bg-background-light dark:bg-background-dark/50 border border-transparent focus-within:border-primary/50 transition-colors">
+<div class="flex items-center justify-center pl-3 text-text-secondary">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="w-full bg-transparent border-none focus:ring-0 text-sm placeholder:text-text-secondary/70 text-text-main dark:text-white" placeholder="Szukaj projektu..."/>
+</div>
+</label>
+<!-- Auth Actions -->
+<button class="flex items-center gap-2 text-text-main dark:text-white hover:text-primary transition-colors">
+<span class="material-symbols-outlined">person</span>
+<span class="text-sm font-semibold hidden sm:block">Zaloguj</span>
+</button>
+<button class="lg:hidden p-2 text-text-main dark:text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</header>
+</div>
+</div>
+<!-- Main Content Wrapper -->
+<main class="w-full min-h-screen pb-20">
+<div class="max-w-[1280px] mx-auto px-4 lg:px-10 flex flex-col gap-8">
+<!-- Breadcrumbs -->
+<div class="flex flex-wrap gap-2 py-6 text-sm">
+<a class="text-text-secondary hover:text-primary transition-colors" href="#">Strona główna</a>
+<span class="text-text-secondary">/</span>
+<a class="text-text-secondary hover:text-primary transition-colors" href="#">Projekty domów</a>
+<span class="text-text-secondary">/</span>
+<span class="text-text-main dark:text-white font-medium">Modern Barn NV-01</span>
+</div>
+<!-- Page Layout: Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+<!-- Left Column: Content (Gallery, Tabs, Details) -->
+<div class="lg:col-span-8 flex flex-col gap-10">
+<!-- Header Mobile Only (Visible on small screens) -->
+<div class="lg:hidden flex flex-col gap-2">
+<h1 class="text-3xl font-black tracking-tight text-text-main dark:text-white">Modern Barn NV-01</h1>
+<p class="text-text-secondary">145 m² | Nowoczesna Stodoła</p>
+</div>
+<!-- Gallery -->
+<div class="flex flex-col gap-4">
+<!-- Main Image -->
+<div class="w-full aspect-video rounded-xl overflow-hidden shadow-sm group relative bg-gray-200 dark:bg-gray-800">
+<div class="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-105" data-alt="Modern barn style house exterior with large glass windows and wooden facade during sunset" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAie2Le0u731SgMNVCD4vKc30v1VLlBkEFPJy0KlyKIWVk59dbshuE_vKYi5pBk9--2hHhuDv2j2bFZwdvOTLoWSyphVbc5v_NiKicMOI7yPbUg2e1cvL1lONaitsOtG_C5D3g4gHFqaZXrwamfg3qM1Q6jJOB3LQEZDMSHFA23Bz94HuMdlR9QY0lflpw9rxE3baNfa9XjsQms5ctT9QWWnA0U8aczoYLglPTXgm38C33Fb4Vw14cytFB6GwtG6LCSdSeBgsd-rIX-');">
+</div>
+<div class="absolute bottom-4 right-4 flex gap-2">
+<button class="bg-white/90 dark:bg-black/80 hover:bg-white dark:hover:bg-black text-text-main dark:text-white px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-sm flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[16px]">grid_view</span>
+                                     Zobacz wszystkie (12)
+                                 </button>
+</div>
+</div>
+<!-- Thumbnails -->
+<div class="grid grid-cols-4 gap-3">
+<div class="aspect-[4/3] rounded-lg cursor-pointer overflow-hidden border-2 border-primary">
+<div class="w-full h-full bg-cover bg-center hover:opacity-80 transition-opacity" data-alt="Front view of the modern barn house" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD8ZbNqDcGDrJy9VNKWOqIvs49a_epctuo9f_IBog80qEjRWLIcC28_Ndi9EOU6FTobZtCS9xowVNxLaKRDh6LsRI7FXJQu0X6EFN6AgzULCZgd8CjvYVMtl7jcenfKaj0dAWGj0hje6QsmqUK1KB14pz5MRrjDdBJjtuUypAphbYuN-PfdHMmtZSRK8nh8AN5hd3qdO_I8clwvbSXTtSxzplP3oLzp0u_a1EiTVEiCXm3y7Ovks5vO1hwqv4YcMwBQ820rU59kDxeP');"></div>
+</div>
+<div class="aspect-[4/3] rounded-lg cursor-pointer overflow-hidden border-2 border-transparent hover:border-primary/50 transition-colors">
+<div class="w-full h-full bg-cover bg-center hover:opacity-80 transition-opacity" data-alt="Interior living room with high ceilings and fireplace" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDMZoBo5ht1xFzfplAEr--e_EccXQtL7sGr8utWaKkNyXeNyYj6kHB0tHzz8aLiQ4nxLtjyf4pkuwPEl90bBKyd3BTsbG5gMXbBIUdfcWG9wX3cGYu3ER5bU15-_aycJJLsKz58n004TNAA0FJUGXNx43e8dszruUIpDa5TrpaDLKR2TrrixBfUc0AjCvPC3GpY8EDtqGy7qiljeFm-ImobAZ-H5jHfh-bp-pbOSTWu8K2H7X4VhgSsMW8Sf6IYA4-9cfejP5OcxXBh');"></div>
+</div>
+<div class="aspect-[4/3] rounded-lg cursor-pointer overflow-hidden border-2 border-transparent hover:border-primary/50 transition-colors">
+<div class="w-full h-full bg-cover bg-center hover:opacity-80 transition-opacity" data-alt="Modern kitchen with island and dining area" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCR1BFN_F2zJElv7dbRFZJYXOwN2nJ_xiQUl2uD2f-V5rRiLm3Jplg6XJ4tnBxUElaezFnH-uLiao4vg2etsblrl8_-la_JsHlLl69YsZeUQT2Tv8ciGbHh85bfO2-gBL9he7iVWLQHwGGrnwj3rOoLMG2Bz8IaeIHp3_Woix6R1a6u9U7VkSjU2cfGjHVS37LLtUPBSG0drt3r9M0ZNVjvRvgr7c3OtAnKhfY8LJ0dT3i9FSqwxwbvP3brUNyTtk8coSQXhY3cdWRX');"></div>
+</div>
+<div class="aspect-[4/3] rounded-lg cursor-pointer overflow-hidden border-2 border-transparent hover:border-primary/50 transition-colors relative">
+<div class="w-full h-full bg-cover bg-center hover:opacity-80 transition-opacity opacity-70" data-alt="Backyard patio and garden area" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA5KxhYEBAQH6wB8NFK6sxtFqPE7Uu94Ycf2rHMCzaR1Cu6rwCZ_CIMrRFibIA6akHlu5vS5H1Q0kTpR_ZHMQad4DDfDTL6Psh61FHTdOJ0E85d5qwf4Z7FwA04J5h7ZqbQRidsMNJB3OskzicnINyBx0gWy7BzIP35b8tfh3SrKBV9whC8hUmPVDMZi5RfTVarCQfXfloaweWjz5pSEhWSxAXl1-TF-DX1GwNeHd4zKbjTo9kBsf3wVnMLeIvmmhtZGPiFi7EPEz6o');"></div>
+<div class="absolute inset-0 flex items-center justify-center text-white font-bold bg-black/30">+8</div>
+</div>
+</div>
+</div>
+<!-- Tabs & Content -->
+<div class="flex flex-col">
+<!-- Tab Nav -->
+<div class="flex border-b border-gray-200 dark:border-gray-700 mb-8 overflow-x-auto no-scrollbar">
+<button class="px-6 py-4 text-primary border-b-2 border-primary font-bold text-sm uppercase tracking-wider whitespace-nowrap">Opis Projektu</button>
+<button class="px-6 py-4 text-text-secondary hover:text-text-main dark:hover:text-white font-medium text-sm uppercase tracking-wider whitespace-nowrap transition-colors">Rzuty</button>
+<button class="px-6 py-4 text-text-secondary hover:text-text-main dark:hover:text-white font-medium text-sm uppercase tracking-wider whitespace-nowrap transition-colors">Parametry</button>
+<button class="px-6 py-4 text-text-secondary hover:text-text-main dark:hover:text-white font-medium text-sm uppercase tracking-wider whitespace-nowrap transition-colors">Co zawiera</button>
+</div>
+<!-- Content Section: Description -->
+<div class="prose prose-lg dark:prose-invert max-w-none mb-12">
+<h3 class="text-2xl font-bold text-text-main dark:text-white mb-4">O projekcie Modern Barn NV-01</h3>
+<p class="text-text-main/80 dark:text-white/80 leading-relaxed mb-4">
+                                Modern Barn NV-01 to projekt domu parterowego z poddaszem użytkowym, który łączy w sobie tradycyjną formę stodoły z nowoczesnym minimalizmem. Budynek charakteryzuje się prostą bryłą przykrytą dwuspadowym dachem bez okapów, co podkreśla jego nowoczesny charakter.
+                            </p>
+<p class="text-text-main/80 dark:text-white/80 leading-relaxed">
+                                Sercem domu jest przestronna strefa dzienna z wysokim sufitem nad salonem i dużymi przeszkleniami otwierającymi wnętrze na ogród. Układ funkcjonalny został zaprojektowany z myślą o 4-5 osobowej rodzinie, zapewniając wyraźny podział na strefę dzienną i nocną. Zastosowanie naturalnych materiałów elewacyjnych, takich jak drewno i kamień, sprawia, że dom doskonale wpisuje się w krajobraz.
+                            </p>
+</div>
+<!-- Content Section: Floor Plans -->
+<div class="mb-12">
+<h3 class="text-2xl font-bold text-text-main dark:text-white mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">floor</span>
+                                Rzuty kondygnacji
+                            </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+<p class="text-sm font-bold text-text-secondary mb-4 uppercase tracking-wider">Parter - 95.4 m²</p>
+<div class="aspect-square bg-contain bg-center bg-no-repeat" data-alt="Floor plan layout of the ground floor showing living room, kitchen, and garage" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBFwrTtw7qJSnm4D_6GWfxRPcZzmJv1rzCebY-MfgAiaWo_7qM6B5R39pdMBQ1CsieQwN925P3IyAARdoL7kKDwgEVDyTi6BraenQOpBcWs0gbh2gFYl94nYoydV3lss_kN_Vui6WCEC6W_9tYoEZnzUSUtCulIeBVhP-8EjU8uv2YSD3liqyaNj5hfG61jiRT1MGTcEOlq5FBddsq6O6m7U9zmsllzRmSiYwrdJrjpki6iSx9G1x5d0LGfKctg1zb3Cj-JDmicCfmj');"></div>
+</div>
+<div class="bg-white dark:bg-surface-dark p-4 rounded-xl border border-gray-100 dark:border-white/5 shadow-sm">
+<p class="text-sm font-bold text-text-secondary mb-4 uppercase tracking-wider">Poddasze - 49.6 m²</p>
+<div class="aspect-square bg-contain bg-center bg-no-repeat" data-alt="Floor plan layout of the attic floor showing bedrooms and bathroom" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA3rp0fhqraB7J2lzjhtlu8TZmEMJG1rJkQGQWgN_x64CXGJfKg-bEOjBzCKjf5vpZ1u5LWuJ-3ibyLvAho-0ur4_A_-QKZIpP7ZR5gt4bVh4exfXoOZEkZDlwBwZw6356Vgbgd9-KtN3K_BfhE6-sg9nky6HT4TKDHNIdTn9AN0ENiURx_T0ES5MC9IOfPMRcjc5bs0IvQMGDTSpWveO72lCUGa2p7yRBBf9pqR5PmNb-tYfv7ob8OJU3kkc3W-AER6eCQ-NCiqTH7');"></div>
+</div>
+</div>
+</div>
+<!-- Content Section: Parameters -->
+<div class="mb-12">
+<h3 class="text-2xl font-bold text-text-main dark:text-white mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">tune</span>
+                                Parametry techniczne
+                            </h3>
+<div class="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+<table class="w-full text-sm text-left">
+<tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+<tr class="bg-white dark:bg-surface-dark">
+<td class="px-6 py-4 font-medium text-text-secondary">Powierzchnia użytkowa</td>
+<td class="px-6 py-4 text-text-main dark:text-white font-bold">145.00 m²</td>
+</tr>
+<tr class="bg-gray-50 dark:bg-white/5">
+<td class="px-6 py-4 font-medium text-text-secondary">Powierzchnia zabudowy</td>
+<td class="px-6 py-4 text-text-main dark:text-white font-bold">118.50 m²</td>
+</tr>
+<tr class="bg-white dark:bg-surface-dark">
+<td class="px-6 py-4 font-medium text-text-secondary">Kubatura</td>
+<td class="px-6 py-4 text-text-main dark:text-white font-bold">780.00 m³</td>
+</tr>
+<tr class="bg-gray-50 dark:bg-white/5">
+<td class="px-6 py-4 font-medium text-text-secondary">Wysokość budynku</td>
+<td class="px-6 py-4 text-text-main dark:text-white font-bold">8.45 m</td>
+</tr>
+<tr class="bg-white dark:bg-surface-dark">
+<td class="px-6 py-4 font-medium text-text-secondary">Kąt nachylenia dachu</td>
+<td class="px-6 py-4 text-text-main dark:text-white font-bold">40°</td>
+</tr>
+<tr class="bg-gray-50 dark:bg-white/5">
+<td class="px-6 py-4 font-medium text-text-secondary">Minimalne wymiary działki</td>
+<td class="px-6 py-4 text-text-main dark:text-white font-bold">20.5m x 18.5m</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Content Section: What's included -->
+<div class="mb-6">
+<h3 class="text-2xl font-bold text-text-main dark:text-white mb-6 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">folder_open</span>
+                                Co zawiera projekt?
+                            </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex items-start gap-3 p-4 bg-white dark:bg-surface-dark rounded-lg border border-gray-100 dark:border-white/5">
+<span class="material-symbols-outlined text-primary mt-0.5">check_circle</span>
+<div>
+<p class="font-bold text-text-main dark:text-white">Projekt architektoniczny</p>
+<p class="text-sm text-text-secondary mt-1">Pełna dokumentacja rzutów, przekrojów i elewacji.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-4 bg-white dark:bg-surface-dark rounded-lg border border-gray-100 dark:border-white/5">
+<span class="material-symbols-outlined text-primary mt-0.5">check_circle</span>
+<div>
+<p class="font-bold text-text-main dark:text-white">Projekt konstrukcyjny</p>
+<p class="text-sm text-text-secondary mt-1">Obliczenia statyczne i rysunki wykonawcze.</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-4 bg-white dark:bg-surface-dark rounded-lg border border-gray-100 dark:border-white/5">
+<span class="material-symbols-outlined text-primary mt-0.5">check_circle</span>
+<div>
+<p class="font-bold text-text-main dark:text-white">Projekty instalacji</p>
+<p class="text-sm text-text-secondary mt-1">Sanitarne, elektryczne i grzewcze (z rekuperacją).</p>
+</div>
+</div>
+<div class="flex items-start gap-3 p-4 bg-white dark:bg-surface-dark rounded-lg border border-gray-100 dark:border-white/5">
+<span class="material-symbols-outlined text-primary mt-0.5">check_circle</span>
+<div>
+<p class="font-bold text-text-main dark:text-white">Zgoda na zmiany</p>
+<p class="text-sm text-text-secondary mt-1">Bezpłatna zgoda na adaptację projektu.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Sticky Sidebar -->
+<div class="lg:col-span-4 relative">
+<div class="sticky top-28 flex flex-col gap-6">
+<!-- Header Desktop Only -->
+<div class="hidden lg:flex flex-col gap-3 pb-4 border-b border-gray-200 dark:border-white/10">
+<h1 class="text-3xl font-black tracking-tight text-text-main dark:text-white leading-tight">Modern Barn NV-01</h1>
+<p class="text-text-secondary text-lg">Powierzchnia użytkowa: <span class="text-text-main dark:text-white font-semibold">145 m²</span></p>
+</div>
+<!-- Purchase Card -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-none dark:border dark:border-white/10 p-6 flex flex-col gap-6">
+<!-- Price -->
+<div class="flex flex-col gap-1">
+<div class="flex items-end gap-2">
+<span class="text-4xl font-black text-text-main dark:text-white tracking-tight">4 500 PLN</span>
+<span class="text-sm text-text-secondary mb-1.5 font-medium">brutto</span>
+</div>
+<div class="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-wide">
+<span class="flex size-2 rounded-full bg-primary animate-pulse"></span>
+                                    Dostępny od ręki
+                                </div>
+</div>
+<!-- Key Specs Grid -->
+<div class="grid grid-cols-2 gap-3">
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-background-dark rounded-lg border border-gray-100 dark:border-white/5">
+<span class="material-symbols-outlined text-text-secondary">bed</span>
+<div class="flex flex-col leading-none">
+<span class="text-sm font-bold text-text-main dark:text-white">3</span>
+<span class="text-[10px] text-text-secondary uppercase">Sypialnie</span>
+</div>
+</div>
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-background-dark rounded-lg border border-gray-100 dark:border-white/5">
+<span class="material-symbols-outlined text-text-secondary">bathtub</span>
+<div class="flex flex-col leading-none">
+<span class="text-sm font-bold text-text-main dark:text-white">2</span>
+<span class="text-[10px] text-text-secondary uppercase">Łazienki</span>
+</div>
+</div>
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-background-dark rounded-lg border border-gray-100 dark:border-white/5">
+<span class="material-symbols-outlined text-text-secondary">garage</span>
+<div class="flex flex-col leading-none">
+<span class="text-sm font-bold text-text-main dark:text-white">2</span>
+<span class="text-[10px] text-text-secondary uppercase">Garaż</span>
+</div>
+</div>
+<div class="flex items-center gap-3 p-3 bg-white dark:bg-background-dark rounded-lg border border-gray-100 dark:border-white/5">
+<span class="material-symbols-outlined text-text-secondary">roofing</span>
+<div class="flex flex-col leading-none">
+<span class="text-sm font-bold text-text-main dark:text-white">Dwuspadowy</span>
+<span class="text-[10px] text-text-secondary uppercase">Dach</span>
+</div>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-col gap-3">
+<button class="w-full h-12 bg-primary hover:bg-primary-dark text-text-main font-bold rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">shopping_cart</span>
+                                    Kup projekt
+                                </button>
+<button class="w-full h-12 bg-transparent border-2 border-gray-200 dark:border-white/10 hover:border-primary text-text-main dark:text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors">
+<span class="material-symbols-outlined">download</span>
+                                    Pobierz rzut PDF
+                                </button>
+</div>
+<!-- Trust Signals -->
+<div class="flex items-center justify-center gap-4 pt-2 border-t border-gray-100 dark:border-white/5">
+<div class="flex items-center gap-1.5 opacity-60">
+<span class="material-symbols-outlined text-[18px]">lock</span>
+<span class="text-[10px] font-medium uppercase tracking-wider">Bezpieczna płatność</span>
+</div>
+<div class="flex items-center gap-1.5 opacity-60">
+<span class="material-symbols-outlined text-[18px]">bolt</span>
+<span class="text-[10px] font-medium uppercase tracking-wider">Szybka dostawa</span>
+</div>
+</div>
+</div>
+<!-- Contact Support Box -->
+<div class="bg-primary/10 rounded-xl p-5 flex items-start gap-4">
+<div class="bg-white dark:bg-surface-dark p-2 rounded-full text-primary shrink-0">
+<span class="material-symbols-outlined">support_agent</span>
+</div>
+<div>
+<p class="text-sm font-bold text-text-main dark:text-white">Masz pytania?</p>
+<p class="text-xs text-text-secondary mt-1 mb-2">Nasi architekci chętnie pomogą w doborze projektu.</p>
+<a class="text-xs font-bold text-primary hover:underline" href="#">Zadzwoń do nas →</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<hr class="border-gray-200 dark:border-white/10 my-8"/>
+<!-- Similar Projects Section -->
+<section class="flex flex-col gap-8">
+<div class="flex items-center justify-between">
+<h2 class="text-2xl font-bold text-text-main dark:text-white">Podobne projekty</h2>
+<a class="text-primary font-bold text-sm hover:underline flex items-center gap-1" href="#">
+                        Zobacz więcej <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- Card 1 -->
+<div class="group flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all dark:border dark:border-white/5">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Modern white house with pool" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBF6Mi4w9yJjAXaMvOPvBhdG5mMaC1vfVS4Et_zq0_Q7CQlYUnMjFOER9RVtAZs_zCeiOoYWu1SzO6pACenhE75ghviE30mD1LS4AExtbpdFy7Po6X2Dg0d4eQ0ym9LTGZli20YRHbO9MyxWJ3YlK7p_GAfYD3LrK0rjasdrPflzLvQ2HXbwjixCIbLcmJIZ_fT4vQCDLNvMhBHiisAi2mjIJhpe6YxCNviNTEiqSqzqlJvYIpmKvK7KZufqqOfwcqdpuSuJQEAkxjf');"></div>
+<div class="absolute top-3 right-3 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">120 m²</div>
+</div>
+<div class="p-5 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-lg font-bold text-text-main dark:text-white group-hover:text-primary transition-colors">Modern Villa NV-02</h3>
+<p class="text-sm text-text-secondary">Dom piętrowy</p>
+</div>
+<p class="text-lg font-bold text-text-main dark:text-white">4 200 PLN</p>
+</div>
+<div class="flex items-center gap-4 text-xs text-text-secondary pt-2 border-t border-gray-100 dark:border-white/5">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">bed</span> 4 pokoje</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">bathtub</span> 2 łazienki</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all dark:border dark:border-white/5">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Modern brick house exterior" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAR1pgp7waF2_i881N9Xtd5DsuAV5pGX6QCA4NjXDvOBVR0x5jNfkGYEu2LGfKby6VznCjPdFDFWIM5Dpc0c9D8jsp_VuhlQvo7imx3PY0hVFCxEOaEiRx8BKL8yDoP-LRaDXf53i48qxqlRbyQOWKJIzf8_Le-ZW502GZMtEI0cYuGDlyxWh-9YObBloYACdABTchKopHaWn0CSdrXPRqSCbYXP8IoMRD_xXDlbNauez8GL2wWzkX1jyEhezxJdFiYY4pMwROnmgW7');"></div>
+<div class="absolute top-3 right-3 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">156 m²</div>
+</div>
+<div class="p-5 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-lg font-bold text-text-main dark:text-white group-hover:text-primary transition-colors">Brick House BH-05</h3>
+<p class="text-sm text-text-secondary">Nowoczesna stodoła</p>
+</div>
+<p class="text-lg font-bold text-text-main dark:text-white">4 800 PLN</p>
+</div>
+<div class="flex items-center gap-4 text-xs text-text-secondary pt-2 border-t border-gray-100 dark:border-white/5">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">bed</span> 4 pokoje</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">bathtub</span> 3 łazienki</span>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all dark:border dark:border-white/5">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-105" data-alt="Minimalist concrete house" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBISl9Xef4LyClpdWNOUiHLKtAPbV09u7BQceyr8Xt0P7L0jfOz5mGNnHeChoNOWtOFXvUmhK3gI7mk4D0VmJjZbuPf0L5qfBDGAlgkroROGvL7Xu1Q0DjyeNaAenOtSkw5A7KsxvSo8xGGAoghd-LYFIa7s5lhTh1bIoAXyaJLYB4ezZUcyl13aub2IPdMU5KDGEZC5MRT-oDNBoYzkvoAcZ-qDgDlF5nx2BnY8R6Cld7d4FlP5Ifn00C3UqpW1v6S9pcnePZtG4mG');"></div>
+<div class="absolute top-3 right-3 bg-black/70 text-white text-xs font-bold px-2 py-1 rounded">135 m²</div>
+</div>
+<div class="p-5 flex flex-col gap-3">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-lg font-bold text-text-main dark:text-white group-hover:text-primary transition-colors">Cube Project CP-01</h3>
+<p class="text-sm text-text-secondary">Dom z płaskim dachem</p>
+</div>
+<p class="text-lg font-bold text-text-main dark:text-white">4 600 PLN</p>
+</div>
+<div class="flex items-center gap-4 text-xs text-text-secondary pt-2 border-t border-gray-100 dark:border-white/5">
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">bed</span> 3 pokoje</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">bathtub</span> 2 łazienki</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Section -->
+<section class="max-w-3xl mx-auto w-full pt-10">
+<h2 class="text-2xl font-bold text-text-main dark:text-white mb-8 text-center">Częste pytania (FAQ)</h2>
+<div class="flex flex-col gap-4">
+<details class="group bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/5 overflow-hidden">
+<summary class="flex items-center justify-between p-5 cursor-pointer font-bold text-text-main dark:text-white hover:text-primary transition-colors">
+                            Czy projekt zawiera zgodę na zmiany?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="px-5 pb-5 text-text-secondary dark:text-gray-400 text-sm leading-relaxed">
+                            Tak, do każdego zakupionego projektu dołączamy bezpłatną, pisemną zgodę na wprowadzanie zmian adaptacyjnych. Możesz zmienić układ ścianek działowych, wielkość okien czy materiały wykończeniowe u swojego architekta adaptującego.
+                        </div>
+</details>
+<details class="group bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/5 overflow-hidden">
+<summary class="flex items-center justify-between p-5 cursor-pointer font-bold text-text-main dark:text-white hover:text-primary transition-colors">
+                            Jaki jest czas oczekiwania na projekt?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="px-5 pb-5 text-text-secondary dark:text-gray-400 text-sm leading-relaxed">
+                            Projekty "dostępne od ręki" wysyłamy w ciągu 24h od zaksięgowania wpłaty. W przypadku projektów na zamówienie czas oczekiwania wynosi zazwyczaj od 5 do 14 dni roboczych.
+                        </div>
+</details>
+<details class="group bg-white dark:bg-surface-dark rounded-xl border border-gray-200 dark:border-white/5 overflow-hidden">
+<summary class="flex items-center justify-between p-5 cursor-pointer font-bold text-text-main dark:text-white hover:text-primary transition-colors">
+                            Czy pomagacie w adaptacji projektu?
+                            <span class="material-symbols-outlined transition-transform group-open:rotate-180">expand_more</span>
+</summary>
+<div class="px-5 pb-5 text-text-secondary dark:text-gray-400 text-sm leading-relaxed">
+                            Jako pracownia autorska oferujemy konsultacje, jednak formalną adaptację projektu do działki musi wykonać uprawniony architekt lokalny. My dostarczamy kompletną dokumentację, która jest podstawą do adaptacji.
+                        </div>
+</details>
+</div>
+</section>
+</div>
+</main>
+<!-- Simple Footer -->
+<footer class="bg-surface-light dark:bg-surface-dark border-t border-[#e7f3f1] dark:border-white/10 py-12">
+<div class="max-w-[1280px] mx-auto px-10 text-center">
+<p class="text-text-secondary text-sm">© 2023 Modern Studio. Wszelkie prawa zastrzeżone.</p>
+</div>
+</footer>
+</body></html>

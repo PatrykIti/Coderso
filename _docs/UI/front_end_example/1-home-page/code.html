@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NOVA DOMY - Modern Architecture Studio</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ecc8",
+                        "primary-dark": "#0fbda0",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#10221f",
+                        "charcoal": "#0d1b19",
+                        "charcoal-light": "#1a332f",
+                        "muted-gold": "#c4a066",
+                    },
+                    fontFamily: {
+                        "display": ["Public Sans", "sans-serif"],
+                        "sans": ["Public Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "md": "0.375rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                    boxShadow: {
+                        'glass': '0 4px 30px rgba(0, 0, 0, 0.1)',
+                        'card': '0 10px 40px -10px rgba(0,0,0,0.08)',
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .dark .glass-panel {
+            background: rgba(16, 34, 31, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .masonry-grid {
+            column-count: 1;
+            column-gap: 1.5rem;
+        }
+        @media (min-width: 640px) {
+            .masonry-grid { column-count: 2; }
+        }
+        @media (min-width: 1024px) {
+            .masonry-grid { column-count: 3; }
+        }
+        .masonry-item {
+            break-inside: avoid;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ccc; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #aaa; 
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-charcoal dark:text-gray-100 font-display transition-colors duration-300 antialiased group/design-root overflow-x-hidden">
+<!-- Sticky Header -->
+<header class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+<div class="glass-panel w-full border-b border-gray-200/50 dark:border-gray-800/50">
+<div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex items-center justify-between h-20">
+<!-- Logo -->
+<div class="flex items-center gap-3">
+<div class="size-10 text-primary bg-charcoal dark:bg-white rounded-lg flex items-center justify-center">
+<svg class="w-6 h-6 text-primary dark:text-charcoal" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<h1 class="text-xl font-bold tracking-tight text-charcoal dark:text-white">NOVA DOMY</h1>
+</div>
+<!-- Desktop Navigation -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-sm font-medium text-charcoal dark:text-gray-300 hover:text-primary transition-colors" href="#">Projects</a>
+<a class="text-sm font-medium text-charcoal dark:text-gray-300 hover:text-primary transition-colors" href="#">Individual Design</a>
+<a class="text-sm font-medium text-charcoal dark:text-gray-300 hover:text-primary transition-colors" href="#">Realizations</a>
+<a class="text-sm font-medium text-charcoal dark:text-gray-300 hover:text-primary transition-colors" href="#">Technology</a>
+<a class="text-sm font-medium text-charcoal dark:text-gray-300 hover:text-primary transition-colors" href="#">Contact</a>
+</nav>
+<!-- Actions -->
+<div class="flex items-center gap-4">
+<a class="hidden sm:block text-xs font-bold text-charcoal dark:text-white hover:text-primary transition-colors" href="#">PL | EN</a>
+<button class="bg-primary hover:bg-primary-dark text-charcoal font-bold py-2.5 px-5 rounded-lg text-sm transition-all shadow-lg shadow-primary/20">
+                            Get a Quote
+                        </button>
+<!-- Mobile Menu Button -->
+<button class="md:hidden p-2 text-charcoal dark:text-white">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</header>
+<main class="pt-20">
+<!-- Hero Section -->
+<section class="relative min-h-[90vh] flex items-center bg-background-light dark:bg-background-dark overflow-hidden">
+<!-- Abstract Background Elements -->
+<div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-gray-100 to-transparent dark:from-gray-800/30 opacity-60 z-0"></div>
+<div class="layout-container max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 w-full z-10 py-12 lg:py-0">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+<!-- Left Content -->
+<div class="flex flex-col gap-8 max-w-2xl">
+<div class="space-y-4">
+<span class="inline-block px-3 py-1 bg-primary/10 text-primary-dark dark:text-primary text-xs font-bold uppercase tracking-wider rounded-full">Premium Architecture</span>
+<h1 class="text-5xl lg:text-7xl font-bold leading-[1.1] tracking-tight text-charcoal dark:text-white">
+                                Twój wymarzony dom <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-emerald-500">zaczyna się tutaj</span>
+</h1>
+<p class="text-lg text-gray-600 dark:text-gray-300 max-w-lg leading-relaxed">
+                                Energy-efficient, modern ready-made house projects with fixed construction costs. We combine award-winning design with sustainable technology.
+                            </p>
+</div>
+<div class="flex flex-wrap gap-3">
+<!-- Chips -->
+<div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-charcoal-light rounded-full border border-gray-100 dark:border-gray-700 shadow-sm">
+<span class="material-symbols-outlined text-primary text-xl">bolt</span>
+<span class="text-sm font-bold">Energy A++</span>
+</div>
+<div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-charcoal-light rounded-full border border-gray-100 dark:border-gray-700 shadow-sm">
+<span class="material-symbols-outlined text-primary text-xl">payments</span>
+<span class="text-sm font-bold">Fixed Costs</span>
+</div>
+</div>
+<div class="flex flex-wrap gap-4 pt-4">
+<button class="bg-charcoal dark:bg-white text-white dark:text-charcoal font-bold h-14 px-8 rounded-lg text-base hover:opacity-90 transition-opacity flex items-center gap-2">
+                                View Projects
+                                <span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+<button class="bg-transparent border-2 border-charcoal dark:border-gray-600 text-charcoal dark:text-white font-bold h-14 px-8 rounded-lg text-base hover:bg-charcoal hover:text-white dark:hover:bg-white dark:hover:text-charcoal transition-all">
+                                Free Consultation
+                            </button>
+</div>
+</div>
+<!-- Right Content: 3D Wireframe Visual -->
+<div class="relative w-full h-[400px] lg:h-[600px] flex items-center justify-center">
+<div class="relative w-full h-full rounded-2xl overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-charcoal-light dark:to-background-dark border border-gray-100 dark:border-gray-800 shadow-2xl" data-alt="Minimalist 3D wireframe rendering of a modern house floating in space">
+<!-- Placeholder for 3D Render -->
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&amp;w=2070&amp;auto=format&amp;fit=crop')] bg-cover bg-center opacity-90 mix-blend-overlay grayscale"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-background-light dark:from-background-dark to-transparent"></div>
+<!-- Decorative wireframe overlay simulation -->
+<div class="absolute inset-10 border border-primary/30 rounded-lg"></div>
+<div class="absolute inset-12 border border-dashed border-primary/20 rounded-lg"></div>
+<div class="absolute bottom-8 left-8 bg-white/90 dark:bg-charcoal/90 backdrop-blur p-4 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700">
+<div class="flex items-center gap-3">
+<div class="bg-primary/20 p-2 rounded-lg">
+<span class="material-symbols-outlined text-primary">view_in_ar</span>
+</div>
+<div>
+<p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Model</p>
+<p class="font-bold text-charcoal dark:text-white">NOVA-74 Modern</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Filter Bar (Overlapping) -->
+<div class="absolute bottom-0 lg:bottom-10 left-0 right-0 px-4 translate-y-1/2 lg:translate-y-0 z-20">
+<div class="max-w-[1000px] mx-auto">
+<div class="bg-white dark:bg-charcoal-light p-4 rounded-xl shadow-card border border-gray-100 dark:border-gray-700 flex flex-col lg:flex-row gap-4 items-end lg:items-center">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+<!-- Input 1 -->
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Surface Area</label>
+<div class="relative">
+<select class="w-full bg-gray-50 dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-lg py-3 px-4 text-charcoal dark:text-white font-medium appearance-none">
+<option>Any Size</option>
+<option>Up to 100 m²</option>
+<option>100 - 150 m²</option>
+<option>150 m² +</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Input 2 -->
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Bedrooms</label>
+<div class="relative">
+<select class="w-full bg-gray-50 dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-lg py-3 px-4 text-charcoal dark:text-white font-medium appearance-none">
+<option>Any</option>
+<option>2 Bedrooms</option>
+<option>3 Bedrooms</option>
+<option>4+ Bedrooms</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Input 3 -->
+<div class="flex flex-col gap-1.5">
+<label class="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Roof Type</label>
+<div class="relative">
+<select class="w-full bg-gray-50 dark:bg-background-dark border-transparent focus:border-primary focus:ring-0 rounded-lg py-3 px-4 text-charcoal dark:text-white font-medium appearance-none">
+<option>Any Type</option>
+<option>Flat Roof</option>
+<option>Gable Roof</option>
+<option>Hipped Roof</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+<button class="w-full lg:w-auto h-[50px] px-8 bg-primary hover:bg-primary-dark text-charcoal font-bold rounded-lg whitespace-nowrap shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 mt-2 lg:mt-6">
+<span class="material-symbols-outlined">search</span>
+                            Find Project
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- 3 Steps Timeline -->
+<section class="py-24 bg-white dark:bg-charcoal-light">
+<div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 mt-12 lg:mt-0">
+<div class="text-center mb-16">
+<h2 class="text-3xl font-bold mb-4 dark:text-white">Od projektu do kluczy</h2>
+<p class="text-gray-500 dark:text-gray-400">Streamlined process to get you into your new home faster.</p>
+</div>
+<div class="relative grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Connecting Line (Desktop) -->
+<div class="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 border-t-2 border-dashed border-gray-200 dark:border-gray-700 z-0"></div>
+<!-- Step 1 -->
+<div class="relative z-10 flex flex-col items-center text-center group">
+<div class="w-24 h-24 bg-background-light dark:bg-background-dark rounded-full flex items-center justify-center border-4 border-white dark:border-charcoal-light shadow-lg mb-6 group-hover:border-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-4xl text-primary">architecture</span>
+</div>
+<h3 class="text-xl font-bold mb-2 dark:text-white">1. Choose Project</h3>
+<p class="text-gray-500 dark:text-gray-400 text-sm max-w-xs">Select from our catalog of over 50 ready-made, adaptable designs.</p>
+</div>
+<!-- Step 2 -->
+<div class="relative z-10 flex flex-col items-center text-center group">
+<div class="w-24 h-24 bg-background-light dark:bg-background-dark rounded-full flex items-center justify-center border-4 border-white dark:border-charcoal-light shadow-lg mb-6 group-hover:border-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-4xl text-primary">edit_document</span>
+</div>
+<h3 class="text-xl font-bold mb-2 dark:text-white">2. Adaptation</h3>
+<p class="text-gray-500 dark:text-gray-400 text-sm max-w-xs">Our architects adapt the project to your plot and specific needs.</p>
+</div>
+<!-- Step 3 -->
+<div class="relative z-10 flex flex-col items-center text-center group">
+<div class="w-24 h-24 bg-background-light dark:bg-background-dark rounded-full flex items-center justify-center border-4 border-white dark:border-charcoal-light shadow-lg mb-6 group-hover:border-primary transition-colors duration-300">
+<span class="material-symbols-outlined text-4xl text-primary">key</span>
+</div>
+<h3 class="text-xl font-bold mb-2 dark:text-white">3. Construction</h3>
+<p class="text-gray-500 dark:text-gray-400 text-sm max-w-xs">We handle the build with fixed costs and guaranteed timelines.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Featured Projects -->
+<section class="py-24 bg-background-light dark:bg-background-dark">
+<div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex flex-col sm:flex-row justify-between items-end mb-12 gap-4">
+<div>
+<span class="text-primary font-bold uppercase tracking-wider text-sm mb-2 block">Our Portfolio</span>
+<h2 class="text-3xl md:text-4xl font-bold text-charcoal dark:text-white">Popularne Projekty</h2>
+</div>
+<a class="flex items-center gap-2 font-bold text-charcoal dark:text-white hover:text-primary transition-colors" href="#">
+                        See All Projects
+                        <span class="material-symbols-outlined">arrow_right_alt</span>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Project Card 1 -->
+<article class="group bg-white dark:bg-charcoal-light rounded-2xl overflow-hidden shadow-sm hover:shadow-card transition-all duration-300 flex flex-col">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500" data-alt="Modern white two-story house with large windows and a pool" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDfoLayj1SCIi26WZ1DWfRB6afHCtebWaewSIU_aTJlVqW_VB7VLxuLM7OCyfyoRb3vzNCGag1A2mVOyfucoO-KQfmD-6060mani6Oo6IWTg20IyMrpukL4TrYygj8nQ10hnKsUBbq5PL8qQadUSYA1jcjd8iezEN6PlkhG8ZQ-0FiLloeNzDs1Aeru_WovIJJpS_Ytn-0BK_nXAO_2HxMaec8IKeH8D6kazXtmvN2iEutHd0Xoiyr1uJh3UIv8cYG262bfKew49liE')"></div>
+<div class="absolute top-4 left-4">
+<span class="bg-white/90 dark:bg-charcoal/90 backdrop-blur text-xs font-bold px-3 py-1.5 rounded-full text-charcoal dark:text-white">New</span>
+</div>
+<div class="absolute bottom-4 right-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+<button class="bg-primary text-charcoal p-3 rounded-full shadow-lg">
+<span class="material-symbols-outlined">arrow_outward</span>
+</button>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-xl font-bold text-charcoal dark:text-white mb-1">Villa Moderno</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">Modern Barn Style</p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-primary">PLN 640k</p>
+<p class="text-xs text-gray-400">Est. turnkey</p>
+</div>
+</div>
+<div class="mt-auto grid grid-cols-3 gap-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">square_foot</span>
+<span class="text-sm font-bold dark:text-white">145 m²</span>
+</div>
+<div class="flex flex-col items-center border-l border-gray-100 dark:border-gray-700">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">bed</span>
+<span class="text-sm font-bold dark:text-white">4 Beds</span>
+</div>
+<div class="flex flex-col items-center border-l border-gray-100 dark:border-gray-700">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">bathtub</span>
+<span class="text-sm font-bold dark:text-white">2 Baths</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Project Card 2 -->
+<article class="group bg-white dark:bg-charcoal-light rounded-2xl overflow-hidden shadow-sm hover:shadow-card transition-all duration-300 flex flex-col">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500" data-alt="Compact modern minimalist home with flat roof and garden" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC6SnbNGRug2M1nDmAqENCmVrFTywE178DUeWbby6A5wXeiAhKn-LGtiI9RTKvmbn-zgv995J_KxiDOldcFQUwOlqkudA1HAlTn9_nQwVcvVnb1obbxpEb_2Jn5qIB44LRc_edhu6PRw-sWF2ztWLfRnLgboIcVyUWRynbn1kAKy_PUO0s_YDJ02z9lj8-qTE8ZqVoKGeK7BDaHuVre7aYYBUm-ADuVrVD2J_VbukIdKLr8qFR1g-_XAmQmvM5QOGQHjC5hXJJbUF6b')"></div>
+<div class="absolute top-4 left-4">
+<span class="bg-primary text-charcoal text-xs font-bold px-3 py-1.5 rounded-full">Bestseller</span>
+</div>
+<div class="absolute bottom-4 right-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+<button class="bg-primary text-charcoal p-3 rounded-full shadow-lg">
+<span class="material-symbols-outlined">arrow_outward</span>
+</button>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-xl font-bold text-charcoal dark:text-white mb-1">Eco Cube 2</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">Minimalist Cube</p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-primary">PLN 420k</p>
+<p class="text-xs text-gray-400">Est. turnkey</p>
+</div>
+</div>
+<div class="mt-auto grid grid-cols-3 gap-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">square_foot</span>
+<span class="text-sm font-bold dark:text-white">108 m²</span>
+</div>
+<div class="flex flex-col items-center border-l border-gray-100 dark:border-gray-700">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">bed</span>
+<span class="text-sm font-bold dark:text-white">3 Beds</span>
+</div>
+<div class="flex flex-col items-center border-l border-gray-100 dark:border-gray-700">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">bathtub</span>
+<span class="text-sm font-bold dark:text-white">2 Baths</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Project Card 3 -->
+<article class="group bg-white dark:bg-charcoal-light rounded-2xl overflow-hidden shadow-sm hover:shadow-card transition-all duration-300 flex flex-col">
+<div class="relative aspect-[4/3] overflow-hidden">
+<div class="absolute inset-0 bg-cover bg-center group-hover:scale-105 transition-transform duration-500" data-alt="Luxurious modern house with extensive glass facade and evening lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAls3AEkxuTBjUYJatRL6pf-ae1gCD_-HtZZtA-NJ8XW9g3z5JTuGHOW2MPxuBzn89nhQa9oqC25Tgfd8v4cAGNgcUi7qwpFkCCHk2c96wAqLWm9Tft27sLT7VK6JLrjXQ6p-L7Z9GSlURYja_kgiMT3ou6XdBzIHLt9oH_eFSJaVLqT0H2PDjpxCgl3FJr7FtdUHkIfIU6Y1mr1yFffR99BiSwo7xhG9bcydc7bjiMXdTvJqw7ZDnMyatze5NuB8MYrDgf4K0rBsf4')"></div>
+<div class="absolute bottom-4 right-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+<button class="bg-primary text-charcoal p-3 rounded-full shadow-lg">
+<span class="material-symbols-outlined">arrow_outward</span>
+</button>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-4">
+<div>
+<h3 class="text-xl font-bold text-charcoal dark:text-white mb-1">Horizon View</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">Luxury Estate</p>
+</div>
+<div class="text-right">
+<p class="text-lg font-bold text-primary">PLN 980k</p>
+<p class="text-xs text-gray-400">Est. turnkey</p>
+</div>
+</div>
+<div class="mt-auto grid grid-cols-3 gap-4 border-t border-gray-100 dark:border-gray-700 pt-4">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">square_foot</span>
+<span class="text-sm font-bold dark:text-white">210 m²</span>
+</div>
+<div class="flex flex-col items-center border-l border-gray-100 dark:border-gray-700">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">bed</span>
+<span class="text-sm font-bold dark:text-white">5 Beds</span>
+</div>
+<div class="flex flex-col items-center border-l border-gray-100 dark:border-gray-700">
+<span class="material-symbols-outlined text-gray-400 mb-1 text-xl">bathtub</span>
+<span class="text-sm font-bold dark:text-white">3 Baths</span>
+</div>
+</div>
+</div>
+</article>
+</div>
+</div>
+</section>
+<!-- Technology (Dark Mode Section) -->
+<section class="py-24 bg-charcoal text-white relative overflow-hidden">
+<!-- Background Pattern -->
+<div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(#13ecc8 1px, transparent 1px); background-size: 32px 32px;"></div>
+<div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+<div>
+<span class="text-primary font-bold uppercase tracking-wider text-sm mb-4 block">Smart Construction</span>
+<h2 class="text-3xl md:text-5xl font-bold mb-6">Future-Proof Technology</h2>
+<p class="text-gray-300 text-lg mb-8 leading-relaxed">
+                            Our homes are built with the latest energy-efficient technologies including advanced insulation systems, heat recovery ventilation, and smart home integration as standard.
+                        </p>
+<div class="space-y-6">
+<div class="flex items-start gap-4">
+<div class="bg-white/10 p-3 rounded-lg">
+<span class="material-symbols-outlined text-primary">thermostat</span>
+</div>
+<div>
+<h4 class="font-bold text-lg">Thermal Comfort</h4>
+<p class="text-gray-400 text-sm">Advanced wall composition with U-value &lt; 0.15 W/m²K</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<div class="bg-white/10 p-3 rounded-lg">
+<span class="material-symbols-outlined text-primary">solar_power</span>
+</div>
+<div>
+<h4 class="font-bold text-lg">Solar Ready</h4>
+<p class="text-gray-400 text-sm">Roof structures designed for optimal PV panel placement.</p>
+</div>
+</div>
+</div>
+<button class="mt-10 text-primary font-bold hover:text-white transition-colors flex items-center gap-2">
+                            Explore Technology
+                            <span class="material-symbols-outlined">arrow_right_alt</span>
+</button>
+</div>
+<!-- Diagram SVG Visualization -->
+<div class="relative bg-white/5 rounded-2xl p-8 border border-white/10">
+<div class="aspect-square md:aspect-video flex items-center justify-center">
+<div class="text-center" data-alt="Technical diagram showing wall layers and insulation technology">
+<!-- Abstract Technical Diagram using Tailwind and standard elements -->
+<div class="relative w-64 h-64 mx-auto">
+<div class="absolute inset-0 border-2 border-primary/30 rounded-full animate-[spin_10s_linear_infinite]"></div>
+<div class="absolute inset-4 border-2 border-dashed border-white/20 rounded-full animate-[spin_15s_linear_infinite_reverse]"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="bg-charcoal p-4 rounded-xl border border-primary text-center">
+<span class="material-symbols-outlined text-4xl text-primary mb-2">home_iot_device</span>
+<p class="font-bold text-sm">Smart Core</p>
+</div>
+</div>
+<!-- Orbiting elements -->
+<div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 bg-white/10 px-3 py-1 rounded text-xs">Insulation</div>
+<div class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-4 bg-white/10 px-3 py-1 rounded text-xs">Ventilation</div>
+<div class="absolute left-0 top-1/2 -translate-x-4 -translate-y-1/2 bg-white/10 px-3 py-1 rounded text-xs">Structure</div>
+<div class="absolute right-0 top-1/2 translate-x-4 -translate-y-1/2 bg-white/10 px-3 py-1 rounded text-xs">Acoustics</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Gallery & Testimonials (Masonry) -->
+<section class="py-24 bg-background-light dark:bg-background-dark">
+<div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+<div class="text-center mb-16">
+<span class="text-primary font-bold uppercase tracking-wider text-sm mb-2 block">Realizations</span>
+<h2 class="text-3xl font-bold dark:text-white">Our Clients' Homes</h2>
+</div>
+<div class="masonry-grid">
+<!-- Gallery Item 1 -->
+<div class="masonry-item rounded-xl overflow-hidden mb-6 group relative">
+<img alt="Interior living room with high ceilings" class="w-full h-auto transform group-hover:scale-105 transition-transform duration-500" data-alt="Modern bright living room interior with floor to ceiling windows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDy782e5Q5RDifvd30UUpGqS7Y2zATw2KhQmc1a6Q8CI0jPzojFMcp9sF4cMHGGRpZQTjChIdX1OHiLUFfpd-de7p2yDxC_Ze4rJFZwebYKexHeYO3FbeHNyQNeVhD6k0X2MGtVijkNmhuYGGYy4iHNLImJgJVkuI23GivQqI5GN3JbxXZf6ce5yRmOlJhbmo-oyd97-r3fI8C8LvZGSqtnu8clF0gTgmTg4PMUSL92wM1MxYk9gH9UPibGJYXf7NOzOkw7Ilmlz4aE"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="text-white font-bold tracking-wider">Project Warsaw</span>
+</div>
+</div>
+<!-- Testimonial 1 -->
+<div class="masonry-item bg-white dark:bg-charcoal-light p-8 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+<div class="flex text-primary mb-4">
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+<span class="material-symbols-outlined text-sm">star</span>
+</div>
+<p class="text-charcoal dark:text-gray-200 italic mb-6">"The fixed cost guarantee was a game changer for us. We moved in exactly when promised, with no hidden fees."</p>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-gray-200 rounded-full bg-cover bg-center" data-alt="Portrait of a smiling male client" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCFx5mdLRAsX3EIKUF8TNfB68Y0Fyc9PlDeGwY1wga0sfpoy4E9JpMmvV0tVkDMaBe_yHFKfr0nXUgKPdoRiRG4G4r-qna0y-nZ1y7qiAU6mjN8eg1wswBHrM7S3T-9hW4y9U_cZLMqshBDqNlQfgVlIixMJVoKHEo9rwE75ZCqEV-kORfxQe7-8ty3zBvb6iQ2ZsvEDxaUhYcCj41HL1E59b2VBub6TjCIyuyGA8802XTvHehOCEBM7ipnXHFD06L_4ZfoPKvJDcUf')"></div>
+<div>
+<p class="font-bold text-sm text-charcoal dark:text-white">Marek K.</p>
+<p class="text-xs text-gray-500">Wrocław, Poland</p>
+</div>
+</div>
+</div>
+<!-- Gallery Item 2 -->
+<div class="masonry-item rounded-xl overflow-hidden mb-6 group relative">
+<img alt="Exterior facade detail" class="w-full h-auto transform group-hover:scale-105 transition-transform duration-500" data-alt="Close up of modern wooden facade details" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD27UsUivDoGiRfiK9BFBnZlVQ8bN05gBrkMyeBlmdSkRzm_23CqovQCFbkeNLwydpTFP6i-udGyZ2yYSa0OYFnuzy4IgNYPp6EGiS0NYcgTwROhOkV5vO3OgI2pV7c4mXzLEwJxmYAEgmX6nRbtodu4MIXlluFwuuLlnXfqWUapIzysf1NHPb5C8ujT9Z51na00RBPflp4ufhA6u20E6VQDReI7gxYjCzdS57XdmjCl7h1EQKc8Q-O6R2parDKkZuZq9RTp0ZGt6kb"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="text-white font-bold tracking-wider">Detail View</span>
+</div>
+</div>
+<!-- Gallery Item 3 -->
+<div class="masonry-item rounded-xl overflow-hidden mb-6 group relative">
+<img alt="Kitchen interior" class="w-full h-auto transform group-hover:scale-105 transition-transform duration-500" data-alt="Clean minimalist kitchen design with island" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAWNIwvqLZOqqXu8ssLWMLeVYOOZgsr0eIWpg6_cYwfbWTPCmINZq47vg9Ok9D1oXkvt_hIyH-96vl_bilC2ggMW2C0I6QdEXCGSYinPI7m2dKuBux4048ITSqefRURKiMBP300gE5-NUeB__y8gDFJCdA5Yr2wV64VqN9Ecz43Pfv0fI6yC72VTTWkI66SzZtDPFYZG3fWRCB1a6-YyBKASYuzLUpS5_5eU_AdHKVLweMrwtDiBj-J-q8h5-B-OSXJHiFDfE8zmUTH"/>
+<div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+<span class="text-white font-bold tracking-wider">Interiors</span>
+</div>
+</div>
+<!-- Testimonial 2 -->
+<div class="masonry-item bg-charcoal text-white p-8 rounded-xl shadow-lg mb-6">
+<span class="material-symbols-outlined text-primary text-4xl mb-4">format_quote</span>
+<p class="text-gray-200 italic mb-6">"Professional approach from day one. The design team listened to our needs and the final house is simply stunning."</p>
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-gray-500 rounded-full bg-cover bg-center" data-alt="Portrait of a female client" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAmOEiYE3M0YvSvxrWnqUqCC32IUlTBp9am1ejghJR6JAR4ciGE_i_JuPNNAy3mO7T_7pd_g6h26jsEkCLjkvR-ghfrZk-AElrtukArRlV9mhxWVFg0i6GQMZtxz6YH8X-YQ3IV2Vflo9TWmAHLi5jcvD4mumOzSPDU91rUT6x7qKZ7rZNzaO5VXXnb_iW0gkhnZhO6iwgjnPTI_UWKU4teEhS6g61FQHx4RnqbSd3WkbiANxX3weBPYMTATDaCHHXO5ps0vRf4fl-W')"></div>
+<div>
+<p class="font-bold text-sm">Anna S.</p>
+<p class="text-xs text-gray-400">Kraków, Poland</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-white dark:bg-charcoal-light border-t border-gray-200 dark:border-gray-800 pt-16 pb-8">
+<div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+<!-- Brand -->
+<div class="space-y-6">
+<div class="flex items-center gap-2">
+<div class="size-8 bg-charcoal dark:bg-white text-primary dark:text-charcoal rounded flex items-center justify-center">
+<span class="material-symbols-outlined">home</span>
+</div>
+<h2 class="text-xl font-bold text-charcoal dark:text-white">NOVA DOMY</h2>
+</div>
+<p class="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+                        Creating modern, sustainable living spaces that inspire. We are dedicated to quality, transparency, and innovation in every project.
+                    </p>
+<div class="flex gap-4">
+<a class="text-gray-400 hover:text-primary transition-colors" href="#"><span class="text-xl">FB</span></a>
+<a class="text-gray-400 hover:text-primary transition-colors" href="#"><span class="text-xl">IG</span></a>
+<a class="text-gray-400 hover:text-primary transition-colors" href="#"><span class="text-xl">LN</span></a>
+</div>
+</div>
+<!-- Links 1 -->
+<div>
+<h3 class="font-bold text-charcoal dark:text-white mb-6">Offer</h3>
+<ul class="space-y-4 text-sm text-gray-500 dark:text-gray-400">
+<li><a class="hover:text-primary transition-colors" href="#">Ready Projects</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Individual Design</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Interior Design</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Construction Services</a></li>
+</ul>
+</div>
+<!-- Links 2 -->
+<div>
+<h3 class="font-bold text-charcoal dark:text-white mb-6">Company</h3>
+<ul class="space-y-4 text-sm text-gray-500 dark:text-gray-400">
+<li><a class="hover:text-primary transition-colors" href="#">About Us</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Realizations</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Technology</a></li>
+<li><a class="hover:text-primary transition-colors" href="#">Contact</a></li>
+</ul>
+</div>
+<!-- Newsletter -->
+<div>
+<h3 class="font-bold text-charcoal dark:text-white mb-6">Stay Updated</h3>
+<p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Join our newsletter for the latest architectural trends.</p>
+<form class="flex flex-col gap-2">
+<input class="bg-gray-50 dark:bg-background-dark border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3 text-sm focus:border-primary focus:ring-0" placeholder="Your email address" type="email"/>
+<button class="bg-charcoal dark:bg-white text-white dark:text-charcoal font-bold py-3 rounded-lg text-sm hover:bg-primary hover:text-charcoal transition-colors">Subscribe</button>
+</form>
+</div>
+</div>
+<div class="border-t border-gray-100 dark:border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-xs text-gray-400">© 2024 NOVA DOMY Studio. All rights reserved.</p>
+<div class="flex gap-6 text-xs text-gray-400">
+<a class="hover:text-primary" href="#">Privacy Policy</a>
+<a class="hover:text-primary" href="#">Terms of Service</a>
+</div>
+</div>
+</div>
+</footer>
+</body></html>

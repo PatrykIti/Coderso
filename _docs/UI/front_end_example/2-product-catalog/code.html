@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pl"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NOVA DOMY - Projekty Domów</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500;1,600;1,700;1,800;1,900&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13ecc8",
+              "primary-dark": "#0fbda0",
+              "background-light": "#f8fcfb",
+              "background-dark": "#10221f",
+              "surface-light": "#ffffff",
+              "surface-dark": "#162e2a",
+              "text-main": "#0d1b19",
+              "text-muted": "#4c9a8d",
+            },
+            fontFamily: {
+              "display": ["Public Sans", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "0.5rem",
+              "lg": "0.75rem",
+              "xl": "1rem",
+              "full": "9999px"
+            },
+            boxShadow: {
+              'card': '0 4px 20px -2px rgba(19, 236, 200, 0.1)',
+              'card-hover': '0 10px 30px -4px rgba(19, 236, 200, 0.2)',
+            }
+          },
+        },
+      }
+    </script>
+<style>
+      /* Custom Slider Styling */
+      input[type=range] {
+        -webkit-appearance: none;
+        width: 100%;
+        background: transparent; 
+      }
+      
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: #13ecc8;
+        cursor: pointer;
+        margin-top: -6px; 
+        box-shadow: 0 0 0 2px #fff;
+      }
+      
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 4px;
+        cursor: pointer;
+        background: #cfe7e3;
+        border-radius: 2px;
+      }
+      
+      input[type=range]:focus {
+        outline: none;
+      }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-text-main transition-colors duration-300 min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-50 w-full bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md border-b border-[#e7f3f1] dark:border-white/10">
+<div class="px-6 lg:px-10 py-4 flex items-center justify-between mx-auto max-w-[1440px]">
+<div class="flex items-center gap-4">
+<a class="flex items-center gap-2 group" href="#">
+<div class="size-8 text-primary group-hover:rotate-90 transition-transform duration-500">
+<svg class="w-full h-full" fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M42.1739 20.1739L27.8261 5.82609C29.1366 7.13663 28.3989 10.1876 26.2002 13.7654C24.8538 15.9564 22.9595 18.3449 20.6522 20.6522C18.3449 22.9595 15.9564 24.8538 13.7654 26.2002C10.1876 28.3989 7.13663 29.1366 5.82609 27.8261L20.1739 42.1739C21.4845 43.4845 24.5355 42.7467 28.1133 40.548C30.3042 39.2016 32.6927 37.3073 35 35C37.3073 32.6927 39.2016 30.3042 40.548 28.1133C42.7467 24.5355 43.4845 21.4845 42.1739 20.1739Z" fill="currentColor"></path>
+<path clip-rule="evenodd" d="M7.24189 26.4066C7.31369 26.4411 7.64204 26.5637 8.52504 26.3738C9.59462 26.1438 11.0343 25.5311 12.7183 24.4963C14.7583 23.2426 17.0256 21.4503 19.238 19.238C21.4503 17.0256 23.2426 14.7583 24.4963 12.7183C25.5311 11.0343 26.1438 9.59463 26.3738 8.52504C26.5637 7.64204 26.4411 7.31369 26.4066 7.24189C26.345 7.21246 26.143 7.14535 25.6664 7.1918C24.9745 7.25925 23.9954 7.5498 22.7699 8.14278C20.3369 9.32007 17.3369 11.4915 14.4142 14.4142C11.4915 17.3369 9.32007 20.3369 8.14278 22.7699C7.5498 23.9954 7.25925 24.9745 7.1918 25.6664C7.14534 26.143 7.21246 26.345 7.24189 26.4066ZM29.9001 10.7285C29.4519 12.0322 28.7617 13.4172 27.9042 14.8126C26.465 17.1544 24.4686 19.6641 22.0664 22.0664C19.6641 24.4686 17.1544 26.465 14.8126 27.9042C13.4172 28.7617 12.0322 29.4519 10.7285 29.9001L21.5754 40.747C21.6001 40.7606 21.8995 40.931 22.8729 40.7217C23.9424 40.4916 25.3821 39.879 27.0661 38.8441C29.1062 37.5904 31.3734 35.7982 33.5858 33.5858C35.7982 31.3734 37.5904 29.1062 38.8441 27.0661C39.879 25.3821 40.4916 23.9425 40.7216 22.8729C40.931 21.8995 40.7606 21.6001 40.747 21.5754L29.9001 10.7285ZM29.2403 4.41187L43.5881 18.7597C44.9757 20.1473 44.9743 22.1235 44.6322 23.7139C44.2714 25.3919 43.4158 27.2666 42.252 29.1604C40.8128 31.5022 38.8165 34.012 36.4142 36.4142C34.012 38.8165 31.5022 40.8128 29.1604 42.252C27.2666 43.4158 25.3919 44.2714 23.7139 44.6322C22.1235 44.9743 20.1473 44.9757 18.7597 43.5881L4.41187 29.2403C3.29027 28.1187 3.08209 26.5973 3.21067 25.2783C3.34099 23.9415 3.8369 22.4852 4.54214 21.0277C5.96129 18.0948 8.43335 14.7382 11.5858 11.5858C14.7382 8.43335 18.0948 5.9613 21.0277 4.54214C22.4852 3.8369 23.9415 3.34099 25.2783 3.21067C26.5973 3.08209 28.1187 3.29028 29.2403 4.41187Z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+<h2 class="text-[#0d1b19] dark:text-white text-xl font-bold tracking-tight">NOVA DOMY</h2>
+</a>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-[#0d1b19] dark:text-white/80 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium" href="#">Projekty</a>
+<a class="text-[#0d1b19] dark:text-white/80 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium" href="#">Realizacje</a>
+<a class="text-[#0d1b19] dark:text-white/80 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium" href="#">O nas</a>
+<a class="text-[#0d1b19] dark:text-white/80 hover:text-primary dark:hover:text-primary transition-colors text-sm font-medium" href="#">Strefa Architekta</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="hidden lg:flex items-center justify-center p-2 rounded-full hover:bg-[#e7f3f1] dark:hover:bg-white/10 text-[#0d1b19] dark:text-white transition-colors">
+<span class="material-symbols-outlined text-xl">search</span>
+</button>
+<button class="flex items-center justify-center px-6 h-10 rounded-lg bg-primary hover:bg-primary-dark transition-colors text-[#0d1b19] text-sm font-bold shadow-sm">
+                    Zaloguj się
+                </button>
+</div>
+</div></header>
+<!-- Main Content Area -->
+<main class="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<!-- Page Heading -->
+<div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="text-[#0d1b19] dark:text-white text-4xl lg:text-5xl font-black tracking-tight mb-2">Projekty Domów</h1>
+<p class="text-[#4c9a8d] dark:text-gray-400 text-lg">Odkryj nowoczesne projekty gotowe i znajdź swój ideał.</p>
+</div>
+</div>
+<!-- Content Grid: Sidebar + Results -->
+<div class="flex flex-col lg:flex-row gap-10 relative">
+<!-- Sidebar Filters -->
+<aside class="w-full lg:w-[280px] shrink-0 space-y-8 lg:sticky lg:top-28 h-fit lg:max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 pb-4">
+<!-- Filter Header -->
+<div class="flex items-center justify-between pb-2 border-b border-[#e7f3f1] dark:border-white/10">
+<h3 class="text-[#0d1b19] dark:text-white text-lg font-bold flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">tune</span>
+                            Filtrowanie
+                        </h3>
+<button class="text-xs font-semibold text-[#4c9a8d] hover:text-primary transition-colors uppercase tracking-wide">Resetuj</button>
+</div>
+<!-- Area Slider -->
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<p class="text-[#0d1b19] dark:text-white font-semibold text-sm">Powierzchnia (m²)</p>
+<span class="text-primary font-bold text-sm">70 - 250+</span>
+</div>
+<div class="relative pt-2">
+<input class="absolute pointer-events-none opacity-0 z-10 w-full" max="300" min="30" type="range" value="70"/> <!-- dummy for logic -->
+<div class="w-full bg-[#cfe7e3] dark:bg-white/10 rounded-full h-1 relative">
+<div class="absolute left-[15%] right-[20%] bg-primary h-1 rounded-full"></div>
+<div class="absolute left-[15%] top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow border-2 border-white cursor-pointer"></div>
+<div class="absolute right-[20%] top-1/2 -translate-y-1/2 w-4 h-4 bg-primary rounded-full shadow border-2 border-white cursor-pointer"></div>
+</div>
+</div>
+<div class="flex gap-2 mt-2">
+<input class="w-1/2 rounded-md border border-[#e7f3f1] dark:border-white/10 dark:bg-surface-dark dark:text-white px-3 py-2 text-sm focus:border-primary focus:ring-primary" type="number" value="70"/>
+<input class="w-1/2 rounded-md border border-[#e7f3f1] dark:border-white/10 dark:bg-surface-dark dark:text-white px-3 py-2 text-sm focus:border-primary focus:ring-primary" type="number" value="250"/>
+</div>
+</div>
+<!-- Floors (Chips) -->
+<div class="space-y-3">
+<p class="text-[#0d1b19] dark:text-white font-semibold text-sm">Liczba kondygnacji</p>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 rounded-full bg-primary text-[#0d1b19] text-xs font-bold shadow-sm transition-all hover:shadow-md">Parterowy</button>
+<button class="px-4 py-2 rounded-full bg-[#e7f3f1] dark:bg-white/5 text-[#0d1b19] dark:text-white/80 hover:bg-[#d5ebe7] dark:hover:bg-white/10 text-xs font-medium transition-colors">Piętrowy</button>
+<button class="px-4 py-2 rounded-full bg-[#e7f3f1] dark:bg-white/5 text-[#0d1b19] dark:text-white/80 hover:bg-[#d5ebe7] dark:hover:bg-white/10 text-xs font-medium transition-colors">Z poddaszem</button>
+</div>
+</div>
+<!-- Style (Checkboxes) -->
+<div class="space-y-3">
+<p class="text-[#0d1b19] dark:text-white font-semibold text-sm">Styl architektoniczny</p>
+<div class="space-y-2">
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-gray-300 text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm text-[#0d1b19] dark:text-gray-300 group-hover:text-primary transition-colors">Nowoczesna stodoła</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-gray-300 text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm text-[#0d1b19] dark:text-gray-300 group-hover:text-primary transition-colors">Minimalistyczny</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input checked="" class="rounded border-gray-300 text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm text-[#0d1b19] dark:text-gray-300 group-hover:text-primary transition-colors">Willa miejska</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<input class="rounded border-gray-300 text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm text-[#0d1b19] dark:text-gray-300 group-hover:text-primary transition-colors">Tradycyjny</span>
+</label>
+</div>
+</div>
+<!-- Garage -->
+<div class="space-y-3 pt-2 border-t border-[#e7f3f1] dark:border-white/10">
+<p class="text-[#0d1b19] dark:text-white font-semibold text-sm pt-2">Garaż</p>
+<select class="w-full rounded-lg border-gray-200 dark:border-white/10 dark:bg-surface-dark dark:text-white text-sm focus:border-primary focus:ring-primary p-2.5">
+<option>Dowolny</option>
+<option>Jednostanowiskowy</option>
+<option>Dwustanowiskowy</option>
+<option>Brak garażu</option>
+</select>
+</div>
+<!-- B2B Banner -->
+<div class="bg-[#e7f3f1] dark:bg-white/5 rounded-xl p-5 mt-4 relative overflow-hidden group cursor-pointer">
+<div class="absolute -right-4 -top-4 w-20 h-20 bg-primary/20 rounded-full blur-xl group-hover:bg-primary/30 transition-colors"></div>
+<h4 class="font-bold text-[#0d1b19] dark:text-white relative z-10 mb-1">Strefa Architekta</h4>
+<p class="text-xs text-[#4c9a8d] dark:text-gray-400 relative z-10 mb-3">Współpraca B2B i pliki projektowe.</p>
+<span class="text-xs font-bold text-primary flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                            Dołącz teraz <span class="material-symbols-outlined text-sm">arrow_forward</span>
+</span>
+</div>
+</aside>
+<!-- Main Grid Section -->
+<div class="flex-1 min-w-0">
+<!-- Toolbar -->
+<div class="flex flex-wrap items-center justify-between gap-4 mb-8 bg-surface-light dark:bg-surface-dark p-3 rounded-lg border border-[#e7f3f1] dark:border-white/5">
+<p class="text-sm font-medium text-[#4c9a8d] dark:text-gray-400 pl-2">Znaleziono: <span class="text-[#0d1b19] dark:text-white font-bold">124 projekty</span></p>
+<div class="flex items-center gap-3">
+<div class="relative group">
+<select class="appearance-none bg-transparent pl-3 pr-8 py-1.5 text-sm font-bold text-[#0d1b19] dark:text-white cursor-pointer focus:outline-none">
+<option>Popularne</option>
+<option>Najnowsze</option>
+<option>Cena rosnąco</option>
+<option>Cena malejąco</option>
+</select>
+<span class="material-symbols-outlined absolute right-1 top-1.5 text-lg pointer-events-none text-[#0d1b19] dark:text-white">expand_more</span>
+</div>
+<div class="h-6 w-px bg-gray-200 dark:bg-white/10"></div>
+<div class="flex gap-1">
+<button class="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-[#0d1b19] dark:text-white transition-colors">
+<span class="material-symbols-outlined text-[20px]">grid_view</span>
+</button>
+<button class="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 transition-colors">
+<span class="material-symbols-outlined text-[20px]">view_list</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Projects Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+<!-- Card 1 -->
+<article class="group relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-transparent hover:border-primary/30 hover:shadow-card-hover transition-all duration-300">
+<!-- Image -->
+<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+<span class="absolute top-4 left-4 z-10 bg-primary text-[#0d1b19] text-[10px] uppercase font-bold px-3 py-1.5 rounded-full shadow-sm tracking-wide">Bestseller</span>
+<button class="absolute top-4 right-4 z-10 bg-white/90 dark:bg-black/50 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</button>
+<img alt="Modern house render with large windows and pool" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Modern geometric house render" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9c4V1zvtBnih7TNkbPRZdlfniGBMz_d3oYlLOPkM1rkVMXaYaciNTps-7RvsH6ry9-md2KsnWRgnP5_lSVURJA1hfjqubsBQxRAz2xED37-cET9cpq04t--7dWZU6O7clq-SXQqFJqyAH3Lq0p7xt-qVOxOuxaH5eH7aSjl7NIqbng23EhI53Yr8dnyNmmFAZ2gdikGTaz-TiHjEbDWzct6jgVf_vqgBRJS5Sbo1IVMEXoKPbxpoU190woCPNBGRrWyrqf05lbhcl"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+<button class="bg-primary hover:bg-primary-dark text-[#0d1b19] font-bold text-sm px-6 py-2 rounded-lg shadow-lg translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                        Zobacz szczegóły
+                                    </button>
+</div>
+</div>
+<!-- Content -->
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div class="flex justify-between items-start">
+<h3 class="text-xl font-bold text-[#0d1b19] dark:text-white group-hover:text-primary transition-colors">NV-204</h3>
+<span class="text-sm font-bold text-[#0d1b19] dark:text-white bg-[#e7f3f1] dark:bg-white/10 px-2 py-1 rounded">4 500 PLN</span>
+</div>
+<div class="h-px w-full bg-[#e7f3f1] dark:bg-white/10 my-1"></div>
+<div class="grid grid-cols-3 gap-2 text-[#4c9a8d] dark:text-gray-400">
+<div class="flex flex-col items-start">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">square_foot</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pow.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">145 m²</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">bed</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pokoi</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">4</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">bathtub</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Łaz.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">2</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="group relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-transparent hover:border-primary/30 hover:shadow-card-hover transition-all duration-300">
+<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+<span class="absolute top-4 left-4 z-10 bg-white/90 dark:bg-white/20 backdrop-blur text-[#0d1b19] dark:text-white text-[10px] uppercase font-bold px-3 py-1.5 rounded-full shadow-sm tracking-wide">Nowość</span>
+<button class="absolute top-4 right-4 z-10 bg-white/90 dark:bg-black/50 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</button>
+<img alt="Minimalist villa exterior at dusk" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Minimalist dark exterior house" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB26bBTdk__uPJUNqedtjvVg14pW5rxhIzq_um-BsWCaOx1-W78ZW-y7ijJLw9NoLdz0a77diSw5M9SxeQozpD13G_JdeFPwv4UFpcyD0ObRtHvwB9jCweibgyTgN_chvScyJtVCJxBwMPiV6uQzuy6nFaSsI8568YiILR81d6DMf1t6Bly7stdRFX-nuOj4q5qKvqIS6VZzDoiO06gfqC-LAWnzFcWZnCDldVbEq75i2nPceyV8h1ApiLsNnl0IeMaboKBylr9d6JB"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+<button class="bg-primary hover:bg-primary-dark text-[#0d1b19] font-bold text-sm px-6 py-2 rounded-lg shadow-lg translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                        Zobacz szczegóły
+                                    </button>
+</div>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div class="flex justify-between items-start">
+<h3 class="text-xl font-bold text-[#0d1b19] dark:text-white group-hover:text-primary transition-colors">NV-310</h3>
+<span class="text-sm font-bold text-[#0d1b19] dark:text-white bg-[#e7f3f1] dark:bg-white/10 px-2 py-1 rounded">5 200 PLN</span>
+</div>
+<div class="h-px w-full bg-[#e7f3f1] dark:bg-white/10 my-1"></div>
+<div class="grid grid-cols-3 gap-2 text-[#4c9a8d] dark:text-gray-400">
+<div class="flex flex-col items-start">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">square_foot</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pow.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">185 m²</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">bed</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pokoi</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">5</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">garage</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Garaż</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">2</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 3 -->
+<article class="group relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-transparent hover:border-primary/30 hover:shadow-card-hover transition-all duration-300">
+<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+<button class="absolute top-4 right-4 z-10 bg-white/90 dark:bg-black/50 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</button>
+<img alt="Small cozy modern house with garden" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Cozy white house with garden" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZ3fsmelSxVkhaLMjABUxSKWF7t0O_Y5RkXK6f83lYICUIxkONyjCQQQSW8cHUbHHhzL7Smps0NbWq8F6lOPNLgPn7IpPtEi6PGL4dtkaZC-pfdn-ezmUyIPA5MfnVJU1GWHb9Fkb6yV2jLU2wyxtmEGjIcm6PbBS_PUK1rFmOK7SeyggJr5JDX2OZS599lt29pkUUIngffWaf_4jG-B7IG84ubU5LAordzQ8s2DKDipGuHgVoniRliOzAKG6iqk4fOtIg4tIHLzT9"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+<button class="bg-primary hover:bg-primary-dark text-[#0d1b19] font-bold text-sm px-6 py-2 rounded-lg shadow-lg translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                        Zobacz szczegóły
+                                    </button>
+</div>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div class="flex justify-between items-start">
+<h3 class="text-xl font-bold text-[#0d1b19] dark:text-white group-hover:text-primary transition-colors">NV-102</h3>
+<span class="text-sm font-bold text-[#0d1b19] dark:text-white bg-[#e7f3f1] dark:bg-white/10 px-2 py-1 rounded">3 800 PLN</span>
+</div>
+<div class="h-px w-full bg-[#e7f3f1] dark:bg-white/10 my-1"></div>
+<div class="grid grid-cols-3 gap-2 text-[#4c9a8d] dark:text-gray-400">
+<div class="flex flex-col items-start">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">square_foot</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pow.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">98 m²</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">bed</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pokoi</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">3</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">bathtub</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Łaz.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">1</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 4 -->
+<article class="group relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-transparent hover:border-primary/30 hover:shadow-card-hover transition-all duration-300">
+<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+<span class="absolute top-4 left-4 z-10 bg-black text-white text-[10px] uppercase font-bold px-3 py-1.5 rounded-full shadow-sm tracking-wide">Promo</span>
+<button class="absolute top-4 right-4 z-10 bg-white/90 dark:bg-black/50 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</button>
+<img alt="Large family house with wooden siding" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Modern house with wood siding" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCXkDHgZ0ARMlOouys8xOY-T58Wdfo7QQr33Dxjan2Wgt1TF4krb62waTwEUruid8wFYQX2MvMUoGoF4mSRDlO-gp7R8CAU5ueyZxFQ7jqRN-6ayLIqxVB-fmIRYip6uhh0DuOWzIlmlk5KrtEoSP7nKgSrk-E7E6Olh0T6pDa7waLeAbGXOWxsAgCs2TbCVOmUTOf_Qz8zlsy2y8QBtZPaW5-UbjVGTAJeVuNWnJCOPZhCf1-h5Egc4MetADlieav_pmW0aBFhLGSx"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+<button class="bg-primary hover:bg-primary-dark text-[#0d1b19] font-bold text-sm px-6 py-2 rounded-lg shadow-lg translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                        Zobacz szczegóły
+                                    </button>
+</div>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div class="flex justify-between items-start">
+<h3 class="text-xl font-bold text-[#0d1b19] dark:text-white group-hover:text-primary transition-colors">NV-405</h3>
+<span class="text-sm font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded">4 100 PLN</span>
+</div>
+<div class="h-px w-full bg-[#e7f3f1] dark:bg-white/10 my-1"></div>
+<div class="grid grid-cols-3 gap-2 text-[#4c9a8d] dark:text-gray-400">
+<div class="flex flex-col items-start">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">square_foot</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pow.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">160 m²</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">bed</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pokoi</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">4</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">garage</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Garaż</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">1</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 5 -->
+<article class="group relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-transparent hover:border-primary/30 hover:shadow-card-hover transition-all duration-300">
+<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+<button class="absolute top-4 right-4 z-10 bg-white/90 dark:bg-black/50 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</button>
+<img alt="Barn style house with black facade" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Barn style black house" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwN3Mp6lhn065faVEOM1TbZNccjP4FaNSXUCKvsw37LelfcjlXgvZa9jPlACiiPoIOhTkEFjEM2-o1T87OIoGW5QLHd2ksw_7kK58-ONeKvdQJ3p1coUtp47T2EDbKOuH2Ohn847-7iWyDhz1kzKwcmFuGHcdGdSILHdjdp6i4KH2_91bd5G-1oL95TvY-_C9XePYgYnuURzatJ0DDNPnsLd-1lbu49OzGyol_urEqA5HZTBgEL5kyA5novQcVjidqtfwo2WA0EADD"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+<button class="bg-primary hover:bg-primary-dark text-[#0d1b19] font-bold text-sm px-6 py-2 rounded-lg shadow-lg translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                        Zobacz szczegóły
+                                    </button>
+</div>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div class="flex justify-between items-start">
+<h3 class="text-xl font-bold text-[#0d1b19] dark:text-white group-hover:text-primary transition-colors">NV-Stodoła 1</h3>
+<span class="text-sm font-bold text-[#0d1b19] dark:text-white bg-[#e7f3f1] dark:bg-white/10 px-2 py-1 rounded">4 900 PLN</span>
+</div>
+<div class="h-px w-full bg-[#e7f3f1] dark:bg-white/10 my-1"></div>
+<div class="grid grid-cols-3 gap-2 text-[#4c9a8d] dark:text-gray-400">
+<div class="flex flex-col items-start">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">square_foot</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pow.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">130 m²</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">bed</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pokoi</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">3</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">roofing</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Dach</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">2-spad</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Card 6 -->
+<article class="group relative flex flex-col bg-surface-light dark:bg-surface-dark rounded-xl overflow-hidden border border-transparent hover:border-primary/30 hover:shadow-card-hover transition-all duration-300">
+<div class="relative aspect-[4/3] overflow-hidden bg-gray-100 dark:bg-gray-800">
+<button class="absolute top-4 right-4 z-10 bg-white/90 dark:bg-black/50 p-2 rounded-full text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+<span class="material-symbols-outlined text-lg">favorite</span>
+</button>
+<img alt="Luxury villa with glass walls" class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-700" data-alt="Luxury glass villa render" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOT5nUPlvxpAHr6bLYhBGMwknltssHlw59ek5-siLy-DdqJek0pyVCO6A5Dsc757w7N3QCpAmHThbWu5NP6FP-0tdpWnRZR6WfFgbZ6FfE4bBemkB5jSsGak_3OGqqobi1IeMGyb4WT1Fofq34v5x_DNneV91OIZD0Cu5GppfZRJTO8rXmYHg-ucjdq5pDzBbwXW0iTJTXhSYbsG2OnKzFN9znTTemPn3yzq8nreBTJfLMVGq3WXSn1wiVQtBIbqNwDHNyNEvp-wQg"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-6">
+<button class="bg-primary hover:bg-primary-dark text-[#0d1b19] font-bold text-sm px-6 py-2 rounded-lg shadow-lg translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                                        Zobacz szczegóły
+                                    </button>
+</div>
+</div>
+<div class="p-5 flex flex-col gap-3 flex-1">
+<div class="flex justify-between items-start">
+<h3 class="text-xl font-bold text-[#0d1b19] dark:text-white group-hover:text-primary transition-colors">NV-500 Premium</h3>
+<span class="text-sm font-bold text-[#0d1b19] dark:text-white bg-[#e7f3f1] dark:bg-white/10 px-2 py-1 rounded">Zapytaj</span>
+</div>
+<div class="h-px w-full bg-[#e7f3f1] dark:bg-white/10 my-1"></div>
+<div class="grid grid-cols-3 gap-2 text-[#4c9a8d] dark:text-gray-400">
+<div class="flex flex-col items-start">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">square_foot</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pow.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">250+ m²</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">bed</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Pokoi</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">6</span>
+</div>
+<div class="flex flex-col items-start border-l border-[#e7f3f1] dark:border-white/10 pl-3">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-lg">pool</span>
+<span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-500">Dod.</span>
+</div>
+<span class="text-[#0d1b19] dark:text-white font-semibold">Basen</span>
+</div>
+</div>
+</div>
+</article>
+</div>
+<!-- Pagination -->
+<div class="mt-12 flex justify-center">
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-[#e7f3f1] dark:border-white/10 text-gray-400 hover:text-[#0d1b19] dark:hover:text-white hover:border-primary transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-[#0d1b19] font-bold shadow-sm">1</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-[#e7f3f1] dark:border-white/10 text-[#0d1b19] dark:text-white hover:border-primary transition-colors">2</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-[#e7f3f1] dark:border-white/10 text-[#0d1b19] dark:text-white hover:border-primary transition-colors">3</button>
+<span class="px-2 text-gray-400">...</span>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-[#e7f3f1] dark:border-white/10 text-[#0d1b19] dark:text-white hover:border-primary transition-colors">12</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-[#e7f3f1] dark:border-white/10 text-gray-400 hover:text-[#0d1b19] dark:hover:text-white hover:border-primary transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Simple -->
+<footer class="mt-auto border-t border-[#e7f3f1] dark:border-white/10 bg-white dark:bg-surface-dark py-10">
+<div class="max-w-[1440px] mx-auto px-6 lg:px-10 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-sm text-[#4c9a8d] dark:text-gray-500">© 2024 NOVA DOMY. Wszystkie prawa zastrzeżone.</p>
+<div class="flex gap-6">
+<a class="text-sm text-[#0d1b19] dark:text-white hover:text-primary transition-colors" href="#">Polityka Prywatności</a>
+<a class="text-sm text-[#0d1b19] dark:text-white hover:text-primary transition-colors" href="#">Regulamin</a>
+<a class="text-sm text-[#0d1b19] dark:text-white hover:text-primary transition-colors" href="#">Kontakt</a>
+</div>
+</div>
+</footer>
+<!-- Overlay Gradient Bottom for Mobile - optional UI enhancement -->
+<div class="lg:hidden fixed bottom-0 left-0 w-full h-16 bg-gradient-to-t from-white dark:from-black to-transparent pointer-events-none z-40"></div>
+<!-- Mobile Filter Floating Button -->
+<div class="lg:hidden fixed bottom-6 right-6 z-50">
+<button class="flex items-center gap-2 bg-[#0d1b19] dark:bg-primary text-white dark:text-[#0d1b19] px-5 py-3 rounded-full shadow-xl font-bold">
+<span class="material-symbols-outlined">tune</span>
+            Filtry
+        </button>
+</div>
+</body></html>

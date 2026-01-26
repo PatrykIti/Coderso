@@ -40,6 +40,53 @@ tests/unit/menus/
   menuService.test.ts
 ```
 
+## Admin UI Foundations (Shared Wrappers)
+
+All admin screens should share a consistent shell and layout primitives. Build
+these once and reuse across UI tasks.
+
+**Icon library:** Use `lucide-react` (already configured via TASK-024). Map any
+prototype icons to their closest Lucide equivalents.
+
+**Wrappers:**
+- `AdminShell`: Sidebar + top bar + breadcrumbs + content slot.
+- `SplitShell`: `AdminShell` plus optional right panel (drawer on mobile).
+- `EditorShell`: 3-column layout (library / canvas / inspector).
+- `SettingsShell`: Settings sidebar + main pane + optional preview pane.
+
+**Shared UI pieces:**
+- `SidebarNav`, `TopBar`, `Breadcrumbs`, `PageHeader`, `ActionBar`.
+- `StatCard`, `DataTable`, `EmptyState`, `SectionHeader`.
+
+**File plan:**
+
+| File | What to Add |
+| --- | --- |
+| `core/admin/ui/layouts/AdminShell.tsx` | base layout wrapper |
+| `core/admin/ui/layouts/SplitShell.tsx` | right-panel variant |
+| `core/admin/ui/layouts/EditorShell.tsx` | 3-column editor layout |
+| `core/admin/ui/layouts/SettingsShell.tsx` | settings layout |
+| `core/admin/ui/navigation/sidebarConfig.ts` | nav groups + routes |
+| `core/admin/ui/components/PageHeader.tsx` | title + actions |
+| `core/admin/ui/components/SectionHeader.tsx` | section labels |
+| `core/admin/ui/components/StatCard.tsx` | dashboard stats |
+| `core/admin/ui/components/DataTable.tsx` | table wrapper |
+
+## UI Screen Subtasks (HTML -> shadcn conversion)
+
+These tasks convert the generated HTML prototypes into reusable React + shadcn
+components. Functional wiring is still owned by the original UI tasks (TASK-010,
+TASK-011, TASK-012, TASK-018, TASK-019).
+
+- `TASK-006-01_Dashboard_UI.md`
+- `TASK-006-02_Menu_Editor_UI.md`
+- `TASK-006-03_Media_Library_UI.md`
+- `TASK-006-04_Schema_Builder_UI.md`
+- `TASK-006-05_Plugin_Store_UI.md`
+- `TASK-006-06_Page_List_UI.md`
+- `TASK-006-07_Page_Editor_UI.md`
+- `TASK-006-08_Design_Tokens_UI.md`
+
 ## Commands (if needed)
 
 No new dependencies.

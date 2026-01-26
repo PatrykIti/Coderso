@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 23 tasks
+- **To Do:** 31 tasks
 - **In Progress:** 0
 - **Done:** 1 tasks
 
@@ -43,6 +43,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-004 | Auth, RBAC, and Admin API Base | High | Large | Sessions + RBAC + REST base |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-006 | Menus and Navigation | Medium | Medium | Menu CRUD + admin UI |
+| TASK-006-01 | Dashboard UI | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-02 | Menu Editor UI | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-03 | Media Library UI | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-04 | Schema Builder UI | High | Large | HTML -> shadcn conversion |
+| TASK-006-05 | Plugin Store UI | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-06 | Page List UI | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-07 | Page Editor UI | High | Large | HTML -> shadcn conversion |
+| TASK-006-08 | Design Tokens UI | Medium | Medium | HTML -> shadcn conversion |
 | TASK-007 | Settings and Design Tokens | Medium | Medium | Global settings + tokens |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
