@@ -5,7 +5,7 @@
 **Category:** CMS/PageBuilder
 **Estimated Effort:** Large
 **Dependencies:** TASK-002, TASK-009, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -52,7 +52,7 @@ No new dependencies.
 
 ### TASK-010-01_Block_list_and_ordering
 
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 - Add blocks from a widget picker.
 - Drag and drop reorder.
@@ -111,7 +111,7 @@ function BlockToolbar({ onDuplicate, onDelete }) {
 
 ### TASK-010-02_Wizard_flow
 
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 - Wizard asks minimal questions and sets variant.
 - On finish, switch to Visual mode.
@@ -136,7 +136,7 @@ Wizard sketch:
 
 ### TASK-010-03_Visual_mode
 
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 - Variant picker with previews.
 - Show only fields relevant to chosen variant.
@@ -162,7 +162,7 @@ Visual sketch:
 
 ### TASK-010-04_Advanced_mode
 
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 - Layout panel for spacing, margins, container width.
 - Per-device visibility toggles.
@@ -196,7 +196,7 @@ function BlockSettings({ block, onChange }) {
 
 ### TASK-010-05_Save_and_publish
 
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 - Save draft via `PATCH /pages/:id`.
 - Publish via `POST /pages/:id/publish`.

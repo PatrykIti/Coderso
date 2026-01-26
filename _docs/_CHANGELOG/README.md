@@ -44,6 +44,7 @@ Project Change Log.
 | 017 | 2026-01-26 | Page editor UI | Admin/UI |
 | 018 | 2026-01-26 | Design tokens UI | Admin/UI |
 | 019 | 2026-01-26 | Users and roles UI | Admin/UI |
+| 020 | 2026-01-26 | Page builder UI | Admin/UI |
 
 
 ---
