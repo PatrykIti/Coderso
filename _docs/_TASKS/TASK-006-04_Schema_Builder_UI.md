@@ -5,7 +5,7 @@
 **Category:** Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-003, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -63,4 +63,3 @@ right JSON preview). This is the visual layer for TASK-011.
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-schema-builder-ui.md`
-
