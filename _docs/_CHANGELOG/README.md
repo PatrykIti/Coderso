@@ -40,6 +40,7 @@ Project Change Log.
 | 013 | 2026-01-26 | Media library UI | Admin/UI |
 | 014 | 2026-01-26 | Schema builder UI | Admin/UI |
 | 015 | 2026-01-26 | Plugin store UI | Admin/UI |
+| 016 | 2026-01-26 | Page list UI | Admin/UI |
 
 
 ---
