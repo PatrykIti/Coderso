@@ -131,6 +131,28 @@ Permissions: `settings:read`, `settings:write`
 - `PATCH /settings/:key`
 - `PATCH /settings`
 
+Payloady:
+
+`PATCH /settings/:key`
+
+```json
+{ "value": "pl-PL" }
+```
+
+`PATCH /settings` (bulk map)
+
+```json
+{
+  "site.name": "Nextless",
+  "site.locale": "pl-PL",
+  "design.tokens": { "colors": { "primary": "#111111" } }
+}
+```
+
+Response:
+- `GET /settings` zwraca merged view (z defaultami).
+- `design.tokens` zwracane jako resolved tokens (defaults + overrides).
+
 ---
 
 ## Plugins (installed)

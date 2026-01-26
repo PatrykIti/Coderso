@@ -147,6 +147,10 @@ Storage:
 - `plugin_settings` (plugin)
 - widget settings w `pages.current_data`
 
+Global settings (v1):
+- `site.name`, `site.locale`
+- `design.tokens` (override tokenow UI)
+
 ---
 
 ## Plugin integration

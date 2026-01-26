@@ -10,6 +10,8 @@ niestandardowych klas Tailwind w runtime.
 - Wszelkie niestandardowe style pluginu musza byc w `dist/style.css`.
 - Core dostarcza domyslne wartosci tokenow w theme (np. `/themes/default`).
 - Admin moze zmieniac wartosci tokenow na poziomie global settings.
+- Override tokenow jest przechowywany w `settings` pod kluczem `design.tokens`.
+- Merge order: theme defaults -> global overrides (`design.tokens`).
 
 ## Token groups (v1)
 

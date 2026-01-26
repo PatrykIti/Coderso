@@ -114,6 +114,12 @@ export const previewTokens = pgTable(
   })
 );
 
+export const settings = pgTable("settings", {
+  key: text("key").primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const contentTypes = pgTable("content_types", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),

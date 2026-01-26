@@ -27,6 +27,12 @@ Zasada:
 - aktywny jest jeden profil naraz.
 - zmiana profilu przelacza wyglad calosc strony.
 
+## Token pipeline
+
+- Theme dostarcza domyslne tokeny.
+- Globalne override z `settings.design.tokens`.
+- Profil theme (v1) moze nadpisac tokeny na poziomie profilu (v1.1+).
+
 ## Page routing per profile
 
 - `/` moze wskazywac na inna strone w kazdym profilu.

@@ -30,6 +30,7 @@ Project Change Log.
 | 003 | 2026-01-25 | Content types engine | CMS/Content |
 | 004 | 2026-01-25 | Auth, RBAC, and admin API base | Core/Auth |
 | 005 | 2026-01-25 | Media storage and uploads | CMS/Media |
+| 006 | 2026-01-25 | Settings and design tokens | CMS/Settings |
 
 
 ---
