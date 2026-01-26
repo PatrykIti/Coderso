@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,35 +26,16 @@ export function DesignTokensEditor({
   onReset,
   initialDraft,
 }: DesignTokensEditorProps) {
-  const initialDraftValue = initialDraft ?? JSON.stringify(value, null, 2);
-  const [draft, setDraft] = useState(initialDraftValue);
-  const [error, setError] = useState<string | null>(() => {
+  const [localDraft, setLocalDraft] = useState<string | null>(
+    initialDraft ?? null
+  );
+  const draft = localDraft ?? JSON.stringify(value, null, 2);
+  const error = useMemo(() => {
     try {
-      JSON.parse(initialDraftValue);
+      JSON.parse(draft);
       return null;
     } catch {
       return "Invalid JSON";
-    }
-  });
-
-  useEffect(() => {
-    if (initialDraft) return;
-    const nextDraft = JSON.stringify(value, null, 2);
-    setDraft(nextDraft);
-    try {
-      JSON.parse(nextDraft);
-      setError(null);
-    } catch {
-      setError("Invalid JSON");
-    }
-  }, [value, initialDraft]);
-
-  useEffect(() => {
-    try {
-      JSON.parse(draft);
-      setError(null);
-    } catch {
-      setError("Invalid JSON");
     }
   }, [draft]);
 
@@ -67,9 +48,9 @@ export function DesignTokensEditor({
     try {
       const parsed = JSON.parse(draft) as TokenOverrides;
       onChange(parsed);
-      setError(null);
+      setLocalDraft(null);
     } catch {
-      setError("Invalid JSON");
+      setLocalDraft(draft);
     }
   };
 
@@ -97,9 +78,9 @@ export function DesignTokensEditor({
         </div>
         <Textarea
           value={draft}
-          onChange={(event) => setDraft(event.target.value)}
+          onChange={(event) => setLocalDraft(event.target.value)}
           spellCheck={false}
-          className="h-full min-h-[420px] resize-none border-0 bg-transparent pl-12 pr-4 font-mono text-sm leading-6 focus-visible:ring-0"
+          className="h-full min-h-105 resize-none border-0 bg-transparent pl-12 pr-4 font-mono text-sm leading-6 focus-visible:ring-0"
         />
       </div>
       {error ? (
@@ -109,7 +90,14 @@ export function DesignTokensEditor({
         <Button size="sm" onClick={applyDraft} disabled={Boolean(error)}>
           Apply tokens
         </Button>
-        <Button size="sm" variant="outline" onClick={onReset}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            onReset();
+            setLocalDraft(null);
+          }}
+        >
           Reset defaults
         </Button>
       </div>
