@@ -35,6 +35,7 @@ Project Change Log.
 | 008 | 2026-01-25 | Menus and navigation | CMS/Menus |
 | 009 | 2026-01-26 | Auth UI foundations | Admin/UI |
 | 010 | 2026-01-26 | Admin shell wrappers and navigation scaffolding | Admin/UI |
+| 011 | 2026-01-26 | Dashboard UI | Admin/UI |
 
 
 ---
