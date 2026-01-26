@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Schema Builder - Nextless CMS</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "primary-content": "#ffffff",
+                        "background-light": "#f8fafc", // Slightly off-white for the app bg
+                        "background-dark": "#101a22",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#1a2632",
+                        "teal-accent": "#0d9488", // For the requested teal accents
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                    boxShadow: {
+                        'soft': '0 2px 10px rgba(0, 0, 0, 0.03)',
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white h-screen overflow-hidden flex flex-col">
+<!-- Top Navigation -->
+<header class="h-16 bg-surface-light dark:bg-surface-dark border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 shrink-0 z-20">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">deployed_code</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight">Nextless <span class="text-slate-400 font-normal">CMS</span></h1>
+</div>
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-sm font-medium text-slate-900 dark:text-white border-b-2 border-primary pb-0.5" href="#">Content</a>
+<a class="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors" href="#">Media</a>
+<a class="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors" href="#">Settings</a>
+<a class="text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors" href="#">Users</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="flex items-center justify-center size-9 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="h-8 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<div class="flex items-center gap-3">
+<div class="text-right hidden sm:block">
+<p class="text-sm font-bold leading-none">Sarah Chen</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">Admin</p>
+</div>
+<div class="size-9 bg-slate-200 rounded-full bg-cover bg-center" data-alt="Portrait of Sarah Chen, the admin user" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAevSNN1hiaq-xPKVB_xnHn4cmBGtFHOuJH_kIsOa8DTPkZqwugV1k1qDWmTuJeJQmbZPufa1JxJQHdfSrB5BU7oJwyZlnGrj_W6nGlnU0ZjtMtUHKaxl0mf74I0EWX-WjkYomNdu6VKD2hk8Dpb5jBtfXTsDI7kjdLp1WKup3cZViOjsFvYpBmO1P8f9TZzRHc46aaktGO2VT-KKfL4iRVUWDwxRwlP45M-wN6D5JwWkUxu-mxEQ3ozdkyhRO8SjiIdI4zPIl5nhU');"></div>
+</div>
+</div>
+</header>
+<!-- Main Workspace -->
+<main class="flex flex-1 overflow-hidden">
+<!-- Left Sidebar: Content Types -->
+<aside class="w-72 bg-surface-light dark:bg-surface-dark border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
+<div class="p-4 border-b border-slate-100 dark:border-slate-800">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-900 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/20 placeholder:text-slate-400" placeholder="Filter types..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-3 space-y-1">
+<div class="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Collections</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary group border-l-4 border-primary" href="#">
+<span class="material-symbols-outlined text-[20px] fill-1">article</span>
+<span class="text-sm font-semibold">Blog Post</span>
+<span class="ml-auto text-xs bg-primary/20 px-1.5 py-0.5 rounded text-primary-700">12</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 group border-l-4 border-transparent transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">category</span>
+<span class="text-sm font-medium">Category</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 group border-l-4 border-transparent transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">person</span>
+<span class="text-sm font-medium">Author</span>
+</a>
+<div class="px-3 py-2 mt-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Single Types</div>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 group border-l-4 border-transparent transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">home</span>
+<span class="text-sm font-medium">Homepage</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 group border-l-4 border-transparent transition-all" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-sm font-medium">Global Settings</span>
+</a>
+</div>
+<div class="p-4 border-t border-slate-100 dark:border-slate-800">
+<button class="flex w-full items-center justify-center gap-2 bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800 py-2.5 rounded-lg transition-colors shadow-sm text-sm font-semibold">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Create New Type
+                </button>
+</div>
+</aside>
+<!-- Center Canvas: Builder -->
+<section class="flex-1 flex flex-col min-w-0 bg-background-light dark:bg-background-dark overflow-hidden relative">
+<!-- Builder Header -->
+<div class="px-8 py-6 border-b border-slate-200 dark:border-slate-800 bg-surface-light/50 backdrop-blur-sm sticky top-0 z-10 flex items-start justify-between">
+<div class="flex flex-col gap-2 max-w-2xl">
+<div class="flex items-center gap-3">
+<h2 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Blog Post</h2>
+<button class="p-1 text-slate-400 hover:text-primary transition-colors rounded">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Define the structure for your main blog articles. These will appear in the /blog route.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Discard</button>
+<button class="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-sm hover:bg-primary/90 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                        Save Schema
+                    </button>
+</div>
+</div>
+<!-- Builder Content -->
+<div class="flex-1 overflow-y-auto p-8">
+<div class="max-w-3xl mx-auto flex flex-col gap-4 pb-20">
+<!-- Field Card: Title (Expanded) -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl border-2 border-primary shadow-soft relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+<!-- Card Header -->
+<div class="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-300 cursor-grab hover:text-slate-500">drag_indicator</span>
+<div class="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">title</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-slate-900 dark:text-white">Title</h3>
+<span class="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">String</span>
+</div>
+<p class="text-xs text-slate-500">The main headline of the post</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex gap-1">
+<span class="px-2 py-1 bg-teal-accent/10 text-teal-accent text-xs font-medium rounded">Required</span>
+<span class="px-2 py-1 bg-teal-accent/10 text-teal-accent text-xs font-medium rounded">Unique</span>
+</div>
+<div class="h-4 w-px bg-slate-200 mx-1"></div>
+<span class="material-symbols-outlined text-slate-400">expand_less</span>
+</div>
+</div>
+<!-- Card Settings (Expanded) -->
+<div class="border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Display Name</label>
+<input class="w-full text-sm rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:ring-primary focus:border-primary" type="text" value="Title"/>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">API ID (Slug)</label>
+<input class="w-full text-sm font-mono text-slate-600 rounded-lg border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800" readonly="" type="text" value="title"/>
+</div>
+</div>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Validation</label>
+<div class="space-y-2">
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="rounded border-slate-300 text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">Required field</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="rounded border-slate-300 text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">Unique value</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="rounded border-slate-300 text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm text-slate-700 dark:text-slate-300">Limit character count</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Field Card: Slug (Collapsed) -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative hover:border-slate-300 transition-all">
+<div class="flex items-center justify-between p-4 cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-300 cursor-grab hover:text-slate-500">drag_indicator</span>
+<div class="size-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400">
+<span class="material-symbols-outlined">link</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-slate-900 dark:text-white">Slug</h3>
+<span class="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">UID</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-slate-400">Targets: Title</span>
+<span class="material-symbols-outlined text-slate-400">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Field Card: Cover Image (Collapsed) -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative hover:border-slate-300 transition-all">
+<div class="flex items-center justify-between p-4 cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-300 cursor-grab hover:text-slate-500">drag_indicator</span>
+<div class="size-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-500">
+<span class="material-symbols-outlined">image</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-slate-900 dark:text-white">Cover Image</h3>
+<span class="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">Media</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-medium rounded">Single Asset</span>
+<span class="material-symbols-outlined text-slate-400">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Field Card: Author (Collapsed) -->
+<div class="group bg-surface-light dark:bg-surface-dark rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm relative hover:border-slate-300 transition-all">
+<div class="flex items-center justify-between p-4 cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-300 cursor-grab hover:text-slate-500">drag_indicator</span>
+<div class="size-10 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500">
+<span class="material-symbols-outlined">hub</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-bold text-slate-900 dark:text-white">Author</h3>
+<span class="text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded">Relation</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-slate-400">One to Many</span>
+<span class="material-symbols-outlined text-slate-400">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Add Field Trigger -->
+<button class="group w-full py-6 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl flex flex-col items-center justify-center gap-2 text-slate-500 hover:border-primary hover:text-primary hover:bg-primary/5 transition-all">
+<div class="size-10 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-primary group-hover:text-white flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined">add</span>
+</div>
+<span class="text-sm font-medium">Add another field</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Right Panel: JSON Preview -->
+<aside class="hidden xl:flex w-[400px] flex-col bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shrink-0">
+<div class="h-14 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">data_object</span>
+<h3 class="font-bold text-sm text-slate-700 dark:text-slate-300 uppercase tracking-wider">Preview Model</h3>
+</div>
+<button class="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+                    Copy JSON
+                </button>
+</div>
+<div class="flex-1 overflow-y-auto p-4">
+<div class="bg-white dark:bg-[#0d1117] rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm p-4 h-full">
+<pre class="font-mono text-xs leading-relaxed text-slate-600 dark:text-slate-400"><span class="text-slate-400">{</span>
+  <span class="text-teal-accent font-semibold">"collectionName"</span>: <span class="text-amber-500">"blog_posts"</span>,
+  <span class="text-teal-accent font-semibold">"info"</span>: <span class="text-slate-400">{</span>
+    <span class="text-teal-accent font-semibold">"displayName"</span>: <span class="text-amber-500">"Blog Post"</span>,
+    <span class="text-teal-accent font-semibold">"description"</span>: <span class="text-amber-500">"Main article content type"</span>
+  <span class="text-slate-400">}</span>,
+  <span class="text-teal-accent font-semibold">"options"</span>: <span class="text-slate-400">{</span>
+    <span class="text-teal-accent font-semibold">"draftAndPublish"</span>: <span class="text-blue-500">true</span>
+  <span class="text-slate-400">}</span>,
+  <span class="text-teal-accent font-semibold">"attributes"</span>: <span class="text-slate-400">{</span>
+    <span class="text-teal-accent font-semibold">"title"</span>: <span class="text-slate-400">{</span>
+      <span class="text-teal-accent font-semibold">"type"</span>: <span class="text-amber-500">"string"</span>,
+      <span class="text-teal-accent font-semibold">"required"</span>: <span class="text-blue-500">true</span>,
+      <span class="text-teal-accent font-semibold">"unique"</span>: <span class="text-blue-500">true</span>
+    <span class="text-slate-400">}</span>,
+    <span class="text-teal-accent font-semibold">"slug"</span>: <span class="text-slate-400">{</span>
+      <span class="text-teal-accent font-semibold">"type"</span>: <span class="text-amber-500">"uid"</span>,
+      <span class="text-teal-accent font-semibold">"targetField"</span>: <span class="text-amber-500">"title"</span>
+    <span class="text-slate-400">}</span>,
+    <span class="text-teal-accent font-semibold">"cover_image"</span>: <span class="text-slate-400">{</span>
+      <span class="text-teal-accent font-semibold">"type"</span>: <span class="text-amber-500">"media"</span>,
+      <span class="text-teal-accent font-semibold">"multiple"</span>: <span class="text-blue-500">false</span>,
+      <span class="text-teal-accent font-semibold">"required"</span>: <span class="text-blue-500">false</span>,
+      <span class="text-teal-accent font-semibold">"allowedTypes"</span>: <span class="text-slate-400">[</span>
+        <span class="text-amber-500">"images"</span>
+      <span class="text-slate-400">]</span>
+    <span class="text-slate-400">}</span>,
+    <span class="text-teal-accent font-semibold">"author"</span>: <span class="text-slate-400">{</span>
+      <span class="text-teal-accent font-semibold">"type"</span>: <span class="text-amber-500">"relation"</span>,
+      <span class="text-teal-accent font-semibold">"relation"</span>: <span class="text-amber-500">"manyToOne"</span>,
+      <span class="text-teal-accent font-semibold">"target"</span>: <span class="text-amber-500">"api::author.author"</span>,
+      <span class="text-teal-accent font-semibold">"inversedBy"</span>: <span class="text-amber-500">"blog_posts"</span>
+    <span class="text-slate-400">}</span>,
+    <span class="text-teal-accent font-semibold">"content"</span>: <span class="text-slate-400">{</span>
+      <span class="text-teal-accent font-semibold">"type"</span>: <span class="text-amber-500">"richtext"</span>
+    <span class="text-slate-400">}</span>
+  <span class="text-slate-400">}</span>
+<span class="text-slate-400">}</span>
+</pre>
+</div>
+</div>
+</aside>
+</main>
+</body></html>

@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nextless CMS - Page Editor</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#182635",
+                        "canvas-light": "#f0f3f4",
+                        "canvas-dark": "#0b1219",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Inter", "sans-serif"] // Fallback for smaller UI text if needed
+                    },
+                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+        /* Hide native summary marker */
+        details > summary {
+            list-style: none;
+        }
+        details > summary::-webkit-details-marker {
+            display: none;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-[#111518] dark:text-white h-screen flex flex-col overflow-hidden selection:bg-primary/20">
+<!-- Top Navigation Bar -->
+<header class="flex h-16 items-center justify-between border-b border-[#e2e8f0] dark:border-gray-700 bg-surface-light dark:bg-surface-dark px-4 shrink-0 z-20">
+<!-- Left: Logo & Breadcrumbs -->
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-[#111518] dark:text-white">
+<div class="size-6 text-primary">
+<svg fill="none" viewbox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M4.41189 29.2403L18.7597 43.5881C19.8813 44.7097 21.4027 44.9179 22.7217 44.7893C24.0585 44.659 25.5148 44.1631 26.9723 43.4579C29.9052 42.0387 33.2618 39.5667 36.4142 36.4142C39.5667 33.2618 42.0387 29.9052 43.4579 26.9723C44.1631 25.5148 44.659 24.0585 44.7893 22.7217C44.9179 21.4027 44.7097 19.8813 43.5881 18.7597L29.2403 4.41187C27.8527 3.02428 25.8765 3.02573 24.2861 3.36776C22.6081 3.72863 20.7334 4.58419 18.8396 5.74801C16.4978 7.18716 13.9881 9.18353 11.5858 11.5858C9.18354 13.988 7.18717 16.4978 5.74802 18.8396C4.58421 20.7334 3.72865 22.6081 3.36778 24.2861C3.02574 25.8765 3.02429 27.8527 4.41189 29.2403Z" fill="currentColor"></path>
+</svg>
+</div>
+<span class="font-bold text-lg tracking-tight hidden md:block">Nextless</span>
+</div>
+<div class="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-2"></div>
+<nav class="flex items-center text-sm font-medium">
+<a class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors" href="#">Pages</a>
+<span class="material-symbols-outlined text-gray-400 mx-1 text-base">chevron_right</span>
+<span class="text-[#111518] dark:text-white flex items-center gap-2">
+                    Homepage
+                    <span class="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold uppercase dark:bg-yellow-900/30 dark:text-yellow-300">Draft</span>
+</span>
+</nav>
+</div>
+<!-- Center: Device Toggles -->
+<div class="hidden md:flex items-center bg-[#f0f3f4] dark:bg-gray-800 rounded-lg p-1 gap-1">
+<button class="p-1.5 rounded bg-white dark:bg-gray-700 shadow-sm text-primary transition-all">
+<span class="material-symbols-outlined text-[20px]">desktop_windows</span>
+</button>
+<button class="p-1.5 rounded hover:bg-white/50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-all">
+<span class="material-symbols-outlined text-[20px]">tablet_mac</span>
+</button>
+<button class="p-1.5 rounded hover:bg-white/50 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-all">
+<span class="material-symbols-outlined text-[20px]">smartphone</span>
+</button>
+</div>
+<!-- Right: Actions -->
+<div class="flex items-center gap-3">
+<div class="text-xs text-gray-500 dark:text-gray-400 hidden lg:block mr-2">
+                Last saved 2m ago
+            </div>
+<button class="flex h-9 items-center justify-center rounded-lg px-4 bg-gray-100 hover:bg-gray-200 text-[#111518] dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white text-sm font-bold transition-colors">
+                Preview
+            </button>
+<button class="flex h-9 items-center justify-center rounded-lg px-4 bg-primary hover:bg-primary/90 text-white text-sm font-bold transition-colors shadow-sm shadow-blue-500/20">
+                Publish
+            </button>
+<div class="h-9 w-9 rounded-full bg-cover bg-center ml-2 border border-gray-200 dark:border-gray-700" data-alt="User profile avatar with abstract gradient" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAhNlPuVlqdBG5B-XGlf5nL1vgPA7mrhnAWY8dVF8Qt9RzUOBI3VLFgPoP8BuqjLUADYi70oUTp8FwSF_z3BRU646PctgCGSKB_SluXT38GJCQU4XJoop5STEKWOKu7uR1ZReVXVZ7h_nYzKKzWb1dRxdUwUZqsZ_4nSqTHtk-zHcHYyjI0Y6O-XtUlbhYgUlAVPkdZVhqg5CMFIuBEVlPYAfWKe_h7pb2WmnqA6d9pQK0oM92i3Cfx0Oxy8VhSl8vhQ4x-cPRt3q8");'></div>
+</div>
+</header>
+<!-- Main Workspace -->
+<div class="flex flex-1 overflow-hidden">
+<!-- LEFT SIDEBAR: Components & Assets -->
+<aside class="w-72 bg-surface-light dark:bg-surface-dark border-r border-[#e2e8f0] dark:border-gray-700 flex flex-col z-10">
+<!-- Search -->
+<div class="p-4 border-b border-[#f0f3f4] dark:border-gray-800">
+<div class="relative flex items-center w-full h-10 rounded-lg focus-within:ring-2 focus-within:ring-primary/20 bg-[#f0f3f4] dark:bg-gray-800 transition-all">
+<div class="grid place-items-center h-full w-10 text-gray-400">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="peer h-full w-full outline-none bg-transparent text-sm text-gray-700 dark:text-gray-200 placeholder-gray-500 pr-2" placeholder="Find components..." type="text"/>
+</div>
+</div>
+<!-- Block Library -->
+<div class="flex-1 overflow-y-auto p-4 space-y-4">
+<!-- Category: Layout -->
+<details class="group" open="">
+<summary class="flex cursor-pointer items-center justify-between py-2 text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider text-xs mb-2">
+<span>Layout Blocks</span>
+<span class="material-symbols-outlined text-gray-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="grid grid-cols-2 gap-2 pb-4">
+<!-- Draggable Item -->
+<div class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary hover:text-primary dark:hover:border-primary cursor-grab active:cursor-grabbing transition-all group/item">
+<span class="material-symbols-outlined text-gray-500 group-hover/item:text-primary">view_quilt</span>
+<span class="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover/item:text-primary">Container</span>
+</div>
+<div class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary hover:text-primary dark:hover:border-primary cursor-grab active:cursor-grabbing transition-all group/item">
+<span class="material-symbols-outlined text-gray-500 group-hover/item:text-primary">grid_view</span>
+<span class="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover/item:text-primary">Grid 2x2</span>
+</div>
+<div class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary hover:text-primary dark:hover:border-primary cursor-grab active:cursor-grabbing transition-all group/item">
+<span class="material-symbols-outlined text-gray-500 group-hover/item:text-primary">splitscreen</span>
+<span class="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover/item:text-primary">Columns</span>
+</div>
+<div class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary hover:text-primary dark:hover:border-primary cursor-grab active:cursor-grabbing transition-all group/item">
+<span class="material-symbols-outlined text-gray-500 group-hover/item:text-primary">space_bar</span>
+<span class="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover/item:text-primary">Spacer</span>
+</div>
+</div>
+</details>
+<!-- Category: Basic -->
+<details class="group" open="">
+<summary class="flex cursor-pointer items-center justify-between py-2 text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider text-xs mb-2">
+<span>Basic Elements</span>
+<span class="material-symbols-outlined text-gray-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="flex flex-col gap-2 pb-4">
+<div class="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-primary cursor-grab shadow-sm">
+<div class="flex items-center justify-center size-8 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined text-[18px]">title</span>
+</div>
+<span class="text-sm font-medium">Heading</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-primary cursor-grab shadow-sm">
+<div class="flex items-center justify-center size-8 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined text-[18px]">notes</span>
+</div>
+<span class="text-sm font-medium">Text Block</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-primary cursor-grab shadow-sm">
+<div class="flex items-center justify-center size-8 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined text-[18px]">smart_button</span>
+</div>
+<span class="text-sm font-medium">Button</span>
+</div>
+</div>
+</details>
+<!-- Category: Media -->
+<details class="group">
+<summary class="flex cursor-pointer items-center justify-between py-2 text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider text-xs mb-2">
+<span>Media</span>
+<span class="material-symbols-outlined text-gray-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="flex flex-col gap-2 pb-4">
+<div class="flex items-center gap-3 p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-primary cursor-grab shadow-sm">
+<div class="flex items-center justify-center size-8 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+<span class="material-symbols-outlined text-[18px]">image</span>
+</div>
+<span class="text-sm font-medium">Image</span>
+</div>
+</div>
+</details>
+</div>
+</aside>
+<!-- CENTER CANVAS: The Stage -->
+<main class="flex-1 bg-canvas-light dark:bg-canvas-dark relative flex flex-col items-center justify-start p-8 overflow-hidden">
+<!-- Scale/Context info overlay -->
+<div class="absolute top-4 left-4 z-10 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur text-xs font-mono py-1 px-2 rounded border border-gray-200 dark:border-gray-700 text-gray-500">
+                100% • 1024px
+            </div>
+<!-- The "Page" Frame -->
+<div class="w-full h-full max-w-[1024px] bg-white dark:bg-surface-dark shadow-2xl rounded-sm overflow-y-auto relative scroll-smooth ring-1 ring-black/5 dark:ring-white/5">
+<!-- HERO SECTION (Selected State) -->
+<section class="relative w-full group cursor-default ring-2 ring-primary ring-inset z-10">
+<!-- Selection Label -->
+<div class="absolute -top-[25px] left-0 bg-primary text-white text-[10px] font-bold uppercase px-2 py-1 rounded-t flex items-center gap-2">
+<span class="material-symbols-outlined text-[12px]">web_asset</span>
+                        Hero Section
+                    </div>
+<!-- Action buttons for the block -->
+<div class="absolute -top-[25px] right-0 bg-primary text-white flex rounded-t overflow-hidden">
+<button class="p-1 hover:bg-white/20"><span class="material-symbols-outlined text-[14px]">arrow_upward</span></button>
+<button class="p-1 hover:bg-white/20"><span class="material-symbols-outlined text-[14px]">arrow_downward</span></button>
+<button class="p-1 hover:bg-white/20"><span class="material-symbols-outlined text-[14px]">delete</span></button>
+</div>
+<!-- Actual Content -->
+<div class="relative w-full py-20 px-10 bg-cover bg-center text-center text-white" data-alt="Modern office workspace with large windows and desks" style="background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://lh3.googleusercontent.com/aida-public/AB6AXuBjmq7pOr2IaijOh09itST5ub6XWRmP6b5jM7X4g7klh4Ko-y2raK67AmHcqH_7qy_0xmheNYz4TXlpAkIH7UL3QKS8F89dqFw5BaZ8Qd4T4-cy1LfhavsjqnRGv9Jt_hEudL9bGyBIVDsKWBl1E7kjmNWnc-tu6pjmts-Od6M3HecM3OsLWLYhs1g3Kwzvccz5R2SfMwPSVhOirA6YUCAVw1Jw7673HuT8C-q9UekNye4iFsFM9eyNt30RcYvD4ngY_IMgLyXd824');">
+<div class="max-w-2xl mx-auto space-y-6">
+<span class="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur text-sm font-medium border border-white/30">
+                                v2.4 Released
+                            </span>
+<h1 class="text-5xl font-bold leading-tight tracking-tight">Build faster with Nextless</h1>
+<p class="text-lg text-gray-200">The headless CMS that treats your content like code. Version control, instant rollbacks, and a visual editor that actually works.</p>
+<div class="flex items-center justify-center gap-4 pt-4">
+<button class="bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-600 transition-colors">Get Started</button>
+<button class="bg-white text-gray-900 px-6 py-3 rounded-lg font-bold hover:bg-gray-100 transition-colors">View Demo</button>
+</div>
+</div>
+</div>
+</section>
+<!-- FEATURES GRID (Unselected) -->
+<section class="py-20 px-10 border-b border-gray-100 dark:border-gray-800 relative group hover:ring-1 hover:ring-primary/50 hover:ring-inset transition-all">
+<!-- Hover Actions (Visible on hover) -->
+<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-gray-800 shadow-md rounded border border-gray-200 dark:border-gray-700 flex">
+<button class="p-1.5 text-gray-500 hover:text-primary"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="p-1.5 text-gray-500 hover:text-primary"><span class="material-symbols-outlined text-[16px]">drag_handle</span></button>
+</div>
+<div class="max-w-5xl mx-auto">
+<div class="text-center mb-12">
+<h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4">Why developers love us</h2>
+<p class="text-gray-500 dark:text-gray-400">Everything you need to ship high-performance websites.</p>
+</div>
+<div class="grid grid-cols-3 gap-8">
+<!-- Feature 1 -->
+<div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+<div class="size-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-primary flex items-center justify-center mb-4">
+<span class="material-symbols-outlined">speed</span>
+</div>
+<h3 class="text-lg font-bold mb-2 dark:text-white">Blazing Fast</h3>
+<p class="text-gray-500 text-sm dark:text-gray-400">Optimized for edge delivery with zero-latency API responses globally.</p>
+</div>
+<!-- Feature 2 -->
+<div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+<div class="size-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 flex items-center justify-center mb-4">
+<span class="material-symbols-outlined">api</span>
+</div>
+<h3 class="text-lg font-bold mb-2 dark:text-white">GraphQL Native</h3>
+<p class="text-gray-500 text-sm dark:text-gray-400">Type-safe content APIs generated automatically from your schema.</p>
+</div>
+<!-- Feature 3 -->
+<div class="p-6 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700">
+<div class="size-12 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 flex items-center justify-center mb-4">
+<span class="material-symbols-outlined">security</span>
+</div>
+<h3 class="text-lg font-bold mb-2 dark:text-white">Enterprise Security</h3>
+<p class="text-gray-500 text-sm dark:text-gray-400">SOC2 compliant, SSO ready, and role-based access control built-in.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- FOOTER PLACEHOLDER -->
+<section class="py-10 border-t border-gray-200 dark:border-gray-800 text-center relative hover:ring-1 hover:ring-primary/50 hover:ring-inset transition-all">
+<p class="text-gray-400 text-sm">© 2024 Nextless Inc. All rights reserved.</p>
+</section>
+</div>
+</main>
+<!-- RIGHT SIDEBAR: Properties Inspector -->
+<aside class="w-80 bg-surface-light dark:bg-surface-dark border-l border-[#e2e8f0] dark:border-gray-700 flex flex-col z-10 overflow-hidden">
+<!-- Inspector Header -->
+<div class="h-14 shrink-0 px-5 flex items-center justify-between border-b border-[#f0f3f4] dark:border-gray-800">
+<span class="font-bold text-sm uppercase tracking-wide text-gray-800 dark:text-white">Hero Section</span>
+<div class="flex gap-2">
+<button class="text-gray-400 hover:text-primary transition-colors" title="Documentation"><span class="material-symbols-outlined text-[18px]">help</span></button>
+<button class="text-gray-400 hover:text-primary transition-colors" title="Reset"><span class="material-symbols-outlined text-[18px]">restart_alt</span></button>
+</div>
+</div>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto">
+<!-- Content Tab -->
+<div class="p-5 border-b border-[#f0f3f4] dark:border-gray-800 space-y-5">
+<h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Content</h3>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-500 dark:text-gray-400 block">Main Heading</label>
+<input class="w-full bg-[#f0f3f4] dark:bg-gray-800 border-none rounded px-3 py-2 text-sm text-[#111518] dark:text-white focus:ring-1 focus:ring-primary" type="text" value="Build faster with Nextless"/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-500 dark:text-gray-400 block">Subtext</label>
+<textarea class="w-full bg-[#f0f3f4] dark:bg-gray-800 border-none rounded px-3 py-2 text-sm text-[#111518] dark:text-white focus:ring-1 focus:ring-primary resize-none" rows="3">The headless CMS that treats your content like code. Version control, instant rollbacks, and a visual editor that actually works.</textarea>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-500 dark:text-gray-400 block">Button 1 Label</label>
+<input class="w-full bg-[#f0f3f4] dark:bg-gray-800 border-none rounded px-3 py-2 text-sm text-[#111518] dark:text-white focus:ring-1 focus:ring-primary" type="text" value="Get Started"/>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-500 dark:text-gray-400 block">Button 2 Label</label>
+<input class="w-full bg-[#f0f3f4] dark:bg-gray-800 border-none rounded px-3 py-2 text-sm text-[#111518] dark:text-white focus:ring-1 focus:ring-primary" type="text" value="View Demo"/>
+</div>
+</div>
+</div>
+<!-- Styling Tab -->
+<div class="p-5 border-b border-[#f0f3f4] dark:border-gray-800 space-y-5">
+<h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Styling</h3>
+<!-- Background Image -->
+<div class="space-y-2">
+<label class="text-xs font-medium text-gray-500 dark:text-gray-400 block">Background Image</label>
+<div class="flex gap-3 items-center">
+<div class="size-16 rounded bg-cover bg-center shrink-0 border border-gray-200 dark:border-gray-700" data-alt="Thumbnail of the hero background image" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB3B3MWTxImbyej87MHAXFc_a8BS_o7HY7zGg5J6Yca2Xj6S-My8JArzmoZiuHz7FoHGigsONxdh23Hbb1aL_8hxXTy7Vz21LpwEMK68eF0qLpCLV-h9nYIbZbzDZ6QqttM4bkaMv1hFDZKDOhjwagoV6p-ALc5nuzArJrzoBKqEEhhYPtn1Me1mb8JwlFNdi4LMG2Z0Mc5XdxgUtJUwl1gddR3N7D6v9bvJUabftv90m_qujwZJmgHFx1Gmq4IUe0iZqnE41Bsvvo');"></div>
+<button class="text-sm text-primary font-medium hover:underline">Replace Image</button>
+</div>
+</div>
+<!-- Overlay Opacity -->
+<div class="space-y-2 pt-2">
+<div class="flex justify-between">
+<label class="text-xs font-medium text-gray-500 dark:text-gray-400 block">Overlay Opacity</label>
+<span class="text-xs text-gray-400">50%</span>
+</div>
+<input class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-primary" type="range" value="50"/>
+</div>
+<!-- Layout Padding -->
+<div class="space-y-2 pt-2">
+<label class="text-xs font-medium text-gray-500 dark:text-gray-400 block mb-2">Padding (Y-Axis)</label>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-gray-400 text-sm">vertical_align_center</span>
+<input class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-primary" type="range" value="80"/>
+<span class="text-xs text-gray-400 w-8 text-right">80px</span>
+</div>
+</div>
+</div>
+<!-- Advanced Tab -->
+<div class="p-5 space-y-5">
+<details class="group">
+<summary class="flex cursor-pointer items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+<span>Advanced</span>
+<span class="material-symbols-outlined text-gray-400 group-open:rotate-180 transition-transform">expand_more</span>
+</summary>
+<div class="pt-2 space-y-3">
+<div class="flex items-center justify-between">
+<label class="text-sm text-gray-600 dark:text-gray-300">Visible on Mobile</label>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 checked:border-primary peer" id="toggle" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer peer-checked:bg-primary" for="toggle"></label>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-xs font-medium text-gray-500 dark:text-gray-400 block">CSS Class</label>
+<input class="w-full bg-[#f0f3f4] dark:bg-gray-800 border-none rounded px-3 py-2 text-sm text-[#111518] dark:text-white focus:ring-1 focus:ring-primary font-mono" type="text" value="hero-section-main"/>
+</div>
+</div>
+</details>
+</div>
+</div>
+</aside>
+</div>
+</body></html>

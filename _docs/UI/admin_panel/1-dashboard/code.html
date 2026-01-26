@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nextless CMS - Dashboard</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#161b22",
+                        "border-light": "#e5e7eb",
+                        "border-dark": "#2d3748",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.375rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="font-display bg-background-light dark:bg-background-dark text-[#111518] dark:text-gray-100 overflow-hidden">
+<div class="flex h-screen w-full">
+<!-- SideNavBar -->
+<aside class="w-64 flex-shrink-0 flex flex-col bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark hidden md:flex">
+<div class="p-6 pb-2">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-xl">hexagon</span>
+</div>
+<h1 class="text-xl font-bold tracking-tight text-[#111518] dark:text-white">Nextless</h1>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-6">
+<!-- Navigation Groups -->
+<div class="flex flex-col gap-1">
+<p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Main</p>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary group transition-colors" href="#">
+<span class="material-symbols-outlined filled">dashboard</span>
+<span class="text-sm font-medium">Dashboard</span>
+</a>
+</div>
+<div class="flex flex-col gap-1">
+<p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Content</p>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">article</span>
+<span class="text-sm font-medium">Pages</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">post_add</span>
+<span class="text-sm font-medium">Posts</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="text-sm font-medium">Media</span>
+</a>
+</div>
+<div class="flex flex-col gap-1">
+<p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Store</p>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">shopping_bag</span>
+<span class="text-sm font-medium">Products</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-sm font-medium">Orders</span>
+</a>
+</div>
+<div class="flex flex-col gap-1">
+<p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Admin</p>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="text-sm font-medium">Users</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-sm font-medium">Settings</span>
+</a>
+</div>
+</div>
+<div class="p-4 border-t border-border-light dark:border-border-dark flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="text-sm font-medium">Docs</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-sm font-medium">Support</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Layout -->
+<main class="flex-1 flex flex-col h-full overflow-hidden relative">
+<!-- TopNavBar -->
+<header class="h-16 flex items-center justify-between px-6 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark shrink-0 z-10">
+<div class="flex items-center gap-4">
+<button class="md:hidden p-2 text-gray-600 dark:text-gray-400">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<!-- Breadcrumbs Integrated -->
+<div class="flex items-center gap-2 text-sm">
+<span class="text-gray-500 dark:text-gray-400">Home</span>
+<span class="text-gray-300 dark:text-gray-600">/</span>
+<span class="font-medium text-[#111518] dark:text-white">Dashboard</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<!-- Search -->
+<div class="hidden sm:flex items-center bg-background-light dark:bg-[#0d1216] rounded-lg px-3 py-1.5 w-64 border border-transparent focus-within:border-primary transition-all">
+<span class="material-symbols-outlined text-gray-400 text-[20px]">search</span>
+<input class="bg-transparent border-none text-sm w-full focus:ring-0 text-[#111518] dark:text-white placeholder-gray-400" placeholder="Search..." type="text"/>
+<div class="text-xs text-gray-400 border border-gray-300 dark:border-gray-700 rounded px-1.5 py-0.5">⌘K</div>
+</div>
+<!-- Notifications -->
+<button class="relative p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-surface-dark"></span>
+</button>
+<!-- User Profile -->
+<div class="h-9 w-9 rounded-full bg-cover bg-center border border-gray-200 dark:border-gray-700" data-alt="User profile avatar showing a smiling person" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAB2mDsQ-cdl0JjSYnSQwIYGxonneQzLkJZvkoa02u2LFNCuS-l9SI_EzRQB1vQOkR1GJoI1BxkExUEQf0F_lDUEDHLUX0kaFV1GUK6IXwW4q5RXSG-VmkX6qGiAwaqtKsd4iKwXXrbOjzsHmyKVb-vF7szTE_r1kNAA-OCVS8ikoSeWabiozCxSDDPSyLxHnE9hVSXysfPjKRh-S7iH6EuaHmYqf2ssxK-Rm1SkFDi_WUgcI04KrAKx8xe8UPTCSgQLWZyEojCWcA");'></div>
+</div>
+</header>
+<!-- Scrollable Page Content -->
+<div class="flex-1 overflow-y-auto bg-background-light dark:bg-background-dark p-6 md:p-8">
+<div class="max-w-6xl mx-auto flex flex-col gap-8">
+<!-- Page Heading & Actions -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div class="flex flex-col gap-1">
+<h2 class="text-3xl font-bold tracking-tight text-[#111518] dark:text-white">Dashboard</h2>
+<p class="text-gray-500 dark:text-gray-400">Welcome back, Admin. Here's what's happening today.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">cloud_upload</span>
+                                Upload Media
+                            </button>
+<button class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold shadow-sm shadow-blue-500/20 hover:bg-blue-600 transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                                New Page
+                            </button>
+</div>
+</div>
+<!-- Analytics Summary Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Stat Card 1 -->
+<div class="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Visitors</p>
+<span class="material-symbols-outlined text-green-500 text-xl">trending_up</span>
+</div>
+<div>
+<h3 class="text-3xl font-bold text-[#111518] dark:text-white">12,450</h3>
+<p class="text-xs text-green-600 font-medium mt-1">+12% from last week</p>
+</div>
+</div>
+<!-- Stat Card 2 -->
+<div class="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<p class="text-sm font-medium text-gray-500 dark:text-gray-400">Page Views</p>
+<span class="material-symbols-outlined text-primary text-xl">visibility</span>
+</div>
+<div>
+<h3 class="text-3xl font-bold text-[#111518] dark:text-white">48,205</h3>
+<p class="text-xs text-gray-500 font-medium mt-1">Avg. 3.4 pages/session</p>
+</div>
+</div>
+<!-- Stat Card 3 -->
+<div class="bg-surface-light dark:bg-surface-dark p-5 rounded-xl border border-border-light dark:border-border-dark flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<p class="text-sm font-medium text-gray-500 dark:text-gray-400">Storage Used</p>
+<span class="material-symbols-outlined text-orange-500 text-xl">hard_drive</span>
+</div>
+<div class="flex flex-col gap-2">
+<h3 class="text-3xl font-bold text-[#111518] dark:text-white">82%</h3>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5">
+<div class="bg-orange-500 h-1.5 rounded-full" style="width: 82%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Main Grid: Recent Edits & Site Health -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Recent Edits (Span 2) -->
+<div class="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark flex flex-col overflow-hidden">
+<div class="p-5 border-b border-border-light dark:border-border-dark flex items-center justify-between">
+<h3 class="font-bold text-lg text-[#111518] dark:text-white">Recent Edits</h3>
+<button class="text-sm text-primary hover:underline font-medium">View All</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-gray-50/50 dark:bg-gray-800/50 text-xs uppercase text-gray-500 font-semibold">
+<tr>
+<th class="px-5 py-3">Document</th>
+<th class="px-5 py-3">Author</th>
+<th class="px-5 py-3">Status</th>
+<th class="px-5 py-3 text-right">Last Edited</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-light dark:divide-border-dark text-sm">
+<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<td class="px-5 py-3">
+<div class="font-medium text-[#111518] dark:text-white">About Us Page</div>
+<div class="text-xs text-gray-500">/about-us</div>
+</td>
+<td class="px-5 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-cover" data-alt="Avatar of author" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCcNADt1gyWtI0g5MlMWV1SqNVFUhVEN04CzaLVZBLpyLzm_3r_Fa7HEFU0GQWSwbLrnBY5Zv3NQxBTlrjNU_kpHZMPRRfM8GXqYDMWMAoeXQZgAJJ2-RxKGZgX0nPzG_FvNPNDOeMIYc7FBiDYmXI-kqkue-aJkumsM12ml745NDwHQnyc0F88-cUHINxsjiqzgZZ656kLiTnlBEMPXTFmRS2ZygR4AKSo2wIEXfJgXjtthgulO63ZsLbs-CO-XSnvVk_KASqWiK8")'></div>
+<span class="text-gray-600 dark:text-gray-300">Admin</span>
+</div>
+</td>
+<td class="px-5 py-3">
+<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                                    Draft
+                                                </span>
+</td>
+<td class="px-5 py-3 text-right text-gray-500">
+                                                2 mins ago
+                                            </td>
+</tr>
+<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<td class="px-5 py-3">
+<div class="font-medium text-[#111518] dark:text-white">Pricing Update Q3</div>
+<div class="text-xs text-gray-500">/pricing</div>
+</td>
+<td class="px-5 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">JD</div>
+<span class="text-gray-600 dark:text-gray-300">John Doe</span>
+</div>
+</td>
+<td class="px-5 py-3">
+<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                                    Published
+                                                </span>
+</td>
+<td class="px-5 py-3 text-right text-gray-500">
+                                                2 hours ago
+                                            </td>
+</tr>
+<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<td class="px-5 py-3">
+<div class="font-medium text-[#111518] dark:text-white">Blog: Modern CMS Guide</div>
+<div class="text-xs text-gray-500">/blog/modern-cms</div>
+</td>
+<td class="px-5 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-cover" data-alt="Avatar of author" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDLqAOdq4IIdk0xitNqYvzaEsfImfHZM3HjiEI9Uwk9-H_SUAeSSMlObFtGJMrUo0p54fkXMqiXMqU5FPnzTjUiXWbDmVU1wJVFYi0eT_ZFPFFDEBfFgg-NgvC28S9yoFTy7KKU70f0_EL8KnGCQB_FEgQj5KcWTNhNrtaSdlkh67y4Su_2PtglZGoiSKj8PMjSm9cWhjqUwHjm-Al94vUEnIKTWMaHjiK5B4wK5Qpei5EJmTDRuC78TvE9L0frM_nu8DzLIDxCdJk")'></div>
+<span class="text-gray-600 dark:text-gray-300">Admin</span>
+</div>
+</td>
+<td class="px-5 py-3">
+<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                                    Published
+                                                </span>
+</td>
+<td class="px-5 py-3 text-right text-gray-500">
+                                                1 day ago
+                                            </td>
+</tr>
+<tr class="group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+<td class="px-5 py-3">
+<div class="font-medium text-[#111518] dark:text-white">Terms of Service</div>
+<div class="text-xs text-gray-500">/legal/terms</div>
+</td>
+<td class="px-5 py-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">S</div>
+<span class="text-gray-600 dark:text-gray-300">System</span>
+</div>
+</td>
+<td class="px-5 py-3">
+<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                                    Archived
+                                                </span>
+</td>
+<td class="px-5 py-3 text-right text-gray-500">
+                                                3 days ago
+                                            </td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Column: Site Health & Security -->
+<div class="flex flex-col gap-6">
+<!-- Site Health -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-5">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-lg text-[#111518] dark:text-white">Site Health</h3>
+<span class="text-sm font-medium text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">Good</span>
+</div>
+<div class="flex flex-col gap-4">
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="text-gray-500">Performance Score</span>
+<span class="font-medium text-[#111518] dark:text-white">98/100</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
+<div class="bg-primary h-2 rounded-full" style="width: 98%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="text-gray-500">Uptime (30d)</span>
+<span class="font-medium text-[#111518] dark:text-white">99.9%</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
+<div class="bg-green-500 h-2 rounded-full" style="width: 99%"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1">
+<span class="text-gray-500">Database Load</span>
+<span class="font-medium text-[#111518] dark:text-white">12%</span>
+</div>
+<div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
+<div class="bg-blue-300 h-2 rounded-full" style="width: 12%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Security Status -->
+<div class="bg-surface-light dark:bg-surface-dark rounded-xl border border-border-light dark:border-border-dark p-5 flex flex-col gap-4">
+<div class="flex items-center gap-3">
+<div class="p-2 rounded-full bg-green-100 text-green-600 dark:bg-green-900/30">
+<span class="material-symbols-outlined">shield_lock</span>
+</div>
+<div class="flex-1">
+<h3 class="font-bold text-base text-[#111518] dark:text-white">Security Status</h3>
+<p class="text-xs text-gray-500">System protected</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+<span class="material-symbols-outlined text-green-500 text-[18px]">check_circle</span>
+<span>SSL Certificate Valid</span>
+</div>
+<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+<span class="material-symbols-outlined text-green-500 text-[18px]">check_circle</span>
+<span>Backups Up-to-date</span>
+</div>
+<div class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+<span class="material-symbols-outlined text-gray-400 text-[18px]">schedule</span>
+<span class="text-xs">Last scan: 2m ago</span>
+</div>
+</div>
+<button class="mt-2 w-full py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Run Security Scan</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Media Library - Nextless CMS</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                        "surface-light": "#ffffff",
+                        "surface-dark": "#161f28",
+                        "input-bg-light": "#f0f3f4",
+                        "input-bg-dark": "#1c2630",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #334155;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display h-screen flex overflow-hidden selection:bg-primary/20 selection:text-primary">
+<!-- Sidebar Navigation -->
+<aside class="hidden md:flex flex-col w-64 bg-surface-light dark:bg-surface-dark border-r border-slate-200 dark:border-slate-800 h-full flex-shrink-0 z-20">
+<div class="p-6 flex flex-col gap-1">
+<h1 class="text-slate-900 dark:text-white text-xl font-bold leading-normal tracking-tight">Nextless</h1>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-normal">CMS Admin v4.0</p>
+</div>
+<div class="flex-1 px-4 flex flex-col gap-2 overflow-y-auto">
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" style="font-size: 20px;">dashboard</span>
+<span class="text-slate-600 dark:text-slate-300 text-sm font-medium group-hover:text-slate-900 dark:group-hover:text-white">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/10 text-primary group" href="#">
+<span class="material-symbols-outlined text-primary" style="font-size: 20px; font-variation-settings: 'FILL' 1;">image</span>
+<span class="text-primary text-sm font-medium">Media</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" style="font-size: 20px;">description</span>
+<span class="text-slate-600 dark:text-slate-300 text-sm font-medium group-hover:text-slate-900 dark:group-hover:text-white">Posts</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" style="font-size: 20px;">layers</span>
+<span class="text-slate-600 dark:text-slate-300 text-sm font-medium group-hover:text-slate-900 dark:group-hover:text-white">Pages</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" style="font-size: 20px;">group</span>
+<span class="text-slate-600 dark:text-slate-300 text-sm font-medium group-hover:text-slate-900 dark:group-hover:text-white">Users</span>
+</a>
+</nav>
+<div class="mt-auto pt-4 pb-6 border-t border-slate-200 dark:border-slate-800">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group" href="#">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white" style="font-size: 20px;">settings</span>
+<span class="text-slate-600 dark:text-slate-300 text-sm font-medium group-hover:text-slate-900 dark:group-hover:text-white">Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content -->
+<main class="flex-1 flex flex-col min-w-0 h-full relative">
+<!-- Header & Toolbar -->
+<header class="flex-shrink-0 bg-surface-light dark:bg-surface-dark border-b border-slate-200 dark:border-slate-800 z-10">
+<!-- Breadcrumbs + Title -->
+<div class="px-6 pt-5 pb-2">
+<div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-1">
+<a class="hover:text-primary transition-colors" href="#">Home</a>
+<span class="text-slate-300 dark:text-slate-600">/</span>
+<span class="text-slate-900 dark:text-white font-medium">Media Library</span>
+</div>
+<div class="flex justify-between items-end">
+<div>
+<h1 class="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Media Library</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Manage your images and assets.</p>
+</div>
+<button class="bg-primary hover:bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm shadow-blue-500/20 transition-all">
+<span class="material-symbols-outlined" style="font-size: 20px;">cloud_upload</span>
+                        Upload New
+                    </button>
+</div>
+</div>
+<!-- Toolbar Controls -->
+<div class="px-6 py-4 flex flex-col lg:flex-row gap-4 items-center justify-between">
+<!-- Search & Filters -->
+<div class="flex flex-1 w-full gap-3 items-center overflow-x-auto no-scrollbar">
+<!-- Search -->
+<div class="relative group min-w-[240px]">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-400" style="font-size: 20px;">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2 bg-input-bg-light dark:bg-input-bg-dark border-none rounded-lg text-sm text-slate-900 dark:text-white placeholder-slate-500 focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Search assets..." type="text"/>
+</div>
+<div class="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+<!-- Chips -->
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-medium shadow-sm transition-colors">
+                            All Files
+                        </button>
+<button class="px-3 py-1.5 rounded-lg bg-input-bg-light dark:bg-input-bg-dark hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium transition-colors">
+                            Images
+                        </button>
+<button class="px-3 py-1.5 rounded-lg bg-input-bg-light dark:bg-input-bg-dark hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium transition-colors">
+                            Documents
+                        </button>
+<button class="px-3 py-1.5 rounded-lg bg-input-bg-light dark:bg-input-bg-dark hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium transition-colors">
+                            Audio
+                        </button>
+</div>
+</div>
+<!-- View Toggle -->
+<div class="flex items-center bg-input-bg-light dark:bg-input-bg-dark rounded-lg p-1 shrink-0">
+<button class="p-1.5 rounded bg-white dark:bg-slate-700 shadow-sm text-primary">
+<span class="material-symbols-outlined block" style="font-size: 20px;">grid_view</span>
+</button>
+<button class="p-1.5 rounded text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+<span class="material-symbols-outlined block" style="font-size: 20px;">view_list</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Content Area Split -->
+<div class="flex flex-1 overflow-hidden">
+<!-- Grid Scroll Area -->
+<div class="flex-1 overflow-y-auto p-6 scroll-smooth">
+<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+<!-- Card 1: Selected -->
+<div class="group relative flex flex-col gap-2">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-primary shadow-[0_0_0_4px_rgba(19,146,236,0.15)] transition-all">
+<img alt="Alpine landscape with mountains and lake" class="w-full h-full object-cover" data-alt="Alpine landscape with mountains and lake" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAsvJP4ZVPeVtjBZoOd1LtVxx5qGwzlXnctBwpuxYJxqHbLdpSZBRRVlBFRptFizWUymcgotu-42SrHbz8MWo6oHl8t2VaXgWkqWnJJx3tZ_Szt9CrroBipMjLLP5LDHI46_hCw0UOHIjscY4L6297x57d_R2FJfr8WPwHbLkq6Pa4htGu-waRnhjkyAe9_X-TtJkeAf66JrmnoKJlihXV47uJVjPjFhIfcsyOvhDlWo8AMUK63htw_ifQ1SmFVfY6xFqfWcb01aA"/>
+<div class="absolute top-2 right-2">
+<div class="w-5 h-5 rounded bg-primary text-white flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined" style="font-size: 16px;">check</span>
+</div>
+</div>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-primary truncate">hero-banner_v2.jpg</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">2.4 MB • JPG</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group relative flex flex-col gap-2 cursor-pointer">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors z-10"></div>
+<img alt="Laptop computer on wooden desk with coding" class="w-full h-full object-cover" data-alt="Laptop computer on wooden desk with coding" src="https://lh3.googleusercontent.com/aida-public/AB6AXuClyHkYN_sDn6EPxCiM2dPRrEzywcxnNXazwUFFXMgdhJ0y0LW4Otk-xYmYloMjntKmrmpG4rl8pYpjmEb5DgVY0bUXSYTX8FNDyKo1-M3cYEIzQDPmHu3bOt5KMUVX_vNQOLY2viI8LEq4P1j2CY0LkkYfJ-J-vmf_8ptQoZefQKtA_XIIxrItEJfYOGzkWspWZPB4HZMc8AEaBxNOfKOYOp6-w7D_b9Fmh5tufRrgW_3ZGFwXnkWkJnLQ7zyauzD36SoIgEKWG-I"/>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">coding-session.jpg</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">1.8 MB • JPG</p>
+</div>
+</div>
+<!-- Card 3: Document -->
+<div class="group relative flex flex-col gap-2 cursor-pointer">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all flex items-center justify-center">
+<span class="material-symbols-outlined text-red-500 dark:text-red-400" style="font-size: 48px;">picture_as_pdf</span>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">Q1_Financial_Report.pdf</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">840 KB • PDF</p>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="group relative flex flex-col gap-2 cursor-pointer">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors z-10"></div>
+<img alt="Abstract fluid blue and purple gradient background" class="w-full h-full object-cover" data-alt="Abstract fluid blue and purple gradient background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALQxi3_cf4u5Xuzs0Pg-bo7MSIpPLVsB8IXAgYKN8LJjWfy2IbYH0O2VQx_vJl2_2ziuIJgypOecU10BfI0eWXhwr8BPqocBN9ZdzkmyXXgCcho1KVx9k_8n2n63Z3kaM20sXLuBv-csxNKnRfEcFQcwDcYHxbkq76yKNl9ta7GCcvaoDXD9iyOXbNpGscpERyGpnr2rKU2zXwkwFb2Io5eZHBEPdUEFrmEZ10NXvItco2ggtnpzi3A3OlQZwKeFcxGHPHMWa5j1k"/>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">abstract-bg-04.png</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">4.1 MB • PNG</p>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="group relative flex flex-col gap-2 cursor-pointer">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors z-10"></div>
+<img alt="Modern minimalist interior with white furniture" class="w-full h-full object-cover" data-alt="Modern minimalist interior with white furniture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCYPG34z48VPNIWZUOy9JSLr0DR2n8c_iJKHZUzSVKrnSEjlpw0Wygl4iP8Q42cnpaMj2xZ2DkuGKn_4antSHoPejB9mN_3PFAPEzyPJPmPiAFcgSIDpFfDFff6_4X568BOB8GBELdKBiBk1HcqWrg8B6ALUPAvHoJlT2WeYXoHLErvj2niNX6WNo5WuBk1gqD9cFk6qcCDXEkA5brOwI5JCirfXhK9TM5Lwh2S1d7BJUGl1xzBFgaT-wziW_Yb22ZPz-_9QusoEzI"/>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">office_interior_day.jpg</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">3.2 MB • JPG</p>
+</div>
+</div>
+<!-- Card 6 -->
+<div class="group relative flex flex-col gap-2 cursor-pointer">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors z-10"></div>
+<img alt="Retro technology aesthetic with neon lights" class="w-full h-full object-cover" data-alt="Retro technology aesthetic with neon lights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDsbEGSZ5Pb-B_KUrUrbRjJIH4GDb6v-lcDHf9e9eKpbUEYhtmTXKVG68S_nqp2oQryMZJL1Kd1yJpNNpDq9x6XfFbZ03o9E6eUChcGKbf3oWvn4edzgii-TcO9HmeaOOQMceVG_OEzGx-CjMlX2rAp6z8xzeO2J4iLvaW8A-mwjPmibwlz5g4FbzeLwWmtTLn05D-7S04qxBhkTu7G0X0Tvwm-__kN38QQA49lrXTG3jB3-pI_X6u5zfXJ-ROk6q4sss9CJtbz-fM"/>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">tech-meetup-thumb.jpg</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">1.2 MB • JPG</p>
+</div>
+</div>
+<!-- Card 7: Audio -->
+<div class="group relative flex flex-col gap-2 cursor-pointer">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-50 dark:bg-slate-800/50 border-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all flex items-center justify-center">
+<span class="material-symbols-outlined text-purple-500 dark:text-purple-400" style="font-size: 48px;">audio_file</span>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">podcast-episode-01.mp3</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">42 MB • MP3</p>
+</div>
+</div>
+<!-- Card 8 -->
+<div class="group relative flex flex-col gap-2 cursor-pointer">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors z-10"></div>
+<img alt="Minimalist desk setup with plants" class="w-full h-full object-cover" data-alt="Minimalist desk setup with plants" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFB0j1ekrz-sefeuoJ47fB_-7ypcgPl34R-H1OPM9LIAzhe4BMLjdwOc_lnQCbdpqU8RXx_DTGf7UJHOak9en-GiFWlROBADUYqpwnglghzSqLPFnancNlXHiskO6ng1KoRXbdJLlyetk7SspNjpPw4d8apSuktqylZ-yroKiQ4V4YI2jp5v47mCCcGiyUCWnEpcOLHs2cZ8FpZd2q_zlz_lWw1qh0ul3KqpjRV5-7H2J_jQ_jeD2syRnTOwbFtpkfUfPqtCNHZ7o"/>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">workspace-minimal.jpg</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">2.8 MB • JPG</p>
+</div>
+</div>
+<!-- Card 9 -->
+<div class="group relative flex flex-col gap-2 cursor-pointer">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-transparent hover:border-slate-300 dark:hover:border-slate-600 transition-all">
+<div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors z-10"></div>
+<img alt="Business team working in modern office" class="w-full h-full object-cover" data-alt="Business team working in modern office" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrVOTULVNyIsI4BQ6MaDvun-QKs8rixyTXtXMIqDveXAe129NdN_4APkazWIvvjx2tmayTCaLgjn1qIPB6GTHpQaOjv9M5R2_lrIHoeb0hiU_GVkgnQXQ5IcHoMVTpdjMye9Eg-NW0_uFM0uFgD69lpQEoC368MgPUtznxwoBbU93Gx_gk-a3KkwCOOuhkXCeaEL829AaR32XThOY61fzilgX7WMrT_GHqsZskmrjzCP3Q4zNqNv0Y0BN78w7bTZcypmt7BpFEf9U"/>
+</div>
+<div class="px-1">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate group-hover:text-primary transition-colors">team_meeting_02.jpg</p>
+<p class="text-xs text-slate-500 dark:text-slate-400">3.5 MB • JPG</p>
+</div>
+</div>
+</div>
+<!-- Pagination / Load More -->
+<div class="mt-8 flex justify-center pb-8">
+<button class="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white text-sm font-medium px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
+                        Load More Assets
+                    </button>
+</div>
+</div>
+<!-- Details Sidebar (Contextual) -->
+<aside class="w-80 flex-shrink-0 bg-surface-light dark:bg-surface-dark border-l border-slate-200 dark:border-slate-800 overflow-y-auto hidden lg:flex flex-col">
+<div class="p-6 flex flex-col gap-6">
+<div class="flex items-center justify-between">
+<h2 class="text-lg font-bold text-slate-900 dark:text-white">Details</h2>
+<button class="text-slate-400 hover:text-red-500 transition-colors">
+<span class="material-symbols-outlined" style="font-size: 20px;">delete</span>
+</button>
+</div>
+<!-- Preview -->
+<div class="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 aspect-[4/3]">
+<img alt="Alpine landscape with mountains and lake" class="w-full h-full object-cover" data-alt="Alpine landscape with mountains and lake" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNTZlw6J3-wiu85ZqHlXo5_40vqCk5yMZpdjKmC4oKCTIkq9b2ywxm_cWuAkvr7p6PFr30pVdbOL9E7lSFMtCyEUD2z0UvpsvPLdFvJthKUL4xcwD0d_-5uUge2W42WxGkyNFrBpeyZtJe3A2QXvPhZ05oOrl9a_x-WDlZbnFo-V4RW3_AzpMaJzfg9FlcFIggeH0_jOjwos4yxV7meGWD9c4ppv75IZayFlh2jAaS-cEzfDTLX3I0JmtglyouHvHC1MTJpasbtNA"/>
+</div>
+<!-- Metadata -->
+<div class="space-y-4">
+<div class="grid grid-cols-2 gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+<div>
+<span class="block text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Type</span>
+<span class="block text-sm font-medium text-slate-900 dark:text-white mt-1">JPG Image</span>
+</div>
+<div>
+<span class="block text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Size</span>
+<span class="block text-sm font-medium text-slate-900 dark:text-white mt-1">2.4 MB</span>
+</div>
+<div>
+<span class="block text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Dimensions</span>
+<span class="block text-sm font-medium text-slate-900 dark:text-white mt-1">1920 x 1080</span>
+</div>
+<div>
+<span class="block text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wide">Date</span>
+<span class="block text-sm font-medium text-slate-900 dark:text-white mt-1">Oct 24, 2023</span>
+</div>
+</div>
+<!-- Form Fields -->
+<div class="flex flex-col gap-4">
+<label class="block">
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">File Name</span>
+<input class="mt-1 block w-full rounded-lg bg-input-bg-light dark:bg-input-bg-dark border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-800 focus:ring-0 text-sm py-2 px-3 text-slate-900 dark:text-white transition-all" type="text" value="hero-banner_v2.jpg"/>
+</label>
+<label class="block">
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Alt Text</span>
+<input class="mt-1 block w-full rounded-lg bg-input-bg-light dark:bg-input-bg-dark border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-800 focus:ring-0 text-sm py-2 px-3 text-slate-900 dark:text-white transition-all" type="text" value="Alpine mountain landscape with lake reflection"/>
+</label>
+<label class="block">
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Caption</span>
+<textarea class="mt-1 block w-full rounded-lg bg-input-bg-light dark:bg-input-bg-dark border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-800 focus:ring-0 text-sm py-2 px-3 text-slate-900 dark:text-white resize-none transition-all" rows="3">Beautiful scenery captured during the winter expedition.</textarea>
+</label>
+</div>
+</div>
+<!-- Actions -->
+<div class="mt-auto pt-4 flex flex-col gap-3">
+<button class="w-full py-2 px-4 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors shadow-sm">Save Changes</button>
+<button class="w-full py-2 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" style="font-size: 18px;">link</span>
+                            Copy Link
+                        </button>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</body></html>
