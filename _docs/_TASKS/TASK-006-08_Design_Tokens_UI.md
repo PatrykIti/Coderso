@@ -5,7 +5,7 @@
 **Category:** Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-007, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -61,4 +61,3 @@ panels for tokens.
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-design-tokens-ui.md`
-
