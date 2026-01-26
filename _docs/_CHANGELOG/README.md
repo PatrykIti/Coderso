@@ -43,6 +43,7 @@ Project Change Log.
 | 016 | 2026-01-26 | Page list UI | Admin/UI |
 | 017 | 2026-01-26 | Page editor UI | Admin/UI |
 | 018 | 2026-01-26 | Design tokens UI | Admin/UI |
+| 019 | 2026-01-26 | Users and roles UI | Admin/UI |
 
 
 ---

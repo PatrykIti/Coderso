@@ -5,7 +5,7 @@
 **Category:** Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-019, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -62,4 +62,3 @@ and RBAC actions are covered by TASK-019.
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-users-roles-ui.md`
-
