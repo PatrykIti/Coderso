@@ -12,6 +12,7 @@ jak Next.js oraz doswiadczeniem uzytkownika jak WordPress.
 
 Zakres:
 - Core SSR + admin w React.
+- Admin UI: shadcn/ui + Tailwind v4.
 - Pluginy instalowane runtime bez rebuilda core.
 - Store z prebuilt paczkami pluginow.
 - Curation + skany bezpieczenstwa po stronie store.

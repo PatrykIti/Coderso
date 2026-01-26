@@ -183,6 +183,7 @@ Widoki:
 - Plugins store
 
 UI ma byc spojne z modelem Wizard/Visual/Advanced dla widgetow.
+Admin UI bazuje na shadcn/ui + Tailwind v4.
 
 ---
 

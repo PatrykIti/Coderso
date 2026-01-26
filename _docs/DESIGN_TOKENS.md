@@ -39,6 +39,12 @@ theme: {
 }
 ```
 
+## Admin UI (shadcn + Tailwind v4)
+
+- Admin UI mapuje tokeny na zmienne shadcn (`--background`, `--foreground`, itp.).
+- Tailwind v4 uzywa `@theme` w CSS do generowania klas `bg-background`, `text-foreground`, itd.
+- Mapowanie jest w `core/admin/styles/globals.css`.
+
 ## Example usage
 
 ```css

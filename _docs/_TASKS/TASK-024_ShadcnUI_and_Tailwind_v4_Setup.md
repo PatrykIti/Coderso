@@ -204,12 +204,12 @@ Install baseline UI components used across Admin UI.
 
 Core components (v1):
 - button, input, select, dropdown-menu, dialog
-- textarea, checkbox, tabs, toast, tooltip
+- textarea, checkbox, tabs, sonner, tooltip
 
 Commands:
 
 ```bash
-bun dlx shadcn@latest add button input select dropdown-menu dialog textarea checkbox tabs toast tooltip
+bun dlx shadcn@latest add button input select dropdown-menu dialog textarea checkbox tabs sonner tooltip
 ```
 
 **Implementation Checklist:**

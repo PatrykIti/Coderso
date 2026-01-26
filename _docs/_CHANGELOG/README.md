@@ -31,6 +31,7 @@ Project Change Log.
 | 004 | 2026-01-25 | Auth, RBAC, and admin API base | Core/Auth |
 | 005 | 2026-01-25 | Media storage and uploads | CMS/Media |
 | 006 | 2026-01-25 | Settings and design tokens | CMS/Settings |
+| 007 | 2026-01-25 | Shadcn UI and Tailwind v4 setup | Admin/UI |
 
 
 ---
