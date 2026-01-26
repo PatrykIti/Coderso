@@ -164,3 +164,19 @@ export const contentRevisions = pgTable(
     entryIdIdx: index("content_revisions_entry_id_idx").on(t.entryId),
   })
 );
+
+export const media = pgTable("media", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  key: text("key").notNull(),
+  url: text("url").notNull(),
+  type: text("type").notNull(),
+  mimeType: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  width: integer("width"),
+  height: integer("height"),
+  alt: text("alt"),
+  title: text("title"),
+  caption: text("caption"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdBy: uuid("created_by").references(() => users.id),
+});

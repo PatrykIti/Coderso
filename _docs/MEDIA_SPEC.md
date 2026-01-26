@@ -10,7 +10,7 @@
 ## Local storage
 
 - Katalog: `MEDIA_DIR` (np. `/data/media`).
-- URL publiczny: `/media/<path>`.
+- URL publiczny: `/media/<path>` (lub `MEDIA_BASE_URL`).
 - Struktura sciezek: `/<yyyy>/<mm>/<uuid>.<ext>`.
 - Cache-Control: long cache dla niezmiennych plikow.
 
@@ -19,9 +19,12 @@
 Konfiguracja:
 - `MEDIA_STORAGE=local|s3|azure`
 - `MEDIA_BASE_URL=https://cdn.example.com` (opcjonalnie)
+- `MEDIA_MAX_SIZE_BYTES=10485760` (opcjonalnie, domyslnie 10MB)
+- `MEDIA_ALLOWED_MIME=image/*,application/pdf` (opcjonalnie)
 
 S3 (przyklad):
 - `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`
+- `S3_PREFIX` (opcjonalnie)
 
 Azure (przyklad):
 - `AZURE_CONTAINER`, `AZURE_ACCOUNT`, `AZURE_KEY`
@@ -34,8 +37,8 @@ Adapter interface (concept):
 
 ## Upload rules
 
-- Max size per file (config).
-- Dozwolone MIME types (whitelist).
+- Max size per file (config: `MEDIA_MAX_SIZE_BYTES`).
+- Dozwolone MIME types (whitelist: `MEDIA_ALLOWED_MIME`).
 - Metadane: alt, title, caption.
 
 ## Security
