@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Login - Nextless CMS</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0d93f2",
+                        "primary-hover": "#0b84da",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101b22",
+                        "slate-850": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"],
+                        "sans": ["Noto Sans", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "2xl": "1.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+    </style>
+</head>
+<body class="h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark text-slate-800 dark:text-white transition-colors duration-200">
+<div class="flex min-h-screen w-full flex-row">
+<!-- Left Branding Panel -->
+<div class="hidden lg:flex w-[40%] xl:w-[45%] flex-col relative bg-gradient-to-br from-[#121c25] via-[#0f2430] to-primary overflow-hidden">
+<!-- Background Pattern/Image -->
+<div class="absolute inset-0 opacity-20 mix-blend-overlay bg-cover bg-center" data-alt="Abstract dark blue geometric gradient background" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAbSCTl94yI6OKncaZnyoIdkZUxUjS6aZRsfKLV2T01u_HdGSAo0x7c2pOH-iDDilWA5NJwjD0NULDsV75frWeb03IiMu0BOzUmAeCatifOBR-Kq3ywFpZI5Km5TfkabremCvrLC7IrcWEeSxRBookiLR24R39l-j131lbdklgj_82oMBYjFMpl6XUsMc3PPwW3WwBEnYO0ujdz7vQyo6nedf66uPyau1U9t4rCLLi-kiilSo5SU-tzyiIOjqNWYc3fCSWBl3gH72s');">
+</div>
+<div class="relative z-10 flex flex-col h-full justify-between p-12 xl:p-16">
+<!-- Logo Area -->
+<div class="flex items-center gap-3">
+<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 text-white">
+<span class="material-symbols-outlined text-2xl">layers</span>
+</div>
+<span class="text-white font-display font-bold text-2xl tracking-tight">Nextless</span>
+</div>
+<!-- Headline -->
+<div class="mb-12">
+<h1 class="text-white font-display font-bold text-4xl xl:text-5xl leading-tight mb-4">
+                        The future of content management.
+                    </h1>
+<p class="text-blue-100/80 font-body text-lg font-light max-w-md">
+                        Experience the power of headless flexibility combined with intuitive design. Build faster, scale better.
+                    </p>
+</div>
+<!-- Footer quote or element -->
+<div class="flex items-center gap-4 text-blue-200/60 text-sm font-display">
+<span>© 2024 Nextless Inc.</span>
+</div>
+</div>
+</div>
+<!-- Right Login Panel -->
+<div class="w-full lg:w-[60%] xl:w-[55%] flex flex-col items-center justify-center p-4 sm:p-8 bg-background-light dark:bg-background-dark overflow-y-auto">
+<!-- Mobile Logo (visible only on small screens) -->
+<div class="flex lg:hidden items-center gap-2 mb-8">
+<span class="material-symbols-outlined text-primary text-3xl">layers</span>
+<span class="text-slate-900 dark:text-white font-display font-bold text-2xl">Nextless</span>
+</div>
+<div class="w-full max-w-[440px] flex flex-col">
+<!-- Login Card -->
+<div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl dark:shadow-slate-900/50 p-8 sm:p-10 border border-slate-100 dark:border-slate-700">
+<!-- Card Heading -->
+<div class="mb-8 text-center sm:text-left">
+<h2 class="text-slate-900 dark:text-white font-display text-3xl font-bold tracking-tight mb-2">Welcome back</h2>
+<p class="text-slate-500 dark:text-slate-400 font-body text-sm">Enter your credentials to access your workspace.</p>
+</div>
+<!-- Form -->
+<form action="#" class="space-y-5" method="POST">
+<!-- Email Field -->
+<div class="space-y-1.5">
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 font-display" for="email">Email</label>
+<div class="relative">
+<input autocomplete="email" class="block w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 py-2.5 px-3 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-primary focus:ring-primary dark:focus:border-primary sm:text-sm sm:leading-6 shadow-sm transition-all duration-200" id="email" name="email" placeholder="name@example.com" required="" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="space-y-1.5">
+<label class="block text-sm font-medium text-slate-700 dark:text-slate-300 font-display" for="password">Password</label>
+<div class="relative">
+<input autocomplete="current-password" class="block w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 py-2.5 px-3 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-primary focus:ring-primary dark:focus:border-primary sm:text-sm sm:leading-6 shadow-sm transition-all duration-200" id="password" name="password" placeholder="Enter your password" required="" type="password"/>
+</div>
+</div>
+<!-- Remember Me & Forgot Password -->
+<div class="flex items-center justify-between">
+<div class="flex items-center">
+<input class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary bg-white dark:bg-slate-700 dark:border-slate-600" id="remember-me" name="remember-me" type="checkbox"/>
+<label class="ml-2 block text-sm text-slate-600 dark:text-slate-400" for="remember-me">Remember me</label>
+</div>
+<div class="text-sm">
+<a class="font-medium text-primary hover:text-primary-hover transition-colors" href="#">Forgot password?</a>
+</div>
+</div>
+<!-- Submit Button -->
+<div>
+<button class="flex w-full justify-center rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors duration-200 font-display tracking-wide" type="submit">
+                                Sign in
+                            </button>
+</div>
+</form>
+<!-- Divider -->
+<div class="relative mt-8">
+<div aria-hidden="true" class="absolute inset-0 flex items-center">
+<div class="w-full border-t border-slate-200 dark:border-slate-700"></div>
+</div>
+<div class="relative flex justify-center text-sm font-medium leading-6">
+<span class="bg-white dark:bg-slate-800 px-4 text-slate-500 dark:text-slate-400">Or continue with</span>
+</div>
+</div>
+<!-- SSO Buttons -->
+<div class="mt-6 grid grid-cols-2 gap-4">
+<a class="flex w-full items-center justify-center gap-2 rounded-lg bg-white dark:bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors focus-visible:ring-2 focus-visible:ring-primary" href="#">
+<svg aria-hidden="true" class="h-5 w-5" viewbox="0 0 24 24">
+<path d="M12.0003 20.45c-4.666 0-8.45-3.784-8.45-8.45 0-4.666 3.784-8.45 8.45-8.45 4.666 0 8.45 3.784 8.45 8.45 0 4.666-3.784 8.45-8.45 8.45z" fill="#fff"></path>
+<path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
+<path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"></path>
+<path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"></path>
+<path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
+</svg>
+<span class="text-sm">Google</span>
+</a>
+<a class="flex w-full items-center justify-center gap-2 rounded-lg bg-white dark:bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-700 dark:text-white shadow-sm ring-1 ring-inset ring-slate-300 dark:ring-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors focus-visible:ring-2 focus-visible:ring-primary" href="#">
+<svg aria-hidden="true" class="h-5 w-5" fill="currentColor" viewbox="0 0 24 24">
+<path clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" fill-rule="evenodd"></path>
+</svg>
+<span class="text-sm">GitHub</span>
+</a>
+</div>
+</div>
+<!-- Footer Links -->
+<div class="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
+<div class="flex justify-center gap-6">
+<a class="hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="hover:text-primary transition-colors" href="#">Support</a>
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</body></html>
