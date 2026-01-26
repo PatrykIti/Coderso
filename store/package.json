@@ -1,1 +1,9 @@
-{"name": "@nextless/store", "scripts": {"dev": "echo store dev", "lint": "echo store lint", "test": "echo store test"}, "dependencies": {}}
+{
+  "name": "@nextless/store",
+  "scripts": {
+    "dev": "echo store dev",
+    "lint": "eslint --max-warnings=0 --no-error-on-unmatched-pattern \"{server,services,ui,db,src}/**/*.{ts,tsx}\"",
+    "test": "echo store test"
+  },
+  "dependencies": {}
+}
