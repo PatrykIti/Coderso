@@ -5,7 +5,7 @@
 **Category:** Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-010, TASK-009, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -65,4 +65,3 @@ TASK-010.
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-page-editor-ui.md`
-
