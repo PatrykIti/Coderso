@@ -5,7 +5,7 @@
 **Category:** Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-017, TASK-018, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -61,4 +61,3 @@ modal with security analysis details.
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-plugin-store-ui.md`
-
