@@ -5,7 +5,7 @@
 **Category:** Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-006, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-26)
 
 ---
 
@@ -62,4 +62,3 @@ split view: menu tree on the left and an editor drawer on the right.
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-menu-editor-ui.md`
-
