@@ -47,8 +47,13 @@ export async function listSettings(): Promise<SettingValueMap> {
   const merged = { ...DEFAULT_SETTINGS } as SettingValueMap;
   for (const row of rows) {
     const key = row.key as SettingKey;
+    if (key === "design.tokens") {
+      merged[key] = row.value as DesignTokenOverrides;
+      continue;
+    }
+
     if (key in merged) {
-      merged[key] = row.value as SettingValueMap[SettingKey];
+      merged[key] = row.value as string;
     }
   }
 

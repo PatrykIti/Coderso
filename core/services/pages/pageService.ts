@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { pages } from "../../db/schema";
-import { createRevisionTx } from "./revisionService";
+import { createRevisionTx, type RevisionData } from "./revisionService";
 
 export type PageStatus = "draft" | "published";
 export type PageData = Record<string, unknown>;
@@ -22,7 +22,7 @@ function toPublishedData(data: PageData): PageData {
   const blocks = Array.isArray(data.blocks)
     ? data.blocks.map((block) => {
         if (!block || typeof block !== "object") return block;
-        const { editor, ...rest } = block as Record<string, unknown>;
+        const { editor: _editor, ...rest } = block as Record<string, unknown>;
         return rest;
       })
     : data.blocks;
@@ -76,7 +76,7 @@ export async function publishPage(id: string, userId: string) {
     const [page] = await tx.select().from(pages).where(eq(pages.id, id));
     if (!page) throw new Error("page_not_found");
 
-    await createRevisionTx(tx, id, page.currentData, userId);
+    await createRevisionTx(tx, id, page.currentData as RevisionData, userId);
 
     const publishedData = toPublishedData(page.currentData as PageData);
     const [updated] = await tx

@@ -5,6 +5,7 @@ import {
   publishPage,
   unpublishPage,
   updatePage,
+  type PageData,
 } from "../../services/pages/pageService";
 import { createPreviewToken } from "../../services/pages/previewService";
 import {
@@ -46,7 +47,7 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
 
   router.post("/pages", requirePermission("content:write"), async (ctx) => {
     validate(pageCreateSchema, ctx.body);
-    const body = ctx.body as { title: string; slug: string; data: unknown };
+    const body = ctx.body as { title: string; slug: string; data: PageData };
     return createPage({ title: body.title, slug: body.slug, data: body.data });
   });
 
@@ -61,7 +62,7 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
     const body = ctx.body as {
       title?: string;
       slug?: string;
-      data?: unknown;
+      data?: PageData;
     };
     const page = await updatePage(ctx.params.id, {
       title: body.title,

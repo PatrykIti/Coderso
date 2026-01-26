@@ -10,10 +10,19 @@
     "dev": "concurrently -n core,store -c blue,magenta \"bun --cwd core dev\" \"bun --cwd store dev\"",
     "dev:core": "bun --cwd core dev",
     "dev:store": "bun --cwd store dev",
-    "lint": "bun --cwd core lint && bun --cwd store lint",
+    "lint": "bun --cwd core lint && bun --cwd core lint:types && bun --cwd store lint",
     "test": "bun --cwd core test && bun --cwd store test"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@types/node": "^25.0.10",
+    "@types/react": "^19.2.9",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
+    "concurrently": "^9.2.1",
+    "eslint": "8.57.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "typescript": "^5.9.3"
   }
 }

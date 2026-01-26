@@ -22,7 +22,8 @@ export type UpdateEntryInput = {
   data?: EntryData;
 };
 
-type DbClient = typeof db;
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type DbClient = typeof db | DbTransaction;
 
 async function getContentSchema(typeId: string) {
   const [row] = await db

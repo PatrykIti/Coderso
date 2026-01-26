@@ -4,7 +4,8 @@ import { pageRevisions, pages } from "../../db/schema";
 
 export type RevisionData = Record<string, unknown>;
 
-type DbClient = typeof db;
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type DbClient = typeof db | DbTransaction;
 
 export async function listRevisions(pageId: string) {
   return db

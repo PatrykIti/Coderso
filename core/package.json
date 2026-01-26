@@ -2,7 +2,8 @@
   "name": "@nextless/core",
   "scripts": {
     "dev": "echo core dev",
-    "lint": "echo core lint",
+    "lint": "eslint --max-warnings=0 \"{admin,server,services,ui,db}/**/*.{ts,tsx}\"",
+    "lint:types": "tsc -p tsconfig.json --noEmit",
     "test": "echo core test"
   },
   "dependencies": {
