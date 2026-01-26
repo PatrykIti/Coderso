@@ -37,6 +37,7 @@ Project Change Log.
 | 010 | 2026-01-26 | Admin shell wrappers and navigation scaffolding | Admin/UI |
 | 011 | 2026-01-26 | Dashboard UI | Admin/UI |
 | 012 | 2026-01-26 | Menu editor UI | Admin/UI |
+| 013 | 2026-01-26 | Media library UI | Admin/UI |
 
 
 ---
