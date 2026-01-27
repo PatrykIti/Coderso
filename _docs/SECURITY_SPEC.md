@@ -8,6 +8,8 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 - Rate limiting: per IP dla login i admin API.
 - CORS: tylko zaufane originy dla admina.
 - CSRF: token dla POST/PUT/DELETE w admin.
+  - Token pobierany z `GET /admin/api/auth/csrf`.
+  - UI dodaje `X-CSRF-Token` do mutacji.
 - Security headers:
   - Content-Security-Policy (basic)
   - X-Content-Type-Options

@@ -1,13 +1,49 @@
-import { CheckCircle, KeyRound, QrCode } from "lucide-react";
+import { useState } from "react";
+import { AlertCircle, CheckCircle, KeyRound, QrCode } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { AuthShell } from "@/ui/layouts/AuthShell";
 import { OtpInput } from "@/ui/auth/OtpInput";
 import { RecoveryCodesPanel } from "@/ui/auth/RecoveryCodesPanel";
+import { isApiClientError } from "@/services/apiClient";
+import { verifyOtp } from "@/services/authClient";
 
-export function TwoFactorPage() {
+type TwoFactorPageProps = {
+  initialError?: string;
+};
+
+export function TwoFactorPage({ initialError = "" }: TwoFactorPageProps) {
+  const [otp, setOtp] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [useRecovery, setUseRecovery] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(initialError);
+
+  const handleVerify = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await verifyOtp(
+        useRecovery ? { recoveryCode } : { code: otp }
+      );
+      if (typeof window !== "undefined") {
+        window.location.assign("/admin");
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Verification failed. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthShell contentClassName="max-w-2xl">
       <Card className="border-border/60 shadow-lg">
@@ -44,11 +80,46 @@ export function TwoFactorPage() {
               </span>
               Enter Verification Code
             </Badge>
-            <OtpInput />
-            <Button className="w-full max-w-sm gap-2">
+            {error ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            {useRecovery ? (
+              <div className="space-y-3">
+                <Input
+                  placeholder="Enter recovery code"
+                  value={recoveryCode}
+                  onChange={(event) => setRecoveryCode(event.target.value)}
+                />
+                <Button
+                  variant="ghost"
+                  onClick={() => setUseRecovery(false)}
+                >
+                  Use authenticator code instead
+                </Button>
+              </div>
+            ) : (
+              <OtpInput value={otp} onChange={setOtp} />
+            )}
+            <Button
+              className="w-full max-w-sm gap-2"
+              onClick={handleVerify}
+              disabled={loading}
+            >
               <CheckCircle className="h-4 w-4" />
-              Verify & Enable
+              {loading
+                ? "Verifying..."
+                : useRecovery
+                  ? "Verify recovery code"
+                  : "Verify & Enable"}
             </Button>
+            {!useRecovery ? (
+              <Button variant="ghost" onClick={() => setUseRecovery(true)}>
+                Use a recovery code
+              </Button>
+            ) : null}
           </section>
           <section>
             <RecoveryCodesPanel />

@@ -54,6 +54,7 @@ Project Change Log.
 | 027 | 2026-01-27 | Store client and update policy | Core/Store |
 | 028 | 2026-01-27 | Plugin store admin UI | Admin/UI |
 | 029 | 2026-01-27 | Users and roles admin UI | Admin/UI |
+| 030 | 2026-01-27 | Auth UI wiring | Admin/UI |
 
 
 ---

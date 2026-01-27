@@ -42,11 +42,38 @@ Przyklad error:
 - `POST /auth/logout`
 - `GET /auth/me`
 - `GET /auth/csrf` (pobiera token CSRF)
+- `POST /auth/verify-otp` (MFA)
+- `POST /auth/reset` (public)
+- `POST /auth/reset/confirm` (public)
 
 Payload login:
 
 ```json
 { "email": "user@example.com", "password": "secret" }
+```
+
+OTP verify payload (summary):
+
+```json
+{ "code": "123456" }
+```
+
+Recovery verify payload (summary):
+
+```json
+{ "recoveryCode": "ABCD-EFGH" }
+```
+
+Reset request payload (summary):
+
+```json
+{ "email": "user@example.com" }
+```
+
+Reset confirm payload (summary):
+
+```json
+{ "token": "reset-token", "password": "new-password" }
 ```
 
 ---

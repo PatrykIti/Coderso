@@ -10,6 +10,8 @@ Poza zakresem v1:
 - Email + haslo.
 - Haslo hashowane (argon2id rekomendowane).
 - Po poprawnym loginie tworzymy session cookie (httpOnly).
+- UI pokazuje bledy walidacji pod polami i alert ogolny przy `auth_failed`.
+- Po sukcesie przekierowanie do `/admin`.
 
 ## Sessions
 
@@ -40,7 +42,9 @@ Poza zakresem v1:
 
 - Token resetu w DB z TTL.
 - Email poza zakresem v1.
+- UI: `/auth/reset` wysyla email, `/auth/reset/confirm` ustawia nowe haslo.
+- Bledy walidacji i nieprawidlowy token pokazywane w UI.
 
 ## MFA (v2)
 
-- MFA poza zakresem v1.
+- MFA poza zakresem v1, ale UI posiada ekran OTP/recovery (wiring gotowy).

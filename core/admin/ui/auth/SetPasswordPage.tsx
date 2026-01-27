@@ -1,18 +1,78 @@
-import { Eye, EyeOff, LockKeyhole } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertCircle, Eye, EyeOff, LockKeyhole } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { AuthShell } from "@/ui/layouts/AuthShell";
 import { PasswordStrengthList } from "@/ui/auth/PasswordStrengthList";
+import { isApiClientError } from "@/services/apiClient";
+import { confirmPasswordReset } from "@/services/authClient";
 
-const defaultRules = [
-  { label: "At least 8 characters", met: true },
-  { label: "At least 1 number", met: false },
-  { label: "At least 1 special character", met: false },
-];
+const hasNumber = (value: string) => /\\d/.test(value);
+const hasSpecial = (value: string) => /[^a-zA-Z0-9]/.test(value);
 
-export function SetPasswordPage() {
+const resolveToken = (token?: string) => {
+  if (token) return token;
+  if (typeof window === "undefined") return "";
+  const params = new URLSearchParams(window.location.search);
+  return params.get("token") ?? "";
+};
+
+type SetPasswordPageProps = {
+  token?: string;
+  initialError?: string;
+};
+
+export function SetPasswordPage({ token, initialError = "" }: SetPasswordPageProps) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(initialError);
+  const [success, setSuccess] = useState(false);
+  const resetToken = useMemo(() => resolveToken(token), [token]);
+
+  const rules = useMemo(
+    () => [
+      { label: "At least 8 characters", met: password.length >= 8 },
+      { label: "At least 1 number", met: hasNumber(password) },
+      { label: "At least 1 special character", met: hasSpecial(password) },
+    ],
+    [password]
+  );
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setSuccess(false);
+
+    if (!resetToken) {
+      setError("Reset token is missing or expired.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await confirmPasswordReset({ token: resetToken, password });
+      setSuccess(true);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Unable to update password. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthShell
       mobileBrand={
@@ -41,7 +101,18 @@ export function SetPasswordPage() {
               Your new password must be different from previous passwords.
             </p>
           </div>
-          <form className="space-y-5">
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            {success ? (
+              <Alert>
+                <AlertDescription>Password updated successfully.</AlertDescription>
+              </Alert>
+            ) : null}
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="new-password">
                 New password
@@ -49,18 +120,25 @@ export function SetPasswordPage() {
               <div className="relative">
                 <Input
                   id="new-password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Enter new password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                 />
                 <button
                   type="button"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => setShowPassword((prev) => !prev)}
                 >
-                  <Eye className="h-4 w-4" />
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
-            <PasswordStrengthList rules={defaultRules} />
+            <PasswordStrengthList rules={rules} />
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="confirm-password">
                 Confirm password
@@ -68,19 +146,26 @@ export function SetPasswordPage() {
               <div className="relative">
                 <Input
                   id="confirm-password"
-                  type="password"
+                  type={showConfirm ? "text" : "password"}
                   placeholder="Confirm new password"
+                  value={confirm}
+                  onChange={(event) => setConfirm(event.target.value)}
                 />
                 <button
                   type="button"
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  onClick={() => setShowConfirm((prev) => !prev)}
                 >
-                  <EyeOff className="h-4 w-4" />
+                  {showConfirm ? (
+                    <Eye className="h-4 w-4" />
+                  ) : (
+                    <EyeOff className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
-            <Button className="w-full" type="submit">
-              Update password
+            <Button className="w-full" type="submit" disabled={loading}>
+              {loading ? "Updating..." : "Update password"}
             </Button>
           </form>
           <div className="text-center">

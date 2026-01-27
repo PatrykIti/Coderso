@@ -1,5 +1,7 @@
-import { Layers } from "lucide-react";
+import { useState } from "react";
+import { AlertCircle, Layers } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -9,8 +11,45 @@ import { Separator } from "@/components/ui/separator";
 import { AuthShell } from "@/ui/layouts/AuthShell";
 import { AuthBrandPanel } from "@/ui/auth/AuthBrandPanel";
 import { SsoButtons } from "@/ui/auth/SsoButtons";
+import { isApiClientError } from "@/services/apiClient";
+import { login, toFieldErrors } from "@/services/authClient";
 
-export function LoginPage() {
+type LoginPageProps = {
+  initialEmail?: string;
+  initialError?: string;
+};
+
+export function LoginPage({ initialEmail = "", initialError = "" }: LoginPageProps) {
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(initialError);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setFieldErrors({});
+    setLoading(true);
+
+    try {
+      await login({ email, password });
+      if (typeof window !== "undefined") {
+        window.location.assign("/admin");
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+        setFieldErrors(toFieldErrors(err));
+      } else {
+        setError("Unable to sign in. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthShell
       brand={<AuthBrandPanel />}
@@ -45,7 +84,13 @@ export function LoginPage() {
           </p>
         </CardHeader>
         <CardContent className="space-y-6">
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="email">
                 Email
@@ -56,7 +101,13 @@ export function LoginPage() {
                 type="email"
                 placeholder="name@example.com"
                 autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                aria-invalid={Boolean(fieldErrors.email)}
               />
+              {fieldErrors.email ? (
+                <p className="text-xs text-destructive">{fieldErrors.email}</p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="password">
@@ -68,19 +119,29 @@ export function LoginPage() {
                 type="password"
                 placeholder="Enter your password"
                 autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                aria-invalid={Boolean(fieldErrors.password)}
               />
+              {fieldErrors.password ? (
+                <p className="text-xs text-destructive">{fieldErrors.password}</p>
+              ) : null}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
               <label className="flex items-center gap-2 text-muted-foreground">
-                <Checkbox id="remember" />
+                <Checkbox
+                  id="remember"
+                  checked={remember}
+                  onCheckedChange={(checked) => setRemember(Boolean(checked))}
+                />
                 Remember me
               </label>
               <a className="text-primary hover:underline" href="#">
                 Forgot password?
               </a>
             </div>
-            <Button className="w-full" type="submit">
-              Sign in
+            <Button className="w-full" type="submit" disabled={loading}>
+              {loading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
           <div className="space-y-6">

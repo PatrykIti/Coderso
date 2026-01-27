@@ -1,13 +1,49 @@
-import { Layers } from "lucide-react";
+import { useState } from "react";
+import { AlertCircle, Layers } from "lucide-react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { AuthShell } from "@/ui/layouts/AuthShell";
 import { InfoBanner } from "@/ui/auth/InfoBanner";
+import { isApiClientError } from "@/services/apiClient";
+import { requestPasswordReset } from "@/services/authClient";
 
-export function ResetPasswordPage() {
+type ResetPasswordPageProps = {
+  initialEmail?: string;
+  initialError?: string;
+};
+
+export function ResetPasswordPage({
+  initialEmail = "",
+  initialError = "",
+}: ResetPasswordPageProps) {
+  const [email, setEmail] = useState(initialEmail);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(initialError);
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+    setSuccess(false);
+    try {
+      await requestPasswordReset({ email });
+      setSuccess(true);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Unable to send reset link. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <AuthShell
       mobileBrand={
@@ -40,22 +76,41 @@ export function ResetPasswordPage() {
               Recover access to your Nextless account.
             </p>
           </div>
-          <InfoBanner
-            title="Need help?"
-            description="Enter your email to receive a secure reset link. It will expire in 1 hour."
-          />
-          <form className="space-y-4">
+          {success ? (
+            <InfoBanner
+              title="Reset link sent"
+              description="Check your inbox for a secure reset link. It expires in 1 hour."
+            />
+          ) : (
+            <InfoBanner
+              title="Need help?"
+              description="Enter your email to receive a secure reset link. It will expire in 1 hour."
+            />
+          )}
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            {error ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="email">
                 Email address
               </label>
-              <Input id="email" type="email" placeholder="name@company.com" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@company.com"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+              />
               <p className="text-xs text-muted-foreground">
                 Use the email associated with your account.
               </p>
             </div>
-            <Button className="w-full" type="submit">
-              Send reset link
+            <Button className="w-full" type="submit" disabled={loading}>
+              {loading ? "Sending..." : "Send reset link"}
             </Button>
             <Button className="w-full" type="button" variant="ghost">
               Back to login
