@@ -46,6 +46,8 @@ Przyklad error:
 - `POST /auth/reset` (public)
 - `POST /auth/reset/confirm` (public)
 
+`GET /auth/csrf` wymaga aktywnej sesji i zwraca `{ token }` do headera `X-CSRF-Token`.
+
 Payload login:
 
 ```json
