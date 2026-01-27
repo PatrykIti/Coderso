@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Entry Editor - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#1392ec",
+              "background-light": "#f6f7f8",
+              "background-dark": "#101a22",
+            },
+            fontFamily: {
+              "display": ["Space Grotesk", "sans-serif"],
+              "body": ["Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'WHT' 300, 'opsz' 20;
+        }
+        .editor-block:hover .block-controls {
+            opacity: 1;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">dataset</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl bg-primary/10 text-primary transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">group</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC55A6dPgY0H86erfiDX6UiBOyGLsSdsuERelS-YnxCp853o4Y3eBFOW9ZjxgWhEMSFCIOe5U0eNrk_kogQ9UiFK9b4gkOCgLTY4mEJODV91LeOjMCaqb4r_ln4ct5he44Ei4Z7b7oWC3azZpeBhZUh2SgGmL1IdYLBJ0gZ-J0VIHu_knpKzpsV6JAEtIybl1dXQ9ne_VhCyt528t4EZz7_gYVjpJTQcNkJX7zjMuhtg441YJ-FaITLfob2zyzJ3VhNvevdfDLXWcU');"></div>
+</div>
+</div>
+</aside>
+<div class="flex-1 flex flex-col h-full relative overflow-hidden">
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 z-20">
+<div class="flex items-center gap-4">
+<nav class="flex items-center gap-2 text-sm font-display">
+<a class="text-slate-400 hover:text-primary transition-colors" href="#">Content</a>
+<span class="material-symbols-outlined text-slate-300 text-sm">chevron_right</span>
+<a class="text-slate-400 hover:text-primary transition-colors" href="#">Blog Posts</a>
+<span class="material-symbols-outlined text-slate-300 text-sm">chevron_right</span>
+<span class="text-slate-900 dark:text-white font-semibold">Edit Entry</span>
+</nav>
+<span class="ml-4 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200/50">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Published
+            </span>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors font-display text-sm font-semibold flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]">visibility</span>
+                Preview
+            </button>
+<button class="px-6 py-2 bg-primary text-white rounded-lg font-bold font-display text-sm hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+                Update
+            </button>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden">
+<main class="flex-1 overflow-y-auto bg-white dark:bg-[#101a22] p-12">
+<div class="max-w-3xl mx-auto space-y-10">
+<div class="space-y-4">
+<textarea class="w-full text-5xl font-display font-bold text-slate-900 dark:text-white placeholder:text-slate-200 dark:placeholder:text-slate-800 border-none bg-transparent p-0 resize-none focus:ring-0 leading-tight" placeholder="Enter post title..." rows="2">Mastering Headless CMS Architecture</textarea>
+<div class="flex items-center gap-2 group">
+<span class="text-xs font-display font-bold text-slate-400 uppercase tracking-wider">Slug:</span>
+<div class="flex-1 flex items-center bg-slate-50 dark:bg-slate-800/50 rounded-lg px-3 py-1.5 border border-transparent focus-within:border-primary/30 transition-all">
+<span class="text-sm text-slate-400">/blog/</span>
+<input class="bg-transparent border-none p-0 text-sm text-slate-600 dark:text-slate-300 focus:ring-0 w-full font-mono" type="text" value="mastering-headless-cms"/>
+<button class="ml-2 text-slate-400 hover:text-primary transition-colors" title="Auto-generate slug">
+<span class="material-symbols-outlined text-[18px]">autorenew</span>
+</button>
+</div>
+</div>
+</div>
+<div class="relative group">
+<div class="w-full h-64 rounded-2xl bg-slate-100 dark:bg-slate-800/50 overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-3 group-hover:border-primary transition-all">
+<img alt="Featured Image Preview" class="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHIhS_va0QEMO97s0Uixi4WPEkZrj89j0khDLBwTVMwcewAgPB9pDoeAAsas0k73II_Fv3FAlzfZ30LmnfRHiCI99adkxcjCzk1xJMsxaUhnxvRi-01c3Xt51UKBlbJGMTJBfeoGnxtbAvnHr5cI52IALBbxgrFsx-w90VZhUa0dcTbVKy6lcA2AJskaremZYaCVRTjNM99RDz3xfoJg84hBKY3rjKnHs6I04StLcfZSrWDDbs3NJ5W0V8QxHbeBCqfcgOausVpuQ"/>
+<div class="z-10 bg-white/90 dark:bg-slate-900/90 p-4 rounded-xl shadow-xl flex flex-col items-center">
+<span class="material-symbols-outlined text-slate-400 mb-1">image</span>
+<span class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest font-display">Change Featured Image</span>
+</div>
+</div>
+</div>
+<div class="editor-content space-y-8 pb-32">
+<div class="editor-block relative group">
+<div class="block-controls absolute -left-12 top-0 opacity-0 transition-opacity flex flex-col gap-1">
+<button class="p-1.5 text-slate-300 hover:text-primary"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+<button class="p-1.5 text-slate-300 hover:text-primary"><span class="material-symbols-outlined text-lg">add</span></button>
+</div>
+<p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed font-body">
+                            Headless Content Management Systems (CMS) have revolutionized the way digital content is produced and consumed. Unlike traditional CMS platforms that couple the back-end content management with the front-end presentation layer, a headless CMS operates as a back-end only content repository.
+                        </p>
+</div>
+<div class="editor-block relative group border-l-4 border-primary pl-6 py-2">
+<div class="block-controls absolute -left-12 top-0 opacity-0 transition-opacity flex flex-col gap-1">
+<button class="p-1.5 text-slate-300 hover:text-primary"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+<button class="p-1.5 text-slate-300 hover:text-primary"><span class="material-symbols-outlined text-lg">add</span></button>
+</div>
+<h3 class="text-2xl font-display font-bold text-slate-900 dark:text-white mb-4">Why decoupled architecture matters?</h3>
+<p class="text-lg text-slate-600 dark:text-slate-400 leading-relaxed font-body">
+                            The primary advantage of this architecture is flexibility. Developers can choose their preferred front-end frameworks (like Next.js, Remix, or Nuxt) to deliver the content, while content creators can manage everything in a central hub.
+                        </p>
+</div>
+<div class="editor-block relative group">
+<div class="block-controls absolute -left-12 top-0 opacity-0 transition-opacity flex flex-col gap-1">
+<button class="p-1.5 text-slate-300 hover:text-primary"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+<button class="p-1.5 text-slate-300 hover:text-primary"><span class="material-symbols-outlined text-lg">add</span></button>
+</div>
+<div class="p-8 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-800">
+<div class="flex items-center gap-3 text-primary mb-2">
+<span class="material-symbols-outlined">info</span>
+<span class="font-display font-bold text-sm uppercase tracking-wider">Pro Tip</span>
+</div>
+<p class="text-slate-600 dark:text-slate-400 italic">Always ensure your API endpoints are properly cached through a CDN to maintain high performance at scale.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<aside class="w-80 bg-slate-50 dark:bg-[#15202b] border-l border-slate-200 dark:border-slate-800 overflow-y-auto shrink-0 p-6 flex flex-col gap-8">
+<div class="space-y-4">
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest font-display">Publishing</h3>
+<div class="space-y-4 bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-display">Status</label>
+<div class="relative">
+<select class="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 focus:ring-primary appearance-none cursor-pointer">
+<option>Published</option>
+<option>Draft</option>
+<option>Scheduled</option>
+<option>Archived</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">unfold_more</span>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-display">Publish Date</label>
+<div class="relative">
+<input class="w-full pl-3 pr-10 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-300 focus:ring-primary cursor-pointer" type="text" value="Oct 24, 2023 10:30 AM"/>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">calendar_today</span>
+</div>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest font-display">Search Engine Optimization</h3>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-lg">expand_more</span>
+</button>
+</div>
+<div class="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+<div class="space-y-2">
+<span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-display">Snippet Preview</span>
+<div class="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
+<div class="text-blue-600 dark:text-blue-400 text-sm font-medium truncate mb-0.5">Mastering Headless CMS Architecture | Nextless CMS</div>
+<div class="text-emerald-700 dark:text-emerald-500 text-[10px] truncate mb-1">https://nextless.cms/blog/mastering-headless-cms</div>
+<div class="text-slate-500 text-[11px] line-clamp-2">Learn how headless architecture can improve your performance and developer experience with modern tools...</div>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-display">Meta Description</label>
+<textarea class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-600 dark:text-slate-400 focus:ring-primary h-20 resize-none" placeholder="Enter SEO description...">Learn how headless architecture can improve your performance and developer experience with modern tools...</textarea>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest font-display">Taxonomy</h3>
+<div class="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-display">Tags</label>
+<div class="flex flex-wrap gap-2 p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg min-h-[42px]">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded border border-primary/20">
+                                HEADLESS
+                                <button class="hover:text-primary-dark"><span class="material-symbols-outlined text-xs">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded border border-primary/20">
+                                ARCHITECTURE
+                                <button class="hover:text-primary-dark"><span class="material-symbols-outlined text-xs">close</span></button>
+</span>
+<input class="flex-1 bg-transparent border-none p-0 text-sm focus:ring-0 min-w-[60px]" placeholder="Add..." type="text"/>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-4 border-t border-slate-200 dark:border-slate-800">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCHIhS_va0QEMO97s0Uixi4WPEkZrj89j0khDLBwTVMwcewAgPB9pDoeAAsas0k73II_Fv3FAlzfZ30LmnfRHiCI99adkxcjCzk1xJMsxaUhnxvRi-01c3Xt51UKBlbJGMTJBfeoGnxtbAvnHr5cI52IALBbxgrFsx-w90VZhUa0dcTbVKy6lcA2AJskaremZYaCVRTjNM99RDz3xfoJg84hBKY3rjKnHs6I04StLcfZSrWDDbs3NJ5W0V8QxHbeBCqfcgOausVpuQ');"></div>
+<div class="flex flex-col">
+<span class="text-sm font-bold text-slate-900 dark:text-white font-display">Sarah Jenks</span>
+<span class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Main Author</span>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</div>
+
+</body></html>
