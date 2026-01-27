@@ -34,9 +34,14 @@ export function hashSessionToken(token: string) {
 export function buildSessionCookieOptions(
   ttlDays: number = DEFAULT_SESSION_TTL_DAYS
 ): SessionCookieOptions {
+  const secureOverride = process.env.COOKIE_SECURE;
+  const secure =
+    secureOverride !== undefined
+      ? secureOverride !== "false"
+      : process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
-    secure: true,
+    secure,
     sameSite: "strict",
     path: "/",
     maxAge: ttlDays * 24 * 60 * 60,
