@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 11 tasks
-- **In Progress:** 0
-- **Done:** 28 tasks
+- **To Do:** 13 tasks
+- **In Progress:** 1
+- **Done:** 31 tasks
 
 ---
 
@@ -40,7 +40,9 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-002 | Pages, Revisions, and Preview | High | Medium | Pages + revisions + preview |
 | TASK-003 | Content Types Engine | High | Large | Dynamic content schemas |
-| TASK-004 | Auth, RBAC, and Admin API Base | High | Large | Sessions + RBAC + REST base |
+| TASK-004 | Auth, RBAC, and Admin API Base (Index) | High | Large | Index for TASK-004-01..06 |
+| TASK-004-01 | Core HTTP Server and Admin UI Bootstrap | High | Large | Bun server + admin entry |
+| TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
@@ -54,7 +56,9 @@ Task board for project work. Keep task files and this board in sync.
 
 ## In Progress
 
-*No tasks currently in progress*
+| ID | Title | Priority | Effort | Notes |
+|----|-------|----------|--------|-------|
+| TASK-004-06 | Auth Routes and Base API Layer | High | Medium | login/logout/me base |
 
 ---
 
@@ -63,6 +67,9 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-001 | ORM Foundation and Auth Tables | High | Medium | Drizzle + auth tables |
+| TASK-004-03 | Password Hashing and Sessions | High | Medium | argon2 + sessions |
+| TASK-004-04 | Auth Middleware | High | Medium | attachUser + requireAuth |
+| TASK-004-05 | RBAC Middleware | High | Medium | requirePermission |
 | TASK-006 | Menus and Navigation | Medium | Medium | Menu CRUD + admin UI |
 | TASK-007 | Settings and Design Tokens | Medium | Medium | Global settings + tokens |
 | TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
