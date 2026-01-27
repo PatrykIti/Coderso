@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 11 tasks
-- **In Progress:** 3
-- **Done:** 31 tasks
+- **To Do:** 10 tasks
+- **In Progress:** 1
+- **Done:** 34 tasks
 
 ---
 
@@ -57,8 +57,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-004 | Auth, RBAC, and Admin API Base (Index) | High | Large | Index for TASK-004-01..06 |
-| TASK-004-01 | Core HTTP Server and Admin UI Bootstrap | High | Large | Bun server + admin entry |
-| TASK-004-06 | Auth Routes and Base API Layer | High | Medium | login/logout/me base |
 
 ---
 
@@ -97,3 +95,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-018 | Plugin Store Admin UI (Functional) | Medium | Medium | Store browse + install |
 | TASK-019 | Users and Roles Admin UI (Functional) | Medium | Medium | Users + roles UI |
 | TASK-025 | Auth UI Wiring (Functional) | High | Medium | Login + 2FA + reset wiring |
+| TASK-004-01 | Core HTTP Server and Admin UI Bootstrap | High | Large | Bun server + admin entry |
+| TASK-004-06 | Auth Routes and Base API Layer | High | Medium | login/logout/me base |
+| TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |

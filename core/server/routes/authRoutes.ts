@@ -2,14 +2,30 @@ import { ApiError } from "../errorHandler";
 import { type Router, type RouteContext } from "../router";
 import {
   buildSessionCookieOptions,
+  createCsrfToken,
   createSession,
+  revokeAllSessions,
   revokeSessionByToken,
   SESSION_COOKIE_NAME,
+  setCsrfToken,
 } from "../../services/auth/sessionService";
-import { getUserByEmail, updateLastLogin } from "../../services/auth/userService";
-import { verifyPassword } from "../../services/auth/password";
+import {
+  getUserByEmail,
+  updateLastLogin,
+  updatePassword,
+} from "../../services/auth/userService";
+import { hashPassword, verifyPassword } from "../../services/auth/password";
 import { logAudit } from "../../services/audit/auditService";
-import { authLoginSchema } from "../validation/authSchemas";
+import {
+  authLoginSchema,
+  authResetConfirmSchema,
+  authResetSchema,
+  authVerifyOtpSchema,
+} from "../validation/authSchemas";
+import {
+  consumeResetToken,
+  createResetToken,
+} from "../../services/auth/passwordResetService";
 
 export type AuthRouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -17,6 +33,9 @@ export type AuthRouteDeps = {
 };
 
 type LoginBody = { email: string; password: string };
+type OtpBody = { code?: string; recoveryCode?: string };
+type ResetBody = { email: string };
+type ResetConfirmBody = { token: string; password: string };
 
 type PublicUser = {
   id: string;
@@ -100,5 +119,78 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
   router.get("/auth/me", requireAuth, async (ctx) => {
     if (!ctx.user) throw new ApiError("auth_required", "Not authenticated", 401);
     return { user: ctx.user };
+  });
+
+  router.get("/auth/csrf", requireAuth, async (ctx) => {
+    if (!ctx.sessionId) {
+      throw new ApiError("auth_required", "Not authenticated", 401);
+    }
+    const { token, tokenHash } = createCsrfToken();
+    await setCsrfToken(ctx.sessionId, tokenHash);
+    return { token };
+  });
+
+  router.post("/auth/verify-otp", requireAuth, async (ctx) => {
+    validate(authVerifyOtpSchema, ctx.body);
+    const body = ctx.body as OtpBody;
+
+    if (body.recoveryCode) {
+      throw new ApiError("mfa_not_configured", "MFA not enabled", 400);
+    }
+
+    if (body.code) {
+      throw new ApiError("mfa_not_configured", "MFA not enabled", 400);
+    }
+
+    throw new ApiError("validation_error", "Invalid payload", 400);
+  });
+
+  router.post("/auth/reset", async (ctx) => {
+    validate(authResetSchema, ctx.body);
+    const body = ctx.body as ResetBody;
+
+    const user = await getUserByEmail(body.email);
+    if (!user) {
+      return { ok: true };
+    }
+
+    await createResetToken(user.id);
+
+    await logAudit({
+      actorId: null,
+      action: "auth.reset.request",
+      targetType: "user",
+      targetId: user.id,
+      metadata: { email: user.email },
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
+
+    return { ok: true };
+  });
+
+  router.post("/auth/reset/confirm", async (ctx) => {
+    validate(authResetConfirmSchema, ctx.body);
+    const body = ctx.body as ResetConfirmBody;
+
+    const reset = await consumeResetToken(body.token);
+    if (!reset) {
+      throw new ApiError("reset_invalid", "Reset token invalid or expired", 400);
+    }
+
+    const passwordHash = await hashPassword(body.password);
+    await updatePassword(reset.userId, passwordHash);
+    await revokeAllSessions(reset.userId);
+
+    await logAudit({
+      actorId: reset.userId,
+      action: "auth.reset.confirm",
+      targetType: "user",
+      targetId: reset.userId,
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
+
+    return { ok: true };
   });
 }

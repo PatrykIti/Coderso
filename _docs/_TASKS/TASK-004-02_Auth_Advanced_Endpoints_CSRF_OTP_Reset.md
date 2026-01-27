@@ -5,7 +5,7 @@
 **Category:** Core/Auth
 **Estimated Effort:** Medium
 **Dependencies:** TASK-004-01, TASK-004-03, TASK-020
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 

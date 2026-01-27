@@ -24,3 +24,13 @@ export async function updateLastLogin(userId: string) {
 
   return row ?? null;
 }
+
+export async function updatePassword(userId: string, passwordHash: string) {
+  const [row] = await db
+    .update(users)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+    .returning();
+
+  return row ?? null;
+}

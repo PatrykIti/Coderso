@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../../db/client";
 import { sessions } from "../../db/schema";
 
@@ -23,8 +23,12 @@ export type SessionCookieOptions = {
   maxAge: number;
 };
 
-export function hashSessionToken(token: string) {
+export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+export function hashSessionToken(token: string) {
+  return hashToken(token);
 }
 
 export function buildSessionCookieOptions(
@@ -41,6 +45,11 @@ export function buildSessionCookieOptions(
 
 function generateToken() {
   return randomBytes(32).toString("base64url");
+}
+
+export function createCsrfToken() {
+  const token = generateToken();
+  return { token, tokenHash: hashToken(token) };
 }
 
 export async function createSession(input: CreateSessionInput) {
@@ -91,4 +100,31 @@ export async function revokeSessionByToken(token: string) {
   const session = await getSessionByToken(token);
   if (!session) return null;
   return revokeSession(session.id);
+}
+
+export async function revokeAllSessions(userId: string) {
+  const now = new Date();
+  await db
+    .update(sessions)
+    .set({ revokedAt: now })
+    .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)));
+}
+
+export async function setCsrfToken(sessionId: string, tokenHash: string) {
+  const [row] = await db
+    .update(sessions)
+    .set({ csrfTokenHash: tokenHash })
+    .where(eq(sessions.id, sessionId))
+    .returning();
+
+  return row ?? null;
+}
+
+export async function getCsrfTokenHash(sessionId: string) {
+  const [row] = await db
+    .select({ csrfTokenHash: sessions.csrfTokenHash })
+    .from(sessions)
+    .where(eq(sessions.id, sessionId));
+
+  return row?.csrfTokenHash ?? null;
 }

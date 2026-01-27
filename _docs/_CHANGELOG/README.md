@@ -55,6 +55,8 @@ Project Change Log.
 | 028 | 2026-01-27 | Plugin store admin UI | Admin/UI |
 | 029 | 2026-01-27 | Users and roles admin UI | Admin/UI |
 | 030 | 2026-01-27 | Auth UI wiring | Admin/UI |
+| 031 | 2026-01-27 | Core HTTP server and admin bootstrap | Core/Platform |
+| 032 | 2026-01-27 | Auth advanced endpoints (CSRF/OTP/Reset) | Core/Auth |
 
 
 ---

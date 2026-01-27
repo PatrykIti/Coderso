@@ -12,6 +12,8 @@ Poza zakresem v1:
 - Po poprawnym loginie tworzymy session cookie (httpOnly).
 - UI pokazuje bledy walidacji pod polami i alert ogolny przy `auth_failed`.
 - Po sukcesie przekierowanie do `/admin`.
+- Admin UI weryfikuje sesje przez `GET /auth/me` (zwraca `user`).
+- CSRF token pobierany przez `GET /auth/csrf` i uzywany w mutacjach (`X-CSRF-Token`).
 
 ## Sessions
 
@@ -44,6 +46,7 @@ Poza zakresem v1:
 - Email poza zakresem v1.
 - UI: `/auth/reset` wysyla email, `/auth/reset/confirm` ustawia nowe haslo.
 - Bledy walidacji i nieprawidlowy token pokazywane w UI.
+ - Endpointy zwracaja `{ ok: true }` bez ujawniania czy email istnieje.
 
 ## MFA (v2)
 

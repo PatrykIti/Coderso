@@ -64,6 +64,13 @@
       "when": 1769515660026,
       "tag": "0008_plugins_registry",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1769546829798,
+      "tag": "0009_auth_reset_and_csrf",
+      "breakpoints": true
     }
   ]
 }

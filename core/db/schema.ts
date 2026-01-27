@@ -53,6 +53,7 @@ export const sessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     tokenHash: text("token_hash").notNull(),
+    csrfTokenHash: text("csrf_token_hash"),
     ip: text("ip"),
     userAgent: text("user_agent"),
     expiresAt: timestamp("expires_at").notNull(),
@@ -62,6 +63,30 @@ export const sessions = pgTable(
   (t) => ({
     tokenHashIdx: uniqueIndex("sessions_token_hash_idx").on(t.tokenHash),
     expiresAtIdx: index("sessions_expires_at_idx").on(t.expiresAt),
+    csrfTokenHashIdx: index("sessions_csrf_token_hash_idx").on(
+      t.csrfTokenHash
+    ),
+  })
+);
+
+export const passwordResets = pgTable(
+  "password_resets",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    tokenHashIdx: uniqueIndex("password_resets_token_hash_idx").on(
+      t.tokenHash
+    ),
+    expiresAtIdx: index("password_resets_expires_at_idx").on(t.expiresAt),
   })
 );
 
