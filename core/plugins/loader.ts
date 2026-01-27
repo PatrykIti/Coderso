@@ -221,7 +221,7 @@ export function registerPluginAssetRoutes(
   options?: { runtimeDir?: string; cacheSeconds?: number }
 ) {
   router.static(
-    \"/plugins/:name/:version/*\",
+    "/plugins/:name/:version/*",
     createPluginAssetHandler(options)
   );
 }

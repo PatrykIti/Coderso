@@ -34,13 +34,14 @@
     "postgres": "^3.4.8",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "semver": "^7.7.2",
+    "semver": "^7.7.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "@types/bun": "^1.3.6",
+    "@types/semver": "^7.5.10",
     "@vitejs/plugin-react": "^5.1.2",
     "drizzle-kit": "^0.31.8",
     "tailwindcss": "^4.1.18",
