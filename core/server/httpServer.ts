@@ -131,6 +131,9 @@ const redirectToDev = (req: Request, devUrl: string) => {
 
 const handleAdmin = async (req: Request, devUrl?: string) => {
   const url = new URL(req.url);
+  if (url.pathname === "/admin") {
+    return Response.redirect("/admin/", 307);
+  }
 
   if (devUrl) return redirectToDev(req, devUrl);
 

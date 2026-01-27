@@ -36,7 +36,7 @@ export function LoginPage({ initialEmail = "", initialError = "" }: LoginPagePro
     try {
       await login({ email, password });
       if (typeof window !== "undefined") {
-        window.location.assign("/admin");
+        window.location.assign("/admin/");
       }
     } catch (err) {
       if (isApiClientError(err)) {

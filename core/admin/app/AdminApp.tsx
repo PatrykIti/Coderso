@@ -149,7 +149,7 @@ export function AdminApp({ path }: AdminAppProps) {
       window.location.assign("/admin/login");
     }
     if (authState === "authenticated" && isPublic) {
-      window.location.assign("/admin");
+      window.location.assign("/admin/");
     }
   }, [authState, isProtected, isPublic]);
 
