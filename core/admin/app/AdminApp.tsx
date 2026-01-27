@@ -153,7 +153,7 @@ export function AdminApp({ path }: AdminAppProps) {
     }
   }, [authState, isProtected, isPublic]);
 
-  if (isProtected && authState === "checking") {
+  if (isProtected && authState !== "authenticated") {
     return <Loading />;
   }
 
