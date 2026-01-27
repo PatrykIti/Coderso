@@ -5,12 +5,19 @@ import { cn } from "@/lib/utils";
 
 type TopBarProps = {
   breadcrumbs?: React.ReactNode;
+  search?: React.ReactNode;
   actions?: React.ReactNode;
   user?: React.ReactNode;
   className?: string;
 };
 
-export function TopBar({ breadcrumbs, actions, user, className }: TopBarProps) {
+export function TopBar({
+  breadcrumbs,
+  search,
+  actions,
+  user,
+  className,
+}: TopBarProps) {
   return (
     <header
       className={cn(
@@ -27,6 +34,7 @@ export function TopBar({ breadcrumbs, actions, user, className }: TopBarProps) {
           </div>
         )}
       </div>
+      <div className="flex flex-1 justify-center px-6">{search}</div>
       <div className="flex items-center gap-2">
         {actions}
         <Button variant="ghost" size="icon">

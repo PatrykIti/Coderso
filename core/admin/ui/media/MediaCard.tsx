@@ -3,11 +3,13 @@ import { FileAudio, FileText, Image as ImageIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+import type { MediaItem } from "./types";
+import { formatBytes } from "./utils";
+
 type MediaCardProps = {
-  name: string;
-  size: string;
-  type: "image" | "document" | "audio";
+  item: MediaItem;
   selected?: boolean;
+  onSelect?: (id: string) => void;
 };
 
 const typeIconMap = {
@@ -16,10 +18,14 @@ const typeIconMap = {
   audio: FileAudio,
 };
 
-export function MediaCard({ name, size, type, selected }: MediaCardProps) {
-  const Icon = typeIconMap[type];
+export function MediaCard({ item, selected, onSelect }: MediaCardProps) {
+  const Icon = typeIconMap[item.type];
   return (
-    <div className="group flex flex-col gap-2">
+    <button
+      type="button"
+      className="group flex flex-col gap-2 text-left"
+      onClick={() => onSelect?.(item.id)}
+    >
       <div
         className={cn(
           "relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl border bg-muted/30",
@@ -34,14 +40,14 @@ export function MediaCard({ name, size, type, selected }: MediaCardProps) {
         ) : null}
       </div>
       <div className="space-y-1 px-1">
-        <p className="truncate text-sm font-medium">{name}</p>
+        <p className="truncate text-sm font-medium">{item.name}</p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{size}</span>
+          <span>{formatBytes(item.sizeBytes)}</span>
           <Badge variant="outline" className="text-[10px]">
-            {type}
+            {item.type}
           </Badge>
         </div>
       </div>
-    </div>
+    </button>
   );
 }

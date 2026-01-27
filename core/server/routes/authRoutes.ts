@@ -8,6 +8,7 @@ import {
 } from "../../services/auth/sessionService";
 import { getUserByEmail, updateLastLogin } from "../../services/auth/userService";
 import { verifyPassword } from "../../services/auth/password";
+import { logAudit } from "../../services/audit/auditService";
 import { authLoginSchema } from "../validation/authSchemas";
 
 export type AuthRouteDeps = {
@@ -61,6 +62,15 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
     );
 
     await updateLastLogin(user.id);
+    await logAudit({
+      actorId: user.id,
+      action: "auth.login",
+      targetType: "user",
+      targetId: user.id,
+      metadata: { email: user.email },
+      ip: ctx.ip,
+      userAgent: ctx.userAgent,
+    });
 
     return {
       user: toPublicUser(user),
@@ -74,6 +84,16 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       await revokeSessionByToken(token);
     }
     ctx.clearCookie?.(SESSION_COOKIE_NAME);
+    if (ctx.user?.id) {
+      await logAudit({
+        actorId: ctx.user.id,
+        action: "auth.logout",
+        targetType: "user",
+        targetId: ctx.user.id,
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+      });
+    }
     return { ok: true };
   });
 

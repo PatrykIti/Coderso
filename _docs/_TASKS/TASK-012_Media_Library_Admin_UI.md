@@ -5,7 +5,7 @@
 **Category:** CMS/Media
 **Estimated Effort:** Medium
 **Dependencies:** TASK-005, TASK-024, TASK-006-03
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 
@@ -24,13 +24,15 @@ Build the media library UI for uploads, browsing, and metadata edits.
 
 ```
 core/admin/ui/media/
-  MediaLibrary.tsx
+  MediaLibraryPage.tsx
   MediaGrid.tsx
-  MediaDetail.tsx
+  MediaDetailsPanel.tsx
   UploadDropzone.tsx
 
 tests/unit/mediaUi/
   mediaLibrary.test.tsx
+tests/integration/ui/
+  media.test.tsx
 ```
 
 ## Commands (if needed)
@@ -43,7 +45,7 @@ No new dependencies.
 
 ### TASK-012-01_Media_list_and_upload_UI
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Drag and drop upload.
 - Filter by type (image, pdf, other).
@@ -62,7 +64,7 @@ await fetch("/admin/api/media", { method: "POST", body: form });
 
 | File | What to Add |
 | --- | --- |
-| `core/admin/ui/media/MediaLibrary.tsx` | list + upload |
+| `core/admin/ui/media/MediaLibraryPage.tsx` | list + upload |
 | `core/admin/ui/media/UploadDropzone.tsx` | drag and drop |
 
 Upload sketch:
@@ -89,7 +91,7 @@ async function uploadFiles(files: File[]) {
 
 ### TASK-012-02_Media_detail_and_metadata
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Edit title, alt, caption.
 - Copy URL.
@@ -100,7 +102,7 @@ async function uploadFiles(files: File[]) {
 
 | File | What to Add |
 | --- | --- |
-| `core/admin/ui/media/MediaDetail.tsx` | metadata editor |
+| `core/admin/ui/media/MediaDetailsPanel.tsx` | metadata editor |
 | `core/admin/ui/media/MediaGrid.tsx` | grid + select |
 
 Metadata sketch:
@@ -140,9 +142,9 @@ await fetch(`/admin/api/media/${id}`, {
 
 ## New Files to Create
 
-- `core/admin/ui/media/MediaLibrary.tsx`
+- `core/admin/ui/media/MediaLibraryPage.tsx`
 - `core/admin/ui/media/MediaGrid.tsx`
-- `core/admin/ui/media/MediaDetail.tsx`
+- `core/admin/ui/media/MediaDetailsPanel.tsx`
 - `core/admin/ui/media/UploadDropzone.tsx`
 - `tests/unit/mediaUi/mediaLibrary.test.tsx`
 - `tests/integration/ui/media.test.tsx`

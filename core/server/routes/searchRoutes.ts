@@ -1,0 +1,39 @@
+import { searchAll } from "../../services/search/searchService";
+
+export type RouteContext = {
+  params: Record<string, string>;
+  query: Record<string, string | undefined>;
+  body: unknown;
+  user?: { id: string };
+};
+
+export type RouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
+
+export type Router = {
+  get: (path: string, ...handlers: RouteHandler[]) => void;
+  post: (path: string, ...handlers: RouteHandler[]) => void;
+  patch: (path: string, ...handlers: RouteHandler[]) => void;
+  delete: (path: string, ...handlers: RouteHandler[]) => void;
+};
+
+export type SearchRouteDeps = {
+  requirePermission: (permission: string) => RouteHandler;
+};
+
+function parseLimit(input: string | undefined) {
+  if (!input) return undefined;
+  const value = Number(input);
+  if (!Number.isFinite(value)) return undefined;
+  return value;
+}
+
+export function registerSearchRoutes(router: Router, deps: SearchRouteDeps) {
+  const { requirePermission } = deps;
+
+  router.get("/search", requirePermission("content:read"), async (ctx) => {
+    const query = ctx.query.q ?? "";
+    const limit = parseLimit(ctx.query.limit);
+    const items = await searchAll(query, { limit });
+    return { items };
+  });
+}

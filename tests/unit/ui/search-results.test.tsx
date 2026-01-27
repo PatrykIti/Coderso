@@ -1,0 +1,23 @@
+import { expect, test } from "bun:test";
+import { renderToString } from "react-dom/server";
+
+import {
+  SearchResults,
+  groupResults,
+  type SearchItem,
+} from "../../../core/admin/ui/search/SearchResults";
+
+test("SearchResults highlights active item", () => {
+  const items: SearchItem[] = [
+    { id: "page-1", type: "page", title: "Homepage" },
+    { id: "entry-1", type: "entry", title: "Launch announcement" },
+  ];
+  const groups = groupResults(items);
+  const html = renderToString(
+    <SearchResults query="home" groups={groups} activeIndex={1} />
+  );
+
+  expect(html).toContain("Pages");
+  expect(html).toContain("Entries");
+  expect(html).toContain('data-active="true"');
+});

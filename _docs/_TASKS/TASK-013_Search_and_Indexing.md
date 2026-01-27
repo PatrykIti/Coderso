@@ -5,7 +5,7 @@
 **Category:** CMS/Search
 **Estimated Effort:** Medium
 **Dependencies:** TASK-002, TASK-003, TASK-005, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 
@@ -48,7 +48,7 @@ No new dependencies.
 
 ### TASK-013-01_DB_indexes_and_tsvector
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Add full-text indexes and trigram indexes.
 
@@ -81,7 +81,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 ### TASK-013-02_Search_service_and_endpoints
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Implement `GET /search?q=...` and `search` params on list endpoints.
 
@@ -129,7 +129,7 @@ router.get("/search", requirePermission("content:read"), async (req) => {
 
 ### TASK-013-03_Admin_UI_search
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Global search bar in admin layout.
 - Result grouping by type.

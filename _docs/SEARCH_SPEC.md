@@ -11,16 +11,34 @@ Zakres: wyszukiwanie w panelu admina.
 ## Implementacja
 
 - Postgres full-text (tsvector) dla pol tekstowych.
-- Trigram/ILIKE dla szybkiego wyszukiwania po tytule.
+- `plainto_tsquery('simple', q)` dla bezpiecznego parsowania zapytan.
+- Trigram (pg_trgm) dla szybkim dopasowan typu ILIKE.
 
-## Indeksy (przyklad)
+## Indeksy (v1)
 
-- `pages(title, slug)`
-- `content_entries(title)`
-- `media(title, alt)`
+- GIN tsvector: `pages(title + slug)`, `content_entries(title + slug)`, `media(title + alt + caption)`.
+- GIN trigram: `pages.title`, `pages.slug`, `content_entries.title`, `content_entries.slug`, `media.title`.
+
+## Query rules
+
+- Minimalna dlugosc zapytania: 2 znaki.
+- Limit domyslny: 20 (max 50).
+- Wyniki zwracane jako lista z polem `type`.
 
 ## API
 
-- `GET /search?q=...` (admin)
-- `GET /pages?search=...`
-- `GET /content/:type/entries?search=...`
+- `GET /search?q=...&limit=20` (admin)
+- `GET /pages?search=...` (planowane v1.1)
+- `GET /content/:type/entries?search=...` (planowane v1.1)
+
+Przykladowa odpowiedz:
+
+```json
+{
+  "items": [
+    { "id": "page-id", "type": "page", "title": "Homepage", "slug": "home" },
+    { "id": "entry-id", "type": "entry", "title": "Launch announcement", "slug": "launch" },
+    { "id": "media-id", "type": "media", "title": "Hero banner" }
+  ]
+}
+```

@@ -5,12 +5,14 @@ import {
   setSettings,
 } from "../../services/settings/settingsService";
 import { getResolvedTokens } from "../../services/theme/tokenService";
+import { logAudit } from "../../services/audit/auditService";
 import { settingsBulkSchema, settingsUpdateSchema } from "../validation/settingsSchemas";
 
 export type RouteContext = {
   params: Record<string, string>;
   query: Record<string, string | undefined>;
   body: unknown;
+  user?: { id: string };
 };
 
 export type RouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
@@ -55,6 +57,13 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
       validate(settingsUpdateSchema, ctx.body);
       const body = ctx.body as { value: unknown };
       const updated = await setSetting(ctx.params.key, body.value);
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "settings.update",
+        targetType: "settings",
+        targetId: ctx.params.key,
+        metadata: { keys: [ctx.params.key] },
+      });
       return updated;
     }
   );
@@ -64,8 +73,16 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     requirePermission("settings:write"),
     async (ctx) => {
       validate(settingsBulkSchema, ctx.body);
-      const updated = await setSettings(ctx.body as Record<string, unknown>);
+      const payload = ctx.body as Record<string, unknown>;
+      const updated = await setSettings(payload);
       const tokens = await getResolvedTokens();
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "settings.update",
+        targetType: "settings",
+        targetId: "bulk",
+        metadata: { keys: Object.keys(payload) },
+      });
       return { ...updated, "design.tokens": tokens };
     }
   );

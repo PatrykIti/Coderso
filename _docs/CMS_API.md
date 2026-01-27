@@ -88,6 +88,19 @@ Permissions: `media:read`, `media:write`
 - `PATCH /media/:id`
 - `DELETE /media/:id`
 
+Upload payload (multipart):
+
+- `file`: binary
+- `alt`: string (optional)
+- `title`: string (optional)
+- `caption`: string (optional)
+
+Update metadata payload:
+
+```json
+{ "title": "Hero Banner", "alt": "Mountain landscape", "caption": "Winter view" }
+```
+
 ---
 
 ## Menus
@@ -178,6 +191,52 @@ Preview response (example):
 {
   "previewToken": "token",
   "expiresAt": "2026-01-27T10:00:00Z"
+}
+```
+
+---
+
+## Search
+
+Permissions: `content:read`
+
+- `GET /search?q=...&limit=20`
+
+Response:
+
+```json
+{
+  "items": [
+    { "id": "page-id", "type": "page", "title": "Homepage", "slug": "home" },
+    { "id": "entry-id", "type": "entry", "title": "Launch announcement", "slug": "launch" },
+    { "id": "media-id", "type": "media", "title": "Hero banner" }
+  ]
+}
+```
+
+---
+
+## Audit logs
+
+Permissions: `audit:read`
+
+- `GET /audit?limit=100`
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "audit-id",
+      "actorId": "user-id",
+      "action": "pages.publish",
+      "targetType": "page",
+      "targetId": "page-id",
+      "metadata": { "slug": "home" },
+      "createdAt": "2026-01-27T10:00:00Z"
+    }
+  ]
 }
 ```
 

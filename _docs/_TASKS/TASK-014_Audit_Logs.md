@@ -5,7 +5,7 @@
 **Category:** CMS/Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-004, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 
@@ -45,7 +45,7 @@ No new dependencies.
 
 ### TASK-014-01_Audit_log_service
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Example:
 
@@ -101,7 +101,7 @@ function sanitizeMetadata(meta: Record<string, any>) {
 
 ### TASK-014-02_Hook_audit_into_core_actions
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Events (v1):
 - auth.login
@@ -124,7 +124,7 @@ Events (v1):
 
 ### TASK-014-03_Admin_API_and_UI
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - `GET /audit` endpoint (read-only).
 - Admin UI list with filters (action, date, user).

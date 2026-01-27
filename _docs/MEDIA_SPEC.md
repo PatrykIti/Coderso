@@ -41,6 +41,14 @@ Adapter interface (concept):
 - Dozwolone MIME types (whitelist: `MEDIA_ALLOWED_MIME`).
 - Metadane: alt, title, caption.
 
+## Admin UI behavior (v1)
+
+- Upload dropzone + manual browse.
+- Wyszukiwarka po nazwie i tytule.
+- Filtry: all, images, documents, audio.
+- Panel szczegolow: podglad meta, edycja title/alt/caption, copy link.
+- Delete asset wymaga potwierdzenia w UI (v1.1).
+
 ## Security
 
 - Uploady tylko przez admin API (auth + CSRF).

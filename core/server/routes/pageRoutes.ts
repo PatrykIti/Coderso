@@ -12,6 +12,7 @@ import {
   listRevisions,
   restoreRevision,
 } from "../../services/pages/revisionService";
+import { logAudit } from "../../services/audit/auditService";
 import {
   pageCreateSchema,
   pagePreviewSchema,
@@ -80,6 +81,13 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
       if (!ctx.user?.id) throw new Error("auth_required");
       const page = await publishPage(ctx.params.id, ctx.user.id);
       if (!page) throw new Error("page_not_found");
+      await logAudit({
+        actorId: ctx.user.id,
+        action: "pages.publish",
+        targetType: "page",
+        targetId: page.id,
+        metadata: { slug: page.slug },
+      });
       return { ok: true };
     }
   );
@@ -126,7 +134,14 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
     "/pages/:id/revisions/:revisionId/restore",
     requirePermission("content:write"),
     async (ctx) => {
-      await restoreRevision(ctx.params.revisionId);
+      const revision = await restoreRevision(ctx.params.revisionId);
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "pages.restore",
+        targetType: "page",
+        targetId: revision.pageId,
+        metadata: { revisionId: revision.id },
+      });
       return { ok: true };
     }
   );

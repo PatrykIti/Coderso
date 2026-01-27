@@ -46,6 +46,9 @@ Project Change Log.
 | 019 | 2026-01-26 | Users and roles UI | Admin/UI |
 | 020 | 2026-01-26 | Page builder UI | Admin/UI |
 | 021 | 2026-01-27 | Content types admin UI | Admin/UI |
+| 022 | 2026-01-27 | Media library admin UI | Admin/UI |
+| 023 | 2026-01-27 | Search and indexing | CMS/Search |
+| 024 | 2026-01-27 | Audit logs | CMS/Security |
 
 
 ---

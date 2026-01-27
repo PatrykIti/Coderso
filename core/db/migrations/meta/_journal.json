@@ -43,6 +43,20 @@
       "when": 1769425870647,
       "tag": "0005_nosy_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1769512754517,
+      "tag": "0006_search_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1769513648664,
+      "tag": "0007_audit_logs",
+      "breakpoints": true
     }
   ]
 }

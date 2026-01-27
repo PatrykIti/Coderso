@@ -6,6 +6,7 @@ import {
   LifeBuoy,
   List,
   Settings,
+  Shield,
   ShoppingBag,
   Store,
   Users,
@@ -44,6 +45,7 @@ export const defaultNavSections: NavSection[] = [
     title: "Admin",
     items: [
       { label: "Users", href: "/admin/users", icon: Users },
+      { label: "Audit Logs", href: "/admin/audit", icon: Shield },
       { label: "Settings", href: "/admin/settings", icon: Settings },
     ],
   },

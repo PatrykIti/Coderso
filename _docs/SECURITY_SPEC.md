@@ -38,7 +38,9 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 
 ## Audit logs (v1.0)
 
-- Logowanie zdarzen admin: login, publish, plugin install.
+- Logowanie zdarzen admin: login, publish, plugin install, settings update.
+- Metadata jest czyszczona z sekretow (token/password/secret).
+- `ip` i `userAgent` zapisywane w metadata jesli dostepne.
 
 ## Plugin security
 
