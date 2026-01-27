@@ -7,21 +7,84 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 
-export function UserDetailsDrawer() {
+import type { RoleSummary } from "../roles/types";
+import type { UserSummary } from "./types";
+
+export type UserDetailsDrawerProps = {
+  user?: UserSummary | null;
+  roles: RoleSummary[];
+  canManageUsers?: boolean;
+  onEditUser: () => void;
+  onResetPassword: () => void;
+};
+
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .filter(Boolean)
+    .map((chunk) => chunk[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+const getPermissionSummary = (user: UserSummary, roles: RoleSummary[]) => {
+  const roleMap = new Map(roles.map((role) => [role.id, role]));
+  const permissions = new Set<string>();
+  let hasFullAccess = false;
+
+  user.roleIds.forEach((roleId) => {
+    const role = roleMap.get(roleId);
+    if (!role) return;
+    if (role.permissions.includes("*")) {
+      hasFullAccess = true;
+      return;
+    }
+    role.permissions.forEach((permission) => permissions.add(permission));
+  });
+
+  return {
+    hasFullAccess,
+    count: hasFullAccess ? "Full access" : `${permissions.size} permissions`,
+    items: hasFullAccess
+      ? ["All admin capabilities"]
+      : Array.from(permissions).slice(0, 3),
+  };
+};
+
+export function UserDetailsDrawer({
+  user,
+  roles,
+  canManageUsers = true,
+  onEditUser,
+  onResetPassword,
+}: UserDetailsDrawerProps) {
+  if (!user) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center text-center text-sm text-muted-foreground">
+        <p className="text-base font-medium text-foreground">No user selected</p>
+        <p className="mt-1">Select a user to review permissions and activity.</p>
+      </div>
+    );
+  }
+
+  const roleMap = new Map(roles.map((role) => [role.id, role.name]));
+  const roleNames = user.roleIds.map((roleId) => roleMap.get(roleId) ?? roleId);
+  const permissionSummary = getPermissionSummary(user, roles);
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <Avatar size="lg">
-            <AvatarFallback>SJ</AvatarFallback>
+            <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="text-lg font-semibold">Sarah Jenks</h3>
-            <p className="text-xs text-muted-foreground">sarah@nextless.com</p>
+            <h3 className="text-lg font-semibold">{user.name}</h3>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
         </div>
         <Badge variant="outline" className="text-xs">
-          Admin
+          {roleNames[0] ?? "User"}
         </Badge>
       </div>
       <Separator className="my-4" />
@@ -31,7 +94,7 @@ export function UserDetailsDrawer() {
             <p className="text-xs font-semibold uppercase text-muted-foreground">
               Last active
             </p>
-            <p className="mt-1 text-sm font-medium">2 minutes ago</p>
+            <p className="mt-1 text-sm font-medium">{user.lastActive}</p>
           </div>
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium">
@@ -39,11 +102,13 @@ export function UserDetailsDrawer() {
               Permissions summary
             </div>
             <div className="rounded-lg border bg-background p-3">
-              <p className="text-xs text-muted-foreground">24 permissions</p>
+              <p className="text-xs text-muted-foreground">
+                {permissionSummary.count}
+              </p>
               <ul className="mt-2 space-y-1 text-sm">
-                <li>Manage users & roles</li>
-                <li>Edit content models</li>
-                <li>Publish pages</li>
+                {permissionSummary.items.map((permission) => (
+                  <li key={permission}>{permission}</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -78,7 +143,7 @@ export function UserDetailsDrawer() {
             </div>
             <div className="rounded-lg border bg-muted/30 p-3">
               <p className="text-xs text-muted-foreground">
-                Two-factor authentication is enabled.
+                Two-factor authentication {user.mfaEnabled ? "enabled" : "disabled"}.
               </p>
             </div>
           </div>
@@ -86,8 +151,15 @@ export function UserDetailsDrawer() {
       </ScrollArea>
       <Separator className="my-4" />
       <div className="space-y-2">
-        <Button className="w-full">Edit permissions</Button>
-        <Button variant="outline" className="w-full">
+        <Button className="w-full" onClick={onEditUser} disabled={!canManageUsers}>
+          Edit permissions
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={onResetPassword}
+          disabled={!canManageUsers}
+        >
           Reset password
         </Button>
       </div>

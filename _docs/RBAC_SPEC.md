@@ -67,6 +67,10 @@ Notes:
 - Users/Roles: users:read/write + roles:read/write
 - Audit: audit:read
 
+UI behavior:
+- Widoki Users/Roles wylaczaja akcje edycji bez `users:write` lub `roles:write`.
+- Ostatni admin nie moze zostac usuniety ani pozbawiony roli admin.
+
 ## Enforcement
 
 - Middleware `auth` sprawdza session.

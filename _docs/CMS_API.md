@@ -51,6 +51,50 @@ Payload login:
 
 ---
 
+## Users
+
+Permissions: `users:read`, `users:write`
+
+- `GET /users`
+- `POST /users`
+- `PATCH /users/:id`
+- `DELETE /users/:id`
+- `POST /users/:id/reset-password`
+
+Create user payload (summary):
+
+```json
+{
+  "name": "Alex Morgan",
+  "email": "alex@example.com",
+  "roleIds": ["editor"],
+  "status": "pending"
+}
+```
+
+---
+
+## Roles
+
+Permissions: `roles:read`, `roles:write`
+
+- `GET /roles`
+- `POST /roles`
+- `PATCH /roles/:id`
+- `DELETE /roles/:id`
+
+Create role payload (summary):
+
+```json
+{
+  "name": "editor",
+  "description": "Content editors",
+  "permissions": ["content:read", "content:write", "media:read"]
+}
+```
+
+---
+
 ## Pages
 
 Permissions: `content:read`, `content:write`, `content:publish`

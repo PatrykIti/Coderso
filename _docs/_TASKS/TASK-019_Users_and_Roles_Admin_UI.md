@@ -5,7 +5,7 @@
 **Category:** CMS/Auth
 **Estimated Effort:** Medium
 **Dependencies:** TASK-004, TASK-024, TASK-006-13
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 

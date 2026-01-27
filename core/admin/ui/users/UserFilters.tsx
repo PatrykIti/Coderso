@@ -10,7 +10,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function UserFilters() {
+import type { RoleSummary } from "../roles/types";
+
+export type UserFiltersProps = {
+  query: string;
+  roleFilter: string;
+  statusFilter: string;
+  roles: RoleSummary[];
+  onQueryChange: (value: string) => void;
+  onRoleChange: (value: string) => void;
+  onStatusChange: (value: string) => void;
+};
+
+export function UserFilters({
+  query,
+  roleFilter,
+  statusFilter,
+  roles,
+  onQueryChange,
+  onRoleChange,
+  onStatusChange,
+}: UserFiltersProps) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
       <div className="relative w-full lg:max-w-md">
@@ -18,23 +38,26 @@ export function UserFilters() {
         <Input
           placeholder="Search users by name or email..."
           className="pl-9"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
         />
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <Select defaultValue="all">
+        <Select value={roleFilter} onValueChange={onRoleChange}>
           <SelectTrigger className="h-8 w-[160px]">
             <ShieldCheck className="h-3 w-3 text-muted-foreground" />
             <SelectValue placeholder="Role" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All roles</SelectItem>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="editor">Editor</SelectItem>
-            <SelectItem value="viewer">Viewer</SelectItem>
-            <SelectItem value="api">API Access</SelectItem>
+            {roles.map((role) => (
+              <SelectItem key={role.id} value={role.id}>
+                {role.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <Select defaultValue="any">
+        <Select value={statusFilter} onValueChange={onStatusChange}>
           <SelectTrigger className="h-8 w-[150px]">
             <User className="h-3 w-3 text-muted-foreground" />
             <SelectValue placeholder="Status" />

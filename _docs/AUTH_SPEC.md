@@ -28,6 +28,14 @@ Poza zakresem v1:
 - Permissions jako lista stringow w `roles.permissions`.
 - Middleware sprawdza access per route.
 
+## Admin UI (v1)
+
+- Zarzadzanie uzytkownikami i rolami w panelu `/admin/users`.
+- Operacje mutujace wymagaja `users:write` i `roles:write`.
+- UI blokuje usuniecie ostatniego admina.
+- Ostatni admin nie moze utracic roli admin do czasu utworzenia kolejnego.
+- Uzytkownicy zapraszani startuja ze statusem `pending`.
+
 ## Password reset (v1.1)
 
 - Token resetu w DB z TTL.
