@@ -322,7 +322,7 @@ Algorytm:
 
 Zasady:
 - Instalacja nie przebudowuje core.
-- W razie bledu -> cleanup i status "failed".
+- W razie bledu -> cleanup i status "error".
 
 ---
 
@@ -333,6 +333,9 @@ Zachowanie:
 - ESM cache utrzymuje moduly per wersja.
 - Zmiana wersji = zmiana sciezki -> nowy import.
 - Disable = usuniecie z registry (hooki nie sa wywolywane).
+- Safe mode (`PLUGINS_SAFE_MODE=1`) uruchamia core bez pluginow.
+- Auto-disable po przekroczeniu progu bledow (default: 3, `PLUGIN_ERROR_THRESHOLD`).
+- Licznik bledow i `last_error` przechowywane w registry.
 
 Kontrakt pluginu (server):
 - eksport `default function register(ctx)`.
@@ -442,6 +445,8 @@ Cel:
 - Cache-Control dla assetow statycznych (long cache).
 - Plugin powinien generowac URL przez `ctx.assets.getUrl("...")` zamiast
   hardcode sciezek.
+- Dla pracy po stronie servera: `ctx.assets.getPublicPath("...")` zwraca
+  bezpieczna sciezke do assetu.
 
 ---
 
@@ -492,7 +497,7 @@ Tabela `plugins` (przykladowa):
 - version
 - apiVersion
 - enabled
-- status (installed|enabled|disabled|failed)
+- status (installed|disabled|error)
 - permissions (json)
 - entry (json)
 - integrity (json)
@@ -500,18 +505,23 @@ Tabela `plugins` (przykladowa):
 - installedAt
 - updatedAt
 - lastError
+- errorCount
 
 Tabela `plugin_settings`:
 - pluginName
 - key
 - value
+- updatedAt
 
 ---
 
 ## Konfiguracja (env)
 
 Przykladowe zmienne:
-- PLUGINS_DIR=/plugins-runtime
+- PLUGINS_RUNTIME_DIR=/plugins-runtime
+- PLUGINS_SAFE_MODE=1
+- PLUGIN_ERROR_THRESHOLD=3
+- PLUGIN_TIMEOUT_MS=5000
 - STORE_BASE_URL=https://store.example.com
 - STORE_PUBLIC_KEY=...
 - PLUGIN_MAX_SIZE_MB=50
@@ -529,7 +539,7 @@ Wymagane:
 - logi instalacji (download, verify, unpack, load).
 - logi update/rollback (version switch, failure reason).
 - logi bledow pluginow z wersja i nazwa.
-- metryki: czas instalacji, czas load, liczba failed.
+- metryki: czas instalacji, czas load, liczba error.
 
 ---
 

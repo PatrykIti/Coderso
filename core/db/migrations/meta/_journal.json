@@ -57,6 +57,13 @@
       "when": 1769513648664,
       "tag": "0007_audit_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1769515660026,
+      "tag": "0008_plugins_registry",
+      "breakpoints": true
     }
   ]
 }

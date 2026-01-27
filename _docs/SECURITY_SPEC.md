@@ -50,6 +50,9 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 ## Operational safety
 
 - Safe mode uruchamia core bez pluginow, aby odzyskac panel admina.
+  - Env: `PLUGINS_SAFE_MODE=1`.
 - Error boundaries w admin UI izoluje bledy pluginow.
 - Auto-disable pluginu po przekroczeniu progu bledow (configurable).
+  - Env: `PLUGIN_ERROR_THRESHOLD` (domyslnie 3).
 - Watchdog/timeouts dla hookow i renderowania server-side.
+  - Env: `PLUGIN_TIMEOUT_MS` (domyslnie 5000ms).

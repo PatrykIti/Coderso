@@ -49,6 +49,7 @@ Project Change Log.
 | 022 | 2026-01-27 | Media library admin UI | Admin/UI |
 | 023 | 2026-01-27 | Search and indexing | CMS/Search |
 | 024 | 2026-01-27 | Audit logs | CMS/Security |
+| 025 | 2026-01-27 | Plugin runtime loader and registry | Core/Plugins |
 
 
 ---

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 17 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 0
-- **Done:** 22 tasks
+- **Done:** 23 tasks
 
 ---
 
@@ -44,7 +44,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
-| TASK-015 | Plugin Runtime Loader and Registry | High | Large | Runtime load + safe mode |
 | TASK-016 | SDK Package and Plugin API | High | Large | @core/sdk package |
 | TASK-017 | Store Client and Update Policy | High | Large | Signatures + updates |
 | TASK-018 | Plugin Store Admin UI (Functional) | Medium | Medium | Store browse + install |
@@ -90,3 +89,4 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-012 | Media Library Admin UI (Functional) | Medium | Medium | Uploads + metadata UI |
 | TASK-013 | Search and Indexing | Medium | Medium | Admin search + DB indexes |
 | TASK-014 | Audit Logs | Medium | Medium | Audit events + UI |
+| TASK-015 | Plugin Runtime Loader and Registry | High | Large | Runtime load + safe mode |

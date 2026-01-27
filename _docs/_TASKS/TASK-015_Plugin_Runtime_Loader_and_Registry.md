@@ -5,7 +5,7 @@
 **Category:** Core/Plugins
 **Estimated Effort:** Large
 **Dependencies:** TASK-001, TASK-004, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 
@@ -57,7 +57,7 @@ bun add semver
 
 ### TASK-015-01_Plugin_registry_service
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Registry keeps install state, enabled flag, version, last error, and
 permissions.
@@ -122,7 +122,7 @@ export async function listPlugins() {
 
 ### TASK-015-02_Plugin_settings_storage
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Backed by `plugin_settings` table.
 - Scoped by plugin name.
@@ -150,7 +150,7 @@ async function setPluginSetting(pluginName: string, key: string, value: unknown)
 
 ### TASK-015-03_Runtime_loader_server
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Rules:
 - Load ESM from `plugins-runtime/<name>/<version>/dist/server.mjs`.
@@ -194,7 +194,7 @@ export function isCompatible(meta) {
 
 ### TASK-015-04_Assets_mapping
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Expose plugin public assets under:
 `/plugins/<name>/<version>/...`.
@@ -220,7 +220,7 @@ if (path.includes("..")) return new Response("Invalid path", { status: 400 });
 
 ### TASK-015-05_Safe_mode_and_error_handling
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Safe mode disables all plugins (env or setting).
 - Error guard for hooks/routes; log and continue.
@@ -268,7 +268,7 @@ export async function loadAllPlugins() {
 
 ### TASK-015-06_Admin_UI_error_boundaries
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Wrap plugin UI with error boundaries and show fallback when a plugin
 throws in admin UI.

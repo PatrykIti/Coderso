@@ -206,9 +206,9 @@ export interface PermissionsAPI {
 
 ```ts
 export interface SettingsAPI {
-  get(key: string): string | null;
-  set(key: string, value: string): void;
-  delete(key: string): void;
+  get(key: string): Promise<unknown>;
+  set(key: string, value: unknown): Promise<void>;
+  delete(key: string): Promise<void>;
 }
 ```
 
@@ -216,9 +216,9 @@ export interface SettingsAPI {
 
 ```ts
 export interface StorageAPI {
-  get(key: string): string | null;
-  set(key: string, value: string): void;
-  delete(key: string): void;
+  get(key: string): Promise<unknown>;
+  set(key: string, value: unknown): Promise<void>;
+  delete(key: string): Promise<void>;
 }
 ```
 

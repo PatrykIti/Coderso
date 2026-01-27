@@ -5,6 +5,7 @@ import {
   timestamp,
   jsonb,
   integer,
+  boolean,
   primaryKey,
   uniqueIndex,
   index,
@@ -120,6 +121,45 @@ export const settings = pgTable("settings", {
   value: jsonb("value").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const plugins = pgTable(
+  "plugins",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull().unique(),
+    version: text("version").notNull(),
+    apiVersion: text("api_version").notNull(),
+    coreVersion: text("core_version").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    status: text("status").notNull().default("installed"),
+    permissions: jsonb("permissions").notNull(),
+    entry: jsonb("entry").notNull(),
+    integrity: jsonb("integrity").notNull(),
+    signature: text("signature"),
+    installedAt: timestamp("installed_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    lastError: text("last_error"),
+    errorCount: integer("error_count").notNull().default(0),
+  },
+  (t) => ({
+    statusIdx: index("plugins_status_idx").on(t.status),
+  })
+);
+
+export const pluginSettings = pgTable(
+  "plugin_settings",
+  {
+    pluginName: text("plugin_name")
+      .notNull()
+      .references(() => plugins.name, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    value: jsonb("value").notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    pk: primaryKey(t.pluginName, t.key),
+  })
+);
 
 export const auditLogs = pgTable(
   "audit_logs",

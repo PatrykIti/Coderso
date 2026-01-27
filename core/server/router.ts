@@ -35,6 +35,7 @@ export type Router = {
   patch: (path: string, ...handlers: RouteHandler[]) => void;
   put: (path: string, ...handlers: RouteHandler[]) => void;
   delete: (path: string, ...handlers: RouteHandler[]) => void;
+  static: (path: string, ...handlers: RouteHandler[]) => void;
 };
 
 export function createRouter(): Router {
@@ -52,5 +53,6 @@ export function createRouter(): Router {
     patch: add("PATCH"),
     put: add("PUT"),
     delete: add("DELETE"),
+    static: add("GET"),
   };
 }

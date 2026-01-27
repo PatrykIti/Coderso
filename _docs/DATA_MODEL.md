@@ -201,11 +201,13 @@ Zasady:
 - installed_at
 - updated_at
 - last_error
+- error_count
 
 `plugin_settings`
 - plugin_name
 - key
 - value
+- updated_at
 
 ## Optional (v1.1+)
 
