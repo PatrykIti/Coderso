@@ -124,17 +124,20 @@ const resolveAdminFile = (pathname: string) => {
   return filePath;
 };
 
-const proxyToVite = async (req: Request, devUrl: string) => {
+const redirectToDev = (req: Request, devUrl: string) => {
   const url = new URL(req.url);
   const target = new URL(url.pathname + url.search, devUrl);
-  const proxyRequest = new Request(target, req);
-  return fetch(proxyRequest);
+  return Response.redirect(target.toString(), 307);
 };
 
 const handleAdmin = async (req: Request, devUrl?: string) => {
-  if (devUrl) return proxyToVite(req, devUrl);
-
   const url = new URL(req.url);
+  if (url.pathname === "/admin") {
+    return Response.redirect("/admin/", 307);
+  }
+
+  if (devUrl) return redirectToDev(req, devUrl);
+
   if (isAdminAsset(url.pathname)) {
     const filePath = resolveAdminFile(url.pathname);
     if (!filePath) return new Response("Forbidden", { status: 403 });
