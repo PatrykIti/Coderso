@@ -52,6 +52,7 @@ Project Change Log.
 | 025 | 2026-01-27 | Plugin runtime loader and registry | Core/Plugins |
 | 026 | 2026-01-27 | SDK package and plugin API | Core/SDK |
 | 027 | 2026-01-27 | Store client and update policy | Core/Store |
+| 028 | 2026-01-27 | Plugin store admin UI | Admin/UI |
 
 
 ---

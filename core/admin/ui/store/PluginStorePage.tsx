@@ -1,126 +1,208 @@
-import {
-  BarChart3,
-  Globe,
-  Palette,
-  Rocket,
-  Shield,
-  Sparkles,
-} from "lucide-react";
+import { useMemo, useState } from "react";
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
-import { PluginCard } from "./PluginCard";
-import { PluginFilters } from "./PluginFilters";
-import type { PluginSummary } from "./types";
+import { PluginDetail } from "../plugins/PluginDetail";
+import { PluginList } from "../plugins/PluginList";
+import type { InstalledPlugin, UpdatePolicy } from "../plugins/types";
+import { StoreDetail } from "./StoreDetail";
+import { StoreList } from "./StoreList";
+import type { StoreCatalogItem } from "./types";
 
-const plugins: PluginSummary[] = [
+const catalog: StoreCatalogItem[] = [
   {
-    id: "seo-optimizer",
-    name: "SEO Optimizer Pro",
-    description:
-      "Automatically generate meta tags, sitemaps, and optimize content for search engines.",
-    version: "2.4.0",
+    id: "seo-boost",
+    name: "SEO Boost",
+    description: "Improve metadata, sitemaps, and on-page SEO scoring.",
     status: "verified",
-    icon: <Rocket className="h-6 w-6" />,
     tags: ["seo", "automation"],
     securityScore: 96,
-    lastUpdated: "Jan 20, 2026",
+    lastUpdated: "Jan 22, 2026",
     downloads: "32k installs",
-    changelog: [
-      "v2.4.0 Added sitemap batching and faster crawl reports.",
-      "v2.3.2 Updated CVE dependency scanners.",
+    latestVersion: "2.4.0",
+    installedVersion: "2.3.2",
+    permissions: ["content:read", "content:write"],
+    versions: [
+      { version: "2.4.0", releaseType: "security", compatible: true },
+      { version: "2.3.2", releaseType: "normal", compatible: true },
     ],
   },
   {
     id: "analytics",
     name: "Nextless Analytics",
-    description:
-      "Privacy-focused analytics dashboard integrated directly into your CMS.",
-    version: "3.1.2",
+    description: "Privacy-focused analytics dashboard inside the CMS.",
     status: "official",
-    installed: true,
-    icon: <BarChart3 className="h-6 w-6" />,
-    tags: ["analytics", "first-party"],
+    tags: ["analytics", "insights"],
     securityScore: 99,
     lastUpdated: "Jan 18, 2026",
     downloads: "120k installs",
-    changelog: [
-      "v3.1.2 Added realtime goals view.",
-      "v3.1.0 Improved bot filtering logic.",
+    latestVersion: "3.1.2",
+    installedVersion: "3.1.2",
+    permissions: ["admin:ui", "content:read"],
+    versions: [
+      { version: "3.1.2", releaseType: "security", compatible: true },
+      { version: "3.1.0", releaseType: "normal", compatible: true },
     ],
   },
   {
     id: "localizer",
     name: "Polyglot Localizer",
-    description:
-      "AI-powered translation for all your content types. Supports 50+ languages.",
-    version: "1.0.5",
-    status: "verified",
-    icon: <Globe className="h-6 w-6" />,
-    tags: ["i18n", "translations"],
-    securityScore: 92,
-    lastUpdated: "Jan 12, 2026",
-    downloads: "8.7k installs",
-    changelog: [
-      "v1.0.5 Added glossary lock for brand terms.",
-      "v1.0.3 Added Polish and Czech translation packs.",
-    ],
-  },
-  {
-    id: "security-center",
-    name: "Security Center",
-    description:
-      "Monitor access attempts, auto-lock suspicious sessions, and track CVEs.",
-    version: "2.0.1",
-    status: "official",
-    icon: <Shield className="h-6 w-6" />,
-    tags: ["security", "monitoring"],
-    securityScore: 98,
-    lastUpdated: "Jan 22, 2026",
-    downloads: "47k installs",
-    changelog: [
-      "v2.0.1 Added IP allowlist import.",
-      "v2.0.0 Introduced automated session lockouts.",
-    ],
-  },
-  {
-    id: "brand-kit",
-    name: "Brand Kit",
-    description:
-      "Sync design tokens across teams and export theme presets for clients.",
-    version: "0.9.4",
+    description: "Translate content types across 50+ languages.",
     status: "community",
-    icon: <Palette className="h-6 w-6" />,
-    tags: ["design", "themes"],
-    securityScore: 90,
-    lastUpdated: "Jan 9, 2026",
-    downloads: "5.2k installs",
-    changelog: [
-      "v0.9.4 Added token diff view.",
-      "v0.9.0 New export pipeline for Figma.",
-    ],
-  },
-  {
-    id: "ai-content",
-    name: "Aurora AI Writer",
-    description:
-      "Generate drafts, rewrite headlines, and suggest content improvements.",
-    version: "1.6.0",
-    status: "community",
-    icon: <Sparkles className="h-6 w-6" />,
-    tags: ["ai", "assistant"],
+    tags: ["i18n", "ai"],
     securityScore: 88,
-    lastUpdated: "Jan 14, 2026",
-    downloads: "11k installs",
-    changelog: [
-      "v1.6.0 Added tone presets per content type.",
-      "v1.5.2 Added Czech language prompts.",
+    lastUpdated: "Jan 10, 2026",
+    downloads: "8.7k installs",
+    latestVersion: "1.0.5",
+    permissions: ["content:read", "content:write"],
+    versions: [
+      { version: "1.0.5", releaseType: "normal", compatible: true },
+      { version: "1.0.4", releaseType: "normal", compatible: true },
     ],
   },
 ];
 
+const installedSeed: InstalledPlugin[] = [
+  {
+    name: "SEO Boost",
+    version: "2.3.2",
+    status: "enabled",
+    enabled: true,
+    policy: "auto-security",
+    lastUpdated: "Jan 15, 2026",
+    updateAvailable: "2.4.0",
+    permissions: ["content:read", "content:write"],
+  },
+  {
+    name: "Nextless Analytics",
+    version: "3.1.2",
+    status: "enabled",
+    enabled: true,
+    policy: "manual",
+    lastUpdated: "Jan 18, 2026",
+    permissions: ["admin:ui", "content:read"],
+  },
+];
+
 export function PluginStorePage() {
+  const [query, setQuery] = useState("");
+  const [storeItems, setStoreItems] = useState(catalog);
+  const [selectedStoreId, setSelectedStoreId] = useState(storeItems[0]?.id ?? "");
+  const [selectedVersion, setSelectedVersion] = useState(
+    storeItems[0]?.versions[0]?.version ?? ""
+  );
+  const [installedPlugins, setInstalledPlugins] = useState(installedSeed);
+  const [selectedInstalled, setSelectedInstalled] = useState(installedSeed[0]?.name ?? "");
+
+  const selectedStore = storeItems.find((item) => item.id === selectedStoreId);
+  const selectedInstalledPlugin = installedPlugins.find(
+    (plugin) => plugin.name === selectedInstalled
+  );
+
+  const storeSelection = useMemo(() => {
+    if (!selectedStore) return { plugin: undefined, version: "" };
+    const defaultVersion = selectedStore.versions[0]?.version ?? "";
+    return {
+      plugin: selectedStore,
+      version: selectedVersion || defaultVersion,
+    };
+  }, [selectedStore, selectedVersion]);
+
+  const handleSelectStore = (id: string) => {
+    setSelectedStoreId(id);
+    const next = storeItems.find((item) => item.id === id);
+    setSelectedVersion(next?.versions[0]?.version ?? "");
+  };
+
+  const handleInstall = (version: string) => {
+    if (!selectedStore) return;
+
+    setInstalledPlugins((prev) => {
+      const existing = prev.find((item) => item.name === selectedStore.name);
+      if (existing) {
+        return prev.map((item) =>
+          item.name === selectedStore.name
+            ? {
+                ...item,
+                version,
+                status: "enabled",
+                enabled: true,
+                lastUpdated: "Today",
+                updateAvailable: undefined,
+              }
+            : item
+        );
+      }
+
+      return [
+        ...prev,
+        {
+          name: selectedStore.name,
+          version,
+          status: "enabled",
+          enabled: true,
+          policy: "auto-security",
+          lastUpdated: "Today",
+          permissions: selectedStore.permissions,
+        },
+      ];
+    });
+
+    setStoreItems((prev) =>
+      prev.map((item) =>
+        item.id === selectedStore.id
+          ? { ...item, installedVersion: version }
+          : item
+      )
+    );
+    setSelectedInstalled(selectedStore.name);
+  };
+
+  const handleUpdate = (version: string) => {
+    if (!selectedStore) return;
+    handleInstall(version);
+  };
+
+  const handleToggleEnabled = (enabled: boolean) => {
+    if (!selectedInstalledPlugin) return;
+    setInstalledPlugins((prev) =>
+      prev.map((item) =>
+        item.name === selectedInstalledPlugin.name
+          ? {
+              ...item,
+              enabled,
+              status: enabled ? "enabled" : "disabled",
+            }
+          : item
+      )
+    );
+  };
+
+  const handlePolicyChange = (policy: UpdatePolicy) => {
+    if (!selectedInstalledPlugin) return;
+    setInstalledPlugins((prev) =>
+      prev.map((item) =>
+        item.name === selectedInstalledPlugin.name ? { ...item, policy } : item
+      )
+    );
+  };
+
+  const handleUpdateCheck = () => {
+    if (!selectedInstalledPlugin) return;
+    setInstalledPlugins((prev) =>
+      prev.map((item) =>
+        item.name === selectedInstalledPlugin.name
+          ? {
+              ...item,
+              updateAvailable: item.updateAvailable ?? "1.0.0",
+            }
+          : item
+      )
+    );
+  };
+
   return (
     <AdminShell
       activeHref="/admin/store"
@@ -132,17 +214,50 @@ export function PluginStorePage() {
         </div>
       }
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Plugin Store"
-          description="Discover and install official and community plugins. Every plugin is scanned for security vulnerabilities."
+          description="Browse verified plugins, install securely, and manage update policies."
         />
-        <PluginFilters />
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {plugins.map((plugin) => (
-            <PluginCard key={plugin.id} plugin={plugin} />
-          ))}
-        </div>
+        <Tabs defaultValue="store" className="w-full">
+          <TabsList>
+            <TabsTrigger value="store">Store</TabsTrigger>
+            <TabsTrigger value="installed">Installed</TabsTrigger>
+          </TabsList>
+          <TabsContent value="store" className="mt-6">
+            <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+              <StoreList
+                items={storeItems}
+                selectedId={selectedStoreId}
+                query={query}
+                onQueryChange={setQuery}
+                onSelect={handleSelectStore}
+              />
+              <StoreDetail
+                plugin={storeSelection.plugin}
+                selectedVersion={storeSelection.version}
+                onSelectVersion={setSelectedVersion}
+                onInstall={handleInstall}
+                onUpdate={handleUpdate}
+              />
+            </div>
+          </TabsContent>
+          <TabsContent value="installed" className="mt-6">
+            <div className="grid gap-6 lg:grid-cols-[1fr_420px]">
+              <PluginList
+                items={installedPlugins}
+                selectedName={selectedInstalled}
+                onSelect={setSelectedInstalled}
+              />
+              <PluginDetail
+                plugin={selectedInstalledPlugin}
+                onToggleEnabled={handleToggleEnabled}
+                onPolicyChange={handlePolicyChange}
+                onUpdate={handleUpdateCheck}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminShell>
   );

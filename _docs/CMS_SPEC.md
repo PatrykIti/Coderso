@@ -12,6 +12,7 @@ znajduja sie w osobnych plikach (linki ponizej).
 - Users + roles.
 - Revisions i publish workflow (draft/published).
 - Plugin registry i settings.
+- Plugin store (browse, install/update, enable/disable, update policy).
 
 Poza zakresem v1:
 - Multi-site.
@@ -157,6 +158,8 @@ Global settings (v1):
 
 - Plugin rejestruje bloki, admin pages, routes.
 - Core przechowuje stan pluginow w `plugins` i `plugin_settings`.
+- Admin UI zawiera sklep pluginow + zarzadzanie zainstalowanymi pluginami
+  (update policy domyslnie `auto-security`).
 
 ---
 

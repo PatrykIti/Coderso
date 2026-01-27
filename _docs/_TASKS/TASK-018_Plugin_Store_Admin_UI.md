@@ -5,7 +5,7 @@
 **Category:** CMS/Plugins
 **Estimated Effort:** Medium
 **Dependencies:** TASK-017, TASK-024, TASK-006-05
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 
@@ -45,7 +45,7 @@ No new dependencies.
 
 ### TASK-018-01_Store_browser_UI
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - List plugins with filters and search.
 - Plugin detail view (version, scans, permissions).
@@ -85,7 +85,7 @@ Store detail sketch:
 
 ### TASK-018-02_Install_and_update_actions
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Install modal with version selector.
 - Update flow with security warning for non-security releases.
@@ -128,7 +128,7 @@ await fetch(`/admin/api/plugins/${name}/update`, { method: "POST", headers: { "X
 
 ### TASK-018-03_Update_policy_controls
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Default policy: auto-security.
 - Per-plugin overrides (manual/auto-security).

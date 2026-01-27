@@ -16,3 +16,24 @@ export type PluginSummary = {
   downloads: string;
   changelog: string[];
 };
+
+export type StoreCatalogVersion = {
+  version: string;
+  releaseType: "normal" | "security";
+  compatible: boolean;
+};
+
+export type StoreCatalogItem = {
+  id: string;
+  name: string;
+  description: string;
+  status: PluginStatus;
+  tags: string[];
+  securityScore: number;
+  lastUpdated: string;
+  downloads: string;
+  latestVersion: string;
+  installedVersion?: string;
+  permissions: string[];
+  versions: StoreCatalogVersion[];
+};
