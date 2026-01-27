@@ -63,6 +63,86 @@ Zaimplementowane w:
 
 ---
 
+## Reference Snippets (routes)
+
+```ts
+router.post("/auth/login", async (ctx) => {
+  validate(authLoginSchema, ctx.body);
+  const { email, password } = ctx.body as { email: string; password: string };
+  const user = await getUserByEmail(email);
+  if (!user || user.status !== "active") {
+    throw new ApiError("auth_failed", "Invalid credentials", 401);
+  }
+  const ok = await verifyPassword(user.passwordHash, password);
+  if (!ok) throw new ApiError("auth_failed", "Invalid credentials", 401);
+
+  const { token, session } = await createSession({ userId: user.id, ip: ctx.ip, userAgent: ctx.userAgent });
+  ctx.setCookie?.(SESSION_COOKIE_NAME, token, buildSessionCookieOptions());
+  await updateLastLogin(user.id);
+
+  return { user: { id: user.id, email: user.email, name: user.name ?? null }, session: { expiresAt: session.expiresAt } };
+});
+```
+
+```ts
+router.post("/auth/logout", requireAuth, async (ctx) => {
+  const token = ctx.cookies?.[SESSION_COOKIE_NAME];
+  if (token) await revokeSessionByToken(token);
+  ctx.clearCookie?.(SESSION_COOKIE_NAME);
+  return { ok: true };
+});
+```
+
+```ts
+router.get("/auth/me", requireAuth, async (ctx) => {
+  if (!ctx.user) throw new ApiError("auth_required", "Not authenticated", 401);
+  return { user: ctx.user };
+});
+```
+
+---
+
+## Tests (detailed templates)
+
+### `tests/unit/auth/authRoutes.test.ts`
+
+```ts
+import { expect, test } from "bun:test";
+import { registerAuthRoutes } from "../../../core/server/routes/authRoutes";
+
+test("registerAuthRoutes wires auth endpoints", () => {
+  const routes: Array<{ method: string; path: string }> = [];
+  const router = {
+    routes,
+    get: (path: string) => routes.push({ method: "GET", path }),
+    post: (path: string) => routes.push({ method: "POST", path }),
+    patch: () => undefined,
+    put: () => undefined,
+    delete: () => undefined,
+    static: () => undefined,
+  };
+  registerAuthRoutes(router, { requireAuth: () => async () => undefined, validate: () => undefined });
+  expect(routes.map((r) => `${r.method} ${r.path}`)).toEqual(
+    expect.arrayContaining([
+      "POST /auth/login",
+      "POST /auth/logout",
+      "GET /auth/me",
+    ])
+  );
+});
+```
+
+### `tests/integration/routes/auth.test.ts`
+
+```ts
+// spin http server from TASK-004-01\n
+// POST /admin/api/auth/login -> 200 + session cookie\n
+// GET /admin/api/auth/me -> 200 when cookie present\n
+// POST /admin/api/auth/logout -> clears cookie\n
+```
+
+---
+
 ## Testing Requirements
 
 - [ ] `tests/unit/auth/authRoutes.test.ts` (login/logout/me)

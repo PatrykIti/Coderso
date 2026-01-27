@@ -32,6 +32,59 @@ Zasady:
 
 ---
 
+## Implementation Details (reference)
+
+**Flow:**
+1) Parsuj `Cookie` header.\n
+2) Pobierz token sesji.\n
+3) `getSessionByToken(token)` -> sprawdz `expiresAt` + `revokedAt`.\n
+4) `getUserById(session.userId)`.\n
+5) Jesli `user.status !== "active"` -> ignore.\n
+6) Ustaw `ctx.user` i `ctx.sessionId`.\n
+
+**Errors:**
+- `requireAuth()` rzuca `auth_required` (mapowane na 401).\n
+
+**OptionalAuth (jesli dodasz):**
+- nie rzuca erroru; tylko ustawia `ctx.user` gdy jest sesja.\n
+
+---
+
+## Reference Snippet
+
+```ts
+export async function attachUserFromSession(ctx: AuthContext) {
+  const token = ctx.cookies?.[SESSION_COOKIE_NAME];
+  if (!token) return;
+
+  const session = await getSessionByToken(token);
+  if (!session) return;
+
+  const user = await getUserById(session.userId);
+  if (!user || user.status !== "active") return;
+
+  ctx.user = { id: user.id, email: user.email, name: user.name };
+  ctx.sessionId = session.id;
+}
+```
+
+---
+
+## Tests (templates)
+
+```ts
+const ctx = { cookies: { session: token } };
+await attachUserFromSession(ctx);
+expect(ctx.user?.id).toBe(userId);
+```
+
+```ts
+const guard = requireAuth();
+await expect(guard({} as AuthContext)).rejects.toThrow("auth_required");
+```
+
+---
+
 ## Tests
 
 - `tests/unit/auth/sessionService.test.ts`

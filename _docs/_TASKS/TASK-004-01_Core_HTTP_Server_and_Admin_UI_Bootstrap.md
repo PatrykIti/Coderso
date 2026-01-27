@@ -60,6 +60,48 @@ core/server/dev.ts        # dev bootstrap (start HTTP + optional Vite proxy)
 5) `core/vite.config.ts` + `core/package.json` + `core/server/dev.ts`.\n
 6) Testy: `routeMatcher`, `errorHandler`, integracyjne route tests.\n
 
+## RouteContext contract (explicit)
+
+**Source of truth:** `core/server/router.ts` + `core/server/httpServer.ts`.
+
+Minimalny kontrakt, ktory musi byc wypelniony przez HTTP handler:
+
+```ts
+type RouteContext = {
+  params: Record<string, string>;
+  query: Record<string, string | undefined>;
+  body: unknown;
+  headers?: Record<string, string | undefined>;
+  cookies?: Record<string, string | undefined>;
+  user?: { id: string; email?: string; name?: string | null };
+  sessionId?: string;
+  ip?: string;
+  userAgent?: string;
+  setCookie?: (name: string, value: string, options: CookieOptions) => void;
+  clearCookie?: (name: string) => void;
+};
+
+type CookieOptions = {
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: "strict" | "lax" | "none";
+  path: string;
+  maxAge: number;
+};
+```
+
+**Wypelnianie pola:**
+- `params`: wynik `matchRoute`.\n
+- `query`: mapowanie z `URLSearchParams` (tylko pierwsza wartosc).\n
+- `body`: JSON dla POST/PATCH/PUT, `undefined` dla GET/DELETE.\n
+- `headers`: lowercase keys (`req.headers` -> obiekt).\n
+- `cookies`: z parsowania `Cookie` header.\n
+- `ip`: `req.headers.get("x-forwarded-for")` lub `req.ip`.\n
+- `userAgent`: `req.headers.get("user-agent")`.\n
+- `user` + `sessionId`: ustawiane przez `attachUserFromSession(ctx)`.\n
+
+---
+
 ### 1) HTTP server (Bun)
 
 **File:** `core/server/httpServer.ts`
@@ -213,6 +255,166 @@ Dodaj test:
 **File:** `core/server/dev.ts`
 - startuje `httpServer.ts`
 - w dev moze proxy `/admin` do Vite (np. `VITE_DEV_SERVER_URL`).
+
+---
+
+## Dev flow vs SSR (explicit)
+
+**Opcja A (zalecana na start): Vite dev server + proxy**\n
+- Uruchom Vite z `core/admin` jako root.\n
+- `httpServer.ts` proxy `GET /admin/*` do `VITE_DEV_SERVER_URL`.\n
+- API (`/admin/api/*`) obslugiwane lokalnie przez Bun.\n
+- Szybszy dev feedback, brak SSR w dev.\n
+
+**Opcja B (SSR w Bun):**\n
+- `httpServer.ts` importuje `entry-server.tsx` i renderuje HTML.\n
+- `dist/client` dostarcza assety klienta.\n
+- Wymaga `vite build --ssr` + `vite build`.\n
+- Uzywaj w produkcji lub w testach integracyjnych SSR.\n
+
+**Env flags:**\n
+- `VITE_DEV_SERVER_URL` (np. `http://localhost:5173`) -> proxy `/admin/*`.\n
+- `ADMIN_SSR=1` -> wymusza SSR w Bun.\n
+- `ADMIN_SSR=0` -> zawsze SPA (index.html).\n
+
+---
+
+## UI Routing Map (Auth vs Admin)
+
+**Public (bez sesji):**\n
+- `/admin/login`\n
+- `/admin/2fa`\n
+- `/admin/reset`\n
+- `/admin/reset/confirm`\n
+
+**Protected (wymaga sesji):**\n
+- `/admin`\n
+- `/admin/pages` + `/admin/pages/:id`\n
+- `/admin/menus`\n
+- `/admin/media`\n
+- `/admin/users`\n
+- `/admin/settings`\n
+- `/admin/store`\n
+
+**Routing rules:**\n
+1) Brak sesji + wejscie na protected -> redirect do `/admin/login`.\n
+2) Sesja aktywna + wejscie na `/admin/login` -> redirect do `/admin`.\n
+3) `/admin/2fa` uzywane po loginie, jesli backend zwroci info o MFA.\n
+
+**Skad sesja?**\n
+- `GET /admin/api/auth/me` zwraca `{ user }` lub 401.\n
+- AdminApp moze zrobic lightweight `me()` i ustawic `isAuthenticated`.\n
+
+---
+
+## Reference snippets (for implementation)
+
+### A) `matchRoute()` / `matchPath()` (example)
+
+```ts
+export function normalizePath(input: string) {
+  const url = input.split(\"?\")[0] ?? input;
+  if (url.length > 1 && url.endsWith(\"/\")) return url.slice(0, -1);
+  return url;
+}
+
+export function matchRoute(pattern: string, path: string) {
+  const normalizedPattern = normalizePath(pattern);
+  const normalizedPath = normalizePath(path);
+
+  const patternParts = normalizedPattern.split(\"/\").filter(Boolean);
+  const pathParts = normalizedPath.split(\"/\").filter(Boolean);
+
+  if (patternParts.length !== pathParts.length) {
+    return { matched: false, params: {} as Record<string, string> };
+  }
+
+  const params: Record<string, string> = {};
+  for (let i = 0; i < patternParts.length; i += 1) {
+    const part = patternParts[i];
+    const value = pathParts[i];
+    if (part.startsWith(\":\")) {
+      params[part.slice(1)] = decodeURIComponent(value ?? \"\");
+      continue;
+    }
+    if (part !== value) {
+      return { matched: false, params: {} };
+    }
+  }
+
+  return { matched: true, params };
+}
+```
+
+### B) `AdminApp` (pseudo‑router)
+
+```tsx
+const routes = [
+  { pattern: \"/admin\", element: <DashboardPage /> },
+  { pattern: \"/admin/login\", element: <LoginPage /> },
+  { pattern: \"/admin/2fa\", element: <TwoFactorPage /> },
+  { pattern: \"/admin/reset\", element: <ResetPasswordPage /> },
+  { pattern: \"/admin/reset/confirm\", element: <SetPasswordPage /> },
+  { pattern: \"/admin/pages\", element: <PageListPage /> },
+  { pattern: \"/admin/pages/:id\", element: <PageEditor pageId={params.id} /> },
+  { pattern: \"/admin/media\", element: <MediaLibraryPage /> },
+  { pattern: \"/admin/menus\", element: <MenuEditorPage /> },
+  { pattern: \"/admin/users\", element: <UsersRolesPage /> },
+  { pattern: \"/admin/settings\", element: <SettingsPage /> },
+  { pattern: \"/admin/store\", element: <PluginStorePage /> },
+];
+
+export function AdminApp({ path }: { path: string }) {
+  const normalized = normalizePath(path);
+  for (const route of routes) {
+    const result = matchRoute(route.pattern, normalized);
+    if (result.matched) return route.element;
+  }
+  return <NotFound />;\n
+}
+```
+
+### C) `handleApi(req)` (Bun server outline)
+
+```ts
+async function handleApi(req: Request, url: URL) {
+  const { router } = buildRouter(); // registerAllRoutes
+  const path = url.pathname.replace(\"/admin/api\", \"\") || \"/\";
+
+  for (const route of router.routes) {
+    if (route.method !== req.method) continue;
+    const match = matchRoute(route.path, path);
+    if (!match.matched) continue;
+
+    const ctx: RouteContext = {
+      params: match.params,
+      query: Object.fromEntries(url.searchParams.entries()),
+      body: await parseJson(req),
+      headers: Object.fromEntries(req.headers.entries()),
+      cookies: parseCookies(req.headers.get(\"cookie\")),
+      ip: req.headers.get(\"x-forwarded-for\") ?? undefined,
+      userAgent: req.headers.get(\"user-agent\") ?? undefined,
+      setCookie: (name, value, options) => pushSetCookie(resHeaders, name, value, options),
+      clearCookie: (name) => pushSetCookie(resHeaders, name, \"\", { maxAge: 0, ... }),
+    };
+
+    await attachUserFromSession(ctx);
+
+    try {
+      let result: unknown = undefined;
+      for (const handler of route.handlers) {
+        const out = await handler(ctx);
+        if (out !== undefined) result = out;
+      }
+      return jsonResponse(result ?? { ok: true });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  }
+
+  return new Response(\"Not Found\", { status: 404 });
+}
+```
 
 ---
 
