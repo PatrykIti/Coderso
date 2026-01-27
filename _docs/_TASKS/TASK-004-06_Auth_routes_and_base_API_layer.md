@@ -5,7 +5,7 @@
 **Category:** Core/Auth
 **Estimated Effort:** Medium
 **Dependencies:** TASK-004-03, TASK-004-04, TASK-004-05
-**Status:** In Progress
+**Status:** In Progress (2026-01-27)
 
 ---
 
@@ -27,6 +27,12 @@ Zaimplementowane w:
 - `core/server/errorHandler.ts`
 - `core/server/validation/authSchemas.ts`
 
+**Behavior (obecnie):**
+- `POST /auth/login` sprawdza haslo i status `active`.\n
+- Ustawia cookie `SESSION_COOKIE_NAME`.\n
+- Loguje audit `auth.login`.\n
+- `GET /auth/me` zwraca `{ user }`.\n
+
 ---
 
 ## Remaining Work
@@ -46,6 +52,14 @@ Zaimplementowane w:
 | `core/server/errorHandler.ts` | status mapping + error shape |
 | `core/server/routes/index.ts` | rejestracja `registerAuthRoutes` |
 | `core/server/validation/authSchemas.ts` | login schema + errors |
+
+**Expected responses:**\n
+- `POST /auth/login` success: `{ user, session: { expiresAt } }`\n
+- error: `{ error: { code, message } }`\n
+
+**Login validation:**\n
+- email required, password min length 8.\n
+- errors z `validate()` powinny mapowac na `validation_error`.\n
 
 ---
 

@@ -44,11 +44,21 @@ core/admin/
 
 core/vite.config.ts       # root=admin, outDir=dist/client, SSR entry
 core/package.json         # dev script
+core/server/dev.ts        # dev bootstrap (start HTTP + optional Vite proxy)
 ```
 
 ---
 
 ## Implementation Checklist
+
+## Implementation Order (recommended)
+
+1) `core/server/routes/index.ts` – agregacja routow.\n
+2) `core/server/router.ts` – matchowanie sciezek + params.\n
+3) `core/server/httpServer.ts` – Bun.serve + wykonanie routow.\n
+4) `core/admin/index.html`, `core/admin/main.tsx`, `core/admin/app/AdminApp.tsx`.\n
+5) `core/vite.config.ts` + `core/package.json` + `core/server/dev.ts`.\n
+6) Testy: `routeMatcher`, `errorHandler`, integracyjne route tests.\n
 
 ### 1) HTTP server (Bun)
 
@@ -76,6 +86,24 @@ core/package.json         # dev script
 **JSON response:**
 - domyslnie `200` + `application/json` + `JSON.stringify(payload)`.
 
+**Cookies:**
+- Dodaj parser `Cookie` header -> `{ [key]: value }`.
+- `setCookie` i `clearCookie` zwracaja `Set-Cookie` na response.
+- Utrzymuj `httpOnly`, `secure`, `sameSite`, `path`, `maxAge`.
+
+**Body parsing:**
+- Dla `Content-Type: application/json` zparsuj JSON i obsluz error 400.
+- Dla innych typow zwracaj `undefined` (uploady maja osobny handler).
+
+**Static assets:**
+- `/admin/assets/*` oraz `/admin/favicon.ico` serwuj z `core/dist/client`.\n
+- W prod: `Bun.file()` + `Response` z poprawnym `Content-Type`.\n
+- W dev: jesli ustawione `VITE_DEV_SERVER_URL`, proxy `/admin/*` do Vite.\n
+
+**SPA fallback:**
+- Wszystkie sciezki `/admin/*` ktore nie sa statycznym assetem -> `index.html`.\n
+- To pozwala na client-side routing w `AdminApp`.\n
+
 ---
 
 ### 2) Route matching w routerze
@@ -90,6 +118,11 @@ Dodaj helpery:
 - split `/pages/:id` i `/pages/123` po `/`.
 - segment `:id` -> `params.id = "123"`.
 - liczba segmentow musi pasowac.
+
+**Match rules:**
+- Porownuj liczbe segmentow.\n
+- `:param` zawsze pasuje.\n
+- Dopuszczaj trailing slash (`/admin/` == `/admin`).\n
 
 Dodaj test:
 - `tests/unit/server/routeMatcher.test.ts`.
@@ -153,8 +186,14 @@ Dodaj test:
   - `/admin/store` -> `PluginStorePage`
 - dla nieznanych sciezek: fallback “Not found”.
 
+**Routing pomocniczy:**
+- Dodaj helper `matchPath(path, pattern)` (np. `\"/admin/pages/:id\"`).
+- `PageEditor` dostaje `id` z params (moze byc jako prop).
+- Normalizuj `path` (usun trailing slash i query string).
+
 **entry-server.tsx**
 - `export function render(path: string)` -> `renderToString(<AdminApp path={path} />)`.
+- Uzyj `import { renderToString } from "react-dom/server"`.\n
 
 ---
 
@@ -164,11 +203,16 @@ Dodaj test:
 - `root: path.resolve(__dirname, "./admin")`
 - `build.outDir: path.resolve(__dirname, "./dist/client")`
 - SSR build: `build.ssr` + `entry-server.tsx`.
+- `base: "/admin/"` dla poprawnych sciezek assetow w prod.
 
 **File:** `core/package.json`
 - `dev` uruchamia:
   - Bun HTTP server (np. `bun run server/dev.ts`).
   - Vite dev server dla admina (np. `vite --config vite.config.ts`).
+
+**File:** `core/server/dev.ts`
+- startuje `httpServer.ts`
+- w dev moze proxy `/admin` do Vite (np. `VITE_DEV_SERVER_URL`).
 
 ---
 
@@ -180,6 +224,7 @@ Dodaj test:
 - `core/admin/main.tsx`
 - `core/admin/entry-server.tsx`
 - `core/admin/app/AdminApp.tsx`
+- `core/server/dev.ts`
 - `tests/unit/server/routeMatcher.test.ts`
 - `tests/unit/server/errorHandler.test.ts`
 
@@ -190,6 +235,7 @@ Dodaj test:
 - [ ] `tests/unit/server/routeMatcher.test.ts` (param matching, 404).
 - [ ] `tests/unit/server/errorHandler.test.ts` (mapowanie error -> JSON).
 - [ ] `tests/integration/routes/*.test.ts` nadal przechodza.
+- [ ] `tests/integration/routes/auth.test.ts` działa po uruchomieniu serwera.
 
 ---
 
@@ -197,6 +243,7 @@ Dodaj test:
 
 - `_docs/ARCHITECTURE.md` (sekcja o HTTP server + entrypoints)
 - `_docs/CMS_SPEC.md` (admin UI bootstrap / dev run)
+- `_docs/README.md` (jak uruchomic core dev)
 
 ---
 

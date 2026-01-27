@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Core/Auth
 **Estimated Effort:** Medium
-**Dependencies:** TASK-004-01, TASK-020
+**Dependencies:** TASK-004-01, TASK-004-03, TASK-020
 **Status:** To Do
 
 ---
@@ -18,6 +18,18 @@ CSRF, OTP/recovery oraz reset hasla.
 - Dzialajacy `GET /auth/csrf`.
 - `POST /auth/verify-otp` (na razie stub lub pelna walidacja).
 - Reset hasla: `POST /auth/reset` + `POST /auth/reset/confirm`.
+
+**Response shape (standard):**
+
+```json
+{ "ok": true }
+```
+
+lub:
+
+```json
+{ "error": { "code": "...", "message": "..." } }
+```
 
 ---
 
@@ -38,6 +50,14 @@ core/db/schema.ts           # tabela password_resets
 
 ## Implementation Checklist
 
+## Implementation Order (recommended)
+
+1) Dodaj schematy walidacji w `authSchemas.ts`.\n
+2) Dodaj `password_resets` do `core/db/schema.ts` + migracja.\n
+3) Zaimplementuj `passwordResetService.ts`.\n
+4) Rozszerz `authRoutes.ts` o `/auth/csrf`, `/auth/verify-otp`, `/auth/reset*`.\n
+5) Dodaj testy unit/integration.\n
+
 ### 1) CSRF endpoint
 
 **File:** `core/server/routes/authRoutes.ts`
@@ -49,6 +69,16 @@ core/db/schema.ts           # tabela password_resets
 
 **Wspolpraca z TASK-020:**
 - Middleware `csrf.ts` waliduje `X-CSRF-Token` przeciw tokenowi sesji.
+
+**Recommended storage (v1):**
+- Dodaj kolumne `csrf_token_hash` do `sessions`.\n
+- Helpers w `sessionService.ts`:\n
+  - `setCsrfToken(sessionId, tokenHash)`\n
+  - `getCsrfTokenHash(sessionId)`\n
+
+**Status code i error:**
+- Jesli brak sesji: `401 auth_required`.
+- Jesli brak tokenu: `500 internal_error` (developer error).
 
 ---
 
@@ -69,6 +99,10 @@ core/db/schema.ts           # tabela password_resets
   - `authOtpSchema`
   - `authRecoverySchema`
 
+**Error codes:**
+- `mfa_not_configured` (400)\n
+- `otp_invalid` (401)\n
+
 ---
 
 ### 3) Reset hasla (v1.1)
@@ -85,6 +119,10 @@ Funkcje:
 - TTL 1h.
 - Token jednorazowy (`used_at`).
 
+**Token format:**
+- 32 bajty random, Base64URL (bez `=`).
+- Hashuj SHA-256 -> hex string.
+
 **File:** `core/db/schema.ts`
 
 Dodaj tabela `password_resets`:
@@ -94,6 +132,14 @@ Dodaj tabela `password_resets`:
 - `expires_at` (timestamp)
 - `used_at` (timestamp | null)
 - `created_at`, `updated_at`
+
+**Sessions update:**
+- Dodaj `csrf_token_hash` do `sessions`.\n
+- Dodaj index po `csrf_token_hash` (opcjonalnie).\n
+
+**Migracje:**
+- Drizzle: `bun x drizzle-kit generate` -> nowy plik migracji.\n
+- W testach wymagaj `bun x drizzle-kit migrate`.\n
 
 ---
 
@@ -105,6 +151,7 @@ Dodaj tabela `password_resets`:
   - payload: `{ email }`
   - jesli user nie istnieje: zwroc `{ ok: true }` (bez leakow)
   - jesli istnieje: utworz token resetu i zwroc `{ ok: true }`
+  - loguj audit: `auth.reset.request` (bez ujawniania tokenu)
 
 - `POST /auth/reset/confirm`:
   - payload: `{ token, password }`
@@ -112,12 +159,22 @@ Dodaj tabela `password_resets`:
   - hashuj nowe haslo (argon2id)
   - ustaw nowe haslo w `users.password_hash`
   - revoke wszystkie sesje usera
+  - loguj audit: `auth.reset.confirm`
+
+**Required helpers (services):**
+- `updatePassword(userId, hash)` w `userService.ts`.
+- `revokeAllSessions(userId)` w `sessionService.ts`.
 
 **File:** `core/server/validation/authSchemas.ts`
 
 Dodaj:
 - `authResetSchema` (email)
 - `authResetConfirmSchema` (token + password)
+
+**Validation rules:**
+- `email` format (simple regex) + min length.\n
+- `password` min 8 znakow.\n
+- `token` min 32 znakow.\n
 
 ---
 
