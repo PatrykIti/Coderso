@@ -50,6 +50,7 @@ Project Change Log.
 | 023 | 2026-01-27 | Search and indexing | CMS/Search |
 | 024 | 2026-01-27 | Audit logs | CMS/Security |
 | 025 | 2026-01-27 | Plugin runtime loader and registry | Core/Plugins |
+| 026 | 2026-01-27 | SDK package and plugin API | Core/SDK |
 
 
 ---

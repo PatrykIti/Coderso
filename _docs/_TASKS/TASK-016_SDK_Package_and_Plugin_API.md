@@ -5,7 +5,7 @@
 **Category:** Core/SDK
 **Estimated Effort:** Large
 **Dependencies:** TASK-015
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 
@@ -52,7 +52,7 @@ bun --cwd packages/sdk add -d typescript
 
 ### TASK-016-01_SDK_package_exports
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Exports:
 - `@core/sdk/server`
@@ -133,7 +133,7 @@ export type PluginMeta = { name: string; version: string };
 
 ### TASK-016-02_Hook_context_and_assets_helpers
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Hook handlers receive `(payload, ctx)`.
 - Assets API returns URL and public path.
@@ -180,7 +180,7 @@ export interface AssetsAPI {
 
 ### TASK-016-03_Runtime_bindings_in_core
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Provide implementations for ServerContext and ClientContext.
 - Bind assets API to plugin public path.

@@ -430,7 +430,7 @@ Wersja v1:
 - Pluginy rejestruja endpointy pod prefiksem
   `/api/plugins/<plugin-name>/*`.
 - Rejestracja przez SDK:
-  registerRoute({ method, path, handler })
+  registerRoute({ method, path, handler, permission? })
 
 Cel:
 - webhooki (platnosci, integracje).

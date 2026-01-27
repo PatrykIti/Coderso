@@ -40,6 +40,7 @@ export type ServerContext = {
       method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
       path: string;
       handler: (req: Request) => Response | Promise<Response>;
+      permission?: string;
     }) => void;
   };
   assets: AssetsAPI;

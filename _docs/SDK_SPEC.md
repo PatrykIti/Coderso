@@ -189,8 +189,13 @@ export interface RoutesAPI {
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     path: string; // bez prefiksu, core doda /api/plugins/<name>
     handler: (req: Request) => Response | Promise<Response>;
+    permission?: string; // opcjonalny permission wymagany dla route
   }): void;
 }
+
+Notes:
+- Jesli `permission` jest podany, core sprawdza czy plugin ma go zadeklarowany
+  w `plugin.json` (brak = error).
 ```
 
 ### PermissionsAPI
