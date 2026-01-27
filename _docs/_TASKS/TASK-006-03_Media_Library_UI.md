@@ -1,4 +1,4 @@
-# TASK-006-03: Media Library UI
+# TASK-006-03: Media Library UI (Visual)
 # FileName: TASK-006-03_Media_Library_UI.md
 
 **Priority:** Medium

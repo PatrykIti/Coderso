@@ -1,10 +1,10 @@
-# TASK-010: Page Builder UI
+# TASK-010: Page Builder UI (Functional)
 # FileName: TASK-010_Page_Builder_UI.md
 
 **Priority:** High
 **Category:** CMS/PageBuilder
 **Estimated Effort:** Large
-**Dependencies:** TASK-002, TASK-009, TASK-024
+**Dependencies:** TASK-002, TASK-009, TASK-024, TASK-006-06, TASK-006-07
 **Status:** Done (2026-01-26)
 
 ---

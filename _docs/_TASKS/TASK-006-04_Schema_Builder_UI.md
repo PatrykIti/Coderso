@@ -1,4 +1,4 @@
-# TASK-006-04: Schema Builder UI
+# TASK-006-04: Schema Builder UI (Visual)
 # FileName: TASK-006-04_Schema_Builder_UI.md
 
 **Priority:** High

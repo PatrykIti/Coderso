@@ -1,4 +1,4 @@
-# TASK-006-11: Reset Password UI
+# TASK-006-11: Reset Password UI (Visual)
 # FileName: TASK-006-11_Reset_Password_UI.md
 
 **Priority:** Medium

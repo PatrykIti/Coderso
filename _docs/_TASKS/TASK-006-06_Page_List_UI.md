@@ -1,4 +1,4 @@
-# TASK-006-06: Page List UI
+# TASK-006-06: Page List UI (Visual)
 # FileName: TASK-006-06_Page_List_UI.md
 
 **Priority:** Medium

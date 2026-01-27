@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
+- **To Do:** 20 tasks
 - **In Progress:** 0
 - **Done:** 19 tasks
 
@@ -44,14 +44,16 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
-| TASK-012 | Media Library Admin UI | Medium | Medium | Uploads + metadata UI |
+| TASK-012 | Media Library Admin UI (Functional) | Medium | Medium | Uploads + metadata UI |
 | TASK-013 | Search and Indexing | Medium | Medium | Admin search + DB indexes |
 | TASK-014 | Audit Logs | Medium | Medium | Audit events + UI |
 | TASK-015 | Plugin Runtime Loader and Registry | High | Large | Runtime load + safe mode |
 | TASK-016 | SDK Package and Plugin API | High | Large | @core/sdk package |
 | TASK-017 | Store Client and Update Policy | High | Large | Signatures + updates |
-| TASK-018 | Plugin Store Admin UI | Medium | Medium | Store browse + install |
-| TASK-019 | Users and Roles Admin UI | Medium | Medium | Users + roles UI |
+| TASK-018 | Plugin Store Admin UI (Functional) | Medium | Medium | Store browse + install |
+| TASK-019 | Users and Roles Admin UI (Functional) | Medium | Medium | Users + roles UI |
+| TASK-025 | Auth UI Wiring (Functional) | High | Medium | Login + 2FA + reset wiring |
+| TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-020 | Security Middleware and Request Pipeline | High | Medium | CSRF + rate limit |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
@@ -73,18 +75,18 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-006 | Menus and Navigation | Medium | Medium | Menu CRUD + admin UI |
 | TASK-007 | Settings and Design Tokens | Medium | Medium | Global settings + tokens |
 | TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
-| TASK-006-09 | Login UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-10 | Two Factor UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-11 | Reset Password UI | Medium | Small | HTML -> shadcn conversion |
-| TASK-006-12 | Set Password UI | Medium | Small | HTML -> shadcn conversion |
-| TASK-006-01 | Dashboard UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-02 | Menu Editor UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-03 | Media Library UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-04 | Schema Builder UI | High | Large | HTML -> shadcn conversion |
-| TASK-006-05 | Plugin Store UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-06 | Page List UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-07 | Page Editor UI | High | Large | HTML -> shadcn conversion |
-| TASK-006-08 | Design Tokens UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-006-13 | Users and Roles UI | Medium | Medium | HTML -> shadcn conversion |
-| TASK-010 | Page Builder UI | High | Large | Wizard/Visual/Advanced |
-| TASK-011 | Content Types Admin UI | High | Large | Schema builder + entries |
+| TASK-006-09 | Login UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-10 | Two Factor UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-11 | Reset Password UI (Visual) | Medium | Small | HTML -> shadcn conversion |
+| TASK-006-12 | Set Password UI (Visual) | Medium | Small | HTML -> shadcn conversion |
+| TASK-006-01 | Dashboard UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-02 | Menu Editor UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-03 | Media Library UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-04 | Schema Builder UI (Visual) | High | Large | HTML -> shadcn conversion |
+| TASK-006-05 | Plugin Store UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-06 | Page List UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-07 | Page Editor UI (Visual) | High | Large | HTML -> shadcn conversion |
+| TASK-006-08 | Design Tokens UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-006-13 | Users and Roles UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
+| TASK-010 | Page Builder UI (Functional) | High | Large | Wizard/Visual/Advanced |
+| TASK-011 | Content Types Admin UI (Functional) | High | Large | Schema builder + entries |

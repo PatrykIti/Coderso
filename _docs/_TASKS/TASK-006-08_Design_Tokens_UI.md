@@ -1,4 +1,4 @@
-# TASK-006-08: Design Tokens UI
+# TASK-006-08: Design Tokens UI (Visual)
 # FileName: TASK-006-08_Design_Tokens_UI.md
 
 **Priority:** Medium

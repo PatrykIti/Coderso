@@ -1,4 +1,4 @@
-# TASK-006-13: Users and Roles UI
+# TASK-006-13: Users and Roles UI (Visual)
 # FileName: TASK-006-13_Users_and_Roles_UI.md
 
 **Priority:** Medium

@@ -1,4 +1,4 @@
-# TASK-006-10: Two Factor UI
+# TASK-006-10: Two Factor UI (Visual)
 # FileName: TASK-006-10_Two_Factor_UI.md
 
 **Priority:** Medium

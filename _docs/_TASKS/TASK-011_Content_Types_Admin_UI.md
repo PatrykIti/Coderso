@@ -1,10 +1,10 @@
-# TASK-011: Content Types Admin UI
+# TASK-011: Content Types Admin UI (Functional)
 # FileName: TASK-011_Content_Types_Admin_UI.md
 
 **Priority:** High
 **Category:** CMS/ContentTypes
 **Estimated Effort:** Large
-**Dependencies:** TASK-003, TASK-004, TASK-024
+**Dependencies:** TASK-003, TASK-004, TASK-024, TASK-006-04
 **Status:** Done (2026-01-27)
 
 ---

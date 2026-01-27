@@ -1,4 +1,4 @@
-# TASK-006-01: Dashboard UI
+# TASK-006-01: Dashboard UI (Visual)
 # FileName: TASK-006-01_Dashboard_UI.md
 
 **Priority:** Medium

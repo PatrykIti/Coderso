@@ -1,4 +1,4 @@
-# TASK-006-07: Page Editor UI
+# TASK-006-07: Page Editor UI (Visual)
 # FileName: TASK-006-07_Page_Editor_UI.md
 
 **Priority:** High

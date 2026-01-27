@@ -1,10 +1,10 @@
-# TASK-019: Users and Roles Admin UI
+# TASK-019: Users and Roles Admin UI (Functional)
 # FileName: TASK-019_Users_and_Roles_Admin_UI.md
 
 **Priority:** Medium
 **Category:** CMS/Auth
 **Estimated Effort:** Medium
-**Dependencies:** TASK-004, TASK-024
+**Dependencies:** TASK-004, TASK-024, TASK-006-13
 **Status:** To Do
 
 ---

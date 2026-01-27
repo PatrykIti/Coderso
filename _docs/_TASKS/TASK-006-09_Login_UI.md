@@ -1,4 +1,4 @@
-# TASK-006-09: Login UI
+# TASK-006-09: Login UI (Visual)
 # FileName: TASK-006-09_Login_UI.md
 
 **Priority:** Medium

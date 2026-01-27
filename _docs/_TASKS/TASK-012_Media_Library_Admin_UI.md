@@ -1,10 +1,10 @@
-# TASK-012: Media Library Admin UI
+# TASK-012: Media Library Admin UI (Functional)
 # FileName: TASK-012_Media_Library_Admin_UI.md
 
 **Priority:** Medium
 **Category:** CMS/Media
 **Estimated Effort:** Medium
-**Dependencies:** TASK-005, TASK-024
+**Dependencies:** TASK-005, TASK-024, TASK-006-03
 **Status:** To Do
 
 ---

@@ -1,10 +1,10 @@
-# TASK-018: Plugin Store Admin UI
+# TASK-018: Plugin Store Admin UI (Functional)
 # FileName: TASK-018_Plugin_Store_Admin_UI.md
 
 **Priority:** Medium
 **Category:** CMS/Plugins
 **Estimated Effort:** Medium
-**Dependencies:** TASK-017, TASK-024
+**Dependencies:** TASK-017, TASK-024, TASK-006-05
 **Status:** To Do
 
 ---

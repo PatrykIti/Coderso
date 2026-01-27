@@ -1,4 +1,4 @@
-# TASK-006-02: Menu Editor UI
+# TASK-006-02: Menu Editor UI (Visual)
 # FileName: TASK-006-02_Menu_Editor_UI.md
 
 **Priority:** Medium

@@ -1,4 +1,4 @@
-# TASK-006-05: Plugin Store UI
+# TASK-006-05: Plugin Store UI (Visual)
 # FileName: TASK-006-05_Plugin_Store_UI.md
 
 **Priority:** Medium

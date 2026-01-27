@@ -1,4 +1,4 @@
-# TASK-006-12: Set Password UI
+# TASK-006-12: Set Password UI (Visual)
 # FileName: TASK-006-12_Set_Password_UI.md
 
 **Priority:** Medium
