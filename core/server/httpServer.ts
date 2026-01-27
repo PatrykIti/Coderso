@@ -45,12 +45,11 @@ const createCookieValue = (
 
 const jsonResponse = (payload: unknown, init?: ResponseInit) => {
   const body = payload === undefined ? "" : JSON.stringify(payload);
+  const headers = new Headers(init?.headers);
+  headers.set("Content-Type", "application/json");
   return new Response(body, {
     status: init?.status ?? 200,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 };
 
@@ -132,9 +131,6 @@ const redirectToDev = (req: Request, devUrl: string) => {
 
 const handleAdmin = async (req: Request, devUrl?: string) => {
   const url = new URL(req.url);
-  if (url.pathname === "/admin") {
-    return Response.redirect("/admin/", 307);
-  }
 
   if (devUrl) return redirectToDev(req, devUrl);
 
