@@ -5,7 +5,7 @@
 **Category:** Core/Store
 **Estimated Effort:** Large
 **Dependencies:** TASK-015
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 
@@ -51,7 +51,7 @@ bun add @noble/ed25519 canonicalize fflate
 
 ### TASK-017-01_Store_client
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Endpoints:
 - `GET /plugins`
@@ -83,7 +83,7 @@ export async function fetchMetadata(name: string, version: string) {
 
 ### TASK-017-02_Signature_and_checksum_verification
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Verify ed25519 signature for `metadata.json`.
 - Verify SHA256 checksum for ZIP.
@@ -116,7 +116,7 @@ export function verifyMetadata(meta, sig, key) {
 
 ### TASK-017-03_Install_and_update_flow
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Download ZIP to temp.
 - Unpack into `plugins-runtime/<name>/<version>`.
@@ -161,7 +161,7 @@ export async function installPlugin(name: string, version: string) {
 
 ### TASK-017-04_Update_policy
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Default: `auto-security`.
 - Auto-apply only releases with `release.type=security`.
@@ -184,7 +184,7 @@ if (release.type !== "security" && policy === "auto-security") return { skipped:
 
 ### TASK-017-05_Revocation_checks
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Pull `revocations.json` on interval (e.g. hourly).
 - Disable revoked plugins and surface warning in admin.

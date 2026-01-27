@@ -12,5 +12,5 @@
       "@/*": ["./admin/*"]
     }
   },
-  "include": ["admin", "server", "services", "ui", "plugins"]
+  "include": ["admin", "server", "services", "ui", "plugins", "store"]
 }

@@ -286,6 +286,11 @@ Permissions: `plugins:read`, `plugins:manage`
 - `POST /plugins/:name/update`
 - `DELETE /plugins/:name`
 
+Uwagi:
+- `POST /plugins/:name/update` respektuje polityke update (domyslnie `auto-security`).
+- Dla update manualnych polityka moze byc nadpisana przez admina.
+- Revocations z `revocations.json` skutkuja auto-disable w core.
+
 ---
 
 ## Store (browse)
