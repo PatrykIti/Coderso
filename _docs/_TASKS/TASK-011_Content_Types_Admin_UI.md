@@ -5,7 +5,7 @@
 **Category:** CMS/ContentTypes
 **Estimated Effort:** Large
 **Dependencies:** TASK-003, TASK-004, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 ---
 
@@ -49,13 +49,13 @@ No new dependencies.
 
 ### TASK-011-01_Schema_builder_UI
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 Schema fields: text, richtext, number, boolean, select, media, relation.
 
 Rules:
 - Field `name` is unique per content type.
-- `name` uses `snake_case` or `kebab-case` (pick one and enforce).
+- `name` uses `kebab-case` and is validated in the UI.
 - Required fields cannot have empty default.
 - Relation fields require target type slug.
 
@@ -91,7 +91,7 @@ Schema builder sketch:
 
 ### TASK-011-02_Content_type_CRUD_UI
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Create, edit, delete content types.
 - Validate schema on save (client + server).
@@ -127,7 +127,7 @@ await fetch("/admin/api/content-types", {
 
 ### TASK-011-03_Entry_list_UI
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - List entries per content type.
 - Filters by status (draft/published).
@@ -153,7 +153,7 @@ List sketch:
 
 ### TASK-011-04_Entry_editor_UI
 
-**Status:** To Do
+**Status:** Done (2026-01-27)
 
 - Form generated from schema.
 - Draft save and publish buttons.

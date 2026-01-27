@@ -44,13 +44,21 @@ Business/Media:
 ## Content Type fields
 
 Fields sa definiowane jako JSON schema.
-Przyklady typow:
+Typy dostepne w UI v1:
 - text, richtext, number, boolean
-- select, multiselect
-- image, file
+- select
+- media (image/file w jednym typie)
 - relation (do innego typu)
-- date, datetime
-- seo (title, description)
+
+Pozostale typy (multiselect, date/datetime, seo) planowane v1.1+ lub przez pluginy.
+
+## Admin UI rules (v1)
+
+- `name` pola musi byc unikalny i w kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
+- Required field musi miec `defaultValue` (UI blokuje brak defaultu).
+- Relation field wymaga `target` (slug typu docelowego).
+- UI generuje formularz entry dynamicznie z pola `schema`.
+- Draft/publish/preview + autosave draft w edytorze wpisu.
 
 ## Example schema (summary)
 

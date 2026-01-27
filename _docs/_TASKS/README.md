@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 19 tasks
+- **To Do:** 18 tasks
 - **In Progress:** 0
-- **Done:** 18 tasks
+- **Done:** 19 tasks
 
 ---
 
@@ -44,7 +44,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
-| TASK-011 | Content Types Admin UI | High | Large | Schema builder + entries |
 | TASK-012 | Media Library Admin UI | Medium | Medium | Uploads + metadata UI |
 | TASK-013 | Search and Indexing | Medium | Medium | Admin search + DB indexes |
 | TASK-014 | Audit Logs | Medium | Medium | Audit events + UI |
@@ -88,3 +87,4 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-006-08 | Design Tokens UI | Medium | Medium | HTML -> shadcn conversion |
 | TASK-006-13 | Users and Roles UI | Medium | Medium | HTML -> shadcn conversion |
 | TASK-010 | Page Builder UI | High | Large | Wizard/Visual/Advanced |
+| TASK-011 | Content Types Admin UI | High | Large | Schema builder + entries |

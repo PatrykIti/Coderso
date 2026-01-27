@@ -9,3 +9,5 @@ store/dist/
 coverage/
 .DS_Store
 .tmp
+
+GENERATION_LIST.md

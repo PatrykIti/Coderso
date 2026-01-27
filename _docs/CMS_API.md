@@ -138,6 +138,49 @@ Permissions: `content:read`, `content:write`, `content:publish`
 - `POST /content/:type/entries/:id/publish`
 - `POST /content/:type/entries/:id/unpublish`
 
+Create content type payload (summary):
+
+```json
+{
+  "name": "Blog Post",
+  "slug": "blog",
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["title"],
+    "properties": {
+      "title": { "type": "string" },
+      "summary": { "type": "string" },
+      "featured": { "type": "boolean", "default": false }
+    }
+  }
+}
+```
+
+Create entry payload (summary):
+
+```json
+{
+  "title": "Launch announcement",
+  "slug": "launch-announcement",
+  "status": "draft",
+  "data": {
+    "title": "Launch announcement",
+    "summary": "Short intro",
+    "featured": true
+  }
+}
+```
+
+Preview response (example):
+
+```json
+{
+  "previewToken": "token",
+  "expiresAt": "2026-01-27T10:00:00Z"
+}
+```
+
 ---
 
 ## Settings
