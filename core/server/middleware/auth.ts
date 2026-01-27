@@ -7,7 +7,7 @@ import { getUserById } from "../../services/auth/userService";
 export type AuthContext = {
   cookies?: Record<string, string | undefined>;
   headers?: Record<string, string | undefined>;
-  user?: { id: string; email: string; name?: string | null };
+  user?: { id: string; email?: string; name?: string | null };
   sessionId?: string;
 };
 

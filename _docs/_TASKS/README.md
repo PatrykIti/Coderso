@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 12 tasks
-- **In Progress:** 2
+- **To Do:** 11 tasks
+- **In Progress:** 3
 - **Done:** 31 tasks
 
 ---
@@ -40,7 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-002 | Pages, Revisions, and Preview | High | Medium | Pages + revisions + preview |
 | TASK-003 | Content Types Engine | High | Large | Dynamic content schemas |
-| TASK-004-01 | Core HTTP Server and Admin UI Bootstrap | High | Large | Bun server + admin entry |
 | TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
@@ -58,6 +57,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-004 | Auth, RBAC, and Admin API Base (Index) | High | Large | Index for TASK-004-01..06 |
+| TASK-004-01 | Core HTTP Server and Admin UI Bootstrap | High | Large | Bun server + admin entry |
 | TASK-004-06 | Auth Routes and Base API Layer | High | Medium | login/logout/me base |
 
 ---

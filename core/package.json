@@ -1,7 +1,7 @@
 {
   "name": "@nextless/core",
   "scripts": {
-    "dev": "echo core dev",
+    "dev": "bun run server/dev.ts",
     "lint": "eslint --max-warnings=0 \"{admin,server,services,ui,db,plugins,store}/**/*.{ts,tsx}\"",
     "lint:types": "tsc -p tsconfig.json --noEmit",
     "test": "echo core test"

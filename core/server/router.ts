@@ -56,3 +56,36 @@ export function createRouter(): Router {
     static: add("GET"),
   };
 }
+
+export function normalizePath(input: string) {
+  const base = input.split("?")[0] ?? input;
+  if (base.length > 1 && base.endsWith("/")) return base.slice(0, -1);
+  return base;
+}
+
+export function matchRoute(pathPattern: string, path: string) {
+  const normalizedPattern = normalizePath(pathPattern);
+  const normalizedPath = normalizePath(path);
+
+  const patternParts = normalizedPattern.split("/").filter(Boolean);
+  const pathParts = normalizedPath.split("/").filter(Boolean);
+
+  if (patternParts.length !== pathParts.length) {
+    return { matched: false, params: {} as Record<string, string> };
+  }
+
+  const params: Record<string, string> = {};
+  for (let index = 0; index < patternParts.length; index += 1) {
+    const part = patternParts[index];
+    const value = pathParts[index];
+    if (part?.startsWith(":")) {
+      params[part.slice(1)] = decodeURIComponent(value ?? "");
+      continue;
+    }
+    if (part !== value) {
+      return { matched: false, params: {} };
+    }
+  }
+
+  return { matched: true, params };
+}
