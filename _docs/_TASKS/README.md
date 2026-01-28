@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 10 tasks
-- **In Progress:** 1
-- **Done:** 68 tasks
+- **To Do:** 11 tasks
+- **In Progress:** 2
+- **Done:** 67 tasks
 
 ---
 
@@ -48,6 +48,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-002-05 | Pages UI Wiring (Admin) | High | Medium | Replace mocks with API |
 
 ---
 
@@ -56,6 +57,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-004 | Auth, RBAC, and Admin API Base (Index) | High | Large | Index for TASK-004-01..06 |
+| TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..05 |
 
 ---
 
@@ -63,7 +65,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..04 |
 | TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
 | TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |
 | TASK-002-03 | Preview Tokens & TTL | High | Medium | Secure preview links |

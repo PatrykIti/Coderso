@@ -5,7 +5,7 @@
 **Category:** CMS/Pages  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-001  
-**Status:** Done (2026-01-28)  
+**Status:** In Progress (2026-01-28)  
 
 ---
 
@@ -28,6 +28,9 @@ This task is split into detailed subtasks to align data storage, services, and a
 
 4. **TASK-002-04** – Pages Admin API & Validation  
    File: `_docs/_TASKS/TASK-002-04_Pages_Admin_API.md`
+
+5. **TASK-002-05** – Pages UI Wiring (Admin)  
+   File: `_docs/_TASKS/TASK-002-05_Pages_UI_Wiring.md`
 
 ---
 
