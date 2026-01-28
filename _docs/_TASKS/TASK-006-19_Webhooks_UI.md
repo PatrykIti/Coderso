@@ -40,8 +40,6 @@ events checklist. This is visual-only until webhook endpoints land.
 | `core/admin/ui/settings/WebhooksPage.tsx` | create | main layout |
 | `core/admin/ui/settings/WebhooksTable.tsx` | create | table + rows |
 | `core/admin/ui/settings/WebhookDrawer.tsx` | create | create/edit |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | add “Webhooks” |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/webhooks` |
 
 ## Data + State
 

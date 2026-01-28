@@ -37,8 +37,6 @@ actions. Visual-only layer until security endpoints exist.
 | --- | --- | --- |
 | `core/admin/ui/settings/SessionsPage.tsx` | create | main layout |
 | `core/admin/ui/settings/SessionsTable.tsx` | create | table |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | keep security nav |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/security/sessions` |
 
 ## Data + State
 

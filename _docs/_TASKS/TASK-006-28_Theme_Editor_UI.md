@@ -39,7 +39,6 @@ Visual-only layer for TASK-008.
 | `core/admin/ui/themes/ThemeEditorPage.tsx` | create | main layout |
 | `core/admin/ui/themes/ThemePreviewPanel.tsx` | create | preview |
 | `core/admin/ui/themes/ThemeTokensEditor.tsx` | create | token tabs |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/themes/:id` |
 
 ## Data + State
 

@@ -38,8 +38,6 @@ exist.
 | --- | --- | --- |
 | `core/admin/ui/settings/IntegrationsPage.tsx` | create | main layout |
 | `core/admin/ui/settings/IntegrationCard.tsx` | create | card |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | add “Integrations” |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/integrations` |
 
 ## Data + State
 

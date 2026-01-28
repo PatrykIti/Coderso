@@ -38,7 +38,6 @@ layer for the search functionality in TASK-013.
 | --- | --- | --- |
 | `core/admin/ui/search/SearchPage.tsx` | create | main layout |
 | `core/admin/ui/search/SearchResults.tsx` | update | align with new design |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/search` |
 
 ## Data + State
 

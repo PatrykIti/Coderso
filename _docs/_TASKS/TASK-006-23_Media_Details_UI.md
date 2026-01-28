@@ -39,7 +39,6 @@ design. Visual-only layer for TASK-012.
 | --- | --- | --- |
 | `core/admin/ui/media/MediaDetailsDrawer.tsx` | create | drawer |
 | `core/admin/ui/media/MediaLibraryPage.tsx` | update | trigger drawer |
-| `core/admin/app/AdminApp.tsx` | update | keep `/admin/media` |
 
 ## Data + State
 

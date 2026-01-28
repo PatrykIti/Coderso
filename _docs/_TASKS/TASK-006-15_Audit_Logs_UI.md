@@ -41,7 +41,6 @@ JSON preview drawer). Functional data is already covered by TASK-014.
 | `core/admin/ui/audit/AuditFilters.tsx` | create | filter row |
 | `core/admin/ui/audit/AuditTable.tsx` | create | table + rows |
 | `core/admin/ui/audit/AuditDetailsDrawer.tsx` | create | JSON preview |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/audit` (if needed) |
 
 ## Data + State
 

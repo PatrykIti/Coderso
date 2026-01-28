@@ -37,8 +37,6 @@ Visual-only layer until security endpoints exist.
 | --- | --- | --- |
 | `core/admin/ui/settings/LoginAlertsPage.tsx` | create | main layout |
 | `core/admin/ui/settings/LoginAlertsCard.tsx` | create | toggle card |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | add “Login Alerts” |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/security/login-alerts` |
 
 ## Data + State
 

@@ -38,7 +38,6 @@ layer for TASK-019.
 | --- | --- | --- |
 | `core/admin/ui/roles/PermissionsMatrixPage.tsx` | create | main layout |
 | `core/admin/ui/roles/PermissionsMatrix.tsx` | create | grid |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/roles/matrix` |
 
 ## Data + State
 

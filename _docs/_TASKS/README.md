@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 38 tasks
+- **To Do:** 39 tasks
 - **In Progress:** 1
 - **Done:** 34 tasks
 
@@ -70,6 +70,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-006-39 | Storage Settings UI (Visual) | Medium | Medium | Storage config |
 | TASK-006-40 | Import & Export UI (Visual) | Medium | Medium | Import/export |
 | TASK-006-41 | Login Alerts UI (Visual) | Medium | Medium | Login alerts |
+| TASK-006-42 | Admin UI Integration | High | Medium | Routing + navigation |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |

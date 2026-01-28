@@ -39,7 +39,6 @@ until SEO endpoints exist.
 | `core/admin/ui/seo/SeoManagerPage.tsx` | create | main layout |
 | `core/admin/ui/seo/SeoTable.tsx` | create | table + rows |
 | `core/admin/ui/seo/SeoDrawer.tsx` | create | quick edit |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/seo` |
 
 ## Data + State
 

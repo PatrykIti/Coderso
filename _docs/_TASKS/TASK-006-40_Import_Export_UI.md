@@ -38,7 +38,6 @@ layer only until import/export endpoints exist.
 | `core/admin/ui/import-export/ImportExportPage.tsx` | create | main layout |
 | `core/admin/ui/import-export/ExportCards.tsx` | create | export section |
 | `core/admin/ui/import-export/ImportDropzone.tsx` | create | dropzone |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/tools/import-export` |
 
 ## Data + State
 

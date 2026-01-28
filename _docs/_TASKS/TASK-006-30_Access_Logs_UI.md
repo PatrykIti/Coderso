@@ -38,7 +38,6 @@ design. Visual-only layer for future access log endpoints.
 | --- | --- | --- |
 | `core/admin/ui/security/AccessLogsPage.tsx` | create | main layout |
 | `core/admin/ui/security/AccessLogsTable.tsx` | create | table |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/security/access-logs` |
 
 ## Data + State
 

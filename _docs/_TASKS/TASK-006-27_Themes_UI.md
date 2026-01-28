@@ -38,7 +38,6 @@ activation actions. Visual-only layer for TASK-008.
 | --- | --- | --- |
 | `core/admin/ui/themes/ThemesPage.tsx` | create | main layout |
 | `core/admin/ui/themes/ThemeCard.tsx` | create | profile card |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/themes` |
 
 ## Data + State
 

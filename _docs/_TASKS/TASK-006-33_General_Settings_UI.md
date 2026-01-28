@@ -39,8 +39,6 @@ Visual-only layer until settings endpoints are wired.
 | `core/admin/ui/settings/GeneralSettingsPage.tsx` | create | main layout |
 | `core/admin/ui/settings/BrandingCard.tsx` | create | name/locale/timezone |
 | `core/admin/ui/settings/LogoUploadCard.tsx` | create | uploads |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | add “General” |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/general` |
 
 ## Data + State
 

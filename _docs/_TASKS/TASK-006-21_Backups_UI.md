@@ -39,7 +39,6 @@ until backup endpoints exist.
 | `core/admin/ui/backups/BackupsPage.tsx` | create | main layout |
 | `core/admin/ui/backups/BackupsTable.tsx` | create | list |
 | `core/admin/ui/backups/BackupScheduleCard.tsx` | create | schedule |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/backups` |
 
 ## Data + State
 

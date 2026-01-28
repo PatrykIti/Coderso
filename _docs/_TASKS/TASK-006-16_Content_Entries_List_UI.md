@@ -44,7 +44,6 @@ for the entries list handled in TASK-011.
 | `core/admin/ui/entries/EntryTable.tsx` | create | table + rows |
 | `core/admin/ui/entries/EntryTypeSidebar.tsx` | create | left list |
 | `core/admin/ui/layouts/SplitShell.tsx` | use | wrapper |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/entries` |
 
 ## Data + State
 

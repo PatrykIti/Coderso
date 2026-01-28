@@ -42,8 +42,6 @@ are implemented.
 | `core/admin/ui/settings/ApiKeysPage.tsx` | create | main layout |
 | `core/admin/ui/settings/ApiKeysTable.tsx` | create | table + rows |
 | `core/admin/ui/settings/ApiKeyDialog.tsx` | create | create key modal |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | add “API Keys” |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/api-keys` |
 
 ## Data + State
 

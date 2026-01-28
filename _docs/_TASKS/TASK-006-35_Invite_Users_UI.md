@@ -38,7 +38,6 @@ preview). Visual-only layer for TASK-019.
 | --- | --- | --- |
 | `core/admin/ui/users/InviteUserDialog.tsx` | create | modal/drawer |
 | `core/admin/ui/users/UsersRolesPage.tsx` | update | launch invite |
-| `core/admin/app/AdminApp.tsx` | update | ensure route `/admin/users` |
 
 ## Data + State
 

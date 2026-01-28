@@ -38,7 +38,6 @@ Visual-only layer for TASK-009.
 | --- | --- | --- |
 | `core/admin/ui/widgets/WidgetLibraryPage.tsx` | create | main layout |
 | `core/admin/ui/widgets/WidgetCard.tsx` | create | widget preview |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/widgets` |
 
 ## Data + State
 

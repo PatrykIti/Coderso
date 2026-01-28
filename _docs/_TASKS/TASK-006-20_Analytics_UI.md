@@ -41,7 +41,6 @@ until analytics endpoints exist.
 | `core/admin/ui/analytics/KpiCards.tsx` | create | KPI row |
 | `core/admin/ui/analytics/AnalyticsCharts.tsx` | create | chart panels |
 | `core/admin/ui/analytics/TopContentTable.tsx` | create | table |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/analytics` |
 
 ## Data + State
 

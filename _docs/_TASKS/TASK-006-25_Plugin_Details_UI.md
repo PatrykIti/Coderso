@@ -38,7 +38,6 @@ settings). Visual-only layer for plugin management.
 | --- | --- | --- |
 | `core/admin/ui/store/PluginDetailsPage.tsx` | create | main layout |
 | `core/admin/ui/store/PluginDetailsTabs.tsx` | create | tabs |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/store/plugins/:id` |
 
 ## Data + State
 

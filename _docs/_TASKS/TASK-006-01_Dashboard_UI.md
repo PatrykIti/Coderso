@@ -45,7 +45,6 @@ view models and later connect to real endpoints.
 | `core/admin/ui/dashboard/SiteHealthCard.tsx` | create | progress summary |
 | `core/admin/ui/dashboard/SecurityStatusCard.tsx` | create | status list |
 | `core/admin/ui/layouts/AdminShell.tsx` | use | shared wrapper |
-| `core/admin/ui/navigation/sidebarConfig.ts` | update | add dashboard route |
 
 ## Data + State
 

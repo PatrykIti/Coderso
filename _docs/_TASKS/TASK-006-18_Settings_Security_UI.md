@@ -41,8 +41,6 @@ session TTL, IP allowlist, login alerts.
 | `core/admin/ui/settings/SecurityPolicyCard.tsx` | create | policy block |
 | `core/admin/ui/settings/IpAllowlistTable.tsx` | create | table |
 | `core/admin/ui/settings/LoginAlertsCard.tsx` | create | alerts toggles |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | add “Security” |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/security` |
 
 ## Data + State
 

@@ -39,7 +39,6 @@ layer until redirects endpoints exist.
 | `core/admin/ui/redirects/RedirectsPage.tsx` | create | main layout |
 | `core/admin/ui/redirects/RedirectsTable.tsx` | create | table |
 | `core/admin/ui/redirects/RedirectDrawer.tsx` | create | drawer |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/redirects` |
 
 ## Data + State
 

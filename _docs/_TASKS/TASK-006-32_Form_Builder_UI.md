@@ -41,7 +41,6 @@ Visual-only layer until form builder data is implemented.
 | `core/admin/ui/forms/FieldLibrary.tsx` | create | left list |
 | `core/admin/ui/forms/FormCanvas.tsx` | create | canvas |
 | `core/admin/ui/forms/FieldSettingsPanel.tsx` | create | right panel |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/forms` |
 
 ## Data + State
 

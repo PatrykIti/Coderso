@@ -38,8 +38,6 @@ Visual-only layer until email settings endpoints exist.
 | --- | --- | --- |
 | `core/admin/ui/settings/EmailSettingsPage.tsx` | create | main layout |
 | `core/admin/ui/settings/SmtpCard.tsx` | create | SMTP fields |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | add “Email” |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/email` |
 
 ## Data + State
 

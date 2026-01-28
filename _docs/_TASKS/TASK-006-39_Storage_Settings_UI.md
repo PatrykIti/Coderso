@@ -38,8 +38,6 @@ connection test. Visual-only layer until storage settings endpoints exist.
 | --- | --- | --- |
 | `core/admin/ui/settings/StorageSettingsPage.tsx` | create | main layout |
 | `core/admin/ui/settings/StorageProviderCard.tsx` | create | provider fields |
-| `core/admin/ui/settings/SettingsSidebar.tsx` | update | add “Storage” |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/settings/storage` |
 
 ## Data + State
 

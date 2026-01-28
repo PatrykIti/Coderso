@@ -42,7 +42,6 @@ editor in TASK-011.
 | `core/admin/ui/entries/EntryEditorHeader.tsx` | create | top bar |
 | `core/admin/ui/entries/EntryMetadataPanel.tsx` | create | right sidebar |
 | `core/admin/ui/entries/FieldRenderer.tsx` | update | align with new layout |
-| `core/admin/app/AdminApp.tsx` | update | route `/admin/entries/:id` |
 
 ## Data + State
 
