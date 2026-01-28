@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>General Settings - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">widgets</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">extension</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-primary bg-primary/10 transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBQjCH8zIQMvIxNIKUjFFL3J0fdVGluZKE4oPdJxnR5yIIF2s_92yf7PubsExbKKwqdVcowGmki9eig6UgrOfeguhAv8gYjBu5Ad25SX68AF_zIKQeiVqjn3_KfD7gHo6N6Wit76W9WM-ePGEspFoBQc07E_rFqENPBgGUV209f1PWuGsF_Sw4xR-Ik9zmsUp8kv4LHe16YwoHzuvKZrC9BtYSmo_uNppV3AvxtB-WxJwqSNz5CMN6EnR_Wo3hZQu85Ly22Dq-AtTU');"></div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full relative overflow-hidden">
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 z-10">
+<div class="flex items-center gap-4">
+<div>
+<h1 class="text-lg font-display font-bold text-slate-900 dark:text-white leading-none">General Settings</h1>
+<p class="text-xs text-slate-400 font-medium mt-1">Manage your global site configuration and preferences</p>
+</div>
+</div>
+<div class="flex items-center gap-4 text-slate-400">
+<span class="text-xs font-medium italic">Last saved: Today at 11:42 AM</span>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto custom-scrollbar pb-32">
+<div class="max-w-4xl mx-auto py-12 px-8 space-y-8">
+<div class="bg-white dark:bg-[#15202b] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">info</span>
+<h2 class="font-display font-bold text-slate-900 dark:text-white">Site Information</h2>
+</div>
+<div class="p-8 space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest">Site Name</label>
+<input class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-primary focus:border-primary transition-all" placeholder="e.g. My Awesome Site" type="text" value="Nextless Portfolio"/>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest">Site Tagline</label>
+<input class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-primary focus:border-primary transition-all" placeholder="Short description of your site" type="text" value="Built with speed and precision"/>
+</div>
+</div>
+<div class="space-y-2 max-w-sm">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest">Primary Locale</label>
+<select class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-primary focus:border-primary transition-all appearance-none">
+<option value="en-US">English (United States)</option>
+<option value="en-GB">English (United Kingdom)</option>
+<option value="fr-FR">French (France)</option>
+<option value="de-DE">German (Germany)</option>
+<option value="es-ES">Spanish (Spain)</option>
+</select>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-[#15202b] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<h2 class="font-display font-bold text-slate-900 dark:text-white">Timezone &amp; Units</h2>
+</div>
+<div class="p-8 space-y-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest">Timezone</label>
+<select class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-primary focus:border-primary transition-all appearance-none">
+<option>(UTC-08:00) Pacific Time (US &amp; Canada)</option>
+<option>(UTC+00:00) Greenwich Mean Time</option>
+<option>(UTC+01:00) Central European Time</option>
+<option>(UTC+09:00) Tokyo</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest">Date Format</label>
+<select class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:ring-primary focus:border-primary transition-all appearance-none">
+<option>MM/DD/YYYY</option>
+<option>DD/MM/YYYY</option>
+<option>YYYY-MM-DD</option>
+</select>
+</div>
+</div>
+<div class="flex gap-12">
+<div class="space-y-4">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest">Measurement System</label>
+<div class="flex gap-4">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input checked="" class="w-4 h-4 text-primary border-slate-300 focus:ring-primary" name="units" type="radio"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Metric</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 text-primary border-slate-300 focus:ring-primary" name="units" type="radio"/>
+<span class="text-sm text-slate-600 dark:text-slate-300 group-hover:text-primary transition-colors">Imperial</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-white dark:bg-[#15202b] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">palette</span>
+<h2 class="font-display font-bold text-slate-900 dark:text-white">Branding</h2>
+</div>
+<div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+<div class="space-y-4">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest">Site Logo</label>
+<div class="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer group">
+<div class="w-12 h-12 rounded-full bg-white dark:bg-slate-700 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">upload</span>
+</div>
+<div class="text-center">
+<p class="text-sm font-medium text-slate-700 dark:text-slate-200">Click to upload logo</p>
+<p class="text-[10px] text-slate-400 mt-1">PNG, SVG or WebP (max. 2MB)</p>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<label class="block text-xs font-bold text-slate-400 uppercase tracking-widest">Favicon</label>
+<div class="flex items-center gap-6">
+<div class="w-16 h-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-center shadow-inner">
+<span class="material-symbols-outlined text-slate-300 text-3xl">image</span>
+</div>
+<div class="flex-1 space-y-2">
+<button class="w-full py-2 px-4 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold font-display hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+                                        Upload New
+                                    </button>
+<button class="w-full py-2 px-4 text-red-500 text-xs font-bold font-display hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-all">
+                                        Remove
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-6 bg-white/80 dark:bg-[#15202b]/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 z-20">
+<div class="max-w-4xl mx-auto flex items-center justify-between">
+<div class="flex items-center gap-2 text-slate-400">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span class="text-xs font-medium">Auto-save is currently enabled for this session</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-6 py-2.5 text-slate-600 dark:text-slate-300 font-bold font-display text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
+                        Discard Changes
+                    </button>
+<button class="px-8 py-2.5 bg-primary text-white rounded-lg font-bold font-display text-sm hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        Save Changes
+                    </button>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

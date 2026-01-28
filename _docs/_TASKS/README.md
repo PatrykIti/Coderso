@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 26 tasks
 - **In Progress:** 1
 - **Done:** 34 tasks
 
@@ -48,6 +48,16 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-006-17 | Content Entry Editor UI (Visual) | High | Large | Entry editor layout |
 | TASK-006-18 | Settings Security UI (Visual) | Medium | Medium | Security settings |
 | TASK-006-19 | Webhooks UI (Visual) | Medium | Medium | Webhooks list + drawer |
+| TASK-006-20 | Analytics UI (Visual) | Medium | Medium | KPIs + charts |
+| TASK-006-21 | Backups UI (Visual) | Medium | Medium | Backups list + schedule |
+| TASK-006-22 | Global Search UI (Visual) | Medium | Medium | Search results page |
+| TASK-006-23 | Media Details UI (Visual) | Medium | Medium | Media details drawer |
+| TASK-006-24 | Permissions Matrix UI (Visual) | Medium | Medium | RBAC matrix |
+| TASK-006-25 | Plugin Details UI (Visual) | Medium | Medium | Plugin detail tabs |
+| TASK-006-26 | SEO Manager UI (Visual) | Medium | Medium | SEO table + drawer |
+| TASK-006-27 | Themes UI (Visual) | Medium | Medium | Themes list |
+| TASK-006-28 | Theme Editor UI (Visual) | Medium | Large | Theme editor layout |
+| TASK-006-29 | Widget Library UI (Visual) | High | Medium | Widget library grid |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |

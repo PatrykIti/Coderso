@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Form Builder - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+        }
+        .preview-canvas {
+            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+        .dark .preview-canvas {
+            background-image: radial-gradient(#1e293b 1px, transparent 1px);
+        }
+        .drag-handle {
+            cursor: grab;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">dynamic_form</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl text-primary bg-primary/10 transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">reorder</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAxXQHFdWQVIftL9FdI-1JawXE3Ruhitahx20_zTNyHLRwwUIGr4s_lhu2PVaW-wZUuzCRtDy71L-9gU9JZL3kuuR_9sMI3tsQ8IyY0Yzpq9CsNs6WU_ptqHIBbyXSD1zvR0X5R4g_jd8VHNV2mo1DTYojpYkowV_tMOvUNmm6qsjhAFKAKv1NQFRqsmE8TR33oQegbqGQBgXg-38gFg3goccy2AyQFsBySfJV1I9Je1D1ApnDnAbtqf6rphRBhaKycahs3dj7h6nE');"></div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 z-10">
+<div class="flex items-center gap-4">
+<button class="text-slate-400 hover:text-slate-600 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div>
+<h1 class="text-lg font-display font-bold text-slate-900 dark:text-white leading-none">Contact Support Form</h1>
+<p class="text-xs text-slate-400 font-medium">Customer Service • Draft • Saved 12s ago</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-slate-600 dark:text-slate-300 font-bold font-display text-sm hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all">
+                Preview
+            </button>
+<button class="px-5 py-2.5 bg-primary text-white rounded-lg font-bold font-display text-sm hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                Save Form
+            </button>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<aside class="w-64 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
+<div class="p-5 border-b border-slate-100 dark:border-slate-800">
+<h3 class="text-xs font-bold font-display text-slate-400 uppercase tracking-widest">Fields Library</h3>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 cursor-grab hover:border-primary/50 transition-colors group">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">text_fields</span>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Text Input</span>
+</div>
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 cursor-grab hover:border-primary/50 transition-colors group">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">alternate_email</span>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Email Field</span>
+</div>
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 cursor-grab hover:border-primary/50 transition-colors group">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">check_box</span>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Checkbox</span>
+</div>
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 cursor-grab hover:border-primary/50 transition-colors group">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">list</span>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Select Menu</span>
+</div>
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 cursor-grab hover:border-primary/50 transition-colors group">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">subject</span>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Textarea</span>
+</div>
+<div class="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center gap-3 cursor-grab hover:border-primary/50 transition-colors group">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-primary">calendar_month</span>
+<span class="text-sm font-medium text-slate-700 dark:text-slate-300">Date Picker</span>
+</div>
+</div>
+<div class="p-4 border-t border-slate-100 dark:border-slate-800">
+<button class="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-bold uppercase tracking-wider">Advanced Fields</button>
+</div>
+</aside>
+<div class="flex-1 overflow-y-auto p-12 custom-scrollbar preview-canvas flex flex-col items-center">
+<div class="w-full max-w-xl bg-white dark:bg-[#1e293b] rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8 space-y-6 min-h-[600px]">
+<div class="border-b border-slate-100 dark:border-slate-800 pb-6 mb-2">
+<h2 class="text-2xl font-display font-bold text-slate-900 dark:text-white">Contact Us</h2>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1">We'll get back to you within 24 hours.</p>
+</div>
+<div class="space-y-4">
+<div class="relative group p-4 border-2 border-primary rounded-xl bg-primary/5">
+<div class="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-slate-400 hover:text-primary"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+</div>
+<div class="absolute -right-3 -top-3 flex gap-2">
+<button class="h-8 w-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center justify-center text-slate-400 hover:text-red-500 shadow-sm transition-colors">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-primary uppercase tracking-wider">Full Name</label>
+<div class="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-primary/30 rounded-lg text-slate-400 text-sm">John Doe</div>
+</div>
+</div>
+<div class="relative group p-4 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-xl transition-all">
+<div class="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-slate-400 hover:text-primary"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email Address</label>
+<div class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 text-sm italic">example@email.com</div>
+</div>
+</div>
+<div class="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl py-8 flex flex-col items-center justify-center text-slate-400 bg-slate-50/30 dark:bg-slate-800/10">
+<span class="material-symbols-outlined text-3xl mb-2">add_circle</span>
+<p class="text-xs font-medium">Drop a field here to add to your form</p>
+</div>
+<div class="relative group p-4 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 rounded-xl transition-all">
+<div class="absolute -left-10 top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-slate-400 hover:text-primary"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Message</label>
+<div class="w-full px-4 py-8 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-400 text-sm italic">Type your request...</div>
+</div>
+</div>
+</div>
+<div class="pt-6 border-t border-slate-100 dark:border-slate-800">
+<button class="w-full py-4 bg-primary text-white rounded-xl font-bold font-display shadow-lg shadow-primary/20">Submit Message</button>
+</div>
+</div>
+</div>
+<aside class="w-80 bg-white dark:bg-[#15202b] border-l border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-display font-bold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">settings_input_component</span>
+                        Field Settings
+                    </h3>
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">Text Input</span>
+</div>
+<div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg text-xs font-bold uppercase tracking-wider">
+<button class="flex-1 py-1.5 rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white">General</button>
+<button class="flex-1 py-1.5 rounded-md text-slate-400">Logic</button>
+<button class="flex-1 py-1.5 rounded-md text-slate-400">Style</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+<div class="space-y-4">
+<div>
+<label class="block text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest mb-1.5">Label</label>
+<input class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-primary focus:border-primary" type="text" value="Full Name"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest mb-1.5">Placeholder</label>
+<input class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-primary focus:border-primary" type="text" value="John Doe"/>
+</div>
+<div>
+<label class="block text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest mb-1.5">Helper Text</label>
+<textarea class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-primary focus:border-primary" rows="2">Please enter your legal name.</textarea>
+</div>
+</div>
+<div class="h-px bg-slate-100 dark:bg-slate-800"></div>
+<div class="space-y-4">
+<label class="text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest">Validation Rules</label>
+<div class="flex items-center justify-between">
+<span class="text-sm text-slate-600 dark:text-slate-300">Required Field</span>
+<div class="relative inline-block w-8 h-4 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="absolute block w-4 h-4 rounded-full bg-white border-4 border-slate-200 appearance-none cursor-pointer checked:right-0 checked:border-primary right-4" id="required-toggle" type="checkbox"/>
+<label class="block overflow-hidden h-4 rounded-full bg-slate-200 cursor-pointer" for="required-toggle"></label>
+</div>
+</div>
+<div>
+<label class="block text-xs font-medium text-slate-500 mb-1.5">Regex Pattern</label>
+<div class="flex gap-2">
+<input class="flex-1 px-3 py-2 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white" type="text" value="^[a-zA-Z ]*$"/>
+<button class="px-2 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"><span class="material-symbols-outlined text-[18px] text-slate-400">info</span></button>
+</div>
+</div>
+</div>
+<div class="h-px bg-slate-100 dark:bg-slate-800"></div>
+<div class="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-xl border border-blue-100 dark:border-blue-800/50">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-[18px]">alt_route</span>
+<span class="text-xs font-bold text-blue-900 dark:text-blue-300">Conditional Logic</span>
+</div>
+<p class="text-[11px] text-blue-700 dark:text-blue-400 mb-3">Show this field only if 'Subject' is set to 'Technical Support'.</p>
+<button class="text-[10px] font-bold text-primary uppercase hover:underline">Edit Logic Rule</button>
+</div>
+</div>
+<div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+<button class="w-full py-2.5 bg-slate-900 dark:bg-slate-700 text-white font-bold font-display text-sm rounded-lg transition-all flex items-center justify-center gap-2">
+                    Duplicate Field
+                </button>
+</div>
+</aside>
+</div>
+</main>
+
+</body></html>

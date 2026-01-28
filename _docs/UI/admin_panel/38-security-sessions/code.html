@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Security Sessions - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">shield_person</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">extension</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-primary bg-primary/10 transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuD20cWDqPgyNM5xX6zRaOEaOfLXygACcBteKv11Keiou521ZAvmyPCqAwuXnK8r2fud3rFRpbAAvxjl5KHsRKwLIS865iJJktx4ijAoJGoW6Qb_a6404T_1vlwDGQuBV2inpZ6-IHBDnvVqVyoGOeQ5mbroeOY68mYO5rEJqj1-uGJTJTIrFApW1gAQ6nzcaJWoMgiRqPvmZ0NPYM9880BFmnRxVTLxJq6xLv1qRnGGKR-OIxkYIrZe7ttKZNpPzXF24ycqO7Tm208');"></div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 z-10">
+<div class="flex items-center gap-4">
+<button class="text-slate-400 hover:text-slate-600 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div>
+<h1 class="text-lg font-display font-bold text-slate-900 dark:text-white leading-none">Security Sessions</h1>
+<p class="text-xs text-slate-400 font-medium">Account Security • Monitoring</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-5 py-2.5 bg-red-500 text-white rounded-lg font-bold font-display text-sm hover:bg-red-600 transition-all flex items-center gap-2 shadow-lg shadow-red-500/10">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+                Revoke All Other Sessions
+            </button>
+</div>
+</header>
+<div class="bg-white dark:bg-[#15202b] px-8 border-b border-slate-200 dark:border-slate-800 shrink-0">
+<div class="flex gap-8">
+<button class="py-4 border-b-2 border-transparent text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                General
+            </button>
+<button class="py-4 border-b-2 border-primary text-sm font-bold font-display text-primary">
+                Active Sessions
+            </button>
+<button class="py-4 border-b-2 border-transparent text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                Audit Log
+            </button>
+<button class="py-4 border-b-2 border-transparent text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                Two-Factor Auth
+            </button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+<div class="max-w-6xl mx-auto space-y-6">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="text-xl font-display font-bold text-slate-900 dark:text-white">Where you're signed in</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400">Manage your active sessions on other devices and locations.</p>
+</div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 text-xs font-medium">
+<span class="material-symbols-outlined text-[16px]">info</span>
+                    3 Active Sessions
+                </div>
+</div>
+<div class="bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+<th class="px-6 py-4 text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest">Device/OS</th>
+<th class="px-6 py-4 text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest">Location</th>
+<th class="px-6 py-4 text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest">Last Active</th>
+<th class="px-6 py-4 text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest">Status</th>
+<th class="px-6 py-4 text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+<tr class="group hover:bg-slate-50/30 dark:hover:bg-slate-800/20 transition-colors">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">desktop_windows</span>
+</div>
+<div>
+<div class="text-sm font-bold text-slate-900 dark:text-white">Chrome on macOS</div>
+<div class="text-[11px] text-slate-500 dark:text-slate-500">Apple MacBook Pro 14"</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-600 dark:text-slate-300">San Francisco, USA</span>
+<span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-medium text-slate-400">192.168.1.1</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-sm text-slate-600 dark:text-slate-300">Just now</span>
+</td>
+<td class="px-6 py-5">
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold rounded-full uppercase tracking-tight">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                    Current Session
+                                </div>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="px-3 py-1.5 text-slate-300 dark:text-slate-600 cursor-not-allowed text-xs font-bold font-display">
+                                    Cannot Revoke
+                                </button>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50/30 dark:hover:bg-slate-800/20 transition-colors">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined">smartphone</span>
+</div>
+<div>
+<div class="text-sm font-bold text-slate-900 dark:text-white">Safari on iPhone 13</div>
+<div class="text-[11px] text-slate-500 dark:text-slate-500">iOS 16.2</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-600 dark:text-slate-300">London, UK</span>
+<span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-medium text-slate-400">82.12.34.120</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-sm text-slate-600 dark:text-slate-300">2 hours ago</span>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs text-slate-400 font-medium">Inactive</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="px-4 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white rounded-lg text-xs font-bold font-display transition-all opacity-0 group-hover:opacity-100">
+                                    Revoke
+                                </button>
+</td>
+</tr>
+<tr class="group hover:bg-slate-50/30 dark:hover:bg-slate-800/20 transition-colors">
+<td class="px-6 py-5">
+<div class="flex items-center gap-3">
+<div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined">laptop</span>
+</div>
+<div>
+<div class="text-sm font-bold text-slate-900 dark:text-white">Edge on Windows 11</div>
+<div class="text-[11px] text-slate-500 dark:text-slate-500">Dell XPS 15</div>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<span class="text-sm text-slate-600 dark:text-slate-300">Berlin, Germany</span>
+<span class="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-medium text-slate-400">144.92.11.5</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-sm text-slate-600 dark:text-slate-300">3 days ago</span>
+</td>
+<td class="px-6 py-5">
+<span class="text-xs text-slate-400 font-medium">Inactive</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="px-4 py-1.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white rounded-lg text-xs font-bold font-display transition-all opacity-0 group-hover:opacity-100">
+                                    Revoke
+                                </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-800/50 flex items-start gap-4">
+<div class="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-800/50 flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined">privacy_tip</span>
+</div>
+<div>
+<h3 class="font-display font-bold text-blue-900 dark:text-blue-300">Noticing something strange?</h3>
+<p class="text-sm text-blue-700 dark:text-blue-400 mt-1">If you don't recognize a session, revoke it immediately and change your password to keep your account secure.</p>
+<div class="mt-3 flex gap-4">
+<button class="text-xs font-bold text-primary hover:underline">Change Password</button>
+<button class="text-xs font-bold text-primary hover:underline">Security Settings</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

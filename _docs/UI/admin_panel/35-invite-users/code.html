@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Users - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">widgets</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl text-primary bg-primary/10 transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">group</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAxXQHFdWQVIftL9FdI-1JawXE3Ruhitahx20_zTNyHLRwwUIGr4s_lhu2PVaW-wZUuzCRtDy71L-9gU9JZL3kuuR_9sMI3tsQ8IyY0Yzpq9CsNs6WU_ptqHIBbyXSD1zvR0X5R4g_jd8VHNV2mo1DTYojpYkowV_tMOvUNmm6qsjhAFKAKv1NQFRqsmE8TR33oQegbqGQBgXg-38gFg3goccy2AyQFsBySfJV1I9Je1D1ApnDnAbtqf6rphRBhaKycahs3dj7h6nE');"></div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 z-10">
+<div class="flex items-center gap-4">
+<h1 class="text-xl font-display font-bold text-slate-900 dark:text-white leading-none">Users &amp; Teams</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-5 py-2.5 bg-primary text-white rounded-lg font-bold font-display text-sm hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">person_add</span>
+                Invite User
+            </button>
+</div>
+</header>
+<div class="flex-1 p-8 overflow-y-auto custom-scrollbar">
+<div class="bg-white dark:bg-[#15202b] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-slate-100 dark:border-slate-800">
+<th class="p-4 text-xs font-bold font-display text-slate-400 uppercase tracking-widest">User</th>
+<th class="p-4 text-xs font-bold font-display text-slate-400 uppercase tracking-widest">Role</th>
+<th class="p-4 text-xs font-bold font-display text-slate-400 uppercase tracking-widest">Status</th>
+<th class="p-4 text-xs font-bold font-display text-slate-400 uppercase tracking-widest">Last Active</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-50 dark:divide-slate-800/50">
+<tr>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-slate-200 flex-shrink-0"></div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Alex Rivera</p>
+<p class="text-xs text-slate-400">alex@nextless.io</p>
+</div>
+</div>
+</td>
+<td class="p-4"><span class="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-[10px] font-bold rounded uppercase">Admin</span></td>
+<td class="p-4"><span class="flex items-center gap-1.5 text-xs text-green-500 font-medium"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Active</span></td>
+<td class="p-4 text-xs text-slate-400">2 mins ago</td>
+</tr>
+<tr>
+<td class="p-4">
+<div class="flex items-center gap-3">
+<div class="h-8 w-8 rounded-full bg-slate-200 flex-shrink-0"></div>
+<div>
+<p class="text-sm font-bold text-slate-900 dark:text-white">Sarah Chen</p>
+<p class="text-xs text-slate-400">sarah.c@nextless.io</p>
+</div>
+</div>
+</td>
+<td class="p-4"><span class="px-2 py-1 bg-slate-100 dark:bg-slate-800 text-[10px] font-bold rounded uppercase">Editor</span></td>
+<td class="p-4"><span class="flex items-center gap-1.5 text-xs text-green-500 font-medium"><span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Active</span></td>
+<td class="p-4 text-xs text-slate-400">5 hours ago</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="absolute inset-0 z-40 bg-slate-900/40 dark:bg-slate-950/60 backdrop-blur-sm transition-opacity">
+<div class="absolute inset-y-0 right-0 w-full max-w-md bg-white dark:bg-[#15202b] shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
+<div class="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+<div>
+<h2 class="text-lg font-display font-bold text-slate-900 dark:text-white">Invite User</h2>
+<p class="text-xs text-slate-400">Add a new member to your workspace</p>
+</div>
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+<div class="space-y-4">
+<label class="text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest">User Details</label>
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-medium text-slate-500 mb-1.5">Full Name</label>
+<input class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-primary focus:border-primary placeholder:text-slate-400" placeholder="e.g. John Doe" type="text"/>
+</div>
+<div>
+<label class="block text-xs font-medium text-slate-500 mb-1.5">Email Address</label>
+<input class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-primary focus:border-primary placeholder:text-slate-400" placeholder="john@example.com" type="email"/>
+</div>
+</div>
+</div>
+<div class="h-px bg-slate-100 dark:bg-slate-800"></div>
+<div class="space-y-4">
+<label class="text-[10px] font-bold font-display text-slate-400 uppercase tracking-widest">Access &amp; Role</label>
+<div>
+<label class="block text-xs font-medium text-slate-500 mb-1.5">Workspace Role</label>
+<div class="relative">
+<select class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-primary focus:border-primary appearance-none cursor-pointer">
+<option>Admin</option>
+<option selected="">Editor</option>
+<option>Viewer</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+<div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-5 border border-slate-100 dark:border-slate-800/50">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary text-[18px]">verified_user</span>
+<span class="text-xs font-bold font-display text-slate-900 dark:text-white">Permissions Preview</span>
+</div>
+<ul class="space-y-3">
+<li class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-green-500 text-[16px]">check_circle</span>
+                            Can create and edit content
+                        </li>
+<li class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-green-500 text-[16px]">check_circle</span>
+                            Can manage media assets
+                        </li>
+<li class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-green-500 text-[16px]">check_circle</span>
+                            Can publish updates to staging
+                        </li>
+<li class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-600 text-[16px]">block</span>
+                            Cannot manage billing or workspace settings
+                        </li>
+</ul>
+</div>
+</div>
+<div class="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3">
+<button class="flex-1 px-5 py-3 bg-primary text-white rounded-xl font-bold font-display text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+                    Send Invitation
+                </button>
+<button class="flex-1 px-5 py-3 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl font-bold font-display text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-center">
+                    Cancel
+                </button>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>
