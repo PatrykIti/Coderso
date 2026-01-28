@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 10 tasks
+- **To Do:** 14 tasks
 - **In Progress:** 1
 - **Done:** 63 tasks
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-002 | Pages, Revisions, and Preview | High | Medium | Pages + revisions + preview |
 | TASK-003 | Content Types Engine | High | Large | Dynamic content schemas |
 | TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
@@ -49,6 +48,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
+| TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |
+| TASK-002-03 | Preview Tokens & TTL | High | Medium | Secure preview links |
+| TASK-002-04 | Pages Admin API & Validation | High | Medium | REST endpoints + schemas |
 
 ---
 
