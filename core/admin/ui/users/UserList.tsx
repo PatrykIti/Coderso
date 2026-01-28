@@ -69,6 +69,7 @@ export type UserListProps = {
   protectedIds?: string[];
   canManageUsers?: boolean;
   onSelect: (id: string) => void;
+  onViewProfile?: (user: UserSummary) => void;
   onEdit: (user: UserSummary) => void;
   onToggleStatus: (user: UserSummary) => void;
   onResetPassword: (user: UserSummary) => void;
@@ -82,6 +83,7 @@ export function UserList({
   protectedIds = [],
   canManageUsers = true,
   onSelect,
+  onViewProfile,
   onEdit,
   onToggleStatus,
   onResetPassword,
@@ -187,7 +189,9 @@ export function UserList({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-44">
-                      <DropdownMenuItem onClick={() => onSelect(user.id)}>
+                      <DropdownMenuItem
+                        onClick={() => (onViewProfile ? onViewProfile(user) : onSelect(user.id))}
+                      >
                         View profile
                       </DropdownMenuItem>
                       <DropdownMenuItem

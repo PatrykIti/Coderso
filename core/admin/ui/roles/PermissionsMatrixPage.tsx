@@ -18,7 +18,7 @@ function PermissionsMatrixSearch() {
 export function PermissionsMatrixPage() {
   return (
     <AdminShell
-      activeHref="/admin/users"
+      activeHref="/admin/roles"
       breadcrumbs={
         <div className="flex flex-col gap-1">
           <span className="text-base font-semibold text-foreground">

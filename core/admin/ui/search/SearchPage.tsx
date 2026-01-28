@@ -123,6 +123,7 @@ export function SearchPage() {
 
   return (
     <AdminShell
+      activeHref="/admin/search"
       showSearch={false}
       breadcrumbs={<span className="text-sm text-muted-foreground">Search</span>}
     >

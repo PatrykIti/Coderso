@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { UserPlus, UserCog } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { SectionHeader } from "@/ui/shared/SectionHeader";
@@ -124,9 +125,20 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const [userEditorSeed, setUserEditorSeed] = useState(0);
   const [roleEditorSeed, setRoleEditorSeed] = useState(0);
   const [inviteDialogSeed, setInviteDialogSeed] = useState(0);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [isLargeScreen, setIsLargeScreen] = useState(true);
 
   const canManageUsers = hasPermission(permissions, "users:write");
   const canManageRoles = hasPermission(permissions, "roles:write");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsLargeScreen(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -290,6 +302,15 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     setInviteDialogOpen(true);
   };
 
+  const handleSelectUser = (id: string) => {
+    setSelectedUserId(id);
+    if (!isLargeScreen) setDetailsOpen(true);
+  };
+
+  const handleViewProfile = (user: UserSummary) => {
+    handleSelectUser(user.id);
+  };
+
   const readOnly = !canManageUsers || !canManageRoles;
 
   return (
@@ -366,7 +387,8 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
           selectedId={selectedUser?.id}
           protectedIds={protectedUserIds}
           canManageUsers={canManageUsers}
-          onSelect={setSelectedUserId}
+          onSelect={handleSelectUser}
+          onViewProfile={handleViewProfile}
           onEdit={openUserEditor}
           onToggleStatus={handleToggleStatus}
           onResetPassword={() => undefined}
@@ -427,6 +449,19 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         onOpenChange={setRoleEditorOpen}
         onSave={handleSaveRole}
       />
+      {!isLargeScreen ? (
+        <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-md">
+            <UserDetailsDrawer
+              user={selectedUser}
+              roles={roles}
+              canManageUsers={canManageUsers}
+              onEditUser={() => selectedUser && openUserEditor(selectedUser)}
+              onResetPassword={() => undefined}
+            />
+          </SheetContent>
+        </Sheet>
+      ) : null}
     </SplitShell>
   );
 }

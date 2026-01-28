@@ -24,7 +24,7 @@ import { AccessLogsTable } from "./AccessLogsTable";
 export function AccessLogsPage() {
   return (
     <AdminShell
-      activeHref="/admin/security/access-logs"
+      activeHref="/admin/access-logs"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Security</span>

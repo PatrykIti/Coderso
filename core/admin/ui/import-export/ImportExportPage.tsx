@@ -11,7 +11,7 @@ import { ImportDropzone } from "./ImportDropzone";
 export function ImportExportPage() {
   return (
     <AdminShell
-      activeHref="/admin/import-export"
+      activeHref="/admin/tools/import-export"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Data</span>

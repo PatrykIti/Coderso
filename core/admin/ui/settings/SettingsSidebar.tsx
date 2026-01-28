@@ -1,5 +1,4 @@
 import {
-  Database,
   HardDrive,
   KeyRound,
   Link2,
@@ -8,22 +7,19 @@ import {
   Plug,
   Settings,
   Shield,
-  Users,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 const items = [
-  { id: "general", label: "General", icon: Settings },
-  { id: "design-tokens", label: "Design Tokens", icon: Palette },
-  { id: "data-model", label: "Data Model", icon: Database },
-  { id: "team", label: "Team", icon: Users },
-  { id: "security", label: "Security", icon: Shield },
-  { id: "api-keys", label: "API Keys", icon: KeyRound },
-  { id: "webhooks", label: "Webhooks", icon: Link2 },
-  { id: "email", label: "Email", icon: Mail },
-  { id: "storage", label: "Storage", icon: HardDrive },
-  { id: "integrations", label: "Integrations", icon: Plug },
+  { id: "general", label: "General", icon: Settings, href: "/admin/settings/general" },
+  { id: "design-tokens", label: "Design Tokens", icon: Palette, href: "/admin/settings" },
+  { id: "security", label: "Security", icon: Shield, href: "/admin/settings/security" },
+  { id: "api-keys", label: "API Keys", icon: KeyRound, href: "/admin/settings/api-keys" },
+  { id: "webhooks", label: "Webhooks", icon: Link2, href: "/admin/settings/webhooks" },
+  { id: "email", label: "Email", icon: Mail, href: "/admin/settings/email" },
+  { id: "storage", label: "Storage", icon: HardDrive, href: "/admin/settings/storage" },
+  { id: "integrations", label: "Integrations", icon: Plug, href: "/admin/settings/integrations" },
 ];
 
 type SettingsSidebarProps = {
@@ -41,9 +37,10 @@ export function SettingsSidebar({ activeId = "design-tokens" }: SettingsSidebarP
           const isActive = item.id === activeId;
           const Icon = item.icon;
           return (
-            <button
+            <a
               key={item.id}
-              type="button"
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
                 isActive
@@ -53,7 +50,7 @@ export function SettingsSidebar({ activeId = "design-tokens" }: SettingsSidebarP
             >
               <Icon className="h-4 w-4" />
               {item.label}
-            </button>
+            </a>
           );
         })}
       </div>
