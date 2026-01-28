@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils"
 
 type RedirectStatus = "active" | "inactive"
 
-type RedirectRow = {
+export type RedirectRow = {
   id: string
   from: string
   to: string
@@ -23,32 +23,10 @@ type RedirectRow = {
   lastHit: string
 }
 
-const redirects: RedirectRow[] = [
-  {
-    id: "redirect-1",
-    from: "/old-product-page",
-    to: "/products/new-v2-edition",
-    type: "301",
-    status: "active",
-    lastHit: "2 mins ago",
-  },
-  {
-    id: "redirect-2",
-    from: "/blog-launch",
-    to: "/blog/introducing-nextless",
-    type: "301",
-    status: "active",
-    lastHit: "14 hours ago",
-  },
-  {
-    id: "redirect-3",
-    from: "/temporary-offer",
-    to: "/pricing?promo=spring",
-    type: "302",
-    status: "inactive",
-    lastHit: "Never",
-  },
-]
+type RedirectsTableProps = {
+  items: RedirectRow[]
+  onEdit?: (redirect: RedirectRow) => void
+}
 
 const statusMeta: Record<
   RedirectStatus,
@@ -71,7 +49,7 @@ const typeBadge: Record<RedirectRow["type"], string> = {
   "302": "border-transparent bg-blue-500/10 text-blue-600",
 }
 
-export function RedirectsTable() {
+export function RedirectsTable({ items, onEdit }: RedirectsTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -98,7 +76,7 @@ export function RedirectsTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {redirects.map((redirect) => {
+          {items.map((redirect) => {
             const status = statusMeta[redirect.status]
 
             return (
@@ -139,6 +117,7 @@ export function RedirectsTable() {
                       size="icon-sm"
                       className="text-muted-foreground hover:text-primary"
                       aria-label="Edit redirect"
+                      onClick={() => onEdit?.(redirect)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>

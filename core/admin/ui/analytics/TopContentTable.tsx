@@ -73,14 +73,18 @@ const contentRows: ContentRow[] = [
   },
 ];
 
-export function TopContentTable() {
+type TopContentTableProps = {
+  onViewAll?: () => void;
+};
+
+export function TopContentTable({ onViewAll }: TopContentTableProps) {
   return (
     <Card className="border-border/60">
       <CardHeader className="space-y-1">
         <SectionHeader
           title="Top Content"
           action={
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" onClick={onViewAll}>
               View all
             </Button>
           }

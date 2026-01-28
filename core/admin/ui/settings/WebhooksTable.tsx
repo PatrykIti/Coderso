@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-type WebhookStatus = "active" | "inactive";
-type DeliveryStatus = "success" | "pending" | "failed";
+export type WebhookStatus = "active" | "inactive";
+export type DeliveryStatus = "success" | "pending" | "failed";
 
-type WebhookRow = {
+export type WebhookRow = {
   id: string;
   url: string;
   events: string[];
@@ -25,30 +25,6 @@ type WebhookRow = {
     status: DeliveryStatus;
   };
 };
-
-const webhooks: WebhookRow[] = [
-  {
-    id: "deployment-hook",
-    url: "https://api.deployment-service.com/hooks",
-    events: ["entry.created", "media.uploaded"],
-    status: "active",
-    lastDelivery: { label: "2 minutes ago", status: "success" },
-  },
-  {
-    id: "slack-alerts",
-    url: "https://hooks.slack.com/services/T0123/B456",
-    events: ["entry.updated"],
-    status: "inactive",
-    lastDelivery: { label: "3 days ago", status: "pending" },
-  },
-  {
-    id: "staging-worker",
-    url: "https://staging-worker.internal.io/process",
-    events: ["media.deleted"],
-    status: "active",
-    lastDelivery: { label: "1 hour ago", status: "failed" },
-  },
-];
 
 const statusClasses: Record<WebhookStatus, string> = {
   active: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
@@ -73,7 +49,12 @@ const deliveryMeta: Record<
   },
 };
 
-export function WebhooksTable() {
+type WebhooksTableProps = {
+  items: WebhookRow[];
+  onEdit?: (row: WebhookRow) => void;
+};
+
+export function WebhooksTable({ items, onEdit }: WebhooksTableProps) {
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
       <Table>
@@ -97,7 +78,7 @@ export function WebhooksTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {webhooks.map((webhook) => {
+          {items.map((webhook) => {
             const delivery = deliveryMeta[webhook.lastDelivery.status];
             const DeliveryIcon = delivery.icon;
 
@@ -138,7 +119,12 @@ export function WebhooksTable() {
                 </TableCell>
                 <TableCell className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon-sm" aria-label="Edit webhook">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Edit webhook"
+                      onClick={() => onEdit?.(webhook)}
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button

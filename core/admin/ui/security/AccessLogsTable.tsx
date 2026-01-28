@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -23,27 +22,9 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
-type AccessLogStatus = "success" | "failed";
+import type { AccessLogItem, AccessLogStatus } from "./types";
 
-type AccessLog = {
-  id: string;
-  user: {
-    name: string;
-    detail: string;
-  };
-  ipAddress: string;
-  device: {
-    label: string;
-    icon: LucideIcon;
-  };
-  timestamp: {
-    date: string;
-    time: string;
-  };
-  status: AccessLogStatus;
-};
-
-const accessLogs: AccessLog[] = [
+const accessLogs: AccessLogItem[] = [
   {
     id: "log-1",
     user: {
@@ -128,7 +109,11 @@ function getInitials(name: string) {
     .join("");
 }
 
-export function AccessLogsTable() {
+type AccessLogsTableProps = {
+  onView?: (log: AccessLogItem) => void;
+};
+
+export function AccessLogsTable({ onView }: AccessLogsTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -210,6 +195,7 @@ export function AccessLogsTable() {
                     variant="ghost"
                     size="icon-sm"
                     aria-label="Open log actions"
+                    onClick={() => onView?.(log)}
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>

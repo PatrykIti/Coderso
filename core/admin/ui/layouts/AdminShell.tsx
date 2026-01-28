@@ -37,7 +37,12 @@ export function AdminShell({
   contentClassName,
 }: AdminShellProps) {
   return (
-    <div className={cn("flex min-h-screen w-full bg-muted/30", className)}>
+    <div
+      className={cn(
+        "flex h-screen w-full overflow-hidden bg-muted/30",
+        className
+      )}
+    >
       <SidebarNav
         sections={navSections}
         footerItems={footerItems}

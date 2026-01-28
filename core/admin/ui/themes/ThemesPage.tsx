@@ -7,6 +7,7 @@ import {
   Sparkles,
   Sun,
 } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,8 +32,11 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { ThemeCard, type ThemeProfile } from "./ThemeCard";
+import { ThemeExportDialog } from "./ThemeExportDialog";
+import { ThemeProfileDrawer } from "./ThemeProfileDrawer";
 
 const activeTheme = {
+  id: "neo-minimalist",
   name: "Neo Minimalist",
   description:
     "Clean, high-contrast interface designed for maximum readability and focus.",
@@ -72,6 +76,20 @@ const primaryPalette = ["#e7f4fd", "#cfebfb", "#1392ec", "#0f75bd", "#0a4e7e"];
 const radiusScale = ["sm", "lg", "xl", "2xl"];
 
 export function ThemesPage() {
+  const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<ThemeProfile | null>(null);
+
+  const openCreateProfile = () => {
+    setEditingProfile(null);
+    setProfileDrawerOpen(true);
+  };
+
+  const openEditProfile = (profile: ThemeProfile) => {
+    setEditingProfile(profile);
+    setProfileDrawerOpen(true);
+  };
+
   return (
     <AdminShell
       activeHref="/admin/themes"
@@ -89,10 +107,16 @@ export function ThemesPage() {
             title="Themes"
             description="Manage theme profiles, palettes, and activation states."
             actions={
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Profile
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+                  <Download className="h-4 w-4" />
+                  Export Config
+                </Button>
+                <Button className="gap-2" onClick={openCreateProfile}>
+                  <Plus className="h-4 w-4" />
+                  New Profile
+                </Button>
+              </div>
             }
           />
 
@@ -193,7 +217,9 @@ export function ThemesPage() {
                   </div>
                 </div>
                 <div className="flex w-full flex-col gap-2 md:w-auto">
-                  <Button className="w-full md:w-auto">Edit Theme</Button>
+                  <Button className="w-full md:w-auto" asChild>
+                    <a href={`/admin/themes/${activeTheme.id}`}>Edit Theme</a>
+                  </Button>
                   <Button variant="outline" className="w-full md:w-auto">
                     Duplicate
                   </Button>
@@ -215,7 +241,13 @@ export function ThemesPage() {
             </div>
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {profiles.map((profile) => (
-                <ThemeCard key={profile.id} theme={profile} />
+                <ThemeCard
+                  key={profile.id}
+                  theme={profile}
+                  onEdit={() => openEditProfile(profile)}
+                  onDuplicate={() => undefined}
+                  onActivate={() => undefined}
+                />
               ))}
             </div>
           </section>
@@ -295,7 +327,11 @@ export function ThemesPage() {
               </div>
             </CardContent>
             <CardFooter className="border-t pt-6">
-              <Button variant="outline" className="w-full gap-2">
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setExportOpen(true)}
+              >
                 <Download className="h-4 w-4" />
                 Export Config
               </Button>
@@ -303,6 +339,12 @@ export function ThemesPage() {
           </Card>
         </aside>
       </div>
+      <ThemeProfileDrawer
+        open={profileDrawerOpen}
+        onOpenChange={setProfileDrawerOpen}
+        profile={editingProfile}
+      />
+      <ThemeExportDialog open={exportOpen} onOpenChange={setExportOpen} />
     </AdminShell>
   );
 }

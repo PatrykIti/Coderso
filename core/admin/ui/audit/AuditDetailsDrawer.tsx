@@ -32,7 +32,7 @@ export function AuditDetailsDrawer({
       <SheetContent
         side="right"
         showCloseButton={false}
-        className="flex w-full flex-col sm:max-w-md lg:max-w-lg"
+        className="flex h-full min-h-0 w-full flex-col sm:max-w-md lg:max-w-lg"
       >
         {!log ? (
           <div className="flex flex-1 flex-col items-center justify-center text-center text-sm text-muted-foreground">
@@ -64,7 +64,7 @@ export function AuditDetailsDrawer({
                 </Button>
               </SheetClose>
             </div>
-            <ScrollArea className="flex-1 pr-4">
+            <ScrollArea className="flex-1 min-h-0 pr-4">
               <div className="space-y-6 py-6">
                 <div className="rounded-xl border bg-muted/30 p-4">
                   <div className="flex items-start gap-4">

@@ -9,7 +9,22 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
-export function FieldSettingsPanel() {
+export type FieldSettings = {
+  id: string;
+  label: string;
+  type: string;
+  helper?: string;
+};
+
+type FieldSettingsPanelProps = {
+  field: FieldSettings;
+};
+
+const supportsPlaceholder = new Set(["text", "email", "textarea"]);
+const supportsOptions = new Set(["select"]);
+const supportsDefault = new Set(["checkbox"]);
+
+export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="border-b p-4">
@@ -20,11 +35,11 @@ export function FieldSettingsPanel() {
             </span>
             <div>
               <p className="text-sm font-semibold text-foreground">Field Settings</p>
-              <p className="text-xs text-muted-foreground">Text input</p>
+              <p className="text-xs text-muted-foreground">{field.label}</p>
             </div>
           </div>
           <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-            Text Input
+            {field.type}
           </Badge>
         </div>
       </div>
@@ -47,24 +62,53 @@ export function FieldSettingsPanel() {
                 <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                   Label
                 </label>
-                <Input defaultValue="Full Name" />
+                <Input defaultValue={field.label} />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  Placeholder
-                </label>
-                <Input defaultValue="John Doe" />
-              </div>
+              {supportsPlaceholder.has(field.type) ? (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Placeholder
+                  </label>
+                  <Input defaultValue="John Doe" />
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                   Helper Text
                 </label>
                 <Textarea
                   rows={2}
-                  defaultValue="Please enter your legal name."
+                  defaultValue={field.helper ?? "Additional guidance for this field."}
                 />
               </div>
             </div>
+            {supportsOptions.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Options
+                  </label>
+                  <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+                    Define the selectable values for this field.
+                  </div>
+                </div>
+              </>
+            ) : null}
+            {supportsDefault.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Default state</p>
+                    <p className="text-xs text-muted-foreground">
+                      Pre-check this option for new submissions.
+                    </p>
+                  </div>
+                  <Switch />
+                </div>
+              </>
+            ) : null}
             <Separator />
             <div className="space-y-4">
               <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">

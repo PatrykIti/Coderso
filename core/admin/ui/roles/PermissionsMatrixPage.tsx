@@ -1,10 +1,13 @@
 import { Info, Plus, Search, Save } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
 import { PermissionsMatrix } from "./PermissionsMatrix";
+import { RoleEditor } from "./RoleEditor";
+import type { RoleDraft } from "./types";
 
 function PermissionsMatrixSearch() {
   return (
@@ -16,6 +19,12 @@ function PermissionsMatrixSearch() {
 }
 
 export function PermissionsMatrixPage() {
+  const [roleEditorOpen, setRoleEditorOpen] = useState(false);
+
+  const handleSaveRole = (_draft: RoleDraft) => {
+    setRoleEditorOpen(false);
+  };
+
   return (
     <AdminShell
       activeHref="/admin/roles"
@@ -31,7 +40,12 @@ export function PermissionsMatrixPage() {
       }
       search={<PermissionsMatrixSearch />}
       topbarActions={
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={() => setRoleEditorOpen(true)}
+        >
           <Plus className="h-4 w-4" />
           Add Role
         </Button>
@@ -64,6 +78,11 @@ export function PermissionsMatrixPage() {
           </div>
         </div>
       </div>
+      <RoleEditor
+        open={roleEditorOpen}
+        onOpenChange={setRoleEditorOpen}
+        onSave={(draft) => handleSaveRole(draft)}
+      />
     </AdminShell>
   );
 }

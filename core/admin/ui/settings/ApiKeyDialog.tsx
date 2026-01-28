@@ -56,7 +56,10 @@ type ApiKeyDialogProps = {
 export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 p-0 sm:max-w-lg" showCloseButton={false}>
+      <DialogContent
+        className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg"
+        showCloseButton={false}
+      >
         <DialogHeader className="flex flex-row items-start justify-between gap-4 border-b px-6 py-4 text-left">
           <div>
             <DialogTitle>Create API Key</DialogTitle>
@@ -73,53 +76,55 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
             <X className="h-4 w-4" />
           </Button>
         </DialogHeader>
-        <div className="space-y-5 px-6 py-5">
-          <div className="space-y-2">
-            <label
-              htmlFor="api-key-name"
-              className="text-sm font-semibold text-foreground"
-            >
-              Key Name
-            </label>
-            <Input
-              id="api-key-name"
-              placeholder="e.g. Analytics Pipeline"
-              className="bg-muted/40"
-            />
-          </div>
-          <Separator />
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Scopes</p>
-              <p className="text-xs text-muted-foreground">
-                Limit access to only the permissions you need.
-              </p>
+        <ScrollArea className="flex-1">
+          <div className="space-y-5 px-6 py-5">
+            <div className="space-y-2">
+              <label
+                htmlFor="api-key-name"
+                className="text-sm font-semibold text-foreground"
+              >
+                Key Name
+              </label>
+              <Input
+                id="api-key-name"
+                placeholder="e.g. Analytics Pipeline"
+                className="bg-muted/40"
+              />
             </div>
-            <ScrollArea className="max-h-56 rounded-xl border bg-muted/30">
-              <div className="space-y-3 p-4">
-                {scopeOptions.map((scope) => (
-                  <label
-                    key={scope.id}
-                    className="flex items-start gap-3 rounded-xl border bg-background/60 p-3 transition-colors hover:bg-muted/40"
-                  >
-                    <Checkbox
-                      className="mt-1"
-                      defaultChecked={scope.defaultChecked}
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {scope.label}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {scope.description}
-                      </p>
-                    </div>
-                  </label>
-                ))}
+            <Separator />
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Scopes</p>
+                <p className="text-xs text-muted-foreground">
+                  Limit access to only the permissions you need.
+                </p>
               </div>
-            </ScrollArea>
+              <div className="rounded-xl border bg-muted/30">
+                <div className="space-y-3 p-4">
+                  {scopeOptions.map((scope) => (
+                    <label
+                      key={scope.id}
+                      className="flex items-start gap-3 rounded-xl border bg-background/60 p-3 transition-colors hover:bg-muted/40"
+                    >
+                      <Checkbox
+                        className="mt-1"
+                        defaultChecked={scope.defaultChecked}
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {scope.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {scope.description}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
         <Separator />
         <div className="bg-muted/30 px-6 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">

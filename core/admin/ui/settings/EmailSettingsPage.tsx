@@ -8,6 +8,7 @@ import {
   User,
   Wifi,
 } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
+import { EmailLogsDrawer } from "./EmailLogsDrawer";
 import { SettingsSidebar } from "./SettingsSidebar";
 import { SmtpCard } from "./SmtpCard";
 
@@ -33,6 +35,8 @@ const statusItems = [
 ];
 
 export function EmailSettingsPage() {
+  const [logsOpen, setLogsOpen] = useState(false);
+
   return (
     <SettingsShell
       activeHref="/admin/settings"
@@ -190,6 +194,7 @@ export function EmailSettingsPage() {
                       variant="ghost"
                       size="sm"
                       className="w-full justify-center gap-2 text-primary"
+                      onClick={() => setLogsOpen(true)}
                     >
                       <History className="h-4 w-4" />
                       View delivery logs
@@ -215,6 +220,7 @@ export function EmailSettingsPage() {
           </div>
         </div>
       </div>
+      <EmailLogsDrawer open={logsOpen} onOpenChange={setLogsOpen} />
     </SettingsShell>
   );
 }

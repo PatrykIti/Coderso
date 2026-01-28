@@ -6,6 +6,7 @@ import {
   SlidersHorizontal,
   User,
 } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +19,22 @@ import {
 } from "@/components/ui/select";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { ExportDialog } from "@/ui/shared/ExportDialog";
 
+import { AccessLogDetailsDrawer } from "./AccessLogDetailsDrawer";
 import { AccessLogsTable } from "./AccessLogsTable";
+import type { AccessLogItem } from "./types";
 
 export function AccessLogsPage() {
+  const [selectedLog, setSelectedLog] = useState<AccessLogItem | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+
+  const handleViewLog = (log: AccessLogItem) => {
+    setSelectedLog(log);
+    setDrawerOpen(true);
+  };
+
   return (
     <AdminShell
       activeHref="/admin/access-logs"
@@ -38,7 +51,7 @@ export function AccessLogsPage() {
           title="Access Logs"
           description="Monitor user authentication and security events."
           actions={
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4" />
               Export CSV
             </Button>
@@ -98,8 +111,27 @@ export function AccessLogsPage() {
           </div>
         </div>
 
-        <AccessLogsTable />
+        <AccessLogsTable onView={handleViewLog} />
       </div>
+      <AccessLogDetailsDrawer
+        log={selectedLog}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        title="Export Access Logs"
+        description="Download access logs based on the current filters."
+        filename="access-logs.csv"
+        fields={[
+          { id: "user", label: "User", defaultChecked: true },
+          { id: "ip", label: "IP address", defaultChecked: true },
+          { id: "device", label: "Device" },
+          { id: "timestamp", label: "Timestamp", defaultChecked: true },
+          { id: "status", label: "Status" },
+        ]}
+      />
     </AdminShell>
   );
 }

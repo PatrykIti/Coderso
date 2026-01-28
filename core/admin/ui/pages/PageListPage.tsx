@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AdminShell } from "@/ui/layouts/AdminShell";
@@ -6,8 +7,11 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { PageFilters } from "./PageFilters";
 import { PageTable } from "./PageTable";
+import { PageCreateDrawer } from "./PageCreateDrawer";
 
 export function PageListPage() {
+  const [createOpen, setCreateOpen] = useState(false);
+
   return (
     <AdminShell
       activeHref="/admin/pages"
@@ -24,7 +28,7 @@ export function PageListPage() {
           title="Pages"
           description="Manage your content and page structures."
           actions={
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" />
               Create New Page
             </Button>
@@ -44,6 +48,7 @@ export function PageListPage() {
           </div>
         </div>
       </div>
+      <PageCreateDrawer open={createOpen} onOpenChange={setCreateOpen} />
     </AdminShell>
   );
 }

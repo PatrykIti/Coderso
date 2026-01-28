@@ -26,8 +26,11 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { WidgetCard } from "./WidgetCard";
+import { WidgetCreateDialog } from "./WidgetCreateDialog";
+import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
+import type { WidgetCategoryId, WidgetItem } from "./types";
 
-type WidgetCategoryId = "all" | "favorites" | "hero" | "grid" | "forms" | "media";
+type WidgetCategoryFilter = "all" | "favorites" | WidgetCategoryId;
 type WidgetView = "grid" | "list";
 type WidgetPreview =
   | "hero"
@@ -40,20 +43,11 @@ type WidgetPreview =
   | "banner";
 
 type CategoryItem = {
-  id: WidgetCategoryId;
+  id: WidgetCategoryFilter;
   label: string;
   icon: LucideIcon;
 };
-
-type WidgetItem = {
-  id: string;
-  name: string;
-  category: Exclude<WidgetCategoryId, "all" | "favorites">;
-  categoryLabel: string;
-  preview: WidgetPreview;
-  badge?: string;
-  isFavorite?: boolean;
-};
+type WidgetWithPreview = WidgetItem & { preview: WidgetPreview };
 
 const primaryCategories: CategoryItem[] = [
   { id: "all", label: "All Widgets", icon: LayoutGrid },
@@ -67,7 +61,7 @@ const secondaryCategories: CategoryItem[] = [
   { id: "media", label: "Media", icon: ImageIcon },
 ];
 
-const seedWidgets: WidgetItem[] = [
+const seedWidgets: WidgetWithPreview[] = [
   {
     id: "hero-split",
     name: "Hero Split",
@@ -252,11 +246,15 @@ function renderPreview(kind: WidgetPreview) {
 export function WidgetLibraryPage() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<WidgetView>("grid");
-  const [activeCategory, setActiveCategory] = useState<WidgetCategoryId>("all");
-  const [widgets, setWidgets] = useState<WidgetItem[]>(seedWidgets);
+  const [activeCategory, setActiveCategory] =
+    useState<WidgetCategoryFilter>("all");
+  const [widgets, setWidgets] = useState<WidgetWithPreview[]>(seedWidgets);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [selectedWidget, setSelectedWidget] = useState<WidgetItem | null>(null);
 
   const categoryCounts = useMemo(() => {
-    const counts: Record<WidgetCategoryId, number> = {
+    const counts: Record<WidgetCategoryFilter, number> = {
       all: widgets.length,
       favorites: widgets.filter((widget) => widget.isFavorite).length,
       hero: widgets.filter((widget) => widget.category === "hero").length,
@@ -295,6 +293,11 @@ export function WidgetLibraryPage() {
     );
   };
 
+  const handleSelectWidget = (widget: WidgetItem) => {
+    setSelectedWidget(widget);
+    setDetailsOpen(true);
+  };
+
   return (
     <AdminShell
       activeHref="/admin/widgets"
@@ -323,7 +326,7 @@ export function WidgetLibraryPage() {
             Filters
           </Button>
           <Separator orientation="vertical" className="h-6" />
-          <Button size="sm" className="gap-2">
+          <Button size="sm" className="gap-2" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
             Custom Widget
           </Button>
@@ -433,6 +436,16 @@ export function WidgetLibraryPage() {
                     badge={widget.badge}
                     isFavorite={widget.isFavorite}
                     onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
+                    onSelect={() =>
+                      handleSelectWidget({
+                        id: widget.id,
+                        name: widget.name,
+                        category: widget.category,
+                        categoryLabel: widget.categoryLabel,
+                        badge: widget.badge,
+                        isFavorite: widget.isFavorite,
+                      })
+                    }
                   />
                 ))
               )}
@@ -440,6 +453,12 @@ export function WidgetLibraryPage() {
           </div>
         </div>
       </div>
+      <WidgetDetailsDrawer
+        widget={selectedWidget}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
+      <WidgetCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
     </AdminShell>
   );
 }

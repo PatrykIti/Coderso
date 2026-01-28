@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { ExportDialog } from "@/ui/shared/ExportDialog";
 
 import { AuditDetailsDrawer } from "./AuditDetailsDrawer";
 import { AuditFilters } from "./AuditFilters";
@@ -127,6 +128,7 @@ export function AuditList() {
   const [severity, setSeverity] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const filteredLogs = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -177,7 +179,7 @@ export function AuditList() {
           title="Audit Logs"
           description="Detailed trail of all actions and security events within the platform."
           actions={
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4" />
               Export CSV
             </Button>
@@ -203,6 +205,21 @@ export function AuditList() {
         log={selectedLog}
         open={drawerOpen}
         onOpenChange={handleDrawerChange}
+      />
+      <ExportDialog
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        title="Export Audit Logs"
+        description="Download audit events for compliance reviews."
+        filename="audit-logs.csv"
+        fields={[
+          { id: "event", label: "Event", defaultChecked: true },
+          { id: "actor", label: "Actor", defaultChecked: true },
+          { id: "resource", label: "Resource", defaultChecked: true },
+          { id: "ip", label: "IP address" },
+          { id: "timestamp", label: "Timestamp", defaultChecked: true },
+          { id: "status", label: "Status" },
+        ]}
       />
     </AdminShell>
   );

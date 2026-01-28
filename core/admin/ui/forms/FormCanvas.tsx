@@ -8,22 +8,28 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 type FieldPreviewProps = {
+  id: string;
   label: string;
   placeholder?: string;
   value?: string;
   selected?: boolean;
   multiline?: boolean;
+  onSelect?: (id: string) => void;
 };
 
 function FieldPreview({
+  id,
   label,
   placeholder,
   value,
   selected = false,
   multiline = false,
+  onSelect,
 }: FieldPreviewProps) {
   return (
     <div
+      role={onSelect ? "button" : undefined}
+      onClick={() => onSelect?.(id)}
       className={cn(
         "group relative rounded-xl border p-4 transition",
         selected
@@ -85,7 +91,12 @@ function FieldPreview({
   );
 }
 
-export function FormCanvas() {
+type FormCanvasProps = {
+  selectedFieldId: string;
+  onSelectField: (id: string) => void;
+};
+
+export function FormCanvas({ selectedFieldId, onSelectField }: FormCanvasProps) {
   return (
     <ScrollArea className="h-full">
       <div className="min-h-full bg-[radial-gradient(circle_at_1px_1px,_rgba(148,163,184,0.25),_transparent_0)] bg-[size:20px_20px] px-8 py-10 dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(51,65,85,0.45),_transparent_0)] lg:px-12">
@@ -101,13 +112,18 @@ export function FormCanvas() {
             </div>
             <div className="space-y-4">
               <FieldPreview
+                id="text"
                 label="Full Name"
                 value="John Doe"
-                selected
+                selected={selectedFieldId === "text"}
+                onSelect={onSelectField}
               />
               <FieldPreview
+                id="email"
                 label="Email Address"
                 placeholder="example@email.com"
+                selected={selectedFieldId === "email"}
+                onSelect={onSelectField}
               />
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 py-10 text-center text-muted-foreground">
                 <CirclePlus className="mb-2 h-6 w-6" />
@@ -116,9 +132,12 @@ export function FormCanvas() {
                 </p>
               </div>
               <FieldPreview
+                id="textarea"
                 label="Message"
                 placeholder="Type your request..."
                 multiline
+                selected={selectedFieldId === "textarea"}
+                onSelect={onSelectField}
               />
             </div>
             <div className="pt-4">

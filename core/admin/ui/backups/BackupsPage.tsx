@@ -1,13 +1,17 @@
 import { CloudUpload, Info } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
+import { BackupNowDialog } from "./BackupNowDialog";
 import { BackupScheduleCard } from "./BackupScheduleCard";
 import { BackupsTable } from "./BackupsTable";
 
 export function BackupsPage() {
+  const [backupOpen, setBackupOpen] = useState(false);
+
   return (
     <AdminShell
       activeHref="/admin/backups"
@@ -25,7 +29,7 @@ export function BackupsPage() {
           title="Backups"
           description="Manage scheduled backups for your database and assets."
           actions={
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setBackupOpen(true)}>
               <CloudUpload className="h-4 w-4" />
               Create Backup Now
             </Button>
@@ -48,6 +52,7 @@ export function BackupsPage() {
           </div>
         </div>
       </div>
+      <BackupNowDialog open={backupOpen} onOpenChange={setBackupOpen} />
     </AdminShell>
   );
 }

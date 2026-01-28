@@ -6,6 +6,7 @@ import {
   ShieldAlert,
   Zap,
 } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { IntegrationCard, type IntegrationCardProps } from "./IntegrationCard";
+import { IntegrationDrawer } from "./IntegrationDrawer";
+import { IntegrationRequestDialog } from "./IntegrationRequestDialog";
 import { SettingsSidebar } from "./SettingsSidebar";
 
 const integrations: IntegrationCardProps[] = [
@@ -63,6 +66,16 @@ function IntegrationsSearch() {
 }
 
 export function IntegrationsPage() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [activeIntegration, setActiveIntegration] =
+    useState<IntegrationCardProps | null>(null);
+
+  const handleOpenIntegration = (integration: IntegrationCardProps) => {
+    setActiveIntegration(integration);
+    setDrawerOpen(true);
+  };
+
   return (
     <SettingsShell
       activeHref="/admin/settings"
@@ -76,7 +89,7 @@ export function IntegrationsPage() {
       }
       search={<IntegrationsSearch />}
       topbarActions={
-        <Button size="sm" className="gap-2">
+        <Button size="sm" className="gap-2" onClick={() => setRequestOpen(true)}>
           <Plus className="h-4 w-4" />
           Request new
         </Button>
@@ -116,12 +129,33 @@ export function IntegrationsPage() {
 
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
               {integrations.map((integration) => (
-                <IntegrationCard key={integration.name} {...integration} />
+                <IntegrationCard
+                  key={integration.name}
+                  {...integration}
+                  onAction={() => handleOpenIntegration(integration)}
+                />
               ))}
             </div>
           </div>
         </div>
       </div>
+      <IntegrationDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        integration={
+          activeIntegration
+            ? {
+                name: activeIntegration.name,
+                status: activeIntegration.status,
+                description: activeIntegration.description,
+              }
+            : null
+        }
+      />
+      <IntegrationRequestDialog
+        open={requestOpen}
+        onOpenChange={setRequestOpen}
+      />
     </SettingsShell>
   );
 }

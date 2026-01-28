@@ -1,13 +1,51 @@
 import { Plus } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { SettingsSidebar } from "./SettingsSidebar";
 import { WebhookDrawer } from "./WebhookDrawer";
-import { WebhooksTable } from "./WebhooksTable";
+import { WebhooksTable, type WebhookRow } from "./WebhooksTable";
+
+const webhooks: WebhookRow[] = [
+  {
+    id: "deployment-hook",
+    url: "https://api.deployment-service.com/hooks",
+    events: ["entry.created", "media.uploaded"],
+    status: "active",
+    lastDelivery: { label: "2 minutes ago", status: "success" },
+  },
+  {
+    id: "slack-alerts",
+    url: "https://hooks.slack.com/services/T0123/B456",
+    events: ["entry.updated"],
+    status: "inactive",
+    lastDelivery: { label: "3 days ago", status: "pending" },
+  },
+  {
+    id: "staging-worker",
+    url: "https://staging-worker.internal.io/process",
+    events: ["media.deleted"],
+    status: "active",
+    lastDelivery: { label: "1 hour ago", status: "failed" },
+  },
+];
 
 export function WebhooksPage() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editingWebhook, setEditingWebhook] = useState<WebhookRow | null>(null);
+
+  const openCreate = () => {
+    setEditingWebhook(null);
+    setDrawerOpen(true);
+  };
+
+  const openEdit = (webhook: WebhookRow) => {
+    setEditingWebhook(webhook);
+    setDrawerOpen(true);
+  };
+
   return (
     <SettingsShell
       activeHref="/admin/settings"
@@ -20,7 +58,7 @@ export function WebhooksPage() {
         </div>
       }
       topbarActions={
-        <Button size="sm" className="gap-2">
+        <Button size="sm" className="gap-2" onClick={openCreate}>
           <Plus className="h-4 w-4" />
           Create Webhook
         </Button>
@@ -38,10 +76,17 @@ export function WebhooksPage() {
           </div>
         </div>
         <div className="flex-1 p-6">
-          <WebhooksTable />
+          <WebhooksTable items={webhooks} onEdit={openEdit} />
         </div>
       </div>
-      <WebhookDrawer />
+      <WebhookDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        mode={editingWebhook ? "edit" : "create"}
+        webhook={
+          editingWebhook ? { url: editingWebhook.url, events: editingWebhook.events } : null
+        }
+      />
     </SettingsShell>
   );
 }

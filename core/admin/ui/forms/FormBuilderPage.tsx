@@ -1,13 +1,74 @@
-import { ArrowLeft, Eye, Save } from "lucide-react";
+import {
+  AlignLeft,
+  ArrowLeft,
+  AtSign,
+  Calendar,
+  CheckSquare,
+  Eye,
+  ListChecks,
+  Save,
+  Type,
+} from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
-import { FieldLibrary } from "./FieldLibrary";
-import { FieldSettingsPanel } from "./FieldSettingsPanel";
+import { FieldLibrary, type FieldLibraryItem } from "./FieldLibrary";
+import { FieldSettingsPanel, type FieldSettings } from "./FieldSettingsPanel";
 import { FormCanvas } from "./FormCanvas";
 
+const fieldLibraryItems: Array<FieldLibraryItem & FieldSettings> = [
+  {
+    id: "text",
+    label: "Text Input",
+    icon: Type,
+    type: "text",
+    helper: "Single line text field.",
+  },
+  {
+    id: "email",
+    label: "Email Field",
+    icon: AtSign,
+    type: "email",
+    helper: "Validates email addresses automatically.",
+  },
+  {
+    id: "checkbox",
+    label: "Checkbox",
+    icon: CheckSquare,
+    type: "checkbox",
+    helper: "Toggle a yes/no value.",
+  },
+  {
+    id: "select",
+    label: "Select Menu",
+    icon: ListChecks,
+    type: "select",
+    helper: "Choose one option from a list.",
+  },
+  {
+    id: "textarea",
+    label: "Textarea",
+    icon: AlignLeft,
+    type: "textarea",
+    helper: "Multi-line text input.",
+  },
+  {
+    id: "date",
+    label: "Date Picker",
+    icon: Calendar,
+    type: "date",
+    helper: "Pick a date from the calendar.",
+  },
+];
+
 export function FormBuilderPage() {
+  const [selectedFieldId, setSelectedFieldId] = useState("text");
+  const selectedField =
+    fieldLibraryItems.find((field) => field.id === selectedFieldId) ??
+    fieldLibraryItems[0];
+
   return (
     <AdminShell
       activeHref="/admin/forms"
@@ -42,14 +103,18 @@ export function FormBuilderPage() {
       }
     >
       <div className="flex h-full min-h-[calc(100vh-4rem)]">
-        <aside className="hidden w-72 shrink-0 border-r bg-background lg:block">
-          <FieldLibrary />
+        <aside className="hidden min-h-0 w-72 shrink-0 overflow-hidden border-r bg-background lg:block">
+          <FieldLibrary
+            items={fieldLibraryItems}
+            selectedId={selectedFieldId}
+            onSelect={setSelectedFieldId}
+          />
         </aside>
-        <section className="min-w-0 flex-1 bg-muted/20">
-          <FormCanvas />
+        <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-muted/20">
+          <FormCanvas selectedFieldId={selectedFieldId} onSelectField={setSelectedFieldId} />
         </section>
-        <aside className="hidden w-80 shrink-0 border-l bg-background lg:block">
-          <FieldSettingsPanel />
+        <aside className="hidden min-h-0 w-80 shrink-0 overflow-hidden border-l bg-background lg:block">
+          <FieldSettingsPanel field={selectedField} />
         </aside>
       </div>
     </AdminShell>

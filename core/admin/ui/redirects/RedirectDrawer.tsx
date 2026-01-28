@@ -15,25 +15,32 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
-  SheetTrigger,
 } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 
 export type RedirectDrawerProps = {
-  trigger?: React.ReactNode
-  defaultOpen?: boolean
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  mode: "create" | "edit"
+  redirect?: {
+    from: string
+    to: string
+    type: "301" | "302"
+    active: boolean
+  } | null
 }
 
 export function RedirectDrawer({
-  trigger,
-  defaultOpen = false,
+  open,
+  onOpenChange,
+  mode,
+  redirect,
 }: RedirectDrawerProps) {
   return (
-    <Sheet defaultOpen={defaultOpen}>
-      {trigger ? <SheetTrigger asChild>{trigger}</SheetTrigger> : null}
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-[360px] flex-col p-0 sm:w-[420px]"
+        className="flex h-full min-h-0 w-[360px] flex-col p-0 sm:w-[420px]"
         showCloseButton={false}
       >
         <div className="flex items-center justify-between border-b px-6 py-4">
@@ -42,7 +49,9 @@ export function RedirectDrawer({
               <Link2 className="h-5 w-5" />
             </span>
             <div>
-              <p className="text-sm font-semibold text-foreground">New Redirect</p>
+              <p className="text-sm font-semibold text-foreground">
+                {mode === "create" ? "New Redirect" : "Edit Redirect"}
+              </p>
               <p className="text-xs text-muted-foreground">
                 Define where traffic should go.
               </p>
@@ -54,7 +63,7 @@ export function RedirectDrawer({
             </Button>
           </SheetClose>
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="space-y-6 px-6 py-6">
             <div className="space-y-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -76,6 +85,7 @@ export function RedirectDrawer({
                       id="redirect-source"
                       placeholder="old-page-link"
                       className="pl-6"
+                      defaultValue={redirect?.from ?? ""}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -92,6 +102,7 @@ export function RedirectDrawer({
                   <Input
                     id="redirect-destination"
                     placeholder="https://... or /new-path"
+                    defaultValue={redirect?.to ?? ""}
                   />
                 </div>
               </div>
@@ -109,7 +120,7 @@ export function RedirectDrawer({
                   >
                     Redirect type
                   </label>
-                  <Select defaultValue="301">
+                  <Select defaultValue={redirect?.type ?? "301"}>
                     <SelectTrigger id="redirect-type">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
@@ -127,7 +138,7 @@ export function RedirectDrawer({
                     Active status
                   </label>
                   <div className="flex h-10 items-center gap-2">
-                    <Switch id="redirect-active" defaultChecked />
+                    <Switch id="redirect-active" defaultChecked={redirect?.active ?? true} />
                     <span className="text-sm text-muted-foreground">
                       Enabled
                     </span>
@@ -154,7 +165,7 @@ export function RedirectDrawer({
             <SheetClose asChild>
               <Button variant="outline">Cancel</Button>
             </SheetClose>
-            <Button>Add redirect</Button>
+            <Button>{mode === "create" ? "Add redirect" : "Save changes"}</Button>
           </div>
         </div>
       </SheetContent>

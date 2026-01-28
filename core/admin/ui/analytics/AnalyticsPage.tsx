@@ -1,4 +1,5 @@
 import { CalendarDays } from "lucide-react";
+import { useState } from "react";
 
 import {
   Select,
@@ -13,8 +14,11 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { AnalyticsCharts } from "./AnalyticsCharts";
 import { KpiCards } from "./KpiCards";
 import { TopContentTable } from "./TopContentTable";
+import { TopContentDrawer } from "./TopContentDrawer";
 
 export function AnalyticsPage() {
+  const [topContentOpen, setTopContentOpen] = useState(false);
+
   return (
     <AdminShell
       activeHref="/admin/analytics"
@@ -48,8 +52,12 @@ export function AnalyticsPage() {
         />
         <KpiCards />
         <AnalyticsCharts />
-        <TopContentTable />
+        <TopContentTable onViewAll={() => setTopContentOpen(true)} />
       </div>
+      <TopContentDrawer
+        open={topContentOpen}
+        onOpenChange={setTopContentOpen}
+      />
     </AdminShell>
   );
 }

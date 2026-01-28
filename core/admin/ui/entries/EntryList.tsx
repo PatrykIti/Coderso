@@ -1,14 +1,26 @@
 import { LayoutGrid, List, Plus } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 
+import { EntryCreateDrawer } from "./EntryCreateDrawer";
 import { EntryFilters } from "./EntryFilters";
 import { EntryTable } from "./EntryTable";
 import { EntryTypeSidebar } from "./EntryTypeSidebar";
+import { ContentTypeCreateDrawer } from "../content-types/ContentTypeCreateDrawer";
 
 export function EntryList() {
+  const [createOpen, setCreateOpen] = useState(false);
+  const [collectionOpen, setCollectionOpen] = useState(false);
+
+  const handleEditEntry = (id: string) => {
+    if (typeof window !== "undefined") {
+      window.location.assign(`/admin/entries/${encodeURIComponent(id)}`);
+    }
+  };
+
   return (
     <SplitShell
       activeHref="/admin/entries"
@@ -23,7 +35,7 @@ export function EntryList() {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-6 lg:flex-row">
           <aside className="hidden w-72 shrink-0 overflow-hidden rounded-xl border bg-background lg:block">
-            <EntryTypeSidebar />
+            <EntryTypeSidebar onCreateCollection={() => setCollectionOpen(true)} />
           </aside>
           <div className="flex min-w-0 flex-1 flex-col gap-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -53,17 +65,22 @@ export function EntryList() {
                     <LayoutGrid className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button className="gap-2">
+                <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Create New
                 </Button>
               </div>
             </div>
             <EntryFilters />
-            <EntryTable />
+            <EntryTable onEdit={handleEditEntry} />
           </div>
         </div>
       </div>
+      <EntryCreateDrawer open={createOpen} onOpenChange={setCreateOpen} />
+      <ContentTypeCreateDrawer
+        open={collectionOpen}
+        onOpenChange={setCollectionOpen}
+      />
     </SplitShell>
   );
 }

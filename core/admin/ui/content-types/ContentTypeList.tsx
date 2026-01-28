@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import {
 } from "@/components/ui/table";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+
+import { ContentTypeCreateDrawer } from "./ContentTypeCreateDrawer";
 
 const types = [
   {
@@ -43,6 +46,8 @@ const statusStyles = {
 };
 
 export function ContentTypeList() {
+  const [createOpen, setCreateOpen] = useState(false);
+
   return (
     <AdminShell
       activeHref="/admin/content-types"
@@ -59,7 +64,7 @@ export function ContentTypeList() {
           title="Content Types"
           description="Create reusable schemas for structured content entries."
           actions={
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setCreateOpen(true)}>
               <Plus className="h-4 w-4" />
               New type
             </Button>
@@ -102,8 +107,8 @@ export function ContentTypeList() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      Edit
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={`/admin/content-types/${type.id}`}>Edit</a>
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -112,6 +117,7 @@ export function ContentTypeList() {
           </Table>
         </div>
       </div>
+      <ContentTypeCreateDrawer open={createOpen} onOpenChange={setCreateOpen} />
     </AdminShell>
   );
 }

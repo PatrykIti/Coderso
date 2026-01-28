@@ -20,7 +20,11 @@ const contentTypes = [
   { id: "categories", name: "Categories", count: 12, icon: Tag },
 ];
 
-export function EntryTypeSidebar() {
+type EntryTypeSidebarProps = {
+  onCreateCollection?: () => void;
+};
+
+export function EntryTypeSidebar({ onCreateCollection }: EntryTypeSidebarProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="p-5">
@@ -82,6 +86,7 @@ export function EntryTypeSidebar() {
         <Button
           variant="outline"
           className="w-full border-dashed text-muted-foreground hover:text-primary"
+          onClick={onCreateCollection}
         >
           <Plus className="h-4 w-4" />
           New Collection

@@ -83,10 +83,8 @@ function resolveKind(mimeType: string): MediaKind {
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);
   const [items, setItems] = useState<MediaItem[]>(seedMedia);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    seedMedia[0]?.id ?? null
-  );
-  const [isDrawerOpen, setIsDrawerOpen] = useState(Boolean(seedMedia[0]?.id));
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<MediaFilter>("all");
   const [view, setView] = useState<MediaView>("grid");
@@ -121,8 +119,10 @@ export function MediaLibraryPage() {
       title: file.name,
     }));
     setItems((prev) => [...newItems, ...prev]);
-    setSelectedId(newItems[0]?.id ?? null);
-    setIsDrawerOpen(true);
+    if (newItems[0]?.id) {
+      setSelectedId(newItems[0].id);
+      setIsDrawerOpen(true);
+    }
     setIsUploading(false);
   };
 
@@ -135,9 +135,8 @@ export function MediaLibraryPage() {
   const handleDelete = (id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
     if (selectedId === id) {
-      const next = items.find((item) => item.id !== id);
-      setSelectedId(next?.id ?? null);
-      setIsDrawerOpen(Boolean(next));
+      setSelectedId(null);
+      setIsDrawerOpen(false);
     }
   };
 

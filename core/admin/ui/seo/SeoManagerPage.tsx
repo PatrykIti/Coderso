@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
+import { SeoAuditDialog } from "./SeoAuditDialog";
 import { SeoDrawer } from "./SeoDrawer";
 import { SeoTable, type SeoItem } from "./SeoTable";
 
@@ -89,9 +90,8 @@ function getHealth(item: SeoItem): Exclude<SeoFilter, "all"> {
 export function SeoManagerPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<SeoFilter>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(
-    seoItems[0]?.id ?? null
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
 
   const filteredItems = useMemo(() => {
     return seoItems.filter((item) => {
@@ -147,7 +147,7 @@ export function SeoManagerPage() {
                 className="pl-9"
               />
             </div>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => setAuditDialogOpen(true)}>
               <SearchCheck className="h-4 w-4" />
               Run Full Audit
             </Button>
@@ -193,6 +193,7 @@ export function SeoManagerPage() {
           if (!nextOpen) setSelectedId(null);
         }}
       />
+      <SeoAuditDialog open={auditDialogOpen} onOpenChange={setAuditDialogOpen} />
     </AdminShell>
   );
 }

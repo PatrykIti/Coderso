@@ -60,7 +60,11 @@ const statusLabels = {
   scheduled: "Scheduled",
 };
 
-function EntryRowActions() {
+type EntryTableProps = {
+  onEdit?: (id: string) => void;
+};
+
+function EntryRowActions({ onEdit, entryId }: { onEdit?: (id: string) => void; entryId: string }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -69,7 +73,7 @@ function EntryRowActions() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onEdit?.(entryId)}>
           <Pencil className="h-4 w-4" />
           Edit
         </DropdownMenuItem>
@@ -87,7 +91,7 @@ function EntryRowActions() {
   );
 }
 
-export function EntryTable() {
+export function EntryTable({ onEdit }: EntryTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -157,7 +161,7 @@ export function EntryTable() {
               </TableCell>
               <TableCell className="pr-4 text-right">
                 <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
-                  <EntryRowActions />
+                  <EntryRowActions onEdit={onEdit} entryId={entry.id} />
                 </div>
               </TableCell>
             </TableRow>

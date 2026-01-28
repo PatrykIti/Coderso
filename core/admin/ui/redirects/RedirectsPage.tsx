@@ -1,4 +1,5 @@
 import { Plus, Search } from "lucide-react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -6,9 +7,49 @@ import { AdminShell } from "@/ui/layouts/AdminShell"
 import { PageHeader } from "@/ui/shared/PageHeader"
 
 import { RedirectDrawer } from "./RedirectDrawer"
-import { RedirectsTable } from "./RedirectsTable"
+import { RedirectsTable, type RedirectRow } from "./RedirectsTable"
+
+const redirects: RedirectRow[] = [
+  {
+    id: "redirect-1",
+    from: "/old-product-page",
+    to: "/products/new-v2-edition",
+    type: "301",
+    status: "active",
+    lastHit: "2 mins ago",
+  },
+  {
+    id: "redirect-2",
+    from: "/blog-launch",
+    to: "/blog/introducing-nextless",
+    type: "301",
+    status: "active",
+    lastHit: "14 hours ago",
+  },
+  {
+    id: "redirect-3",
+    from: "/temporary-offer",
+    to: "/pricing?promo=spring",
+    type: "302",
+    status: "inactive",
+    lastHit: "Never",
+  },
+]
 
 export function RedirectsPage() {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [editingRedirect, setEditingRedirect] = useState<RedirectRow | null>(null)
+
+  const openCreate = () => {
+    setEditingRedirect(null)
+    setDrawerOpen(true)
+  }
+
+  const openEdit = (redirect: RedirectRow) => {
+    setEditingRedirect(redirect)
+    setDrawerOpen(true)
+  }
+
   return (
     <AdminShell
       activeHref="/admin/redirects"
@@ -26,14 +67,10 @@ export function RedirectsPage() {
           title="Redirects"
           description="Site management - 14 active routes."
           actions={
-            <RedirectDrawer
-              trigger={
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create redirect
-                </Button>
-              }
-            />
+            <Button className="gap-2" onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              Create redirect
+            </Button>
           }
         />
         <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
@@ -42,8 +79,23 @@ export function RedirectsPage() {
             <Input placeholder="Search redirects..." className="pl-9" />
           </div>
         </div>
-        <RedirectsTable />
+        <RedirectsTable items={redirects} onEdit={openEdit} />
       </div>
+      <RedirectDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+        mode={editingRedirect ? "edit" : "create"}
+        redirect={
+          editingRedirect
+            ? {
+                from: editingRedirect.from,
+                to: editingRedirect.to,
+                type: editingRedirect.type,
+                active: editingRedirect.status === "active",
+              }
+            : null
+        }
+      />
     </AdminShell>
   )
 }

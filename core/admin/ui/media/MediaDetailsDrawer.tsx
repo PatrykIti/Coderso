@@ -100,10 +100,10 @@ export function MediaDetailsDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
+      <SheetContent
         side="right"
         showCloseButton={false}
-        className="flex h-full w-full flex-col gap-0 p-0 sm:max-w-md"
+        className="flex h-full min-h-0 w-full flex-col gap-0 p-0 sm:max-w-md"
       >
         <div className="flex items-center justify-between border-b px-6 py-5">
           <div className="space-y-1">
@@ -120,7 +120,7 @@ export function MediaDetailsDrawer({
         </div>
         {item ? (
           <>
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
               <div className="space-y-8 px-6 pb-8 pt-6">
                 <div className="space-y-4">
                   <div className="group relative overflow-hidden rounded-xl border bg-muted/20 shadow-sm">

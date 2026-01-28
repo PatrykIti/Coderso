@@ -2,13 +2,33 @@ import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import { SeoManagerPage } from "../../../core/admin/ui/seo/SeoManagerPage";
+import { SeoDrawer } from "../../../core/admin/ui/seo/SeoDrawer";
+import type { SeoItem } from "../../../core/admin/ui/seo/SeoTable";
 
 test("SeoManagerPage renders table and drawer", () => {
   const html = renderToString(<SeoManagerPage />);
+  const item: SeoItem = {
+    id: "seo-home",
+    title: "Homepage",
+    path: "/",
+    score: 90,
+    metaStatus: "optimized",
+    socialStatus: "ready",
+    metaTitle: "Home",
+    metaDescription: "Description",
+    keywords: ["cms"],
+    previewUrl: "https://example.com",
+    previewPath: "home",
+    analysisStatus: "passed",
+    analysisNotes: [],
+  };
+  const drawer = renderToString(
+    <SeoDrawer item={item} open onOpenChange={() => undefined} />
+  );
 
   expect(html).toContain("SEO Manager");
   expect(html).toContain("Run Full Audit");
   expect(html).toContain("SEO Score");
-  expect(html).toContain("Quick SEO Edit");
-  expect(html).toContain("Search Engine Preview");
+  expect(drawer).toContain("Quick SEO Edit");
+  expect(drawer).toContain("Search Engine Preview");
 });

@@ -17,6 +17,7 @@ export type IntegrationCardProps = {
   icon: LucideIcon;
   accent: IntegrationAccent;
   className?: string;
+  onAction?: () => void;
 };
 
 const accentStyles: Record<IntegrationAccent, string> = {
@@ -63,6 +64,7 @@ export function IntegrationCard({
   icon: Icon,
   accent,
   className,
+  onAction,
 }: IntegrationCardProps) {
   const action = actionMeta[status];
 
@@ -86,7 +88,7 @@ export function IntegrationCard({
         <h3 className="text-lg font-semibold">{name}</h3>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <Button variant={action.variant} className="mt-auto w-full">
+      <Button variant={action.variant} className="mt-auto w-full" onClick={onAction}>
         <action.Icon className="h-4 w-4" />
         {action.label}
       </Button>

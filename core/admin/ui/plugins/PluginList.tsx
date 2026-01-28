@@ -24,7 +24,8 @@ export type PluginListProps = {
   onSelect: (name: string) => void;
 };
 
-export function PluginList({ items, selectedName, onSelect }: PluginListProps) {
+export function PluginList(props: PluginListProps) {
+  const { items, selectedName } = props;
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
       <Table>
@@ -42,8 +43,10 @@ export function PluginList({ items, selectedName, onSelect }: PluginListProps) {
             <TableRow
               key={plugin.name}
               className={cn(
+                "cursor-pointer transition-colors hover:bg-muted/40",
                 selectedName === plugin.name && "bg-primary/5"
               )}
+              onClick={() => props.onSelect(plugin.name)}
             >
               <TableCell>
                 <div>
@@ -63,8 +66,10 @@ export function PluginList({ items, selectedName, onSelect }: PluginListProps) {
                 {plugin.lastUpdated}
               </TableCell>
               <TableCell className="text-right">
-                <Button variant="ghost" size="sm" onClick={() => onSelect(plugin.name)}>
-                  Manage
+                <Button variant="ghost" size="sm" asChild>
+                  <a href={`/admin/store/plugins/${encodeURIComponent(plugin.name)}`}>
+                    Manage
+                  </a>
                 </Button>
               </TableCell>
             </TableRow>

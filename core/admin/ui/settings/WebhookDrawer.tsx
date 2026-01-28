@@ -35,24 +35,36 @@ const webhookEvents = [
   },
 ];
 
-export function WebhookDrawer() {
+type WebhookDrawerProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  mode: "create" | "edit";
+  webhook?: { url: string; events: string[] } | null;
+};
+
+export function WebhookDrawer({
+  open,
+  onOpenChange,
+  mode,
+  webhook,
+}: WebhookDrawerProps) {
   return (
-    <Sheet defaultOpen>
+    <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-full w-full flex-col p-0 sm:max-w-md"
+        className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-md"
         overlayClassName="bg-slate-900/40 backdrop-blur-sm"
         showCloseButton={false}
       >
         <div className="flex items-center justify-between border-b px-6 py-4">
-          <SheetTitle>Create New Webhook</SheetTitle>
+          <SheetTitle>{mode === "create" ? "Create New Webhook" : "Edit Webhook"}</SheetTitle>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close webhook drawer">
               <X className="h-4 w-4" />
             </Button>
           </SheetClose>
         </div>
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="space-y-6 px-6 py-6">
             <div className="space-y-2">
               <p className="text-sm font-semibold">Endpoint URL</p>
@@ -62,6 +74,7 @@ export function WebhookDrawer() {
                   type="url"
                   placeholder="https://your-domain.com/webhook"
                   className="pl-9"
+                  defaultValue={webhook?.url ?? ""}
                 />
               </div>
             </div>
@@ -73,7 +86,10 @@ export function WebhookDrawer() {
                     key={event.id}
                     className="flex items-start gap-3 rounded-xl border bg-background/40 p-3 transition-colors hover:bg-muted/40"
                   >
-                    <Checkbox className="mt-1" />
+                    <Checkbox
+                      className="mt-1"
+                      defaultChecked={webhook?.events?.includes(event.id)}
+                    />
                     <div>
                       <p className="text-sm font-semibold text-foreground">
                         {event.label}
@@ -112,8 +128,12 @@ export function WebhookDrawer() {
             Test Connection
           </Button>
           <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline">Cancel</Button>
-            <Button>Create Webhook</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => onOpenChange(false)}>
+              {mode === "create" ? "Create Webhook" : "Save Changes"}
+            </Button>
           </div>
         </div>
       </SheetContent>

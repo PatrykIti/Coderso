@@ -17,9 +17,17 @@ export type ThemeProfile = {
 
 type ThemeCardProps = {
   theme: ThemeProfile;
+  onEdit?: () => void;
+  onDuplicate?: () => void;
+  onActivate?: () => void;
 };
 
-export function ThemeCard({ theme }: ThemeCardProps) {
+export function ThemeCard({
+  theme,
+  onEdit,
+  onDuplicate,
+  onActivate,
+}: ThemeCardProps) {
   return (
     <Card
       className={cn(
@@ -66,6 +74,7 @@ export function ThemeCard({ theme }: ThemeCardProps) {
               size="icon-xs"
               variant="ghost"
               aria-label={`Edit ${theme.name}`}
+              onClick={onEdit}
             >
               <Pencil className="h-3.5 w-3.5" />
             </Button>
@@ -73,6 +82,7 @@ export function ThemeCard({ theme }: ThemeCardProps) {
               size="icon-xs"
               variant="ghost"
               aria-label={`Duplicate ${theme.name}`}
+              onClick={onDuplicate}
             >
               <Copy className="h-3.5 w-3.5" />
             </Button>
@@ -84,7 +94,7 @@ export function ThemeCard({ theme }: ThemeCardProps) {
                 Current
               </Badge>
             ) : (
-              <Button size="xs" variant="outline">
+              <Button size="xs" variant="outline" onClick={onActivate}>
                 Activate
               </Button>
             )}
