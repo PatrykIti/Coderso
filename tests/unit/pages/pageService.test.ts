@@ -5,6 +5,7 @@ import { db } from "../../../core/db/client";
 import { pageRevisions, pages, users } from "../../../core/db/schema";
 import {
   createPage,
+  duplicatePage,
   publishPage,
   unpublishPage,
   updatePage,
@@ -89,6 +90,12 @@ testIfDb("create/update/publish/unpublish page", async () => {
 
   const revisions = await listRevisions(page.id);
   expect(revisions.length).toBe(1);
+
+  const clone = await duplicatePage(page.id, createdUserId);
+  expect(clone?.id).not.toBe(page.id);
+  expect(clone?.slug).not.toBe(page.slug);
+  expect(clone?.title).toContain("copy");
+  await cleanup(clone?.id, undefined);
 
   const draft = await unpublishPage(page.id);
   expect(draft?.status).toBe("draft");
