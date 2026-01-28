@@ -136,7 +136,7 @@ export function LoginPage({ initialEmail = "", initialError = "" }: LoginPagePro
                 />
                 Remember me
               </label>
-              <a className="text-primary hover:underline" href="#">
+              <a className="text-primary hover:underline" href="/admin/reset">
                 Forgot password?
               </a>
             </div>

@@ -10,4 +10,5 @@ test("LoginPage renders error state", () => {
 
   expect(html).toContain("Invalid credentials");
   expect(html).toContain("user@site.com");
+  expect(html).toContain("/admin/reset");
 });

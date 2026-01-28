@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 10 tasks
+- **To Do:** 9 tasks
 - **In Progress:** 1
-- **Done:** 76 tasks
+- **Done:** 77 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |
-| TASK-004-07 | Auth UI Wiring (Functional) | High | Medium | Login + 2FA + reset wiring |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
@@ -138,4 +137,5 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-025 | Auth UI Wiring (Functional) | High | Medium | Login + 2FA + reset wiring |
 | TASK-004-01 | Core HTTP Server and Admin UI Bootstrap | High | Large | Bun server + admin entry |
 | TASK-004-06 | Auth Routes and Base API Layer | High | Medium | login/logout/me base |
+| TASK-004-07 | Auth UI Wiring (Functional) | High | Medium | Login + 2FA + reset wiring |
 | TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |

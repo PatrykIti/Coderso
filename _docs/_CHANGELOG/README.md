@@ -91,6 +91,7 @@ Project Change Log.
 | 064 | 2026-01-28 | Pages revisions and preview enhancements | CMS/Pages |
 | 065 | 2026-01-28 | Pages UI wiring | Admin/UI |
 | 066 | 2026-01-28 | Content UI wiring | Admin/UI |
+| 067 | 2026-01-28 | Auth UI wiring | Admin/UI |
 
 
 ---

@@ -31,7 +31,7 @@ indeksem, a szczegoly znajduja sie w osobnych plikach pod-taskow.
 | TASK-004-04 | Done (2026-01-27) | `TASK-004-04_Auth_middleware.md` |
 | TASK-004-05 | Done (2026-01-27) | `TASK-004-05_RBAC_middleware.md` |
 | TASK-004-06 | In Progress | `TASK-004-06_Auth_routes_and_base_API_layer.md` |
-| TASK-004-07 | To Do | `TASK-004-07_Auth_UI_Wiring.md` |
+| TASK-004-07 | Done (2026-01-28) | `TASK-004-07_Auth_UI_Wiring.md` |
 
 ---
 

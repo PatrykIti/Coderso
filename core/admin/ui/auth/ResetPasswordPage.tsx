@@ -112,8 +112,8 @@ export function ResetPasswordPage({
             <Button className="w-full" type="submit" disabled={loading}>
               {loading ? "Sending..." : "Send reset link"}
             </Button>
-            <Button className="w-full" type="button" variant="ghost">
-              Back to login
+            <Button className="w-full" type="button" variant="ghost" asChild>
+              <a href="/admin/login">Back to login</a>
             </Button>
           </form>
         </CardContent>

@@ -8,4 +8,5 @@ test("SetPasswordPage renders strength list", () => {
 
   expect(html).toContain("Set new password");
   expect(html).toContain("Password strength");
+  expect(html).toContain("/admin/login");
 });

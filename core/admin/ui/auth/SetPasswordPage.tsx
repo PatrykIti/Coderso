@@ -62,6 +62,11 @@ export function SetPasswordPage({ token, initialError = "" }: SetPasswordPagePro
     try {
       await confirmPasswordReset({ token: resetToken, password });
       setSuccess(true);
+      if (typeof window !== "undefined") {
+        window.setTimeout(() => {
+          window.location.assign("/admin/login");
+        }, 1200);
+      }
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -169,7 +174,10 @@ export function SetPasswordPage({ token, initialError = "" }: SetPasswordPagePro
             </Button>
           </form>
           <div className="text-center">
-            <a className="text-sm text-muted-foreground hover:text-foreground" href="#">
+            <a
+              className="text-sm text-muted-foreground hover:text-foreground"
+              href="/admin/login"
+            >
               Back to login
             </a>
           </div>

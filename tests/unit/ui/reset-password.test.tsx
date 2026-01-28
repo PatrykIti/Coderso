@@ -8,4 +8,5 @@ test("ResetPasswordPage renders instructions", () => {
 
   expect(html).toContain("Reset password");
   expect(html).toContain("Send reset link");
+  expect(html).toContain("/admin/login");
 });
