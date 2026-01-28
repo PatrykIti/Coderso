@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 7 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 0
 - **Done:** 88 tasks
 
@@ -147,3 +147,4 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-005-06 | Media Service + Validation | Medium | Medium | Upload metadata + validation |
 | TASK-005-07 | Media API Routes | Medium | Medium | Upload + CRUD endpoints |
 | TASK-005-08 | Media UI Wiring (Admin) | Medium | Medium | Admin upload + metadata UI |
+| TASK-005-09 | Storage Settings Runtime Config | High | Medium | DB config + encryption + UI |

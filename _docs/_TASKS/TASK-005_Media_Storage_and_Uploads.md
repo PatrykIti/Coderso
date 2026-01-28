@@ -23,6 +23,7 @@ Media storage pipeline with local storage by default and optional S3/Azure adapt
 6. TASK-005-06 – Media Service + Validation
 7. TASK-005-07 – Media API Routes
 8. TASK-005-08 – Media UI Wiring (Admin)
+9. TASK-005-09 – Storage Settings Runtime Config
 
 ## Sub-Tasks
 
@@ -49,6 +50,9 @@ Media storage pipeline with local storage by default and optional S3/Azure adapt
 
 8. **TASK-005-08** – Media UI Wiring (Admin)  
    File: `_docs/_TASKS/TASK-005-08_Media_UI_Wiring.md`
+
+9. **TASK-005-09** – Storage Settings Runtime Config  
+   File: `_docs/_TASKS/TASK-005-09_Storage_Settings_Runtime_Config.md`
 
 ## Testing Requirements
 
