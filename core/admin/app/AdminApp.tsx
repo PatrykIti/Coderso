@@ -43,12 +43,14 @@ import { StorageSettingsPage } from "@/ui/settings/StorageSettingsPage";
 import { WebhooksPage } from "@/ui/settings/WebhooksPage";
 import { PluginDetailsPage } from "@/ui/store/PluginDetailsPage";
 import { PluginStorePage } from "@/ui/store/PluginStorePage";
+import { PagePreview } from "@/ui/pages/PagePreview";
 
 const publicRoutes = new Set([
   "/admin/login",
   "/admin/2fa",
   "/admin/reset",
   "/admin/reset/confirm",
+  "/admin/preview",
 ]);
 
 type RouteMatch = {
@@ -104,6 +106,7 @@ const routes = [
   { pattern: "/admin/entries/:id", element: <EntryEditor /> },
   { pattern: "/admin/pages", element: <PageListPage /> },
   { pattern: "/admin/pages/:id", element: <PageEditor /> },
+  { pattern: "/admin/preview", element: <PagePreview /> },
   { pattern: "/admin/media", element: <MediaLibraryPage /> },
   { pattern: "/admin/menus", element: <MenuEditorPage /> },
   { pattern: "/admin/users", element: <UsersRolesPage /> },
@@ -206,7 +209,7 @@ export function AdminApp({ path }: AdminAppProps) {
     if (authState === "unauthenticated" && isProtected) {
       window.location.assign("/admin/login");
     }
-    if (authState === "authenticated" && isPublic) {
+    if (authState === "authenticated" && isPublic && normalizedPath !== "/admin/preview") {
       window.location.assign("/admin/");
     }
   }, [authState, isProtected, isPublic]);

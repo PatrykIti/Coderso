@@ -237,6 +237,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           onChange={handleChangeBlock}
         />
       }
+      rightPanelClassName="p-6"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Pages</span>

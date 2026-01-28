@@ -112,8 +112,13 @@ export function registerContentEntryRoutes(
         entry.id,
         body.ttlMinutes
       );
-      const url = `/preview?type=content&contentType=${type.slug}&slug=${entry.slug}&token=${token}`;
-      return { url, expiresAt };
+      const previewPath = `/preview?type=content&contentType=${type.slug}&slug=${entry.slug}&token=${token}`;
+      const baseUrl = process.env.PUBLIC_BASE_URL;
+      const fallbackBase = "/admin";
+      const previewUrl = baseUrl
+        ? new URL(previewPath, baseUrl).toString()
+        : `${fallbackBase}${previewPath}`;
+      return { token, previewUrl, expiresAt };
     }
   );
 

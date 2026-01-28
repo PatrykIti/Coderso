@@ -132,9 +132,10 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
       const slugPath = page.slug.startsWith("/") ? page.slug : `/${page.slug}`;
       const previewPath = `/preview?type=page&path=${encodeURIComponent(slugPath)}&token=${token}`;
       const baseUrl = process.env.PUBLIC_BASE_URL;
+      const fallbackBase = "/admin";
       const previewUrl = baseUrl
         ? new URL(previewPath, baseUrl).toString()
-        : previewPath;
+        : `${fallbackBase}${previewPath}`;
       return { token, previewUrl, expiresAt };
     }
   );
