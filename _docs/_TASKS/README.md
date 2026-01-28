@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 9 tasks
-- **In Progress:** 1
-- **Done:** 77 tasks
+- **To Do:** 16 tasks
+- **In Progress:** 0
+- **Done:** 79 tasks
 
 ---
 
@@ -38,8 +38,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |
-| TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
+| TASK-005 | Media Storage and Uploads (Index) | Medium | Medium | Index for TASK-005-01..08 |
+| TASK-005-01 | Media DB Schema | Medium | Small | Table + migration |
+| TASK-005-02 | Storage Adapter Interface | Medium | Small | Adapter contract + resolver |
+| TASK-005-03 | Local Storage Adapter | Medium | Small | Local file storage |
+| TASK-005-04 | S3 Storage Adapter | Medium | Medium | AWS S3 integration |
+| TASK-005-05 | Azure Storage Adapter | Medium | Medium | Azure Blob integration |
+| TASK-005-06 | Media Service + Validation | Medium | Medium | Upload metadata + validation |
+| TASK-005-07 | Media API Routes | Medium | Medium | Upload + CRUD endpoints |
+| TASK-005-08 | Media UI Wiring (Admin) | Medium | Medium | Admin upload + metadata UI |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
@@ -54,7 +61,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-004 | Auth, RBAC, and Admin API Base (Index) | High | Large | Index for TASK-004-01..06 |
+| _empty_ | _n/a_ | _n/a_ | _n/a_ | _n/a_ |
 
 ---
 
@@ -104,6 +111,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-006-41 | Login Alerts UI (Visual) | Medium | Medium | Login alerts |
 | TASK-006-42 | Admin UI Integration | High | Medium | Routing + navigation |
 | TASK-001 | ORM Foundation and Auth Tables | High | Medium | Drizzle + auth tables |
+| TASK-004 | Auth, RBAC, and Admin API Base (Index) | High | Large | Index for TASK-004-01..07 |
 | TASK-004-03 | Password Hashing and Sessions | High | Medium | argon2 + sessions |
 | TASK-004-04 | Auth Middleware | High | Medium | attachUser + requireAuth |
 | TASK-004-05 | RBAC Middleware | High | Medium | requirePermission |

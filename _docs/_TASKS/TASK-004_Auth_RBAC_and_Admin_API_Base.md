@@ -5,7 +5,7 @@
 **Category:** Core/Auth
 **Estimated Effort:** Large
 **Dependencies:** TASK-001
-**Status:** In Progress (2026-01-27)
+**Status:** Done (2026-01-28)
 
 ---
 
@@ -26,7 +26,7 @@ indeksem, a szczegoly znajduja sie w osobnych plikach pod-taskow.
 | ID | Status | File |
 | --- | --- | --- |
 | TASK-004-01 | To Do | `TASK-004-01_Core_HTTP_Server_and_Admin_UI_Bootstrap.md` |
-| TASK-004-02 | To Do | `TASK-004-02_Auth_Advanced_Endpoints_CSRF_OTP_Reset.md` |
+| TASK-004-02 | Done (2026-01-27) | `TASK-004-02_Auth_Advanced_Endpoints_CSRF_OTP_Reset.md` |
 | TASK-004-03 | Done (2026-01-27) | `TASK-004-03_Password_hashing_and_sessions.md` |
 | TASK-004-04 | Done (2026-01-27) | `TASK-004-04_Auth_middleware.md` |
 | TASK-004-05 | Done (2026-01-27) | `TASK-004-05_RBAC_middleware.md` |
