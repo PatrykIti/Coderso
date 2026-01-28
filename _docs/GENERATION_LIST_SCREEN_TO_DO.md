@@ -1,33 +1,3 @@
-### 1. Themes / Theme Profiles
-
-  Design "Themes" admin screen. Sidebar + topbar layout. Header
-  with active theme card and toggle between profiles. Grid of
-  theme
-  profiles with preview thumbnails, tokens summary, and actions
-  (activate, duplicate, edit). Right panel shows selected
-  profile
-  details (colors, typography, spacing). Same admin style and
-  icons.
-
-  ### 2. Theme Editor (Profile Details)
-
-  Design "Theme Editor" screen. Top bar with breadcrumbs and
-  actions (save, reset, export). Main area split: left live
-  preview
-  (panel, cards, buttons), right JSON/token editor with
-  validation and tabs (colors, typography, spacing, radius).
-  Same admin style
-  and icons.
-
-  ### 3. Plugin Details
-
-  Design "Plugin Details" screen. Header with plugin name,
-  version, status badge, update policy. Tabs for Overview,
-  Permissions,
-  Changelog, Settings. Overview shows description, author,
-  compatibility, install date. Permissions tab with scopes
-  list. Same admin
-  style and icons.
 
   ### 4. Plugin Settings (per plugin)
 
@@ -36,13 +6,6 @@
   save bar
   (sticky) and validation hints. Same admin style and icons.
 
-  ### 5. Media Item Details (Drawer)
-
-  Design "Media Details" drawer screen. Shows preview, metadata
-  fields (alt, title, caption), file details (size, mime,
-  dimensions),
-  usage list. Actions: replace, copy URL, delete. Same admin
-  style and icons.
 
   ### 6. Menu Preview (Public Nav)
 
@@ -50,13 +13,6 @@
   right live preview (desktop/mobile toggle). Include
   breadcrumbs, save
   actions, drag/drop hints. Same admin style and icons.
-
-  ### 7. Search Results (Global Search)
-
-  Design "Global Search" screen. Full-page search with results
-  grouped by type (pages, entries, media, users). Include
-  filters and
-  recent searches. Same admin style and icons.
 
   ### 8. System Status / Health
 
@@ -93,14 +49,6 @@
   (edit
   schema, export). Same admin style and icons.
 
-  ### 13. Roles & Permissions Matrix
-
-  Design "Roles & Permissions" screen. Sidebar + topbar layout.
-  Main panel with roles list on left and permission matrix on
-  right
-  (grid with rows = permissions, columns = roles). Include bulk
-  toggles, search, and save bar. Same admin style and icons.
-
   ### 14. Content Revisions
 
   Design "Content Revisions" screen. Table with revision
@@ -116,14 +64,6 @@
   filters (type,
   status). Same admin style and icons.
 
-  ### 16. Widget Library
-
-  Design "Widget Library" screen. Sidebar with categories
-  (hero, grid, forms, media). Main grid of widgets with preview
-  cards and
-  actions (insert, favorite). Include search and filters. Same
-  admin style and icons.
-
   ### 17. Widget Settings (Editor)
 
   Design "Widget Settings" screen. Wizard/Visual/Advanced tabs.
@@ -138,14 +78,6 @@
   field settings
   (validation, labels, rules). Top actions: save, preview. Same
   admin style and icons.
-
-  ### 19. SEO Manager
-
-  Design "SEO Manager" screen. Table of pages/entries with SEO
-  score, title, description, status. Filters and quick edit
-  drawer for
-  meta title/description and preview snippet. Same admin style
-  and icons.
 
   ### 20. Redirects
 
@@ -219,17 +151,3 @@
   pages/media with export options (json/csv). Import dropzone
   with
   instructions and status list. Same admin style and icons.
-
-  ### 31. Backups
-
-  Design "Backups" screen. List of backups with size, date,
-  status. Actions: create backup, restore, download. Schedule
-  card for
-  daily/weekly. Same admin style and icons.
-
-  ### 32. Analytics Overview
-
-  Design "Analytics" screen. KPI cards (visits, conversions,
-  top pages). Charts (line/bar) and date range picker. Same
-  admin style
-  and icons.

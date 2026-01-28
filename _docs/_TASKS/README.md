@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 10 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 1
 - **Done:** 34 tasks
 
@@ -42,6 +42,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-003 | Content Types Engine | High | Large | Dynamic content schemas |
 | TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
+| TASK-006-14 | API Keys UI (Visual) | Medium | Medium | Settings API keys |
+| TASK-006-15 | Audit Logs UI (Visual) | Medium | Medium | Filters + details drawer |
+| TASK-006-16 | Content Entries List UI (Visual) | High | Medium | Entries list + sidebar |
+| TASK-006-17 | Content Entry Editor UI (Visual) | High | Large | Entry editor layout |
+| TASK-006-18 | Settings Security UI (Visual) | Medium | Medium | Security settings |
+| TASK-006-19 | Webhooks UI (Visual) | Medium | Medium | Webhooks list + drawer |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
