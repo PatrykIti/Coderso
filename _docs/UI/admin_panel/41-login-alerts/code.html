@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Login Alerts - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101a22",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+        }
+        .toggle-switch:checked {
+            @apply bg-primary border-primary;
+        }
+        .toggle-switch:checked + label {
+            @apply translate-x-5;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-white dark:bg-[#15202b] border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">shield_person</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<button class="p-3 rounded-xl text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">extension</span>
+</button>
+<div class="h-px w-8 bg-slate-100 dark:bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-primary bg-primary/10 transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-100 dark:ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuALNisSwZsRHO7lKO1o6i_LPEUDTJPs0U0S6Ja59cP3jFzAvu3cPqBIVWkA5vgSgT9dJuxc8OBA6log7N42KIhSnuYIlydnSjBHU6SBZ1vLNuxMCnn9t8-MVh8AP8BUALGSefCtuSB5I0fNUIk01aOhGTVU5jkIg9fs8RDpnn0ShylahGk2iooRwqLEB50a4s9hLfQpTegIedFsJ9WgmdkvyAMg1CCMAEP98XDsyUoQ9Ex4sWrVCsvlVYhN74mVTIY2CWaxlaUhjSU');"></div>
+</div>
+</div>
+</aside>
+<main class="flex-1 flex flex-col h-full relative overflow-hidden bg-background-light dark:bg-background-dark">
+<header class="h-16 bg-white dark:bg-[#15202b] border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0 z-10">
+<div class="flex items-center gap-4">
+<button class="text-slate-400 hover:text-slate-600 transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<div>
+<h1 class="text-lg font-display font-bold text-slate-900 dark:text-white leading-none">Login Alerts</h1>
+<p class="text-xs text-slate-400 font-medium">Security • Notifications &amp; Protection</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-xs text-slate-400 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full font-medium">System Status: Active</span>
+</div>
+</header>
+<div class="bg-white dark:bg-[#15202b] px-8 border-b border-slate-200 dark:border-slate-800 shrink-0">
+<div class="flex gap-8">
+<button class="py-4 border-b-2 border-transparent text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                    General
+                </button>
+<button class="py-4 border-b-2 border-transparent text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                    Active Sessions
+                </button>
+<button class="py-4 border-b-2 border-primary text-sm font-bold font-display text-primary">
+                    Login Alerts
+                </button>
+<button class="py-4 border-b-2 border-transparent text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                    Audit Log
+                </button>
+<button class="py-4 border-b-2 border-transparent text-sm font-bold font-display text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                    Two-Factor Auth
+                </button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-8 custom-scrollbar pb-32">
+<div class="max-w-4xl mx-auto space-y-6">
+<section class="bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+<div class="flex items-start justify-between">
+<div class="flex gap-4">
+<div class="h-10 w-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]">notifications_active</span>
+</div>
+<div>
+<h2 class="text-base font-display font-bold text-slate-900 dark:text-white">Suspicious Login Alerts</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Get notified whenever someone logs in from a new device, browser, or location.</p>
+</div>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</div>
+</section>
+<section class="bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+<div class="flex gap-4 mb-6">
+<div class="h-10 w-10 rounded-xl bg-amber-500/5 flex items-center justify-center text-amber-500">
+<span class="material-symbols-outlined text-[20px]">security</span>
+</div>
+<div class="flex-1">
+<h2 class="text-base font-display font-bold text-slate-900 dark:text-white">Brute Force Protection</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Protect your account from automated login attempts by setting a lockout threshold.</p>
+</div>
+</div>
+<div class="ml-14 space-y-4">
+<div class="flex items-center justify-between">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300">Failed attempts threshold</label>
+<span class="text-sm font-bold text-primary font-display">5 attempts</span>
+</div>
+<input class="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-primary" max="15" min="3" type="range" value="5"/>
+<p class="text-[11px] text-slate-400 italic">User will be temporarily locked out for 30 minutes after reaching the threshold.</p>
+</div>
+</section>
+<section class="bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+<div class="flex gap-4 mb-6">
+<div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+<span class="material-symbols-outlined text-[20px]">group</span>
+</div>
+<div class="flex-1">
+<h2 class="text-base font-display font-bold text-slate-900 dark:text-white">Recipients</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Choose who receives the security alerts and system warnings.</p>
+</div>
+</div>
+<div class="ml-14 space-y-6">
+<div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+<div>
+<h3 class="text-sm font-bold text-slate-900 dark:text-white">Admin-only alerts</h3>
+<p class="text-xs text-slate-500">Send notifications only to account administrators.</p>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-medium text-slate-700 dark:text-slate-300">Custom Email List</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[18px]">mail</span>
+<input class="w-full bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:ring-primary focus:border-primary" placeholder="security@company.com, admin@company.com" type="text"/>
+</div>
+<p class="text-[11px] text-slate-400">Comma separated list of email addresses.</p>
+</div>
+</div>
+</section>
+<section class="bg-white dark:bg-[#15202b] border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+<div class="flex gap-4 mb-6">
+<div class="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
+<span class="material-symbols-outlined text-[20px]">hub</span>
+</div>
+<div class="flex-1">
+<h2 class="text-base font-display font-bold text-slate-900 dark:text-white">Notification Channels</h2>
+<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Select the platforms where you want to receive security events.</p>
+</div>
+</div>
+<div class="ml-14 grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="flex items-center justify-between p-4 border border-slate-100 dark:border-slate-800 rounded-xl">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">alternate_email</span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Email</span>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 border border-slate-100 dark:border-slate-800 rounded-xl">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 text-[20px]">webhook</span>
+<span class="text-sm font-bold text-slate-900 dark:text-white">Webhook</span>
+</div>
+<div class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-4 peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<div class="absolute bottom-0 inset-x-0 h-20 bg-white/80 dark:bg-[#15202b]/80 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex items-center justify-center px-8 z-20">
+<div class="max-w-4xl w-full flex items-center justify-between">
+<p class="text-sm text-slate-500">Unsaved changes in Security settings</p>
+<div class="flex gap-3">
+<button class="px-6 py-2 text-slate-600 dark:text-slate-400 text-sm font-bold font-display hover:text-slate-900 dark:hover:text-white transition-colors">
+                        Discard
+                    </button>
+<button class="px-8 py-2.5 bg-primary text-white rounded-xl font-bold font-display text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+                        Save Changes
+                    </button>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>

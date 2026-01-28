@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 26 tasks
+- **To Do:** 36 tasks
 - **In Progress:** 1
 - **Done:** 34 tasks
 
@@ -58,6 +58,16 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-006-27 | Themes UI (Visual) | Medium | Medium | Themes list |
 | TASK-006-28 | Theme Editor UI (Visual) | Medium | Large | Theme editor layout |
 | TASK-006-29 | Widget Library UI (Visual) | High | Medium | Widget library grid |
+| TASK-006-30 | Access Logs UI (Visual) | Medium | Medium | Access logs table |
+| TASK-006-31 | Email Settings UI (Visual) | Medium | Medium | SMTP settings |
+| TASK-006-32 | Form Builder UI (Visual) | High | Large | Form builder layout |
+| TASK-006-33 | General Settings UI (Visual) | Medium | Medium | General settings |
+| TASK-006-34 | Integrations UI (Visual) | Medium | Medium | Integrations cards |
+| TASK-006-35 | Invite Users UI (Visual) | Medium | Medium | Invite modal |
+| TASK-006-36 | IP Allowlist UI (Visual) | Medium | Medium | IP allowlist |
+| TASK-006-37 | Redirects UI (Visual) | Medium | Medium | Redirects list |
+| TASK-006-38 | Security Sessions UI (Visual) | Medium | Medium | Active sessions |
+| TASK-006-39 | Storage Settings UI (Visual) | Medium | Medium | Storage config |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
