@@ -1,5 +1,7 @@
 import { BookOpen, Hash, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,16 +11,79 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  createContentType,
+  type ContentTypeSummary,
+} from "@/services/contentTypesClient";
+
+import { buildSchemaFromFields } from "./schemaMapping";
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
 
 type ContentTypeCreateDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreated?: (type: ContentTypeSummary) => void;
 };
 
 export function ContentTypeCreateDrawer({
   open,
   onOpenChange,
+  onCreated,
 }: ContentTypeCreateDrawerProps) {
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [slugTouched, setSlugTouched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!slugTouched) {
+      setSlug(name ? slugify(name) : "");
+    }
+  }, [name, slugTouched]);
+
+  useEffect(() => {
+    if (!open) {
+      setName("");
+      setSlug("");
+      setSlugTouched(false);
+      setError(null);
+      setIsSaving(false);
+    }
+  }, [open]);
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !slug.trim()) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const created = await createContentType({
+        name: name.trim(),
+        slug: slug.trim(),
+        schema: buildSchemaFromFields([]),
+      });
+      onCreated?.(created);
+      onOpenChange(false);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to create content type.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const isDisabled = !name.trim() || !slug.trim() || isSaving;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -39,7 +104,12 @@ export function ContentTypeCreateDrawer({
             </Button>
           </SheetClose>
         </div>
-        <div className="flex-1 px-6 py-6">
+        <div className="flex-1 space-y-4 px-6 py-6">
+          {error ? (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
           <div className="space-y-5">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -47,7 +117,12 @@ export function ContentTypeCreateDrawer({
               </label>
               <div className="relative">
                 <BookOpen className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Blog Post" className="pl-9" />
+                <Input
+                  placeholder="Blog Post"
+                  className="pl-9"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-2">
@@ -56,7 +131,15 @@ export function ContentTypeCreateDrawer({
               </label>
               <div className="relative">
                 <Hash className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="blog-posts" className="pl-9" />
+                <Input
+                  placeholder="blog-posts"
+                  className="pl-9"
+                  value={slug}
+                  onChange={(event) => {
+                    setSlug(event.target.value);
+                    setSlugTouched(true);
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -67,8 +150,8 @@ export function ContentTypeCreateDrawer({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={() => onOpenChange(false)}>
-              Create Collection
+            <Button onClick={handleSubmit} disabled={isDisabled}>
+              {isSaving ? "Creating..." : "Create Collection"}
             </Button>
           </div>
         </div>

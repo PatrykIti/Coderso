@@ -90,6 +90,7 @@ Project Change Log.
 | 063 | 2026-01-28 | Admin UI mobile navigation | Admin/UI |
 | 064 | 2026-01-28 | Pages revisions and preview enhancements | CMS/Pages |
 | 065 | 2026-01-28 | Pages UI wiring | Admin/UI |
+| 066 | 2026-01-28 | Content UI wiring | Admin/UI |
 
 
 ---

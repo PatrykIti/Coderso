@@ -1,4 +1,11 @@
-import { ChevronLeft, ChevronRight, Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -20,51 +27,41 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const entries = [
-  {
-    id: "entry-1",
-    title: "Mastering Headless CMS Architecture",
-    slug: "/blog/mastering-headless-cms",
-    status: "published" as const,
-    author: "Sarah Jenks",
-    updated: "2 hours ago",
-  },
-  {
-    id: "entry-2",
-    title: "New Plugin System Announcement",
-    slug: "/blog/plugin-system-v2",
-    status: "draft" as const,
-    author: "Admin User",
-    updated: "Oct 22, 2025",
-  },
-  {
-    id: "entry-3",
-    title: "Top 10 Frontend Trends in 2026",
-    slug: "/blog/frontend-trends-2026",
-    status: "scheduled" as const,
-    author: "Michael Chen",
-    updated: "Oct 19, 2025",
-  },
-];
+import type { EntrySummary } from "@/services/entriesClient";
 
 const statusStyles = {
   published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-  scheduled: "bg-amber-500/10 text-amber-600 border-amber-500/20",
 };
 
 const statusLabels = {
   published: "Published",
   draft: "Draft",
-  scheduled: "Scheduled",
 };
 
 type EntryTableProps = {
+  entries: EntrySummary[];
   onEdit?: (id: string) => void;
 };
 
-function EntryRowActions({ onEdit, entryId }: { onEdit?: (id: string) => void; entryId: string }) {
+const formatUpdatedAt = (value?: string | null) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
+
+function EntryRowActions({
+  onEdit,
+  entryId,
+}: {
+  onEdit?: (id: string) => void;
+  entryId: string;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -91,7 +88,7 @@ function EntryRowActions({ onEdit, entryId }: { onEdit?: (id: string) => void; e
   );
 }
 
-export function EntryTable({ onEdit }: EntryTableProps) {
+export function EntryTable({ entries, onEdit }: EntryTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -118,60 +115,58 @@ export function EntryTable({ onEdit }: EntryTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {entries.map((entry) => (
-            <TableRow key={entry.id} className="group">
-              <TableCell className="pl-4">
-                <Checkbox aria-label={`Select ${entry.title}`} />
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span className="font-semibold text-foreground">
-                    {entry.title}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {entry.slug}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className={statusStyles[entry.status]}
-                >
-                  {statusLabels[entry.status]}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Avatar size="sm">
-                    <AvatarFallback>
-                      {entry.author
-                        .split(" ")
-                        .map((chunk) => chunk[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-muted-foreground">
-                    {entry.author}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {entry.updated}
-              </TableCell>
-              <TableCell className="pr-4 text-right">
-                <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
-                  <EntryRowActions onEdit={onEdit} entryId={entry.id} />
-                </div>
+          {entries.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="pl-4 text-sm text-muted-foreground">
+                No entries yet.
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            entries.map((entry) => (
+              <TableRow key={entry.id} className="group">
+                <TableCell className="pl-4">
+                  <Checkbox aria-label={`Select ${entry.title}`} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-foreground">
+                      {entry.title}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {entry.slug}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={statusStyles[entry.status]}>
+                    {statusLabels[entry.status]}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Avatar size="sm">
+                      <AvatarFallback>NA</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-muted-foreground">System</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {formatUpdatedAt(entry.updatedAt)}
+                </TableCell>
+                <TableCell className="pr-4 text-right">
+                  <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
+                    <EntryRowActions onEdit={onEdit} entryId={entry.id} />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
       <Separator />
       <div className="flex flex-col items-start gap-3 px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <span>
-          Showing <span className="font-semibold text-foreground">1-3</span> of 124
+          Showing <span className="font-semibold text-foreground">1-{entries.length}</span> of {entries.length}
           entries
         </span>
         <div className="flex items-center gap-2">
@@ -179,7 +174,7 @@ export function EntryTable({ onEdit }: EntryTableProps) {
             <span className="sr-only">Previous</span>
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </Button>
-          <Button variant="outline" size="icon-sm">
+          <Button variant="outline" size="icon-sm" disabled>
             <span className="sr-only">Next</span>
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Button>

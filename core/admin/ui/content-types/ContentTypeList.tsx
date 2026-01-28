@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,42 +12,70 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  listContentTypes,
+  type ContentTypeSummary,
+} from "@/services/contentTypesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { ContentTypeCreateDrawer } from "./ContentTypeCreateDrawer";
-
-const types = [
-  {
-    id: "blog",
-    name: "Blog Post",
-    slug: "blog",
-    fields: 8,
-    status: "published",
-  },
-  {
-    id: "faq",
-    name: "FAQ",
-    slug: "faq",
-    fields: 4,
-    status: "draft",
-  },
-  {
-    id: "events",
-    name: "Events",
-    slug: "events",
-    fields: 6,
-    status: "published",
-  },
-];
+import { countSchemaFields } from "./schemaMapping";
 
 const statusStyles = {
   published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   draft: "bg-slate-500/10 text-slate-600 border-slate-500/20",
 };
 
+type ContentTypeRow = ContentTypeSummary & {
+  fieldCount: number;
+  status: "published" | "draft";
+};
+
 export function ContentTypeList() {
+  const [types, setTypes] = useState<ContentTypeSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+
+  const rows = useMemo<ContentTypeRow[]>(
+    () =>
+      types.map((type) => ({
+        ...type,
+        fieldCount: countSchemaFields(type.schema),
+        status: "published",
+      })),
+    [types]
+  );
+
+  useEffect(() => {
+    let active = true;
+    listContentTypes()
+      .then((result) => {
+        if (!active) return;
+        setTypes(result);
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load content types.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleCreated = (created: ContentTypeSummary) => {
+    setTypes((prev) => [created, ...prev]);
+  };
 
   return (
     <AdminShell
@@ -70,6 +99,12 @@ export function ContentTypeList() {
             </Button>
           }
         />
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>Unable to load content types</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <Table>
             <TableHeader className="bg-muted/40">
@@ -82,42 +117,60 @@ export function ContentTypeList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {types.map((type) => (
-                <TableRow key={type.id}>
-                  <TableCell>
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold">{type.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {type.fields} fields
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {type.slug}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{type.fields}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={statusStyles[type.status as keyof typeof statusStyles]}
-                    >
-                      {type.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href={`/admin/content-types/${type.id}`}>Edit</a>
-                    </Button>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                    Loading content types...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                    No content types yet. Create the first one to get started.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((type) => (
+                  <TableRow key={type.id}>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold">{type.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {type.fieldCount} fields
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {type.slug}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{type.fieldCount}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={statusStyles[type.status]}
+                      >
+                        {type.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" asChild>
+                        <a href={`/admin/content-types/${type.id}`}>Edit</a>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
       </div>
-      <ContentTypeCreateDrawer open={createOpen} onOpenChange={setCreateOpen} />
+      <ContentTypeCreateDrawer
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={handleCreated}
+      />
     </AdminShell>
   );
 }

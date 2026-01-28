@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 9 tasks
 - **In Progress:** 1
-- **Done:** 69 tasks
+- **Done:** 76 tasks
 
 ---
 
@@ -38,13 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-003 | Content Types Engine (Index) | High | Large | Index for TASK-003-01..06 |
-| TASK-003-01 | Content DB Schema | High | Medium | Tables + indexes |
-| TASK-003-02 | Content Schema Validation | High | Medium | AJV + strict schema |
-| TASK-003-03 | Content Services and Revisions | High | Large | CRUD + publish + revisions |
-| TASK-003-04 | Content Admin API | High | Medium | REST endpoints + guards |
-| TASK-003-05 | Content Preview Tokens | Medium | Medium | Preview links for entries |
-| TASK-003-06 | Content UI Wiring (Admin) | High | Medium | Replace mocks with API |
 | TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
@@ -75,6 +68,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-002-03 | Preview Tokens & TTL | High | Medium | Secure preview links |
 | TASK-002-04 | Pages Admin API & Validation | High | Medium | REST endpoints + schemas |
 | TASK-002-05 | Pages UI Wiring (Admin) | High | Medium | Replace mocks with API |
+| TASK-003 | Content Types Engine (Index) | High | Large | Index for TASK-003-01..06 |
+| TASK-003-01 | Content DB Schema | High | Medium | Tables + indexes |
+| TASK-003-02 | Content Schema Validation | High | Medium | AJV + strict schema |
+| TASK-003-03 | Content Services and Revisions | High | Large | CRUD + publish + revisions |
+| TASK-003-04 | Content Admin API | High | Medium | REST endpoints + guards |
+| TASK-003-05 | Content Preview Tokens | Medium | Medium | Preview links for entries |
+| TASK-003-06 | Content UI Wiring (Admin) | High | Medium | Replace mocks with API |
 | TASK-006-14 | API Keys UI (Visual) | Medium | Medium | Settings API keys |
 | TASK-006-15 | Audit Logs UI (Visual) | Medium | Medium | Filters + details drawer |
 | TASK-006-16 | Content Entries List UI (Visual) | High | Medium | Entries list + sidebar |

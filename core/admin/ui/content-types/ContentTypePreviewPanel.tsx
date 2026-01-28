@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 import type { ContentField } from "./SchemaBuilder";
+import { buildSchemaFromFields } from "./schemaMapping";
 
 export type ContentTypePreviewPanelProps = {
   name: string;
@@ -12,50 +13,13 @@ export type ContentTypePreviewPanelProps = {
   fields: ContentField[];
 };
 
-function toSchemaProperties(fields: ContentField[]) {
-  return fields.reduce<Record<string, Record<string, unknown>>>((acc, field) => {
-    let type: "string" | "number" | "boolean" = "string";
-    if (field.type === "number") type = "number";
-    if (field.type === "boolean") type = "boolean";
-
-    const definition: Record<string, unknown> = { type };
-
-    if (field.label) definition.title = field.label;
-    if (field.help) definition.description = field.help;
-    if (field.type === "select" && field.options?.length) {
-      definition.enum = field.options;
-    }
-    if (field.defaultValue !== undefined && field.defaultValue !== "") {
-      if (field.type === "number") {
-        const parsed = Number(field.defaultValue);
-        if (!Number.isNaN(parsed)) definition.default = parsed;
-      } else if (field.type === "boolean") {
-        definition.default = field.defaultValue === "true";
-      } else {
-        definition.default = field.defaultValue;
-      }
-    }
-
-    acc[field.name] = definition;
-    return acc;
-  }, {});
-}
 
 export function ContentTypePreviewPanel({
   name,
   slug,
   fields,
 }: ContentTypePreviewPanelProps) {
-  const required = fields
-    .filter((field) => field.required)
-    .map((field) => field.name);
-
-  const schema = {
-    type: "object",
-    additionalProperties: false,
-    ...(required.length ? { required } : {}),
-    properties: toSchemaProperties(fields),
-  };
+  const schema = buildSchemaFromFields(fields);
 
   return (
     <div className="flex h-full flex-col gap-4">

@@ -103,7 +103,7 @@ const routes = [
   { pattern: "/admin/content-types/:id", element: <ContentTypeEditor /> },
   { pattern: "/admin/content-types/:id/schema", element: <SchemaBuilderPage /> },
   { pattern: "/admin/entries", element: <EntryList /> },
-  { pattern: "/admin/entries/:id", element: <EntryEditor /> },
+  { pattern: "/admin/entries/:type/:id", element: <EntryEditor /> },
   { pattern: "/admin/pages", element: <PageListPage /> },
   { pattern: "/admin/pages/:id", element: <PageEditor /> },
   { pattern: "/admin/preview", element: <PagePreview /> },
@@ -212,7 +212,7 @@ export function AdminApp({ path }: AdminAppProps) {
     if (authState === "authenticated" && isPublic && normalizedPath !== "/admin/preview") {
       window.location.assign("/admin/");
     }
-  }, [authState, isProtected, isPublic]);
+  }, [authState, isProtected, isPublic, normalizedPath]);
 
   if (isProtected && authState !== "authenticated") {
     return <Loading />;

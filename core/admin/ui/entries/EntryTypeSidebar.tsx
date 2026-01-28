@@ -7,24 +7,33 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-const contentTypes = [
-  {
-    id: "blog-posts",
-    name: "Blog Posts",
-    count: 124,
-    icon: FileText,
-    active: true,
-  },
-  { id: "products", name: "Products", count: 42, icon: ShoppingBag },
-  { id: "authors", name: "Authors", count: 8, icon: User },
-  { id: "categories", name: "Categories", count: 12, icon: Tag },
-];
+const resolveIcon = (slug: string) => {
+  if (slug.includes("product")) return ShoppingBag;
+  if (slug.includes("author") || slug.includes("staff")) return User;
+  if (slug.includes("category") || slug.includes("tag")) return Tag;
+  return FileText;
+};
+
+type EntryTypeItem = {
+  id: string;
+  slug: string;
+  name: string;
+  count?: number;
+};
 
 type EntryTypeSidebarProps = {
+  types: EntryTypeItem[];
+  activeSlug?: string | null;
+  onSelect?: (slug: string) => void;
   onCreateCollection?: () => void;
 };
 
-export function EntryTypeSidebar({ onCreateCollection }: EntryTypeSidebarProps) {
+export function EntryTypeSidebar({
+  types,
+  activeSlug,
+  onSelect,
+  onCreateCollection,
+}: EntryTypeSidebarProps) {
   return (
     <div className="flex h-full flex-col">
       <div className="p-5">
@@ -39,15 +48,17 @@ export function EntryTypeSidebar({ onCreateCollection }: EntryTypeSidebarProps) 
       <Separator />
       <ScrollArea className="flex-1">
         <div className="space-y-1 p-3">
-          {contentTypes.map((type) => {
-            const Icon = type.icon;
+          {types.map((type) => {
+            const Icon = resolveIcon(type.slug);
+            const isActive = type.slug === activeSlug;
             return (
               <button
                 key={type.id}
                 type="button"
+                onClick={() => onSelect?.(type.slug)}
                 className={cn(
                   "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors",
-                  type.active
+                  isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-muted"
                 )}
@@ -56,7 +67,7 @@ export function EntryTypeSidebar({ onCreateCollection }: EntryTypeSidebarProps) 
                   <span
                     className={cn(
                       "flex h-8 w-8 items-center justify-center rounded-lg",
-                      type.active
+                      isActive
                         ? "bg-primary/15 text-primary"
                         : "bg-muted text-muted-foreground"
                     )}
@@ -66,15 +77,15 @@ export function EntryTypeSidebar({ onCreateCollection }: EntryTypeSidebarProps) 
                   <span className="font-medium">{type.name}</span>
                 </div>
                 <Badge
-                  variant={type.active ? "secondary" : "ghost"}
+                  variant={isActive ? "secondary" : "ghost"}
                   className={cn(
                     "rounded-md px-2 py-0.5 text-[10px] font-semibold",
-                    type.active
+                    isActive
                       ? "border border-primary/20 bg-primary/10 text-primary"
                       : "text-muted-foreground"
                   )}
                 >
-                  {type.count}
+                  {type.count ?? 0}
                 </Badge>
               </button>
             );

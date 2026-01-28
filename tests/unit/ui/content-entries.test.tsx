@@ -7,6 +7,6 @@ test("EntryList renders sidebar and table", () => {
   const html = renderToString(<EntryList />);
 
   expect(html).toContain("Content Types");
-  expect(html).toContain("Blog Posts");
-  expect(html).toContain("Mastering Headless CMS Architecture");
+  expect(html).toContain("Entries");
+  expect(html).toContain("Loading entries");
 });

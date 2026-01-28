@@ -8,7 +8,7 @@ test("EntryEditor renders schema-based fields", () => {
 
   expect(html).toContain("Edit Entry");
   expect(html).toContain("Preview");
-  expect(html).toContain("Update");
-  expect(html).toContain("Entry content");
+  expect(html).toContain("Publish");
+  expect(html).toContain("Loading entry fields");
   expect(html).toContain("Publishing");
 });

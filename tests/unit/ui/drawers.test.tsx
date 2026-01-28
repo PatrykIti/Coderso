@@ -49,7 +49,11 @@ test("PageCreateDrawer renders title", () => {
 
 test("EntryCreateDrawer renders title", () => {
   const html = renderToString(
-    <EntryCreateDrawer open onOpenChange={() => undefined} />
+    <EntryCreateDrawer
+      open
+      onOpenChange={() => undefined}
+      types={[{ id: "blog", slug: "blog", name: "Blog" }]}
+    />
   );
 
   expect(html).toContain("Create New Entry");

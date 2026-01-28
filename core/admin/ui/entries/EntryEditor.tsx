@@ -1,6 +1,7 @@
 import { RefreshCcw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,61 +15,33 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { isApiClientError } from "@/services/apiClient";
+import { getContentTypeBySlug } from "@/services/contentTypesClient";
+import {
+  getEntry,
+  previewEntry,
+  publishEntry,
+  updateEntry,
+  unpublishEntry,
+  type EntryDetail,
+} from "@/services/entriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
 import { EntryEditorHeader, EntryEditorHeaderActions } from "./EntryEditorHeader";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { FieldRenderer } from "./FieldRenderer";
 import type { ContentField } from "../content-types/SchemaBuilder";
+import {
+  buildSchemaFromFields,
+  fieldsFromSchema,
+} from "../content-types/schemaMapping";
 
-const entrySchema: ContentField[] = [
-  {
-    id: "title",
-    name: "title",
-    type: "text",
-    label: "Title",
-    required: true,
-    defaultValue: "Mastering Headless CMS Architecture",
-  },
-  {
-    id: "slug",
-    name: "slug",
-    type: "text",
-    label: "Slug",
-    required: true,
-    defaultValue: "mastering-headless-cms",
-  },
-  {
-    id: "body",
-    name: "body",
-    type: "richtext",
-    label: "Entry content",
-    required: true,
-    help: "Write the main story for this entry.",
-    defaultValue:
-      "Headless CMS platforms give teams the freedom to deliver content across channels without locking into a single frontend.",
-  },
-  {
-    id: "cover",
-    name: "cover-image",
-    type: "media",
-    label: "Featured image",
-    help: "Used for social previews and listing cards.",
-  },
-  {
-    id: "related",
-    name: "related-entry",
-    type: "relation",
-    label: "Related entry",
-    relation: { target: "blog" },
-    options: ["Launch announcement", "Roadmap update", "Hiring playbook"],
-    help: "Connect to another entry in the same collection.",
-  },
-];
-
-const contentFields = entrySchema.filter((field) => field.type === "richtext");
-const mediaFields = entrySchema.filter((field) => field.type === "media");
-const relationFields = entrySchema.filter((field) => field.type === "relation");
+const resolveEntryParams = (pathname: string) => {
+  const parts = pathname.split("/").filter(Boolean);
+  const index = parts.findIndex((segment) => segment === "entries");
+  if (index === -1) return { type: null, id: null };
+  return { type: parts[index + 1] ?? null, id: parts[index + 2] ?? null };
+};
 
 function resolveDefaultValue(field: ContentField) {
   if (field.defaultValue === undefined || field.defaultValue === "") return null;
@@ -82,8 +55,15 @@ function resolveDefaultValue(field: ContentField) {
   return field.defaultValue;
 }
 
-function buildInitialValues(fields: ContentField[]) {
+function buildInitialValues(
+  fields: ContentField[],
+  data: Record<string, unknown>
+) {
   return fields.reduce<Record<string, unknown>>((acc, field) => {
+    if (data[field.name] !== undefined) {
+      acc[field.name] = data[field.name];
+      return acc;
+    }
     const fallback = field.type === "boolean" ? false : "";
     acc[field.name] = resolveDefaultValue(field) ?? fallback;
     return acc;
@@ -99,59 +79,190 @@ function slugify(value: string) {
 }
 
 export function EntryEditor() {
-  const [values, setValues] = useState<Record<string, unknown>>(() =>
-    buildInitialValues(entrySchema)
-  );
-  const [status, setStatus] = useState<EntryStatus>("published");
+  const [{ type, id }] = useState<{ type: string | null; id: string | null }>(() => {
+    if (typeof window === "undefined") {
+      return { type: null, id: null };
+    }
+    return resolveEntryParams(window.location.pathname);
+  });
+  const [entry, setEntry] = useState<EntryDetail | null>(null);
+  const [contentTypeName, setContentTypeName] = useState<string | null>(null);
+  const [fields, setFields] = useState<ContentField[]>([]);
+  const [values, setValues] = useState<Record<string, unknown>>({});
+  const [status, setStatus] = useState<EntryStatus>("draft");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [publishDate, setPublishDate] = useState("Oct 24, 2023 10:30 AM");
-  const [seoDescription, setSeoDescription] = useState(
-    "Learn how headless architecture can improve your performance and developer experience with modern tools."
-  );
+  const [publishDate, setPublishDate] = useState("");
+  const [seoDescription, setSeoDescription] = useState("");
   const [tags] = useState(["HEADLESS", "ARCHITECTURE", "PERFORMANCE"]);
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const schemaFieldNames = useMemo(
+    () => new Set(fields.map((field) => field.name)),
+    [fields]
+  );
+
+  useEffect(() => {
+    if (!type || !id) return;
+    let active = true;
+    Promise.all([getEntry(type, id), getContentTypeBySlug(type)])
+      .then(([entryResult, contentType]) => {
+        if (!active) return;
+        if (!contentType) {
+          setError("Content type not found.");
+          return;
+        }
+        const mappedFields = fieldsFromSchema(contentType.schema);
+        setFields(mappedFields);
+        setEntry(entryResult);
+        setContentTypeName(contentType.name);
+        setTitle(entryResult.title);
+        setSlug(entryResult.slug);
+        setValues(buildInitialValues(mappedFields, entryResult.data ?? {}));
+        setStatus(entryResult.status);
+        setHasUnsavedChanges(false);
+        setPublishDate(entryResult.publishedAt ?? "");
+        setError(null);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load entry.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id, type]);
 
   const handleFieldChange = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
     setHasUnsavedChanges(true);
   };
 
-  const handlePreview = () => {};
-
-  const handlePublish = () => {
-    setStatus("published");
-    setHasUnsavedChanges(false);
-  };
-
-  const handleStatusChange = (nextStatus: EntryStatus) => {
-    setStatus(nextStatus);
+  const handleTitleChange = (value: string) => {
+    setTitle(value);
+    if (schemaFieldNames.has("title")) {
+      setValues((prev) => ({ ...prev, title: value }));
+    }
     setHasUnsavedChanges(true);
   };
 
-  const title = String(values.title ?? "");
-  const slug = String(values.slug ?? "");
-
-  const handleGenerateSlug = () => {
-    handleFieldChange("slug", slugify(title));
+  const handleSlugChange = (value: string) => {
+    setSlug(value);
+    if (schemaFieldNames.has("slug")) {
+      setValues((prev) => ({ ...prev, slug: value }));
+    }
+    setHasUnsavedChanges(true);
   };
 
-  const renderFieldCard = (field: ContentField) => (
-    <Card key={field.id}>
-      <CardHeader className="space-y-2">
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">{field.label}</CardTitle>
-          {field.required ? <Badge variant="outline">Required</Badge> : null}
-        </div>
-        {field.help ? <CardDescription>{field.help}</CardDescription> : null}
-      </CardHeader>
-      <CardContent>
-        <FieldRenderer
-          field={field}
-          value={values[field.name]}
-          onChange={(value) => handleFieldChange(field.name, value)}
-        />
-      </CardContent>
-    </Card>
+  const handlePreview = async () => {
+    if (!type || !id) return;
+    try {
+      const result = await previewEntry(type, id, 30);
+      if (typeof window !== "undefined") {
+        window.open(result.previewUrl, "_blank", "noopener");
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to generate preview.");
+      }
+    }
+  };
+
+  const buildPayloadData = () => {
+    const schema = buildSchemaFromFields(fields);
+    const data: Record<string, unknown> = {};
+    Object.keys(schema.properties).forEach((key) => {
+      if (values[key] !== undefined) data[key] = values[key];
+    });
+    if (schemaFieldNames.has("title")) data.title = title;
+    if (schemaFieldNames.has("slug")) data.slug = slug;
+    return data;
+  };
+
+  const handleSaveDraft = async () => {
+    if (!type || !id) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const updated = await updateEntry(type, id, {
+        title,
+        slug,
+        data: buildPayloadData(),
+      });
+      setEntry(updated);
+      setStatus(updated.status);
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to save entry.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!type || !id) return;
+    setIsPublishing(true);
+    setError(null);
+    try {
+      if (status === "published") {
+        await handleSaveDraft();
+      } else {
+        await publishEntry(type, id);
+        const updated = await getEntry(type, id);
+        setEntry(updated);
+        setStatus(updated.status);
+        setHasUnsavedChanges(false);
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to publish entry.");
+      }
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleStatusChange = async (nextStatus: EntryStatus) => {
+    if (!type || !id) return;
+    setStatus(nextStatus);
+    if (nextStatus === "draft") {
+      await unpublishEntry(type, id);
+      setHasUnsavedChanges(false);
+    }
+    if (nextStatus === "published") {
+      await publishEntry(type, id);
+      setHasUnsavedChanges(false);
+    }
+  };
+
+  const handleGenerateSlug = () => {
+    handleSlugChange(slugify(title));
+  };
+
+  const contentFields = fields.filter(
+    (field) => field.type !== "media" && field.type !== "relation"
   );
+  const mediaFields = fields.filter((field) => field.type === "media");
+  const relationFields = fields.filter((field) => field.type === "relation");
 
   return (
     <AdminShell
@@ -162,8 +273,8 @@ export function EntryEditor() {
         <EntryEditorHeader
           status={status}
           hasUnsavedChanges={hasUnsavedChanges}
-          contentType="Blog Posts"
-          entryLabel="Edit Entry"
+          contentType={contentTypeName ?? type ?? "Entries"}
+          entryLabel={entry?.title ?? "Edit Entry"}
         />
       }
       topbarActions={
@@ -177,10 +288,24 @@ export function EntryEditor() {
       <div className="flex h-full min-h-[calc(100vh-4rem)]">
         <ScrollArea className="flex-1 bg-background">
           <div className="mx-auto flex max-w-4xl flex-col gap-8 px-10 py-10">
+            {error ? (
+              <Alert variant="destructive">
+                <AlertTitle>Unable to load entry</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            {hasUnsavedChanges ? (
+              <Alert>
+                <AlertTitle>Unsaved changes</AlertTitle>
+                <AlertDescription>
+                  Save or publish the entry to keep your edits.
+                </AlertDescription>
+              </Alert>
+            ) : null}
             <div className="space-y-4">
               <Textarea
                 value={title}
-                onChange={(event) => handleFieldChange("title", event.target.value)}
+                onChange={(event) => handleTitleChange(event.target.value)}
                 rows={2}
                 className="min-h-[96px] resize-none border-none bg-transparent p-0 text-4xl font-semibold leading-tight tracking-tight focus-visible:ring-0"
                 placeholder="Enter post title..."
@@ -190,12 +315,10 @@ export function EntryEditor() {
                   Slug
                 </span>
                 <div className="flex flex-1 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-                  <span className="text-xs text-muted-foreground">/blog/</span>
+                  <span className="text-xs text-muted-foreground">/</span>
                   <Input
                     value={slug}
-                    onChange={(event) =>
-                      handleFieldChange("slug", event.target.value)
-                    }
+                    onChange={(event) => handleSlugChange(event.target.value)}
                     className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
                   />
                   <Button
@@ -210,22 +333,79 @@ export function EntryEditor() {
               </div>
             </div>
 
-            <Tabs defaultValue="content" className="space-y-6">
-              <TabsList variant="line">
-                <TabsTrigger value="content">Content</TabsTrigger>
-                <TabsTrigger value="media">Media</TabsTrigger>
-                <TabsTrigger value="relations">Relations</TabsTrigger>
-              </TabsList>
-              <TabsContent value="content" className="space-y-6">
-                {contentFields.map(renderFieldCard)}
-              </TabsContent>
-              <TabsContent value="media" className="space-y-6">
-                {mediaFields.map(renderFieldCard)}
-              </TabsContent>
-              <TabsContent value="relations" className="space-y-6">
-                {relationFields.map(renderFieldCard)}
-              </TabsContent>
-            </Tabs>
+            {isLoading ? (
+              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                Loading entry fields...
+              </div>
+            ) : (
+              <Tabs defaultValue="content" className="space-y-6">
+                <TabsList variant="line">
+                  <TabsTrigger value="content">Content</TabsTrigger>
+                  <TabsTrigger value="media">Media</TabsTrigger>
+                  <TabsTrigger value="relations">Relations</TabsTrigger>
+                </TabsList>
+                <TabsContent value="content" className="space-y-6">
+                  {contentFields.map((field) => (
+                    <Card key={field.id}>
+                      <CardHeader className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <CardTitle className="text-base">{field.label}</CardTitle>
+                          {field.required ? <Badge variant="outline">Required</Badge> : null}
+                        </div>
+                        {field.help ? <CardDescription>{field.help}</CardDescription> : null}
+                      </CardHeader>
+                      <CardContent>
+                        <FieldRenderer
+                          field={field}
+                          value={values[field.name]}
+                          onChange={(value) => handleFieldChange(field.name, value)}
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+                <TabsContent value="media" className="space-y-6">
+                  {mediaFields.map((field) => (
+                    <Card key={field.id}>
+                      <CardHeader className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <CardTitle className="text-base">{field.label}</CardTitle>
+                          {field.required ? <Badge variant="outline">Required</Badge> : null}
+                        </div>
+                        {field.help ? <CardDescription>{field.help}</CardDescription> : null}
+                      </CardHeader>
+                      <CardContent>
+                        <FieldRenderer
+                          field={field}
+                          value={values[field.name]}
+                          onChange={(value) => handleFieldChange(field.name, value)}
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+                <TabsContent value="relations" className="space-y-6">
+                  {relationFields.map((field) => (
+                    <Card key={field.id}>
+                      <CardHeader className="space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                          <CardTitle className="text-base">{field.label}</CardTitle>
+                          {field.required ? <Badge variant="outline">Required</Badge> : null}
+                        </div>
+                        {field.help ? <CardDescription>{field.help}</CardDescription> : null}
+                      </CardHeader>
+                      <CardContent>
+                        <FieldRenderer
+                          field={field}
+                          value={values[field.name]}
+                          onChange={(value) => handleFieldChange(field.name, value)}
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         </ScrollArea>
         <aside className="hidden w-96 shrink-0 border-l bg-muted/30 lg:block">
@@ -240,6 +420,15 @@ export function EntryEditor() {
             onSeoDescriptionChange={setSeoDescription}
             tags={tags}
           />
+          <div className="border-t px-6 py-4">
+            <Button
+              className="w-full"
+              onClick={handleSaveDraft}
+              disabled={isSaving || isPublishing}
+            >
+              {isSaving ? "Saving..." : "Save draft"}
+            </Button>
+          </div>
         </aside>
       </div>
     </AdminShell>

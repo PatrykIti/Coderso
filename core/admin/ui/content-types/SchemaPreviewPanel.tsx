@@ -4,19 +4,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-const previewSchema = {
-  type: "object",
-  additionalProperties: false,
-  required: ["title", "slug"],
-  properties: {
-    title: { type: "string" },
-    slug: { type: "string" },
-    excerpt: { type: "string" },
-    coverImage: { type: "string", format: "media" },
-  },
+import type { ContentSchema } from "./schemaMapping";
+
+type SchemaPreviewPanelProps = {
+  schema: ContentSchema;
 };
 
-export function SchemaPreviewPanel() {
+export function SchemaPreviewPanel({ schema }: SchemaPreviewPanelProps) {
   return (
     <div className="flex h-full flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
@@ -34,7 +28,7 @@ export function SchemaPreviewPanel() {
       <Separator />
       <ScrollArea className="flex-1 rounded-lg border bg-muted/40 p-3">
         <pre className="text-xs leading-relaxed text-muted-foreground">
-          {JSON.stringify(previewSchema, null, 2)}
+          {JSON.stringify(schema, null, 2)}
         </pre>
       </ScrollArea>
       <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">

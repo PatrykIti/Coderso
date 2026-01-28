@@ -1,6 +1,7 @@
 import {
   createContentType,
   deleteContentType,
+  getContentType,
   listContentTypes,
   updateContentType,
 } from "../../services/content/typeService";
@@ -39,6 +40,16 @@ export function registerContentTypeRoutes(
   router.get("/content-types", requirePermission("content:read"), async () => {
     return listContentTypes();
   });
+
+  router.get(
+    "/content-types/:id",
+    requirePermission("content:read"),
+    async (ctx) => {
+      const result = await getContentType(ctx.params.id);
+      if (!result) throw new Error("content_type_not_found");
+      return result;
+    }
+  );
 
   router.post(
     "/content-types",

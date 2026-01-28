@@ -6,9 +6,7 @@ import { EntryEditor } from "../../../core/admin/ui/entries/EntryEditor";
 test("EntryEditor renders main panels", () => {
   const html = renderToString(<EntryEditor />);
 
-  expect(html).toContain("Entry content");
-  expect(html).toContain("Media");
-  expect(html).toContain("Relations");
+  expect(html).toContain("Loading entry fields");
   expect(html).toContain("Search Engine Optimization");
   expect(html).toContain("Taxonomy");
 });

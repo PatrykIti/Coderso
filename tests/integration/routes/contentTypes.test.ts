@@ -36,6 +36,7 @@ test("content routes are registered", () => {
     expect.arrayContaining([
       "GET /content-types",
       "POST /content-types",
+      "GET /content-types/:id",
       "PATCH /content-types/:id",
       "DELETE /content-types/:id",
       "GET /content/:type/entries",

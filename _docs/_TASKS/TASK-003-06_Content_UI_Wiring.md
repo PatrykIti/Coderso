@@ -5,7 +5,7 @@
 **Category:** CMS/Content  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-003-04, TASK-006-16, TASK-006-17, TASK-006-04  
-**Status:** To Do  
+**Status:** Done (2026-01-28)  
 
 ---
 
