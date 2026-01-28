@@ -1,8 +1,17 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UploadCloud } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  deleteMedia,
+  listMedia,
+  updateMedia,
+  uploadMedia,
+  type MediaRecord,
+} from "@/services/mediaClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { MediaDetailsDrawer } from "@/ui/media/MediaDetailsDrawer";
 import { MediaGrid } from "@/ui/media/MediaGrid";
@@ -18,71 +27,39 @@ import {
 } from "@/ui/media/UploadDropzone";
 import type { MediaItem, MediaKind, MediaMetaUpdate } from "@/ui/media/types";
 
-const seedMedia: MediaItem[] = [
-  {
-    id: "media-1",
-    name: "hero-banner_v2.jpg",
-    type: "image",
-    sizeBytes: 2.4 * 1024 * 1024,
-    url: "/media/hero-banner_v2.jpg",
-    mimeType: "image/jpeg",
-    createdAt: "2026-01-20T09:12:00Z",
-    width: 1920,
-    height: 1080,
-    title: "Hero Banner",
-    alt: "Mountain landscape",
-  },
-  {
-    id: "media-2",
-    name: "coding-session.jpg",
-    type: "image",
-    sizeBytes: 1.8 * 1024 * 1024,
-    url: "/media/coding-session.jpg",
-    mimeType: "image/jpeg",
-    createdAt: "2026-01-18T12:30:00Z",
-    width: 1600,
-    height: 900,
-  },
-  {
-    id: "media-3",
-    name: "Q1_Financial_Report.pdf",
-    type: "document",
-    sizeBytes: 840 * 1024,
-    url: "/media/Q1_Financial_Report.pdf",
-    mimeType: "application/pdf",
-    createdAt: "2026-01-14T08:10:00Z",
-  },
-  {
-    id: "media-4",
-    name: "abstract-bg-04.png",
-    type: "image",
-    sizeBytes: 4.1 * 1024 * 1024,
-    url: "/media/abstract-bg-04.png",
-    mimeType: "image/png",
-    createdAt: "2026-01-12T15:55:00Z",
-    width: 2400,
-    height: 1350,
-  },
-  {
-    id: "media-5",
-    name: "podcast-episode-01.mp3",
-    type: "audio",
-    sizeBytes: 42 * 1024 * 1024,
-    url: "/media/podcast-episode-01.mp3",
-    mimeType: "audio/mpeg",
-    createdAt: "2026-01-10T19:20:00Z",
-  },
-];
-
-function resolveKind(mimeType: string): MediaKind {
+function resolveKindFromMime(mimeType: string): MediaKind {
   if (mimeType.startsWith("image/")) return "image";
   if (mimeType.startsWith("audio/")) return "audio";
   return "document";
 }
 
+function resolveName(record: MediaRecord) {
+  const fromKey = record.key?.split("/").pop();
+  if (fromKey) return fromKey;
+  const fromUrl = record.url?.split("/").pop();
+  return fromUrl ?? "asset";
+}
+
+function toMediaItem(record: MediaRecord): MediaItem {
+  return {
+    id: record.id,
+    name: resolveName(record),
+    type: resolveKindFromMime(record.mimeType),
+    sizeBytes: record.size,
+    url: record.url,
+    mimeType: record.mimeType,
+    createdAt: record.createdAt,
+    width: record.width ?? undefined,
+    height: record.height ?? undefined,
+    title: record.title ?? undefined,
+    alt: record.alt ?? undefined,
+    caption: record.caption ?? undefined,
+  };
+}
+
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);
-  const [items, setItems] = useState<MediaItem[]>(seedMedia);
+  const [items, setItems] = useState<MediaItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -90,6 +67,45 @@ export function MediaLibraryPage() {
   const [view, setView] = useState<MediaView>("grid");
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await listMedia();
+      setItems(result.map(toMediaItem));
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load media assets.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      await refresh();
+      if (!active) return;
+    })();
+    return () => {
+      active = false;
+    };
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const exists = items.some((item) => item.id === selectedId);
+    if (!exists) {
+      setSelectedId(null);
+      setIsDrawerOpen(false);
+    }
+  }, [items, selectedId]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
@@ -104,40 +120,68 @@ export function MediaLibraryPage() {
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
 
-  const handleUploadFiles = (files: File[]) => {
+  const handleUploadFiles = async (files: File[]) => {
     setUploadError(null);
     if (files.length === 0) return;
     setIsUploading(true);
-    const newItems = files.map((file) => ({
-      id: crypto.randomUUID(),
-      name: file.name,
-      type: resolveKind(file.type),
-      sizeBytes: file.size,
-      url: `/media/${file.name}`,
-      mimeType: file.type || "application/octet-stream",
-      createdAt: new Date().toISOString(),
-      title: file.name,
-    }));
-    setItems((prev) => [...newItems, ...prev]);
-    if (newItems[0]?.id) {
-      setSelectedId(newItems[0].id);
-      setIsDrawerOpen(true);
+    try {
+      const uploaded = [] as Array<{ id: string }>;
+      for (const file of files) {
+        const result = await uploadMedia(file);
+        uploaded.push(result);
+      }
+      await refresh();
+      if (uploaded[0]?.id) {
+        setSelectedId(uploaded[0].id);
+        setIsDrawerOpen(true);
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setUploadError(err.message);
+      } else {
+        setUploadError("Failed to upload files.");
+      }
+    } finally {
+      setIsUploading(false);
     }
-    setIsUploading(false);
   };
 
   const handleSaveMeta = (id: string, meta: MediaMetaUpdate) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...meta } : item))
-    );
+    void (async () => {
+      setError(null);
+      try {
+        const updated = await updateMedia(id, meta);
+        setItems((prev) =>
+          prev.map((item) => (item.id === id ? toMediaItem(updated) : item))
+        );
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to update media metadata.");
+        }
+      }
+    })();
   };
 
   const handleDelete = (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-    if (selectedId === id) {
-      setSelectedId(null);
-      setIsDrawerOpen(false);
-    }
+    void (async () => {
+      setError(null);
+      try {
+        await deleteMedia(id);
+        setItems((prev) => prev.filter((item) => item.id !== id));
+        if (selectedId === id) {
+          setSelectedId(null);
+          setIsDrawerOpen(false);
+        }
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to delete media asset.");
+        }
+      }
+    })();
   };
 
   const handleSelectItem = (id: string) => {
@@ -182,6 +226,12 @@ export function MediaLibraryPage() {
             </Button>
           }
         />
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>Media API error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
         <MediaToolbar
           search={search}
           filter={filter}
@@ -198,11 +248,17 @@ export function MediaLibraryPage() {
               disabled={isUploading}
               error={uploadError}
             />
-            <MediaGrid
-              items={filteredItems}
-              selectedId={selectedId}
-              onSelect={handleSelectItem}
-            />
+            {isLoading ? (
+              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                Loading assets...
+              </div>
+            ) : (
+              <MediaGrid
+                items={filteredItems}
+                selectedId={selectedId}
+                onSelect={handleSelectItem}
+              />
+            )}
             <div className="flex justify-center">
               <Button variant="outline">Load More Assets</Button>
             </div>

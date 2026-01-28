@@ -1,12 +1,15 @@
 import path from "node:path";
 import { ApiError, toErrorResponse } from "./errorHandler";
+import { parseRequestBody } from "./requestBody";
 import { attachUserFromSession, requireAuth } from "./middleware/auth";
 import { requirePermission } from "./middleware/rbac";
 import { createRouter, matchRoute, normalizePath, type RouteContext } from "./router";
 import { registerAllRoutes } from "./routes";
+import { getMediaStorageAdapter } from "../services/media/storage";
 
 const API_PREFIX = "/admin/api";
 const ADMIN_PREFIX = "/admin";
+const MEDIA_PREFIX = "/media";
 
 const parseCookies = (header: string | null) => {
   if (!header) return {} as Record<string, string>;
@@ -75,17 +78,6 @@ const errorResponse = (error: unknown) => {
     }
   }
   return jsonResponse(toErrorResponse(error), { status: 500 });
-};
-
-const parseJsonBody = async (req: Request) => {
-  if (req.method === "GET" || req.method === "DELETE") return undefined;
-  const contentType = req.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) return undefined;
-  try {
-    return await req.json();
-  } catch {
-    throw new ApiError("invalid_json", "Invalid JSON body", 400);
-  }
 };
 
 const resolveIp = (req: Request) => {
@@ -171,7 +163,7 @@ const handleApi = async (req: Request) => {
     const ctx: RouteContext = {
       params: match.params,
       query: Object.fromEntries(url.searchParams.entries()),
-      body: await parseJsonBody(req),
+      body: await parseRequestBody(req),
       headers: headersObj,
       cookies,
       ip: resolveIp(req),
@@ -212,6 +204,32 @@ const handleApi = async (req: Request) => {
   return new Response("Not Found", { status: 404 });
 };
 
+const handleMedia = async (req: Request) => {
+  const url = new URL(req.url);
+  if (!url.pathname.startsWith(MEDIA_PREFIX)) {
+    return new Response("Not Found", { status: 404 });
+  }
+
+  const key = url.pathname.slice(MEDIA_PREFIX.length).replace(/^\/+/, "");
+  if (!key) return new Response("Not Found", { status: 404 });
+
+  const storage = (process.env.MEDIA_STORAGE ?? "local").toLowerCase();
+  if (storage !== "local") {
+    const adapter = getMediaStorageAdapter();
+    return Response.redirect(adapter.getPublicUrl(key), 302);
+  }
+
+  const baseDir = path.resolve(process.env.MEDIA_DIR ?? "/data/media");
+  const targetPath = path.resolve(baseDir, key);
+  if (targetPath !== baseDir && !targetPath.startsWith(`${baseDir}${path.sep}`)) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  const file = Bun.file(targetPath);
+  if (!(await file.exists())) return new Response("Not Found", { status: 404 });
+  return new Response(file, { headers: { "Content-Type": file.type } });
+};
+
 export function startHttpServer(options: HttpServerOptions = {}) {
   const port = options.port ?? Number(process.env.PORT ?? 3000);
   const adminDevUrl = options.adminDevUrl ?? process.env.VITE_DEV_SERVER_URL;
@@ -222,6 +240,9 @@ export function startHttpServer(options: HttpServerOptions = {}) {
       const url = new URL(req.url);
       if (url.pathname.startsWith(API_PREFIX)) {
         return handleApi(req);
+      }
+      if (url.pathname.startsWith(MEDIA_PREFIX)) {
+        return handleMedia(req);
       }
       if (url.pathname.startsWith(ADMIN_PREFIX)) {
         return handleAdmin(req, adminDevUrl);

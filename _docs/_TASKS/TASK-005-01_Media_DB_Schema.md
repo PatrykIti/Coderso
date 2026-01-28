@@ -5,7 +5,7 @@
 **Category:** CMS/Media  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-001  
-**Status:** To Do  
+**Status:** Done (2026-01-28)  
 
 ---
 

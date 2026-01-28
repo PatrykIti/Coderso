@@ -13,19 +13,24 @@ function getS3Config() {
   const region = process.env.S3_REGION;
   const accessKeyId = process.env.S3_ACCESS_KEY;
   const secretAccessKey = process.env.S3_SECRET_KEY;
+  const endpoint = process.env.S3_ENDPOINT?.trim() || undefined;
 
   if (!bucket || !region || !accessKeyId || !secretAccessKey) {
     throw new Error("s3_config_missing");
   }
 
-  return { bucket, region, accessKeyId, secretAccessKey };
+  return { bucket, region, accessKeyId, secretAccessKey, endpoint };
 }
 
-function getBaseUrl(bucket: string, region: string) {
-  return (
-    process.env.MEDIA_BASE_URL ??
-    `https://${bucket}.s3.${region}.amazonaws.com`
-  );
+function getBaseUrl(bucket: string, region: string, endpoint?: string) {
+  if (process.env.MEDIA_BASE_URL) {
+    return process.env.MEDIA_BASE_URL;
+  }
+  if (endpoint) {
+    const normalized = endpoint.replace(/\/+$/g, "");
+    return `${normalized}/${bucket}`;
+  }
+  return `https://${bucket}.s3.${region}.amazonaws.com`;
 }
 
 function getKeyPrefix() {
@@ -42,11 +47,12 @@ function buildKey(prefix: string, fileName: string) {
 }
 
 export function createS3Adapter(): MediaStorageAdapter {
-  const { bucket, region, accessKeyId, secretAccessKey } = getS3Config();
-  const baseUrl = getBaseUrl(bucket, region);
+  const { bucket, region, accessKeyId, secretAccessKey, endpoint } = getS3Config();
+  const baseUrl = getBaseUrl(bucket, region, endpoint);
   const client = new S3Client({
     region,
     credentials: { accessKeyId, secretAccessKey },
+    endpoint,
   });
 
   return {

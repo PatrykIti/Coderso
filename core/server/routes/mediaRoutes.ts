@@ -32,9 +32,9 @@ export type MediaRouteDeps = {
 
 type UploadBody = {
   file: UploadFile;
-  alt?: string;
-  title?: string;
-  caption?: string;
+  alt?: unknown;
+  title?: unknown;
+  caption?: unknown;
 };
 
 function isUploadFile(input: unknown): input is UploadFile {
@@ -57,6 +57,9 @@ export function registerMediaRoutes(router: Router, deps: MediaRouteDeps) {
 
   router.post("/media", requirePermission("media:write"), async (ctx) => {
     validate(mediaUploadSchema, ctx.body);
+    if (!ctx.body || typeof ctx.body !== "object") {
+      throw new Error("media_file_invalid");
+    }
     const body = ctx.body as UploadBody;
 
     if (!isUploadFile(body.file)) {
@@ -65,7 +68,11 @@ export function registerMediaRoutes(router: Router, deps: MediaRouteDeps) {
 
     return uploadMedia(
       body.file,
-      { alt: body.alt, title: body.title, caption: body.caption },
+      {
+        alt: typeof body.alt === "string" ? body.alt : undefined,
+        title: typeof body.title === "string" ? body.title : undefined,
+        caption: typeof body.caption === "string" ? body.caption : undefined,
+      },
       ctx.user?.id
     );
   });

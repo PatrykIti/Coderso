@@ -25,9 +25,11 @@ Konfiguracja:
 S3 (przyklad):
 - `S3_BUCKET`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`
 - `S3_PREFIX` (opcjonalnie)
+- `S3_ENDPOINT` (opcjonalnie, kompatybilne S3 / custom origin)
 
 Azure (przyklad):
 - `AZURE_CONTAINER`, `AZURE_ACCOUNT`, `AZURE_KEY`
+- `AZURE_STORAGE_CONNECTION_STRING` (alternatywa dla konta + klucza)
 
 Adapter interface (concept):
 - `put(file)` -> `{ url, key }`

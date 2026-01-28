@@ -21,9 +21,10 @@ export function getMediaStorageAdapter() {
       adapter = createAzureAdapter();
       break;
     case "local":
-    default:
       adapter = createLocalAdapter();
       break;
+    default:
+      throw new Error(`media_storage_unknown:${storage}`);
   }
 
   adapterCache.set(storage, adapter);
