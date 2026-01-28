@@ -7,6 +7,7 @@ test("AuditList renders filters and table", () => {
   const html = renderToString(<AuditList />);
 
   expect(html).toContain("Audit Logs");
-  expect(html).toContain("All actions");
-  expect(html).toContain("settings.update");
+  expect(html).toContain("Export CSV");
+  expect(html).toContain("Event");
+  expect(html).toContain("IP Address");
 });

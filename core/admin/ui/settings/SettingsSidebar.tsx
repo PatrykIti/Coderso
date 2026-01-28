@@ -1,4 +1,15 @@
-import { Database, KeyRound, Palette, Settings, Users } from "lucide-react";
+import {
+  Database,
+  HardDrive,
+  KeyRound,
+  Link2,
+  Mail,
+  Palette,
+  Plug,
+  Settings,
+  Shield,
+  Users,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -7,7 +18,12 @@ const items = [
   { id: "design-tokens", label: "Design Tokens", icon: Palette },
   { id: "data-model", label: "Data Model", icon: Database },
   { id: "team", label: "Team", icon: Users },
+  { id: "security", label: "Security", icon: Shield },
   { id: "api-keys", label: "API Keys", icon: KeyRound },
+  { id: "webhooks", label: "Webhooks", icon: Link2 },
+  { id: "email", label: "Email", icon: Mail },
+  { id: "storage", label: "Storage", icon: HardDrive },
+  { id: "integrations", label: "Integrations", icon: Plug },
 ];
 
 type SettingsSidebarProps = {

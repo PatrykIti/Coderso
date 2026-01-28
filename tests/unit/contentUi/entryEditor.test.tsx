@@ -6,9 +6,9 @@ import { EntryEditor } from "../../../core/admin/ui/entries/EntryEditor";
 test("EntryEditor renders schema-based fields", () => {
   const html = renderToString(<EntryEditor />);
 
-  expect(html).toContain("Entry Editor");
-  expect(html).toContain("Save draft");
-  expect(html).toContain("Publish");
-  expect(html).toContain("Summary");
-  expect(html).toContain("Preview Link");
+  expect(html).toContain("Edit Entry");
+  expect(html).toContain("Preview");
+  expect(html).toContain("Update");
+  expect(html).toContain("Entry content");
+  expect(html).toContain("Publishing");
 });

@@ -1,0 +1,14 @@
+import { expect, test } from "bun:test";
+import { renderToString } from "react-dom/server";
+
+import { StorageSettingsPage } from "../../../core/admin/ui/settings/StorageSettingsPage";
+
+test("StorageSettingsPage renders provider cards and config panel", () => {
+  const html = renderToString(<StorageSettingsPage />);
+
+  expect(html).toContain("Storage Settings");
+  expect(html).toContain("Local Storage");
+  expect(html).toContain("Amazon S3");
+  expect(html).toContain("Azure Blob");
+  expect(html).toContain("Test Connection");
+});

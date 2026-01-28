@@ -3,10 +3,10 @@ import { UploadCloud } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { SplitShell } from "@/ui/layouts/SplitShell";
-import { PageHeader } from "@/ui/shared/PageHeader";
-import { MediaDetailsPanel } from "@/ui/media/MediaDetailsPanel";
+import { AdminShell } from "@/ui/layouts/AdminShell";
+import { MediaDetailsDrawer } from "@/ui/media/MediaDetailsDrawer";
 import { MediaGrid } from "@/ui/media/MediaGrid";
+import { PageHeader } from "@/ui/shared/PageHeader";
 import {
   MediaToolbar,
   type MediaFilter,
@@ -86,6 +86,7 @@ export function MediaLibraryPage() {
   const [selectedId, setSelectedId] = useState<string | null>(
     seedMedia[0]?.id ?? null
   );
+  const [isDrawerOpen, setIsDrawerOpen] = useState(Boolean(seedMedia[0]?.id));
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<MediaFilter>("all");
   const [view, setView] = useState<MediaView>("grid");
@@ -121,6 +122,7 @@ export function MediaLibraryPage() {
     }));
     setItems((prev) => [...newItems, ...prev]);
     setSelectedId(newItems[0]?.id ?? null);
+    setIsDrawerOpen(true);
     setIsUploading(false);
   };
 
@@ -135,7 +137,13 @@ export function MediaLibraryPage() {
     if (selectedId === id) {
       const next = items.find((item) => item.id !== id);
       setSelectedId(next?.id ?? null);
+      setIsDrawerOpen(Boolean(next));
     }
+  };
+
+  const handleSelectItem = (id: string) => {
+    setSelectedId(id);
+    setIsDrawerOpen(true);
   };
 
   const handleCopy = (url: string) => {
@@ -151,18 +159,8 @@ export function MediaLibraryPage() {
   };
 
   return (
-    <SplitShell
+    <AdminShell
       activeHref="/admin/media"
-      rightPanel={
-        <MediaDetailsPanel
-          key={selectedItem?.id ?? "empty"}
-          item={selectedItem}
-          onSave={handleSaveMeta}
-          onDelete={handleDelete}
-          onCopy={handleCopy}
-          onOpen={handleOpen}
-        />
-      }
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Home</span>
@@ -204,7 +202,7 @@ export function MediaLibraryPage() {
             <MediaGrid
               items={filteredItems}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={handleSelectItem}
             />
             <div className="flex justify-center">
               <Button variant="outline">Load More Assets</Button>
@@ -212,6 +210,16 @@ export function MediaLibraryPage() {
           </CardContent>
         </Card>
       </div>
-    </SplitShell>
+      <MediaDetailsDrawer
+        key={selectedItem?.id ?? "empty"}
+        item={selectedItem}
+        open={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        onSave={handleSaveMeta}
+        onDelete={handleDelete}
+        onCopy={handleCopy}
+        onOpen={handleOpen}
+      />
+    </AdminShell>
   );
 }

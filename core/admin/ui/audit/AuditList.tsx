@@ -1,170 +1,209 @@
-import { Filter, Shield } from "lucide-react";
+import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
-type AuditItem = {
-  id: string;
-  action: string;
-  targetType: string;
-  targetId: string;
-  actor: string;
-  createdAt: string;
-};
+import { AuditDetailsDrawer } from "./AuditDetailsDrawer";
+import { AuditFilters } from "./AuditFilters";
+import { AuditTable } from "./AuditTable";
+import type { AuditLog } from "./types";
 
-const sampleAudit: AuditItem[] = [
+const auditLogs: AuditLog[] = [
   {
-    id: "audit-1",
-    action: "auth.login",
-    targetType: "user",
-    targetId: "user-1",
-    actor: "admin@nextless.dev",
-    createdAt: "2026-01-27 08:12",
+    id: "log_92kLp023Xm",
+    event: "Updated Article",
+    category: "content",
+    actor: {
+      name: "Sarah Jenks",
+      role: "Admin",
+      type: "user",
+    },
+    resource: "/api/v1/posts/302",
+    resourceLabel: "Article #302 \"Introduction to CMS\"",
+    ipAddress: "192.168.1.45",
+    timestamp: "2 mins ago",
+    timestampLabel: "Oct 24, 14:22:10",
+    status: "success",
+    severity: "info",
+    requestId: "req_abc123",
+    description: "Article metadata updated and published.",
+    payload: {
+      action: "UPDATE",
+      entity: "post",
+      entity_id: 302,
+      diff: {
+        status: { old: "draft", new: "published" },
+        updated_at: "2023-10-24T14:22:10Z",
+      },
+      context: {
+        user_agent: "Mozilla/5.0...",
+        region: "us-east-1",
+      },
+    },
   },
   {
-    id: "audit-2",
-    action: "pages.publish",
-    targetType: "page",
-    targetId: "page-3",
-    actor: "editor@nextless.dev",
-    createdAt: "2026-01-27 07:42",
+    id: "log_83apQ712Lg",
+    event: "Failed Login Attempt",
+    category: "authentication",
+    actor: {
+      name: "Alex Morgan",
+      role: "Editor",
+      type: "user",
+    },
+    resource: "/auth/login",
+    resourceLabel: "Login endpoint",
+    ipAddress: "172.16.0.12",
+    timestamp: "18 mins ago",
+    timestampLabel: "Oct 24, 14:06:42",
+    status: "warning",
+    severity: "warning",
+    requestId: "req_login_42",
+    description: "Invalid credentials supplied from a known IP.",
+    payload: {
+      action: "LOGIN",
+      result: "DENIED",
+      reason: "invalid_password",
+      attempts: 3,
+    },
   },
   {
-    id: "audit-3",
-    action: "settings.update",
-    targetType: "settings",
-    targetId: "site.locale",
-    actor: "admin@nextless.dev",
-    createdAt: "2026-01-26 18:30",
+    id: "log_55kLx118Py",
+    event: "Role Permissions Updated",
+    category: "system",
+    actor: {
+      name: "Dev Bot",
+      role: "Automation",
+      type: "system",
+    },
+    resource: "roles/editor",
+    resourceLabel: "Editor role",
+    ipAddress: "10.0.0.12",
+    timestamp: "42 mins ago",
+    timestampLabel: "Oct 24, 13:40:01",
+    status: "success",
+    severity: "info",
+    requestId: "req_role_219",
+    description: "Automation updated role permissions based on policy.",
+    payload: {
+      action: "UPDATE",
+      entity: "role",
+      permissions_added: ["content.publish", "content.archive"],
+      permissions_removed: ["settings.update"],
+    },
+  },
+  {
+    id: "log_12fKe498Qw",
+    event: "System Error",
+    category: "system",
+    actor: {
+      name: "Dev Bot",
+      role: "Automation",
+      type: "system",
+    },
+    resource: "db_connector_v2",
+    resourceLabel: "Database connector",
+    ipAddress: "10.0.0.5",
+    timestamp: "1 hour ago",
+    timestampLabel: "Oct 24, 13:10:05",
+    status: "error",
+    severity: "error",
+    requestId: "req_sys_522",
+    description: "Database connection timeout reported by worker.",
+    payload: {
+      action: "ERROR",
+      module: "db_connector_v2",
+      code: "ETIMEDOUT",
+      retry_count: 2,
+    },
   },
 ];
 
-const actionStyles: Record<string, string> = {
-  "auth.login": "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  "auth.logout": "bg-slate-500/10 text-slate-600 border-slate-500/20",
-  "pages.publish": "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  "pages.restore": "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  "settings.update": "bg-purple-500/10 text-purple-600 border-purple-500/20",
-};
-
 export function AuditList() {
   const [query, setQuery] = useState("");
-  const [actionFilter, setActionFilter] = useState("all");
+  const [dateRange, setDateRange] = useState("last-7-days");
+  const [eventType, setEventType] = useState("all");
+  const [severity, setSeverity] = useState("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    return sampleAudit.filter((item) => {
+  const filteredLogs = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return auditLogs.filter((log) => {
       const matchesQuery =
-        !query ||
-        item.action.toLowerCase().includes(query.toLowerCase()) ||
-        item.actor.toLowerCase().includes(query.toLowerCase());
-      const matchesAction =
-        actionFilter === "all" || item.action === actionFilter;
-      return matchesQuery && matchesAction;
+        !normalizedQuery ||
+        log.event.toLowerCase().includes(normalizedQuery) ||
+        log.actor.name.toLowerCase().includes(normalizedQuery) ||
+        log.resource.toLowerCase().includes(normalizedQuery);
+      const matchesType = eventType === "all" || log.category === eventType;
+      const matchesSeverity = severity === "all" || log.severity === severity;
+
+      return matchesQuery && matchesType && matchesSeverity;
     });
-  }, [query, actionFilter]);
+  }, [query, eventType, severity]);
+
+  const selectedLog = useMemo(
+    () => auditLogs.find((log) => log.id === selectedId) ?? null,
+    [selectedId]
+  );
+
+  const handleSelect = (log: AuditLog) => {
+    setSelectedId(log.id);
+    setDrawerOpen(true);
+  };
+
+  const handleDrawerChange = (open: boolean) => {
+    setDrawerOpen(open);
+    if (!open) {
+      setSelectedId(null);
+    }
+  };
 
   return (
     <AdminShell
       activeHref="/admin/audit"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Admin</span>
+          <span>Security</span>
           <span>/</span>
           <span className="text-foreground">Audit Logs</span>
         </div>
       }
     >
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6">
         <PageHeader
           title="Audit Logs"
-          description="Track critical actions across the CMS."
+          description="Detailed trail of all actions and security events within the platform."
           actions={
             <Button variant="outline" className="gap-2">
-              <Shield className="h-4 w-4" />
-              Security Overview
+              <Download className="h-4 w-4" />
+              Export CSV
             </Button>
           }
         />
-        <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-          <Input
-            placeholder="Search by action or user..."
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="lg:max-w-sm"
-          />
-          <div className="flex items-center gap-2">
-            <Button
-              variant={actionFilter === "all" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setActionFilter("all")}
-            >
-              All actions
-            </Button>
-            <Button
-              variant={actionFilter === "pages.publish" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setActionFilter("pages.publish")}
-            >
-              Page publish
-            </Button>
-            <Button
-              variant={actionFilter === "settings.update" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setActionFilter("settings.update")}
-            >
-              Settings
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead>Action</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Actor</TableHead>
-                <TableHead>Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={actionStyles[item.action] ?? "bg-muted"}
-                    >
-                      {item.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {item.targetType} / {item.targetId}
-                  </TableCell>
-                  <TableCell className="text-sm">{item.actor}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {item.createdAt}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <AuditFilters
+          query={query}
+          dateRange={dateRange}
+          eventType={eventType}
+          severity={severity}
+          onQueryChange={setQuery}
+          onDateRangeChange={setDateRange}
+          onEventTypeChange={setEventType}
+          onSeverityChange={setSeverity}
+        />
+        <AuditTable
+          logs={filteredLogs}
+          selectedId={selectedId}
+          onSelect={handleSelect}
+        />
       </div>
+      <AuditDetailsDrawer
+        log={selectedLog}
+        open={drawerOpen}
+        onOpenChange={handleDrawerChange}
+      />
     </AdminShell>
   );
 }

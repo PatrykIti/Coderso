@@ -1,5 +1,5 @@
-import { Eye, Save, Send } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { RefreshCcw } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,14 +11,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { SplitShell } from "@/ui/layouts/SplitShell";
-import { PageHeader } from "@/ui/shared/PageHeader";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { AdminShell } from "@/ui/layouts/AdminShell";
 
+import { EntryEditorHeader, EntryEditorHeaderActions } from "./EntryEditorHeader";
+import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { FieldRenderer } from "./FieldRenderer";
 import type { ContentField } from "../content-types/SchemaBuilder";
-
-type EntryStatus = "draft" | "published";
 
 const entrySchema: ContentField[] = [
   {
@@ -27,7 +28,7 @@ const entrySchema: ContentField[] = [
     type: "text",
     label: "Title",
     required: true,
-    help: "Displayed on listing cards and metadata.",
+    defaultValue: "Mastering Headless CMS Architecture",
   },
   {
     id: "slug",
@@ -35,53 +36,39 @@ const entrySchema: ContentField[] = [
     type: "text",
     label: "Slug",
     required: true,
-    help: "URL-friendly identifier (kebab-case).",
+    defaultValue: "mastering-headless-cms",
   },
   {
-    id: "summary",
-    name: "summary",
+    id: "body",
+    name: "body",
     type: "richtext",
-    label: "Summary",
-    help: "Short intro used for previews and SEO.",
-  },
-  {
-    id: "read-time",
-    name: "read-time",
-    type: "number",
-    label: "Read time (minutes)",
-    defaultValue: "5",
-  },
-  {
-    id: "featured",
-    name: "featured",
-    type: "boolean",
-    label: "Featured entry",
-    help: "Highlight on the homepage.",
-    defaultValue: "false",
-  },
-  {
-    id: "priority",
-    name: "priority",
-    type: "select",
-    label: "Priority",
-    options: ["low", "normal", "high"],
-    defaultValue: "normal",
+    label: "Entry content",
+    required: true,
+    help: "Write the main story for this entry.",
+    defaultValue:
+      "Headless CMS platforms give teams the freedom to deliver content across channels without locking into a single frontend.",
   },
   {
     id: "cover",
     name: "cover-image",
     type: "media",
-    label: "Cover image",
-    help: "Used in social previews.",
+    label: "Featured image",
+    help: "Used for social previews and listing cards.",
   },
   {
     id: "related",
     name: "related-entry",
     type: "relation",
     label: "Related entry",
-    relation: { target: "news" },
+    relation: { target: "blog" },
+    options: ["Launch announcement", "Roadmap update", "Hiring playbook"],
+    help: "Connect to another entry in the same collection.",
   },
 ];
+
+const contentFields = entrySchema.filter((field) => field.type === "richtext");
+const mediaFields = entrySchema.filter((field) => field.type === "media");
+const relationFields = entrySchema.filter((field) => field.type === "relation");
 
 function resolveDefaultValue(field: ContentField) {
   if (field.defaultValue === undefined || field.defaultValue === "") return null;
@@ -103,206 +90,158 @@ function buildInitialValues(fields: ContentField[]) {
   }, {});
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
 export function EntryEditor() {
   const [values, setValues] = useState<Record<string, unknown>>(() =>
     buildInitialValues(entrySchema)
   );
-  const [status, setStatus] = useState<EntryStatus>("draft");
+  const [status, setStatus] = useState<EntryStatus>("published");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isAutosaving, setIsAutosaving] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
-  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (autosaveTimer.current) {
-        clearTimeout(autosaveTimer.current);
-      }
-    };
-  }, []);
-
-  const scheduleAutosave = () => {
-    setIsAutosaving(true);
-    if (autosaveTimer.current) {
-      clearTimeout(autosaveTimer.current);
-    }
-    autosaveTimer.current = setTimeout(() => {
-      setIsAutosaving(false);
-      setHasUnsavedChanges(false);
-      setLastSavedAt(new Date());
-    }, 900);
-  };
+  const [publishDate, setPublishDate] = useState("Oct 24, 2023 10:30 AM");
+  const [seoDescription, setSeoDescription] = useState(
+    "Learn how headless architecture can improve your performance and developer experience with modern tools."
+  );
+  const [tags] = useState(["HEADLESS", "ARCHITECTURE", "PERFORMANCE"]);
 
   const handleFieldChange = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
     setHasUnsavedChanges(true);
-    scheduleAutosave();
   };
 
-  const handleSaveDraft = async () => {
-    if (autosaveTimer.current) {
-      clearTimeout(autosaveTimer.current);
-    }
-    setStatus("draft");
-    setHasUnsavedChanges(false);
-    setLastSavedAt(new Date());
-    setIsAutosaving(false);
-  };
+  const handlePreview = () => {};
 
-  const handlePublish = async () => {
-    if (autosaveTimer.current) {
-      clearTimeout(autosaveTimer.current);
-    }
+  const handlePublish = () => {
     setStatus("published");
     setHasUnsavedChanges(false);
-    setLastSavedAt(new Date());
-    setIsAutosaving(false);
   };
 
-  const lastSavedLabel = lastSavedAt
-    ? lastSavedAt.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "Not saved yet";
+  const handleStatusChange = (nextStatus: EntryStatus) => {
+    setStatus(nextStatus);
+    setHasUnsavedChanges(true);
+  };
+
+  const title = String(values.title ?? "");
+  const slug = String(values.slug ?? "");
+
+  const handleGenerateSlug = () => {
+    handleFieldChange("slug", slugify(title));
+  };
+
+  const renderFieldCard = (field: ContentField) => (
+    <Card key={field.id}>
+      <CardHeader className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-base">{field.label}</CardTitle>
+          {field.required ? <Badge variant="outline">Required</Badge> : null}
+        </div>
+        {field.help ? <CardDescription>{field.help}</CardDescription> : null}
+      </CardHeader>
+      <CardContent>
+        <FieldRenderer
+          field={field}
+          value={values[field.name]}
+          onChange={(value) => handleFieldChange(field.name, value)}
+        />
+      </CardContent>
+    </Card>
+  );
 
   return (
-    <SplitShell
+    <AdminShell
       activeHref="/admin/entries"
-      rightPanel={
-        <EntryMetaPanel
-          status={status}
-          lastSavedLabel={lastSavedLabel}
-          isAutosaving={isAutosaving}
-        />
-      }
+      showSearch={false}
+      contentClassName="p-0 overflow-hidden"
       breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Content</span>
-          <span>/</span>
-          <span>Entries</span>
-          <span>/</span>
-          <span className="text-foreground">Blog Post</span>
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
-            {status}
-          </span>
-          {hasUnsavedChanges ? (
-            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700">
-              Unsaved changes
-            </span>
-          ) : null}
-        </div>
+        <EntryEditorHeader
+          status={status}
+          hasUnsavedChanges={hasUnsavedChanges}
+          contentType="Blog Posts"
+          entryLabel="Edit Entry"
+        />
       }
       topbarActions={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2">
-            <Eye className="h-4 w-4" />
-            Preview
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-2"
-            onClick={handleSaveDraft}
-          >
-            <Save className="h-4 w-4" />
-            Save draft
-          </Button>
-          <Button size="sm" className="gap-2" onClick={handlePublish}>
-            <Send className="h-4 w-4" />
-            Publish
-          </Button>
-        </div>
+        <EntryEditorHeaderActions
+          status={status}
+          onPreview={handlePreview}
+          onPublish={handlePublish}
+        />
       }
     >
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <PageHeader
-          title="Entry Editor"
-          description="Edit fields for the Blog Post content type."
-        />
-        <Card>
-          <CardHeader>
-            <CardTitle>Entry fields</CardTitle>
-            <CardDescription>
-              Fields are generated from the content type schema.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            {entrySchema.map((field) => (
-              <div key={field.id} className="space-y-2">
-                {field.type !== "boolean" ? (
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium">{field.label}</p>
-                      {field.help ? (
-                        <p className="text-xs text-muted-foreground">
-                          {field.help}
-                        </p>
-                      ) : null}
-                    </div>
-                    {field.required ? (
-                      <Badge variant="outline">Required</Badge>
-                    ) : null}
-                  </div>
-                ) : null}
-                <FieldRenderer
-                  field={field}
-                  value={values[field.name]}
-                  onChange={(value) => handleFieldChange(field.name, value)}
-                />
-                {field.type === "boolean" && field.help ? (
-                  <p className="text-xs text-muted-foreground">{field.help}</p>
-                ) : null}
+      <div className="flex h-full min-h-[calc(100vh-4rem)]">
+        <ScrollArea className="flex-1 bg-background">
+          <div className="mx-auto flex max-w-4xl flex-col gap-8 px-10 py-10">
+            <div className="space-y-4">
+              <Textarea
+                value={title}
+                onChange={(event) => handleFieldChange("title", event.target.value)}
+                rows={2}
+                className="min-h-[96px] resize-none border-none bg-transparent p-0 text-4xl font-semibold leading-tight tracking-tight focus-visible:ring-0"
+                placeholder="Enter post title..."
+              />
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Slug
+                </span>
+                <div className="flex flex-1 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                  <span className="text-xs text-muted-foreground">/blog/</span>
+                  <Input
+                    value={slug}
+                    onChange={(event) =>
+                      handleFieldChange("slug", event.target.value)
+                    }
+                    className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    onClick={handleGenerateSlug}
+                  >
+                    <RefreshCcw className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    </SplitShell>
-  );
-}
+            </div>
 
-type EntryMetaPanelProps = {
-  status: EntryStatus;
-  lastSavedLabel: string;
-  isAutosaving: boolean;
-};
-
-function EntryMetaPanel({
-  status,
-  lastSavedLabel,
-  isAutosaving,
-}: EntryMetaPanelProps) {
-  return (
-    <div className="flex h-full flex-col gap-6">
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold">Entry Status</h3>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">{status}</Badge>
-          <span className="text-xs text-muted-foreground">
-            {isAutosaving ? "Autosaving..." : "Autosave enabled"}
-          </span>
-        </div>
-        <p className="text-xs text-muted-foreground">Last saved: {lastSavedLabel}</p>
+            <Tabs defaultValue="content" className="space-y-6">
+              <TabsList variant="line">
+                <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="media">Media</TabsTrigger>
+                <TabsTrigger value="relations">Relations</TabsTrigger>
+              </TabsList>
+              <TabsContent value="content" className="space-y-6">
+                {contentFields.map(renderFieldCard)}
+              </TabsContent>
+              <TabsContent value="media" className="space-y-6">
+                {mediaFields.map(renderFieldCard)}
+              </TabsContent>
+              <TabsContent value="relations" className="space-y-6">
+                {relationFields.map(renderFieldCard)}
+              </TabsContent>
+            </Tabs>
+          </div>
+        </ScrollArea>
+        <aside className="hidden w-96 shrink-0 border-l bg-muted/30 lg:block">
+          <EntryMetadataPanel
+            status={status}
+            onStatusChange={handleStatusChange}
+            publishDate={publishDate}
+            onPublishDateChange={setPublishDate}
+            title={title}
+            slug={slug}
+            seoDescription={seoDescription}
+            onSeoDescriptionChange={setSeoDescription}
+            tags={tags}
+          />
+        </aside>
       </div>
-      <Separator />
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Preview Link</h3>
-        <Input
-          readOnly
-          value="https://preview.nextless.local/entry/launch-announcement"
-        />
-        <Button variant="outline" size="sm" className="w-full gap-2">
-          <Eye className="h-4 w-4" />
-          Open Preview
-        </Button>
-      </div>
-      <Separator />
-      <div className="space-y-2 text-xs text-muted-foreground">
-        <p>Locale: en-US</p>
-        <p>Author: admin@nextless.dev</p>
-        <p>Content type: Blog Post</p>
-      </div>
-    </div>
+    </AdminShell>
   );
 }

@@ -11,6 +11,7 @@ import { SectionHeader } from "@/ui/shared/SectionHeader";
 import { RoleEditor } from "../roles/RoleEditor";
 import { RoleList } from "../roles/RoleList";
 import type { RoleDraft, RoleSummary } from "../roles/types";
+import { InviteUserDialog, type InviteUserValues } from "./InviteUserDialog";
 import { UserDetailsDrawer } from "./UserDetailsDrawer";
 import { UserEditor } from "./UserEditor";
 import { UserFilters } from "./UserFilters";
@@ -119,8 +120,10 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const [editingRole, setEditingRole] = useState<RoleSummary | null>(null);
   const [userEditorOpen, setUserEditorOpen] = useState(false);
   const [roleEditorOpen, setRoleEditorOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [userEditorSeed, setUserEditorSeed] = useState(0);
   const [roleEditorSeed, setRoleEditorSeed] = useState(0);
+  const [inviteDialogSeed, setInviteDialogSeed] = useState(0);
 
   const canManageUsers = hasPermission(permissions, "users:write");
   const canManageRoles = hasPermission(permissions, "roles:write");
@@ -185,6 +188,18 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     };
     setUsers((prev) => [nextUser, ...prev]);
     setSelectedUserId(id);
+  };
+
+  const handleInviteUser = (values: InviteUserValues) => {
+    handleSaveUser(
+      {
+        name: values.name,
+        email: values.email,
+        roleIds: [values.roleId],
+        status: "pending",
+      },
+      "create"
+    );
   };
 
   const handleSaveRole = (draft: RoleDraft, mode: "create" | "edit") => {
@@ -270,6 +285,11 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     setRoleEditorOpen(true);
   };
 
+  const openInviteDialog = () => {
+    setInviteDialogSeed((prev) => prev + 1);
+    setInviteDialogOpen(true);
+  };
+
   const readOnly = !canManageUsers || !canManageRoles;
 
   return (
@@ -314,7 +334,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
               </Button>
               <Button
                 className="gap-2"
-                onClick={() => openUserEditor()}
+                onClick={openInviteDialog}
                 disabled={!canManageUsers}
               >
                 <UserPlus className="h-4 w-4" />
@@ -391,6 +411,13 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         canManageUsers={canManageUsers}
         onOpenChange={setUserEditorOpen}
         onSave={handleSaveUser}
+      />
+      <InviteUserDialog
+        key={`invite-${inviteDialogSeed}`}
+        open={inviteDialogOpen}
+        roles={roles}
+        onOpenChange={setInviteDialogOpen}
+        onInvite={handleInviteUser}
       />
       <RoleEditor
         key={`${editingRole?.id ?? "new"}-${roleEditorSeed}`}

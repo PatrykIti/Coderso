@@ -57,6 +57,34 @@ Project Change Log.
 | 030 | 2026-01-27 | Auth UI wiring | Admin/UI |
 | 031 | 2026-01-27 | Core HTTP server and admin bootstrap | Core/Platform |
 | 032 | 2026-01-27 | Auth advanced endpoints (CSRF/OTP/Reset) | Core/Auth |
+| 033 | 2026-01-28 | Form builder UI | Admin/UI |
+| 034 | 2026-01-28 | API Keys UI | Admin/UI |
+| 035 | 2026-01-28 | Audit Logs UI | Admin/UI |
+| 036 | 2026-01-28 | Content Entries List UI | Admin/UI |
+| 037 | 2026-01-28 | Content Entry Editor UI | Admin/UI |
+| 038 | 2026-01-28 | Settings Security UI | Admin/UI |
+| 039 | 2026-01-28 | Webhooks UI | Admin/UI |
+| 040 | 2026-01-28 | Analytics UI | Admin/UI |
+| 041 | 2026-01-28 | Backups UI | Admin/UI |
+| 042 | 2026-01-28 | Global Search UI | Admin/UI |
+| 043 | 2026-01-28 | Media Details UI | Admin/UI |
+| 044 | 2026-01-28 | Permissions Matrix UI | Admin/UI |
+| 045 | 2026-01-28 | Plugin Details UI | Admin/UI |
+| 046 | 2026-01-28 | SEO Manager UI | Admin/UI |
+| 047 | 2026-01-28 | Themes UI | Admin/UI |
+| 048 | 2026-01-28 | Theme Editor UI | Admin/UI |
+| 049 | 2026-01-28 | Widget Library UI | Admin/UI |
+| 050 | 2026-01-28 | Access Logs UI | Admin/UI |
+| 051 | 2026-01-28 | Email Settings UI | Admin/UI |
+| 052 | 2026-01-28 | General Settings UI | Admin/UI |
+| 053 | 2026-01-28 | Integrations UI | Admin/UI |
+| 054 | 2026-01-28 | Invite Users UI | Admin/UI |
+| 055 | 2026-01-28 | IP Allowlist UI | Admin/UI |
+| 056 | 2026-01-28 | Redirects UI | Admin/UI |
+| 057 | 2026-01-28 | Security Sessions UI | Admin/UI |
+| 058 | 2026-01-28 | Storage Settings UI | Admin/UI |
+| 059 | 2026-01-28 | Import & Export UI | Admin/UI |
+| 060 | 2026-01-28 | Login Alerts UI | Admin/UI |
 
 
 ---

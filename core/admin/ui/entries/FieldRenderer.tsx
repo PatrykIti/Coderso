@@ -26,6 +26,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
         <Input
           value={String(value ?? "")}
           onChange={(event) => onChange(event.target.value)}
+          placeholder={`Enter ${field.label.toLowerCase()}...`}
         />
       );
     case "richtext":
@@ -33,7 +34,9 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
         <Textarea
           value={String(value ?? "")}
           onChange={(event) => onChange(event.target.value)}
-          rows={5}
+          rows={10}
+          className="min-h-[240px] resize-none bg-muted/30"
+          placeholder="Start writing..."
         />
       );
     case "number":
@@ -60,7 +63,7 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
     case "select":
       return (
         <Select
-          value={String(value ?? "")}
+          value={value ? String(value) : undefined}
           onValueChange={(next) => onChange(next)}
         >
           <SelectTrigger>
@@ -77,16 +80,45 @@ export function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
       );
     case "media":
       return (
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm">
-            Select media
-          </Button>
-          <Badge variant="outline" className="text-xs">
-            {value ? "1 asset" : "None"}
-          </Badge>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <Button variant="outline" size="sm">
+              Select media
+            </Button>
+            <Badge variant="outline" className="text-xs">
+              {value ? "1 asset selected" : "No asset selected"}
+            </Badge>
+          </div>
+          <div className="flex h-44 items-center justify-center rounded-xl border border-dashed bg-muted/30">
+            <div className="text-center">
+              <p className="text-xs font-medium">Drop a file or browse</p>
+              <p className="text-[11px] text-muted-foreground">
+                Recommended size 1600x900
+              </p>
+            </div>
+          </div>
         </div>
       );
     case "relation":
+      if (field.options && field.options.length > 0) {
+        return (
+          <Select
+            value={value ? String(value) : undefined}
+            onValueChange={(next) => onChange(next)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select related entry" />
+            </SelectTrigger>
+            <SelectContent>
+              {field.options.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        );
+      }
       return (
         <Input
           value={String(value ?? "")}

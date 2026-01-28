@@ -1,0 +1,215 @@
+import { useMemo, useState } from "react";
+import { CircleCheck, Pencil, Save, X } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetClose, SheetContent } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
+import type { SeoItem } from "./SeoTable";
+
+type SeoDrawerProps = {
+  item: SeoItem | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+const titleMax = 60;
+const descriptionMax = 160;
+
+function getCountTone(length: number, max: number) {
+  if (length === 0) return "text-muted-foreground";
+  if (length <= max) return "text-emerald-600";
+  return "text-amber-600";
+}
+
+export function SeoDrawer({ item, open, onOpenChange }: SeoDrawerProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SeoDrawerContent key={item?.id ?? "empty"} item={item} />
+    </Sheet>
+  );
+}
+
+type SeoDrawerContentProps = {
+  item: SeoItem | null;
+};
+
+function SeoDrawerContent({ item }: SeoDrawerContentProps) {
+  const [metaTitle, setMetaTitle] = useState(item?.metaTitle ?? "");
+  const [metaDescription, setMetaDescription] = useState(
+    item?.metaDescription ?? ""
+  );
+
+  const titleCount = metaTitle.length;
+  const descriptionCount = metaDescription.length;
+
+  const analysisTone = useMemo(() => {
+    if (item?.analysisStatus === "attention") {
+      return {
+        container: "border-amber-200/70 bg-amber-50/60 text-amber-700",
+        icon: "text-amber-600",
+      };
+    }
+    return {
+      container: "border-emerald-200/60 bg-emerald-50/50 text-emerald-700",
+      icon: "text-emerald-600",
+    };
+  }, [item?.analysisStatus]);
+
+  const analysisTitle =
+    item?.analysisStatus === "attention" ? "Needs Attention" : "Analysis Passed";
+
+  return (
+    <SheetContent
+      side="right"
+      overlayClassName="bg-slate-900/40 backdrop-blur-sm"
+      className="flex h-full w-full max-w-xl flex-col gap-0 p-0 sm:max-w-xl"
+      showCloseButton={false}
+    >
+        <div className="flex items-center justify-between border-b px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Pencil className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                Quick SEO Edit
+              </p>
+              <p className="text-sm font-semibold text-foreground">
+                {item?.title ?? "No page selected"}
+              </p>
+            </div>
+          </div>
+          <SheetClose asChild>
+            <Button variant="ghost" size="icon">
+              <X className="h-4 w-4" />
+            </Button>
+          </SheetClose>
+        </div>
+
+        <div className="flex-1 space-y-8 overflow-y-auto px-6 py-6">
+          <div className="space-y-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Search Engine Preview
+            </p>
+            <div className="rounded-xl border bg-muted/30 p-4">
+              <p className="text-xs text-muted-foreground">
+                {item?.previewUrl ?? "https://nextless.com"}
+                <span className="text-muted-foreground/70">
+                  {item?.previewPath ? ` › ${item.previewPath}` : ""}
+                </span>
+              </p>
+              <p className="mt-1 text-base font-semibold text-blue-600">
+                {metaTitle || "Add a meta title"}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {metaDescription ||
+                  "Add a meta description to improve click-through rates."}
+              </p>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold">Meta Title</label>
+                <span
+                  className={cn(
+                    "text-[10px] font-medium",
+                    getCountTone(titleCount, titleMax)
+                  )}
+                >
+                  {titleCount} / {titleMax} characters
+                </span>
+              </div>
+              <Input
+                value={metaTitle}
+                onChange={(event) => setMetaTitle(event.target.value)}
+                placeholder="Add a concise, keyword-rich title"
+              />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold">Meta Description</label>
+                <span
+                  className={cn(
+                    "text-[10px] font-medium",
+                    getCountTone(descriptionCount, descriptionMax)
+                  )}
+                >
+                  {descriptionCount} / {descriptionMax} characters
+                </span>
+              </div>
+              <Textarea
+                rows={4}
+                value={metaDescription}
+                onChange={(event) => setMetaDescription(event.target.value)}
+                placeholder="Summarize the page in one or two sentences."
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold">Focus Keywords</label>
+              <div className="flex flex-wrap gap-2">
+                {(item?.keywords ?? []).map((keyword) => (
+                  <Badge
+                    key={keyword}
+                    variant="secondary"
+                    className="gap-1 px-3 py-1 text-xs text-muted-foreground"
+                  >
+                    {keyword}
+                    <X className="h-3 w-3" />
+                  </Badge>
+                ))}
+                <Button
+                  variant="outline"
+                  size="xs"
+                  className="border-dashed text-xs text-muted-foreground"
+                >
+                  + Add Keyword
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              "rounded-xl border px-4 py-4",
+              analysisTone.container
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <CircleCheck className={cn("h-4 w-4", analysisTone.icon)} />
+              <p className="text-xs font-semibold uppercase">{analysisTitle}</p>
+            </div>
+            <ul className="mt-3 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+              {(item?.analysisNotes ?? [
+                "Keyword found in Title and Meta Description",
+                "Optimal length for both Title and Description",
+                "Fast loading time detected for this page",
+              ]).map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="border-t bg-muted/30 px-6 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button variant="outline" className="flex-1">
+              Discard
+            </Button>
+            <Button className="flex-1 gap-2">
+              <Save className="h-4 w-4" />
+              Update SEO
+            </Button>
+          </div>
+        </div>
+    </SheetContent>
+  );
+}
