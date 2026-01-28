@@ -1,3 +1,8 @@
+import { Menu } from "lucide-react";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   defaultFooterItems,
@@ -36,6 +41,8 @@ export function AdminShell({
   className,
   contentClassName,
 }: AdminShellProps) {
+  const [navOpen, setNavOpen] = useState(false);
+
   return (
     <div
       className={cn(
@@ -54,6 +61,17 @@ export function AdminShell({
           search={showSearch ? (search ?? <SearchBar />) : search}
           actions={topbarActions}
           user={user}
+          navToggle={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setNavOpen(true)}
+              aria-label="Open navigation"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          }
         />
         <main
           className={cn(
@@ -64,6 +82,16 @@ export function AdminShell({
           {children}
         </main>
       </div>
+      <Sheet open={navOpen} onOpenChange={setNavOpen}>
+        <SheetContent side="left" className="w-72 p-0">
+          <SidebarNav
+            sections={navSections}
+            footerItems={footerItems}
+            activeHref={activeHref}
+            variant="mobile"
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

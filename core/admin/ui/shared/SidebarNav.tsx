@@ -19,6 +19,7 @@ type SidebarNavProps = {
   activeHref?: string;
   footerItems?: NavItem[];
   brand?: React.ReactNode;
+  variant?: "desktop" | "mobile";
   className?: string;
 };
 
@@ -27,12 +28,17 @@ export function SidebarNav({
   activeHref,
   footerItems,
   brand = defaultBrand,
+  variant = "desktop",
   className,
 }: SidebarNavProps) {
+  const baseClasses =
+    variant === "mobile"
+      ? "flex h-full w-72 flex-col bg-background"
+      : "hidden h-screen w-64 shrink-0 flex-col border-r bg-background md:flex";
   return (
     <aside
       className={cn(
-        "hidden h-screen w-64 shrink-0 flex-col border-r bg-background md:flex",
+        baseClasses,
         className
       )}
     >

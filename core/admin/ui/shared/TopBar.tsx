@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type TopBarProps = {
+  navToggle?: React.ReactNode;
   breadcrumbs?: React.ReactNode;
   search?: React.ReactNode;
   actions?: React.ReactNode;
@@ -12,6 +13,7 @@ type TopBarProps = {
 };
 
 export function TopBar({
+  navToggle,
   breadcrumbs,
   search,
   actions,
@@ -26,6 +28,7 @@ export function TopBar({
       )}
     >
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
+        {navToggle}
         {breadcrumbs ?? (
           <div className="flex items-center gap-2">
             <span>Home</span>
