@@ -1,7 +1,18 @@
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  createPage,
+  duplicatePage,
+  listPages,
+  previewPage,
+  publishPage,
+  type PageSummary,
+  unpublishPage,
+} from "@/services/pagesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -10,7 +21,141 @@ import { PageTable } from "./PageTable";
 import { PageCreateDrawer } from "./PageCreateDrawer";
 
 export function PageListPage() {
+  const [items, setItems] = useState<PageSummary[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
+  const [drawerKey, setDrawerKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const next = await listPages();
+      setItems(next);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load pages.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      await refresh();
+      if (!active) return;
+    })();
+    return () => {
+      active = false;
+    };
+  }, [refresh]);
+
+  const handleCreate = async (payload: {
+    title: string;
+    slug: string;
+    template?: string;
+  }) => {
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const page = await createPage({
+        title: payload.title,
+        slug: payload.slug,
+        template: payload.template,
+        data: { blocks: [], settings: { template: payload.template } },
+      });
+      if (typeof window !== "undefined") {
+        window.location.assign(`/admin/pages/${encodeURIComponent(page.id)}`);
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to create page.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEdit = (id: string) => {
+    if (typeof window !== "undefined") {
+      window.location.assign(`/admin/pages/${encodeURIComponent(id)}`);
+    }
+  };
+
+  const handlePreview = async (id: string) => {
+    setError(null);
+    try {
+      const { previewUrl } = await previewPage(id);
+      if (typeof window !== "undefined") {
+        window.open(previewUrl, "_blank", "noopener");
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to generate preview.");
+      }
+    }
+  };
+
+  const handlePublish = async (id: string) => {
+    setError(null);
+    try {
+      await publishPage(id);
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to publish page.");
+      }
+    }
+  };
+
+  const handleUnpublish = async (id: string) => {
+    setError(null);
+    try {
+      await unpublishPage(id);
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to unpublish page.");
+      }
+    }
+  };
+
+  const handleDuplicate = async (id: string) => {
+    setError(null);
+    try {
+      const clone = await duplicatePage(id);
+      if (typeof window !== "undefined") {
+        window.location.assign(`/admin/pages/${encodeURIComponent(clone.id)}`);
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to duplicate page.");
+      }
+    }
+  };
+
+  const handleDrawerOpenChange = (next: boolean) => {
+    setCreateOpen(next);
+    if (next) {
+      setDrawerKey((prev) => prev + 1);
+    }
+  };
 
   return (
     <AdminShell
@@ -34,8 +179,27 @@ export function PageListPage() {
             </Button>
           }
         />
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>Pages API error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
         <PageFilters />
-        <PageTable />
+        {isLoading ? (
+          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+            Loading pages...
+          </div>
+        ) : (
+          <PageTable
+            items={items}
+            onEdit={handleEdit}
+            onPreview={handlePreview}
+            onPublish={handlePublish}
+            onUnpublish={handleUnpublish}
+            onDuplicate={handleDuplicate}
+          />
+        )}
         <div className="flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <span>Showing 1-4 of 32 pages</span>
           <div className="flex items-center gap-2">
@@ -48,7 +212,14 @@ export function PageListPage() {
           </div>
         </div>
       </div>
-      <PageCreateDrawer open={createOpen} onOpenChange={setCreateOpen} />
+      <PageCreateDrawer
+        key={drawerKey}
+        open={createOpen}
+        onOpenChange={handleDrawerOpenChange}
+        onCreate={handleCreate}
+        isSubmitting={isSubmitting}
+        error={error}
+      />
     </AdminShell>
   );
 }

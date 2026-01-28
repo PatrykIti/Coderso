@@ -89,6 +89,7 @@ Project Change Log.
 | 062 | 2026-01-28 | Admin UI interactions and drawers | Admin/UI |
 | 063 | 2026-01-28 | Admin UI mobile navigation | Admin/UI |
 | 064 | 2026-01-28 | Pages revisions and preview enhancements | CMS/Pages |
+| 065 | 2026-01-28 | Pages UI wiring | Admin/UI |
 
 
 ---

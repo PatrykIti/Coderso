@@ -1,4 +1,5 @@
 import { Globe, LayoutTemplate, X } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +17,53 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type PageCreateDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreate: (payload: {
+    title: string;
+    slug: string;
+    template?: string;
+  }) => Promise<void> | void;
+  isSubmitting?: boolean;
+  error?: string | null;
 };
 
-export function PageCreateDrawer({ open, onOpenChange }: PageCreateDrawerProps) {
+const slugify = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+export function PageCreateDrawer({
+  open,
+  onOpenChange,
+  onCreate,
+  isSubmitting = false,
+  error,
+}: PageCreateDrawerProps) {
+  const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
+  const [template, setTemplate] = useState("landing");
+  const [slugTouched, setSlugTouched] = useState(false);
+
+  const canSubmit = useMemo(() => {
+    return title.trim().length > 0 && slug.trim().length > 0;
+  }, [slug, title]);
+
+  const handleSubmit = () => {
+    if (!canSubmit || isSubmitting) return;
+    const normalizedSlug = slug.startsWith("/") ? slug : `/${slug}`;
+    onCreate({
+      title: title.trim(),
+      slug: normalizedSlug,
+      template,
+    });
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -45,11 +86,28 @@ export function PageCreateDrawer({ open, onOpenChange }: PageCreateDrawerProps) 
         </div>
         <div className="flex-1 px-6 py-6">
           <div className="space-y-5">
+            {error ? (
+              <Alert variant="destructive">
+                <AlertTitle>Unable to create page</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
                 Page title
               </label>
-              <Input placeholder="e.g. About us" />
+              <Input
+                placeholder="e.g. About us"
+                value={title}
+                onChange={(event) => {
+                  const nextTitle = event.target.value;
+                  setTitle(nextTitle);
+                  if (!slugTouched) {
+                    const nextSlug = nextTitle.trim() ? `/${slugify(nextTitle)}` : "";
+                    setSlug(nextSlug);
+                  }
+                }}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -57,7 +115,15 @@ export function PageCreateDrawer({ open, onOpenChange }: PageCreateDrawerProps) 
               </label>
               <div className="relative">
                 <Globe className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="/about" className="pl-9" />
+                <Input
+                  placeholder="/about"
+                  className="pl-9"
+                  value={slug}
+                  onChange={(event) => {
+                    setSlugTouched(true);
+                    setSlug(event.target.value);
+                  }}
+                />
               </div>
             </div>
             <Separator />
@@ -65,7 +131,7 @@ export function PageCreateDrawer({ open, onOpenChange }: PageCreateDrawerProps) 
               <label className="text-xs font-semibold uppercase text-muted-foreground">
                 Template
               </label>
-              <Select defaultValue="landing">
+              <Select value={template} onValueChange={setTemplate}>
                 <SelectTrigger className="h-10">
                   <LayoutTemplate className="h-4 w-4 text-muted-foreground" />
                   <SelectValue placeholder="Select template" />
@@ -86,7 +152,12 @@ export function PageCreateDrawer({ open, onOpenChange }: PageCreateDrawerProps) 
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={() => onOpenChange(false)}>Create Page</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!canSubmit || isSubmitting}
+            >
+              {isSubmitting ? "Creating..." : "Create Page"}
+            </Button>
           </div>
         </div>
       </SheetContent>

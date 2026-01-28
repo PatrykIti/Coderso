@@ -8,5 +8,5 @@ test("PageListPage renders header and table", () => {
 
   expect(html).toContain("Pages");
   expect(html).toContain("Create New Page");
-  expect(html).toContain("Page title");
+  expect(html).toContain("Loading pages");
 });

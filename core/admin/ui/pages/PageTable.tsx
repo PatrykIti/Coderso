@@ -11,55 +11,60 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 import { PageRowActions } from "./PageRowActions";
+import type { PageSummary } from "@/services/pagesClient";
 
-const pages = [
-  {
-    id: "about-us",
-    title: "About Us",
-    slug: "/about-us",
-    status: "published" as const,
-    author: "Sarah Jenks",
-    updated: "Jan 20, 2026",
-  },
-  {
-    id: "pricing-2024",
-    title: "Pricing 2024",
-    slug: "/pricing-v2",
-    status: "draft" as const,
-    author: "Mike Ross",
-    updated: "Jan 18, 2026",
-  },
-  {
-    id: "events",
-    title: "Events & Workshops",
-    slug: "/events",
-    status: "scheduled" as const,
-    author: "Alex Morgan",
-    updated: "Jan 16, 2026",
-  },
-  {
-    id: "careers",
-    title: "Careers",
-    slug: "/careers",
-    status: "published" as const,
-    author: "Sarah Jenks",
-    updated: "Jan 14, 2026",
-  },
-];
-
-const statusStyles = {
+const statusStyles: Record<string, string> = {
   published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
   scheduled: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  archived: "bg-slate-500/10 text-slate-500 border-slate-500/20",
 };
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
   published: "Published",
   draft: "Draft",
   scheduled: "Scheduled",
+  archived: "Archived",
 };
 
-export function PageTable() {
+const formatDate = (value: string) => {
+  try {
+    return new Date(value).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
+};
+
+const toInitials = (value: string) =>
+  value
+    .split(" ")
+    .filter(Boolean)
+    .map((chunk) => chunk[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+export type PageTableProps = {
+  items: PageSummary[];
+  onEdit: (id: string) => void;
+  onPreview: (id: string) => void;
+  onPublish: (id: string) => void;
+  onUnpublish: (id: string) => void;
+  onDuplicate: (id: string) => void;
+};
+
+export function PageTable({
+  items,
+  onEdit,
+  onPreview,
+  onPublish,
+  onUnpublish,
+  onDuplicate,
+}: PageTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -76,7 +81,14 @@ export function PageTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pages.map((page) => (
+          {items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+                No pages yet. Create your first page to get started.
+              </TableCell>
+            </TableRow>
+          ) : null}
+          {items.map((page) => (
             <TableRow key={page.id}>
               <TableCell className="pl-4">
                 <Checkbox aria-label={`Select ${page.title}`} />
@@ -94,31 +106,39 @@ export function PageTable() {
               <TableCell>
                 <Badge
                   variant="outline"
-                  className={statusStyles[page.status]}
+                  className={statusStyles[page.status] ?? statusStyles.draft}
                 >
-                  {statusLabels[page.status]}
+                  {statusLabels[page.status] ?? page.status}
                 </Badge>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-2">
                   <Avatar size="sm">
                     <AvatarFallback>
-                      {page.author
-                        .split(" ")
-                        .map((chunk) => chunk[0])
-                        .join("")}
+                      {toInitials(
+                        page.author?.name ??
+                          page.author?.email ??
+                          "NA"
+                      )}
                     </AvatarFallback>
                   </Avatar>
                   <span className="text-sm text-muted-foreground">
-                    {page.author}
+                    {page.author?.name ?? page.author?.email ?? "Unknown"}
                   </span>
                 </div>
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
-                {page.updated}
+                {formatDate(page.updatedAt)}
               </TableCell>
               <TableCell className="pr-4 text-right">
-                <PageRowActions />
+                <PageRowActions
+                  status={page.status}
+                  onEdit={() => onEdit(page.id)}
+                  onPreview={() => onPreview(page.id)}
+                  onPublish={() => onPublish(page.id)}
+                  onUnpublish={() => onUnpublish(page.id)}
+                  onDuplicate={() => onDuplicate(page.id)}
+                />
               </TableCell>
             </TableRow>
           ))}
