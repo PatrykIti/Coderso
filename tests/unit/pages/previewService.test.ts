@@ -6,6 +6,7 @@ import { previewTokens } from "../../../core/db/schema";
 import {
   createPreviewToken,
   hashPreviewToken,
+  purgeExpiredPreviewTokens,
   validatePreviewToken,
 } from "../../../core/services/pages/previewService";
 
@@ -57,4 +58,21 @@ testIfDb("expired preview token is rejected", async () => {
   expect(row).toBeNull();
 
   await db.delete(previewTokens).where(eq(previewTokens.targetId, targetId));
+});
+
+testIfDb("purgeExpiredPreviewTokens removes expired rows", async () => {
+  const targetId = randomUUID();
+  await createPreviewToken({
+    targetType: "page",
+    targetId,
+    ttlMinutes: -5,
+  });
+
+  await purgeExpiredPreviewTokens();
+
+  const rows = await db
+    .select()
+    .from(previewTokens)
+    .where(eq(previewTokens.targetId, targetId));
+  expect(rows.length).toBe(0);
 });

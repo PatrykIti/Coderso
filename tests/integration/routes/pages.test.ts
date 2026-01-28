@@ -34,6 +34,7 @@ test("registerPageRoutes wires endpoints", () => {
       "POST /pages/:id/publish",
       "POST /pages/:id/unpublish",
       "POST /pages/:id/preview",
+      "POST /pages/:id/duplicate",
       "GET /pages/:id/revisions",
       "POST /pages/:id/revisions/:revisionId/restore",
     ])

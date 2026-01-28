@@ -97,6 +97,7 @@ export const pages = pgTable(
     slug: text("slug").notNull().unique(),
     title: text("title").notNull(),
     status: text("status").notNull().default("draft"),
+    authorId: uuid("author_id").references(() => users.id, { onDelete: "set null" }),
     currentData: jsonb("current_data").notNull(),
     publishedData: jsonb("published_data"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

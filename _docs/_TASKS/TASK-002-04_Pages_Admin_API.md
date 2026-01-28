@@ -5,7 +5,7 @@
 **Category:** CMS/Pages  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-002-02, TASK-002-03, TASK-004-06  
-**Status:** To Do  
+**Status:** Done (2026-01-28)  
 
 ---
 

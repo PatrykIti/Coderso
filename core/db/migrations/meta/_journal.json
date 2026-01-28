@@ -71,6 +71,13 @@
       "when": 1769546829798,
       "tag": "0009_auth_reset_and_csrf",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1769625432913,
+      "tag": "0010_dear_psynapse",
+      "breakpoints": true
     }
   ]
 }

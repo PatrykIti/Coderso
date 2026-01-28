@@ -1,5 +1,6 @@
 import {
   createPage,
+  duplicatePage,
   getPage,
   listPages,
   publishPage,
@@ -48,8 +49,19 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
 
   router.post("/pages", requirePermission("content:write"), async (ctx) => {
     validate(pageCreateSchema, ctx.body);
-    const body = ctx.body as { title: string; slug: string; data: PageData };
-    return createPage({ title: body.title, slug: body.slug, data: body.data });
+    const body = ctx.body as {
+      title: string;
+      slug: string;
+      data: PageData;
+      template?: string;
+    };
+    return createPage({
+      title: body.title,
+      slug: body.slug,
+      data: body.data,
+      template: body.template,
+      authorId: ctx.user?.id,
+    });
   });
 
   router.get("/pages/:id", requirePermission("content:read"), async (ctx) => {
@@ -111,14 +123,29 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
       if (!page) throw new Error("page_not_found");
 
       const body = ctx.body as { ttlMinutes?: number };
-      const { token } = await createPreviewToken({
+      const { token, expiresAt } = await createPreviewToken({
         targetType: "page",
         targetId: page.id,
         ttlMinutes: body.ttlMinutes,
       });
 
-      const url = `/preview?type=page&path=/${page.slug}&token=${token}`;
-      return { url };
+      const slugPath = page.slug.startsWith("/") ? page.slug : `/${page.slug}`;
+      const previewPath = `/preview?type=page&path=${encodeURIComponent(slugPath)}&token=${token}`;
+      const baseUrl = process.env.PUBLIC_BASE_URL;
+      const previewUrl = baseUrl
+        ? new URL(previewPath, baseUrl).toString()
+        : previewPath;
+      return { token, previewUrl, expiresAt };
+    }
+  );
+
+  router.post(
+    "/pages/:id/duplicate",
+    requirePermission("content:write"),
+    async (ctx) => {
+      const clone = await duplicatePage(ctx.params.id, ctx.user?.id);
+      if (!clone) throw new Error("page_not_found");
+      return clone;
     }
   );
 

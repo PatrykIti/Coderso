@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { db } from "../../db/client";
 import { previewTokens } from "../../db/schema";
 
@@ -46,4 +46,10 @@ export async function validatePreviewToken(
   if (targetType && row.targetType !== targetType) return null;
 
   return row;
+}
+
+export async function purgeExpiredPreviewTokens(reference = new Date()) {
+  await db
+    .delete(previewTokens)
+    .where(lt(previewTokens.expiresAt, reference));
 }
