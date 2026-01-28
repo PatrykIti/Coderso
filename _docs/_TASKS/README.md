@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 10 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 1
 - **Done:** 69 tasks
 
@@ -38,7 +38,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-003 | Content Types Engine | High | Large | Dynamic content schemas |
+| TASK-003 | Content Types Engine (Index) | High | Large | Index for TASK-003-01..06 |
+| TASK-003-01 | Content DB Schema | High | Medium | Tables + indexes |
+| TASK-003-02 | Content Schema Validation | High | Medium | AJV + strict schema |
+| TASK-003-03 | Content Services and Revisions | High | Large | CRUD + publish + revisions |
+| TASK-003-04 | Content Admin API | High | Medium | REST endpoints + guards |
+| TASK-003-05 | Content Preview Tokens | Medium | Medium | Preview links for entries |
+| TASK-003-06 | Content UI Wiring (Admin) | High | Medium | Replace mocks with API |
 | TASK-004-02 | Auth Advanced Endpoints (CSRF/OTP/Reset) | High | Medium | CSRF + reset + OTP |
 | TASK-005 | Media Storage and Uploads | Medium | Medium | Local + S3/Azure |
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
