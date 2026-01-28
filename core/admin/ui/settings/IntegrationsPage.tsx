@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
-import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { IntegrationCard, type IntegrationCardProps } from "./IntegrationCard";
 import { SettingsSidebar } from "./SettingsSidebar";
@@ -83,39 +82,44 @@ export function IntegrationsPage() {
         </Button>
       }
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <PageHeader
-          title="Integrations"
-          description="Connect your workflow with third-party services."
-        />
-
-        <div className="flex flex-wrap gap-2">
-          {filters.map((filter, index) => {
-            const isActive = index === 0;
-            return (
-              <Button
-                key={filter}
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  "rounded-full px-4 text-xs font-semibold",
-                  isActive
-                    ? "bg-primary/10 text-primary hover:bg-primary/15"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {filter}
-              </Button>
-            );
-          })}
+      <div className="flex h-full flex-col">
+        <div className="border-b bg-background/70 px-6 py-4">
+          <h1 className="text-2xl font-semibold">Integrations</h1>
+          <p className="text-sm text-muted-foreground">
+            Connect your workflow with third-party services.
+          </p>
         </div>
+        <div className="flex-1 p-6">
+          <div className="mx-auto flex max-w-6xl flex-col gap-6">
+            <div className="flex flex-wrap gap-2">
+              {filters.map((filter, index) => {
+                const isActive = index === 0;
+                return (
+                  <Button
+                    key={filter}
+                    variant="ghost"
+                    size="sm"
+                    className={cn(
+                      "rounded-full px-4 text-xs font-semibold",
+                      isActive
+                        ? "bg-primary/10 text-primary hover:bg-primary/15"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {filter}
+                  </Button>
+                );
+              })}
+            </div>
 
-        <Separator />
+            <Separator />
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {integrations.map((integration) => (
-            <IntegrationCard key={integration.name} {...integration} />
-          ))}
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {integrations.map((integration) => (
+                <IntegrationCard key={integration.name} {...integration} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </SettingsShell>
