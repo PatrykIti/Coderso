@@ -31,6 +31,7 @@ indeksem, a szczegoly znajduja sie w osobnych plikach pod-taskow.
 | TASK-004-04 | Done (2026-01-27) | `TASK-004-04_Auth_middleware.md` |
 | TASK-004-05 | Done (2026-01-27) | `TASK-004-05_RBAC_middleware.md` |
 | TASK-004-06 | In Progress | `TASK-004-06_Auth_routes_and_base_API_layer.md` |
+| TASK-004-07 | To Do | `TASK-004-07_Auth_UI_Wiring.md` |
 
 ---
 
@@ -39,6 +40,7 @@ indeksem, a szczegoly znajduja sie w osobnych plikach pod-taskow.
 1) **TASK-004-01** (HTTP server + Admin UI bootstrap) – uruchamia `/admin`.
 2) **TASK-004-02** (CSRF + OTP/reset endpoints) – pozwala podpiac auth UI.
 3) **TASK-004-06** (auth routes + base API layer) – spina auth z routerem.
+4) **TASK-004-07** (auth UI wiring) – podpina login/2FA/reset do API.
 
 ---
 
