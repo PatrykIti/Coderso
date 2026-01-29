@@ -28,6 +28,7 @@ and plugins.
 - `TASK-007-02_Settings_Admin_API_and_Validation.md`
 - `TASK-007-03_Design_Token_Pipeline.md`
 - `TASK-007-04_Settings_UI_and_Tokens_UI.md`
+- `TASK-007-05_Settings_UI_Wiring.md`
 
 Każdy sub-task zawiera szczegółowe checklisty, przykłady i testy zgodnie
 z `EXAMPLE_TASK.md`.

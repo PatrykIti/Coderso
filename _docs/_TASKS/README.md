@@ -113,6 +113,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-007-02 | Settings Admin API and Validation | Medium | Medium | Endpoints + schemas |
 | TASK-007-03 | Design Token Pipeline | Medium | Medium | Merge + CSS vars |
 | TASK-007-04 | Settings UI and Tokens UI | Medium | Medium | Settings pages + tokens |
+| TASK-007-05 | Settings UI Wiring | Medium | Medium | Admin UI -> settings API |
 | TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
 | TASK-006-09 | Login UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
 | TASK-006-10 | Two Factor UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
