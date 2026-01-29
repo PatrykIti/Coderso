@@ -32,6 +32,34 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 - Limit size per file.
 - Dozwolone MIME types.
 - Skanowanie antivirus (opcjonalnie; plugin).
+- Sekrety storage (S3/Azure) przechowywane sa zaszyfrowane w DB.
+- Master key do szyfrowania: `MEDIA_SECRET_MASTER_KEY` (ENV, poza DB).
+
+### Master key (storage secrets)
+
+`MEDIA_SECRET_MASTER_KEY` to klucz master do szyfrowania/odszyfrowywania sekretow
+S3/Azure zapisywanych w DB. Bez niego runtime nie odszyfruje rekordow.
+
+Akceptowane formaty (32 bajty):
+- 64‑znakowy hex
+- base64 o dlugosci 32 bajtow
+- dokladnie 32 znaki ASCII
+
+Przyklady generowania:
+
+```bash
+# 32 bajty w base64
+openssl rand -base64 32
+
+# 32 bajty w hex (64 znaki)
+openssl rand -hex 32
+```
+
+Rotacja klucza:
+- Po zmianie klucza musisz ponownie wpisac wszystkie sekrety w Admin UI
+  (zostana zaszyfrowane nowym kluczem).
+- Jesli zmienisz klucz bez ponownego zapisu sekretow, konfiguracja storage
+  stanie sie nieczytelna do czasu ich ponownej edycji.
 
 ## Secrets
 

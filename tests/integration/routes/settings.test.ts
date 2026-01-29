@@ -27,7 +27,9 @@ test("registerSettingsRoutes wires endpoints", () => {
   expect(paths).toEqual(
     expect.arrayContaining([
       "GET /settings",
+      "GET /settings/storage",
       "GET /settings/:key",
+      "PATCH /settings/storage",
       "PATCH /settings/:key",
       "PATCH /settings",
     ])

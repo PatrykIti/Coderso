@@ -218,6 +218,33 @@ Permissions: `content:read`, `content:write`, `content:publish`
 
 - `GET /content/:type/entries`
 - `POST /content/:type/entries`
+
+---
+
+## Storage settings
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /settings/storage`
+- `PATCH /settings/storage`
+
+Przyklad payload:
+
+```json
+{
+  "driver": "s3",
+  "publicBaseUrl": "https://cdn.example.com",
+  "maxSizeBytes": 10485760,
+  "allowedMime": "image/*,application/pdf",
+  "s3": {
+    "bucket": "media-bucket",
+    "region": "eu-central-1",
+    "endpoint": "https://s3.amazonaws.com",
+    "accessKey": "AKIA...",
+    "secretKey": "••••"
+  }
+}
+```
 - `GET /content/:type/entries/:id`
 - `PATCH /content/:type/entries/:id`
 - `POST /content/:type/entries/:id/preview`

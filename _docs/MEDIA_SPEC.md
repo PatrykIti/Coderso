@@ -16,7 +16,7 @@
 
 ## External storage (adapter)
 
-Konfiguracja:
+Konfiguracja (runtime z panelu admina):
 - `MEDIA_STORAGE=local|s3|azure`
 - `MEDIA_BASE_URL=https://cdn.example.com` (opcjonalnie)
 - `MEDIA_MAX_SIZE_BYTES=10485760` (opcjonalnie, domyslnie 10MB)
@@ -36,6 +36,13 @@ Adapter interface (concept):
 - `get(key)` -> stream
 - `delete(key)` -> void
 - `getPublicUrl(key)` -> url
+
+Uwaga:
+- Sekrety storage przechowywane sa zaszyfrowane w DB.
+- Do odszyfrowania wymagany jest `MEDIA_SECRET_MASTER_KEY` (ENV) ustawiony na serwerze.
+- Klucz ma 32 bajty (hex 64 znaki / base64 32 bajty / 32 znaki ASCII).
+- Po rotacji klucza trzeba ponownie zapisac sekrety w Admin UI.
+  Szczegoly: `_docs/SECURITY_SPEC.md`.
 
 ## Upload rules
 

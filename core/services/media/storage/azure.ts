@@ -6,11 +6,20 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { MediaStorageAdapter, UploadFile } from "./adapter";
 
+export type AzureStorageOptions = {
+  account?: string | null;
+  key?: string | null;
+  container?: string | null;
+  connectionString?: string | null;
+  baseUrl?: string | null;
+};
+
 type AzureConfig = {
   account: string;
   container: string;
   connectionString?: string;
   key?: string;
+  baseUrl?: string;
 };
 
 function parseAccountFromConnectionString(connectionString: string) {
@@ -18,13 +27,16 @@ function parseAccountFromConnectionString(connectionString: string) {
   return match?.[1];
 }
 
-function getAzureConfig() {
-  const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+function getAzureConfig(options?: AzureStorageOptions) {
+  const connectionString =
+    options?.connectionString ?? process.env.AZURE_STORAGE_CONNECTION_STRING;
   const account =
+    options?.account ??
     process.env.AZURE_ACCOUNT ??
     (connectionString ? parseAccountFromConnectionString(connectionString) : undefined);
-  const key = process.env.AZURE_KEY;
-  const container = process.env.AZURE_CONTAINER;
+  const key = options?.key ?? process.env.AZURE_KEY;
+  const container = options?.container ?? process.env.AZURE_CONTAINER;
+  const baseUrl = options?.baseUrl ?? process.env.MEDIA_BASE_URL;
 
   if (!container) {
     throw new Error("azure_config_missing");
@@ -34,21 +46,18 @@ function getAzureConfig() {
     if (!account) {
       throw new Error("azure_config_missing");
     }
-    return { account, container, connectionString } satisfies AzureConfig;
+    return { account, container, connectionString, baseUrl: baseUrl ?? undefined } satisfies AzureConfig;
   }
 
   if (!account || !key) {
     throw new Error("azure_config_missing");
   }
 
-  return { account, key, container } satisfies AzureConfig;
+  return { account, key, container, baseUrl: baseUrl ?? undefined } satisfies AzureConfig;
 }
 
-function getBaseUrl(account: string, container: string) {
-  return (
-    process.env.MEDIA_BASE_URL ??
-    `https://${account}.blob.core.windows.net/${container}`
-  );
+function getBaseUrl(account: string, container: string, baseUrl?: string) {
+  return baseUrl ?? `https://${account}.blob.core.windows.net/${container}`;
 }
 
 function buildKey(fileName: string) {
@@ -59,8 +68,11 @@ function buildKey(fileName: string) {
   return `${yyyy}/${mm}/${randomUUID()}${ext}`;
 }
 
-export function createAzureAdapter(): MediaStorageAdapter {
-  const { account, key, container, connectionString } = getAzureConfig();
+export function createAzureAdapter(
+  options?: AzureStorageOptions
+): MediaStorageAdapter {
+  const { account, key, container, connectionString, baseUrl } =
+    getAzureConfig(options);
   const service = connectionString
     ? BlobServiceClient.fromConnectionString(connectionString)
     : (() => {
@@ -73,7 +85,7 @@ export function createAzureAdapter(): MediaStorageAdapter {
         );
       })();
   const containerClient = service.getContainerClient(container);
-  const baseUrl = getBaseUrl(account, container);
+  const resolvedBaseUrl = getBaseUrl(account, container, baseUrl);
 
   return {
     async put(file: UploadFile) {
@@ -85,7 +97,7 @@ export function createAzureAdapter(): MediaStorageAdapter {
         blobHTTPHeaders: { blobContentType: file.type },
       });
 
-      return { key: keyName, url: `${baseUrl}/${keyName}` };
+      return { key: keyName, url: `${resolvedBaseUrl}/${keyName}` };
     },
     async get(keyName: string) {
       const blobClient = containerClient.getBlobClient(keyName);
@@ -99,7 +111,7 @@ export function createAzureAdapter(): MediaStorageAdapter {
       await containerClient.deleteBlob(keyName);
     },
     getPublicUrl(keyName: string) {
-      return `${baseUrl}/${keyName}`;
+      return `${resolvedBaseUrl}/${keyName}`;
     },
   };
 }

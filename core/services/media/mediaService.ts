@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { media } from "../../db/schema";
 import { getMediaStorageAdapter } from "./storage";
+import { getStorageSettingsInternal } from "../settings/storageSettings";
 import type { UploadFile } from "./storage/adapter";
 
 export type MediaType = "image" | "file";
@@ -23,12 +24,12 @@ type MediaConfig = {
   allowedMime: string[];
 };
 
-function getConfig(): MediaConfig {
-  const maxSizeBytes = Number(process.env.MEDIA_MAX_SIZE_BYTES ?? 10 * 1024 * 1024);
-  const allowedMime = (process.env.MEDIA_ALLOWED_MIME ?? "image/*,application/pdf")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
+async function getConfig(): Promise<MediaConfig> {
+  const settings = await getStorageSettingsInternal();
+  const maxSizeBytes = settings.maxSizeBytes ?? 10 * 1024 * 1024;
+  const allowedMime = settings.allowedMime.length
+    ? settings.allowedMime
+    : ["image/*", "application/pdf"];
 
   return { maxSizeBytes, allowedMime };
 }
@@ -52,7 +53,7 @@ export async function uploadMedia(
   meta: MediaMeta,
   userId?: string
 ): Promise<UploadResult> {
-  const config = getConfig();
+  const config = await getConfig();
 
   if (file.size > config.maxSizeBytes) {
     throw new Error("media_file_too_large");
@@ -62,7 +63,7 @@ export async function uploadMedia(
     throw new Error("media_mime_not_allowed");
   }
 
-  const adapter = getMediaStorageAdapter();
+  const adapter = await getMediaStorageAdapter();
   const stored = await adapter.put(file);
 
   const [row] = await db
@@ -110,7 +111,7 @@ export async function deleteMedia(id: string) {
   const row = await getMediaById(id);
   if (!row) throw new Error("media_not_found");
 
-  const adapter = getMediaStorageAdapter();
+  const adapter = await getMediaStorageAdapter();
   await adapter.delete(row.key);
 
   await db.delete(media).where(eq(media.id, id));

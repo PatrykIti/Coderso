@@ -4,9 +4,18 @@ import {
   setSetting,
   setSettings,
 } from "../../services/settings/settingsService";
+import {
+  getStorageSettings,
+  setStorageSettings,
+  type StorageSettingsUpdate,
+} from "../../services/settings/storageSettings";
 import { getResolvedTokens } from "../../services/theme/tokenService";
 import { logAudit } from "../../services/audit/auditService";
-import { settingsBulkSchema, settingsUpdateSchema } from "../validation/settingsSchemas";
+import {
+  settingsBulkSchema,
+  settingsUpdateSchema,
+  storageSettingsSchema,
+} from "../validation/settingsSchemas";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -37,6 +46,14 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
   });
 
   router.get(
+    "/settings/storage",
+    requirePermission("settings:read"),
+    async () => {
+      return getStorageSettings();
+    }
+  );
+
+  router.get(
     "/settings/:key",
     requirePermission("settings:read"),
     async (ctx) => {
@@ -47,6 +64,24 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
 
       const value = await getSetting(ctx.params.key);
       return { key: ctx.params.key, value };
+    }
+  );
+
+  router.patch(
+    "/settings/storage",
+    requirePermission("settings:write"),
+    async (ctx) => {
+      validate(storageSettingsSchema, ctx.body);
+      const payload = ctx.body as StorageSettingsUpdate;
+      const updated = await setStorageSettings(payload);
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "settings.update",
+        targetType: "settings",
+        targetId: "storage",
+        metadata: { keys: Object.keys(payload) },
+      });
+      return updated;
     }
   );
 

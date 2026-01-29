@@ -6,6 +6,7 @@ import { requirePermission } from "./middleware/rbac";
 import { createRouter, matchRoute, normalizePath, type RouteContext } from "./router";
 import { registerAllRoutes } from "./routes";
 import { getMediaStorageAdapter } from "../services/media/storage";
+import { getStorageSettingsInternal } from "../services/settings/storageSettings";
 
 const API_PREFIX = "/admin/api";
 const ADMIN_PREFIX = "/admin";
@@ -213,13 +214,13 @@ const handleMedia = async (req: Request) => {
   const key = url.pathname.slice(MEDIA_PREFIX.length).replace(/^\/+/, "");
   if (!key) return new Response("Not Found", { status: 404 });
 
-  const storage = (process.env.MEDIA_STORAGE ?? "local").toLowerCase();
-  if (storage !== "local") {
-    const adapter = getMediaStorageAdapter();
+  const config = await getStorageSettingsInternal();
+  if (config.driver !== "local") {
+    const adapter = await getMediaStorageAdapter();
     return Response.redirect(adapter.getPublicUrl(key), 302);
   }
 
-  const baseDir = path.resolve(process.env.MEDIA_DIR ?? "/data/media");
+  const baseDir = path.resolve(config.localDir ?? "/data/media");
   const targetPath = path.resolve(baseDir, key);
   if (targetPath !== baseDir && !targetPath.startsWith(`${baseDir}${path.sep}`)) {
     return new Response("Forbidden", { status: 403 });

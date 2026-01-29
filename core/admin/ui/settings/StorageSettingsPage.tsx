@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Database,
   Globe2,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  getStorageSettings,
+  updateStorageSettings,
+  type StorageDriver,
+} from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { SettingsSidebar } from "./SettingsSidebar";
@@ -54,8 +61,23 @@ type StorageFieldOption = {
   label: string;
 };
 
+type StorageFieldId =
+  | "localDir"
+  | "publicBaseUrl"
+  | "maxSizeBytes"
+  | "allowedMime"
+  | "s3AccessKey"
+  | "s3SecretKey"
+  | "s3Bucket"
+  | "s3Region"
+  | "s3Endpoint"
+  | "azureAccount"
+  | "azureKey"
+  | "azureContainer"
+  | "azureConnectionString";
+
 type StorageField = {
-  id: string;
+  id: StorageFieldId;
   label: string;
   type: "text" | "password" | "select";
   placeholder?: string;
@@ -70,6 +92,30 @@ type ProviderConfig = {
   fields: StorageField[];
   noteTitle: string;
   noteDescription: string;
+};
+
+type StorageFormState = {
+  driver: StorageProviderId;
+  localDir: string;
+  publicBaseUrl: string;
+  maxSizeBytes: string;
+  allowedMime: string;
+  s3AccessKey: string;
+  s3SecretKey: string;
+  s3Bucket: string;
+  s3Region: string;
+  s3Endpoint: string;
+  azureAccount: string;
+  azureKey: string;
+  azureContainer: string;
+  azureConnectionString: string;
+};
+
+type SecretFlags = {
+  s3AccessKey: boolean;
+  s3SecretKey: boolean;
+  azureKey: boolean;
+  azureConnectionString: boolean;
 };
 
 const providerOptions: StorageProviderDefinition[] = [
@@ -103,38 +149,11 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
     icon: HardDrive,
     fields: [
       {
-        id: "root-path",
+        id: "localDir",
         label: "Storage Root",
         type: "text",
         placeholder: "/var/www/nextless/uploads",
         icon: HardDrive,
-      },
-      {
-        id: "public-url",
-        label: "Public URL",
-        type: "text",
-        placeholder: "https://assets.example.com",
-        icon: Link2,
-      },
-      {
-        id: "visibility",
-        label: "Default Visibility",
-        type: "select",
-        icon: ShieldCheck,
-        options: [
-          { value: "public", label: "Public" },
-          { value: "private", label: "Private" },
-        ],
-      },
-      {
-        id: "retention",
-        label: "Retention Policy",
-        type: "select",
-        icon: ShieldCheck,
-        options: [
-          { value: "standard", label: "Standard" },
-          { value: "archival", label: "Archival" },
-        ],
       },
     ],
     noteTitle: "Filesystem permissions",
@@ -147,28 +166,28 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
     icon: UploadCloud,
     fields: [
       {
-        id: "access-key",
+        id: "s3AccessKey",
         label: "Access Key",
         type: "text",
         placeholder: "AKIAIOSFODNN7EXAMPLE",
         icon: KeyRound,
       },
       {
-        id: "secret-key",
+        id: "s3SecretKey",
         label: "Secret Key",
         type: "password",
-        placeholder: "****************",
+        placeholder: "••••••••",
         icon: Lock,
       },
       {
-        id: "bucket-name",
+        id: "s3Bucket",
         label: "Bucket Name",
         type: "text",
         placeholder: "nextless-assets",
         icon: Database,
       },
       {
-        id: "region",
+        id: "s3Region",
         label: "Region",
         type: "select",
         icon: Globe2,
@@ -180,7 +199,7 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
         ],
       },
       {
-        id: "endpoint",
+        id: "s3Endpoint",
         label: "Custom Endpoint",
         type: "text",
         placeholder: "https://s3.amazonaws.com",
@@ -197,37 +216,32 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
     icon: Database,
     fields: [
       {
-        id: "account-name",
+        id: "azureAccount",
         label: "Account Name",
         type: "text",
         placeholder: "nextlessstorage",
         icon: Database,
       },
       {
-        id: "account-key",
+        id: "azureKey",
         label: "Account Key",
         type: "password",
-        placeholder: "****************",
+        placeholder: "••••••••",
         icon: Lock,
       },
       {
-        id: "container-name",
+        id: "azureContainer",
         label: "Container Name",
         type: "text",
         placeholder: "media-assets",
         icon: Database,
       },
       {
-        id: "region",
-        label: "Region",
-        type: "select",
-        icon: Globe2,
-        options: [
-          { value: "eastus", label: "East US" },
-          { value: "westeurope", label: "West Europe" },
-          { value: "centralus", label: "Central US" },
-          { value: "southeastasia", label: "Southeast Asia" },
-        ],
+        id: "azureConnectionString",
+        label: "Connection String",
+        type: "password",
+        placeholder: "••••••••",
+        icon: Link2,
       },
     ],
     noteTitle: "Access policy",
@@ -236,16 +250,248 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
   },
 };
 
+const globalFields: StorageField[] = [
+  {
+    id: "publicBaseUrl",
+    label: "Public Base URL",
+    type: "text",
+    placeholder: "https://cdn.example.com",
+    icon: Link2,
+  },
+  {
+    id: "maxSizeBytes",
+    label: "Max Upload Size (bytes)",
+    type: "text",
+    placeholder: "10485760",
+    icon: ShieldCheck,
+  },
+  {
+    id: "allowedMime",
+    label: "Allowed MIME Types",
+    type: "text",
+    placeholder: "image/*,application/pdf",
+    icon: ShieldCheck,
+  },
+];
+
 const labelClassName =
   "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 
+const emptyFormState: StorageFormState = {
+  driver: "local",
+  localDir: "",
+  publicBaseUrl: "",
+  maxSizeBytes: "",
+  allowedMime: "",
+  s3AccessKey: "",
+  s3SecretKey: "",
+  s3Bucket: "",
+  s3Region: "",
+  s3Endpoint: "",
+  azureAccount: "",
+  azureKey: "",
+  azureContainer: "",
+  azureConnectionString: "",
+};
+
+const emptySecrets: SecretFlags = {
+  s3AccessKey: false,
+  s3SecretKey: false,
+  azureKey: false,
+  azureConnectionString: false,
+};
+
+const normalizeOptional = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
+const normalizeSecret = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return trimmed;
+};
+
+const normalizeNumber = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    throw new Error("max_size_invalid");
+  }
+  return parsed;
+};
+
 export function StorageSettingsPage() {
   const [activeProvider, setActiveProvider] =
-    useState<StorageProviderId>("s3");
-  const activeMeta =
-    providerOptions.find((provider) => provider.id === activeProvider) ??
-    providerOptions[0];
+    useState<StorageProviderId>("local");
+  const [form, setForm] = useState<StorageFormState>(emptyFormState);
+  const [secrets, setSecrets] = useState<SecretFlags>(emptySecrets);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
   const activeConfig = providerConfigs[activeProvider];
+  const ActiveIcon = activeConfig.icon;
+
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+    setError(null);
+    getStorageSettings()
+      .then((result) => {
+        if (!active) return;
+        const driver = result.driver as StorageProviderId;
+        setActiveProvider(driver);
+        setForm({
+          driver,
+          localDir: result.local.dir ?? "",
+          publicBaseUrl: result.publicBaseUrl ?? "",
+          maxSizeBytes: result.maxSizeBytes ? String(result.maxSizeBytes) : "",
+          allowedMime: result.allowedMime ?? "",
+          s3AccessKey: "",
+          s3SecretKey: "",
+          s3Bucket: result.s3.bucket ?? "",
+          s3Region: result.s3.region ?? "",
+          s3Endpoint: result.s3.endpoint ?? "",
+          azureAccount: result.azure.account ?? "",
+          azureKey: "",
+          azureContainer: result.azure.container ?? "",
+          azureConnectionString: "",
+        });
+        setSecrets({
+          s3AccessKey: result.s3.accessKey.configured,
+          s3SecretKey: result.s3.secretKey.configured,
+          azureKey: result.azure.key.configured,
+          azureConnectionString: result.azure.connectionString.configured,
+        });
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load storage settings.");
+        }
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleFieldChange = (field: StorageFieldId, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    setError(null);
+    setSuccess(null);
+    setIsSaving(true);
+    try {
+      const payload = {
+        driver: activeProvider as StorageDriver,
+        local: { dir: normalizeOptional(form.localDir) },
+        publicBaseUrl: normalizeOptional(form.publicBaseUrl),
+        maxSizeBytes: normalizeNumber(form.maxSizeBytes),
+        allowedMime: normalizeOptional(form.allowedMime),
+        s3: {
+          bucket: normalizeOptional(form.s3Bucket),
+          region: normalizeOptional(form.s3Region),
+          endpoint: normalizeOptional(form.s3Endpoint),
+          accessKey: normalizeSecret(form.s3AccessKey),
+          secretKey: normalizeSecret(form.s3SecretKey),
+        },
+        azure: {
+          container: normalizeOptional(form.azureContainer),
+          account: normalizeOptional(form.azureAccount),
+          key: normalizeSecret(form.azureKey),
+          connectionString: normalizeSecret(form.azureConnectionString),
+        },
+      };
+
+      const updated = await updateStorageSettings(payload);
+      setForm((prev) => ({
+        ...prev,
+        driver: updated.driver,
+        localDir: updated.local.dir ?? "",
+        publicBaseUrl: updated.publicBaseUrl ?? "",
+        maxSizeBytes: updated.maxSizeBytes ? String(updated.maxSizeBytes) : "",
+        allowedMime: updated.allowedMime ?? "",
+        s3AccessKey: "",
+        s3SecretKey: "",
+        s3Bucket: updated.s3.bucket ?? "",
+        s3Region: updated.s3.region ?? "",
+        s3Endpoint: updated.s3.endpoint ?? "",
+        azureAccount: updated.azure.account ?? "",
+        azureKey: "",
+        azureContainer: updated.azure.container ?? "",
+        azureConnectionString: "",
+      }));
+      setSecrets({
+        s3AccessKey: updated.s3.accessKey.configured,
+        s3SecretKey: updated.s3.secretKey.configured,
+        azureKey: updated.azure.key.configured,
+        azureConnectionString: updated.azure.connectionString.configured,
+      });
+      setSuccess("Storage settings updated.");
+    } catch (err) {
+      if (err instanceof Error && err.message === "max_size_invalid") {
+        setError("Max upload size must be a number.");
+      } else if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to update storage settings.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const fieldValues = useMemo(() => form, [form]);
+
+  const renderField = (field: StorageField) => {
+    const value = fieldValues[field.id] ?? "";
+    const showSecretHint =
+      (field.id === "s3AccessKey" && secrets.s3AccessKey) ||
+      (field.id === "s3SecretKey" && secrets.s3SecretKey) ||
+      (field.id === "azureKey" && secrets.azureKey) ||
+      (field.id === "azureConnectionString" && secrets.azureConnectionString);
+
+    if (field.type === "select" && field.options) {
+      return (
+        <Select
+          value={value}
+          onValueChange={(next) => handleFieldChange(field.id, next)}
+        >
+          <SelectTrigger className="bg-muted/40">
+            <SelectValue placeholder="Choose an option" />
+          </SelectTrigger>
+          <SelectContent>
+            {field.options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    return (
+      <Input
+        type={field.type === "password" ? "password" : "text"}
+        value={value}
+        placeholder={showSecretHint ? "••••••••" : field.placeholder}
+        onChange={(event) => handleFieldChange(field.id, event.target.value)}
+        className="bg-muted/30"
+      />
+    );
+  };
 
   return (
     <SettingsShell
@@ -259,136 +505,96 @@ export function StorageSettingsPage() {
           <span className="text-foreground">Storage</span>
         </div>
       }
-      topbarActions={
-        <div className="flex items-center gap-3">
-          <Badge
-            variant="outline"
-            className="gap-2 border-emerald-200 bg-emerald-50 text-emerald-600"
-          >
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            Active: {activeMeta.title}
-          </Badge>
-          <Button size="sm" className="gap-2">
-            <Save className="h-4 w-4" />
-            Save changes
-          </Button>
-        </div>
-      }
     >
-      <div className="flex h-full flex-col">
-        <div className="border-b bg-background/70 px-6 py-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold">Storage Settings</h1>
-            <p className="text-sm text-muted-foreground">
-              Configure where your media assets are stored.
-            </p>
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className="border-primary/20 text-primary">
+              Storage Settings
+            </Badge>
+            <span className="text-sm text-muted-foreground">
+              Configure where assets are stored and delivered.
+            </span>
           </div>
         </div>
-        <div className="flex-1 p-6">
-          <div className="mx-auto max-w-5xl space-y-8">
-            <section className="space-y-4">
-              <div>
-                <p className={labelClassName}>Storage Provider</p>
-                <p className="text-sm text-muted-foreground">
-                  Select a provider for asset uploads and delivery.
-                </p>
-              </div>
-              <div
-                role="radiogroup"
-                aria-label="Storage providers"
-                className="grid gap-4 md:grid-cols-3"
-              >
-                {providerOptions.map((provider) => (
-                  <StorageProviderCard
-                    key={provider.id}
-                    id={provider.id}
-                    title={provider.title}
-                    description={provider.description}
-                    icon={provider.icon}
-                    badge={provider.badge}
-                    isActive={provider.id === activeProvider}
-                    onSelect={setActiveProvider}
-                  />
-                ))}
-              </div>
-            </section>
 
-            <Card className="border-muted/60">
-              <CardHeader className="border-b">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <activeConfig.icon className="h-5 w-5" />
-                  </div>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>Storage settings error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {success ? (
+          <Alert>
+            <AlertTitle>Saved</AlertTitle>
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {providerOptions.map((provider) => (
+            <StorageProviderCard
+              key={provider.id}
+              id={provider.id}
+              title={provider.title}
+              description={provider.description}
+              icon={provider.icon}
+              badge={provider.badge}
+              isActive={provider.id === activeProvider}
+              onSelect={(id) => {
+                setActiveProvider(id);
+                setForm((prev) => ({ ...prev, driver: id }));
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <div className="space-y-6">
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader>
+                <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="flex items-center gap-2 text-base">
+                    <CardTitle className="flex items-center gap-2">
+                      <ActiveIcon className="h-5 w-5 text-primary" />
                       {activeConfig.title}
                     </CardTitle>
                     <CardDescription>{activeConfig.description}</CardDescription>
                   </div>
+                  <CardAction>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      disabled={isLoading}
+                    >
+                      <Wifi className="h-4 w-4" />
+                      Test Connection
+                    </Button>
+                  </CardAction>
                 </div>
-                <CardAction>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Wifi className="h-4 w-4" />
-                    Test Connection
-                  </Button>
-                </CardAction>
               </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  {activeConfig.fields.map((field) => {
-                    const fieldId = `${activeProvider}-${field.id}`;
-                    const Icon = field.icon;
-                    if (field.type === "select") {
-                      return (
-                        <div key={field.id} className="space-y-2">
-                          <label htmlFor={fieldId} className={labelClassName}>
-                            {field.label}
-                          </label>
-                          <div className="relative">
-                            <Icon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Select defaultValue={field.options?.[0]?.value}>
-                              <SelectTrigger id={fieldId} className="w-full pl-9">
-                                <SelectValue
-                                  placeholder={`Select ${field.label.toLowerCase()}`}
-                                />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {field.options?.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div key={field.id} className="space-y-2">
-                        <label htmlFor={fieldId} className={labelClassName}>
-                          {field.label}
-                        </label>
-                        <div className="relative">
-                          <Icon className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id={fieldId}
-                            type={field.type}
-                            placeholder={field.placeholder}
-                            className="pl-9"
-                          />
+              <CardContent className="space-y-5">
+                {activeConfig.fields.map((field) => {
+                  const FieldIcon = field.icon;
+                  return (
+                    <div key={field.id} className="space-y-2">
+                      <label className={labelClassName}>{field.label}</label>
+                      <div className="relative">
+                        <FieldIcon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <div className="pl-7">
+                          {renderField(field)}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
                 <Separator />
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <div className="flex items-start gap-3 text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-3">
                     <Info className="mt-0.5 h-4 w-4 text-primary" />
                     <div>
-                      <p className="text-sm font-semibold text-foreground">
+                      <p className="font-medium text-foreground">
                         {activeConfig.noteTitle}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -397,6 +603,101 @@ export function StorageSettingsPage() {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  Upload Policies
+                </CardTitle>
+                <CardDescription>
+                  Defaults used for all uploads across the CMS.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {globalFields.map((field) => (
+                  <div key={field.id} className="space-y-2">
+                    <label className={labelClassName}>{field.label}</label>
+                    <div className="relative">
+                      <field.icon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <div className="pl-7">
+                        {renderField(field)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+                  Changing the storage driver does not migrate existing files. New uploads
+                  will use the selected provider immediately.
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  Security Summary
+                </CardTitle>
+                <CardDescription>
+                  Secrets are encrypted at rest. Update fields to rotate.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span>S3 Access Key</span>
+                  <Badge variant={secrets.s3AccessKey ? "default" : "secondary"}>
+                    {secrets.s3AccessKey ? "Configured" : "Missing"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>S3 Secret Key</span>
+                  <Badge variant={secrets.s3SecretKey ? "default" : "secondary"}>
+                    {secrets.s3SecretKey ? "Configured" : "Missing"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Azure Account Key</span>
+                  <Badge variant={secrets.azureKey ? "default" : "secondary"}>
+                    {secrets.azureKey ? "Configured" : "Missing"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span>Azure Connection String</span>
+                  <Badge
+                    variant={
+                      secrets.azureConnectionString ? "default" : "secondary"
+                    }
+                  >
+                    {secrets.azureConnectionString ? "Configured" : "Missing"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Save className="h-5 w-5 text-primary" />
+                  Save Changes
+                </CardTitle>
+                <CardDescription>
+                  Apply your storage settings instantly without restarting the server.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button
+                  className="w-full gap-2"
+                  onClick={handleSave}
+                  disabled={isSaving || isLoading}
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save Configuration"}
+                </Button>
               </CardContent>
             </Card>
           </div>

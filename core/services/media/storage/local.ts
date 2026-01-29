@@ -4,12 +4,17 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { MediaStorageAdapter, UploadFile } from "./adapter";
 
-function getLocalMediaDir() {
-  return process.env.MEDIA_DIR ?? "/data/media";
+export type LocalStorageOptions = {
+  dir?: string | null;
+  baseUrl?: string | null;
+};
+
+function getLocalMediaDir(options?: LocalStorageOptions) {
+  return options?.dir ?? process.env.MEDIA_DIR ?? "/data/media";
 }
 
-function getBaseUrl() {
-  return process.env.MEDIA_BASE_URL ?? "/media";
+function getBaseUrl(options?: LocalStorageOptions) {
+  return options?.baseUrl ?? process.env.MEDIA_BASE_URL ?? "/media";
 }
 
 function getExtension(fileName: string) {
@@ -29,30 +34,30 @@ async function ensureDir(target: string) {
   await mkdir(target, { recursive: true });
 }
 
-export function createLocalAdapter(): MediaStorageAdapter {
+export function createLocalAdapter(options?: LocalStorageOptions): MediaStorageAdapter {
   return {
     async put(file: UploadFile) {
       const key = buildKey(file.name);
       const dir = path.dirname(key);
-      const baseDir = getLocalMediaDir();
+      const baseDir = getLocalMediaDir(options);
       await ensureDir(path.join(baseDir, dir));
 
       const buffer = Buffer.from(await file.arrayBuffer());
       await writeFile(path.join(baseDir, key), buffer);
 
-      return { key, url: `${getBaseUrl()}/${key}` };
+      return { key, url: `${getBaseUrl(options)}/${key}` };
     },
     async get(key: string) {
-      const baseDir = getLocalMediaDir();
+      const baseDir = getLocalMediaDir(options);
       return createReadStream(path.join(baseDir, key));
     },
     async delete(key: string) {
-      const baseDir = getLocalMediaDir();
+      const baseDir = getLocalMediaDir(options);
       const target = path.join(baseDir, key);
       await rm(target, { force: true });
     },
     getPublicUrl(key: string) {
-      return `${getBaseUrl()}/${key}`;
+      return `${getBaseUrl(options)}/${key}`;
     },
   };
 }

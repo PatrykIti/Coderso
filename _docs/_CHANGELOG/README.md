@@ -93,6 +93,7 @@ Project Change Log.
 | 066 | 2026-01-28 | Content UI wiring | Admin/UI |
 | 067 | 2026-01-28 | Auth UI wiring | Admin/UI |
 | 068 | 2026-01-28 | Media storage and wiring | CMS/Media |
+| 069 | 2026-01-28 | Storage settings runtime | CMS/Media |
 
 
 ---

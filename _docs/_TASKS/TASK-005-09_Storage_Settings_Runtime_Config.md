@@ -5,7 +5,7 @@
 **Category:** CMS/Media + Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-005-06, TASK-005-07, TASK-007  
-**Status:** To Do  
+**Status:** Done (2026-01-28)  
 
 ---
 

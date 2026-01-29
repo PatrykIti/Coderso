@@ -8,23 +8,39 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { MediaStorageAdapter, UploadFile } from "./adapter";
 
-function getS3Config() {
-  const bucket = process.env.S3_BUCKET;
-  const region = process.env.S3_REGION;
-  const accessKeyId = process.env.S3_ACCESS_KEY;
-  const secretAccessKey = process.env.S3_SECRET_KEY;
-  const endpoint = process.env.S3_ENDPOINT?.trim() || undefined;
+export type S3StorageOptions = {
+  bucket?: string | null;
+  region?: string | null;
+  accessKeyId?: string | null;
+  secretAccessKey?: string | null;
+  endpoint?: string | null;
+  baseUrl?: string | null;
+};
+
+function getS3Config(options?: S3StorageOptions) {
+  const bucket = options?.bucket ?? process.env.S3_BUCKET;
+  const region = options?.region ?? process.env.S3_REGION;
+  const accessKeyId = options?.accessKeyId ?? process.env.S3_ACCESS_KEY;
+  const secretAccessKey = options?.secretAccessKey ?? process.env.S3_SECRET_KEY;
+  const endpoint =
+    (options?.endpoint ?? process.env.S3_ENDPOINT)?.trim() || undefined;
+  const baseUrl = options?.baseUrl ?? process.env.MEDIA_BASE_URL;
 
   if (!bucket || !region || !accessKeyId || !secretAccessKey) {
     throw new Error("s3_config_missing");
   }
 
-  return { bucket, region, accessKeyId, secretAccessKey, endpoint };
+  return { bucket, region, accessKeyId, secretAccessKey, endpoint, baseUrl };
 }
 
-function getBaseUrl(bucket: string, region: string, endpoint?: string) {
-  if (process.env.MEDIA_BASE_URL) {
-    return process.env.MEDIA_BASE_URL;
+function getBaseUrl(
+  bucket: string,
+  region: string,
+  endpoint?: string,
+  baseUrl?: string | null
+) {
+  if (baseUrl) {
+    return baseUrl;
   }
   if (endpoint) {
     const normalized = endpoint.replace(/\/+$/g, "");
@@ -46,9 +62,10 @@ function buildKey(prefix: string, fileName: string) {
   return prefix ? `${prefix}/${base}` : base;
 }
 
-export function createS3Adapter(): MediaStorageAdapter {
-  const { bucket, region, accessKeyId, secretAccessKey, endpoint } = getS3Config();
-  const baseUrl = getBaseUrl(bucket, region, endpoint);
+export function createS3Adapter(options?: S3StorageOptions): MediaStorageAdapter {
+  const { bucket, region, accessKeyId, secretAccessKey, endpoint, baseUrl } =
+    getS3Config(options);
+  const resolvedBaseUrl = getBaseUrl(bucket, region, endpoint, baseUrl);
   const client = new S3Client({
     region,
     credentials: { accessKeyId, secretAccessKey },
@@ -70,7 +87,7 @@ export function createS3Adapter(): MediaStorageAdapter {
         })
       );
 
-      return { key, url: `${baseUrl}/${key}` };
+      return { key, url: `${resolvedBaseUrl}/${key}` };
     },
     async get(key: string) {
       const result = await client.send(
@@ -87,7 +104,7 @@ export function createS3Adapter(): MediaStorageAdapter {
       await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     },
     getPublicUrl(key: string) {
-      return `${baseUrl}/${key}`;
+      return `${resolvedBaseUrl}/${key}`;
     },
   };
 }
