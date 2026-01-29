@@ -129,20 +129,20 @@ function InputsPreview() {
 
 function NavigationPreview() {
   return (
-    <div className="overflow-hidden rounded-lg border border-[var(--admin-base-border)]">
+    <div className="overflow-hidden rounded-lg border border-[(--admin-base-border)]">
       <div className="flex">
-        <div className="w-24 shrink-0 space-y-3 bg-[var(--admin-sidebar-bg)] px-3 py-4 text-[var(--admin-sidebar-text)]">
-          <div className="h-2 w-10 rounded-full bg-[var(--admin-sidebar-text)]/40" />
+        <div className="w-24 shrink-0 space-y-3 bg-[(--admin-sidebar-bg)] px-3 py-4 text-[(--admin-sidebar-text)]">
+          <div className="h-2 w-10 rounded-full bg-[(--admin-sidebar-text)]/40" />
           <div className="space-y-2">
-            <div className="h-2 w-12 rounded-full bg-[var(--admin-sidebar-text)]/50" />
-            <div className="h-2 w-8 rounded-full bg-[var(--admin-sidebar-text)]/40" />
+            <div className="h-2 w-12 rounded-full bg-[(--admin-sidebar-text)]/50" />
+            <div className="h-2 w-8 rounded-full bg-[(--admin-sidebar-text)]/40" />
           </div>
-          <div className="rounded-md bg-[var(--admin-sidebar-active-bg)] px-2 py-1 text-[10px] font-medium text-[var(--admin-sidebar-active-text)]">
+          <div className="rounded-md bg-[(--admin-sidebar-active-bg)] px-2 py-1 text-[10px] font-medium text-[(--admin-sidebar-active-text)]">
             Active
           </div>
         </div>
         <div className="flex-1">
-          <div className="flex items-center justify-between border-b border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] px-3 py-2 text-[10px] text-[var(--admin-topbar-text)]">
+          <div className="flex items-center justify-between border-b border-[(--admin-topbar-border)] bg-[(--admin-topbar-bg)] px-3 py-2 text-[10px] text-[(--admin-topbar-text)]">
             <span>Top bar</span>
             <span>Admin</span>
           </div>
@@ -216,10 +216,63 @@ function ThemeTemplateForm({
     template?.tokens ?? DEFAULT_ADMIN_THEME_TOKENS
   );
 
-  const previewStyle = useMemo(
-    () => toAdminThemeCssVariableMap(tokens) as CSSProperties,
-    [tokens]
-  );
+  const previewStyle = useMemo<Record<string, string>>(() => {
+    const background = tokens.base.bg;
+    const foreground = tokens.base.text;
+    const muted = tokens.base.surface;
+    const card = tokens.card.bg;
+    const border = tokens.base.border;
+    const input = tokens.inputs.border;
+    const ring = tokens.inputs.focusRing;
+    const primary = tokens.buttons.primary.bg;
+    const primaryForeground = tokens.buttons.primary.text;
+    const secondary = tokens.buttons.secondary.bg;
+    const secondaryForeground = tokens.buttons.secondary.text;
+    const accent = tokens.buttons.outline.hoverBg;
+    const accentForeground = tokens.buttons.outline.hoverText;
+    const destructive = tokens.state.danger;
+    return {
+      ...toAdminThemeCssVariableMap(tokens),
+      "--background": background,
+      "--foreground": foreground,
+      "--muted": muted,
+      "--muted-foreground": foreground,
+      "--popover": muted,
+      "--popover-foreground": foreground,
+      "--card": card,
+      "--card-foreground": foreground,
+      "--border": border,
+      "--input": input,
+      "--ring": ring,
+      "--primary": primary,
+      "--primary-foreground": primaryForeground,
+      "--secondary": secondary,
+      "--secondary-foreground": secondaryForeground,
+      "--accent": accent,
+      "--accent-foreground": accentForeground,
+      "--destructive": destructive,
+      "--destructive-foreground": "#ffffff",
+      "--color-background": background,
+      "--color-foreground": foreground,
+      "--color-muted": muted,
+      "--color-muted-foreground": foreground,
+      "--color-popover": muted,
+      "--color-popover-foreground": foreground,
+      "--color-card": card,
+      "--color-card-foreground": foreground,
+      "--color-border": border,
+      "--color-input": input,
+      "--color-ring": ring,
+      "--color-primary": primary,
+      "--color-primary-foreground": primaryForeground,
+      "--color-secondary": secondary,
+      "--color-secondary-foreground": secondaryForeground,
+      "--color-accent": accent,
+      "--color-accent-foreground": accentForeground,
+      "--color-destructive": destructive,
+      "--color-destructive-foreground": "#ffffff",
+    };
+  }, [tokens]);
 
   const updateToken = (path: string[], value: string) => {
     setTokens((prev) => {
