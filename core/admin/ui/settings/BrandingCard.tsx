@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/select";
 
 const localeOptions = [
+  { value: "en", label: "English" },
   { value: "en-US", label: "English (United States)" },
   { value: "en-GB", label: "English (United Kingdom)" },
+  { value: "pl-PL", label: "Polish (Poland)" },
   { value: "fr-FR", label: "French (France)" },
   { value: "de-DE", label: "German (Germany)" },
 ];
@@ -27,7 +29,32 @@ const timezoneOptions = [
 const labelClassName =
   "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 
-export function BrandingCard() {
+type BrandingCardProps = {
+  siteName: string;
+  siteLocale: string;
+  onChange?: (next: { siteName: string; siteLocale: string }) => void;
+  disabled?: boolean;
+};
+
+const defaultValues = {
+  siteName: "Nextless",
+  siteLocale: "en",
+};
+
+export function BrandingCard({
+  siteName = defaultValues.siteName,
+  siteLocale = defaultValues.siteLocale,
+  onChange,
+  disabled = false,
+}: BrandingCardProps) {
+  const handleNameChange = (value: string) => {
+    onChange?.({ siteName: value, siteLocale });
+  };
+
+  const handleLocaleChange = (value: string) => {
+    onChange?.({ siteName, siteLocale: value });
+  };
+
   return (
     <Card className="border-border/60">
       <CardHeader className="border-b">
@@ -51,15 +78,17 @@ export function BrandingCard() {
             </label>
             <Input
               id="site-name"
-              defaultValue="Nextless Portfolio"
+              value={siteName}
               placeholder="e.g. My Awesome Site"
+              onChange={(event) => handleNameChange(event.target.value)}
+              disabled={disabled}
             />
           </div>
           <div className="space-y-2">
             <label className={labelClassName} htmlFor="site-locale">
               Primary locale
             </label>
-            <Select defaultValue="en-US">
+            <Select value={siteLocale} onValueChange={handleLocaleChange} disabled={disabled}>
               <SelectTrigger id="site-locale" className="w-full">
                 <SelectValue placeholder="Select locale" />
               </SelectTrigger>
@@ -76,7 +105,7 @@ export function BrandingCard() {
             <label className={labelClassName} htmlFor="site-timezone">
               Timezone
             </label>
-            <Select defaultValue="utc-08">
+            <Select defaultValue="utc-08" disabled={disabled}>
               <SelectTrigger id="site-timezone" className="w-full">
                 <SelectValue placeholder="Select timezone" />
               </SelectTrigger>

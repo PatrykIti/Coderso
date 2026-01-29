@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { isApiClientError } from "@/services/apiClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { DesignTokensEditor, type TokenOverrides } from "./DesignTokensEditor";
@@ -15,8 +17,14 @@ type SettingsValues = {
 type SettingsPageProps = {
   values: SettingsValues;
   tokens: TokenOverrides;
-  onSave: (input: { values: SettingsValues; tokens: TokenOverrides }) => void;
-  onResetTokens: () => void;
+  onSave: (input: {
+    values: SettingsValues;
+    tokens: TokenOverrides;
+  }) => Promise<void> | void;
+  onResetTokens: () => Promise<void> | void;
+  isLoading?: boolean;
+  isSaving?: boolean;
+  error?: string | null;
 };
 
 export function SettingsPage({
@@ -24,13 +32,61 @@ export function SettingsPage({
   tokens,
   onSave,
   onResetTokens,
+  isLoading = false,
+  isSaving = false,
+  error = null,
 }: SettingsPageProps) {
-  const [form] = useState(values);
+  const [form, setForm] = useState(values);
   const [tokenOverrides, setTokenOverrides] = useState(tokens);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [localSaving, setLocalSaving] = useState(false);
 
   useEffect(() => {
     setTokenOverrides(tokens);
   }, [tokens]);
+
+  useEffect(() => {
+    setForm(values);
+  }, [values]);
+
+  const handleSave = async () => {
+    setSaveError(null);
+    setSaveSuccess(null);
+    setLocalSaving(true);
+    try {
+      await onSave({ values: form, tokens: tokenOverrides });
+      setSaveSuccess("Settings updated.");
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setSaveError(err.message);
+      } else {
+        setSaveError("Failed to save settings.");
+      }
+    } finally {
+      setLocalSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setSaveError(null);
+    setSaveSuccess(null);
+    setLocalSaving(true);
+    try {
+      await onResetTokens();
+      setSaveSuccess("Tokens reset to defaults.");
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setSaveError(err.message);
+      } else {
+        setSaveError("Failed to reset tokens.");
+      }
+    } finally {
+      setLocalSaving(false);
+    }
+  };
+
+  const busy = isLoading || isSaving || localSaving;
 
   return (
     <SettingsShell
@@ -46,19 +102,43 @@ export function SettingsPage({
       }
       topbarActions={
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onResetTokens}>
+          <Button variant="outline" size="sm" onClick={handleReset} disabled={busy}>
             Reset defaults
           </Button>
           <Button variant="outline" size="sm">
             Export JSON
           </Button>
-          <Button size="sm" onClick={() => onSave({ values: form, tokens: tokenOverrides })}>
-            Save changes
+          <Button size="sm" onClick={handleSave} disabled={busy}>
+            {busy ? "Saving..." : "Save changes"}
           </Button>
         </div>
       }
     >
       <div className="flex h-full flex-col">
+        {error ? (
+          <div className="px-6 pt-6">
+            <Alert variant="destructive">
+              <AlertTitle>Settings error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
+        ) : null}
+        {saveError ? (
+          <div className="px-6 pt-6">
+            <Alert variant="destructive">
+              <AlertTitle>Save failed</AlertTitle>
+              <AlertDescription>{saveError}</AlertDescription>
+            </Alert>
+          </div>
+        ) : null}
+        {saveSuccess ? (
+          <div className="px-6 pt-6">
+            <Alert>
+              <AlertTitle>Saved</AlertTitle>
+              <AlertDescription>{saveSuccess}</AlertDescription>
+            </Alert>
+          </div>
+        ) : null}
         <div className="border-b bg-background/70 px-6 py-4">
           <h1 className="text-2xl font-semibold">Theme Configuration</h1>
           <p className="text-sm text-muted-foreground">
@@ -69,7 +149,7 @@ export function SettingsPage({
           <DesignTokensEditor
             value={tokenOverrides}
             onChange={setTokenOverrides}
-            onReset={onResetTokens}
+            onReset={handleReset}
           />
         </div>
       </div>

@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 0
-- **Done:** 93 tasks
+- **Done:** 94 tasks
 
 ---
 

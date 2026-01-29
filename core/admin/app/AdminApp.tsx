@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { me } from "@/services/authClient";
+import { isApiClientError } from "@/services/apiClient";
+import { getSettings, updateSettings } from "@/services/settingsClient";
 import { DashboardPage } from "@/ui/dashboard/DashboardPage";
 import { AnalyticsPage } from "@/ui/analytics/AnalyticsPage";
 import { AuditList } from "@/ui/audit/AuditList";
@@ -81,65 +83,30 @@ const matchRoute = (pattern: string, path: string) => {
   return params;
 };
 
-const defaultSettingsValues = { siteName: "Nextless", siteLocale: "pl-PL" };
+type SettingsValues = {
+  siteName: string;
+  siteLocale: string;
+};
+
+const defaultSettingsValues: SettingsValues = {
+  siteName: "Nextless",
+  siteLocale: "en",
+};
 const defaultTokenOverrides: TokenOverrides = {};
 
-const routes = [
-  { pattern: "/admin", element: <DashboardPage /> },
-  { pattern: "/admin/login", element: <LoginPage /> },
-  { pattern: "/admin/2fa", element: <TwoFactorPage /> },
-  { pattern: "/admin/reset", element: <ResetPasswordPage /> },
-  { pattern: "/admin/reset/confirm", element: <SetPasswordPage /> },
-  { pattern: "/admin/analytics", element: <AnalyticsPage /> },
-  { pattern: "/admin/audit", element: <AuditList /> },
-  { pattern: "/admin/access-logs", element: <AccessLogsPage /> },
-  { pattern: "/admin/backups", element: <BackupsPage /> },
-  { pattern: "/admin/search", element: <SearchPage /> },
-  { pattern: "/admin/seo", element: <SeoManagerPage /> },
-  { pattern: "/admin/redirects", element: <RedirectsPage /> },
-  { pattern: "/admin/tools/import-export", element: <ImportExportPage /> },
-  { pattern: "/admin/forms", element: <FormBuilderPage /> },
-  { pattern: "/admin/content-types", element: <ContentTypeList /> },
-  { pattern: "/admin/content-types/:id", element: <ContentTypeEditor /> },
-  { pattern: "/admin/content-types/:id/schema", element: <SchemaBuilderPage /> },
-  { pattern: "/admin/entries", element: <EntryList /> },
-  { pattern: "/admin/entries/:type/:id", element: <EntryEditor /> },
-  { pattern: "/admin/pages", element: <PageListPage /> },
-  { pattern: "/admin/pages/:id", element: <PageEditor /> },
-  { pattern: "/admin/preview", element: <PagePreview /> },
-  { pattern: "/admin/media", element: <MediaLibraryPage /> },
-  { pattern: "/admin/menus", element: <MenuEditorPage /> },
-  { pattern: "/admin/users", element: <UsersRolesPage /> },
-  { pattern: "/admin/roles", element: <PermissionsMatrixPage /> },
-  { pattern: "/admin/themes", element: <ThemesPage /> },
-  { pattern: "/admin/themes/:id", element: <ThemeEditorPage /> },
-  { pattern: "/admin/widgets", element: <WidgetLibraryPage /> },
-  {
-    pattern: "/admin/settings",
-    element: (
-      <SettingsPage
-        values={defaultSettingsValues}
-        tokens={defaultTokenOverrides}
-        onSave={() => undefined}
-        onResetTokens={() => undefined}
-      />
-    ),
-  },
-  { pattern: "/admin/settings/general", element: <GeneralSettingsPage /> },
-  { pattern: "/admin/settings/security", element: <SecuritySettingsPage /> },
-  { pattern: "/admin/settings/security/ip-allowlist", element: <IpAllowlistPage /> },
-  { pattern: "/admin/settings/security/sessions", element: <SessionsPage /> },
-  { pattern: "/admin/settings/security/login-alerts", element: <LoginAlertsPage /> },
-  { pattern: "/admin/settings/api-keys", element: <ApiKeysPage /> },
-  { pattern: "/admin/settings/webhooks", element: <WebhooksPage /> },
-  { pattern: "/admin/settings/email", element: <EmailSettingsPage /> },
-  { pattern: "/admin/settings/storage", element: <StorageSettingsPage /> },
-  { pattern: "/admin/settings/integrations", element: <IntegrationsPage /> },
-  { pattern: "/admin/store", element: <PluginStorePage /> },
-  { pattern: "/admin/store/plugins/:id", element: <PluginDetailsPage /> },
-];
+type SettingsState = {
+  status: "idle" | "loading" | "ready" | "error";
+  values: SettingsValues;
+  tokens: TokenOverrides;
+  error: string | null;
+};
 
-const resolveRoute = (path: string): RouteMatch => {
+type RouteDefinition = {
+  pattern: string;
+  element: React.ReactNode;
+};
+
+const resolveRoute = (path: string, routes: RouteDefinition[]): RouteMatch => {
   for (const route of routes) {
     const params = matchRoute(route.pattern, path);
     if (params) return { element: route.element, params };
@@ -159,6 +126,31 @@ const Loading = () => (
   </div>
 );
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const resolveSettingsPayload = (
+  payload: Record<string, unknown>,
+  fallback: SettingsState
+) => {
+  const siteName =
+    typeof payload["site.name"] === "string"
+      ? payload["site.name"]
+      : fallback.values.siteName;
+  const siteLocale =
+    typeof payload["site.locale"] === "string"
+      ? payload["site.locale"]
+      : fallback.values.siteLocale;
+  const tokens = isPlainObject(payload["design.tokens"])
+    ? (payload["design.tokens"] as TokenOverrides)
+    : fallback.tokens;
+
+  return {
+    values: { siteName, siteLocale },
+    tokens,
+  };
+};
+
 type AdminAppProps = {
   path: string;
 };
@@ -172,7 +164,173 @@ export function AdminApp({ path }: AdminAppProps) {
     "checking" | "authenticated" | "unauthenticated"
   >(isProtected ? "checking" : "unauthenticated");
 
-  const match = useMemo(() => resolveRoute(normalizedPath), [normalizedPath]);
+  const [settingsState, setSettingsState] = useState<SettingsState>({
+    status: "idle",
+    values: defaultSettingsValues,
+    tokens: defaultTokenOverrides,
+    error: null,
+  });
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  const match = useMemo(() => {
+    const routes: RouteDefinition[] = [
+      { pattern: "/admin", element: <DashboardPage /> },
+      { pattern: "/admin/login", element: <LoginPage /> },
+      { pattern: "/admin/2fa", element: <TwoFactorPage /> },
+      { pattern: "/admin/reset", element: <ResetPasswordPage /> },
+      { pattern: "/admin/reset/confirm", element: <SetPasswordPage /> },
+      { pattern: "/admin/analytics", element: <AnalyticsPage /> },
+      { pattern: "/admin/audit", element: <AuditList /> },
+      { pattern: "/admin/access-logs", element: <AccessLogsPage /> },
+      { pattern: "/admin/backups", element: <BackupsPage /> },
+      { pattern: "/admin/search", element: <SearchPage /> },
+      { pattern: "/admin/seo", element: <SeoManagerPage /> },
+      { pattern: "/admin/redirects", element: <RedirectsPage /> },
+      { pattern: "/admin/tools/import-export", element: <ImportExportPage /> },
+      { pattern: "/admin/forms", element: <FormBuilderPage /> },
+      { pattern: "/admin/content-types", element: <ContentTypeList /> },
+      { pattern: "/admin/content-types/:id", element: <ContentTypeEditor /> },
+      { pattern: "/admin/content-types/:id/schema", element: <SchemaBuilderPage /> },
+      { pattern: "/admin/entries", element: <EntryList /> },
+      { pattern: "/admin/entries/:type/:id", element: <EntryEditor /> },
+      { pattern: "/admin/pages", element: <PageListPage /> },
+      { pattern: "/admin/pages/:id", element: <PageEditor /> },
+      { pattern: "/admin/preview", element: <PagePreview /> },
+      { pattern: "/admin/media", element: <MediaLibraryPage /> },
+      { pattern: "/admin/menus", element: <MenuEditorPage /> },
+      { pattern: "/admin/users", element: <UsersRolesPage /> },
+      { pattern: "/admin/roles", element: <PermissionsMatrixPage /> },
+      { pattern: "/admin/themes", element: <ThemesPage /> },
+      { pattern: "/admin/themes/:id", element: <ThemeEditorPage /> },
+      { pattern: "/admin/widgets", element: <WidgetLibraryPage /> },
+      {
+        pattern: "/admin/settings",
+        element: (
+          <SettingsPage
+            values={settingsState.values}
+            tokens={settingsState.tokens}
+            isLoading={settingsState.status === "loading"}
+            isSaving={settingsSaving}
+            error={settingsState.error}
+            onSave={async ({ values, tokens }) => {
+              setSettingsSaving(true);
+              setSettingsState((prev) => ({ ...prev, error: null }));
+              try {
+                const updated = await updateSettings({
+                  "site.name": values.siteName,
+                  "site.locale": values.siteLocale,
+                  "design.tokens": tokens,
+                });
+                setSettingsState((prev) => {
+                  const resolved = resolveSettingsPayload(updated, prev);
+                  return {
+                    ...prev,
+                    status: "ready",
+                    ...resolved,
+                  };
+                });
+              } catch (error) {
+                const message = isApiClientError(error)
+                  ? error.message
+                  : "Failed to save settings.";
+                setSettingsState((prev) => ({
+                  ...prev,
+                  error: message,
+                  status: "error",
+                }));
+                throw error;
+              } finally {
+                setSettingsSaving(false);
+              }
+            }}
+            onResetTokens={async () => {
+              setSettingsSaving(true);
+              setSettingsState((prev) => ({ ...prev, error: null }));
+              try {
+                const updated = await updateSettings({
+                  "design.tokens": {},
+                });
+                setSettingsState((prev) => {
+                  const resolved = resolveSettingsPayload(updated, prev);
+                  return {
+                    ...prev,
+                    status: "ready",
+                    ...resolved,
+                  };
+                });
+              } catch (error) {
+                const message = isApiClientError(error)
+                  ? error.message
+                  : "Failed to reset tokens.";
+                setSettingsState((prev) => ({
+                  ...prev,
+                  error: message,
+                  status: "error",
+                }));
+                throw error;
+              } finally {
+                setSettingsSaving(false);
+              }
+            }}
+          />
+        ),
+      },
+      {
+        pattern: "/admin/settings/general",
+        element: (
+          <GeneralSettingsPage
+            values={settingsState.values}
+            isLoading={settingsState.status === "loading"}
+            isSaving={settingsSaving}
+            error={settingsState.error}
+            onSave={async (values) => {
+              setSettingsSaving(true);
+              setSettingsState((prev) => ({ ...prev, error: null }));
+              try {
+                const updated = await updateSettings({
+                  "site.name": values.siteName,
+                  "site.locale": values.siteLocale,
+                });
+                setSettingsState((prev) => {
+                  const resolved = resolveSettingsPayload(updated, prev);
+                  return {
+                    ...prev,
+                    status: "ready",
+                    ...resolved,
+                  };
+                });
+              } catch (error) {
+                const message = isApiClientError(error)
+                  ? error.message
+                  : "Failed to save general settings.";
+                setSettingsState((prev) => ({
+                  ...prev,
+                  error: message,
+                  status: "error",
+                }));
+                throw error;
+              } finally {
+                setSettingsSaving(false);
+              }
+            }}
+          />
+        ),
+      },
+      { pattern: "/admin/settings/security", element: <SecuritySettingsPage /> },
+      { pattern: "/admin/settings/security/ip-allowlist", element: <IpAllowlistPage /> },
+      { pattern: "/admin/settings/security/sessions", element: <SessionsPage /> },
+      { pattern: "/admin/settings/security/login-alerts", element: <LoginAlertsPage /> },
+      { pattern: "/admin/settings/api-keys", element: <ApiKeysPage /> },
+      { pattern: "/admin/settings/webhooks", element: <WebhooksPage /> },
+      { pattern: "/admin/settings/email", element: <EmailSettingsPage /> },
+      { pattern: "/admin/settings/storage", element: <StorageSettingsPage /> },
+      { pattern: "/admin/settings/integrations", element: <IntegrationsPage /> },
+      { pattern: "/admin/store", element: <PluginStorePage /> },
+      { pattern: "/admin/store/plugins/:id", element: <PluginDetailsPage /> },
+    ];
+
+    return resolveRoute(normalizedPath, routes);
+  }, [normalizedPath, settingsSaving, settingsState]);
 
   useEffect(() => {
     if (!isProtected) return;
@@ -188,6 +346,49 @@ export function AdminApp({ path }: AdminAppProps) {
       active = false;
     };
   }, [isProtected, normalizedPath]);
+
+  useEffect(() => {
+    if (authState !== "authenticated") return;
+    let active = true;
+    setSettingsState((prev) => ({
+      ...prev,
+      status: "loading",
+      error: null,
+    }));
+
+    const fallbackState: SettingsState = {
+      status: "idle",
+      values: defaultSettingsValues,
+      tokens: defaultTokenOverrides,
+      error: null,
+    };
+
+    getSettings()
+      .then((payload) => {
+        if (!active) return;
+        const resolved = resolveSettingsPayload(payload, fallbackState);
+        setSettingsState((prev) => ({
+          ...prev,
+          status: "ready",
+          ...resolved,
+        }));
+      })
+      .catch((error) => {
+        if (!active) return;
+        const message = isApiClientError(error)
+          ? error.message
+          : "Failed to load settings.";
+        setSettingsState((prev) => ({
+          ...prev,
+          status: "error",
+          error: message,
+        }));
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authState]);
 
   useEffect(() => {
     if (!isPublic) return;

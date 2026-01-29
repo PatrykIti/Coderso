@@ -2,6 +2,15 @@ import { apiRequest } from "./apiClient";
 
 export type StorageDriver = "local" | "s3" | "azure";
 
+export type SettingResponse = {
+  key: string;
+  value: unknown;
+};
+
+export type SettingsResponse = Record<string, unknown>;
+
+export type SettingsUpdate = Record<string, unknown>;
+
 export type StorageSettingsResponse = {
   driver: StorageDriver;
   local: { dir: string | null };
@@ -48,6 +57,30 @@ export async function getStorageSettings() {
   return apiRequest<StorageSettingsResponse>("/settings/storage", {
     method: "GET",
   });
+}
+
+export async function getSettings() {
+  return apiRequest<SettingsResponse>("/settings", {
+    method: "GET",
+  });
+}
+
+export async function getSetting(key: string) {
+  return apiRequest<SettingResponse>(`/settings/${encodeURIComponent(key)}`, {
+    method: "GET",
+  });
+}
+
+export async function updateSettings(payload: SettingsUpdate) {
+  return apiRequest<SettingsResponse>(
+    "/settings",
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
 }
 
 export async function updateStorageSettings(payload: StorageSettingsUpdate) {

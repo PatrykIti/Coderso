@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 
 import {
+  getSetting,
+  getSettings,
   getStorageSettings,
+  updateSettings,
   updateStorageSettings,
 } from "../../../core/admin/services/settingsClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
@@ -50,6 +53,71 @@ test("updateStorageSettings uses CSRF and PATCH", async () => {
 
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/settings/storage");
+    expect(calls[1]?.init?.method).toBe("PATCH");
+    const headers = new Headers(calls[1]?.init?.headers);
+    expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getSettings hits GET /settings", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ "site.name": "Nextless", "site.locale": "en" });
+  };
+
+  try {
+    await getSettings();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/settings");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("getSetting hits GET /settings/:key", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ key: "site.name", value: "Nextless" });
+  };
+
+  try {
+    await getSetting("site.name");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/settings/site.name");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("updateSettings uses CSRF and PATCH", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ "site.name": "Nextless", "site.locale": "en" });
+  };
+
+  try {
+    resetCsrfToken();
+    await updateSettings({ "site.name": "Nextless" });
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/settings");
     expect(calls[1]?.init?.method).toBe("PATCH");
     const headers = new Headers(calls[1]?.init?.headers);
     expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
