@@ -1,24 +1,60 @@
 import { Palette, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import type { ThemeProfile } from "./ThemeCard";
+import type { ThemeMeta } from "@/services/themeClient";
 
 type ThemeProfileDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  themes: ThemeMeta[];
   profile?: ThemeProfile | null;
+  isSaving?: boolean;
+  onSave?: (input: {
+    name: string;
+    description: string;
+    themeName: string;
+  }) => Promise<void> | void;
 };
 
 export function ThemeProfileDrawer({
   open,
   onOpenChange,
+  themes,
   profile,
+  isSaving = false,
+  onSave,
 }: ThemeProfileDrawerProps) {
+  const defaultThemeName = themes[0]?.name ?? "";
+  const [name, setName] = useState(profile?.name ?? "");
+  const [description, setDescription] = useState(profile?.description ?? "");
+  const [themeName, setThemeName] = useState(profile?.themeName ?? defaultThemeName);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(profile?.name ?? "");
+    setDescription(profile?.description ?? "");
+    setThemeName(profile?.themeName ?? defaultThemeName);
+  }, [open, profile, defaultThemeName]);
+
+  const handleSave = async () => {
+    if (!onSave) return;
+    await onSave({ name, description, themeName });
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -45,7 +81,12 @@ export function ThemeProfileDrawer({
               <label className="text-xs font-semibold uppercase text-muted-foreground">
                 Profile name
               </label>
-              <Input placeholder="Neo Minimalist" defaultValue={profile?.name ?? ""} />
+              <Input
+                placeholder="Neo Minimalist"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                disabled={isSaving}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -53,8 +94,27 @@ export function ThemeProfileDrawer({
               </label>
               <Input
                 placeholder="Short summary"
-                defaultValue={profile?.description ?? ""}
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                disabled={isSaving}
               />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Theme
+              </label>
+              <Select value={themeName} onValueChange={setThemeName} disabled={isSaving}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {themes.map((theme) => (
+                    <SelectItem key={theme.name} value={theme.name}>
+                      {theme.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Separator />
             <div className="rounded-xl border bg-muted/30 p-4">
@@ -78,11 +138,11 @@ export function ThemeProfileDrawer({
         </ScrollArea>
         <Separator />
         <div className="flex flex-col gap-3 bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={() => onOpenChange(false)}>
-            {profile ? "Save Profile" : "Create Profile"}
+          <Button onClick={handleSave} disabled={isSaving || !name.trim() || !themeName}>
+            {isSaving ? "Saving..." : profile ? "Save Profile" : "Create Profile"}
           </Button>
         </div>
       </SheetContent>

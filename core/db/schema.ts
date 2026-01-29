@@ -259,6 +259,44 @@ export const contentRevisions = pgTable(
   })
 );
 
+export const themeProfiles = pgTable(
+  "theme_profiles",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    themeName: text("theme_name").notNull(),
+    tokens: jsonb("tokens").notNull().default({}),
+    isActive: boolean("is_active").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    nameIdx: index("theme_profiles_name_idx").on(t.name),
+    activeIdx: index("theme_profiles_active_idx").on(t.isActive),
+  })
+);
+
+export const themeRoutes = pgTable(
+  "theme_routes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => themeProfiles.id, { onDelete: "cascade" }),
+    path: text("path").notNull(),
+    pageId: uuid("page_id").references(() => pages.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    profilePathIdx: uniqueIndex("theme_routes_profile_path_idx").on(
+      t.profileId,
+      t.path
+    ),
+    profileIdx: index("theme_routes_profile_idx").on(t.profileId),
+  })
+);
+
 export const media = pgTable("media", {
   id: uuid("id").defaultRandom().primaryKey(),
   key: text("key").notNull(),

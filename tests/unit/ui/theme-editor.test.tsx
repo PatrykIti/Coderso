@@ -7,8 +7,6 @@ test("ThemeEditorPage renders preview and token editor", () => {
   const html = renderToString(<ThemeEditorPage />);
 
   expect(html).toContain("Theme Editor");
-  expect(html).toContain("Empowering content creators with modern tools");
-  expect(html).toContain("Active Token Properties");
-  expect(html).toContain("theme.config.json");
-  expect(html).toContain("Colors");
+  expect(html).toContain("Save Changes");
+  expect(html).toContain("Loading theme profile");
 });

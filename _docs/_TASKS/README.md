@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 10 tasks
 - **In Progress:** 0
-- **Done:** 94 tasks
+- **Done:** 100 tasks
 
 ---
 
@@ -38,12 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
-| TASK-008-01 | Theme Registry and Loader | Medium | Medium | Scan /themes + theme.json |
-| TASK-008-02 | Theme Profiles and Routes | Medium | Medium | DB + routes + active profile |
-| TASK-008-03 | Template Resolution and Rendering | Medium | Medium | Resolver order + fallback |
-| TASK-008-04 | Themes Admin API | Medium | Medium | /themes + profiles endpoints |
-| TASK-008-05 | Themes Admin UI Wiring | Medium | Medium | Wire themes UI to API |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-026-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
@@ -122,6 +116,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-007-03 | Design Token Pipeline | Medium | Medium | Merge + CSS vars |
 | TASK-007-04 | Settings UI and Tokens UI | Medium | Medium | Settings pages + tokens |
 | TASK-007-05 | Settings UI Wiring | Medium | Medium | Admin UI -> settings API |
+| TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
+| TASK-008-01 | Theme Registry and Loader | Medium | Medium | Scan /themes + theme.json |
+| TASK-008-02 | Theme Profiles and Routes | Medium | Medium | DB + routes + active profile |
+| TASK-008-03 | Template Resolution and Rendering | Medium | Medium | Resolver order + fallback |
+| TASK-008-04 | Themes Admin API | Medium | Medium | /themes + profiles endpoints |
+| TASK-008-05 | Themes Admin UI Wiring | Medium | Medium | Wire themes UI to API |
 | TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
 | TASK-006-09 | Login UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
 | TASK-006-10 | Two Factor UI (Visual) | Medium | Medium | HTML -> shadcn conversion |

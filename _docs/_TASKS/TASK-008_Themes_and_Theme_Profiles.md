@@ -5,7 +5,7 @@
 **Category:** CMS/Themes
 **Estimated Effort:** Large
 **Dependencies:** TASK-001, TASK-007, TASK-024
-**Status:** To Do
+**Status:** Done (2026-01-29)
 
 ---
 

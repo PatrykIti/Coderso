@@ -7,7 +7,7 @@ import {
   Sparkles,
   Sun,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  activateThemeProfile,
+  createThemeProfile,
+  listThemeProfiles,
+  listThemes,
+  updateThemeProfile,
+  type ThemeMeta,
+  type ThemeProfile as ApiThemeProfile,
+} from "@/services/themeClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -35,50 +45,35 @@ import { ThemeCard, type ThemeProfile } from "./ThemeCard";
 import { ThemeExportDialog } from "./ThemeExportDialog";
 import { ThemeProfileDrawer } from "./ThemeProfileDrawer";
 
-const activeTheme = {
-  id: "neo-minimalist",
-  name: "Neo Minimalist",
-  description:
-    "Clean, high-contrast interface designed for maximum readability and focus.",
-  typography: "Space Grotesk",
-  tokens: 124,
+const fallbackPalette = ["#e7f4fd", "#cfebfb", "#1392ec", "#0f75bd", "#0a4e7e"];
+const radiusScale = ["sm", "lg", "xl", "2xl"];
+
+const resolvePalette = (tokens: Record<string, unknown> | undefined) => {
+  if (!tokens || typeof tokens !== "object") return fallbackPalette;
+  const colors = (tokens as Record<string, unknown>).colors as
+    | Record<string, string>
+    | undefined;
+  const palette = [colors?.primary, colors?.secondary, colors?.accent].filter(Boolean);
+  return palette.length > 0 ? (palette as string[]) : fallbackPalette;
 };
 
-const profiles: ThemeProfile[] = [
-  {
-    id: "glassmorphism-ui",
-    name: "Glassmorphism UI",
-    description: "Frosted layers with luminous highlights and airy panels.",
-    palette: ["#3b82f6", "#8b5cf6", "#cbd5e1"],
-    icon: <Sparkles className="h-4 w-4" />,
-    iconClassName: "bg-sky-100 text-sky-600",
-  },
-  {
-    id: "corporate-light",
-    name: "Corporate Light",
-    description: "Bright, structured layout optimized for editorial clarity.",
-    palette: ["#0f172a", "#e2e8f0"],
-    icon: <Sun className="h-4 w-4" />,
-    iconClassName: "bg-amber-100 text-amber-600",
-  },
-  {
-    id: "neo-minimalist",
-    name: "Neo Minimalist",
-    description: "Minimal blocks with crisp contrast and sharp focus states.",
-    palette: ["#1392ec", "#94a3b8"],
-    icon: <Check className="h-4 w-4" />,
-    iconClassName: "bg-primary text-primary-foreground",
-    isActive: true,
-  },
-];
-
-const primaryPalette = ["#e7f4fd", "#cfebfb", "#1392ec", "#0f75bd", "#0a4e7e"];
-const radiusScale = ["sm", "lg", "xl", "2xl"];
+const countTokens = (tokens: Record<string, unknown> | undefined) => {
+  if (!tokens || typeof tokens !== "object") return 0;
+  return Object.values(tokens).reduce((total, group) => {
+    if (!group || typeof group !== "object") return total;
+    return total + Object.keys(group as Record<string, unknown>).length;
+  }, 0);
+};
 
 export function ThemesPage() {
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<ThemeProfile | null>(null);
+  const [themes, setThemes] = useState<ThemeMeta[]>([]);
+  const [profiles, setProfiles] = useState<ApiThemeProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const openCreateProfile = () => {
     setEditingProfile(null);
@@ -89,6 +84,73 @@ export function ThemesPage() {
     setEditingProfile(profile);
     setProfileDrawerOpen(true);
   };
+
+  const dispatchThemeUpdated = () => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("theme:updated"));
+  };
+
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [themesResult, profilesResult] = await Promise.all([
+        listThemes(),
+        listThemeProfiles(),
+      ]);
+      setThemes(themesResult.items);
+      setProfiles(profilesResult.items);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load themes.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  const profilesForCards = useMemo(() => {
+    return profiles.map((profile, index) => {
+      const iconClassName = profile.isActive
+        ? "bg-primary text-primary-foreground"
+        : index % 2 === 0
+          ? "bg-sky-100 text-sky-600"
+          : "bg-amber-100 text-amber-600";
+      const icon = profile.isActive ? (
+        <Check className="h-4 w-4" />
+      ) : index % 2 === 0 ? (
+        <Sparkles className="h-4 w-4" />
+      ) : (
+        <Sun className="h-4 w-4" />
+      );
+
+      return {
+        id: profile.id,
+        name: profile.name,
+        description: profile.description ?? "No description provided.",
+        themeName: profile.themeName,
+        tokens: profile.tokens,
+        palette: resolvePalette(profile.tokens),
+        icon,
+        iconClassName,
+        isActive: profile.isActive,
+      } satisfies ThemeProfile;
+    });
+  }, [profiles]);
+
+  const activeProfile = profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
+  const activeTheme = activeProfile
+    ? themes.find((theme) => theme.name === activeProfile.themeName) ?? null
+    : null;
+
+  const activeProfilePalette = resolvePalette(activeProfile?.tokens);
+  const activeTokensCount = countTokens(activeProfile?.tokens);
 
   return (
     <AdminShell
@@ -183,42 +245,48 @@ export function ThemesPage() {
                       <div className="h-2 w-full rounded bg-muted-foreground/10" />
                     </div>
                     <div className="flex items-center gap-2">
-                      <span
-                        className="h-3 w-3 rounded-full"
-                        style={{ backgroundColor: "#1392ec" }}
-                      />
-                      <span className="h-3 w-3 rounded-full bg-muted-foreground/30" />
+                      {activeProfilePalette.slice(0, 2).map((color) => (
+                        <span
+                          key={color}
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
                     </div>
                   </div>
                 </div>
                 <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-semibold">{activeTheme.name}</h2>
+                    <h2 className="text-xl font-semibold">
+                      {activeProfile?.name ?? "No active profile"}
+                    </h2>
                     <Badge className="bg-emerald-100 text-[10px] uppercase tracking-wide text-emerald-700">
                       Current
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {activeTheme.description}
+                    {activeProfile?.description ?? "Select a theme profile to activate."}
                   </p>
                   <div className="flex flex-wrap gap-6 text-xs">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold uppercase text-muted-foreground">
-                        Typography:
+                        Theme:
                       </span>
-                      <span className="text-foreground">{activeTheme.typography}</span>
+                      <span className="text-foreground">
+                        {activeTheme?.name ?? "Default"}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold uppercase text-muted-foreground">
                         Tokens:
                       </span>
-                      <span className="text-foreground">{activeTheme.tokens} variables</span>
+                      <span className="text-foreground">{activeTokensCount} variables</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex w-full flex-col gap-2 md:w-auto">
-                  <Button className="w-full md:w-auto" asChild>
-                    <a href={`/admin/themes/${activeTheme.id}`}>Edit Theme</a>
+                  <Button className="w-full md:w-auto" asChild disabled={!activeProfile}>
+                    <a href={`/admin/themes/${activeProfile?.id ?? ""}`}>Edit Theme</a>
                   </Button>
                   <Button variant="outline" className="w-full md:w-auto">
                     Duplicate
@@ -236,20 +304,40 @@ export function ThemesPage() {
                 Available Profiles
               </p>
               <Badge variant="outline" className="text-xs">
-                {profiles.length} profiles
+                {profilesForCards.length} profiles
               </Badge>
             </div>
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {profiles.map((profile) => (
+              {profilesForCards.map((profile) => (
                 <ThemeCard
                   key={profile.id}
                   theme={profile}
                   onEdit={() => openEditProfile(profile)}
                   onDuplicate={() => undefined}
-                  onActivate={() => undefined}
+                  onActivate={() => {
+                    if (profile.isActive) return;
+                    setIsSaving(true);
+                    activateThemeProfile(profile.id)
+                      .then(() => loadData())
+                      .then(() => dispatchThemeUpdated())
+                      .catch((err) => {
+                        if (isApiClientError(err)) {
+                          setError(err.message);
+                        } else {
+                          setError("Failed to activate profile.");
+                        }
+                      })
+                      .finally(() => setIsSaving(false));
+                  }}
                 />
               ))}
             </div>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading profiles...</p>
+            ) : null}
+            {error ? (
+              <p className="text-sm text-destructive">{error}</p>
+            ) : null}
           </section>
         </div>
 
@@ -258,7 +346,7 @@ export function ThemesPage() {
             <CardHeader className="space-y-1">
               <CardTitle>Profile Details</CardTitle>
               <CardDescription>
-                Configured tokens for {activeTheme.name}.
+                Configured tokens for {activeProfile?.name ?? "active theme"}.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -267,7 +355,7 @@ export function ThemesPage() {
                   Primary Palette
                 </p>
                 <div className="grid grid-cols-5 gap-2">
-                  {primaryPalette.map((color) => (
+                  {activeProfilePalette.map((color) => (
                     <div
                       key={color}
                       className="aspect-square rounded-md border border-border/60"
@@ -292,9 +380,7 @@ export function ThemesPage() {
                     <span className="text-[10px] uppercase text-muted-foreground">
                       H1 Display - 32px
                     </span>
-                    <p className="text-2xl font-semibold text-foreground">
-                      The quick fox
-                    </p>
+                    <p className="text-2xl font-semibold text-foreground">The quick fox</p>
                   </div>
                   <div className="space-y-1">
                     <span className="text-[10px] uppercase text-muted-foreground">
@@ -343,6 +429,37 @@ export function ThemesPage() {
         open={profileDrawerOpen}
         onOpenChange={setProfileDrawerOpen}
         profile={editingProfile}
+        themes={themes}
+        isSaving={isSaving}
+        onSave={async (input) => {
+          setIsSaving(true);
+          try {
+            if (editingProfile) {
+              await updateThemeProfile(editingProfile.id, {
+                name: input.name,
+                description: input.description,
+              });
+            } else {
+              await createThemeProfile({
+                name: input.name,
+                description: input.description,
+                themeName: input.themeName,
+              });
+            }
+            setProfileDrawerOpen(false);
+            setEditingProfile(null);
+            await loadData();
+            dispatchThemeUpdated();
+          } catch (err) {
+            if (isApiClientError(err)) {
+              setError(err.message);
+            } else {
+              setError("Failed to save theme profile.");
+            }
+          } finally {
+            setIsSaving(false);
+          }
+        }}
       />
       <ThemeExportDialog open={exportOpen} onOpenChange={setExportOpen} />
     </AdminShell>

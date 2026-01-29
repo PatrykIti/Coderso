@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { me } from "@/services/authClient";
 import { isApiClientError } from "@/services/apiClient";
@@ -46,6 +46,9 @@ import { WebhooksPage } from "@/ui/settings/WebhooksPage";
 import { PluginDetailsPage } from "@/ui/store/PluginDetailsPage";
 import { PluginStorePage } from "@/ui/store/PluginStorePage";
 import { PagePreview } from "@/ui/pages/PagePreview";
+import { toCssVariables } from "../../ui/theme/tokenCss";
+import { DEFAULT_TOKENS } from "../../services/theme/tokenTypes";
+import { mergeTokens } from "../../services/theme/tokenUtils";
 
 const publicRoutes = new Set([
   "/admin/login",
@@ -171,6 +174,11 @@ export function AdminApp({ path }: AdminAppProps) {
     error: null,
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const resolvedTokens = useMemo(
+    () => mergeTokens(DEFAULT_TOKENS, settingsState.tokens),
+    [settingsState.tokens]
+  );
+  const tokenCss = useMemo(() => toCssVariables(resolvedTokens), [resolvedTokens]);
 
   const match = useMemo(() => {
     const routes: RouteDefinition[] = [
@@ -332,6 +340,41 @@ export function AdminApp({ path }: AdminAppProps) {
     return resolveRoute(normalizedPath, routes);
   }, [normalizedPath, settingsSaving, settingsState]);
 
+  const refreshSettings = useCallback(() => {
+    setSettingsState((prev) => ({
+      ...prev,
+      status: "loading",
+      error: null,
+    }));
+
+    const fallbackState: SettingsState = {
+      status: "idle",
+      values: defaultSettingsValues,
+      tokens: defaultTokenOverrides,
+      error: null,
+    };
+
+    getSettings()
+      .then((payload) => {
+        const resolved = resolveSettingsPayload(payload, fallbackState);
+        setSettingsState((prev) => ({
+          ...prev,
+          status: "ready",
+          ...resolved,
+        }));
+      })
+      .catch((error) => {
+        const message = isApiClientError(error)
+          ? error.message
+          : "Failed to load settings.";
+        setSettingsState((prev) => ({
+          ...prev,
+          status: "error",
+          error: message,
+        }));
+      });
+  }, []);
+
   useEffect(() => {
     if (!isProtected) return;
     let active = true;
@@ -349,46 +392,16 @@ export function AdminApp({ path }: AdminAppProps) {
 
   useEffect(() => {
     if (authState !== "authenticated") return;
-    let active = true;
-    setSettingsState((prev) => ({
-      ...prev,
-      status: "loading",
-      error: null,
-    }));
-
-    const fallbackState: SettingsState = {
-      status: "idle",
-      values: defaultSettingsValues,
-      tokens: defaultTokenOverrides,
-      error: null,
-    };
-
-    getSettings()
-      .then((payload) => {
-        if (!active) return;
-        const resolved = resolveSettingsPayload(payload, fallbackState);
-        setSettingsState((prev) => ({
-          ...prev,
-          status: "ready",
-          ...resolved,
-        }));
-      })
-      .catch((error) => {
-        if (!active) return;
-        const message = isApiClientError(error)
-          ? error.message
-          : "Failed to load settings.";
-        setSettingsState((prev) => ({
-          ...prev,
-          status: "error",
-          error: message,
-        }));
-      });
-
-    return () => {
-      active = false;
-    };
+    refreshSettings();
   }, [authState]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (authState !== "authenticated") return;
+    const handler = () => refreshSettings();
+    window.addEventListener("theme:updated", handler);
+    return () => window.removeEventListener("theme:updated", handler);
+  }, [authState, refreshSettings]);
 
   useEffect(() => {
     if (!isPublic) return;
@@ -419,5 +432,10 @@ export function AdminApp({ path }: AdminAppProps) {
     return <Loading />;
   }
 
-  return <>{match.element}</>;
+  return (
+    <>
+      <style id="nextless-theme-tokens">{tokenCss}</style>
+      {match.element}
+    </>
+  );
 }

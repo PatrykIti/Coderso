@@ -407,8 +407,8 @@ Permissions: `store:browse`
 Permissions: `themes:read`, `themes:write`
 
 - `GET /themes`
-- `POST /themes/activate`
 - `GET /theme-profiles`
+- `GET /theme-profiles/:id`
 - `POST /theme-profiles`
 - `PATCH /theme-profiles/:id`
 - `POST /theme-profiles/:id/activate`

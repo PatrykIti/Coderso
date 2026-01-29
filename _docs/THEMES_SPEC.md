@@ -14,6 +14,20 @@ Cel: elastyczne themy, profile i szybkie przelaczanie wygladu strony.
 - `templates/` (page, content type, error)
 - `styles/` (base css)
 
+Przykladowy `theme.json`:
+```json
+{
+  "name": "default",
+  "version": "1.0.0",
+  "templates": ["page", "content", "error"],
+  "tokens": {
+    "colors": { "primary": "#111111" },
+    "neutrals": { "bg": "#ffffff" }
+  },
+  "description": "Core default theme"
+}
+```
+
 ## Theme profiles (v1)
 
 Profil zawiera:
@@ -29,9 +43,14 @@ Zasada:
 
 ## Token pipeline
 
-- Theme dostarcza domyslne tokeny.
+- Theme dostarcza domyslne tokeny z `theme.json`.
 - Globalne override z `settings.design.tokens`.
-- Profil theme (v1) moze nadpisac tokeny na poziomie profilu (v1.1+).
+- Profil theme moze nadpisac tokeny na poziomie profilu.
+
+Kolejnosc merge:
+1. Theme defaults (`theme.json`)
+2. Global overrides (`design.tokens`)
+3. Profile overrides (`theme_profiles.tokens`)
 
 ## Page routing per profile
 
@@ -68,8 +87,8 @@ Conflict rules:
 ## API (admin)
 
 - `GET /themes`
-- `POST /themes/activate`
 - `GET /theme-profiles`
+- `GET /theme-profiles/:id`
 - `POST /theme-profiles`
 - `PATCH /theme-profiles/:id`
 - `POST /theme-profiles/:id/activate`

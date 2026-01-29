@@ -143,26 +143,22 @@ Zasady:
 
 ## Themes
 
-`themes`
-- id (uuid, pk)
-- name (unique)
-- version
-- is_active (bool)
-- created_at
+Theme'y sa dostarczane z `/themes` (foldery na dysku). W bazie trzymamy tylko
+profile oraz mapowanie tras.
 
 `theme_profiles`
 - id (uuid, pk)
 - name
-- theme_id (fk themes)
+- description
+- theme_name (string, name z `theme.json`)
 - tokens (jsonb)
-- settings (jsonb)
 - is_active (bool)
 - created_at
 - updated_at
 
 `theme_routes`
 - id (uuid, pk)
-- theme_profile_id (fk theme_profiles)
+- profile_id (fk theme_profiles)
 - path
 - page_id (fk pages)
 
@@ -227,9 +223,8 @@ Zasady:
 - content_entries.status
 - media.created_at
 - menu_items.menu_id
-- themes.name
-- theme_profiles.theme_id
-- theme_routes.theme_profile_id
+- theme_profiles.theme_name
+- theme_routes.profile_id
 - sessions.user_id
 - audit_logs.created_at
 - preview_tokens.token_hash

@@ -9,7 +9,7 @@ test("ThemesPage renders theme grid and actions", () => {
   expect(html).toContain("Themes");
   expect(html).toContain("Active Theme");
   expect(html).toContain("Available Profiles");
-  expect(html).toContain("Glassmorphism UI");
-  expect(html).toContain("Activate");
-  expect(html).toContain("Duplicate");
+  expect(html).toContain("New Profile");
+  expect(html).toContain("Export Config");
+  expect(html).toContain("Loading profiles");
 });

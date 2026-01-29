@@ -9,6 +9,8 @@ export type ThemeProfile = {
   id: string;
   name: string;
   description: string;
+  themeName: string;
+  tokens?: Record<string, unknown>;
   palette: string[];
   icon: React.ReactNode;
   iconClassName: string;

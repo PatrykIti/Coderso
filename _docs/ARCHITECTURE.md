@@ -200,6 +200,11 @@ Client:
 
 /themes
   /default
+  /<theme-name>
+
+Theme registry:
+- Core skanuje `/themes` przy starcie i laduje `theme.json`.
+- Meta (name/version/tokens/templates) trzymane w memory cache.
 
 /dist                   (output build)
   /client

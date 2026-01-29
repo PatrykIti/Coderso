@@ -95,6 +95,11 @@ Project Change Log.
 | 068 | 2026-01-28 | Media storage and wiring | CMS/Media |
 | 069 | 2026-01-28 | Storage settings runtime | CMS/Media |
 | 070 | 2026-01-29 | Settings UI wiring | Admin/UI |
+| 071 | 2026-01-29 | Themes registry | CMS/Themes |
+| 072 | 2026-01-29 | Theme profiles and routes | CMS/Themes |
+| 073 | 2026-01-29 | Template resolution | CMS/Themes |
+| 074 | 2026-01-29 | Themes admin API | CMS/Themes |
+| 075 | 2026-01-29 | Themes UI wiring | Admin/UI |
 
 
 ---

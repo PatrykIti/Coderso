@@ -7,6 +7,7 @@ import { createRouter, matchRoute, normalizePath, type RouteContext } from "./ro
 import { registerAllRoutes } from "./routes";
 import { getMediaStorageAdapter } from "../services/media/storage";
 import { getStorageSettingsInternal } from "../services/settings/storageSettings";
+import { ensureThemesLoaded } from "../themes/registry";
 
 const API_PREFIX = "/admin/api";
 const ADMIN_PREFIX = "/admin";
@@ -234,6 +235,9 @@ const handleMedia = async (req: Request) => {
 export function startHttpServer(options: HttpServerOptions = {}) {
   const port = options.port ?? Number(process.env.PORT ?? 3000);
   const adminDevUrl = options.adminDevUrl ?? process.env.VITE_DEV_SERVER_URL;
+  void ensureThemesLoaded().catch((error) => {
+    console.warn("Theme registry failed to load:", error);
+  });
 
   return Bun.serve({
     port,
