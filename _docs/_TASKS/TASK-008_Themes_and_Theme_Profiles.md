@@ -5,7 +5,7 @@
 **Category:** CMS/Themes
 **Estimated Effort:** Large
 **Dependencies:** TASK-001, TASK-007, TASK-024
-**Status:** Done (2026-01-29)
+**Status:** In Progress (2026-01-29)
 
 ---
 
@@ -29,5 +29,6 @@ profiles (front 1, front 2).
 - `TASK-008-03_Template_Resolution_and_Rendering.md`
 - `TASK-008-04_Themes_Admin_API.md`
 - `TASK-008-05_Themes_Admin_UI_Wiring.md`
+- `TASK-008-06_Admin_UI_Theme_Templates.md`
 
 Kazdy sub-task zawiera szczegolowe checklisty, przyklady i testy.

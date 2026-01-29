@@ -122,6 +122,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-008-03 | Template Resolution and Rendering | Medium | Medium | Resolver order + fallback |
 | TASK-008-04 | Themes Admin API | Medium | Medium | /themes + profiles endpoints |
 | TASK-008-05 | Themes Admin UI Wiring | Medium | Medium | Wire themes UI to API |
+| TASK-008-06 | Admin UI Theme Templates | High | Large | UI-only templates + profiles split |
 | TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
 | TASK-006-09 | Login UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
 | TASK-006-10 | Two Factor UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
