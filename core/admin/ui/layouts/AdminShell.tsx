@@ -46,7 +46,7 @@ export function AdminShell({
   return (
     <div
       className={cn(
-        "flex h-screen w-full overflow-hidden bg-muted/30",
+        "flex h-screen w-full overflow-hidden bg-[var(--admin-base-surface)]",
         className
       )}
     >

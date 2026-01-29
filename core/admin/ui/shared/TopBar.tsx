@@ -23,17 +23,17 @@ export function TopBar({
   return (
     <header
       className={cn(
-        "flex h-16 shrink-0 items-center justify-between border-b bg-background px-6",
+        "flex h-16 shrink-0 items-center justify-between border-b border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] px-6",
         className
       )}
     >
-      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+      <div className="flex items-center gap-4 text-sm text-[var(--admin-topbar-text)]">
         {navToggle}
         {breadcrumbs ?? (
           <div className="flex items-center gap-2">
             <span>Home</span>
-            <span className="text-muted-foreground/50">/</span>
-            <span className="text-foreground">Dashboard</span>
+            <span className="text-[var(--admin-topbar-text)]/60">/</span>
+            <span className="text-[var(--admin-base-text)]">Dashboard</span>
           </div>
         )}
       </div>

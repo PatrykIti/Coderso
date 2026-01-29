@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Theme System  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-008-05, TASK-007-05, TASK-006-27, TASK-006-28  
-**Status:** TODO  
+**Status:** Done (2026-01-29)  
 
 ---
 
@@ -188,5 +188,4 @@ Wymóg: **każdy token ma 1:1 wpływ na UI**.
 
 ## Changelog Entry (planned)
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-admin-theme-templates.md`
-
+- `_docs/_CHANGELOG/076-2026-01-29-admin-ui-themes.md`

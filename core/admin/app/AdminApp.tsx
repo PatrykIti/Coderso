@@ -3,6 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { me } from "@/services/authClient";
 import { isApiClientError } from "@/services/apiClient";
 import { getSettings, updateSettings } from "@/services/settingsClient";
+import {
+  listAdminThemeProfiles,
+  listAdminThemeTemplates,
+} from "@/services/adminThemeClient";
 import { DashboardPage } from "@/ui/dashboard/DashboardPage";
 import { AnalyticsPage } from "@/ui/analytics/AnalyticsPage";
 import { AuditList } from "@/ui/audit/AuditList";
@@ -29,7 +33,6 @@ import { AccessLogsPage } from "@/ui/security/AccessLogsPage";
 import { SeoManagerPage } from "@/ui/seo/SeoManagerPage";
 import { UsersRolesPage } from "@/ui/users/UsersRolesPage";
 import { ThemesPage } from "@/ui/themes/ThemesPage";
-import { ThemeEditorPage } from "@/ui/themes/ThemeEditorPage";
 import { WidgetLibraryPage } from "@/ui/widgets/WidgetLibraryPage";
 import { ApiKeysPage } from "@/ui/settings/ApiKeysPage";
 import { EmailSettingsPage } from "@/ui/settings/EmailSettingsPage";
@@ -39,16 +42,14 @@ import { IpAllowlistPage } from "@/ui/settings/IpAllowlistPage";
 import { LoginAlertsPage } from "@/ui/settings/LoginAlertsPage";
 import { SecuritySettingsPage } from "@/ui/settings/SecuritySettingsPage";
 import { SessionsPage } from "@/ui/settings/SessionsPage";
-import { SettingsPage } from "@/ui/settings/SettingsPage";
-import type { TokenOverrides } from "@/ui/settings/DesignTokensEditor";
 import { StorageSettingsPage } from "@/ui/settings/StorageSettingsPage";
 import { WebhooksPage } from "@/ui/settings/WebhooksPage";
 import { PluginDetailsPage } from "@/ui/store/PluginDetailsPage";
 import { PluginStorePage } from "@/ui/store/PluginStorePage";
 import { PagePreview } from "@/ui/pages/PagePreview";
-import { toCssVariables } from "../../ui/theme/tokenCss";
-import { DEFAULT_TOKENS } from "../../services/theme/tokenTypes";
-import { mergeTokens } from "../../services/theme/tokenUtils";
+import { toAdminThemeCssVariables } from "../../ui/theme/tokenCss";
+import { DEFAULT_ADMIN_THEME_TOKENS } from "../../services/adminThemes/tokenTypes";
+import { mergeAdminThemeTokens } from "../../services/adminThemes/tokenUtils";
 
 const publicRoutes = new Set([
   "/admin/login",
@@ -95,12 +96,10 @@ const defaultSettingsValues: SettingsValues = {
   siteName: "Nextless",
   siteLocale: "en",
 };
-const defaultTokenOverrides: TokenOverrides = {};
 
 type SettingsState = {
   status: "idle" | "loading" | "ready" | "error";
   values: SettingsValues;
-  tokens: TokenOverrides;
   error: string | null;
 };
 
@@ -129,9 +128,6 @@ const Loading = () => (
   </div>
 );
 
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
 const resolveSettingsPayload = (
   payload: Record<string, unknown>,
   fallback: SettingsState
@@ -144,13 +140,8 @@ const resolveSettingsPayload = (
     typeof payload["site.locale"] === "string"
       ? payload["site.locale"]
       : fallback.values.siteLocale;
-  const tokens = isPlainObject(payload["design.tokens"])
-    ? (payload["design.tokens"] as TokenOverrides)
-    : fallback.tokens;
-
   return {
     values: { siteName, siteLocale },
-    tokens,
   };
 };
 
@@ -170,15 +161,16 @@ export function AdminApp({ path }: AdminAppProps) {
   const [settingsState, setSettingsState] = useState<SettingsState>({
     status: "idle",
     values: defaultSettingsValues,
-    tokens: defaultTokenOverrides,
     error: null,
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const resolvedTokens = useMemo(
-    () => mergeTokens(DEFAULT_TOKENS, settingsState.tokens),
-    [settingsState.tokens]
+  const [adminThemeTokens, setAdminThemeTokens] = useState(
+    DEFAULT_ADMIN_THEME_TOKENS
   );
-  const tokenCss = useMemo(() => toCssVariables(resolvedTokens), [resolvedTokens]);
+  const tokenCss = useMemo(
+    () => toAdminThemeCssVariables(adminThemeTokens),
+    [adminThemeTokens]
+  );
 
   const match = useMemo(() => {
     const routes: RouteDefinition[] = [
@@ -209,25 +201,22 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/admin/users", element: <UsersRolesPage /> },
       { pattern: "/admin/roles", element: <PermissionsMatrixPage /> },
       { pattern: "/admin/themes", element: <ThemesPage /> },
-      { pattern: "/admin/themes/:id", element: <ThemeEditorPage /> },
       { pattern: "/admin/widgets", element: <WidgetLibraryPage /> },
       {
         pattern: "/admin/settings",
         element: (
-          <SettingsPage
+          <GeneralSettingsPage
             values={settingsState.values}
-            tokens={settingsState.tokens}
             isLoading={settingsState.status === "loading"}
             isSaving={settingsSaving}
             error={settingsState.error}
-            onSave={async ({ values, tokens }) => {
+            onSave={async (values) => {
               setSettingsSaving(true);
               setSettingsState((prev) => ({ ...prev, error: null }));
               try {
                 const updated = await updateSettings({
                   "site.name": values.siteName,
                   "site.locale": values.siteLocale,
-                  "design.tokens": tokens,
                 });
                 setSettingsState((prev) => {
                   const resolved = resolveSettingsPayload(updated, prev);
@@ -240,36 +229,7 @@ export function AdminApp({ path }: AdminAppProps) {
               } catch (error) {
                 const message = isApiClientError(error)
                   ? error.message
-                  : "Failed to save settings.";
-                setSettingsState((prev) => ({
-                  ...prev,
-                  error: message,
-                  status: "error",
-                }));
-                throw error;
-              } finally {
-                setSettingsSaving(false);
-              }
-            }}
-            onResetTokens={async () => {
-              setSettingsSaving(true);
-              setSettingsState((prev) => ({ ...prev, error: null }));
-              try {
-                const updated = await updateSettings({
-                  "design.tokens": {},
-                });
-                setSettingsState((prev) => {
-                  const resolved = resolveSettingsPayload(updated, prev);
-                  return {
-                    ...prev,
-                    status: "ready",
-                    ...resolved,
-                  };
-                });
-              } catch (error) {
-                const message = isApiClientError(error)
-                  ? error.message
-                  : "Failed to reset tokens.";
+                  : "Failed to save general settings.";
                 setSettingsState((prev) => ({
                   ...prev,
                   error: message,
@@ -350,7 +310,6 @@ export function AdminApp({ path }: AdminAppProps) {
     const fallbackState: SettingsState = {
       status: "idle",
       values: defaultSettingsValues,
-      tokens: defaultTokenOverrides,
       error: null,
     };
 
@@ -375,6 +334,25 @@ export function AdminApp({ path }: AdminAppProps) {
       });
   }, []);
 
+  const refreshAdminTheme = useCallback(() => {
+    const fallback = DEFAULT_ADMIN_THEME_TOKENS;
+    Promise.all([listAdminThemeTemplates(), listAdminThemeProfiles()])
+      .then(([templatesResult, profilesResult]) => {
+        const templates = templatesResult.items;
+        const profiles = profilesResult.items;
+        const activeProfile =
+          profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
+        const template = activeProfile
+          ? templates.find((item) => item.id === activeProfile.templateId) ?? null
+          : templates[0] ?? null;
+        const resolved = mergeAdminThemeTokens(fallback, template?.tokens ?? null);
+        setAdminThemeTokens(resolved);
+      })
+      .catch(() => {
+        setAdminThemeTokens(fallback);
+      });
+  }, []);
+
   useEffect(() => {
     if (!isProtected) return;
     let active = true;
@@ -396,12 +374,20 @@ export function AdminApp({ path }: AdminAppProps) {
   }, [authState, refreshSettings]);
 
   useEffect(() => {
+    if (authState !== "authenticated") return;
+    refreshAdminTheme();
+  }, [authState, refreshAdminTheme]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     if (authState !== "authenticated") return;
-    const handler = () => refreshSettings();
+    const handler = () => {
+      refreshSettings();
+      refreshAdminTheme();
+    };
     window.addEventListener("theme:updated", handler);
     return () => window.removeEventListener("theme:updated", handler);
-  }, [authState, refreshSettings]);
+  }, [authState, refreshAdminTheme, refreshSettings]);
 
   useEffect(() => {
     if (!isPublic) return;

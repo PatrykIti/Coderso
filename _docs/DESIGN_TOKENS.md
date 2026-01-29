@@ -9,9 +9,10 @@ niestandardowych klas Tailwind w runtime.
 - Pluginy powinny uzywac tokenow zamiast hardcode kolorow.
 - Wszelkie niestandardowe style pluginu musza byc w `dist/style.css`.
 - Core dostarcza domyslne wartosci tokenow z aktywnego theme (np. `/themes/default`).
-- Admin moze zmieniac wartosci tokenow na poziomie global settings.
-- Override tokenow jest przechowywany w `settings` pod kluczem `design.tokens`.
-- Merge order: theme defaults -> global overrides (`design.tokens`) -> profile overrides.
+- Admin moze zmieniac wartosci **site tokens** na poziomie global settings.
+- Override tokenow frontu jest przechowywany w `settings` pod kluczem `design.tokens`.
+- Merge order (front): theme defaults -> global overrides (`design.tokens`) -> profile overrides.
+- **Admin UI** ma osobny zestaw tokenow (patrz sekcja niżej) i nie używa `design.tokens`.
 
 ## Token groups (v1)
 
@@ -41,9 +42,32 @@ theme: {
 
 ## Admin UI (shadcn + Tailwind v4)
 
-- Admin UI mapuje tokeny na zmienne shadcn (`--background`, `--foreground`, itp.).
+Admin UI korzysta z osobnych **Admin UI Theme Tokens** przechowywanych w DB.
+
+- Tokeny admina sa przechowywane w `admin_theme_templates` i aktywowane przez `admin_theme_profiles`.
+- UI edycji to **Visual → Admin UI Theme** (tylko pickery, JSON tylko export/import).
+- Admin UI mapuje tokeny na zmienne shadcn (`--background`, `--foreground`, itp.) przez `--admin-*`.
 - Tailwind v4 uzywa `@theme` w CSS do generowania klas `bg-background`, `text-foreground`, itd.
 - Mapowanie jest w `core/admin/styles/globals.css`.
+
+### Admin UI Theme Tokens (granular)
+
+Minimalny zestaw grup:
+
+```ts
+base: { bg, surface, text, border }
+buttons: {
+  primary: { bg, text, hoverBg, hoverText },
+  secondary: { bg, text, hoverBg, hoverText },
+  outline: { border, text, hoverBg, hoverText },
+  ghost: { hoverBg, hoverText }
+}
+inputs: { bg, border, text, placeholder, focusRing }
+sidebar: { bg, text, activeBg, activeText, hoverBg }
+topbar: { bg, text, border }
+card: { bg, border }
+state: { success, warning, danger }
+```
 
 ## Example usage
 

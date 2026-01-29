@@ -85,6 +85,13 @@
       "when": 1769697955008,
       "tag": "0011_themes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1769721449060,
+      "tag": "0012_admin_themes",
+      "breakpoints": true
     }
   ]
 }

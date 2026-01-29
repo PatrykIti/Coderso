@@ -100,6 +100,8 @@ Project Change Log.
 | 073 | 2026-01-29 | Template resolution | CMS/Themes |
 | 074 | 2026-01-29 | Themes admin API | CMS/Themes |
 | 075 | 2026-01-29 | Themes UI wiring | Admin/UI |
+| 076 | 2026-01-29 | Admin UI theme templates | Admin/UI |
+| 077 | 2026-01-29 | Admin UI theme tabs | Admin/UI |
 
 
 ---

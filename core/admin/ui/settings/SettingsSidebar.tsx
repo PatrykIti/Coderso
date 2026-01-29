@@ -3,7 +3,6 @@ import {
   KeyRound,
   Link2,
   Mail,
-  Palette,
   Plug,
   Settings,
   Shield,
@@ -13,7 +12,6 @@ import { cn } from "@/lib/utils";
 
 const items = [
   { id: "general", label: "General", icon: Settings, href: "/admin/settings/general" },
-  { id: "design-tokens", label: "Design Tokens", icon: Palette, href: "/admin/settings" },
   { id: "security", label: "Security", icon: Shield, href: "/admin/settings/security" },
   { id: "api-keys", label: "API Keys", icon: KeyRound, href: "/admin/settings/api-keys" },
   { id: "webhooks", label: "Webhooks", icon: Link2, href: "/admin/settings/webhooks" },
@@ -26,7 +24,7 @@ type SettingsSidebarProps = {
   activeId?: string;
 };
 
-export function SettingsSidebar({ activeId = "design-tokens" }: SettingsSidebarProps) {
+export function SettingsSidebar({ activeId = "general" }: SettingsSidebarProps) {
   return (
     <div className="flex h-full flex-col gap-4 p-4">
       <p className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">

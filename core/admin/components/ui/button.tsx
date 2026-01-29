@@ -9,15 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default:
+          "bg-[var(--admin-button-primary-bg)] text-[var(--admin-button-primary-text)] hover:bg-[var(--admin-button-primary-hover-bg)] hover:text-[var(--admin-button-primary-hover-text)]",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border border-[var(--admin-button-outline-border)] bg-transparent text-[var(--admin-button-outline-text)] shadow-xs hover:bg-[var(--admin-button-outline-hover-bg)] hover:text-[var(--admin-button-outline-hover-text)]",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-[var(--admin-button-secondary-bg)] text-[var(--admin-button-secondary-text)] hover:bg-[var(--admin-button-secondary-hover-bg)] hover:text-[var(--admin-button-secondary-hover-text)]",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+          "hover:bg-[var(--admin-button-ghost-hover-bg)] hover:text-[var(--admin-button-ghost-hover-text)]",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

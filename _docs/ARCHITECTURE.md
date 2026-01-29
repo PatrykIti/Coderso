@@ -206,6 +206,12 @@ Theme registry:
 - Core skanuje `/themes` przy starcie i laduje `theme.json`.
 - Meta (name/version/tokens/templates) trzymane w memory cache.
 
+Admin UI themes:
+- **Admin UI Theme** jest osobnym systemem (nie korzysta z `/themes`).
+- Template'y i profile admina sa trzymane w DB (`admin_theme_templates`, `admin_theme_profiles`).
+- Admin UI korzysta z granularnych tokenow (`--admin-*`) mapowanych do shadcn vars w `core/admin/styles/globals.css`.
+- UI: **Visual → Admin UI Theme** (pickery + export/import JSON).
+
 /dist                   (output build)
   /client
   /server

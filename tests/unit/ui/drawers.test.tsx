@@ -10,7 +10,7 @@ import type { AccessLogItem } from "../../../core/admin/ui/security/types";
 import { WidgetDetailsDrawer } from "../../../core/admin/ui/widgets/WidgetDetailsDrawer";
 import type { WidgetItem } from "../../../core/admin/ui/widgets/types";
 import { ThemeProfileDrawer } from "../../../core/admin/ui/themes/ThemeProfileDrawer";
-import type { ThemeProfile } from "../../../core/admin/ui/themes/ThemeCard";
+import type { AdminThemeProfileCard } from "../../../core/admin/ui/themes/ThemeProfileCard";
 import { IntegrationDrawer } from "../../../core/admin/ui/settings/IntegrationDrawer";
 import { EmailLogsDrawer } from "../../../core/admin/ui/settings/EmailLogsDrawer";
 
@@ -30,21 +30,58 @@ const widget: WidgetItem = {
   categoryLabel: "Hero Section",
 };
 
-const themeProfile: ThemeProfile = {
+const themeProfile: AdminThemeProfileCard = {
   id: "neo-minimalist",
   name: "Neo Minimalist",
   description: "Minimal layout.",
-  themeName: "default",
+  templateId: "template-1",
+  templateName: "Default Admin",
   palette: ["#0f172a"],
-  icon: null,
-  iconClassName: "bg-primary text-primary-foreground",
 };
 
-const themes = [
+const templates = [
   {
-    name: "default",
-    version: "1.0.0",
-    templates: ["page", "content"],
+    id: "template-1",
+    name: "Default Admin",
+    description: null,
+    tokens: {
+      base: {
+        bg: "#ffffff",
+        surface: "#f8fafc",
+        text: "#0f172a",
+        border: "#e2e8f0",
+      },
+      buttons: {
+        primary: { bg: "#1d4ed8", text: "#fff", hoverBg: "#1e40af", hoverText: "#fff" },
+        secondary: { bg: "#0f766e", text: "#fff", hoverBg: "#115e59", hoverText: "#fff" },
+        outline: {
+          border: "#e2e8f0",
+          text: "#0f172a",
+          hoverBg: "#f1f5f9",
+          hoverText: "#0f172a",
+        },
+        ghost: { hoverBg: "#f1f5f9", hoverText: "#0f172a" },
+      },
+      inputs: {
+        bg: "#ffffff",
+        border: "#e2e8f0",
+        text: "#0f172a",
+        placeholder: "#94a3b8",
+        focusRing: "#1d4ed8",
+      },
+      sidebar: {
+        bg: "#ffffff",
+        text: "#64748b",
+        activeBg: "#e0f2fe",
+        activeText: "#1d4ed8",
+        hoverBg: "#f1f5f9",
+      },
+      topbar: { bg: "#ffffff", text: "#64748b", border: "#e2e8f0" },
+      card: { bg: "#ffffff", border: "#e2e8f0" },
+      state: { success: "#16a34a", warning: "#f59e0b", danger: "#ef4444" },
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   },
 ];
 
@@ -99,7 +136,7 @@ test("ThemeProfileDrawer renders profile name", () => {
       open
       onOpenChange={() => undefined}
       profile={themeProfile}
-      themes={themes}
+      templates={templates}
     />
   );
 

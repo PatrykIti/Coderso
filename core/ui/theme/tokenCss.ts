@@ -1,4 +1,5 @@
 import type { DesignTokens } from "../../services/theme/tokenTypes";
+import type { AdminThemeTokens } from "../../services/adminThemes/tokenTypes";
 
 export function toCssVariables(tokens: DesignTokens) {
   const entries = [
@@ -26,6 +27,49 @@ export function toCssVariables(tokens: DesignTokens) {
     `--text-lg:${tokens.typography.lg}`,
     `--text-xl:${tokens.typography.xl}`,
     `--text-2xl:${tokens.typography["2xl"]}`,
+  ];
+
+  return `:root{${entries.join(";")};}`;
+}
+
+export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
+  const entries = [
+    `--admin-base-bg:${tokens.base.bg}`,
+    `--admin-base-surface:${tokens.base.surface}`,
+    `--admin-base-text:${tokens.base.text}`,
+    `--admin-base-border:${tokens.base.border}`,
+    `--admin-button-primary-bg:${tokens.buttons.primary.bg}`,
+    `--admin-button-primary-text:${tokens.buttons.primary.text}`,
+    `--admin-button-primary-hover-bg:${tokens.buttons.primary.hoverBg}`,
+    `--admin-button-primary-hover-text:${tokens.buttons.primary.hoverText}`,
+    `--admin-button-secondary-bg:${tokens.buttons.secondary.bg}`,
+    `--admin-button-secondary-text:${tokens.buttons.secondary.text}`,
+    `--admin-button-secondary-hover-bg:${tokens.buttons.secondary.hoverBg}`,
+    `--admin-button-secondary-hover-text:${tokens.buttons.secondary.hoverText}`,
+    `--admin-button-outline-border:${tokens.buttons.outline.border}`,
+    `--admin-button-outline-text:${tokens.buttons.outline.text}`,
+    `--admin-button-outline-hover-bg:${tokens.buttons.outline.hoverBg}`,
+    `--admin-button-outline-hover-text:${tokens.buttons.outline.hoverText}`,
+    `--admin-button-ghost-hover-bg:${tokens.buttons.ghost.hoverBg}`,
+    `--admin-button-ghost-hover-text:${tokens.buttons.ghost.hoverText}`,
+    `--admin-input-bg:${tokens.inputs.bg}`,
+    `--admin-input-border:${tokens.inputs.border}`,
+    `--admin-input-text:${tokens.inputs.text}`,
+    `--admin-input-placeholder:${tokens.inputs.placeholder}`,
+    `--admin-input-ring:${tokens.inputs.focusRing}`,
+    `--admin-sidebar-bg:${tokens.sidebar.bg}`,
+    `--admin-sidebar-text:${tokens.sidebar.text}`,
+    `--admin-sidebar-active-bg:${tokens.sidebar.activeBg}`,
+    `--admin-sidebar-active-text:${tokens.sidebar.activeText}`,
+    `--admin-sidebar-hover-bg:${tokens.sidebar.hoverBg}`,
+    `--admin-topbar-bg:${tokens.topbar.bg}`,
+    `--admin-topbar-text:${tokens.topbar.text}`,
+    `--admin-topbar-border:${tokens.topbar.border}`,
+    `--admin-card-bg:${tokens.card.bg}`,
+    `--admin-card-border:${tokens.card.border}`,
+    `--admin-state-success:${tokens.state.success}`,
+    `--admin-state-warning:${tokens.state.warning}`,
+    `--admin-state-danger:${tokens.state.danger}`,
   ];
 
   return `:root{${entries.join(";")};}`;
@@ -76,5 +120,48 @@ export function toCssVariableMap(tokens: DesignTokens): Record<string, string> {
     "--ring": "var(--color-primary)",
     "--destructive": "#ef4444",
     "--destructive-foreground": "#ffffff",
+  };
+}
+
+export function toAdminThemeCssVariableMap(
+  tokens: AdminThemeTokens
+): Record<string, string> {
+  return {
+    "--admin-base-bg": tokens.base.bg,
+    "--admin-base-surface": tokens.base.surface,
+    "--admin-base-text": tokens.base.text,
+    "--admin-base-border": tokens.base.border,
+    "--admin-button-primary-bg": tokens.buttons.primary.bg,
+    "--admin-button-primary-text": tokens.buttons.primary.text,
+    "--admin-button-primary-hover-bg": tokens.buttons.primary.hoverBg,
+    "--admin-button-primary-hover-text": tokens.buttons.primary.hoverText,
+    "--admin-button-secondary-bg": tokens.buttons.secondary.bg,
+    "--admin-button-secondary-text": tokens.buttons.secondary.text,
+    "--admin-button-secondary-hover-bg": tokens.buttons.secondary.hoverBg,
+    "--admin-button-secondary-hover-text": tokens.buttons.secondary.hoverText,
+    "--admin-button-outline-border": tokens.buttons.outline.border,
+    "--admin-button-outline-text": tokens.buttons.outline.text,
+    "--admin-button-outline-hover-bg": tokens.buttons.outline.hoverBg,
+    "--admin-button-outline-hover-text": tokens.buttons.outline.hoverText,
+    "--admin-button-ghost-hover-bg": tokens.buttons.ghost.hoverBg,
+    "--admin-button-ghost-hover-text": tokens.buttons.ghost.hoverText,
+    "--admin-input-bg": tokens.inputs.bg,
+    "--admin-input-border": tokens.inputs.border,
+    "--admin-input-text": tokens.inputs.text,
+    "--admin-input-placeholder": tokens.inputs.placeholder,
+    "--admin-input-ring": tokens.inputs.focusRing,
+    "--admin-sidebar-bg": tokens.sidebar.bg,
+    "--admin-sidebar-text": tokens.sidebar.text,
+    "--admin-sidebar-active-bg": tokens.sidebar.activeBg,
+    "--admin-sidebar-active-text": tokens.sidebar.activeText,
+    "--admin-sidebar-hover-bg": tokens.sidebar.hoverBg,
+    "--admin-topbar-bg": tokens.topbar.bg,
+    "--admin-topbar-text": tokens.topbar.text,
+    "--admin-topbar-border": tokens.topbar.border,
+    "--admin-card-bg": tokens.card.bg,
+    "--admin-card-border": tokens.card.border,
+    "--admin-state-success": tokens.state.success,
+    "--admin-state-warning": tokens.state.warning,
+    "--admin-state-danger": tokens.state.danger,
   };
 }

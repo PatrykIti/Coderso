@@ -14,41 +14,41 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import type { ThemeProfile } from "./ThemeCard";
-import type { ThemeMeta } from "@/services/themeClient";
-import { DEFAULT_TOKENS } from "../../../services/theme/tokenTypes";
-import { mergeTokens } from "../../../services/theme/tokenUtils";
+import type { AdminThemeProfileCard } from "./ThemeProfileCard";
+import type { AdminThemeTemplate } from "@/services/adminThemeClient";
+import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../services/adminThemes/tokenTypes";
+import { mergeAdminThemeTokens } from "../../../services/adminThemes/tokenUtils";
 
-const fallbackPalette = ["#e2e8f0", "#94a3b8", "#0f172a", "#f8fafc", "#64748b"];
-
-const resolvePalette = (theme: ThemeMeta | null) => {
-  if (!theme?.tokens) return fallbackPalette;
-  const resolved = mergeTokens(DEFAULT_TOKENS, theme.tokens);
+const resolvePalette = (template: AdminThemeTemplate | null) => {
+  const resolved = mergeAdminThemeTokens(
+    DEFAULT_ADMIN_THEME_TOKENS,
+    template?.tokens ?? null
+  );
   return [
-    resolved.colors.primary,
-    resolved.colors.secondary,
-    resolved.colors.accent,
-    resolved.neutrals.surface,
-    resolved.neutrals.text,
+    resolved.buttons.primary.bg,
+    resolved.buttons.secondary.bg,
+    resolved.buttons.outline.border,
+    resolved.base.surface,
+    resolved.base.text,
   ];
 };
 
 type ThemeProfileDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  themes: ThemeMeta[];
-  profile?: ThemeProfile | null;
+  templates: AdminThemeTemplate[];
+  profile?: AdminThemeProfileCard | null;
   isSaving?: boolean;
   onSave?: (input: {
     name: string;
     description: string;
-    themeName: string;
+    templateId: string;
   }) => Promise<void> | void;
 };
 
 type ThemeProfileFormProps = {
-  profile?: ThemeProfile | null;
-  themes: ThemeMeta[];
+  profile?: AdminThemeProfileCard | null;
+  templates: AdminThemeTemplate[];
   isSaving: boolean;
   onSave?: ThemeProfileDrawerProps["onSave"];
   onClose: () => void;
@@ -56,28 +56,31 @@ type ThemeProfileFormProps = {
 
 function ThemeProfileForm({
   profile,
-  themes,
+  templates,
   isSaving,
   onSave,
   onClose,
 }: ThemeProfileFormProps) {
-  const defaultThemeName = themes[0]?.name ?? "";
+  const defaultTemplateId = templates[0]?.id ?? "";
   const [name, setName] = useState(profile?.name ?? "");
   const [description, setDescription] = useState(profile?.description ?? "");
-  const [themeName, setThemeName] = useState(profile?.themeName ?? defaultThemeName);
+  const [templateId, setTemplateId] = useState(
+    profile?.templateId ?? defaultTemplateId
+  );
+  const resolvedTemplateId = templateId || templates[0]?.id || "";
 
   const handleSave = async () => {
     if (!onSave) return;
-    await onSave({ name, description, themeName });
+    await onSave({ name, description, templateId: resolvedTemplateId });
   };
 
-  const themeOptions = useMemo(
-    () => themes.map((theme) => ({ value: theme.name, label: theme.name })),
-    [themes]
+  const templateOptions = useMemo(
+    () => templates.map((template) => ({ value: template.id, label: template.name })),
+    [templates]
   );
   const selectedTheme = useMemo(
-    () => themes.find((theme) => theme.name === themeName) ?? null,
-    [themes, themeName]
+    () => templates.find((template) => template.id === resolvedTemplateId) ?? null,
+    [templates, resolvedTemplateId]
   );
   const palette = useMemo(() => resolvePalette(selectedTheme), [selectedTheme]);
 
@@ -125,16 +128,16 @@ function ThemeProfileForm({
               Theme Template
             </label>
             <Select
-              value={themeName}
-              onValueChange={setThemeName}
-              disabled={isSaving || themeOptions.length === 0}
+              value={resolvedTemplateId}
+              onValueChange={setTemplateId}
+              disabled={isSaving || templateOptions.length === 0}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select theme" />
               </SelectTrigger>
               <SelectContent>
-                {themeOptions.length > 0 ? (
-                  themeOptions.map((option) => (
+                {templateOptions.length > 0 ? (
+                  templateOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       {option.label}
                     </SelectItem>
@@ -147,8 +150,7 @@ function ThemeProfileForm({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Profiles inherit defaults from the selected theme and override tokens in the
-              editor.
+              Profiles simply point to a template and can be activated anytime.
             </p>
           </div>
           <Separator />
@@ -188,7 +190,10 @@ function ThemeProfileForm({
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={isSaving || !name.trim() || !themeName}>
+        <Button
+          onClick={handleSave}
+          disabled={isSaving || !name.trim() || !resolvedTemplateId}
+        >
           {isSaving ? "Saving..." : profile ? "Save Profile" : "Create Profile"}
         </Button>
       </div>
@@ -199,7 +204,7 @@ function ThemeProfileForm({
 export function ThemeProfileDrawer({
   open,
   onOpenChange,
-  themes,
+  templates,
   profile,
   isSaving = false,
   onSave,
@@ -215,7 +220,7 @@ export function ThemeProfileDrawer({
         <ThemeProfileForm
           key={formKey}
           profile={profile}
-          themes={themes}
+          templates={templates}
           isSaving={isSaving}
           onSave={onSave}
           onClose={() => onOpenChange(false)}

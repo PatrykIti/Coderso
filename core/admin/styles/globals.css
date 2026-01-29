@@ -25,14 +25,48 @@
 
 @layer base {
   :root {
-    --color-primary: #1d4ed8;
-    --color-secondary: #0f766e;
-    --color-accent: #f59e0b;
+    --admin-base-bg: #ffffff;
+    --admin-base-surface: #f8fafc;
+    --admin-base-text: #0f172a;
+    --admin-base-border: #e2e8f0;
 
-    --color-bg: #ffffff;
-    --color-surface: #f8fafc;
-    --color-border: #e2e8f0;
-    --color-text: #0f172a;
+    --admin-button-primary-bg: #1d4ed8;
+    --admin-button-primary-text: #ffffff;
+    --admin-button-primary-hover-bg: #1e40af;
+    --admin-button-primary-hover-text: #ffffff;
+    --admin-button-secondary-bg: #0f766e;
+    --admin-button-secondary-text: #ffffff;
+    --admin-button-secondary-hover-bg: #115e59;
+    --admin-button-secondary-hover-text: #ffffff;
+    --admin-button-outline-border: #e2e8f0;
+    --admin-button-outline-text: #0f172a;
+    --admin-button-outline-hover-bg: #f1f5f9;
+    --admin-button-outline-hover-text: #0f172a;
+    --admin-button-ghost-hover-bg: #f1f5f9;
+    --admin-button-ghost-hover-text: #0f172a;
+
+    --admin-input-bg: #ffffff;
+    --admin-input-border: #e2e8f0;
+    --admin-input-text: #0f172a;
+    --admin-input-placeholder: #94a3b8;
+    --admin-input-ring: #1d4ed8;
+
+    --admin-sidebar-bg: #ffffff;
+    --admin-sidebar-text: #64748b;
+    --admin-sidebar-active-bg: #e0f2fe;
+    --admin-sidebar-active-text: #1d4ed8;
+    --admin-sidebar-hover-bg: #f1f5f9;
+
+    --admin-topbar-bg: #ffffff;
+    --admin-topbar-text: #64748b;
+    --admin-topbar-border: #e2e8f0;
+
+    --admin-card-bg: #ffffff;
+    --admin-card-border: #e2e8f0;
+
+    --admin-state-success: #16a34a;
+    --admin-state-warning: #f59e0b;
+    --admin-state-danger: #ef4444;
 
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;
@@ -54,24 +88,24 @@
     --text-xl: 1.25rem;
     --text-2xl: 1.5rem;
 
-    --background: var(--color-bg);
-    --foreground: var(--color-text);
-    --primary: var(--color-primary);
-    --primary-foreground: var(--color-bg);
-    --secondary: var(--color-secondary);
-    --secondary-foreground: var(--color-bg);
-    --accent: var(--color-accent);
-    --accent-foreground: var(--color-bg);
-    --muted: var(--color-surface);
-    --muted-foreground: var(--color-text);
-    --popover: var(--color-surface);
-    --popover-foreground: var(--color-text);
-    --card: var(--color-surface);
-    --card-foreground: var(--color-text);
-    --border: var(--color-border);
-    --input: var(--color-surface);
-    --ring: var(--color-primary);
-    --destructive: #ef4444;
+    --background: var(--admin-base-bg);
+    --foreground: var(--admin-base-text);
+    --primary: var(--admin-button-primary-bg);
+    --primary-foreground: var(--admin-button-primary-text);
+    --secondary: var(--admin-button-secondary-bg);
+    --secondary-foreground: var(--admin-button-secondary-text);
+    --accent: var(--admin-button-outline-hover-bg);
+    --accent-foreground: var(--admin-button-outline-hover-text);
+    --muted: var(--admin-base-surface);
+    --muted-foreground: var(--admin-base-text);
+    --popover: var(--admin-base-surface);
+    --popover-foreground: var(--admin-base-text);
+    --card: var(--admin-card-bg);
+    --card-foreground: var(--admin-base-text);
+    --border: var(--admin-base-border);
+    --input: var(--admin-input-border);
+    --ring: var(--admin-input-ring);
+    --destructive: var(--admin-state-danger);
     --destructive-foreground: #ffffff;
   }
 

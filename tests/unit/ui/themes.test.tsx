@@ -6,10 +6,10 @@ import { ThemesPage } from "../../../core/admin/ui/themes/ThemesPage";
 test("ThemesPage renders theme grid and actions", () => {
   const html = renderToString(<ThemesPage />);
 
-  expect(html).toContain("Themes");
-  expect(html).toContain("Active Theme");
-  expect(html).toContain("Available Profiles");
+  expect(html).toContain("Admin UI Theme");
+  expect(html).toContain("Create theme templates");
+  expect(html).toContain("New Template");
+  expect(html).toContain("Profiles");
   expect(html).toContain("New Profile");
-  expect(html).toContain("Export Config");
-  expect(html).toContain("Loading profiles");
+  expect(html).toContain("Export JSON");
 });

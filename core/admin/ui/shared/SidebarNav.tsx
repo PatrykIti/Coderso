@@ -4,12 +4,14 @@ import type { NavItem, NavSection } from "@/ui/navigation/sidebarConfig";
 
 const defaultBrand = (
   <div className="flex items-center gap-3 px-2">
-    <div className="h-9 w-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+    <div className="h-9 w-9 rounded-lg bg-[var(--admin-button-primary-bg)] text-[var(--admin-button-primary-text)] flex items-center justify-center font-semibold">
       N
     </div>
     <div className="flex flex-col">
-      <span className="text-sm font-semibold">Nextless</span>
-      <span className="text-xs text-muted-foreground">Admin Panel</span>
+      <span className="text-sm font-semibold text-[var(--admin-sidebar-active-text)]">
+        Nextless
+      </span>
+      <span className="text-xs text-[var(--admin-sidebar-text)]">Admin Panel</span>
     </div>
   </div>
 );
@@ -33,8 +35,8 @@ export function SidebarNav({
 }: SidebarNavProps) {
   const baseClasses =
     variant === "mobile"
-      ? "flex h-full w-72 flex-col bg-background"
-      : "hidden h-screen w-64 shrink-0 flex-col border-r bg-background md:flex";
+      ? "flex h-full w-72 flex-col bg-[var(--admin-sidebar-bg)]"
+      : "hidden h-screen w-64 shrink-0 flex-col border-r border-[var(--admin-base-border)] bg-[var(--admin-sidebar-bg)] md:flex";
   return (
     <aside
       className={cn(
@@ -46,7 +48,7 @@ export function SidebarNav({
       <nav className="flex-1 overflow-y-auto px-4 pb-6">
         {sections.map((section) => (
           <div key={section.title} className="mb-6">
-            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <p className="px-3 text-xs font-semibold uppercase tracking-wider text-[var(--admin-sidebar-text)]/70">
               {section.title}
             </p>
             <div className="mt-2 space-y-1">
@@ -58,9 +60,9 @@ export function SidebarNav({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
                       isActive &&
-                        "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+                        "bg-[var(--admin-sidebar-active-bg)] text-[var(--admin-sidebar-active-text)] hover:bg-[var(--admin-sidebar-active-bg)] hover:text-[var(--admin-sidebar-active-text)]"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -78,14 +80,14 @@ export function SidebarNav({
         ))}
       </nav>
       {footerItems?.length ? (
-        <div className="border-t p-4">
+        <div className="border-t border-[var(--admin-base-border)] p-4">
           {footerItems.map((item) => {
             const Icon = item.icon;
             return (
               <a
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]"
               >
                 <Icon className="h-4 w-4" />
                 {item.label}

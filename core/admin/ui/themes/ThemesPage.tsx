@@ -1,104 +1,71 @@
-import {
-  Check,
-  ChevronDown,
-  Download,
-  Plus,
-  Search,
-  Sparkles,
-  Sun,
-} from "lucide-react";
+import { Download, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { isApiClientError } from "@/services/apiClient";
 import {
-  activateThemeProfile,
-  createThemeProfile,
-  listThemeProfiles,
-  listThemes,
-  updateThemeProfile,
-  type ThemeMeta,
-  type ThemeProfile as ApiThemeProfile,
-} from "@/services/themeClient";
-import type { DesignTokens } from "../../../services/theme/tokenTypes";
-import { DEFAULT_TOKENS } from "../../../services/theme/tokenTypes";
-import { mergeTokens } from "../../../services/theme/tokenUtils";
+  activateAdminThemeProfile,
+  createAdminThemeProfile,
+  createAdminThemeTemplate,
+  listAdminThemeProfiles,
+  listAdminThemeTemplates,
+  updateAdminThemeProfile,
+  updateAdminThemeTemplate,
+  type AdminThemeProfile,
+  type AdminThemeTemplate,
+} from "@/services/adminThemeClient";
+import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../services/adminThemes/tokenTypes";
+import { mergeAdminThemeTokens } from "../../../services/adminThemes/tokenUtils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
-import { ThemeCard, type ThemeProfile } from "./ThemeCard";
 import { ThemeExportDialog } from "./ThemeExportDialog";
+import { ThemeProfileCard, type AdminThemeProfileCard } from "./ThemeProfileCard";
 import { ThemeProfileDrawer } from "./ThemeProfileDrawer";
+import { ThemeTemplateCard } from "./ThemeTemplateCard";
+import { ThemeTemplateDrawer } from "./ThemeTemplateDrawer";
 
-const fallbackPalette = ["#e7f4fd", "#cfebfb", "#1392ec", "#0f75bd", "#0a4e7e"];
-const radiusScale = ["sm", "lg", "xl", "2xl"];
-
-const resolveTokens = (profile: ApiThemeProfile, themes: ThemeMeta[]): DesignTokens => {
-  const themeDefaults =
-    themes.find((theme) => theme.name === profile.themeName)?.tokens ?? {};
-  const withThemeDefaults = mergeTokens(DEFAULT_TOKENS, themeDefaults);
-  return mergeTokens(withThemeDefaults, profile.tokens ?? {});
+const resolveTemplatePalette = (template: AdminThemeTemplate | null) => {
+  const resolved = mergeAdminThemeTokens(
+    DEFAULT_ADMIN_THEME_TOKENS,
+    template?.tokens ?? null
+  );
+  return [
+    resolved.buttons.primary.bg,
+    resolved.buttons.secondary.bg,
+    resolved.buttons.outline.border,
+    resolved.base.surface,
+    resolved.base.text,
+  ];
 };
 
-const resolvePalette = (tokens: DesignTokens) => {
-  if (!tokens || typeof tokens !== "object") return fallbackPalette;
-  const colors = tokens.colors as Record<string, string> | undefined;
-  const neutrals = tokens.neutrals as Record<string, string> | undefined;
-  const palette = [
-    colors?.primary,
-    colors?.secondary,
-    colors?.accent,
-    neutrals?.surface,
-    neutrals?.text,
-  ].filter(Boolean);
-  return palette.length > 0 ? (palette as string[]) : fallbackPalette;
-};
-
-const countTokens = (tokens: Record<string, unknown> | undefined) => {
-  if (!tokens || typeof tokens !== "object") return 0;
-  return Object.values(tokens).reduce<number>((total, group) => {
-    if (!group || typeof group !== "object") return total;
-    return total + Object.keys(group as Record<string, unknown>).length;
-  }, 0);
+const countTokens = (value: unknown): number => {
+  if (!value) return 0;
+  if (typeof value === "string") return 1;
+  if (typeof value !== "object") return 0;
+  return Object.values(value as Record<string, unknown>).reduce<number>(
+    (total, entry) => total + countTokens(entry),
+    0
+  );
 };
 
 export function ThemesPage() {
+  const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
   const [profileDrawerOpen, setProfileDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
-  const [editingProfile, setEditingProfile] = useState<ThemeProfile | null>(null);
-  const [themes, setThemes] = useState<ThemeMeta[]>([]);
-  const [profiles, setProfiles] = useState<ApiThemeProfile[]>([]);
+  const [editingTemplate, setEditingTemplate] = useState<AdminThemeTemplate | null>(
+    null
+  );
+  const [editingProfile, setEditingProfile] = useState<AdminThemeProfileCard | null>(
+    null
+  );
+  const [templates, setTemplates] = useState<AdminThemeTemplate[]>([]);
+  const [profiles, setProfiles] = useState<AdminThemeProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const openCreateProfile = () => {
-    setEditingProfile(null);
-    setProfileDrawerOpen(true);
-  };
-
-  const openEditProfile = (profile: ThemeProfile) => {
-    setEditingProfile(profile);
-    setProfileDrawerOpen(true);
-  };
 
   const dispatchThemeUpdated = () => {
     if (typeof window === "undefined") return;
@@ -109,17 +76,17 @@ export function ThemesPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [themesResult, profilesResult] = await Promise.all([
-        listThemes(),
-        listThemeProfiles(),
+      const [templatesResult, profilesResult] = await Promise.all([
+        listAdminThemeTemplates(),
+        listAdminThemeProfiles(),
       ]);
-      setThemes(themesResult.items);
+      setTemplates(templatesResult.items);
       setProfiles(profilesResult.items);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
       } else {
-        setError("Failed to load themes.");
+        setError("Failed to load admin themes.");
       }
     } finally {
       setIsLoading(false);
@@ -130,360 +97,232 @@ export function ThemesPage() {
     void loadData();
   }, []);
 
-  const profilesForCards = useMemo(() => {
-    return profiles.map((profile, index) => {
-      const iconClassName = profile.isActive
-        ? "bg-primary text-primary-foreground"
-        : index % 2 === 0
-          ? "bg-sky-100 text-sky-600"
-          : "bg-amber-100 text-amber-600";
-      const icon = profile.isActive ? (
-        <Check className="h-4 w-4" />
-      ) : index % 2 === 0 ? (
-        <Sparkles className="h-4 w-4" />
-      ) : (
-        <Sun className="h-4 w-4" />
-      );
+  const templateCards = useMemo(() => {
+    return templates.map((template) => ({
+      ...template,
+      description: template.description ?? "No description provided.",
+      palette: resolveTemplatePalette(template),
+      tokenCount: countTokens(template.tokens),
+    }));
+  }, [templates]);
 
-      const resolvedTokens = resolveTokens(profile, themes);
+  const profileCards = useMemo(() => {
+    return profiles.map((profile) => {
+      const template = templates.find((item) => item.id === profile.templateId) ?? null;
       return {
         id: profile.id,
         name: profile.name,
         description: profile.description ?? "No description provided.",
-        themeName: profile.themeName,
-        tokens: resolvedTokens,
-        palette: resolvePalette(resolvedTokens),
-        icon,
-        iconClassName,
+        templateId: profile.templateId,
+        templateName: template?.name ?? "Unknown",
+        palette: resolveTemplatePalette(template),
         isActive: profile.isActive,
-      } satisfies ThemeProfile;
+      } satisfies AdminThemeProfileCard;
     });
-  }, [profiles, themes]);
+  }, [profiles, templates]);
 
-  const activeProfile = profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
-  const activeTheme = activeProfile
-    ? themes.find((theme) => theme.name === activeProfile.themeName) ?? null
-    : null;
+  const activeProfile = profileCards.find((profile) => profile.isActive) ?? null;
 
-  const activeProfilePalette = activeProfile
-    ? resolvePalette(resolveTokens(activeProfile, themes))
-    : fallbackPalette;
-  const activeTokensCount = activeProfile
-    ? countTokens(resolveTokens(activeProfile, themes))
-    : 0;
+  const openCreateTemplate = () => {
+    setEditingTemplate(null);
+    setTemplateDrawerOpen(true);
+  };
+
+  const openEditTemplate = (template: AdminThemeTemplate) => {
+    setEditingTemplate(template);
+    setTemplateDrawerOpen(true);
+  };
+
+  const openCreateProfile = () => {
+    setEditingProfile(null);
+    setProfileDrawerOpen(true);
+  };
+
+  const openEditProfile = (profile: AdminThemeProfileCard) => {
+    setEditingProfile(profile);
+    setProfileDrawerOpen(true);
+  };
 
   return (
     <AdminShell
       activeHref="/admin/themes"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Visual Engine</span>
+          <span>Visual</span>
           <span>/</span>
-          <span className="text-foreground">Themes</span>
+          <span className="text-foreground">Admin UI Theme</span>
         </div>
       }
     >
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 xl:flex-row">
-        <div className="flex min-w-0 flex-1 flex-col gap-8">
-          <PageHeader
-            title="Themes"
-            description="Manage theme profiles, palettes, and activation states."
-            actions={
-              <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
-                  <Download className="h-4 w-4" />
-                  Export Config
-                </Button>
-                <Button className="gap-2" onClick={openCreateProfile}>
-                  <Plus className="h-4 w-4" />
-                  New Profile
-                </Button>
-              </div>
-            }
-          />
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
+        <PageHeader
+          title="Admin UI Theme"
+          description="Create theme templates and activate profiles for the admin panel."
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+                <Download className="h-4 w-4" />
+                Export JSON
+              </Button>
+              <Button size="sm" className="gap-2" onClick={openCreateTemplate}>
+                <Plus className="h-4 w-4" />
+                New Template
+              </Button>
+            </div>
+          }
+        />
 
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+        <section className="space-y-4">
           <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="relative w-full max-w-sm">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search profiles..." className="pl-9" />
+                  <Input placeholder="Search templates..." className="pl-9" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="secondary">
-                    All
-                  </Button>
-                  <Button size="sm" variant="ghost">
-                    Active
-                  </Button>
-                  <Button size="sm" variant="ghost">
-                    Draft
-                  </Button>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {templates.length} templates
                 </div>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className="gap-2">
-                    Sort: Recently updated
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem>Recently updated</DropdownMenuItem>
-                  <DropdownMenuItem>Name (A-Z)</DropdownMenuItem>
-                  <DropdownMenuItem>Most used</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Show archived</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
 
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  Active Theme
-                </p>
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {templateCards.map((template) => (
+              <ThemeTemplateCard
+                key={template.id}
+                template={template}
+                onEdit={() => openEditTemplate(template)}
+              />
+            ))}
+            {!isLoading && templateCards.length === 0 ? (
+              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                No theme templates yet. Create your first template to unlock profiles.
               </div>
-              <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-                <Button size="xs" variant="secondary">
-                  Production
-                </Button>
-                <Button size="xs" variant="ghost">
-                  Staging
-                </Button>
-              </div>
-            </div>
-            <Card className="border-border/60">
-              <CardContent className="flex flex-col gap-6 md:flex-row md:items-center">
-                <div className="relative h-32 w-full max-w-[220px] overflow-hidden rounded-xl border bg-muted/40">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent" />
-                  <div className="relative flex h-full flex-col justify-between p-4">
-                    <div className="space-y-2">
-                      <div className="h-2 w-1/2 rounded bg-muted-foreground/20" />
-                      <div className="h-2 w-full rounded bg-muted-foreground/10" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {activeProfilePalette.slice(0, 2).map((color) => (
-                        <span
-                          key={color}
-                          className="h-3 w-3 rounded-full"
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-semibold">
-                      {activeProfile?.name ?? "No active profile"}
-                    </h2>
-                    <Badge className="bg-emerald-100 text-[10px] uppercase tracking-wide text-emerald-700">
-                      Current
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {activeProfile?.description ?? "Select a theme profile to activate."}
-                  </p>
-                  <div className="flex flex-wrap gap-6 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold uppercase text-muted-foreground">
-                        Theme:
-                      </span>
-                      <span className="text-foreground">
-                        {activeTheme?.name ?? "Default"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold uppercase text-muted-foreground">
-                        Tokens:
-                      </span>
-                      <span className="text-foreground">{activeTokensCount} variables</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex w-full flex-col gap-2 md:w-auto">
-                  <Button className="w-full md:w-auto" asChild disabled={!activeProfile}>
-                    <a href={`/admin/themes/${activeProfile?.id ?? ""}`}>Edit Theme</a>
-                  </Button>
-                  <Button variant="outline" className="w-full md:w-auto">
-                    Duplicate
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
+            ) : null}
+          </div>
+        </section>
 
-          <Separator />
+        <Separator />
 
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Available Profiles
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Profiles</h2>
+              <p className="text-sm text-muted-foreground">
+                Profiles activate a template for the admin UI.
               </p>
-              <Badge variant="outline" className="text-xs">
-                {profilesForCards.length} profiles
-              </Badge>
             </div>
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {profilesForCards.map((profile) => (
-                <ThemeCard
-                  key={profile.id}
-                  theme={profile}
-                  onEdit={() => openEditProfile(profile)}
-                  onDuplicate={() => undefined}
-                  onActivate={() => {
-                    if (profile.isActive) return;
-                    setIsSaving(true);
-                    activateThemeProfile(profile.id)
-                      .then(() => loadData())
-                      .then(() => dispatchThemeUpdated())
-                      .catch((err) => {
-                        if (isApiClientError(err)) {
-                          setError(err.message);
-                        } else {
-                          setError("Failed to activate profile.");
-                        }
-                      })
-                      .finally(() => setIsSaving(false));
-                  }}
-                />
-              ))}
-            </div>
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading profiles...</p>
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={openCreateProfile}
+              disabled={templates.length === 0}
+            >
+              <Plus className="h-4 w-4" />
+              New Profile
+            </Button>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {profileCards.map((profile) => (
+              <ThemeProfileCard
+                key={profile.id}
+                profile={profile}
+                onEdit={() => openEditProfile(profile)}
+                onActivate={() => {
+                  setIsSaving(true);
+                  activateAdminThemeProfile(profile.id)
+                    .then(() => loadData())
+                    .then(() => dispatchThemeUpdated())
+                    .catch((err) => {
+                      if (isApiClientError(err)) {
+                        setError(err.message);
+                      } else {
+                        setError("Failed to activate profile.");
+                      }
+                    })
+                    .finally(() => setIsSaving(false));
+                }}
+              />
+            ))}
+            {!isLoading && profileCards.length === 0 ? (
+              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                Create a profile to activate a template for your admin UI.
+              </div>
             ) : null}
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : null}
-          </section>
-        </div>
-
-        <aside className="hidden w-full max-w-sm shrink-0 xl:block">
-          <Card className="sticky top-8 border-border/60">
-            <CardHeader className="space-y-1">
-              <CardTitle>Profile Details</CardTitle>
-              <CardDescription>
-                Configured tokens for {activeProfile?.name ?? "active theme"}.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  Primary Palette
-                </p>
-                <div className="grid grid-cols-5 gap-2">
-                  {activeProfilePalette.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      className="group flex flex-col items-center gap-1 text-[10px] text-muted-foreground"
-                      title={color}
-                      onClick={() => {
-                        if (typeof navigator !== "undefined") {
-                          void navigator.clipboard.writeText(color);
-                        }
-                      }}
-                    >
-                      <span
-                        className="aspect-square w-full rounded-md border border-border/60"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="font-mono text-[9px] text-foreground/70">
-                        {color}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
-                  <span>Tip</span>
-                  <span className="text-xs">Click a swatch to copy its hex</span>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  Typography Scale
-                </p>
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <span className="text-[10px] uppercase text-muted-foreground">
-                      H1 Display - 32px
-                    </span>
-                    <p className="text-2xl font-semibold text-foreground">The quick fox</p>
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-[10px] uppercase text-muted-foreground">
-                      Body Base - 14px
-                    </span>
-                    <p className="text-sm text-muted-foreground">
-                      Design is not just what it looks like and feels like. Design is
-                      how it works.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  Radius &amp; Border
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {radiusScale.map((radius) => (
-                    <div
-                      key={radius}
-                      className="flex h-9 w-9 items-center justify-center rounded-lg border bg-muted/30 text-[10px] uppercase text-muted-foreground"
-                    >
-                      {radius}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-6">
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => setExportOpen(true)}
-              >
-                <Download className="h-4 w-4" />
-                Export Config
-              </Button>
-            </CardFooter>
-          </Card>
-        </aside>
+          </div>
+          {activeProfile ? (
+            <p className="text-xs text-muted-foreground">
+              Active profile: <span className="font-medium">{activeProfile.name}</span>
+            </p>
+          ) : null}
+        </section>
       </div>
+
+      <ThemeTemplateDrawer
+        open={templateDrawerOpen}
+        onOpenChange={setTemplateDrawerOpen}
+        template={editingTemplate}
+        isSaving={isSaving}
+        onSave={async ({ name, description, tokens }) => {
+          setIsSaving(true);
+          try {
+            if (editingTemplate?.id) {
+              await updateAdminThemeTemplate(editingTemplate.id, {
+                name,
+                description,
+                tokens,
+              });
+            } else {
+              await createAdminThemeTemplate({ name, description, tokens });
+            }
+            await loadData();
+            dispatchThemeUpdated();
+            setTemplateDrawerOpen(false);
+            setEditingTemplate(null);
+          } catch (err) {
+            if (isApiClientError(err)) {
+              setError(err.message);
+            } else {
+              setError("Failed to save theme template.");
+            }
+          } finally {
+            setIsSaving(false);
+          }
+        }}
+      />
+
       <ThemeProfileDrawer
         open={profileDrawerOpen}
         onOpenChange={setProfileDrawerOpen}
+        templates={templates}
         profile={editingProfile}
-        themes={themes}
         isSaving={isSaving}
-        onSave={async (input) => {
+        onSave={async ({ name, description, templateId }) => {
           setIsSaving(true);
           try {
-            if (editingProfile) {
-              await updateThemeProfile(editingProfile.id, {
-                name: input.name,
-                description: input.description,
+            if (editingProfile?.id) {
+              await updateAdminThemeProfile(editingProfile.id, {
+                name,
+                description,
+                templateId,
               });
             } else {
-              await createThemeProfile({
-                name: input.name,
-                description: input.description,
-                themeName: input.themeName,
+              const shouldActivate = !profiles.some((profile) => profile.isActive);
+              await createAdminThemeProfile({
+                name,
+                description,
+                templateId,
+                isActive: shouldActivate,
               });
             }
-            setProfileDrawerOpen(false);
-            setEditingProfile(null);
             await loadData();
             dispatchThemeUpdated();
+            setProfileDrawerOpen(false);
+            setEditingProfile(null);
           } catch (err) {
             if (isApiClientError(err)) {
               setError(err.message);
@@ -495,6 +334,7 @@ export function ThemesPage() {
           }
         }}
       />
+
       <ThemeExportDialog open={exportOpen} onOpenChange={setExportOpen} />
     </AdminShell>
   );

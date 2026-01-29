@@ -58,7 +58,7 @@ export const defaultNavSections: NavSection[] = [
   {
     title: "Visual",
     items: [
-      { label: "Themes", href: "/admin/themes", icon: Palette },
+      { label: "Admin UI Theme", href: "/admin/themes", icon: Palette },
     ],
   },
   {

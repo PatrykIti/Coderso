@@ -28,7 +28,7 @@ Przykladowy `theme.json`:
 }
 ```
 
-## Theme profiles (v1)
+## Theme profiles (v1) – Site themes
 
 Profil zawiera:
 - `name` (np. "testowy front 1")
@@ -80,9 +80,48 @@ Conflict rules:
 
 ## Admin UI
 
+To dotyczy **Site Themes** (front):
+
 - Lista themes (installed).
 - Lista profili + aktywacja profilu.
 - Edycja tokenow i route mapping.
+
+## Admin UI Theme (v1)
+
+Admin panel ma **osobny** system themingu, niezalezny od frontu.
+
+### Model
+
+- **Admin Theme Template** = zestaw granularnych tokenow UI (kolory tła, bordery, hover, inputy itd.).
+- **Admin Theme Profile** = nazwa + opis + wskazanie template + status aktywny.
+- Profile **nie** ma override tokenow (v1).
+
+### Storage
+
+DB tables:
+- `admin_theme_templates` (name, description, tokens)
+- `admin_theme_profiles` (name, description, template_id, is_active)
+
+### UI
+
+Sekcja: **Visual → Admin UI Theme**
+- Templates: lista + create/edit (pickery, bez JSON na żywo).
+- Profiles: lista + create/edit + activate.
+- JSON tylko dla eksport/import.
+
+### API (admin)
+
+```
+GET    /admin/api/admin-theme-templates
+POST   /admin/api/admin-theme-templates
+PATCH  /admin/api/admin-theme-templates/:id
+DELETE /admin/api/admin-theme-templates/:id
+
+GET    /admin/api/admin-theme-profiles
+POST   /admin/api/admin-theme-profiles
+PATCH  /admin/api/admin-theme-profiles/:id
+POST   /admin/api/admin-theme-profiles/:id/activate
+```
 
 ## API (admin)
 
