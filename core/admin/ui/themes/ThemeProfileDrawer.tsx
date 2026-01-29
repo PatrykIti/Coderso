@@ -16,6 +16,22 @@ import {
 
 import type { ThemeProfile } from "./ThemeCard";
 import type { ThemeMeta } from "@/services/themeClient";
+import { DEFAULT_TOKENS } from "../../../services/theme/tokenTypes";
+import { mergeTokens } from "../../../services/theme/tokenUtils";
+
+const fallbackPalette = ["#e2e8f0", "#94a3b8", "#0f172a", "#f8fafc", "#64748b"];
+
+const resolvePalette = (theme: ThemeMeta | null) => {
+  if (!theme?.tokens) return fallbackPalette;
+  const resolved = mergeTokens(DEFAULT_TOKENS, theme.tokens);
+  return [
+    resolved.colors.primary,
+    resolved.colors.secondary,
+    resolved.colors.accent,
+    resolved.neutrals.surface,
+    resolved.neutrals.text,
+  ];
+};
 
 type ThemeProfileDrawerProps = {
   open: boolean;
@@ -59,6 +75,11 @@ function ThemeProfileForm({
     () => themes.map((theme) => ({ value: theme.name, label: theme.name })),
     [themes]
   );
+  const selectedTheme = useMemo(
+    () => themes.find((theme) => theme.name === themeName) ?? null,
+    [themes, themeName]
+  );
+  const palette = useMemo(() => resolvePalette(selectedTheme), [selectedTheme]);
 
   return (
     <>
@@ -101,20 +122,34 @@ function ThemeProfileForm({
           </div>
           <div className="space-y-2">
             <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Theme
+              Theme Template
             </label>
-            <Select value={themeName} onValueChange={setThemeName} disabled={isSaving}>
+            <Select
+              value={themeName}
+              onValueChange={setThemeName}
+              disabled={isSaving || themeOptions.length === 0}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select theme" />
               </SelectTrigger>
               <SelectContent>
-                {themeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                {themeOptions.length > 0 ? (
+                  themeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-themes" disabled>
+                    No themes available
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              Profiles inherit defaults from the selected theme and override tokens in the
+              editor.
+            </p>
           </div>
           <Separator />
           <div className="rounded-xl border bg-muted/30 p-4">
@@ -122,16 +157,28 @@ function ThemeProfileForm({
               <Palette className="h-4 w-4 text-primary" />
               Palette preview
             </div>
-            <div className="mt-3 flex gap-2">
-              {(profile?.palette ?? ["#e2e8f0", "#94a3b8", "#0f172a"]).map(
-                (color) => (
+            <div className="mt-3 grid grid-cols-5 gap-2">
+              {palette.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className="group flex flex-col items-center gap-1 text-[10px] text-muted-foreground"
+                  title={color}
+                  onClick={() => {
+                    if (typeof navigator !== "undefined") {
+                      void navigator.clipboard.writeText(color);
+                    }
+                  }}
+                >
                   <span
-                    key={color}
-                    className="h-5 w-5 rounded-full border border-background shadow-sm"
+                    className="h-6 w-6 rounded-full border border-background shadow-sm"
                     style={{ backgroundColor: color }}
                   />
-                )
-              )}
+                  <span className="font-mono text-[9px] text-foreground/70">
+                    {color}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

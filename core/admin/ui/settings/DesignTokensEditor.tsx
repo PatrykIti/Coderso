@@ -78,7 +78,16 @@ export function DesignTokensEditor({
         </div>
         <Textarea
           value={draft}
-          onChange={(event) => setLocalDraft(event.target.value)}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setLocalDraft(nextValue);
+            try {
+              const parsed = JSON.parse(nextValue) as TokenOverrides;
+              onChange(parsed);
+            } catch {
+              // keep local draft until JSON becomes valid again
+            }
+          }}
           spellCheck={false}
           className="h-full min-h-105 resize-none border-0 bg-transparent pl-12 pr-4 font-mono text-sm leading-6 focus-visible:ring-0"
         />

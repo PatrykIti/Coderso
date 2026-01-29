@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
+import { DEFAULT_TOKENS } from "../../../services/theme/tokenTypes";
+import { mergeTokens } from "../../../services/theme/tokenUtils";
+import { toCssVariableMap } from "../../../ui/theme/tokenCss";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { DesignTokensEditor, type TokenOverrides } from "./DesignTokensEditor";
@@ -41,6 +44,11 @@ export function SettingsPage({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
+
+  const previewStyle = useMemo(() => {
+    const resolved = mergeTokens(DEFAULT_TOKENS, tokenOverrides);
+    return toCssVariableMap(resolved);
+  }, [tokenOverrides]);
 
   useEffect(() => {
     setTokenOverrides(tokens);
@@ -92,7 +100,11 @@ export function SettingsPage({
     <SettingsShell
       activeHref="/admin/settings"
       sidebar={<SettingsSidebar />}
-      preview={<DesignTokensPreview />}
+      preview={
+        <div style={previewStyle as CSSProperties} className="h-full">
+          <DesignTokensPreview />
+        </div>
+      }
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Settings</span>

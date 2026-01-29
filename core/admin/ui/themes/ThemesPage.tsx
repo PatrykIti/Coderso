@@ -38,6 +38,9 @@ import {
   type ThemeMeta,
   type ThemeProfile as ApiThemeProfile,
 } from "@/services/themeClient";
+import type { DesignTokens } from "../../../services/theme/tokenTypes";
+import { DEFAULT_TOKENS } from "../../../services/theme/tokenTypes";
+import { mergeTokens } from "../../../services/theme/tokenUtils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -48,12 +51,24 @@ import { ThemeProfileDrawer } from "./ThemeProfileDrawer";
 const fallbackPalette = ["#e7f4fd", "#cfebfb", "#1392ec", "#0f75bd", "#0a4e7e"];
 const radiusScale = ["sm", "lg", "xl", "2xl"];
 
-const resolvePalette = (tokens: Record<string, unknown> | undefined) => {
+const resolveTokens = (profile: ApiThemeProfile, themes: ThemeMeta[]): DesignTokens => {
+  const themeDefaults =
+    themes.find((theme) => theme.name === profile.themeName)?.tokens ?? {};
+  const withThemeDefaults = mergeTokens(DEFAULT_TOKENS, themeDefaults);
+  return mergeTokens(withThemeDefaults, profile.tokens ?? {});
+};
+
+const resolvePalette = (tokens: DesignTokens) => {
   if (!tokens || typeof tokens !== "object") return fallbackPalette;
-  const colors = (tokens as Record<string, unknown>).colors as
-    | Record<string, string>
-    | undefined;
-  const palette = [colors?.primary, colors?.secondary, colors?.accent].filter(Boolean);
+  const colors = tokens.colors as Record<string, string> | undefined;
+  const neutrals = tokens.neutrals as Record<string, string> | undefined;
+  const palette = [
+    colors?.primary,
+    colors?.secondary,
+    colors?.accent,
+    neutrals?.surface,
+    neutrals?.text,
+  ].filter(Boolean);
   return palette.length > 0 ? (palette as string[]) : fallbackPalette;
 };
 
@@ -130,27 +145,32 @@ export function ThemesPage() {
         <Sun className="h-4 w-4" />
       );
 
+      const resolvedTokens = resolveTokens(profile, themes);
       return {
         id: profile.id,
         name: profile.name,
         description: profile.description ?? "No description provided.",
         themeName: profile.themeName,
-        tokens: profile.tokens,
-        palette: resolvePalette(profile.tokens),
+        tokens: resolvedTokens,
+        palette: resolvePalette(resolvedTokens),
         icon,
         iconClassName,
         isActive: profile.isActive,
       } satisfies ThemeProfile;
     });
-  }, [profiles]);
+  }, [profiles, themes]);
 
   const activeProfile = profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
   const activeTheme = activeProfile
     ? themes.find((theme) => theme.name === activeProfile.themeName) ?? null
     : null;
 
-  const activeProfilePalette = resolvePalette(activeProfile?.tokens);
-  const activeTokensCount = countTokens(activeProfile?.tokens);
+  const activeProfilePalette = activeProfile
+    ? resolvePalette(resolveTokens(activeProfile, themes))
+    : fallbackPalette;
+  const activeTokensCount = activeProfile
+    ? countTokens(resolveTokens(activeProfile, themes))
+    : 0;
 
   return (
     <AdminShell
@@ -356,16 +376,30 @@ export function ThemesPage() {
                 </p>
                 <div className="grid grid-cols-5 gap-2">
                   {activeProfilePalette.map((color) => (
-                    <div
+                    <button
                       key={color}
-                      className="aspect-square rounded-md border border-border/60"
-                      style={{ backgroundColor: color }}
-                    />
+                      type="button"
+                      className="group flex flex-col items-center gap-1 text-[10px] text-muted-foreground"
+                      title={color}
+                      onClick={() => {
+                        if (typeof navigator !== "undefined") {
+                          void navigator.clipboard.writeText(color);
+                        }
+                      }}
+                    >
+                      <span
+                        className="aspect-square w-full rounded-md border border-border/60"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="font-mono text-[9px] text-foreground/70">
+                        {color}
+                      </span>
+                    </button>
                   ))}
                 </div>
-                <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2 text-xs">
-                  <span className="text-muted-foreground">Hex Code</span>
-                  <code className="font-mono text-primary">#1392ec</code>
+                <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
+                  <span>Tip</span>
+                  <span className="text-xs">Click a swatch to copy its hex</span>
                 </div>
               </div>
 
