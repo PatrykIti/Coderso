@@ -105,7 +105,7 @@ export function resolveTemplate(input: TemplateResolveInput): string | null {
 export function resolveTemplateOr404(input: TemplateResolveInput): string {
   const resolved = resolveTemplate(input);
   if (resolved) return resolved;
-  const { coreRoot } = resolveDefaultRoots();
+  const coreRoot = input.coreRoot ?? resolveDefaultRoots().coreRoot;
   return path.join(coreRoot, "404.tsx");
 }
 

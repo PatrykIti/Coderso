@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { DesignTokenOverrides, DesignTokens } from "../../../services/theme/tokenTypes";
-import { assertTokenOverrides } from "../../../services/theme/tokenValidation";
+import type { DesignTokens } from "../../../services/theme/tokenTypes";
 
 import { ThemeRoutesEditor, type ThemeRouteDraft } from "./ThemeRoutesEditor";
 
@@ -17,14 +16,14 @@ const TOKEN_TABS = [
 ];
 
 type ThemeTokensEditorProps = {
-  value: DesignTokenOverrides;
+  draft: string;
+  error: string | null;
   resolvedTokens: DesignTokens;
   routes: ThemeRouteDraft[];
   pages: Array<{ id: string; title: string }>;
   routesError?: string | null;
-  onChange: (next: DesignTokenOverrides) => void;
+  onDraftChange: (next: string) => void;
   onRoutesChange: (next: ThemeRouteDraft[]) => void;
-  onValidityChange?: (valid: boolean) => void;
 };
 
 type TokenEditorBodyProps = {
@@ -118,38 +117,15 @@ function TokenEditorBody({
 }
 
 export function ThemeTokensEditor({
-  value,
+  draft,
+  error,
   resolvedTokens,
   routes,
   pages,
   routesError,
-  onChange,
+  onDraftChange,
   onRoutesChange,
-  onValidityChange,
 }: ThemeTokensEditorProps) {
-  const [draft, setDraft] = useState(() => JSON.stringify(value ?? {}, null, 2));
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDraft(JSON.stringify(value ?? {}, null, 2));
-    setError(null);
-    onValidityChange?.(true);
-  }, [value, onValidityChange]);
-
-  const handleDraftChange = (next: string) => {
-    setDraft(next);
-    try {
-      const parsed = JSON.parse(next) as unknown;
-      assertTokenOverrides(parsed);
-      setError(null);
-      onValidityChange?.(true);
-      onChange(parsed);
-    } catch {
-      setError("Invalid JSON");
-      onValidityChange?.(false);
-    }
-  };
-
   return (
     <div className="flex h-full flex-col">
       <Tabs defaultValue="colors" className="flex h-full flex-col">
@@ -179,7 +155,7 @@ export function ThemeTokensEditor({
               <TokenEditorBody
                 draft={draft}
                 error={error}
-                onDraftChange={handleDraftChange}
+                onDraftChange={onDraftChange}
                 resolvedTokens={resolvedTokens}
               />
             )}

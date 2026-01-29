@@ -5,7 +5,11 @@ import {
   listThemeProfiles,
   setThemeRoutes,
   updateThemeProfile,
+  type ThemeProfileCreateInput,
+  type ThemeProfileUpdateInput,
+  type ThemeRouteInput,
 } from "../../services/themes/themeProfileService";
+import type { RouteContext } from "../router";
 import { listThemes } from "../../services/themes/themeService";
 import { logAudit } from "../../services/audit/auditService";
 import {
@@ -14,16 +18,18 @@ import {
   themeRoutesSchema,
 } from "../validation/themeSchemas";
 
+export type ThemeRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
+
 export type ThemeRouteDeps = {
-  requirePermission: (permission: string) => (ctx: { user?: { id: string } }) => Promise<void> | void;
+  requirePermission: (permission: string) => ThemeRouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
 };
 
 export type Router = {
-  get: (path: string, ...handlers: Array<(ctx: any) => Promise<unknown> | unknown>) => void;
-  post: (path: string, ...handlers: Array<(ctx: any) => Promise<unknown> | unknown>) => void;
-  patch: (path: string, ...handlers: Array<(ctx: any) => Promise<unknown> | unknown>) => void;
-  put: (path: string, ...handlers: Array<(ctx: any) => Promise<unknown> | unknown>) => void;
+  get: (path: string, ...handlers: ThemeRouteHandler[]) => void;
+  post: (path: string, ...handlers: ThemeRouteHandler[]) => void;
+  patch: (path: string, ...handlers: ThemeRouteHandler[]) => void;
+  put: (path: string, ...handlers: ThemeRouteHandler[]) => void;
 };
 
 export function registerThemeRoutes(router: Router, deps: ThemeRouteDeps) {
@@ -54,7 +60,7 @@ export function registerThemeRoutes(router: Router, deps: ThemeRouteDeps) {
     requirePermission("themes:write"),
     async (ctx) => {
       validate(themeProfileCreateSchema, ctx.body);
-      const created = await createThemeProfile(ctx.body as any);
+      const created = await createThemeProfile(ctx.body as ThemeProfileCreateInput);
       await logAudit({
         actorId: ctx.user?.id ?? null,
         action: "themes.profile.create",
@@ -71,7 +77,10 @@ export function registerThemeRoutes(router: Router, deps: ThemeRouteDeps) {
     requirePermission("themes:write"),
     async (ctx) => {
       validate(themeProfileUpdateSchema, ctx.body);
-      const updated = await updateThemeProfile(ctx.params.id, ctx.body as any);
+      const updated = await updateThemeProfile(
+        ctx.params.id,
+        ctx.body as ThemeProfileUpdateInput
+      );
       if (!updated) throw new Error("theme_profile_not_found");
       await logAudit({
         actorId: ctx.user?.id ?? null,
@@ -105,7 +114,7 @@ export function registerThemeRoutes(router: Router, deps: ThemeRouteDeps) {
     requirePermission("themes:write"),
     async (ctx) => {
       validate(themeRoutesSchema, ctx.body);
-      const updated = await setThemeRoutes(ctx.params.id, ctx.body as any);
+      const updated = await setThemeRoutes(ctx.params.id, ctx.body as ThemeRouteInput[]);
       await logAudit({
         actorId: ctx.user?.id ?? null,
         action: "themes.routes.update",

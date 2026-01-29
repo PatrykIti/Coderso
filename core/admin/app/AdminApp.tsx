@@ -393,7 +393,7 @@ export function AdminApp({ path }: AdminAppProps) {
   useEffect(() => {
     if (authState !== "authenticated") return;
     refreshSettings();
-  }, [authState]);
+  }, [authState, refreshSettings]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;

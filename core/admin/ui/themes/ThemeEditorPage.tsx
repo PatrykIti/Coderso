@@ -1,5 +1,5 @@
 import { Download, RefreshCcw, Save } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ import type { ThemeRouteDraft } from "./ThemeRoutesEditor";
 import type { DesignTokenOverrides } from "../../../services/theme/tokenTypes";
 import { DEFAULT_TOKENS } from "../../../services/theme/tokenTypes";
 import { mergeTokens } from "../../../services/theme/tokenUtils";
+import { toCssVariableMap } from "../../../ui/theme/tokenCss";
+import { assertTokenOverrides } from "../../../services/theme/tokenValidation";
 
 const resolveProfileId = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
@@ -66,6 +68,10 @@ export function ThemeEditorPage({
   const [tokens, setTokens] = useState<DesignTokenOverrides>(
     (initialProfile?.tokens as DesignTokenOverrides) ?? {}
   );
+  const [tokensDraft, setTokensDraft] = useState(
+    JSON.stringify((initialProfile?.tokens as DesignTokenOverrides) ?? {}, null, 2)
+  );
+  const [tokensError, setTokensError] = useState<string | null>(null);
   const [routes, setRoutes] = useState<ThemeRouteDraft[]>(
     initialProfile?.routes ? mapRoutesToDraft(initialProfile.routes) : []
   );
@@ -101,6 +107,9 @@ export function ThemeEditorPage({
       const nextTokens = (profileResult.tokens ?? {}) as DesignTokenOverrides;
       const nextRoutes = mapRoutesToDraft(profileResult.routes ?? []);
       setTokens(nextTokens);
+      setTokensDraft(JSON.stringify(nextTokens, null, 2));
+      setTokensError(null);
+      setTokensValid(true);
       setRoutes(nextRoutes);
       setBaselineTokens(nextTokens);
       setBaselineRoutes(nextRoutes);
@@ -133,6 +142,11 @@ export function ThemeEditorPage({
     );
     return mergeTokens(withThemeDefaults, tokens);
   }, [themeMeta, tokens]);
+
+  const previewStyle = useMemo(
+    () => toCssVariableMap(resolvedTokens),
+    [resolvedTokens]
+  );
 
   const routesError = useMemo(() => {
     const seen = new Set<string>();
@@ -193,8 +207,24 @@ export function ThemeEditorPage({
 
   const handleReset = () => {
     setTokens(baselineTokens);
+    setTokensDraft(JSON.stringify(baselineTokens, null, 2));
+    setTokensError(null);
     setRoutes(baselineRoutes);
     setTokensValid(true);
+  };
+
+  const handleDraftChange = (next: string) => {
+    setTokensDraft(next);
+    try {
+      const parsed = JSON.parse(next) as unknown;
+      assertTokenOverrides(parsed);
+      setTokens(parsed);
+      setTokensError(null);
+      setTokensValid(true);
+    } catch {
+      setTokensError("Invalid JSON");
+      setTokensValid(false);
+    }
   };
 
   const lastSavedLabel = profile?.updatedAt
@@ -210,9 +240,7 @@ export function ThemeEditorPage({
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <span>Settings</span>
           <span>/</span>
-          <span className="text-foreground">
-            {profile?.name ?? "Theme Editor"}
-          </span>
+          <span className="text-foreground">Theme Editor</span>
           <Separator orientation="vertical" className="h-4" />
           <Badge className="bg-emerald-100 text-[10px] uppercase tracking-wide text-emerald-700">
             {profile?.isActive ? "Live" : "Draft"}
@@ -269,18 +297,20 @@ export function ThemeEditorPage({
       {!isLoading && profile ? (
         <div className="flex min-h-[calc(100vh-4rem)] flex-col bg-muted/30 xl:flex-row">
           <section className="flex-1 border-b bg-muted/20 xl:border-b-0">
-            <ThemePreviewPanel />
+            <div style={previewStyle as CSSProperties} className="h-full">
+              <ThemePreviewPanel />
+            </div>
           </section>
           <aside className="w-full border-t bg-background xl:w-[480px] xl:border-l xl:border-t-0">
             <ThemeTokensEditor
-              value={tokens}
+              draft={tokensDraft}
+              error={tokensError}
               resolvedTokens={resolvedTokens}
               routes={routes}
               pages={pages.map((page) => ({ id: page.id, title: page.title }))}
               routesError={routesError}
-              onChange={setTokens}
+              onDraftChange={handleDraftChange}
               onRoutesChange={setRoutes}
-              onValidityChange={setTokensValid}
             />
           </aside>
         </div>

@@ -34,10 +34,19 @@ const themeProfile: ThemeProfile = {
   id: "neo-minimalist",
   name: "Neo Minimalist",
   description: "Minimal layout.",
+  themeName: "default",
   palette: ["#0f172a"],
   icon: null,
   iconClassName: "bg-primary text-primary-foreground",
 };
+
+const themes = [
+  {
+    name: "default",
+    version: "1.0.0",
+    templates: ["page", "content"],
+  },
+];
 
 test("PageCreateDrawer renders title", () => {
   const html = renderToString(
@@ -86,7 +95,12 @@ test("WidgetDetailsDrawer renders widget name", () => {
 
 test("ThemeProfileDrawer renders profile name", () => {
   const html = renderToString(
-    <ThemeProfileDrawer open onOpenChange={() => undefined} profile={themeProfile} />
+    <ThemeProfileDrawer
+      open
+      onOpenChange={() => undefined}
+      profile={themeProfile}
+      themes={themes}
+    />
   );
 
   expect(html).toContain("Edit Profile");

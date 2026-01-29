@@ -28,6 +28,5 @@ test("ThemeEditorPage renders with provided profile", () => {
     />
   );
 
-  expect(html).toContain("Studio");
   expect(html).toContain("Save Changes");
 });

@@ -59,7 +59,7 @@ const resolvePalette = (tokens: Record<string, unknown> | undefined) => {
 
 const countTokens = (tokens: Record<string, unknown> | undefined) => {
   if (!tokens || typeof tokens !== "object") return 0;
-  return Object.values(tokens).reduce((total, group) => {
+  return Object.values(tokens).reduce<number>((total, group) => {
     if (!group || typeof group !== "object") return total;
     return total + Object.keys(group as Record<string, unknown>).length;
   }, 0);
