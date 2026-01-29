@@ -31,6 +31,7 @@
 
     --color-bg: #ffffff;
     --color-surface: #f8fafc;
+    --color-border: #e2e8f0;
     --color-text: #0f172a;
 
     --space-xs: 0.25rem;
@@ -67,7 +68,7 @@
     --popover-foreground: var(--color-text);
     --card: var(--color-surface);
     --card-foreground: var(--color-text);
-    --border: var(--color-surface);
+    --border: var(--color-border);
     --input: var(--color-surface);
     --ring: var(--color-primary);
     --destructive: #ef4444;

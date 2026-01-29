@@ -2,7 +2,7 @@ import type { DesignTokenOverrides } from "./tokenTypes";
 
 const tokenGroups = {
   colors: ["primary", "secondary", "accent"],
-  neutrals: ["bg", "surface", "text"],
+  neutrals: ["bg", "surface", "border", "text"],
   spacing: ["xs", "sm", "md", "lg", "xl", "2xl"],
   radius: ["sm", "md", "lg", "xl"],
   typography: ["sans", "display", "sm", "md", "lg", "xl", "2xl"],

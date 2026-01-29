@@ -7,6 +7,7 @@ export type DesignTokens = {
   neutrals: {
     bg: string;
     surface: string;
+    border: string;
     text: string;
   };
   spacing: {
@@ -51,6 +52,7 @@ export const DEFAULT_TOKENS: DesignTokens = {
   neutrals: {
     bg: "#ffffff",
     surface: "#f8fafc",
+    border: "#e2e8f0",
     text: "#0f172a",
   },
   spacing: {
