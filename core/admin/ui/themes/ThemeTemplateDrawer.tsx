@@ -129,25 +129,25 @@ function InputsPreview() {
 
 function NavigationPreview() {
   return (
-    <div className="overflow-hidden rounded-lg border border-[(--admin-base-border)]">
+    <div className="overflow-hidden rounded-lg border border-[var(--admin-base-border)]">
       <div className="flex">
-        <div className="w-24 shrink-0 space-y-3 bg-[(--admin-sidebar-bg)] px-3 py-4 text-[(--admin-sidebar-text)]">
-          <div className="h-2 w-10 rounded-full bg-[(--admin-sidebar-text)]/40" />
+        <div className="w-24 shrink-0 space-y-3 bg-[var(--admin-sidebar-bg)] px-3 py-4 text-[var(--admin-sidebar-text)]">
+          <div className="h-2 w-10 rounded-full bg-[var(--admin-sidebar-text)]/40" />
           <div className="space-y-2">
-            <div className="h-2 w-12 rounded-full bg-[(--admin-sidebar-text)]/50" />
-            <div className="h-2 w-8 rounded-full bg-[(--admin-sidebar-text)]/40" />
+            <div className="h-2 w-12 rounded-full bg-[var(--admin-sidebar-text)]/50" />
+            <div className="h-2 w-8 rounded-full bg-[var(--admin-sidebar-text)]/40" />
           </div>
-          <div className="rounded-md bg-[(--admin-sidebar-active-bg)] px-2 py-1 text-[10px] font-medium text-[(--admin-sidebar-active-text)]">
+          <div className="rounded-md bg-[var(--admin-sidebar-active-bg)] px-2 py-1 text-[10px] font-medium text-[var(--admin-sidebar-active-text)]">
             Active
           </div>
         </div>
         <div className="flex-1">
-          <div className="flex items-center justify-between border-b border-[(--admin-topbar-border)] bg-[(--admin-topbar-bg)] px-3 py-2 text-[10px] text-[(--admin-topbar-text)]">
+          <div className="flex items-center justify-between border-b border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] px-3 py-2 text-[10px] text-[var(--admin-topbar-text)]">
             <span>Top bar</span>
             <span>Admin</span>
           </div>
           <div className="p-3">
-            <div className="h-16 rounded-md bg-muted" />
+            <div className="h-16 rounded-md bg-[var(--admin-base-surface)]" />
           </div>
         </div>
       </div>
