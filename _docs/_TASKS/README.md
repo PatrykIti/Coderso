@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 0
 - **Done:** 94 tasks
 
@@ -39,8 +39,16 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-008 | Themes and Theme Profiles | Medium | Large | Theme registry + profiles |
+| TASK-008-01 | Theme Registry and Loader | Medium | Medium | Scan /themes + theme.json |
+| TASK-008-02 | Theme Profiles and Routes | Medium | Medium | DB + routes + active profile |
+| TASK-008-03 | Template Resolution and Rendering | Medium | Medium | Resolver order + fallback |
+| TASK-008-04 | Themes Admin API | Medium | Medium | /themes + profiles endpoints |
+| TASK-008-05 | Themes Admin UI Wiring | Medium | Medium | Wire themes UI to API |
 | TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
+| TASK-026-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
+| TASK-026-02 | Dashboard API | Medium | Medium | GET /dashboard |
+| TASK-026-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
 | TASK-020 | Security Middleware and Request Pipeline | High | Medium | CSRF + rate limit |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |

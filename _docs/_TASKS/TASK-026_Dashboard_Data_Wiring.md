@@ -43,90 +43,10 @@ tests/integration/ui/
 
 ---
 
-## Sub-Tasks
+## Sub-Tasks (detailed)
 
-### TASK-026-01_Dashboard_service
+- `TASK-026-01_Dashboard_Service.md`
+- `TASK-026-02_Dashboard_API.md`
+- `TASK-026-03_Dashboard_UI_Wiring.md`
 
-**Status:** To Do
-
-- Agreguj statystyki z pages/content/media/users.
-- Wykorzystaj istniejące serwisy (pageService, contentService, mediaService).
-- Zwracaj spójny kontrakt `DashboardStats`.
-
-**Implementation Checklist:**
-
-| File | What to Add |
-| --- | --- |
-| `core/services/dashboard/dashboardService.ts` | agregacja metryk |
-
-Contract sketch:
-
-```ts
-type DashboardStats = {
-  totals: { pages: number; entries: number; media: number; users: number };
-  recentEdits: Array<{ id: string; title: string; type: string; updatedAt: string }>;
-  storage: { usedPercent: number };
-  security: { status: "ok" | "warning" | "critical"; issues: number };
-};
-```
-
----
-
-### TASK-026-02_Dashboard_route
-
-**Status:** To Do
-
-- Dodaj route `/admin/api/dashboard`.
-- Zabezpiecz przez auth + RBAC (`dashboard:read` lub `admin:read`).
-
-**Implementation Checklist:**
-
-| File | What to Add |
-| --- | --- |
-| `core/server/routes/dashboardRoutes.ts` | GET /dashboard |
-| `core/server/routes/index.ts` | rejestracja routa |
-
----
-
-### TASK-026-03_Dashboard_UI_wiring
-
-**Status:** To Do
-
-- Dodaj `dashboardClient` (fetch + error handling).
-- DashboardPage przyjmuje dane przez props lub hook.
-- Dodaj loading/error states (placeholder).
-
-**Implementation Checklist:**
-
-| File | What to Add |
-| --- | --- |
-| `core/admin/services/dashboardClient.ts` | fetch `GET /admin/api/dashboard` |
-| `core/admin/ui/dashboard/DashboardPage.tsx` | render real data |
-
----
-
-## Testing Requirements
-
-- [ ] `tests/unit/dashboard/dashboardService.test.ts` agregacja metryk.
-- [ ] `tests/integration/routes/dashboard.test.ts` endpoint zwraca kontrakt.
-- [ ] `tests/integration/ui/dashboard.test.tsx` renderuje real data.
-
----
-
-## Documentation Updates Required
-
-- `_docs/CMS_API.md` (dashboard endpoint).
-- `_docs/CMS_SPEC.md` (dashboard metrics list).
-
----
-
-## Changelog Entry (planned)
-
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-dashboard-data-wiring.md`
-- Notes: dashboard data API + UI wiring.
-
----
-
-## Additional Docs
-
-- `_docs/SECURITY_SPEC.md`
+Kazdy sub-task zawiera szczegolowe checklisty, przyklady i testy.
