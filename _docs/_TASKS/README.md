@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 7 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 0
-- **Done:** 89 tasks
+- **Done:** 93 tasks
 
 ---
 
@@ -45,6 +45,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-027 | Runtime Base URL + Auth TTL + Setup Wizard | Medium | Medium | LAST: first-run wizard + baseUrl |
 
 ---
 
@@ -107,7 +108,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-004-04 | Auth Middleware | High | Medium | attachUser + requireAuth |
 | TASK-004-05 | RBAC Middleware | High | Medium | requirePermission |
 | TASK-006 | Menus and Navigation | Medium | Medium | Menu CRUD + admin UI |
-| TASK-007 | Settings and Design Tokens | Medium | Medium | Global settings + tokens |
+| TASK-007 | Settings and Design Tokens | Medium | Medium | Index for TASK-007-01..04 |
+| TASK-007-01 | Settings Model and Service | Medium | Medium | Settings table + service |
+| TASK-007-02 | Settings Admin API and Validation | Medium | Medium | Endpoints + schemas |
+| TASK-007-03 | Design Token Pipeline | Medium | Medium | Merge + CSS vars |
+| TASK-007-04 | Settings UI and Tokens UI | Medium | Medium | Settings pages + tokens |
 | TASK-024 | Shadcn UI and Tailwind v4 Setup | High | Medium | Admin UI base |
 | TASK-006-09 | Login UI (Visual) | Medium | Medium | HTML -> shadcn conversion |
 | TASK-006-10 | Two Factor UI (Visual) | Medium | Medium | HTML -> shadcn conversion |

@@ -29,6 +29,18 @@ Nie-cele:
 - Dostep do sieci z core do store (download paczek).
 - Core budowany w CI/CD (dist/client + dist/server).
 - Pluginy dostarczane jako ESM bundlowane paczki (bez TS/TSX w runtime).
+- Konfiguracje biznesowe (np. baseUrl, TTL) trzymamy w settings i ustawiamy z UI,
+  bez restartu serwera. ENV zostaje tylko dla krytycznych wartosci infrastrukturalnych
+  (np. `DATABASE_URL`, `MEDIA_SECRET_MASTER_KEY`).
+
+## Pierwsze uruchomienie (Setup Wizard)
+
+Po pierwszym logowaniu admin otrzymuje prosty Setup Wizard, aby ustawic:
+- `site.baseUrl` (publiczny URL, potrzebny m.in. do preview i linkow w mailach)
+- `site.locale`, `site.name`
+- `auth.sessionTtlDays` i `auth.resetTtlMinutes`
+
+Wizard zapisuje dane do settings (DB) i oznacza konfiguracje jako zakonczona.
 
 ## Terminologia
 

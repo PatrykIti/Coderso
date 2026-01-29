@@ -13,6 +13,9 @@
 
 Enable preview links for content entries, reusing the existing preview token system. Preview tokens allow viewing draft entries without publishing.
 
+**Base URL note:** Preview URL uses `PUBLIC_BASE_URL` (ENV) as fallback.
+Docelowo ma korzystac z `site.baseUrl` w settings (TASK-027).
+
 ## Sub-Tasks
 
 1. Reuse `preview_tokens` table and `previewService` for entries.

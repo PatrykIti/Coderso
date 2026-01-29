@@ -19,6 +19,10 @@ CSRF, OTP/recovery oraz reset hasla.
 - `POST /auth/verify-otp` (na razie stub lub pelna walidacja).
 - Reset hasla: `POST /auth/reset` + `POST /auth/reset/confirm`.
 
+**TTL note:** Wartosc TTL dla sesji i resetu hasla jest docelowo
+konfigurowana w settings (`auth.sessionTtlDays`, `auth.resetTtlMinutes`)
+po TASK-027.
+
 **Response shape (standard):**
 
 ```json
