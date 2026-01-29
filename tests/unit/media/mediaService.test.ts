@@ -2,9 +2,9 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
-import { media } from "../../../core/db/schema";
+import { media, settings } from "../../../core/db/schema";
 import {
   deleteMedia,
   getMediaById,
@@ -12,6 +12,11 @@ import {
   uploadMedia,
 } from "../../../core/services/media/mediaService";
 import type { UploadFile } from "../../../core/services/media/storage/adapter";
+import {
+  resetStorageSettingsCache,
+  setStorageSettings,
+} from "../../../core/services/settings/storageSettings";
+import { resetMediaStorageAdapterCache } from "../../../core/services/media/storage";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -50,6 +55,24 @@ const previousEnv = {
 let tempDir: string | undefined;
 let createdMediaId: string | undefined;
 let createdMediaKey: string | undefined;
+let existingStorageRows: Array<{ key: string; value: unknown; updatedAt: Date }> = [];
+
+const storageKeys = [
+  "storage.driver",
+  "storage.local.dir",
+  "storage.publicBaseUrl",
+  "storage.maxSizeBytes",
+  "storage.allowedMime",
+  "storage.s3.bucket",
+  "storage.s3.region",
+  "storage.s3.accessKey",
+  "storage.s3.secretKey",
+  "storage.s3.endpoint",
+  "storage.azure.container",
+  "storage.azure.account",
+  "storage.azure.key",
+  "storage.azure.connectionString",
+];
 
 beforeAll(async () => {
   if (!hasDb) return;
@@ -60,9 +83,41 @@ beforeAll(async () => {
   process.env.MEDIA_STORAGE = "local";
   process.env.MEDIA_ALLOWED_MIME = "text/plain";
   process.env.MEDIA_MAX_SIZE_BYTES = "1024";
+
+  existingStorageRows = await db
+    .select()
+    .from(settings)
+    .where(inArray(settings.key, storageKeys));
+  await db
+    .delete(settings)
+    .where(inArray(settings.key, storageKeys));
+
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "text/plain",
+    maxSizeBytes: 1024,
+  });
+
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
 });
 
 afterAll(async () => {
+  if (hasDb) {
+    await db
+      .delete(settings)
+      .where(inArray(settings.key, storageKeys));
+    if (existingStorageRows.length > 0) {
+      for (const row of existingStorageRows) {
+        await db.insert(settings).values(row).onConflictDoNothing();
+      }
+    }
+    resetStorageSettingsCache();
+    resetMediaStorageAdapterCache();
+  }
+
   if (createdMediaId) {
     await db.delete(media).where(eq(media.id, createdMediaId));
   }
