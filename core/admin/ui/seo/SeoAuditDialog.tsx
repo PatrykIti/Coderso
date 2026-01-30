@@ -40,9 +40,16 @@ const auditChecks = [
 type SeoAuditDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onRun: () => Promise<void> | void;
+  isRunning?: boolean;
 };
 
-export function SeoAuditDialog({ open, onOpenChange }: SeoAuditDialogProps) {
+export function SeoAuditDialog({
+  open,
+  onOpenChange,
+  onRun,
+  isRunning = false,
+}: SeoAuditDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] gap-0 p-0 sm:max-w-lg">
@@ -86,9 +93,16 @@ export function SeoAuditDialog({ open, onOpenChange }: SeoAuditDialogProps) {
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button className="gap-2" onClick={() => onOpenChange(false)}>
+          <Button
+            className="gap-2"
+            onClick={async () => {
+              await onRun();
+              onOpenChange(false);
+            }}
+            disabled={isRunning}
+          >
             <RefreshCw className="h-4 w-4" />
-            Start Audit
+            {isRunning ? "Running..." : "Start Audit"}
           </Button>
         </div>
       </DialogContent>

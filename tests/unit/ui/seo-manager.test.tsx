@@ -23,12 +23,17 @@ test("SeoManagerPage renders table and drawer", () => {
     analysisNotes: [],
   };
   const drawer = renderToString(
-    <SeoDrawer item={item} open onOpenChange={() => undefined} />
+    <SeoDrawer
+      item={item}
+      open
+      onOpenChange={() => undefined}
+      onSave={() => undefined}
+    />
   );
 
   expect(html).toContain("SEO Manager");
   expect(html).toContain("Run Full Audit");
-  expect(html).toContain("SEO Score");
+  expect(html).toContain("Loading SEO data...");
   expect(drawer).toContain("Quick SEO Edit");
   expect(drawer).toContain("Search Engine Preview");
 });

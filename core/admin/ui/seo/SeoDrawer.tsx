@@ -15,6 +15,9 @@ type SeoDrawerProps = {
   item: SeoItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSave: (id: string, payload: { title: string; description: string }) => void;
+  isSaving?: boolean;
+  error?: string | null;
 };
 
 const titleMax = 60;
@@ -26,19 +29,35 @@ function getCountTone(length: number, max: number) {
   return "text-amber-600";
 }
 
-export function SeoDrawer({ item, open, onOpenChange }: SeoDrawerProps) {
+export function SeoDrawer({
+  item,
+  open,
+  onOpenChange,
+  onSave,
+  isSaving = false,
+  error,
+}: SeoDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SeoDrawerContent key={item?.id ?? "empty"} item={item} />
+      <SeoDrawerContent
+        key={`${item?.id ?? "empty"}:${item?.metaTitle ?? ""}:${item?.metaDescription ?? ""}`}
+        item={item}
+        onSave={onSave}
+        isSaving={isSaving}
+        error={error}
+      />
     </Sheet>
   );
 }
 
 type SeoDrawerContentProps = {
   item: SeoItem | null;
+  onSave: (id: string, payload: { title: string; description: string }) => void;
+  isSaving: boolean;
+  error?: string | null;
 };
 
-function SeoDrawerContent({ item }: SeoDrawerContentProps) {
+function SeoDrawerContent({ item, onSave, isSaving, error }: SeoDrawerContentProps) {
   const [metaTitle, setMetaTitle] = useState(item?.metaTitle ?? "");
   const [metaDescription, setMetaDescription] = useState(
     item?.metaDescription ?? ""
@@ -204,11 +223,21 @@ function SeoDrawerContent({ item }: SeoDrawerContentProps) {
             <Button variant="outline" className="flex-1">
               Discard
             </Button>
-            <Button className="flex-1 gap-2">
+            <Button
+              className="flex-1 gap-2"
+              onClick={() => {
+                if (!item) return;
+                onSave(item.id, { title: metaTitle, description: metaDescription });
+              }}
+              disabled={!item || isSaving}
+            >
               <Save className="h-4 w-4" />
-              Update SEO
+              {isSaving ? "Saving..." : "Update SEO"}
             </Button>
           </div>
+          {error ? (
+            <p className="mt-3 text-xs text-destructive">{error}</p>
+          ) : null}
         </div>
     </SheetContent>
   );

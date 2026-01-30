@@ -316,6 +316,51 @@ Response:
 
 ---
 
+## SEO Manager
+
+Permissions: `content:read` (list + audit), `content:write` (update)
+
+- `GET /seo`
+- `GET /seo/:id`
+- `PATCH /seo/:id`
+- `POST /seo/audit`
+
+Example item:
+
+```json
+{
+  "id": "seo-id",
+  "targetType": "page",
+  "targetId": "page-id",
+  "targetTitle": "Homepage",
+  "slug": "/",
+  "title": "Homepage | Nextless",
+  "description": "Meta description text...",
+  "canonicalUrl": "https://example.com/",
+  "robots": "index,follow",
+  "score": 90,
+  "status": "warning",
+  "issues": [
+    { "code": "description_short", "severity": "warning", "message": "Description too short." }
+  ],
+  "lastAuditAt": "2026-01-30T10:00:00Z"
+}
+```
+
+`POST /seo/audit` payload:
+
+```json
+{ "targetType": "page", "targetId": "uuid" }
+```
+
+Response:
+
+```json
+{ "audited": 12 }
+```
+
+---
+
 ## Audit logs
 
 Permissions: `audit:read`

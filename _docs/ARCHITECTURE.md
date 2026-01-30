@@ -83,6 +83,11 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 ---
 
+## SEO Manager (v1)
+
+- Metadane SEO i wyniki audytu przechowywane w `seo_documents`.
+- Admin UI korzysta z endpointów `/seo` oraz `/seo/audit`.
+
 ## Kluczowe decyzje architektoniczne
 
 - Core budowany produkcyjnie (Vite SSR: client + server).

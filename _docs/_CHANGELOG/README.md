@@ -107,6 +107,7 @@ Project Change Log.
 | 080 | 2026-01-30 | Plugin safe mode in security settings | Core/Security |
 | 081 | 2026-01-30 | Session limits in security settings | Core/Security |
 | 082 | 2026-01-30 | Search UI wiring | Admin/UI |
+| 083 | 2026-01-30 | SEO manager core and UI | CMS/SEO |
 
 
 ---

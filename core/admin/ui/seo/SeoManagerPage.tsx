@@ -1,76 +1,22 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Filter, Search, SearchCheck } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  listSeo,
+  runSeoAudit,
+  updateSeo,
+  type SeoDocumentItem,
+} from "@/services/seoClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
 import { SeoAuditDialog } from "./SeoAuditDialog";
 import { SeoDrawer } from "./SeoDrawer";
 import { SeoTable, type SeoItem } from "./SeoTable";
-
-const seoItems: SeoItem[] = [
-  {
-    id: "seo-home",
-    title: "Homepage",
-    path: "/",
-    score: 92,
-    metaStatus: "optimized",
-    socialStatus: "ready",
-    metaTitle: "Modern CMS for Next.js Developers | Nextless",
-    metaDescription:
-      "Build faster with Nextless CMS. A modern, headless content management system optimized for speed, SEO, and developer experience. Start for free today.",
-    keywords: ["Headless CMS", "Next.js"],
-    previewUrl: "https://nextless.com",
-    previewPath: "homepage",
-    analysisStatus: "passed",
-    analysisNotes: [
-      "Keyword found in Title and Meta Description",
-      "Optimal length for both Title and Description",
-      "Fast loading time detected for this page",
-    ],
-  },
-  {
-    id: "seo-services",
-    title: "Services Page",
-    path: "/services/overview",
-    score: 65,
-    metaStatus: "short",
-    socialStatus: "missing",
-    metaTitle: "Services & Solutions | Nextless",
-    metaDescription:
-      "Explore our modular services designed to accelerate content delivery.",
-    keywords: ["Content workflow", "SEO tools"],
-    previewUrl: "https://nextless.com",
-    previewPath: "services",
-    analysisStatus: "attention",
-    analysisNotes: [
-      "Meta description is shorter than recommended length",
-      "Add social preview images for better sharing",
-      "Consider adding keyword variation in the title",
-    ],
-  },
-  {
-    id: "seo-contact",
-    title: "Contact Us",
-    path: "/contact",
-    score: 32,
-    metaStatus: "missing",
-    socialStatus: "missing",
-    metaTitle: "Get in touch | Nextless",
-    metaDescription: "",
-    keywords: ["Support", "Contact"],
-    previewUrl: "https://nextless.com",
-    previewPath: "contact",
-    analysisStatus: "attention",
-    analysisNotes: [
-      "Meta description is missing",
-      "Add focus keywords to improve relevance",
-      "Social preview assets are not configured",
-    ],
-  },
-];
 
 type SeoFilter = "all" | "optimized" | "needs-work" | "critical";
 
@@ -87,14 +33,93 @@ function getHealth(item: SeoItem): Exclude<SeoFilter, "all"> {
   return "critical";
 }
 
+const resolveMetaStatus = (description: string) => {
+  if (!description.trim()) return "missing";
+  if (description.trim().length < 70) return "short";
+  return "optimized";
+};
+
+const resolveAnalysisStatus = (status: SeoDocumentItem["status"]) =>
+  status === "ok" ? "passed" : "attention";
+
+const resolvePreviewInfo = (slug: string | null) => {
+  const path = slug ? (slug.startsWith("/") ? slug : `/${slug}`) : "/";
+  const previewPath = path.replace(/^\//, "");
+  const baseUrl =
+    typeof window !== "undefined" ? window.location.origin : "https://nextless.local";
+  return { path, previewUrl: baseUrl, previewPath };
+};
+
+const mapSeoItem = (item: SeoDocumentItem): SeoItem => {
+  const metaTitle = item.title ?? item.targetTitle;
+  const metaDescription = item.description ?? "";
+  const { path, previewUrl, previewPath } = resolvePreviewInfo(item.slug);
+  return {
+    id: item.id,
+    title: item.targetTitle,
+    path,
+    score: item.score ?? 0,
+    metaStatus: resolveMetaStatus(metaDescription),
+    socialStatus: "missing",
+    metaTitle,
+    metaDescription,
+    keywords: [],
+    previewUrl,
+    previewPath,
+    analysisStatus: resolveAnalysisStatus(item.status),
+    analysisNotes: item.issues.length
+      ? item.issues.map((issue) => issue.message)
+      : ["No issues found in the last audit."],
+  };
+};
+
 export function SeoManagerPage() {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<SeoFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [auditDialogOpen, setAuditDialogOpen] = useState(false);
+  const [items, setItems] = useState<SeoItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await listSeo();
+      setItems(result.map(mapSeoItem));
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load SEO data.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      await refresh();
+      if (!active) return;
+    })();
+    return () => {
+      active = false;
+    };
+  }, [refresh]);
+
+  useEffect(() => {
+    if (selectedId && !items.find((item) => item.id === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [items, selectedId]);
 
   const filteredItems = useMemo(() => {
-    return seoItems.filter((item) => {
+    return items.filter((item) => {
       const matchesQuery =
         !query ||
         item.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -103,9 +128,52 @@ export function SeoManagerPage() {
         statusFilter === "all" || getHealth(item) === statusFilter;
       return matchesQuery && matchesStatus;
     });
-  }, [query, statusFilter]);
+  }, [items, query, statusFilter]);
 
-  const selectedItem = seoItems.find((item) => item.id === selectedId) ?? null;
+  const selectedItem = items.find((item) => item.id === selectedId) ?? null;
+
+  const averageScore = useMemo(() => {
+    if (!items.length) return 0;
+    const total = items.reduce((sum, item) => sum + item.score, 0);
+    return Math.round(total / items.length);
+  }, [items]);
+
+  const handleAudit = async () => {
+    setIsAuditing(true);
+    setError(null);
+    try {
+      await runSeoAudit();
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to run SEO audit.");
+      }
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  const handleSave = async (id: string, payload: { title: string; description: string }) => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      await updateSeo(id, {
+        title: payload.title,
+        description: payload.description,
+      });
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to update SEO data.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <AdminShell
@@ -121,16 +189,16 @@ export function SeoManagerPage() {
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight">
-                SEO Manager
-              </h1>
-              <Badge
-                variant="secondary"
-                className="text-[10px] font-semibold uppercase tracking-wide"
-              >
-                Global Scan: 88%
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-semibold tracking-tight">
+                  SEO Manager
+                </h1>
+                <Badge
+                  variant="secondary"
+                  className="text-[10px] font-semibold uppercase tracking-wide"
+                >
+                Global Scan: {averageScore}%
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -174,15 +242,28 @@ export function SeoManagerPage() {
             <Badge variant="outline" className="text-xs">
               {filteredItems.length} pages
             </Badge>
-            <span>Last scan: Jan 27, 2026</span>
+            <span>Last scan: {items.length ? "Latest audit available" : "Not run yet"}</span>
           </div>
         </div>
 
-        <SeoTable
-          items={filteredItems}
-          activeId={selectedId}
-          onEdit={setSelectedId}
-        />
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>SEO data unavailable</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {isLoading ? (
+          <div className="rounded-xl border border-dashed bg-muted/30 p-8 text-center text-sm text-muted-foreground">
+            Loading SEO data...
+          </div>
+        ) : (
+          <SeoTable
+            items={filteredItems}
+            activeId={selectedId}
+            onEdit={setSelectedId}
+          />
+        )}
       </div>
 
       <SeoDrawer
@@ -192,8 +273,16 @@ export function SeoManagerPage() {
         onOpenChange={(nextOpen) => {
           if (!nextOpen) setSelectedId(null);
         }}
+        onSave={handleSave}
+        isSaving={isSaving}
+        error={error}
       />
-      <SeoAuditDialog open={auditDialogOpen} onOpenChange={setAuditDialogOpen} />
+      <SeoAuditDialog
+        open={auditDialogOpen}
+        onOpenChange={setAuditDialogOpen}
+        onRun={handleAudit}
+        isRunning={isAuditing}
+      />
     </AdminShell>
   );
 }

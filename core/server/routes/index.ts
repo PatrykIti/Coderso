@@ -10,6 +10,7 @@ import { registerSearchRoutes } from "./searchRoutes";
 import { registerAuditRoutes } from "./auditRoutes";
 import { registerThemeRoutes } from "./themeRoutes";
 import { registerAdminThemeRoutes } from "./adminThemeRoutes";
+import { registerSeoRoutes } from "./seoRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -29,4 +30,5 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerAuditRoutes(router, { requirePermission: deps.requirePermission });
   registerThemeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerAdminThemeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerSeoRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
 }

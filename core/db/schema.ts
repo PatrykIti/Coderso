@@ -259,6 +259,34 @@ export const contentRevisions = pgTable(
   })
 );
 
+export const seoDocuments = pgTable(
+  "seo_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    targetType: text("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    slug: text("slug"),
+    title: text("title"),
+    description: text("description"),
+    canonicalUrl: text("canonical_url"),
+    robots: text("robots"),
+    score: integer("score"),
+    status: text("status").notNull().default("warning"),
+    issues: jsonb("issues").notNull().default([]),
+    lastAuditAt: timestamp("last_audit_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    targetIdx: uniqueIndex("seo_documents_target_idx").on(
+      t.targetType,
+      t.targetId
+    ),
+    scoreIdx: index("seo_documents_score_idx").on(t.score),
+    updatedAtIdx: index("seo_documents_updated_at_idx").on(t.updatedAt),
+  })
+);
+
 export const themeProfiles = pgTable(
   "theme_profiles",
   {

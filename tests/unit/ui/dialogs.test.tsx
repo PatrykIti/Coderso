@@ -10,7 +10,7 @@ import { IntegrationRequestDialog } from "../../../core/admin/ui/settings/Integr
 
 test("SeoAuditDialog renders audit options", () => {
   const html = renderToString(
-    <SeoAuditDialog open onOpenChange={() => undefined} />
+    <SeoAuditDialog open onOpenChange={() => undefined} onRun={() => undefined} />
   );
 
   expect(html).toContain("Run SEO Audit");

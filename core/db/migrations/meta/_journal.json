@@ -92,6 +92,13 @@
       "when": 1769721449060,
       "tag": "0012_admin_themes",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1769808201693,
+      "tag": "0013_seo_documents",
+      "breakpoints": true
     }
   ]
 }
