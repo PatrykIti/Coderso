@@ -4,19 +4,23 @@
 **Priority:** High
 **Category:** Core/Security
 **Estimated Effort:** Medium
-**Dependencies:** TASK-004
+**Dependencies:** TASK-004, TASK-007
 **Status:** To Do
 
 ---
 
 ## Overview
 
-Implement core security middleware for admin API and server requests.
+Implement core security middleware for admin API and server requests, fully configurable from the Admin Dashboard.
 
 **Goals:**
-- Request ID and structured logging.
-- CSRF protection for state-changing routes.
-- Rate limiting and security headers.
+- Request ID and request context for consistent logging.
+- CSRF protection for state-changing routes (configurable).
+- CORS policy control (configurable).
+- Rate limiting (configurable).
+- Security headers (configurable).
+- Input validation middleware (AJV + standard errors).
+- Admin UI to manage all settings without server restart.
 
 ---
 
@@ -26,15 +30,21 @@ Implement core security middleware for admin API and server requests.
 core/server/middleware/
   requestId.ts
   csrf.ts
+  cors.ts
   rateLimit.ts
   securityHeaders.ts
-  cors.ts
 core/server/validation/
   schemaValidator.ts
-
+core/services/settings/
+  securitySettings.ts
 tests/unit/security/
+  securitySettings.test.ts
   csrf.test.ts
   rateLimit.test.ts
+tests/integration/routes/
+  securityHeaders.test.ts
+  cors.test.ts
+  securitySettings.test.ts
 ```
 
 ## Commands (if needed)
@@ -46,171 +56,63 @@ bun add ajv
 
 ---
 
-## Sub-Tasks
+## Sub-Tasks (detailed task files)
 
-### TASK-020-01_Request_ID_and_logging
+- `TASK-020-01_Security_Settings_Model_and_Defaults.md`
+- `TASK-020-02_Security_Settings_API_and_Validation.md`
+- `TASK-020-03_Request_Context_and_Request_ID.md`
+- `TASK-020-04_CSRF_Protection_Middleware.md`
+- `TASK-020-05_CORS_Policy_Middleware.md`
+- `TASK-020-06_Rate_Limiting_Middleware.md`
+- `TASK-020-07_Security_Headers_Middleware.md`
+- `TASK-020-08_Input_Validation_Middleware.md`
+- `TASK-020-09_Security_Settings_UI_Wiring.md`
 
-**Status:** To Do
+## Implementation Order
 
-- Generate request ID per request.
-- Add to logs and response headers.
-- Use UUIDv4 format.
-
-**Implementation Checklist:**
-
-| File | What to Add |
-| --- | --- |
-| `core/server/middleware/requestId.ts` | request id middleware |
-
-Request ID sketch:
-
-```ts
-export function requestId(req, res, next) {
-  const id = crypto.randomUUID();
-  req.context.requestId = id;
-  res.setHeader("x-request-id", id);
-  next();
-}
-```
-
----
-
-### TASK-020-02_CSRF_and_CORS
-
-**Status:** To Do
-
-- CSRF token endpoint: `GET /auth/csrf`.
-- Validate `X-CSRF-Token` for POST/PUT/PATCH/DELETE.
-- CORS allow only admin origin.
-- Allow `OPTIONS` preflight.
-
-CSRF token sketch:
-
-```ts
-router.get("/auth/csrf", async (req) => {
-  const token = randomToken();
-  await saveCsrfToken(req.session.id, token);
-  return json({ token });
-});
-```
-
-Example check:
-
-```ts
-const token = req.headers.get("x-csrf-token");
-if (!token || token !== session.csrfToken) {
-  return new Response("Invalid CSRF", { status: 403 });
-}
-```
-
-**Implementation Checklist:**
-
-| File | What to Add |
-| --- | --- |
-| `core/server/middleware/csrf.ts` | CSRF validation |
-| `core/server/middleware/cors.ts` | CORS rules |
-
-CORS sketch:
-
-```ts
-export function cors(req, res, next) {
-  res.setHeader("access-control-allow-origin", ADMIN_ORIGIN);
-  next();
-}
-```
-
----
-
-### TASK-020-03_Rate_limiting_and_headers
-
-**Status:** To Do
-
-- Per-IP rate limit for login and admin API.
-- Security headers: CSP, X-Frame-Options, X-Content-Type-Options.
-- Use in-memory store for v1 (replaceable).
-
-**Implementation Checklist:**
-
-| File | What to Add |
-| --- | --- |
-| `core/server/middleware/rateLimit.ts` | rate limiting |
-| `core/server/middleware/securityHeaders.ts` | headers |
-
-Headers sketch:
-
-```ts
-res.setHeader("x-frame-options", "DENY");
-res.setHeader("x-content-type-options", "nosniff");
-```
-
-Rate limit sketch:
-
-```ts
-const buckets = new Map();
-export function rateLimit(req, res, next) {
-  const key = req.ip;
-  const hits = buckets.get(key) ?? 0;
-  if (hits > MAX_REQ) return res.status(429).end();
-  buckets.set(key, hits + 1);
-  next();
-}
-```
-
----
-
-### TASK-020-04_Input_validation
-
-**Status:** To Do
-
-- Validate payloads with JSON schema.
-- Reject unknown fields.
-- Normalize validation errors to standard API error format.
-
-**Implementation Checklist:**
-
-| File | What to Add |
-| --- | --- |
-| `core/server/validation/schemaValidator.ts` | validation helpers |
-
-Validator sketch:
-
-```ts
-export function validate(schema, payload) {
-  const ok = ajv.validate(schema, payload);
-  if (!ok) throw new ValidationError(ajv.errors);
-}
-```
+1. Security settings model + API (020-01, 020-02)
+2. Request context + request ID (020-03)
+3. CSRF + CORS (020-04, 020-05)
+4. Rate limiting (020-06)
+5. Security headers (020-07)
+6. Input validation (020-08)
+7. Admin UI wiring (020-09)
 
 ---
 
 ## Testing Requirements
 
+- [ ] `tests/unit/security/securitySettings.test.ts` validates defaults + merges.
 - [ ] `tests/unit/security/csrf.test.ts` rejects missing token.
 - [ ] `tests/unit/security/rateLimit.test.ts` blocks repeated login attempts.
 - [ ] `tests/integration/routes/securityHeaders.test.ts` verifies headers.
 - [ ] `tests/integration/routes/cors.test.ts` allows only admin origin.
+- [ ] `tests/integration/routes/securitySettings.test.ts` validates settings API.
 
 ---
 
 ## New Files to Create
 
+- `core/services/settings/securitySettings.ts`
 - `core/server/middleware/requestId.ts`
 - `core/server/middleware/csrf.ts`
 - `core/server/middleware/cors.ts`
 - `core/server/middleware/rateLimit.ts`
 - `core/server/middleware/securityHeaders.ts`
 - `core/server/validation/schemaValidator.ts`
+- `tests/unit/security/securitySettings.test.ts`
 - `tests/unit/security/csrf.test.ts`
 - `tests/unit/security/rateLimit.test.ts`
 - `tests/integration/routes/securityHeaders.test.ts`
 - `tests/integration/routes/cors.test.ts`
+- `tests/integration/routes/securitySettings.test.ts`
 
 ---
 
 ## Documentation Updates Required
 
 - `_docs/SECURITY_SPEC.md` (middleware details).
-- `_docs/CMS_API.md` (CSRF usage).
+- `_docs/CMS_API.md` (security settings + CSRF usage).
 
 ---
 
