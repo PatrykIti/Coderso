@@ -5,7 +5,7 @@
 **Category:** CMS/Backups  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-029-01, TASK-020  
-**Status:** To Do
+**Status:** Done (2026-01-30)
 
 ---
 

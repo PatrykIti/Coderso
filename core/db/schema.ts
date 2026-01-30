@@ -148,6 +148,41 @@ export const settings = pgTable("settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const backups = pgTable(
+  "backups",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    status: text("status").notNull().default("queued"),
+    kind: text("kind").notNull().default("manual"),
+    storageDriver: text("storage_driver").notNull().default("local"),
+    artifactPath: text("artifact_path"),
+    sizeBytes: integer("size_bytes"),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    finishedAt: timestamp("finished_at"),
+  },
+  (t) => ({
+    statusIdx: index("backups_status_idx").on(t.status),
+    createdAtIdx: index("backups_created_at_idx").on(t.createdAt),
+  })
+);
+
+export const backupSchedules = pgTable(
+  "backup_schedules",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    enabled: boolean("enabled").notNull().default(true),
+    frequency: text("frequency").notNull().default("daily"),
+    retentionDays: integer("retention_days").notNull().default(30),
+    storageDriver: text("storage_driver").notNull().default("local"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    frequencyIdx: index("backup_schedules_frequency_idx").on(t.frequency),
+  })
+);
+
 export const plugins = pgTable(
   "plugins",
   {

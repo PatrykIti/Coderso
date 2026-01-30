@@ -396,6 +396,64 @@ Top content response:
 
 ---
 
+## Backups (v1)
+
+Permissions: `backups:read`, `backups:write`
+
+Note: v1 backupy to metadane + placeholder na artefakt. Faktyczne backupy realizuje worker/plugin.
+
+- `GET /backups`
+- `POST /backups` (manual create)
+- `POST /backups/:id/restore`
+- `GET /backups/:id/download`
+- `GET /backups/schedule`
+- `PATCH /backups/schedule`
+
+Create payload (optional):
+
+```json
+{ "kind": "manual" }
+```
+
+List response:
+
+```json
+{
+  "items": [
+    {
+      "id": "backup-id",
+      "status": "complete",
+      "kind": "manual",
+      "storageDriver": "s3",
+      "artifactPath": "s3://bucket/backup.tar",
+      "sizeBytes": 1048576,
+      "error": null,
+      "createdAt": "2026-01-30T10:00:00Z",
+      "finishedAt": "2026-01-30T10:05:00Z"
+    }
+  ]
+}
+```
+
+Schedule payload:
+
+```json
+{
+  "enabled": true,
+  "frequency": "daily",
+  "retentionDays": 30,
+  "storageDriver": "s3"
+}
+```
+
+Download response:
+
+```json
+{ "url": "https://cdn.example.com/backups/backup.tar", "path": "s3://bucket/backup.tar" }
+```
+
+---
+
 ## Audit logs
 
 Permissions: `audit:read`

@@ -14,9 +14,21 @@ import { Separator } from "@/components/ui/separator";
 type BackupNowDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreate: () => Promise<boolean>;
+  isSubmitting: boolean;
 };
 
-export function BackupNowDialog({ open, onOpenChange }: BackupNowDialogProps) {
+export function BackupNowDialog({
+  open,
+  onOpenChange,
+  onCreate,
+  isSubmitting,
+}: BackupNowDialogProps) {
+  const handleCreate = async () => {
+    const ok = await onCreate();
+    if (ok) onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] gap-0 p-0 sm:max-w-lg">
@@ -50,12 +62,16 @@ export function BackupNowDialog({ open, onOpenChange }: BackupNowDialogProps) {
         </div>
         <Separator />
         <div className="flex flex-col gap-3 bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button className="gap-2" onClick={() => onOpenChange(false)}>
+          <Button className="gap-2" onClick={handleCreate} disabled={isSubmitting}>
             <CloudUpload className="h-4 w-4" />
-            Start Backup
+            {isSubmitting ? "Starting..." : "Start Backup"}
           </Button>
         </div>
       </DialogContent>

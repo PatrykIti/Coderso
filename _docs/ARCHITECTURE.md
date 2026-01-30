@@ -88,6 +88,13 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Metadane SEO i wyniki audytu przechowywane w `seo_documents`.
 - Admin UI korzysta z endpointów `/seo` oraz `/seo/audit`.
 
+## Backups (v1)
+
+- Backupy w v1 to **metadata-only** zapisane w tabeli `backups`.
+- Harmonogram trzymany jest w `backup_schedules` i konfigurowany z Admin UI.
+- Storage driver dla backupu jest brany z ustawien storage (local/s3/azure).
+- Faktyczne tworzenie/restore plikow backupu realizuje przyszly worker/plugin.
+
 ## Kluczowe decyzje architektoniczne
 
 - Core budowany produkcyjnie (Vite SSR: client + server).

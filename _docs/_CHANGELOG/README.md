@@ -109,6 +109,7 @@ Project Change Log.
 | 082 | 2026-01-30 | Search UI wiring | Admin/UI |
 | 083 | 2026-01-30 | SEO manager core and UI | CMS/SEO |
 | 084 | 2026-01-30 | Analytics core and UI wiring | CMS/Analytics |
+| 085 | 2026-01-30 | Backups core and UI wiring | CMS/Backups |
 
 
 ---
