@@ -5,7 +5,7 @@
 **Category:** Core/Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-004, TASK-007
-**Status:** To Do
+**Status:** Done (2026-01-30)
 
 ---
 

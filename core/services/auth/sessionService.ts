@@ -53,8 +53,9 @@ function generateToken() {
 }
 
 export function createCsrfToken() {
-  const token = generateToken();
-  return { token, tokenHash: hashToken(token) };
+  const issuedAt = Date.now();
+  const token = `${issuedAt}.${generateToken()}`;
+  return { token, tokenHash: hashToken(token), issuedAt };
 }
 
 export async function createSession(input: CreateSessionInput) {

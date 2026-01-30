@@ -1,0 +1,76 @@
+import { afterAll, beforeEach, expect, test } from "bun:test";
+import { sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+
+import { db } from "../../../core/db/client";
+import { settings } from "../../../core/db/schema";
+import {
+  getSecuritySettings,
+  resetSecuritySettingsCache,
+  SECURITY_SETTINGS_DEFAULTS,
+  setSecuritySettings,
+} from "../../../core/services/settings/securitySettings";
+
+const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
+const testIfDb = hasDb ? test : test.skip;
+
+async function canConnect() {
+  try {
+    await db.execute(sql`select 1`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const SETTINGS_KEY = "security.settings";
+
+const cleanup = async () => {
+  if (!hasDb) return;
+  await db.delete(settings).where(eq(settings.key, SETTINGS_KEY));
+  resetSecuritySettingsCache();
+};
+
+beforeEach(async () => {
+  await cleanup();
+});
+
+afterAll(async () => {
+  await cleanup();
+});
+
+testIfDb("getSecuritySettings returns defaults when missing", async () => {
+  const current = await getSecuritySettings();
+  expect(current).toEqual(SECURITY_SETTINGS_DEFAULTS);
+});
+
+testIfDb("setSecuritySettings merges partial updates", async () => {
+  await setSecuritySettings({
+    csrf: { enabled: false },
+    cors: { allowedOrigins: ["https://admin.example.com"] },
+    rateLimit: { admin: { maxRequests: 50 } },
+  });
+
+  const updated = await getSecuritySettings();
+  expect(updated.csrf.enabled).toBe(false);
+  expect(updated.cors.allowedOrigins).toEqual(["https://admin.example.com"]);
+  expect(updated.rateLimit.admin.maxRequests).toBe(50);
+  expect(updated.rateLimit.admin.windowSeconds).toBe(
+    SECURITY_SETTINGS_DEFAULTS.rateLimit.admin.windowSeconds
+  );
+});
+
+testIfDb("setSecuritySettings validates input", async () => {
+  await expect(
+    setSecuritySettings({ csrf: { tokenTtlMinutes: -1 } })
+  ).rejects.toThrow("security_settings_invalid");
+});
+
+testIfDb("cors wildcard disables credentials", async () => {
+  await setSecuritySettings({
+    cors: { allowedOrigins: ["*"], allowCredentials: true },
+  });
+  const updated = await getSecuritySettings();
+  expect(updated.cors.allowedOrigins).toEqual(["*"]);
+  expect(updated.cors.allowCredentials).toBe(false);
+});

@@ -50,7 +50,9 @@ beforeEach(() => {
   resetStorageSettingsCache();
 });
 
-test("getMediaStorageAdapter defaults to local", async () => {
+const testIfDb = hasDb ? test : test.skip;
+
+testIfDb("getMediaStorageAdapter defaults to local", async () => {
   await withStorageDriverUnset(async () => {
     delete process.env.MEDIA_STORAGE;
     process.env.MEDIA_BASE_URL = "http://localhost/media";
@@ -61,8 +63,6 @@ test("getMediaStorageAdapter defaults to local", async () => {
     );
   });
 });
-
-const testIfDb = hasDb ? test : test.skip;
 
 testIfDb("getMediaStorageAdapter rejects unknown storage without DB override", async () => {
   await withStorageDriverUnset(async () => {

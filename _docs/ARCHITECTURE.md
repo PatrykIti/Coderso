@@ -32,6 +32,8 @@ Nie-cele:
 - Konfiguracje biznesowe (np. baseUrl, TTL) trzymamy w settings i ustawiamy z UI,
   bez restartu serwera. ENV zostaje tylko dla krytycznych wartosci infrastrukturalnych
   (np. `DATABASE_URL`, `MEDIA_SECRET_MASTER_KEY`).
+- Ustawienia security middleware (CORS/CSRF/rate-limit/headers) konfigurowalne
+  z Admin UI i stosowane runtime (bez restartu).
 
 ## Pierwsze uruchomienie (Setup Wizard)
 

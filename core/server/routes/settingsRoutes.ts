@@ -9,9 +9,15 @@ import {
   setStorageSettings,
   type StorageSettingsUpdate,
 } from "../../services/settings/storageSettings";
+import {
+  getSecuritySettings,
+  setSecuritySettings,
+  type SecuritySettingsUpdate,
+} from "../../services/settings/securitySettings";
 import { getResolvedTokens } from "../../services/theme/tokenService";
 import { logAudit } from "../../services/audit/auditService";
 import {
+  securitySettingsSchema,
   settingsBulkSchema,
   settingsUpdateSchema,
   storageSettingsSchema,
@@ -54,6 +60,14 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
   );
 
   router.get(
+    "/settings/security",
+    requirePermission("settings:read"),
+    async () => {
+      return getSecuritySettings();
+    }
+  );
+
+  router.get(
     "/settings/:key",
     requirePermission("settings:read"),
     async (ctx) => {
@@ -79,6 +93,24 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
         action: "settings.update",
         targetType: "settings",
         targetId: "storage",
+        metadata: { keys: Object.keys(payload) },
+      });
+      return updated;
+    }
+  );
+
+  router.patch(
+    "/settings/security",
+    requirePermission("settings:write"),
+    async (ctx) => {
+      validate(securitySettingsSchema, ctx.body);
+      const payload = ctx.body as SecuritySettingsUpdate;
+      const updated = await setSecuritySettings(payload);
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "settings.update",
+        targetType: "settings",
+        targetId: "security",
         metadata: { keys: Object.keys(payload) },
       });
       return updated;

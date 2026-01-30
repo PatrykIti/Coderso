@@ -2,10 +2,17 @@ import path from "node:path";
 import { ApiError, toErrorResponse } from "./errorHandler";
 import { parseRequestBody } from "./requestBody";
 import { attachUserFromSession, requireAuth } from "./middleware/auth";
+import { applyCorsHeaders } from "./middleware/cors";
+import { enforceCsrf } from "./middleware/csrf";
 import { requirePermission } from "./middleware/rbac";
+import { checkRateLimit } from "./middleware/rateLimit";
+import { createRequestIdContext } from "./middleware/requestId";
+import { applySecurityHeaders } from "./middleware/securityHeaders";
 import { createRouter, matchRoute, normalizePath, type RouteContext } from "./router";
 import { registerAllRoutes } from "./routes";
+import { validate } from "./validation/schemaValidator";
 import { getMediaStorageAdapter } from "../services/media/storage";
+import { getSecuritySettings } from "../services/settings/securitySettings";
 import { getStorageSettingsInternal } from "../services/settings/storageSettings";
 import { ensureThemesLoaded } from "../themes/registry";
 
@@ -90,7 +97,6 @@ const resolveIp = (req: Request) => {
 
 const buildRouter = () => {
   const router = createRouter();
-  const validate = () => undefined;
   registerAllRoutes(router, {
     requireAuth: requireAuth(),
     requirePermission,
@@ -131,24 +137,42 @@ const handleAdmin = async (req: Request, devUrl?: string) => {
 
   if (devUrl) return redirectToDev(req, devUrl);
 
+  const security = await getSecuritySettings();
+
   if (isAdminAsset(url.pathname)) {
     const filePath = resolveAdminFile(url.pathname);
     if (!filePath) return new Response("Forbidden", { status: 403 });
     const file = Bun.file(filePath);
     if (!(await file.exists())) return new Response("Not Found", { status: 404 });
-    return new Response(file, { headers: { "Content-Type": file.type } });
+    const headers = new Headers({ "Content-Type": file.type });
+    applySecurityHeaders(headers, security.headers);
+    return new Response(file, { headers });
   }
 
   const indexPath = resolveAdminFile("/admin/index.html");
   if (!indexPath) return new Response("Not Found", { status: 404 });
   const indexFile = Bun.file(indexPath);
   if (!(await indexFile.exists())) return new Response("Not Found", { status: 404 });
-  return new Response(indexFile, { headers: { "Content-Type": "text/html" } });
+  const headers = new Headers({ "Content-Type": "text/html" });
+  applySecurityHeaders(headers, security.headers);
+  return new Response(indexFile, { headers });
 };
 
 const handleApi = async (req: Request) => {
   const url = new URL(req.url);
   const pathname = normalizePath(url.pathname).replace(API_PREFIX, "") || "/";
+  const security = await getSecuritySettings();
+  const requestContext = createRequestIdContext(security.requestId);
+  const responseHeaders = new Headers();
+  if (requestContext) {
+    responseHeaders.set(requestContext.headerName, requestContext.requestId);
+  }
+  applySecurityHeaders(responseHeaders, security.headers);
+  applyCorsHeaders(req, responseHeaders, security.cors);
+
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: responseHeaders });
+  }
 
   for (const route of router.routes) {
     if (route.method !== req.method) continue;
@@ -160,7 +184,6 @@ const handleApi = async (req: Request) => {
       headersObj[key] = value;
     });
     const cookies = parseCookies(req.headers.get("cookie"));
-    const responseHeaders = new Headers();
 
     const ctx: RouteContext = {
       params: match.params,
@@ -170,6 +193,8 @@ const handleApi = async (req: Request) => {
       cookies,
       ip: resolveIp(req),
       userAgent: req.headers.get("user-agent") ?? undefined,
+      requestId: requestContext?.requestId,
+      requestStart: requestContext?.requestStart,
       setCookie: (name, value, options) => {
         responseHeaders.append("Set-Cookie", createCookieValue(name, value, options));
       },
@@ -190,6 +215,12 @@ const handleApi = async (req: Request) => {
     await attachUserFromSession(ctx);
 
     try {
+      checkRateLimit(
+        pathname.startsWith("/auth") ? "auth" : "admin",
+        ctx.ip,
+        security.rateLimit
+      );
+      await enforceCsrf(req, ctx, security.csrf);
       let result: unknown = undefined;
       for (const handler of route.handlers) {
         const output = await handler(ctx);
@@ -203,7 +234,7 @@ const handleApi = async (req: Request) => {
     }
   }
 
-  return new Response("Not Found", { status: 404 });
+  return new Response("Not Found", { status: 404, headers: responseHeaders });
 };
 
 const handleMedia = async (req: Request) => {

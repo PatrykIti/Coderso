@@ -375,6 +375,37 @@ Response:
 
 ---
 
+## Security settings
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /settings/security`
+- `PATCH /settings/security`
+
+`PATCH /settings/security` (partial update)
+
+```json
+{
+  "csrf": { "enabled": true, "tokenTtlMinutes": 30 },
+  "rateLimit": {
+    "enabled": true,
+    "admin": { "windowSeconds": 60, "maxRequests": 120 },
+    "auth": { "windowSeconds": 60, "maxRequests": 20 }
+  },
+  "cors": {
+    "allowedOrigins": ["https://admin.example.com"],
+    "allowCredentials": true,
+    "allowedMethods": ["GET", "POST", "PATCH", "DELETE"],
+    "allowedHeaders": ["content-type", "x-csrf-token"],
+    "maxAgeSeconds": 600
+  }
+}
+```
+
+Uwaga: zmiany obowiazuja natychmiast, bez restartu serwera.
+
+---
+
 ## Plugins (installed)
 
 Permissions: `plugins:read`, `plugins:manage`

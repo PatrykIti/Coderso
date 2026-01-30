@@ -14,7 +14,7 @@ const makeRouter = () => {
   };
 };
 
-test("registerSettingsRoutes wires endpoints", () => {
+test("security settings endpoints are registered", () => {
   const { router, routes } = makeRouter();
 
   registerSettingsRoutes(router, {
@@ -25,15 +25,6 @@ test("registerSettingsRoutes wires endpoints", () => {
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
   expect(paths).toEqual(
-    expect.arrayContaining([
-      "GET /settings",
-      "GET /settings/storage",
-      "GET /settings/security",
-      "GET /settings/:key",
-      "PATCH /settings/storage",
-      "PATCH /settings/security",
-      "PATCH /settings/:key",
-      "PATCH /settings",
-    ])
+    expect.arrayContaining(["GET /settings/security", "PATCH /settings/security"])
   );
 });

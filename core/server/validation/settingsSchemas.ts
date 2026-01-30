@@ -57,3 +57,96 @@ export const storageSettingsSchema = {
     },
   },
 };
+
+export const securitySettingsSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    requestId: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        headerName: { type: "string" },
+      },
+    },
+    csrf: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        headerName: { type: "string" },
+        tokenTtlMinutes: { type: "number" },
+      },
+    },
+    cors: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        allowedOrigins: {
+          anyOf: [
+            { type: "array", items: { type: "string" } },
+            { type: "string" },
+          ],
+        },
+        allowCredentials: { type: "boolean" },
+        allowedMethods: {
+          anyOf: [
+            { type: "array", items: { type: "string" } },
+            { type: "string" },
+          ],
+        },
+        allowedHeaders: {
+          anyOf: [
+            { type: "array", items: { type: "string" } },
+            { type: "string" },
+          ],
+        },
+        maxAgeSeconds: { type: "number" },
+      },
+    },
+    rateLimit: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        admin: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            windowSeconds: { type: "number" },
+            maxRequests: { type: "number" },
+          },
+        },
+        auth: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            windowSeconds: { type: "number" },
+            maxRequests: { type: "number" },
+          },
+        },
+      },
+    },
+    headers: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        frameOptions: { enum: ["DENY", "SAMEORIGIN"] },
+        contentTypeOptions: { type: "boolean" },
+        referrerPolicy: { type: ["string", "null"] },
+        permissionsPolicy: { type: ["string", "null"] },
+        csp: { type: ["string", "null"] },
+        hsts: { type: ["string", "null"] },
+      },
+    },
+    validation: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        rejectUnknownFields: { type: "boolean" },
+      },
+    },
+  },
+};

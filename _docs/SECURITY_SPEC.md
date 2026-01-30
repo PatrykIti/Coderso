@@ -17,6 +17,21 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - Referrer-Policy
 - HTTPS w produkcji (HSTS zalecany).
 
+### Konfiguracja runtime (Admin UI)
+
+- Wszystkie ustawienia middleware sa trzymane w DB (`settings.key = security.settings`).
+- Zmiany wchodza w zycie bez restartu (runtime config).
+- Zakres konfigurowalny z panelu:
+  - requestId (enabled, headerName)
+  - csrf (enabled, headerName, tokenTtlMinutes)
+  - cors (allowedOrigins, allowCredentials, allowedMethods, allowedHeaders, maxAgeSeconds)
+  - rateLimit (enabled, admin/auth limits)
+  - headers (frameOptions, referrerPolicy, CSP, HSTS, itd.)
+  - validation (rejectUnknownFields)
+
+Uwaga: header CSRF jest weryfikowany na podstawie tokenu z prefiksem timestamp (`<ts>.<token>`),
+co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
+
 ## Input validation
 
 - JSON schema validation dla payloadow admin API.

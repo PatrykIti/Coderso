@@ -103,6 +103,7 @@ Project Change Log.
 | 076 | 2026-01-29 | Admin UI theme templates | Admin/UI |
 | 077 | 2026-01-29 | Admin UI theme tabs | Admin/UI |
 | 078 | 2026-01-30 | Widget registry and core widgets | CMS/Widgets |
+| 079 | 2026-01-30 | Security middleware and settings | Core/Security |
 
 
 ---

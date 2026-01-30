@@ -5,7 +5,7 @@
 **Category:** Admin/UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-020-02, TASK-006-18, TASK-006-36
-**Status:** To Do
+**Status:** Done (2026-01-30)
 
 ---
 

@@ -1,9 +1,11 @@
 import { expect, test } from "bun:test";
 
 import {
+  getSecuritySettings,
   getSetting,
   getSettings,
   getStorageSettings,
+  updateSecuritySettings,
   updateSettings,
   updateStorageSettings,
 } from "../../../core/admin/services/settingsClient";
@@ -80,6 +82,25 @@ test("getSettings hits GET /settings", async () => {
   }
 });
 
+test("getSecuritySettings hits GET /settings/security", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ csrf: { enabled: true, headerName: "x-csrf-token", tokenTtlMinutes: 30 } });
+  };
+
+  try {
+    await getSecuritySettings();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/settings/security");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("getSetting hits GET /settings/:key", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -118,6 +139,33 @@ test("updateSettings uses CSRF and PATCH", async () => {
 
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/settings");
+    expect(calls[1]?.init?.method).toBe("PATCH");
+    const headers = new Headers(calls[1]?.init?.headers);
+    expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("updateSecuritySettings uses CSRF and PATCH", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ csrf: { enabled: false, headerName: "x-csrf-token", tokenTtlMinutes: 30 } });
+  };
+
+  try {
+    resetCsrfToken();
+    await updateSecuritySettings({ csrf: { enabled: false } });
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/settings/security");
     expect(calls[1]?.init?.method).toBe("PATCH");
     const headers = new Headers(calls[1]?.init?.headers);
     expect(headers.get("X-CSRF-Token")).toBe("csrf-token");

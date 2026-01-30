@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 0
-- **Done:** 113 tasks
+- **Done:** 123 tasks
 
 ---
 
@@ -42,16 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-026-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-026-02 | Dashboard API | Medium | Medium | GET /dashboard |
 | TASK-026-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
-| TASK-020 | Security Middleware and Request Pipeline | High | Medium | CSRF + rate limit |
-| TASK-020-01 | Security Settings Model and Defaults | High | Medium | DB-backed security config |
-| TASK-020-02 | Security Settings API and Validation | High | Medium | /settings/security |
-| TASK-020-03 | Request Context and Request ID | High | Medium | requestId + context |
-| TASK-020-04 | CSRF Protection Middleware | High | Medium | CSRF enforcement |
-| TASK-020-05 | CORS Policy Middleware | High | Medium | allowlist + preflight |
-| TASK-020-06 | Rate Limiting Middleware | High | Medium | auth/admin buckets |
-| TASK-020-07 | Security Headers Middleware | Medium | Small | CSP/HSTS/etc |
-| TASK-020-08 | Input Validation Middleware | Medium | Medium | AJV validate helper |
-| TASK-020-09 | Security Settings UI Wiring | High | Medium | Admin UI config |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -71,6 +61,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-020 | Security Middleware and Request Pipeline | High | Medium | Request pipeline security |
+| TASK-020-01 | Security Settings Model and Defaults | High | Medium | DB-backed security config |
+| TASK-020-02 | Security Settings API and Validation | High | Medium | /settings/security |
+| TASK-020-03 | Request Context and Request ID | High | Medium | requestId + context |
+| TASK-020-04 | CSRF Protection Middleware | High | Medium | CSRF enforcement |
+| TASK-020-05 | CORS Policy Middleware | High | Medium | allowlist + preflight |
+| TASK-020-06 | Rate Limiting Middleware | High | Medium | auth/admin buckets |
+| TASK-020-07 | Security Headers Middleware | Medium | Small | CSP/HSTS/etc |
+| TASK-020-08 | Input Validation Middleware | Medium | Medium | AJV validate helper |
+| TASK-020-09 | Security Settings UI Wiring | High | Medium | Admin UI config |
 | TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..05 |
 | TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
 | TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |

@@ -8,6 +8,8 @@ export type RouteContext = {
   sessionId?: string;
   ip?: string;
   userAgent?: string;
+  requestId?: string;
+  requestStart?: number;
   setCookie?: (name: string, value: string, options: CookieOptions) => void;
   clearCookie?: (name: string) => void;
 };
