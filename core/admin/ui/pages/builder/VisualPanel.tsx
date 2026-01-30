@@ -1,22 +1,25 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import type { WidgetDefinition } from "./types";
+import type { Block, WidgetDefinition } from "./types";
 
 export type VisualPanelProps = {
   widget: WidgetDefinition;
-  selected?: string;
-  onSelect: (variant: string) => void;
+  block: Block;
+  onChange: (next: Block) => void;
 };
 
-export function VisualPanel({ widget, selected, onSelect }: VisualPanelProps) {
+export function VisualPanel({ widget, block, onChange }: VisualPanelProps) {
+  const variant = block.variant ?? widget.variants[0]?.id ?? "";
+  const Editor = widget.editor.visual;
+
   return (
     <div className="space-y-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Visual
         </p>
-        <h3 className="text-lg font-semibold">{widget.label} Variants</h3>
+        <h3 className="text-lg font-semibold">{widget.title} Variants</h3>
         <p className="text-sm text-muted-foreground">
           Choose a visual style for this widget.
         </p>
@@ -26,9 +29,9 @@ export function VisualPanel({ widget, selected, onSelect }: VisualPanelProps) {
           <button
             key={variant.id}
             type="button"
-            onClick={() => onSelect(variant.id)}
+            onClick={() => onChange({ ...block, variant: variant.id })}
             className={
-              selected === variant.id
+              block.variant === variant.id
                 ? "rounded-lg border border-primary bg-primary/5 p-3 text-left"
                 : "rounded-lg border bg-background p-3 text-left"
             }
@@ -42,8 +45,8 @@ export function VisualPanel({ widget, selected, onSelect }: VisualPanelProps) {
                   </p>
                 ) : null}
               </div>
-              <Badge variant={selected === variant.id ? "default" : "outline"}>
-                {selected === variant.id ? "Selected" : "Pick"}
+              <Badge variant={block.variant === variant.id ? "default" : "outline"}>
+                {block.variant === variant.id ? "Selected" : "Pick"}
               </Badge>
             </div>
           </button>
@@ -52,6 +55,12 @@ export function VisualPanel({ widget, selected, onSelect }: VisualPanelProps) {
       <Button variant="outline" className="w-full">
         Add variant preset
       </Button>
+      <Editor
+        value={block.data as Record<string, unknown>}
+        onChange={(data) => onChange({ ...block, data })}
+        variant={variant}
+        onVariantChange={(next) => onChange({ ...block, variant: next })}
+      />
     </div>
   );
 }

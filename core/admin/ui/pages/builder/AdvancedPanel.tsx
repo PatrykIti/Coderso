@@ -1,8 +1,9 @@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
-import type { Block, DeviceTarget } from "./types";
+import type { Block, DeviceTarget, WidgetDefinition } from "./types";
 import { LayoutPanel } from "./LayoutPanel";
+import { sanitizeLayout } from "./blockUtils";
 
 const deviceLabels: { id: DeviceTarget; label: string }[] = [
   { id: "desktop", label: "Desktop" },
@@ -12,22 +13,33 @@ const deviceLabels: { id: DeviceTarget; label: string }[] = [
 
 export type AdvancedPanelProps = {
   block: Block;
+  widget: WidgetDefinition;
   onChange: (next: Block) => void;
 };
 
-export function AdvancedPanel({ block, onChange }: AdvancedPanelProps) {
+export function AdvancedPanel({ block, widget, onChange }: AdvancedPanelProps) {
+  const Editor = widget.editor.advanced;
+  const layoutValue = sanitizeLayout(block.layout);
+
+  const devices = block.visibility?.devices ?? ["desktop", "tablet", "mobile"];
   const toggleDevice = (device: DeviceTarget) => {
-    const devices = block.visibility.devices.includes(device)
-      ? block.visibility.devices.filter((entry) => entry !== device)
-      : [...block.visibility.devices, device];
+    const nextDevices = devices.includes(device)
+      ? devices.filter((entry) => entry !== device)
+      : [...devices, device];
     onChange({
       ...block,
-      visibility: { ...block.visibility, devices },
+      visibility: { ...block.visibility, devices: nextDevices, enabled: block.visibility?.enabled ?? true },
     });
   };
 
   return (
     <div className="space-y-6">
+      <Editor
+        value={block.data as Record<string, unknown>}
+        onChange={(data) => onChange({ ...block, data })}
+        variant={block.variant ?? widget.variants[0]?.id ?? ""}
+        onVariantChange={(next) => onChange({ ...block, variant: next })}
+      />
       <div>
         <div className="flex items-center gap-2">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -39,7 +51,7 @@ export function AdvancedPanel({ block, onChange }: AdvancedPanelProps) {
         </div>
         <div className="mt-3">
           <LayoutPanel
-            value={block.layout}
+            value={layoutValue}
             onChange={(layout) => onChange({ ...block, layout })}
           />
         </div>
@@ -56,7 +68,7 @@ export function AdvancedPanel({ block, onChange }: AdvancedPanelProps) {
             >
               <span className="text-sm font-medium">{device.label}</span>
               <Switch
-                checked={block.visibility.devices.includes(device.id)}
+                checked={devices.includes(device.id)}
                 onCheckedChange={() => toggleDevice(device.id)}
               />
             </div>

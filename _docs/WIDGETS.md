@@ -94,9 +94,10 @@ type WidgetBlock = {
   variant: string; // wariant widgetu
   data: Record<string, unknown>;
   layout?: {
-    container?: "full" | "boxed";
-    padding?: "none" | "sm" | "md" | "lg";
-    margin?: "none" | "sm" | "md" | "lg";
+    container?: "default" | "narrow" | "full";
+    padding?: { top?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl"; bottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" };
+    margin?: { top?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl"; bottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" };
+    background?: { color?: string; image?: string | null };
   };
   visibility?: {
     enabled?: boolean;
@@ -122,7 +123,7 @@ type WidgetDefinition<T = Record<string, unknown>> = {
   title: string;
   description?: string;
   category: "layout" | "content" | "forms" | "navigation" | "media";
-  variants: string[];
+  variants: { id: string; label: string; description?: string }[];
   schema: Record<string, unknown>; // JSON schema (draft-07)
   defaults: T;
   editor: {

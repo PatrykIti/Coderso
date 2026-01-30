@@ -1,4 +1,4 @@
-export type WidgetCategoryId = "hero" | "grid" | "forms" | "media";
+export type WidgetCategoryId = "layout" | "content" | "forms" | "navigation" | "media";
 
 export type WidgetItem = {
   id: string;

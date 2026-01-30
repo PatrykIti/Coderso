@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-009-01  
-**Status:** To Do  
+**Status:** Done (2026-01-30)  
 
 ---
 

@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-002, TASK-007  
-**Status:** To Do  
+**Status:** Done (2026-01-30)  
 
 ---
 

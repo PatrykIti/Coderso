@@ -18,28 +18,26 @@ import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
 import { WidgetPicker } from "./builder/WidgetPicker";
 import {
+  applyWizardSelection,
   createBlock,
   duplicateBlock,
   reorderBlocks,
   shouldWarnOnNavigate,
 } from "./builder/blockUtils";
 import type { Block } from "./builder/types";
-import { widgetRegistry } from "./builder/widgetRegistry";
+import { getWidgetRegistry } from "./builder/widgetRegistry";
+import { normalizeWidgetBlock } from "../../../widgets/validator";
 
+const heroBlockDefaults = createBlock("hero");
 const defaultBlocks: Block[] = [
-  {
-    ...createBlock("hero"),
-    variant: "centered",
-    editor: { mode: "visual", wizardCompleted: true },
+  applyWizardSelection({
+    ...heroBlockDefaults,
     data: {
+      ...(heroBlockDefaults.data ?? {}),
       headline: "Build faster with Nextless",
     },
-  },
-  {
-    ...createBlock("compare-timeline"),
-    variant: "dual-track-highlight",
-    editor: { mode: "wizard", wizardCompleted: false },
-  },
+  }),
+  createBlock("compare-timeline"),
 ];
 
 const resolvePageId = (pathname: string) => {
@@ -52,7 +50,23 @@ const resolvePageId = (pathname: string) => {
 const normalizeBlocks = (data?: Record<string, unknown> | null) => {
   if (!data || typeof data !== "object") return defaultBlocks;
   const blocks = (data as { blocks?: unknown }).blocks;
-  return Array.isArray(blocks) ? (blocks as Block[]) : defaultBlocks;
+  if (!Array.isArray(blocks)) return defaultBlocks;
+
+  try {
+    return blocks.map((block) => {
+      const normalized = normalizeWidgetBlock(block as Block);
+      const base = createBlock(normalized.type);
+      return {
+        ...base,
+        ...normalized,
+        layout: normalized.layout ?? base.layout,
+        visibility: normalized.visibility ?? base.visibility,
+        editor: normalized.editor ?? base.editor,
+      };
+    });
+  } catch {
+    return defaultBlocks;
+  }
 };
 
 export type PageEditorProps = {
@@ -69,19 +83,18 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [blocks, setBlocks] = useState<Block[]>(normalizeBlocks(initialPage?.currentData));
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isLoading, setIsLoading] = useState(!initialPage);
+  const [isLoading, setIsLoading] = useState(
+    !initialPage && typeof window !== "undefined"
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedBlock = blocks.find((block) => block.id === selectedId) ?? null;
-  const selectedWidget = useMemo(
-    () =>
-      selectedBlock
-        ? widgetRegistry.find((widget) => widget.type === selectedBlock.type)
-        : undefined,
-    [selectedBlock]
-  );
+  const selectedWidget = useMemo(() => {
+    if (!selectedBlock) return undefined;
+    return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
+  }, [selectedBlock]);
 
   useEffect(() => {
     if (pageId || typeof window === "undefined") return;

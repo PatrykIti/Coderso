@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import type { Block, WidgetDefinition } from "./types";
+import type { Block, EditorMode, WidgetDefinition } from "./types";
 import { AdvancedPanel } from "./AdvancedPanel";
 import { VisualPanel } from "./VisualPanel";
 import { WizardPanel } from "./WizardPanel";
@@ -21,23 +21,26 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
     );
   }
 
-  if (!block.editor.wizardCompleted) {
+  const editorState = block.editor ?? { mode: "wizard", wizardCompleted: false };
+
+  if (!editorState.wizardCompleted) {
     return (
       <WizardPanel
         widget={widget}
         block={block}
-        onComplete={(variant) => onChange(applyWizardSelection(block, variant))}
+        onChange={onChange}
+        onComplete={() => onChange(applyWizardSelection(block))}
       />
     );
   }
 
   return (
     <Tabs
-      value={block.editor.mode}
+      value={editorState.mode}
       onValueChange={(mode) =>
         onChange({
           ...block,
-          editor: { ...block.editor, mode: mode as Block["editor"]["mode"] },
+          editor: { ...editorState, mode: mode as EditorMode },
         })
       }
       className="gap-4"
@@ -51,18 +54,15 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
         <WizardPanel
           widget={widget}
           block={block}
-          onComplete={(variant) => onChange(applyWizardSelection(block, variant))}
+          onChange={onChange}
+          onComplete={() => onChange(applyWizardSelection(block))}
         />
       </TabsContent>
       <TabsContent value="visual">
-        <VisualPanel
-          widget={widget}
-          selected={block.variant}
-          onSelect={(variant) => onChange({ ...block, variant })}
-        />
+        <VisualPanel widget={widget} block={block} onChange={onChange} />
       </TabsContent>
       <TabsContent value="advanced">
-        <AdvancedPanel block={block} onChange={onChange} />
+        <AdvancedPanel block={block} widget={widget} onChange={onChange} />
       </TabsContent>
     </Tabs>
   );

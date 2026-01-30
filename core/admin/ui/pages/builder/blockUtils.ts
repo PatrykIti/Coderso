@@ -1,22 +1,43 @@
-import type { Block, LayoutValue } from "./types";
+import type {
+  Block,
+  LayoutValue,
+  WidgetDefinition,
+  WidgetEditorState,
+  WidgetVisibility,
+} from "./types";
 import { containerTokens, spacingTokens } from "./types";
+import { getRegisteredWidget } from "@/ui/widgets/registry";
 
 const defaultLayout: LayoutValue = {
   container: "default",
   padding: { top: "xl", bottom: "xl" },
   margin: { top: "none", bottom: "none" },
-  background: { color: "white", image: null },
+  background: { color: "transparent", image: null },
 };
 
-export function createBlock(type: string): Block {
+const defaultVisibility: WidgetVisibility = {
+  devices: ["desktop", "tablet", "mobile"],
+  enabled: true,
+};
+const defaultEditor: WidgetEditorState = {
+  mode: "wizard",
+  wizardCompleted: false,
+};
+
+const resolveDefinition = (input: WidgetDefinition | string) =>
+  typeof input === "string" ? getRegisteredWidget(input) : input;
+
+export function createBlock(definition: WidgetDefinition | string): Block {
+  const resolved = resolveDefinition(definition);
+  const type = typeof definition === "string" ? definition : definition.type;
   return {
     id: crypto.randomUUID(),
     type,
-    variant: undefined,
-    data: {},
+    variant: resolved?.variants[0]?.id,
+    data: resolved?.defaults ?? {},
     layout: { ...defaultLayout },
-    visibility: { devices: ["desktop", "mobile"], enabled: true },
-    editor: { mode: "wizard", wizardCompleted: false },
+    visibility: { ...defaultVisibility },
+    editor: { ...defaultEditor },
   };
 }
 
@@ -30,10 +51,11 @@ export function reorderBlocks<T>(items: T[], fromIndex: number, toIndex: number)
 export function duplicateBlock(blocks: Block[], id: string) {
   const target = blocks.find((block) => block.id === id);
   if (!target) return blocks;
+  const editorState = target.editor ?? { mode: "visual", wizardCompleted: true };
   const clone: Block = {
     ...target,
     id: crypto.randomUUID(),
-    editor: { ...target.editor, mode: "visual" },
+    editor: { ...editorState, mode: "visual" },
   };
   const index = blocks.findIndex((block) => block.id === id);
   const next = [...blocks];
@@ -45,30 +67,39 @@ export function stripEditor(blocks: Block[]) {
   return blocks.map(({ editor: _editor, ...rest }) => rest);
 }
 
-export function applyWizardSelection(block: Block, variant: string): Block {
+export function applyWizardSelection(block: Block, variant?: string): Block {
   return {
     ...block,
-    variant,
+    variant: variant ?? block.variant,
     editor: { mode: "visual", wizardCompleted: true },
   };
 }
 
-export function sanitizeLayout(layout: LayoutValue): LayoutValue {
-  return {
+export function sanitizeLayout(layout?: LayoutValue | null): LayoutValue {
+  const resolved = {
+    ...defaultLayout,
     ...layout,
-    container: containerTokens.includes(layout.container)
-      ? layout.container
+    padding: { ...defaultLayout.padding, ...(layout?.padding ?? {}) },
+    margin: { ...defaultLayout.margin, ...(layout?.margin ?? {}) },
+    background: { ...defaultLayout.background, ...(layout?.background ?? {}) },
+  };
+  return {
+    ...resolved,
+    container: containerTokens.includes(resolved.container)
+      ? resolved.container
       : "default",
     padding: {
-      top: spacingTokens.includes(layout.padding.top) ? layout.padding.top : "md",
-      bottom: spacingTokens.includes(layout.padding.bottom)
-        ? layout.padding.bottom
+      top: spacingTokens.includes(resolved.padding.top)
+        ? resolved.padding.top
+        : "md",
+      bottom: spacingTokens.includes(resolved.padding.bottom)
+        ? resolved.padding.bottom
         : "md",
     },
     margin: {
-      top: spacingTokens.includes(layout.margin.top) ? layout.margin.top : "none",
-      bottom: spacingTokens.includes(layout.margin.bottom)
-        ? layout.margin.bottom
+      top: spacingTokens.includes(resolved.margin.top) ? resolved.margin.top : "none",
+      bottom: spacingTokens.includes(resolved.margin.bottom)
+        ? resolved.margin.bottom
         : "none",
     },
   };

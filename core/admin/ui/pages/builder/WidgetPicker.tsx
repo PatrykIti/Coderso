@@ -4,13 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-import { widgetRegistry } from "./widgetRegistry";
+import { getWidgetRegistry } from "./widgetRegistry";
 
 type WidgetPickerProps = {
   onAdd: (type: string) => void;
 };
 
 export function WidgetPicker({ onAdd }: WidgetPickerProps) {
+  const widgetRegistry = getWidgetRegistry();
   return (
     <div className="flex h-full flex-col">
       <div className="border-b p-4">
@@ -25,7 +26,7 @@ export function WidgetPicker({ onAdd }: WidgetPickerProps) {
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold">{widget.label}</p>
+                  <p className="text-sm font-semibold">{widget.title}</p>
                   <p className="text-xs text-muted-foreground">
                     {widget.description}
                   </p>

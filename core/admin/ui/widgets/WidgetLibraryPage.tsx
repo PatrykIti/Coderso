@@ -24,6 +24,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { listRegisteredWidgets } from "@/ui/widgets/registry";
 
 import { WidgetCard } from "./WidgetCard";
 import { WidgetCreateDialog } from "./WidgetCreateDialog";
@@ -54,75 +55,27 @@ const primaryCategories: CategoryItem[] = [
   { id: "favorites", label: "Favorites", icon: Star },
 ];
 
-const secondaryCategories: CategoryItem[] = [
-  { id: "hero", label: "Hero", icon: GalleryVerticalEnd },
-  { id: "grid", label: "Grid", icon: Columns },
-  { id: "forms", label: "Forms", icon: FileText },
-  { id: "media", label: "Media", icon: ImageIcon },
-];
+const categoryMeta: Record<
+  WidgetCategoryId,
+  { label: string; icon: LucideIcon; preview: WidgetPreview }
+> = {
+  layout: { label: "Layout", icon: GalleryVerticalEnd, preview: "hero" },
+  content: { label: "Content", icon: Columns, preview: "grid" },
+  forms: { label: "Forms", icon: FileText, preview: "form" },
+  navigation: { label: "Navigation", icon: List, preview: "banner" },
+  media: { label: "Media", icon: ImageIcon, preview: "media" },
+};
 
-const seedWidgets: WidgetWithPreview[] = [
-  {
-    id: "hero-split",
-    name: "Hero Split",
-    category: "hero",
-    categoryLabel: "Hero Section",
-    preview: "hero",
-  },
-  {
-    id: "feature-grid",
-    name: "Feature Grid",
-    category: "grid",
-    categoryLabel: "Grid Layout",
-    preview: "grid",
-    isFavorite: true,
-    badge: "Popular",
-  },
-  {
-    id: "contact-form",
-    name: "Contact Form",
-    category: "forms",
-    categoryLabel: "Forms",
-    preview: "form",
-  },
-  {
-    id: "media-gallery",
-    name: "Media Gallery",
-    category: "media",
-    categoryLabel: "Media",
-    preview: "media",
-  },
-  {
-    id: "video-embed",
-    name: "Video Embed",
-    category: "media",
-    categoryLabel: "Media",
-    preview: "video",
-    isFavorite: true,
-  },
-  {
-    id: "center-text",
-    name: "Center Text",
-    category: "grid",
-    categoryLabel: "Grid",
-    preview: "text",
-  },
-  {
-    id: "price-table",
-    name: "Price Table",
-    category: "grid",
-    categoryLabel: "Grid",
-    preview: "pricing",
-  },
-  {
-    id: "promo-banner",
-    name: "Promo Banner",
-    category: "hero",
-    categoryLabel: "Hero",
-    preview: "banner",
-    badge: "New",
-  },
-];
+const secondaryCategories: CategoryItem[] = (
+  Object.entries(categoryMeta) as [
+    WidgetCategoryId,
+    (typeof categoryMeta)[WidgetCategoryId],
+  ][]
+).map(([id, meta]) => ({
+  id,
+  label: meta.label,
+  icon: meta.icon,
+}));
 
 function PreviewFrame({
   children,
@@ -248,7 +201,19 @@ export function WidgetLibraryPage() {
   const [view, setView] = useState<WidgetView>("grid");
   const [activeCategory, setActiveCategory] =
     useState<WidgetCategoryFilter>("all");
-  const [widgets, setWidgets] = useState<WidgetWithPreview[]>(seedWidgets);
+  const [widgets, setWidgets] = useState<WidgetWithPreview[]>(() => {
+    const definitions = listRegisteredWidgets();
+    return definitions.map((definition) => {
+      const meta = categoryMeta[definition.category];
+      return {
+        id: definition.type,
+        name: definition.title,
+        category: definition.category,
+        categoryLabel: meta.label,
+        preview: meta.preview,
+      };
+    });
+  });
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedWidget, setSelectedWidget] = useState<WidgetItem | null>(null);
@@ -257,9 +222,10 @@ export function WidgetLibraryPage() {
     const counts: Record<WidgetCategoryFilter, number> = {
       all: widgets.length,
       favorites: widgets.filter((widget) => widget.isFavorite).length,
-      hero: widgets.filter((widget) => widget.category === "hero").length,
-      grid: widgets.filter((widget) => widget.category === "grid").length,
+      layout: widgets.filter((widget) => widget.category === "layout").length,
+      content: widgets.filter((widget) => widget.category === "content").length,
       forms: widgets.filter((widget) => widget.category === "forms").length,
+      navigation: widgets.filter((widget) => widget.category === "navigation").length,
       media: widgets.filter((widget) => widget.category === "media").length,
     };
     return counts;

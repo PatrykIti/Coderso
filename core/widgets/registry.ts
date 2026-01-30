@@ -1,0 +1,56 @@
+import type { WidgetDefinition } from "./types";
+
+const registry = new Map<string, WidgetDefinition<any>>();
+
+const coreTypePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const pluginTypePattern =
+  /^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function isValidType(type: string) {
+  return coreTypePattern.test(type) || pluginTypePattern.test(type);
+}
+
+export function registerWidget(def: WidgetDefinition<any>) {
+  if (!def || typeof def !== "object") {
+    throw new Error("widget_definition_required");
+  }
+  if (!isValidType(def.type)) {
+    throw new Error("widget_type_invalid");
+  }
+  if (!def.variants || def.variants.length === 0) {
+    throw new Error("widget_variants_required");
+  }
+  for (const variant of def.variants) {
+    if (!variant.id || !variant.label) {
+      throw new Error("widget_variant_invalid");
+    }
+  }
+  if (!def.schema || typeof def.schema !== "object" || Array.isArray(def.schema)) {
+    throw new Error("widget_schema_invalid");
+  }
+  if (!def.defaults || typeof def.defaults !== "object" || Array.isArray(def.defaults)) {
+    throw new Error("widget_defaults_invalid");
+  }
+  if (!def.editor?.wizard || !def.editor?.visual || !def.editor?.advanced) {
+    throw new Error("widget_editor_invalid");
+  }
+  if (typeof def.render !== "function") {
+    throw new Error("widget_render_invalid");
+  }
+  if (registry.has(def.type)) {
+    throw new Error("widget_already_registered");
+  }
+  registry.set(def.type, def);
+}
+
+export function getWidget(type: string): WidgetDefinition<any> | null {
+  return registry.get(type) ?? null;
+}
+
+export function listWidgets(): WidgetDefinition<any>[] {
+  return Array.from(registry.values());
+}
+
+export function clearWidgets() {
+  registry.clear();
+}

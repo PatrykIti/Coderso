@@ -3,8 +3,9 @@ import { GripVertical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 import type { Block } from "./types";
-import { widgetRegistry } from "./widgetRegistry";
+import { getWidgetRegistry } from "./widgetRegistry";
 import { BlockToolbar } from "./BlockToolbar";
 
 export type BlockListProps = {
@@ -24,11 +25,12 @@ export function BlockList({
   onDuplicate,
   onDelete,
 }: BlockListProps) {
+  const widgetRegistry = getWidgetRegistry();
   return (
     <div className="space-y-3">
       {blocks.map((block, index) => {
         const widget = widgetRegistry.find((item) => item.type === block.type);
-        const label = widget?.label ?? block.type;
+        const label = widget?.title ?? block.type;
         return (
           <div
             key={block.id}
@@ -68,6 +70,9 @@ export function BlockList({
                 disableMoveUp={index === 0}
                 disableMoveDown={index === blocks.length - 1}
               />
+            </div>
+            <div className="mt-4 rounded-lg border bg-muted/10 p-4">
+              <WidgetRenderer block={block} />
             </div>
           </div>
         );

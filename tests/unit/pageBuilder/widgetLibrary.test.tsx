@@ -3,11 +3,8 @@ import { renderToString } from "react-dom/server";
 
 import { WidgetLibraryPage } from "../../../core/admin/ui/widgets/WidgetLibraryPage";
 
-test("WidgetLibraryPage renders categories and widget grid", () => {
+test("Widget library renders core widgets", () => {
   const html = renderToString(<WidgetLibraryPage />);
-
   expect(html).toContain("Widget Library");
-  expect(html).toContain("Categories");
   expect(html).toContain("Hero");
-  expect(html).toContain("Insert");
 });

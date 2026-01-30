@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 20 tasks
+- **To Do:** 9 tasks
 - **In Progress:** 0
-- **Done:** 101 tasks
+- **Done:** 113 tasks
 
 ---
 
@@ -38,18 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
-| TASK-009-01 | Widget Registry | High | Medium | Registry contract |
-| TASK-009-02 | Widget Schema Validation | High | Medium | AJV validate + defaults |
-| TASK-009-03 | Core Widget: Hero | High | Medium | Schema + editor + render |
-| TASK-009-04 | Core Widget: Timeline | High | Medium | Schema + editor + render |
-| TASK-009-05 | Core Widget: Compare Timeline | High | Medium | Schema + editor + render |
-| TASK-009-06 | Core Widget: Newsletter | Medium | Small | Schema + editor + render |
-| TASK-009-07 | Core Widget: Contact | Medium | Medium | Schema + editor + render |
-| TASK-009-08 | Core Widget: Navigation | Medium | Medium | Menu integration |
-| TASK-009-09 | Core Widget: Footer | Medium | Medium | Columns + contact |
-| TASK-009-10 | Widget Renderer Pipeline | Medium | Medium | normalize + render |
-| TASK-009-11 | Widgets UI Wiring | High | Medium | Page builder integration |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-026-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-026-02 | Dashboard API | Medium | Medium | GET /dashboard |
@@ -115,6 +103,18 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-006-40 | Import & Export UI (Visual) | Medium | Medium | Import/export |
 | TASK-006-41 | Login Alerts UI (Visual) | Medium | Medium | Login alerts |
 | TASK-006-42 | Admin UI Integration | High | Medium | Routing + navigation |
+| TASK-009 | Widget Registry and Core Widgets | High | Large | Core widgets + schema |
+| TASK-009-01 | Widget Registry | High | Medium | Registry contract |
+| TASK-009-02 | Widget Schema Validation | High | Medium | AJV validate + defaults |
+| TASK-009-03 | Core Widget: Hero | High | Medium | Schema + editor + render |
+| TASK-009-04 | Core Widget: Timeline | High | Medium | Schema + editor + render |
+| TASK-009-05 | Core Widget: Compare Timeline | High | Medium | Schema + editor + render |
+| TASK-009-06 | Core Widget: Newsletter | Medium | Small | Schema + editor + render |
+| TASK-009-07 | Core Widget: Contact | Medium | Medium | Schema + editor + render |
+| TASK-009-08 | Core Widget: Navigation | Medium | Medium | Menu integration |
+| TASK-009-09 | Core Widget: Footer | Medium | Medium | Columns + contact |
+| TASK-009-10 | Widget Renderer Pipeline | Medium | Medium | normalize + render |
+| TASK-009-11 | Widgets UI Wiring | High | Medium | Page builder integration |
 | TASK-001 | ORM Foundation and Auth Tables | High | Medium | Drizzle + auth tables |
 | TASK-004 | Auth, RBAC, and Admin API Base (Index) | High | Large | Index for TASK-004-01..07 |
 | TASK-004-03 | Password Hashing and Sessions | High | Medium | argon2 + sessions |
