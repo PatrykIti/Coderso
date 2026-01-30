@@ -42,6 +42,11 @@ afterAll(async () => {
 testIfDb("getSecuritySettings returns defaults when missing", async () => {
   const current = await getSecuritySettings();
   expect(current).toEqual(SECURITY_SETTINGS_DEFAULTS);
+  expect(current.session).toEqual({
+    ttlDays: 7,
+    maxPerUser: 3,
+    singleSession: false,
+  });
 });
 
 testIfDb("setSecuritySettings merges partial updates", async () => {
@@ -50,6 +55,7 @@ testIfDb("setSecuritySettings merges partial updates", async () => {
     cors: { allowedOrigins: ["https://admin.example.com"] },
     rateLimit: { admin: { maxRequests: 50 } },
     plugins: { safeMode: true },
+    session: { ttlDays: 5, maxPerUser: 2, singleSession: true },
   });
 
   const updated = await getSecuritySettings();
@@ -60,11 +66,17 @@ testIfDb("setSecuritySettings merges partial updates", async () => {
     SECURITY_SETTINGS_DEFAULTS.rateLimit.admin.windowSeconds
   );
   expect(updated.plugins.safeMode).toBe(true);
+  expect(updated.session.ttlDays).toBe(5);
+  expect(updated.session.maxPerUser).toBe(2);
+  expect(updated.session.singleSession).toBe(true);
 });
 
 testIfDb("setSecuritySettings validates input", async () => {
   await expect(
     setSecuritySettings({ csrf: { tokenTtlMinutes: -1 } })
+  ).rejects.toThrow("security_settings_invalid");
+  await expect(
+    setSecuritySettings({ session: { maxPerUser: 0 } })
   ).rejects.toThrow("security_settings_invalid");
 });
 

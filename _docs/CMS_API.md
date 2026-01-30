@@ -401,6 +401,11 @@ Permissions: `settings:read`, `settings:write`
   },
   "plugins": {
     "safeMode": false
+  },
+  "session": {
+    "ttlDays": 7,
+    "maxPerUser": 3,
+    "singleSession": false
   }
 }
 ```

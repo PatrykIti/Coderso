@@ -1,10 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db } from "../../db/client";
 import { sessions } from "../../db/schema";
+import { getSecuritySettings } from "../settings/securitySettings";
 
 export const SESSION_COOKIE_NAME = "session";
-export const DEFAULT_SESSION_TTL_DAYS = 14;
+export const DEFAULT_SESSION_TTL_DAYS = 7;
 
 export type SessionRow = typeof sessions.$inferSelect;
 
@@ -58,8 +59,51 @@ export function createCsrfToken() {
   return { token, tokenHash: hashToken(token), issuedAt };
 }
 
+async function getSessionPolicy() {
+  const settings = await getSecuritySettings();
+  return settings.session;
+}
+
+async function enforceSessionLimits(userId: string, policy: {
+  maxPerUser: number;
+  singleSession: boolean;
+}) {
+  if (policy.singleSession) {
+    await revokeAllSessions(userId);
+    return;
+  }
+
+  const maxPerUser = policy.maxPerUser;
+  if (!Number.isFinite(maxPerUser) || maxPerUser <= 0) return;
+
+  const now = new Date();
+  const active = await db
+    .select({ id: sessions.id, createdAt: sessions.createdAt })
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.userId, userId),
+        isNull(sessions.revokedAt),
+        gt(sessions.expiresAt, now)
+      )
+    )
+    .orderBy(asc(sessions.createdAt));
+
+  const allowedExisting = Math.max(maxPerUser - 1, 0);
+  const excess = active.length - allowedExisting;
+  if (excess <= 0) return;
+
+  const revokeIds = active.slice(0, excess).map((row) => row.id);
+  await db
+    .update(sessions)
+    .set({ revokedAt: now })
+    .where(inArray(sessions.id, revokeIds));
+}
+
 export async function createSession(input: CreateSessionInput) {
-  const ttlDays = input.ttlDays ?? DEFAULT_SESSION_TTL_DAYS;
+  const policy = await getSessionPolicy();
+  const ttlDays = input.ttlDays ?? policy.ttlDays ?? DEFAULT_SESSION_TTL_DAYS;
+  await enforceSessionLimits(input.userId, policy);
   const token = generateToken();
   const tokenHash = hashSessionToken(token);
   const expiresAt = new Date(Date.now() + ttlDays * 24 * 60 * 60 * 1000);
@@ -75,7 +119,7 @@ export async function createSession(input: CreateSessionInput) {
     })
     .returning();
 
-  return { token, session };
+  return { token, session, ttlDays };
 }
 
 export async function getSessionByToken(token: string) {

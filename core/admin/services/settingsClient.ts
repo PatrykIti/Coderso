@@ -79,6 +79,7 @@ export type SecuritySettingsResponse = {
   };
   validation: { rejectUnknownFields: boolean };
   plugins: { safeMode: boolean };
+  session: { ttlDays: number; maxPerUser: number; singleSession: boolean };
 };
 
 export type SecuritySettingsUpdate = {
@@ -93,6 +94,7 @@ export type SecuritySettingsUpdate = {
   headers?: Partial<SecuritySettingsResponse["headers"]>;
   validation?: Partial<SecuritySettingsResponse["validation"]>;
   plugins?: Partial<SecuritySettingsResponse["plugins"]>;
+  session?: Partial<SecuritySettingsResponse["session"]>;
 };
 
 export async function getStorageSettings() {

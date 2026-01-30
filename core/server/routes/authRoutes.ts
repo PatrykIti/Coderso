@@ -68,17 +68,13 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       throw new ApiError("auth_failed", "Invalid credentials", 401);
     }
 
-    const { token, session } = await createSession({
+    const { token, session, ttlDays } = await createSession({
       userId: user.id,
       ip: ctx.ip,
       userAgent: ctx.userAgent,
     });
 
-    ctx.setCookie?.(
-      SESSION_COOKIE_NAME,
-      token,
-      buildSessionCookieOptions()
-    );
+    ctx.setCookie?.(SESSION_COOKIE_NAME, token, buildSessionCookieOptions(ttlDays));
 
     await updateLastLogin(user.id);
     await logAudit({

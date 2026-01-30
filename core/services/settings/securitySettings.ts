@@ -40,6 +40,11 @@ export type SecuritySettings = {
   plugins: {
     safeMode: boolean;
   };
+  session: {
+    ttlDays: number;
+    maxPerUser: number;
+    singleSession: boolean;
+  };
 };
 
 export type SecuritySettingsUpdate = {
@@ -54,6 +59,7 @@ export type SecuritySettingsUpdate = {
   headers?: Partial<SecuritySettings["headers"]>;
   validation?: Partial<SecuritySettings["validation"]>;
   plugins?: Partial<SecuritySettings["plugins"]>;
+  session?: Partial<SecuritySettings["session"]>;
 };
 
 const SECURITY_SETTINGS_KEY = "security.settings";
@@ -94,6 +100,11 @@ const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
   },
   plugins: {
     safeMode: false,
+  },
+  session: {
+    ttlDays: 7,
+    maxPerUser: 3,
+    singleSession: false,
   },
 };
 
@@ -199,6 +210,7 @@ const mergeSecuritySettings = (
   assertObjectOrUndefined(update.headers);
   assertObjectOrUndefined(update.validation);
   assertObjectOrUndefined(update.plugins);
+  assertObjectOrUndefined(update.session);
   assertObjectOrUndefined(update.rateLimit?.admin);
   assertObjectOrUndefined(update.rateLimit?.auth);
 
@@ -210,6 +222,7 @@ const mergeSecuritySettings = (
     "headers",
     "validation",
     "plugins",
+    "session",
   ]);
   if (update.requestId) {
     assertAllowedKeys(update.requestId, ["enabled", "headerName"]);
@@ -251,6 +264,9 @@ const mergeSecuritySettings = (
   }
   if (update.plugins) {
     assertAllowedKeys(update.plugins, ["safeMode"]);
+  }
+  if (update.session) {
+    assertAllowedKeys(update.session, ["ttlDays", "maxPerUser", "singleSession"]);
   }
 
   const requestId = {
@@ -346,6 +362,12 @@ const mergeSecuritySettings = (
     safeMode: normalizeBoolean(update.plugins?.safeMode, base.plugins.safeMode),
   };
 
+  const session = {
+    ttlDays: normalizeNumber(update.session?.ttlDays, base.session.ttlDays),
+    maxPerUser: normalizeNumber(update.session?.maxPerUser, base.session.maxPerUser),
+    singleSession: normalizeBoolean(update.session?.singleSession, base.session.singleSession),
+  };
+
   return {
     requestId,
     csrf,
@@ -354,6 +376,7 @@ const mergeSecuritySettings = (
     headers,
     validation,
     plugins,
+    session,
   };
 };
 

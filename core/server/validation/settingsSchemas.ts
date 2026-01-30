@@ -155,5 +155,14 @@ export const securitySettingsSchema = {
         safeMode: { type: "boolean" },
       },
     },
+    session: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        ttlDays: { type: "number" },
+        maxPerUser: { type: "number" },
+        singleSession: { type: "boolean" },
+      },
+    },
   },
 };

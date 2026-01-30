@@ -68,6 +68,9 @@ type SecurityFormState = {
   hsts: string;
   validationRejectUnknownFields: boolean;
   pluginSafeMode: boolean;
+  sessionTtlDays: string;
+  sessionMaxPerUser: string;
+  sessionSingleSession: boolean;
 };
 
 const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => ({
@@ -95,6 +98,9 @@ const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => (
   hsts: settings.headers.hsts ?? "",
   validationRejectUnknownFields: settings.validation.rejectUnknownFields,
   pluginSafeMode: settings.plugins.safeMode,
+  sessionTtlDays: String(settings.session.ttlDays),
+  sessionMaxPerUser: String(settings.session.maxPerUser),
+  sessionSingleSession: settings.session.singleSession,
 });
 
 const defaultFormState: SecurityFormState = {
@@ -122,6 +128,9 @@ const defaultFormState: SecurityFormState = {
   hsts: "",
   validationRejectUnknownFields: true,
   pluginSafeMode: false,
+  sessionTtlDays: "7",
+  sessionMaxPerUser: "3",
+  sessionSingleSession: false,
 };
 
 export function SecuritySettingsPage() {
@@ -252,6 +261,11 @@ export function SecuritySettingsPage() {
         },
         plugins: {
           safeMode: form.pluginSafeMode,
+        },
+        session: {
+          ttlDays: parsePositiveNumber(form.sessionTtlDays, "session_ttl"),
+          maxPerUser: parsePositiveNumber(form.sessionMaxPerUser, "session_max"),
+          singleSession: form.sessionSingleSession,
         },
       };
 
@@ -574,6 +588,53 @@ export function SecuritySettingsPage() {
                     }
                   />
                 </div>
+              </div>
+            </SecurityPolicyCard>
+
+            <SecurityPolicyCard
+              title="Session Limits"
+              description="Control session lifespan and concurrent logins."
+              icon={<ShieldCheck className="h-4 w-4" />}
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Session TTL (days)</p>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.sessionTtlDays}
+                    onChange={(event) =>
+                      handleFieldChange("sessionTtlDays", event.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Max Sessions per User</p>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.sessionMaxPerUser}
+                    onChange={(event) =>
+                      handleFieldChange("sessionMaxPerUser", event.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Single Session Mode</p>
+                  <p className="text-xs text-muted-foreground">
+                    Single session overrides max per user.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.sessionSingleSession}
+                  onCheckedChange={(value) =>
+                    handleFieldChange("sessionSingleSession", value)
+                  }
+                  aria-label="Enable single session mode"
+                />
               </div>
             </SecurityPolicyCard>
 

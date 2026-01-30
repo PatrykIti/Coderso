@@ -87,6 +87,15 @@ Rotacja klucza:
 - Metadata jest czyszczona z sekretow (token/password/secret).
 - `ip` i `userAgent` zapisywane w metadata jesli dostepne.
 
+## Session policy
+
+- Konfigurowalne w Admin UI: Settings → Security → Session Limits.
+- Parametry:
+  - `session.ttlDays` (domyslnie 7)
+  - `session.maxPerUser` (domyslnie 3)
+  - `session.singleSession` (domyslnie false)
+- `singleSession` uniewaznia poprzednie sesje przy nowym logowaniu.
+
 ## Plugin security
 
 - Permissions gate na API core.
