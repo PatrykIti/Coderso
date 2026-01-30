@@ -1,72 +1,26 @@
-import { useMemo, useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent } from "react";
 import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-import {
-  SearchResults,
-  groupResults,
-  type SearchItem,
-} from "./SearchResults";
-
-const sampleItems: SearchItem[] = [
-  {
-    id: "page-1",
-    type: "page",
-    title: "Homepage",
-    subtitle: "/home",
-  },
-  {
-    id: "page-2",
-    type: "page",
-    title: "About us",
-    subtitle: "/about",
-  },
-  {
-    id: "entry-1",
-    type: "entry",
-    title: "Launch announcement",
-    subtitle: "Blog post",
-  },
-  {
-    id: "entry-2",
-    type: "entry",
-    title: "Roadmap update",
-    subtitle: "News",
-  },
-  {
-    id: "media-1",
-    type: "media",
-    title: "Hero banner",
-    subtitle: "hero-banner_v2.jpg",
-  },
-];
-
-function normalizeQuery(value: string) {
-  return value.trim().replace(/\s+/g, " ");
-}
+import { SearchResults } from "./SearchResults";
+import { useSearchResults } from "./useSearchResults";
 
 export function SearchBar() {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const normalized = normalizeQuery(query);
-  const shouldShow = normalized.length >= 2;
+  const { normalizedQuery, shouldSearch, groups, items, loading, error } =
+    useSearchResults(query, 8);
+  const shouldShow = shouldSearch;
 
-  const items = useMemo(() => {
-    if (!shouldShow) return [];
-    const lowered = normalized.toLowerCase();
-    return sampleItems.filter((item) =>
-      item.title.toLowerCase().includes(lowered)
-    );
-  }, [normalized, shouldShow]);
-
-  const groups = useMemo(() => groupResults(items), [items]);
   const totalItems = items.length;
 
+  const highlightIndex = totalItems > 0 ? Math.min(activeIndex, totalItems - 1) : 0;
+
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (!shouldShow || totalItems === 0) return;
+    if (!shouldSearch || totalItems === 0) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setActiveIndex((prev) => (prev + 1) % totalItems);
@@ -96,15 +50,25 @@ export function SearchBar() {
         className="pl-9"
       />
       <div className={cn("absolute left-0 right-0 top-12 z-20", !shouldShow && "hidden")}>
-        <SearchResults
-          query={normalized}
-          groups={groups}
-          activeIndex={activeIndex}
-          onSelect={() => {
-            setQuery("");
-            setActiveIndex(0);
-          }}
-        />
+        {loading ? (
+          <div className="rounded-xl border bg-background p-4 text-sm text-muted-foreground shadow-lg">
+            Searching...
+          </div>
+        ) : error ? (
+          <div className="rounded-xl border bg-background p-4 text-sm text-destructive shadow-lg">
+            Search unavailable. Try again.
+          </div>
+        ) : (
+          <SearchResults
+            query={normalizedQuery}
+            groups={groups}
+            activeIndex={highlightIndex}
+            onSelect={() => {
+              setQuery("");
+              setActiveIndex(0);
+            }}
+          />
+        )}
       </div>
     </div>
   );

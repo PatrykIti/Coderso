@@ -106,6 +106,7 @@ Project Change Log.
 | 079 | 2026-01-30 | Security middleware and settings | Core/Security |
 | 080 | 2026-01-30 | Plugin safe mode in security settings | Core/Security |
 | 081 | 2026-01-30 | Session limits in security settings | Core/Security |
+| 082 | 2026-01-30 | Search UI wiring | Admin/UI |
 
 
 ---

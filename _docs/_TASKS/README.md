@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 72 tasks
+- **To Do:** 71 tasks
 - **In Progress:** 0
-- **Done:** 124 tasks
+- **Done:** 125 tasks
 
 ---
 
@@ -41,7 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-026 | Search UI Wiring | Medium | Medium | Wire global search to /search |
 | TASK-027 | SEO Manager Core and UI | High | Large | SEO data + audit + UI |
 | TASK-027-01 | SEO DB Schema | High | Medium | seo_documents |
 | TASK-027-02 | SEO Service and Audit Runner | High | Medium | audit scoring |
@@ -249,3 +248,4 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-005-07 | Media API Routes | Medium | Medium | Upload + CRUD endpoints |
 | TASK-005-08 | Media UI Wiring (Admin) | Medium | Medium | Admin upload + metadata UI |
 | TASK-005-09 | Storage Settings Runtime Config | High | Medium | DB config + encryption + UI |
+| TASK-026 | Search UI Wiring | Medium | Medium | Wire global search to /search |

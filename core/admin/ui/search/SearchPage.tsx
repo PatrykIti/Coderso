@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Clock, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,12 +18,8 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
-import {
-  SearchResults,
-  groupResults,
-  type SearchItem,
-  type SearchItemType,
-} from "./SearchResults";
+import { SearchResults, type SearchGroup, type SearchItemType } from "./SearchResults";
+import { useSearchResults } from "./useSearchResults";
 
 const recentSearches = [
   "Summer Campaign 2024",
@@ -38,70 +34,6 @@ const categoryFilters = [
   { id: "legal", label: "Legal", checked: false },
 ];
 
-const sampleResults: SearchItem[] = [
-  {
-    id: "page-1",
-    type: "page",
-    title: "Marketing Strategy 2024",
-    subtitle: "/corporate/marketing/strategy-2024",
-  },
-  {
-    id: "page-2",
-    type: "page",
-    title: "Global Campaign Assets",
-    subtitle: "/resources/campaigns/global",
-  },
-  {
-    id: "entry-1",
-    type: "entry",
-    title: "Spring Sale Announcement",
-    meta: "Blog Post",
-    subtitle: "Published Oct 12, 2023",
-  },
-  {
-    id: "entry-2",
-    type: "entry",
-    title: "Marketing Roadmap v2",
-    meta: "Internal Document",
-    subtitle: "Draft",
-  },
-  {
-    id: "media-1",
-    type: "media",
-    title: "campaign_hero.jpg",
-    image:
-      "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "media-2",
-    type: "media",
-    title: "marketing_presentation.pdf",
-    image:
-      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "media-3",
-    type: "media",
-    title: "team_discussion.mov",
-    image:
-      "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "user-1",
-    type: "user",
-    title: "Marketing Specialist",
-    subtitle: "marketing-team@nextless.com",
-    initials: "MS",
-  },
-  {
-    id: "user-2",
-    type: "user",
-    title: "Alex Rivera",
-    subtitle: "alex.r@nextless.com",
-    initials: "AR",
-  },
-];
-
 type ContentFilter = "all" | SearchItemType;
 
 const contentFilters: { value: ContentFilter; label: string }[] = [
@@ -112,14 +44,48 @@ const contentFilters: { value: ContentFilter; label: string }[] = [
   { value: "user", label: "Users" },
 ];
 
-function filterGroups(groups: ReturnType<typeof groupResults>, value: ContentFilter) {
+function filterGroups(groups: SearchGroup[], value: ContentFilter) {
   if (value === "all") return groups;
   return groups.filter((group) => group.type === value);
 }
 
 export function SearchPage() {
-  const [query, setQuery] = useState("marketing campaign");
-  const groups = useMemo(() => groupResults(sampleResults), []);
+  const [query, setQuery] = useState("");
+  const { normalizedQuery, shouldSearch, groups, loading, error } =
+    useSearchResults(query, 50);
+
+  const renderResults = (filter: ContentFilter) => {
+    if (!shouldSearch) {
+      return (
+        <Card className="items-center border-dashed py-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Type at least 2 characters to search.
+          </p>
+        </Card>
+      );
+    }
+    if (loading) {
+      return (
+        <Card className="items-center border-dashed py-8 text-center">
+          <p className="text-sm text-muted-foreground">Searching...</p>
+        </Card>
+      );
+    }
+    if (error) {
+      return (
+        <Card className="items-center border-dashed py-8 text-center">
+          <p className="text-sm text-destructive">Search failed. Try again.</p>
+        </Card>
+      );
+    }
+    return (
+      <SearchResults
+        variant="page"
+        query={normalizedQuery}
+        groups={filterGroups(groups, filter)}
+      />
+    );
+  };
 
   return (
     <AdminShell
@@ -142,6 +108,7 @@ export function SearchPage() {
                         key={item}
                         type="button"
                         className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted-foreground transition hover:bg-muted/40 hover:text-foreground"
+                        onClick={() => setQuery(item)}
                       >
                         <Clock className="h-4 w-4 text-muted-foreground/70" />
                         <span className="font-medium">{item}</span>
@@ -225,6 +192,7 @@ export function SearchPage() {
                     variant="ghost"
                     size="xs"
                     className="h-6 px-2 text-xs font-medium"
+                    onClick={() => setQuery(item)}
                   >
                     {item}
                   </Button>
@@ -246,11 +214,7 @@ export function SearchPage() {
                 </TabsList>
                 {contentFilters.map((filter) => (
                   <TabsContent key={filter.value} value={filter.value}>
-                    <SearchResults
-                      variant="page"
-                      query={query}
-                      groups={filterGroups(groups, filter.value)}
-                    />
+                    {renderResults(filter.value)}
                   </TabsContent>
                 ))}
               </Tabs>
