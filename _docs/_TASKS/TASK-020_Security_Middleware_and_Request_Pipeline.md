@@ -67,6 +67,7 @@ bun add ajv
 - `TASK-020-07_Security_Headers_Middleware.md`
 - `TASK-020-08_Input_Validation_Middleware.md`
 - `TASK-020-09_Security_Settings_UI_Wiring.md`
+- `TASK-020-10_Session_Limits_Settings.md`
 
 ## Implementation Order
 
@@ -77,6 +78,7 @@ bun add ajv
 5. Security headers (020-07)
 6. Input validation (020-08)
 7. Admin UI wiring (020-09)
+8. Session limits in security settings (020-10)
 
 ---
 

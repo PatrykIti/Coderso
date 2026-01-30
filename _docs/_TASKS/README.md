@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 9 tasks
 - **In Progress:** 0
 - **Done:** 123 tasks
 
@@ -38,6 +38,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-020-10 | Session Limits in Security Settings | High | Medium | TTL + max sessions per user |
 | TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-026-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-026-02 | Dashboard API | Medium | Medium | GET /dashboard |
