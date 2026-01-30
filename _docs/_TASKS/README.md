@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 50 tasks
+- **To Do:** 72 tasks
 - **In Progress:** 0
 - **Done:** 124 tasks
 
@@ -83,6 +83,28 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-037 | Login Alerts Core and UI | Medium | Medium | settings + alerts |
 | TASK-037-01 | Login Alerts Settings | Medium | Medium | security settings |
 | TASK-037-02 | Login Alerts UI Wiring | Medium | Medium | UI -> API |
+| TASK-038 | Forms Core and UI | Medium | Large | Forms CRUD + submissions |
+| TASK-038-01 | Forms DB Schema | Medium | Medium | forms + fields + submissions |
+| TASK-038-02 | Forms Service and Validation | Medium | Medium | CRUD + validation |
+| TASK-038-03 | Forms API Routes | Medium | Medium | /forms endpoints |
+| TASK-038-04 | Forms UI Wiring | Medium | Medium | UI -> API |
+| TASK-039 | API Keys Core and UI | Medium | Medium | keys + scopes |
+| TASK-039-01 | API Keys DB and Service | Medium | Medium | api_keys table |
+| TASK-039-02 | API Keys API Routes | Medium | Medium | /settings/api-keys |
+| TASK-039-03 | API Keys UI Wiring | Medium | Medium | UI -> API |
+| TASK-040 | Webhooks Core and UI | Medium | Large | webhooks + delivery |
+| TASK-040-01 | Webhooks DB and Service | Medium | Medium | webhooks tables |
+| TASK-040-02 | Webhooks Delivery and Retry | Medium | Medium | worker + signing |
+| TASK-040-03 | Webhooks API Routes | Medium | Medium | /settings/webhooks |
+| TASK-040-04 | Webhooks UI Wiring | Medium | Medium | UI -> API |
+| TASK-041 | Email Settings Core and UI | Medium | Medium | SMTP + logs |
+| TASK-041-01 | Email Settings Service | Medium | Medium | config + test |
+| TASK-041-02 | Email API Routes | Medium | Medium | /settings/email |
+| TASK-041-03 | Email UI Wiring | Medium | Medium | UI -> API |
+| TASK-042 | Integrations Core and UI | Medium | Medium | registry + configs |
+| TASK-042-01 | Integrations Service and Registry | Medium | Medium | tables + catalog |
+| TASK-042-02 | Integrations API Routes | Medium | Medium | /settings/integrations |
+| TASK-042-03 | Integrations UI Wiring | Medium | Medium | UI -> API |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
