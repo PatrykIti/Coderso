@@ -83,6 +83,120 @@ Kazdy widget powinien zdefiniowac:
 
 ---
 
+## Model danych bloku (Page Builder)
+
+Kazdy widget zapisany jest jako blok w `page.data.blocks`:
+
+```ts
+type WidgetBlock = {
+  id: string;
+  type: string;    // registry key
+  variant: string; // wariant widgetu
+  data: Record<string, unknown>;
+  layout?: {
+    container?: "full" | "boxed";
+    padding?: "none" | "sm" | "md" | "lg";
+    margin?: "none" | "sm" | "md" | "lg";
+  };
+  visibility?: {
+    enabled?: boolean;
+    devices?: ("desktop" | "tablet" | "mobile")[];
+  };
+  editor?: {
+    mode?: "wizard" | "visual" | "advanced";
+  };
+};
+```
+
+Uwaga: pole `editor` jest usuwane przy publikacji (`pageService.toPublishedData`).
+
+---
+
+## Kontrakt definicji widgetu
+
+Minimalna struktura definicji:
+
+```ts
+type WidgetDefinition<T = Record<string, unknown>> = {
+  type: string;
+  title: string;
+  description?: string;
+  category: "layout" | "content" | "forms" | "navigation" | "media";
+  variants: string[];
+  schema: Record<string, unknown>; // JSON schema (draft-07)
+  defaults: T;
+  editor: {
+    wizard: React.ComponentType<WidgetEditorProps<T>>;
+    visual: React.ComponentType<WidgetEditorProps<T>>;
+    advanced: React.ComponentType<WidgetEditorProps<T>>;
+  };
+  render: React.ComponentType<{ data: T; variant: string }>;
+};
+```
+
+### WidgetEditorProps
+
+```ts
+type WidgetEditorProps<T> = {
+  value: T;
+  onChange: (next: T) => void;
+  variant: string;
+  onVariantChange?: (next: string) => void;
+};
+```
+
+---
+
+## Registry API (core/widgets/registry.ts)
+
+- `registerWidget(def)` – rejestruje widget
+- `getWidget(type)` – zwraca definicje
+- `listWidgets()` – lista wszystkich
+- `clearWidgets()` – tylko dla testow
+
+Naming rules:
+- Core: `hero`, `timeline`, `compare-timeline`, `newsletter`, `contact`, `navigation`, `footer`
+- Pluginy: `<plugin>.<widget>` (np. `seo-boost.hero`)
+
+---
+
+## Walidacja i defaults
+
+Flow:
+1) Pobierz definicje z registry
+2) Sprawdz `variant`
+3) `data = { ...defaults, ...data }`
+4) Waliduj przez AJV (JSON schema)
+
+---
+
+## Render pipeline
+
+- `WidgetRenderer` wybiera definicje po `type`.
+- Brak widgetu → `MissingWidget`.
+- Stosuje `layout` + `visibility`.
+- Renderuje komponent `def.render`.
+
+---
+
+## UI Wiring (Page Builder)
+
+- Widget library czyta `listWidgets()` i pokazuje liste.
+- Dodanie widgetu tworzy blok z `defaults`.
+- Panel Wizard/Visual/Advanced renderuje `definition.editor.*`.
+- Zmiana wariantu aktualizuje `block.variant`.
+
+---
+
+## Authoring Guide (plugin widgets)
+
+- Definiuj wlasne `schema` i `defaults`.
+- Trzymaj dane kompatybilne z JSON schema.
+- Uzywaj design tokens zamiast hardcode kolorow.
+- Stosuj Wizard/Visual/Advanced zgodnie ze standardem core.
+
+---
+
 ## UX i spojnosc
 
 - Nazewnictwo i uklad pol spojne w kazdym widgetcie.
