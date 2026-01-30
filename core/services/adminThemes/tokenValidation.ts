@@ -11,6 +11,7 @@ const tokenGroups = {
   sidebar: ["bg", "text", "activeBg", "activeText", "hoverBg"],
   topbar: ["bg", "text", "border"],
   card: ["bg", "border"],
+  typography: ["sans", "display", "sm", "md", "lg", "xl", "2xl", "mutedText"],
   state: ["success", "warning", "danger"],
 } as const;
 
@@ -95,6 +96,10 @@ export function assertAdminThemeTokens(
   const card = input.card;
   if (!isPlainObject(card)) throw new Error("admin_theme_tokens_invalid");
   assertStringRecord(card, tokenGroups.card);
+
+  const typography = input.typography;
+  if (!isPlainObject(typography)) throw new Error("admin_theme_tokens_invalid");
+  assertStringRecord(typography, tokenGroups.typography);
 
   const state = input.state;
   if (!isPlainObject(state)) throw new Error("admin_theme_tokens_invalid");

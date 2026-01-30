@@ -25,6 +25,7 @@ export function mergeAdminThemeTokens(
     sidebar: { ...defaults.sidebar, ...overrides.sidebar },
     topbar: { ...defaults.topbar, ...overrides.topbar },
     card: { ...defaults.card, ...overrides.card },
+    typography: { ...defaults.typography, ...overrides.typography },
     state: { ...defaults.state, ...overrides.state },
   };
 }

@@ -25,11 +25,12 @@ Dodatkowo:
 
 Zakładki (proponowane):
 1. **Base** – tło, powierzchnie, teksty, obramowania
-2. **Buttons** – primary/secondary/outline/ghost
-3. **Inputs** – pola formularzy, placeholder, focus ring
-4. **Navigation** – sidebar + topbar
-5. **Cards** – card bg + border
-6. **States** – success / warning / danger
+2. **Typography** – kolor tekstu + fonty + rozmiary
+3. **Buttons** – primary/secondary/outline/ghost
+4. **Inputs** – pola formularzy, placeholder, focus ring
+5. **Navigation** – sidebar + topbar
+6. **Cards** – card bg + border
+7. **States** – success / warning / danger
 
 Każda zakładka ma:
 - własny **mini-preview** (komponenty dobrane do grupy),

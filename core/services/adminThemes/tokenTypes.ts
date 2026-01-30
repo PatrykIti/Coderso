@@ -52,6 +52,16 @@ export type AdminThemeTokens = {
     bg: string;
     border: string;
   };
+  typography: {
+    sans: string;
+    display: string;
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    "2xl": string;
+    mutedText: string;
+  };
   state: {
     success: string;
     warning: string;
@@ -112,6 +122,16 @@ export const DEFAULT_ADMIN_THEME_TOKENS: AdminThemeTokens = {
   card: {
     bg: "#ffffff",
     border: "#e2e8f0",
+  },
+  typography: {
+    sans: "\"IBM Plex Sans\", \"Helvetica Neue\", Arial, sans-serif",
+    display: "\"Space Grotesk\", \"Helvetica Neue\", Arial, sans-serif",
+    sm: "0.875rem",
+    md: "1rem",
+    lg: "1.125rem",
+    xl: "1.25rem",
+    "2xl": "1.5rem",
+    mutedText: "#64748b",
   },
   state: {
     success: "#16a34a",

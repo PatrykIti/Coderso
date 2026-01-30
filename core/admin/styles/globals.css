@@ -64,6 +64,8 @@
     --admin-card-bg: #ffffff;
     --admin-card-border: #e2e8f0;
 
+    --admin-text-muted: #64748b;
+
     --admin-state-success: #16a34a;
     --admin-state-warning: #f59e0b;
     --admin-state-danger: #ef4444;
@@ -97,7 +99,7 @@
     --accent: var(--admin-button-outline-hover-bg);
     --accent-foreground: var(--admin-button-outline-hover-text);
     --muted: var(--admin-base-surface);
-    --muted-foreground: var(--admin-base-text);
+    --muted-foreground: var(--admin-text-muted);
     --popover: var(--admin-base-surface);
     --popover-foreground: var(--admin-base-text);
     --card: var(--admin-card-bg);

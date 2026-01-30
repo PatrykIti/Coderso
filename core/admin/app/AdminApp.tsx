@@ -50,6 +50,7 @@ import { PagePreview } from "@/ui/pages/PagePreview";
 import { toAdminThemeCssVariables } from "../../ui/theme/tokenCss";
 import { DEFAULT_ADMIN_THEME_TOKENS } from "../../services/adminThemes/tokenTypes";
 import { mergeAdminThemeTokens } from "../../services/adminThemes/tokenUtils";
+import { assertAdminThemeTokens } from "../../services/adminThemes/tokenValidation";
 
 const publicRoutes = new Set([
   "/admin/login",
@@ -164,9 +165,18 @@ export function AdminApp({ path }: AdminAppProps) {
     error: null,
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [adminThemeTokens, setAdminThemeTokens] = useState(
-    DEFAULT_ADMIN_THEME_TOKENS
-  );
+  const [adminThemeTokens, setAdminThemeTokens] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_ADMIN_THEME_TOKENS;
+    const cached = window.localStorage.getItem("nextless.adminThemeTokens");
+    if (!cached) return DEFAULT_ADMIN_THEME_TOKENS;
+    try {
+      const parsed = JSON.parse(cached) as unknown;
+      assertAdminThemeTokens(parsed);
+      return parsed;
+    } catch {
+      return DEFAULT_ADMIN_THEME_TOKENS;
+    }
+  });
   const tokenCss = useMemo(
     () => toAdminThemeCssVariables(adminThemeTokens),
     [adminThemeTokens]
@@ -347,6 +357,12 @@ export function AdminApp({ path }: AdminAppProps) {
           : templates[0] ?? null;
         const resolved = mergeAdminThemeTokens(fallback, template?.tokens ?? null);
         setAdminThemeTokens(resolved);
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            "nextless.adminThemeTokens",
+            JSON.stringify(resolved)
+          );
+        }
       })
       .catch(() => {
         setAdminThemeTokens(fallback);

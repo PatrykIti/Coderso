@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { AdminThemeTokens } from "../../../services/adminThemes/tokenTypes";
 import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../services/adminThemes/tokenTypes";
+import { mergeAdminThemeTokens } from "../../../services/adminThemes/tokenUtils";
 import { toAdminThemeCssVariableMap } from "../../../ui/theme/tokenCss";
 
 import type { AdminThemeTemplate } from "@/services/adminThemeClient";
@@ -31,6 +32,14 @@ type ColorFieldProps = {
   value: string;
   onChange: (next: string) => void;
   hint?: string;
+};
+
+type TextFieldProps = {
+  label: string;
+  value: string;
+  onChange: (next: string) => void;
+  hint?: string;
+  placeholder?: string;
 };
 
 type PreviewPanelProps = {
@@ -92,6 +101,31 @@ function ColorField({ label, value, onChange, hint }: ColorFieldProps) {
           className="font-mono text-xs"
         />
       </div>
+    </div>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  onChange,
+  hint,
+  placeholder,
+}: TextFieldProps) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-semibold uppercase text-muted-foreground">
+          {label}
+        </label>
+        {hint ? <span className="text-[10px] text-muted-foreground">{hint}</span> : null}
+      </div>
+      <Input
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="font-mono text-xs"
+      />
     </div>
   );
 }
@@ -194,6 +228,30 @@ function CardsPreview() {
   );
 }
 
+function TypographyPreview() {
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <p
+          className="text-lg font-semibold"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
+          Admin UI typography
+        </p>
+        <p className="text-sm text-muted-foreground">
+          This is muted supporting copy.
+        </p>
+      </div>
+      <div className="space-y-1">
+        <p className="text-base">Body text sample for general UI copy.</p>
+        <p className="text-sm text-muted-foreground">
+          Smaller meta label text (text-sm).
+        </p>
+      </div>
+    </div>
+  );
+}
+
 type StateSampleProps = {
   label: string;
   color: string;
@@ -236,14 +294,15 @@ function ThemeTemplateForm({
 }: ThemeTemplateFormProps) {
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
-  const [tokens, setTokens] = useState<AdminThemeTokens>(
-    template?.tokens ?? DEFAULT_ADMIN_THEME_TOKENS
+  const [tokens, setTokens] = useState<AdminThemeTokens>(() =>
+    mergeAdminThemeTokens(DEFAULT_ADMIN_THEME_TOKENS, template?.tokens ?? null)
   );
 
   const previewStyle = useMemo<Record<string, string>>(() => {
     const background = tokens.base.bg;
     const foreground = tokens.base.text;
     const muted = tokens.base.surface;
+    const mutedForeground = tokens.typography.mutedText;
     const card = tokens.card.bg;
     const border = tokens.base.border;
     const input = tokens.inputs.border;
@@ -260,7 +319,7 @@ function ThemeTemplateForm({
       "--background": background,
       "--foreground": foreground,
       "--muted": muted,
-      "--muted-foreground": foreground,
+      "--muted-foreground": mutedForeground,
       "--popover": muted,
       "--popover-foreground": foreground,
       "--card": card,
@@ -279,7 +338,7 @@ function ThemeTemplateForm({
       "--color-background": background,
       "--color-foreground": foreground,
       "--color-muted": muted,
-      "--color-muted-foreground": foreground,
+      "--color-muted-foreground": mutedForeground,
       "--color-popover": muted,
       "--color-popover-foreground": foreground,
       "--color-card": card,
@@ -332,8 +391,12 @@ function ThemeTemplateForm({
     invertSection([
       ["base", "bg"],
       ["base", "surface"],
-      ["base", "text"],
       ["base", "border"],
+    ]);
+  const invertTypography = () =>
+    invertSection([
+      ["base", "text"],
+      ["typography", "mutedText"],
     ]);
   const invertButtons = () =>
     invertSection([
@@ -436,6 +499,7 @@ function ThemeTemplateForm({
             <Tabs defaultValue="base" className="gap-6">
               <TabsList variant="line" className="flex w-full flex-wrap gap-2">
                 <TabsTrigger value="base">Base</TabsTrigger>
+                <TabsTrigger value="typography">Typography</TabsTrigger>
                 <TabsTrigger value="buttons">Buttons</TabsTrigger>
                 <TabsTrigger value="inputs">Inputs</TabsTrigger>
                 <TabsTrigger value="navigation">Navigation</TabsTrigger>
@@ -469,11 +533,6 @@ function ThemeTemplateForm({
                         onChange={(value) => updateToken(["base", "surface"], value)}
                       />
                       <ColorField
-                        label="Text"
-                        value={tokens.base.text}
-                        onChange={(value) => updateToken(["base", "text"], value)}
-                      />
-                      <ColorField
                         label="Border"
                         value={tokens.base.border}
                         onChange={(value) => updateToken(["base", "border"], value)}
@@ -486,6 +545,122 @@ function ThemeTemplateForm({
                     style={previewStyle}
                   >
                     <BasePreview />
+                  </PreviewPanel>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="typography">
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                      <span>Typography</span>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={invertTypography}
+                      >
+                        Invert section
+                      </Button>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <ColorField
+                        label="Text"
+                        value={tokens.base.text}
+                        onChange={(value) => updateToken(["base", "text"], value)}
+                      />
+                      <ColorField
+                        label="Muted Text"
+                        value={tokens.typography.mutedText}
+                        onChange={(value) =>
+                          updateToken(["typography", "mutedText"], value)
+                        }
+                      />
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <div className="text-xs font-semibold uppercase text-muted-foreground">
+                        Font families
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <TextField
+                          label="Sans"
+                          value={tokens.typography.sans}
+                          onChange={(value) =>
+                            updateToken(["typography", "sans"], value)
+                          }
+                          placeholder='"IBM Plex Sans", Arial, sans-serif'
+                        />
+                        <TextField
+                          label="Display"
+                          value={tokens.typography.display}
+                          onChange={(value) =>
+                            updateToken(["typography", "display"], value)
+                          }
+                          placeholder='"Space Grotesk", Arial, sans-serif'
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <div className="text-xs font-semibold uppercase text-muted-foreground">
+                        Font sizes
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <TextField
+                          label="Text SM"
+                          value={tokens.typography.sm}
+                          onChange={(value) =>
+                            updateToken(["typography", "sm"], value)
+                          }
+                          placeholder="0.875rem"
+                        />
+                        <TextField
+                          label="Text MD"
+                          value={tokens.typography.md}
+                          onChange={(value) =>
+                            updateToken(["typography", "md"], value)
+                          }
+                          placeholder="1rem"
+                        />
+                        <TextField
+                          label="Text LG"
+                          value={tokens.typography.lg}
+                          onChange={(value) =>
+                            updateToken(["typography", "lg"], value)
+                          }
+                          placeholder="1.125rem"
+                        />
+                        <TextField
+                          label="Text XL"
+                          value={tokens.typography.xl}
+                          onChange={(value) =>
+                            updateToken(["typography", "xl"], value)
+                          }
+                          placeholder="1.25rem"
+                        />
+                        <TextField
+                          label="Text 2XL"
+                          value={tokens.typography["2xl"]}
+                          onChange={(value) =>
+                            updateToken(["typography", "2xl"], value)
+                          }
+                          placeholder="1.5rem"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <PreviewPanel
+                    title="Typography preview"
+                    description="Font families and text sizing preview."
+                    style={previewStyle}
+                  >
+                    <TypographyPreview />
                   </PreviewPanel>
                 </div>
               </TabsContent>

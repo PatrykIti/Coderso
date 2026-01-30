@@ -13,6 +13,7 @@
 - Added per-tab live previews (base, buttons, inputs, navigation, cards, states).
 - Added “Invert section” shortcuts for quick dark/light variants.
 - Added Admin UI theme profile switcher in the top bar.
+- Added typography tab (text color + font family + sizing).
 
 ### Tests
 - Updated ThemeTemplateDrawer UI test to reflect tabbed layout.
