@@ -13,6 +13,7 @@ import { registerAdminThemeRoutes } from "./adminThemeRoutes";
 import { registerSeoRoutes } from "./seoRoutes";
 import { registerAnalyticsRoutes } from "./analyticsRoutes";
 import { registerBackupRoutes } from "./backupRoutes";
+import { registerImportExportRoutes } from "./importExportRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -35,4 +36,5 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerSeoRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerAnalyticsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerBackupRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerImportExportRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
 }

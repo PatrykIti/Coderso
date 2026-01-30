@@ -1,7 +1,11 @@
 import { History } from "lucide-react";
+import { useCallback, useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { isApiClientError } from "@/services/apiClient";
+import { exportConfig } from "@/services/importExportClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -9,6 +13,34 @@ import { ExportCards } from "./ExportCards";
 import { ImportDropzone } from "./ImportDropzone";
 
 export function ImportExportPage() {
+  const [isExporting, setIsExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleExport = useCallback(async () => {
+    setIsExporting(true);
+    setError(null);
+    try {
+      const bundle = await exportConfig();
+      const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `nextless-export-${bundle.exportedAt}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to export data.");
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
+
   return (
     <AdminShell
       activeHref="/admin/tools/import-export"
@@ -31,6 +63,12 @@ export function ImportExportPage() {
           title="Import & Export"
           description="Data management and portability."
         />
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>Import/export error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
 
         <section className="space-y-6">
           <div className="space-y-1">
@@ -39,7 +77,7 @@ export function ImportExportPage() {
               Select modules and data types to download as portable files.
             </p>
           </div>
-          <ExportCards />
+          <ExportCards onExport={handleExport} isExporting={isExporting} />
         </section>
 
         <Separator />

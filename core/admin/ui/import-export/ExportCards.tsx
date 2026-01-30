@@ -72,7 +72,12 @@ const exportCards: ExportCard[] = [
   },
 ];
 
-export function ExportCards() {
+type ExportCardsProps = {
+  onExport: (target: string) => void;
+  isExporting: boolean;
+};
+
+export function ExportCards({ onExport, isExporting }: ExportCardsProps) {
   return (
     <div className="grid gap-6 md:grid-cols-3">
       {exportCards.map((card) => {
@@ -116,14 +121,17 @@ export function ExportCards() {
                 <Button
                   className={cn("flex-1", card.buttonClassName)}
                   variant={card.buttonVariant}
+                  disabled={isExporting}
+                  onClick={() => onExport(card.id)}
                 >
-                  Download
+                  {isExporting ? "Preparing..." : "Download"}
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
                   className="h-9 w-9"
                   aria-label="Export options"
+                  disabled={isExporting}
                 >
                   <ChevronDown className="h-4 w-4" />
                 </Button>

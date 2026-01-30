@@ -454,6 +454,67 @@ Download response:
 
 ---
 
+## Import / Export (v1)
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /tools/export`
+- `POST /tools/import/preview`
+- `POST /tools/import`
+
+Export response (bundle):
+
+```json
+{
+  "version": 1,
+  "exportedAt": "2026-01-30T10:00:00Z",
+  "settings": { "site.name": "Nextless", "site.locale": "en", "design.tokens": {} },
+  "menus": [
+    {
+      "name": "Main",
+      "location": "primary",
+      "items": [{ "id": "item-1", "label": "Home", "href": "/", "orderIndex": 0 }]
+    }
+  ],
+  "themeProfiles": [
+    {
+      "id": "profile-1",
+      "name": "Default",
+      "description": null,
+      "themeName": "admin-default",
+      "tokens": {},
+      "isActive": true,
+      "routes": [{ "id": "route-1", "path": "/", "pageId": null }]
+    }
+  ],
+  "adminThemes": {
+    "templates": [{ "id": "template-1", "name": "Admin Default", "tokens": {} }],
+    "profiles": [{ "id": "admin-profile-1", "name": "Admin", "templateId": "template-1", "isActive": true }]
+  },
+  "redirects": []
+}
+```
+
+Preview/import response:
+
+```json
+{
+  "summary": {
+    "settings": 3,
+    "menus": 1,
+    "menuItems": 1,
+    "themeProfiles": 1,
+    "themeRoutes": 1,
+    "adminThemeTemplates": 1,
+    "adminThemeProfiles": 1,
+    "redirects": 0,
+    "warnings": []
+  }
+}
+```
+
+---
+
 ## Audit logs
 
 Permissions: `audit:read`

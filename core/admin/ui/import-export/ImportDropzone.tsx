@@ -1,5 +1,7 @@
 import { Archive, FileJson, FileText, UploadCloud } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,6 +15,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  importConfig,
+  previewImport,
+  type ExportBundle,
+  type ImportSummary,
+} from "@/services/importExportClient";
 
 type ImportStatus = "in-progress" | "completed" | "failed";
 
@@ -88,6 +97,59 @@ const importHistory: ImportRecord[] = [
 ];
 
 export function ImportDropzone() {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [bundle, setBundle] = useState<ExportBundle | null>(null);
+  const [preview, setPreview] = useState<ImportSummary | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleBrowse = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFile = useCallback(async (file: File) => {
+    setError(null);
+    setPreview(null);
+    setBundle(null);
+    setIsPreviewing(true);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as ExportBundle;
+      const result = await previewImport(parsed);
+      setBundle(parsed);
+      setPreview(result.summary);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to preview import file.");
+      }
+    } finally {
+      setIsPreviewing(false);
+    }
+  }, []);
+
+  const handleImport = useCallback(async () => {
+    if (!bundle) return;
+    setIsImporting(true);
+    setError(null);
+    try {
+      const result = await importConfig(bundle);
+      setPreview(result.summary);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to import configuration.");
+      }
+    } finally {
+      setIsImporting(false);
+    }
+  }, [bundle]);
+
   return (
     <div className="space-y-8">
       <Card className="border-dashed border-2 bg-card/60 py-10 text-center transition-colors hover:border-primary/40">
@@ -104,11 +166,86 @@ export function ImportDropzone() {
           <Button
             variant="outline"
             className="border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
+            onClick={handleBrowse}
+            disabled={isPreviewing || isImporting}
           >
-            Browse Files
+            {isPreviewing ? "Validating..." : "Browse Files"}
           </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              void handleFile(file);
+              event.currentTarget.value = "";
+            }}
+          />
         </CardContent>
       </Card>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Import error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {preview ? (
+        <Card className="border-border/60">
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Import Preview</p>
+                <p className="text-xs text-muted-foreground">
+                  Review the bundle before applying changes.
+                </p>
+              </div>
+              <Button
+                className="min-w-[160px]"
+                onClick={handleImport}
+                disabled={isImporting}
+              >
+                {isImporting ? "Importing..." : "Apply Import"}
+              </Button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {[
+                { label: "Settings", value: preview.settings },
+                { label: "Menus", value: preview.menus },
+                { label: "Menu items", value: preview.menuItems },
+                { label: "Theme profiles", value: preview.themeProfiles },
+                { label: "Theme routes", value: preview.themeRoutes },
+                { label: "Admin templates", value: preview.adminThemeTemplates },
+                { label: "Admin profiles", value: preview.adminThemeProfiles },
+                { label: "Redirects", value: preview.redirects },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2"
+                >
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    {item.label}
+                  </p>
+                  <p className="text-lg font-semibold">{item.value}</p>
+                </div>
+              ))}
+            </div>
+            {preview.warnings.length > 0 ? (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700">
+                <p className="font-semibold">Warnings</p>
+                <ul className="list-disc pl-4">
+                  {preview.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
