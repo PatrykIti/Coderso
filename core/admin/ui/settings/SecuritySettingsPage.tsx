@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clock3,
   LockKeyhole,
+  PlugZap,
   ShieldCheck,
   ShieldEllipsis,
   Sliders,
@@ -66,6 +67,7 @@ type SecurityFormState = {
   csp: string;
   hsts: string;
   validationRejectUnknownFields: boolean;
+  pluginSafeMode: boolean;
 };
 
 const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => ({
@@ -92,6 +94,7 @@ const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => (
   csp: settings.headers.csp ?? "",
   hsts: settings.headers.hsts ?? "",
   validationRejectUnknownFields: settings.validation.rejectUnknownFields,
+  pluginSafeMode: settings.plugins.safeMode,
 });
 
 const defaultFormState: SecurityFormState = {
@@ -118,6 +121,7 @@ const defaultFormState: SecurityFormState = {
   csp: "",
   hsts: "",
   validationRejectUnknownFields: true,
+  pluginSafeMode: false,
 };
 
 export function SecuritySettingsPage() {
@@ -245,6 +249,9 @@ export function SecuritySettingsPage() {
         },
         validation: {
           rejectUnknownFields: form.validationRejectUnknownFields,
+        },
+        plugins: {
+          safeMode: form.pluginSafeMode,
         },
       };
 
@@ -672,6 +679,26 @@ export function SecuritySettingsPage() {
                     placeholder="max-age=31536000; includeSubDomains"
                   />
                 </div>
+              </div>
+            </SecurityPolicyCard>
+
+            <SecurityPolicyCard
+              title="Plugin Safety"
+              description="Temporarily disable runtime plugins during maintenance or debugging."
+              icon={<PlugZap className="h-4 w-4" />}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Enable Safe Mode</p>
+                  <p className="text-xs text-muted-foreground">
+                    Prevents plugin code from loading until disabled again.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.pluginSafeMode}
+                  onCheckedChange={(value) => handleFieldChange("pluginSafeMode", value)}
+                  aria-label="Enable plugin safe mode"
+                />
               </div>
             </SecurityPolicyCard>
 

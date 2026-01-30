@@ -148,5 +148,12 @@ export const securitySettingsSchema = {
         rejectUnknownFields: { type: "boolean" },
       },
     },
+    plugins: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        safeMode: { type: "boolean" },
+      },
+    },
   },
 };

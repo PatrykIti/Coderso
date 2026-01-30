@@ -11,6 +11,7 @@ test("SecuritySettingsPage renders cards and allowlist table", () => {
   expect(html).toContain("CSRF Protection");
   expect(html).toContain("CORS Policy");
   expect(html).toContain("Rate Limiting");
+  expect(html).toContain("Plugin Safety");
   expect(html).toContain("Active Restrictions");
   expect(html).toContain("Login Alerts");
   expect(html).toContain("IP Range (CIDR)");

@@ -95,7 +95,8 @@ Rotacja klucza:
 ## Operational safety
 
 - Safe mode uruchamia core bez pluginow, aby odzyskac panel admina.
-  - Env: `PLUGINS_SAFE_MODE=1`.
+  - Admin UI: Settings → Security → Plugin Safety.
+  - Env override: `PLUGINS_SAFE_MODE=1` (wymusza niezaleznie od UI).
 - Error boundaries w admin UI izoluje bledy pluginow.
 - Auto-disable pluginu po przekroczeniu progu bledow (configurable).
   - Env: `PLUGIN_ERROR_THRESHOLD` (domyslnie 3).

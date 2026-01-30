@@ -398,6 +398,9 @@ Permissions: `settings:read`, `settings:write`
     "allowedMethods": ["GET", "POST", "PATCH", "DELETE"],
     "allowedHeaders": ["content-type", "x-csrf-token"],
     "maxAgeSeconds": 600
+  },
+  "plugins": {
+    "safeMode": false
   }
 }
 ```

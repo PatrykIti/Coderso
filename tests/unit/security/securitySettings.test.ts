@@ -49,6 +49,7 @@ testIfDb("setSecuritySettings merges partial updates", async () => {
     csrf: { enabled: false },
     cors: { allowedOrigins: ["https://admin.example.com"] },
     rateLimit: { admin: { maxRequests: 50 } },
+    plugins: { safeMode: true },
   });
 
   const updated = await getSecuritySettings();
@@ -58,6 +59,7 @@ testIfDb("setSecuritySettings merges partial updates", async () => {
   expect(updated.rateLimit.admin.windowSeconds).toBe(
     SECURITY_SETTINGS_DEFAULTS.rateLimit.admin.windowSeconds
   );
+  expect(updated.plugins.safeMode).toBe(true);
 });
 
 testIfDb("setSecuritySettings validates input", async () => {

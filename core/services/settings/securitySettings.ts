@@ -37,6 +37,9 @@ export type SecuritySettings = {
   validation: {
     rejectUnknownFields: boolean;
   };
+  plugins: {
+    safeMode: boolean;
+  };
 };
 
 export type SecuritySettingsUpdate = {
@@ -50,6 +53,7 @@ export type SecuritySettingsUpdate = {
   };
   headers?: Partial<SecuritySettings["headers"]>;
   validation?: Partial<SecuritySettings["validation"]>;
+  plugins?: Partial<SecuritySettings["plugins"]>;
 };
 
 const SECURITY_SETTINGS_KEY = "security.settings";
@@ -87,6 +91,9 @@ const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
   },
   validation: {
     rejectUnknownFields: true,
+  },
+  plugins: {
+    safeMode: false,
   },
 };
 
@@ -191,10 +198,19 @@ const mergeSecuritySettings = (
   assertObjectOrUndefined(update.rateLimit);
   assertObjectOrUndefined(update.headers);
   assertObjectOrUndefined(update.validation);
+  assertObjectOrUndefined(update.plugins);
   assertObjectOrUndefined(update.rateLimit?.admin);
   assertObjectOrUndefined(update.rateLimit?.auth);
 
-  assertAllowedKeys(update, ["requestId", "csrf", "cors", "rateLimit", "headers", "validation"]);
+  assertAllowedKeys(update, [
+    "requestId",
+    "csrf",
+    "cors",
+    "rateLimit",
+    "headers",
+    "validation",
+    "plugins",
+  ]);
   if (update.requestId) {
     assertAllowedKeys(update.requestId, ["enabled", "headerName"]);
   }
@@ -232,6 +248,9 @@ const mergeSecuritySettings = (
   }
   if (update.validation) {
     assertAllowedKeys(update.validation, ["rejectUnknownFields"]);
+  }
+  if (update.plugins) {
+    assertAllowedKeys(update.plugins, ["safeMode"]);
   }
 
   const requestId = {
@@ -323,6 +342,10 @@ const mergeSecuritySettings = (
     ),
   };
 
+  const plugins = {
+    safeMode: normalizeBoolean(update.plugins?.safeMode, base.plugins.safeMode),
+  };
+
   return {
     requestId,
     csrf,
@@ -330,6 +353,7 @@ const mergeSecuritySettings = (
     rateLimit,
     headers,
     validation,
+    plugins,
   };
 };
 

@@ -17,6 +17,7 @@ import {
   getHookRegistry,
   getPluginRoutes,
 } from "./sdkRuntime";
+import { getSecuritySettings } from "../services/settings/securitySettings";
 
 export type LoadedPlugin = {
   plugin: PluginRecord;
@@ -29,9 +30,15 @@ function normalizeThreshold(value: string | undefined, fallback: number) {
   return parsed;
 }
 
-export function isSafeMode() {
+function isSafeModeEnv() {
   const value = process.env.PLUGINS_SAFE_MODE;
   return value === "1" || value === "true";
+}
+
+export async function isSafeMode() {
+  if (isSafeModeEnv()) return true;
+  const settings = await getSecuritySettings();
+  return settings.plugins.safeMode;
 }
 
 export { getPluginRoutes, getHookRegistry };
@@ -56,7 +63,7 @@ export async function recordPluginFailure(name: string, error: unknown) {
 }
 
 export async function loadAllPlugins(options?: { runtimeDir?: string }) {
-  if (isSafeMode()) return [] as LoadedPlugin[];
+  if (await isSafeMode()) return [] as LoadedPlugin[];
 
   const runtimeDir = options?.runtimeDir ?? DEFAULT_PLUGINS_DIR;
   const installed = await listPlugins();
@@ -84,6 +91,7 @@ export async function loadAllPlugins(options?: { runtimeDir?: string }) {
 }
 
 export async function loadPluginByName(name: string, options?: { runtimeDir?: string }) {
+  if (await isSafeMode()) return null;
   const plugin = await getPluginByName(name);
   if (!plugin || !plugin.enabled) return null;
 

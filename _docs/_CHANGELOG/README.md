@@ -104,6 +104,7 @@ Project Change Log.
 | 077 | 2026-01-29 | Admin UI theme tabs | Admin/UI |
 | 078 | 2026-01-30 | Widget registry and core widgets | CMS/Widgets |
 | 079 | 2026-01-30 | Security middleware and settings | Core/Security |
+| 080 | 2026-01-30 | Plugin safe mode in security settings | Core/Security |
 
 
 ---

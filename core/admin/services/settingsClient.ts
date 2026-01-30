@@ -78,6 +78,7 @@ export type SecuritySettingsResponse = {
     hsts: string | null;
   };
   validation: { rejectUnknownFields: boolean };
+  plugins: { safeMode: boolean };
 };
 
 export type SecuritySettingsUpdate = {
@@ -91,6 +92,7 @@ export type SecuritySettingsUpdate = {
   };
   headers?: Partial<SecuritySettingsResponse["headers"]>;
   validation?: Partial<SecuritySettingsResponse["validation"]>;
+  plugins?: Partial<SecuritySettingsResponse["plugins"]>;
 };
 
 export async function getStorageSettings() {
