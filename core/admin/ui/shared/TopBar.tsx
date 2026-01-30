@@ -2,6 +2,7 @@ import { Bell, HelpCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { AdminThemeSwitcher } from "@/ui/shared/AdminThemeSwitcher";
 
 type TopBarProps = {
   navToggle?: React.ReactNode;
@@ -39,6 +40,7 @@ export function TopBar({
       </div>
       <div className="flex flex-1 justify-center px-6">{search}</div>
       <div className="flex items-center gap-2">
+        <AdminThemeSwitcher />
         {actions}
         <Button variant="ghost" size="icon">
           <Bell className="h-4 w-4" />

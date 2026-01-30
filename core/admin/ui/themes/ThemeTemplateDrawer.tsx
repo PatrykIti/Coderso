@@ -46,6 +46,30 @@ function normalizeHex(value: string) {
   return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
 }
 
+function invertHex(value: string) {
+  const normalized = normalizeHex(value);
+  const hex = normalized.slice(1);
+  const expanded =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((char) => `${char}${char}`)
+          .join("")
+      : hex;
+  if (expanded.length !== 6) return normalized;
+  const int = Number.parseInt(expanded, 16);
+  if (Number.isNaN(int)) return normalized;
+  const r = 255 - ((int >> 16) & 0xff);
+  const g = 255 - ((int >> 8) & 0xff);
+  const b = 255 - (int & 0xff);
+  const result =
+    "#" +
+    [r, g, b]
+      .map((part) => part.toString(16).padStart(2, "0"))
+      .join("");
+  return result;
+}
+
 function ColorField({ label, value, onChange, hint }: ColorFieldProps) {
   return (
     <div className="space-y-2">
@@ -286,6 +310,79 @@ function ThemeTemplateForm({
     });
   };
 
+  const invertSection = (paths: string[][]) => {
+    setTokens((prev) => {
+      const next = structuredClone(prev) as AdminThemeTokens;
+      for (const path of paths) {
+        let cursor: Record<string, unknown> = next;
+        for (let index = 0; index < path.length - 1; index += 1) {
+          cursor = cursor[path[index]] as Record<string, unknown>;
+        }
+        const key = path[path.length - 1];
+        const current = cursor[key];
+        if (typeof current === "string") {
+          cursor[key] = invertHex(current);
+        }
+      }
+      return next;
+    });
+  };
+
+  const invertBase = () =>
+    invertSection([
+      ["base", "bg"],
+      ["base", "surface"],
+      ["base", "text"],
+      ["base", "border"],
+    ]);
+  const invertButtons = () =>
+    invertSection([
+      ["buttons", "primary", "bg"],
+      ["buttons", "primary", "text"],
+      ["buttons", "primary", "hoverBg"],
+      ["buttons", "primary", "hoverText"],
+      ["buttons", "secondary", "bg"],
+      ["buttons", "secondary", "text"],
+      ["buttons", "secondary", "hoverBg"],
+      ["buttons", "secondary", "hoverText"],
+      ["buttons", "outline", "border"],
+      ["buttons", "outline", "text"],
+      ["buttons", "outline", "hoverBg"],
+      ["buttons", "outline", "hoverText"],
+      ["buttons", "ghost", "hoverBg"],
+      ["buttons", "ghost", "hoverText"],
+    ]);
+  const invertInputs = () =>
+    invertSection([
+      ["inputs", "bg"],
+      ["inputs", "border"],
+      ["inputs", "text"],
+      ["inputs", "placeholder"],
+      ["inputs", "focusRing"],
+    ]);
+  const invertNavigation = () =>
+    invertSection([
+      ["sidebar", "bg"],
+      ["sidebar", "text"],
+      ["sidebar", "activeBg"],
+      ["sidebar", "activeText"],
+      ["sidebar", "hoverBg"],
+      ["topbar", "bg"],
+      ["topbar", "text"],
+      ["topbar", "border"],
+    ]);
+  const invertCards = () =>
+    invertSection([
+      ["card", "bg"],
+      ["card", "border"],
+    ]);
+  const invertStates = () =>
+    invertSection([
+      ["state", "success"],
+      ["state", "warning"],
+      ["state", "danger"],
+    ]);
+
   const handleSave = async () => {
     if (!onSave) return;
     await onSave({ name, description, tokens });
@@ -349,7 +446,17 @@ function ThemeTemplateForm({
               <TabsContent value="base">
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                   <div className="space-y-4">
-                    <div className="text-sm font-semibold text-foreground">Base colors</div>
+                    <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                      <span>Base colors</span>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={invertBase}
+                      >
+                        Invert section
+                      </Button>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <ColorField
                         label="Background"
@@ -387,8 +494,16 @@ function ThemeTemplateForm({
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <div className="text-xs font-semibold uppercase text-muted-foreground">
-                        Primary
+                      <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
+                        <span>Primary</span>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          type="button"
+                          onClick={invertButtons}
+                        >
+                          Invert section
+                        </Button>
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
                         <ColorField
@@ -535,7 +650,17 @@ function ThemeTemplateForm({
               <TabsContent value="inputs">
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                   <div className="space-y-4">
-                    <div className="text-sm font-semibold text-foreground">Inputs</div>
+                    <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                      <span>Inputs</span>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={invertInputs}
+                      >
+                        Invert section
+                      </Button>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <ColorField
                         label="Input Background"
@@ -582,8 +707,16 @@ function ThemeTemplateForm({
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                   <div className="space-y-6">
                     <div className="space-y-3">
-                      <div className="text-xs font-semibold uppercase text-muted-foreground">
-                        Sidebar
+                      <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
+                        <span>Sidebar</span>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          type="button"
+                          onClick={invertNavigation}
+                        >
+                          Invert section
+                        </Button>
                       </div>
                       <div className="grid gap-4 md:grid-cols-2">
                         <ColorField
@@ -660,7 +793,17 @@ function ThemeTemplateForm({
               <TabsContent value="cards">
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                   <div className="space-y-4">
-                    <div className="text-sm font-semibold text-foreground">Cards</div>
+                    <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                      <span>Cards</span>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={invertCards}
+                      >
+                        Invert section
+                      </Button>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <ColorField
                         label="Card Background"
@@ -687,7 +830,17 @@ function ThemeTemplateForm({
               <TabsContent value="states">
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                   <div className="space-y-4">
-                    <div className="text-sm font-semibold text-foreground">States</div>
+                    <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                      <span>States</span>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        type="button"
+                        onClick={invertStates}
+                      >
+                        Invert section
+                      </Button>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <ColorField
                         label="Success"

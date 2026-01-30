@@ -15,6 +15,10 @@ Podziel UI edycji tokenów Admin UI Theme na czytelne zakładki z podglądem
 „na żywo” dostosowanym do danej grupy tokenów. Celem jest skrócenie listy,
 lepsza nawigacja i mniejsze ryzyko błędnej edycji kolorów.
 
+Dodatkowo:
+- szybki przycisk „Invert section” w każdej zakładce (szybkie odwrócenie kolorów),
+- switcher profili w topbarze do szybkiego przełączania motywów.
+
 ---
 
 ## UX / Information Architecture

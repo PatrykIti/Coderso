@@ -11,6 +11,9 @@
 ### Admin / UI
 - Split Admin UI theme token editor into tabs by group.
 - Added per-tab live previews (base, buttons, inputs, navigation, cards, states).
+- Added “Invert section” shortcuts for quick dark/light variants.
+- Added Admin UI theme profile switcher in the top bar.
 
 ### Tests
 - Updated ThemeTemplateDrawer UI test to reflect tabbed layout.
+- Added AdminThemeSwitcher render test.
