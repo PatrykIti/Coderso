@@ -21,7 +21,7 @@ CSRF, OTP/recovery oraz reset hasla.
 
 **TTL note:** Wartosc TTL dla sesji i resetu hasla jest docelowo
 konfigurowana w settings (`auth.sessionTtlDays`, `auth.resetTtlMinutes`)
-po TASK-027.
+po TASK-100.
 
 **Response shape (standard):**
 

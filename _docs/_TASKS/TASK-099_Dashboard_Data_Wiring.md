@@ -1,5 +1,5 @@
-# TASK-026: Dashboard Data Wiring (Functional)
-# FileName: TASK-026_Dashboard_Data_Wiring.md
+# TASK-099: Dashboard Data Wiring (Functional)
+# FileName: TASK-099_Dashboard_Data_Wiring.md
 
 **Priority:** Medium  
 **Category:** Admin/Dashboard  
@@ -45,8 +45,8 @@ tests/integration/ui/
 
 ## Sub-Tasks (detailed)
 
-- `TASK-026-01_Dashboard_Service.md`
-- `TASK-026-02_Dashboard_API.md`
-- `TASK-026-03_Dashboard_UI_Wiring.md`
+- `TASK-099-01_Dashboard_Service.md`
+- `TASK-099-02_Dashboard_API.md`
+- `TASK-099-03_Dashboard_UI_Wiring.md`
 
 Kazdy sub-task zawiera szczegolowe checklisty, przyklady i testy.

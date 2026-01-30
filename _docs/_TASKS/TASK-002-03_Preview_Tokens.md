@@ -18,7 +18,7 @@ Implement preview token creation and validation. The token is used by the Page E
 - The response should include `previewUrl` and `expiresAt`.
 
 **Base URL note:** Preview URL uses `PUBLIC_BASE_URL` (ENV) as fallback.
-Docelowo ma korzystac z `site.baseUrl` w settings (TASK-027).
+Docelowo ma korzystac z `site.baseUrl` w settings (TASK-100).
 
 ---
 

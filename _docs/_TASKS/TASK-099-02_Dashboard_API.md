@@ -1,10 +1,10 @@
-# TASK-026-02: Dashboard API
-# FileName: TASK-026-02_Dashboard_API.md
+# TASK-099-02: Dashboard API
+# FileName: TASK-099-02_Dashboard_API.md
 
 **Priority:** Medium  
 **Category:** Admin/Dashboard  
 **Estimated Effort:** Medium  
-**Dependencies:** TASK-026-01, TASK-004-05  
+**Dependencies:** TASK-099-01, TASK-004-05  
 **Status:** To Do  
 
 ---

@@ -1,10 +1,10 @@
-# TASK-026-03: Dashboard UI Wiring
-# FileName: TASK-026-03_Dashboard_UI_Wiring.md
+# TASK-099-03: Dashboard UI Wiring
+# FileName: TASK-099-03_Dashboard_UI_Wiring.md
 
 **Priority:** Medium  
 **Category:** Admin/Dashboard  
 **Estimated Effort:** Medium  
-**Dependencies:** TASK-026-02, TASK-006-01  
+**Dependencies:** TASK-099-02, TASK-006-01  
 **Status:** To Do  
 
 ---

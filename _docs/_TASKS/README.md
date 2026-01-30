@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 50 tasks
 - **In Progress:** 0
 - **Done:** 124 tasks
 
@@ -38,14 +38,56 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-026 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
-| TASK-026-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
-| TASK-026-02 | Dashboard API | Medium | Medium | GET /dashboard |
-| TASK-026-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-027 | Runtime Base URL + Auth TTL + Setup Wizard | Medium | Medium | LAST: first-run wizard + baseUrl |
+| TASK-080 | Search UI Wiring | Medium | Medium | Wire global search to /search |
+| TASK-081 | SEO Manager Core and UI | High | Large | SEO data + audit + UI |
+| TASK-081-01 | SEO DB Schema | High | Medium | seo_documents |
+| TASK-081-02 | SEO Service and Audit Runner | High | Medium | audit scoring |
+| TASK-081-03 | SEO API Routes | High | Medium | /seo endpoints |
+| TASK-081-04 | SEO UI Wiring | High | Medium | UI -> API |
+| TASK-082 | Analytics Core and UI | Medium | Large | KPIs + top content |
+| TASK-082-01 | Analytics Service | Medium | Medium | aggregate metrics |
+| TASK-082-02 | Analytics API Routes | Medium | Medium | /analytics endpoints |
+| TASK-082-03 | Analytics UI Wiring | Medium | Medium | UI -> API |
+| TASK-083 | Backups Core and UI | Medium | Large | backup registry |
+| TASK-083-01 | Backups DB and Service | Medium | Medium | backups + schedule |
+| TASK-083-02 | Backups API Routes | Medium | Medium | /backups endpoints |
+| TASK-083-03 | Backups UI Wiring | Medium | Medium | UI -> API |
+| TASK-084 | Import / Export Core and UI | Medium | Large | config bundles |
+| TASK-084-01 | Import / Export Service | Medium | Medium | export/import |
+| TASK-084-02 | Import / Export API Routes | Medium | Medium | /tools/export |
+| TASK-084-03 | Import / Export UI Wiring | Medium | Medium | UI -> API |
+| TASK-085 | Redirects Core and UI | Medium | Large | redirect CRUD |
+| TASK-085-01 | Redirects DB and Service | Medium | Medium | redirects table |
+| TASK-085-02 | Redirects API Routes | Medium | Medium | /redirects endpoints |
+| TASK-085-03 | Redirects UI Wiring | Medium | Medium | UI -> API |
+| TASK-086 | Admin Users and Roles Core and UI | High | Large | users + roles + permissions |
+| TASK-086-01 | Users and Roles Service | High | Medium | CRUD + permissions catalog |
+| TASK-086-02 | Users and Roles API Routes | High | Medium | /admin-users + /admin-roles |
+| TASK-086-03 | Users UI Wiring | High | Medium | users list + invite |
+| TASK-086-04 | Roles Matrix UI Wiring | High | Medium | permissions matrix |
+| TASK-087 | Security Sessions Core and UI | Medium | Medium | sessions list + revoke |
+| TASK-087-01 | Sessions Service and API | Medium | Medium | /sessions endpoints |
+| TASK-087-02 | Sessions UI Wiring | Medium | Medium | UI -> API |
+| TASK-088 | Audit Logs UI Wiring | Medium | Medium | audit list + details |
+| TASK-089 | Access Logs Core and UI | Medium | Large | request access logs |
+| TASK-089-01 | Access Logs DB and Service | Medium | Medium | access_logs table |
+| TASK-089-02 | Access Logs API Routes | Medium | Medium | /access-logs |
+| TASK-089-03 | Access Logs UI Wiring | Medium | Medium | UI -> API |
+| TASK-090 | IP Allowlist Core and UI | Medium | Large | allowlist + enforcement |
+| TASK-090-01 | IP Allowlist Service | Medium | Medium | CRUD + CIDR |
+| TASK-090-02 | IP Allowlist API and Middleware | Medium | Medium | /ip-allowlist |
+| TASK-090-03 | IP Allowlist UI Wiring | Medium | Medium | UI -> API |
+| TASK-091 | Login Alerts Core and UI | Medium | Medium | settings + alerts |
+| TASK-091-01 | Login Alerts Settings | Medium | Medium | security settings |
+| TASK-091-02 | Login Alerts UI Wiring | Medium | Medium | UI -> API |
+| TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
+| TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
+| TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
+| TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
+| TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | Medium | Medium | LAST: first-run wizard + baseUrl |
 
 ---
 

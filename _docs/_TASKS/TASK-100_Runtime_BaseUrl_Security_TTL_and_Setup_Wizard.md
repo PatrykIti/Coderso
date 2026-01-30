@@ -1,5 +1,5 @@
-# TASK-027: Runtime Base URL + Auth TTL + Setup Wizard
-# FileName: TASK-027_Runtime_BaseUrl_Security_TTL_and_Setup_Wizard.md
+# TASK-100: Runtime Base URL + Auth TTL + Setup Wizard
+# FileName: TASK-100_Runtime_BaseUrl_Security_TTL_and_Setup_Wizard.md
 
 **Priority:** Medium  
 **Category:** Core/Settings + Admin UI  
@@ -50,7 +50,7 @@ core/admin/AdminApp.tsx       # uruchomienie wizarda przy first-run
 
 ## Sub-Tasks
 
-### TASK-027-01: Settings keys for baseUrl + auth TTL
+### TASK-100-01: Settings keys for baseUrl + auth TTL
 
 **Goal:** Dodac nowe klucze settings i ich walidacje.
 
@@ -83,7 +83,7 @@ const DEFAULT_SETTINGS = {
 
 ---
 
-### TASK-027-02: Public base URL resolver
+### TASK-100-02: Public base URL resolver
 
 **Goal:** Jeden helper do budowania publicznego URL (preview, reset, itp).
 
@@ -116,7 +116,7 @@ export async function resolvePublicBaseUrl(ctx: RouteContext): Promise<string> {
 
 ---
 
-### TASK-027-03: Session TTL + Reset TTL in auth services
+### TASK-100-03: Session TTL + Reset TTL in auth services
 
 **Goal:** TTL sterowane z settings.
 
@@ -134,7 +134,7 @@ export async function resolvePublicBaseUrl(ctx: RouteContext): Promise<string> {
 
 ---
 
-### TASK-027-04: Admin UI wiring for baseUrl + auth TTL
+### TASK-100-04: Admin UI wiring for baseUrl + auth TTL
 
 **General Settings:**
 - `core/admin/ui/settings/GeneralSettingsPage.tsx`
@@ -154,7 +154,7 @@ Korzystamy z istniejacych `/settings` endpoints, tylko nowe klucze.
 
 ---
 
-### TASK-027-05: First-run Setup Wizard
+### TASK-100-05: First-run Setup Wizard
 
 **Goal:** Po pierwszym logowaniu user widzi wizard, ktory zbiera
 `site.baseUrl`, `site.locale`, `site.name`, `auth.sessionTtlDays`,
