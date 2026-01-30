@@ -5,19 +5,24 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
+import type { TopContentRow } from "./TopContentTable";
+
 type TopContentDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  items: TopContentRow[];
 };
 
-const rows = [
-  { title: "Modern UI Trends", views: "12,402", path: "/blog/modern-ui-trends" },
-  { title: "Analytics Dashboard", views: "9,821", path: "/features/analytics-dashboard" },
-  { title: "Getting Started", views: "7,240", path: "/docs/getting-started" },
-  { title: "Pricing", views: "5,112", path: "/pricing" },
-];
+const formatScore = (score: number) => `${score}%`;
 
-export function TopContentDrawer({ open, onOpenChange }: TopContentDrawerProps) {
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+export function TopContentDrawer({ open, onOpenChange, items }: TopContentDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -40,16 +45,25 @@ export function TopContentDrawer({ open, onOpenChange }: TopContentDrawerProps) 
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="space-y-4 px-6 py-6">
-            {rows.map((row) => (
-              <div key={row.path} className="rounded-xl border bg-muted/30 p-4">
-                <p className="text-sm font-semibold">{row.title}</p>
-                <p className="text-xs text-muted-foreground">{row.path}</p>
-                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  {row.views} views
-                </div>
+            {items.length === 0 ? (
+              <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                No content activity yet.
               </div>
-            ))}
+            ) : (
+              items.map((row) => (
+                <div key={row.id} className="rounded-xl border bg-muted/30 p-4">
+                  <p className="text-sm font-semibold">{row.title}</p>
+                  <p className="text-xs text-muted-foreground">{row.path}</p>
+                  <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="flex items-center gap-2">
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      {formatScore(row.score)} activity
+                    </span>
+                    <span>{formatDate(row.updatedAt)}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </ScrollArea>
         <Separator />

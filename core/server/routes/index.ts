@@ -11,6 +11,7 @@ import { registerAuditRoutes } from "./auditRoutes";
 import { registerThemeRoutes } from "./themeRoutes";
 import { registerAdminThemeRoutes } from "./adminThemeRoutes";
 import { registerSeoRoutes } from "./seoRoutes";
+import { registerAnalyticsRoutes } from "./analyticsRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -31,4 +32,5 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerThemeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerAdminThemeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerSeoRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerAnalyticsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
 }

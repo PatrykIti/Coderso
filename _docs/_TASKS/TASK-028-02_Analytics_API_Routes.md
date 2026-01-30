@@ -5,7 +5,7 @@
 **Category:** CMS/Analytics  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-028-01, TASK-020  
-**Status:** To Do
+**Status:** Done (2026-01-30)
 
 ---
 

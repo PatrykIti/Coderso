@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 66 tasks
+- **To Do:** 62 tasks
 - **In Progress:** 0
-- **Done:** 130 tasks
+- **Done:** 134 tasks
 
 ---
 
@@ -41,10 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-028 | Analytics Core and UI | Medium | Large | KPIs + top content |
-| TASK-028-01 | Analytics Service | Medium | Medium | aggregate metrics |
-| TASK-028-02 | Analytics API Routes | Medium | Medium | /analytics endpoints |
-| TASK-028-03 | Analytics UI Wiring | Medium | Medium | UI -> API |
 | TASK-029 | Backups Core and UI | Medium | Large | backup registry |
 | TASK-029-01 | Backups DB and Service | Medium | Medium | backups + schedule |
 | TASK-029-02 | Backups API Routes | Medium | Medium | /backups endpoints |
@@ -130,6 +126,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-020-08 | Input Validation Middleware | Medium | Medium | AJV validate helper |
 | TASK-020-09 | Security Settings UI Wiring | High | Medium | Admin UI config |
 | TASK-020-10 | Session Limits in Security Settings | High | Medium | TTL + max sessions per user |
+| TASK-028 | Analytics Core and UI | Medium | Large | KPIs + top content |
+| TASK-028-01 | Analytics Service | Medium | Medium | aggregate metrics |
+| TASK-028-02 | Analytics API Routes | Medium | Medium | /analytics endpoints |
+| TASK-028-03 | Analytics UI Wiring | Medium | Medium | UI -> API |
 | TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..05 |
 | TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
 | TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |

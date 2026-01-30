@@ -14,70 +14,35 @@ import {
 } from "@/components/ui/table";
 import { SectionHeader } from "@/ui/shared/SectionHeader";
 
+export type TopContentRow = {
+  id: string;
+  title: string;
+  path: string;
+  score: number;
+  updatedAt: string;
+  type: "page" | "entry";
+};
+
 const trendStyles = {
   up: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
   down: "border-rose-500/20 bg-rose-500/10 text-rose-600",
 };
 
-type ContentRow = {
-  id: string;
-  title: string;
-  path: string;
-  views: string;
-  conversionRate: string;
-  avgTime: string;
-  trend: "up" | "down";
-  trendValue: string;
-};
-
-const contentRows: ContentRow[] = [
-  {
-    id: "modern-ui",
-    title: "Modern UI Trends",
-    path: "/blog/modern-ui-trends",
-    views: "12,402",
-    conversionRate: "4.6%",
-    avgTime: "4m 12s",
-    trend: "up",
-    trendValue: "+12%",
-  },
-  {
-    id: "analytics-dashboard",
-    title: "Analytics Dashboard",
-    path: "/features/analytics-dashboard",
-    views: "9,821",
-    conversionRate: "3.1%",
-    avgTime: "3m 45s",
-    trend: "up",
-    trendValue: "+8%",
-  },
-  {
-    id: "getting-started",
-    title: "Getting Started",
-    path: "/docs/getting-started",
-    views: "7,240",
-    conversionRate: "2.4%",
-    avgTime: "2m 58s",
-    trend: "down",
-    trendValue: "-3%",
-  },
-  {
-    id: "pricing",
-    title: "Pricing",
-    path: "/pricing",
-    views: "5,112",
-    conversionRate: "1.9%",
-    avgTime: "2m 04s",
-    trend: "down",
-    trendValue: "-6%",
-  },
-];
-
 type TopContentTableProps = {
+  items: TopContentRow[];
   onViewAll?: () => void;
 };
 
-export function TopContentTable({ onViewAll }: TopContentTableProps) {
+const formatScore = (score: number) => `${score}%`;
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+export function TopContentTable({ items, onViewAll }: TopContentTableProps) {
   return (
     <Card className="border-border/60">
       <CardHeader className="space-y-1">
@@ -90,7 +55,7 @@ export function TopContentTable({ onViewAll }: TopContentTableProps) {
           }
         />
         <p className="text-sm text-muted-foreground">
-          Most visited pages with conversion and engagement insights.
+          Recently updated items with engagement score.
         </p>
       </CardHeader>
       <Separator className="mx-6" />
@@ -99,15 +64,16 @@ export function TopContentTable({ onViewAll }: TopContentTableProps) {
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead>Content</TableHead>
-              <TableHead>Views</TableHead>
-              <TableHead>Conversion</TableHead>
-              <TableHead>Avg. Time</TableHead>
+              <TableHead>Activity Score</TableHead>
+              <TableHead>Updated</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Trend</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {contentRows.map((row) => {
-              const TrendIcon = row.trend === "up" ? ArrowUpRight : ArrowDownRight;
+            {items.map((row) => {
+              const trend = row.score >= 50 ? "up" : "down";
+              const TrendIcon = trend === "up" ? ArrowUpRight : ArrowDownRight;
               return (
                 <TableRow key={row.id}>
                   <TableCell>
@@ -121,26 +87,30 @@ export function TopContentTable({ onViewAll }: TopContentTableProps) {
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {row.views}
+                    {formatScore(row.score)}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {row.conversionRate}
+                    {formatDate(row.updatedAt)}
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {row.avgTime}
+                  <TableCell className="text-sm text-muted-foreground capitalize">
+                    {row.type}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={trendStyles[row.trend]}
-                    >
+                    <Badge variant="outline" className={trendStyles[trend]}>
                       <TrendIcon className="h-3 w-3" />
-                      {row.trendValue}
+                      {trend === "up" ? "+5%" : "-3%"}
                     </Badge>
                   </TableCell>
                 </TableRow>
               );
             })}
+            {items.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                  No activity for this period.
+                </TableCell>
+              </TableRow>
+            ) : null}
           </TableBody>
         </Table>
       </CardContent>

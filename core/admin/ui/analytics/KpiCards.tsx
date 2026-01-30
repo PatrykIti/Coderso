@@ -1,4 +1,4 @@
-import { Eye, FileText, MousePointerClick, TrendingDown, TrendingUp } from "lucide-react";
+import { FileText, Image, Layers, TrendingDown, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,15 +6,12 @@ import { cn } from "@/lib/utils";
 
 type Trend = "up" | "down";
 
-type KpiCard = {
-  id: string;
+export type KpiCard = {
+  id: "publishedPages" | "entries" | "media";
   label: string;
   value: string;
-  helper?: string;
   change: string;
   trend: Trend;
-  icon: React.ComponentType<{ className?: string }>;
-  iconStyles: string;
 };
 
 const trendStyles: Record<Trend, string> = {
@@ -22,42 +19,23 @@ const trendStyles: Record<Trend, string> = {
   down: "border-rose-500/20 bg-rose-500/10 text-rose-600",
 };
 
-const kpiCards: KpiCard[] = [
-  {
-    id: "visits",
-    label: "Unique Visits",
-    value: "42,891",
-    change: "12%",
-    trend: "up",
-    icon: Eye,
-    iconStyles: "bg-primary/10 text-primary",
-  },
-  {
-    id: "conversions",
-    label: "Conversions",
-    value: "2,405",
-    change: "8.4%",
-    trend: "up",
-    icon: MousePointerClick,
-    iconStyles: "bg-emerald-500/10 text-emerald-600",
-  },
-  {
-    id: "top-page",
-    label: "Top Page Views",
-    value: "12,402",
-    helper: "/blog/modern-ui-trends",
-    change: "3%",
-    trend: "down",
-    icon: FileText,
-    iconStyles: "bg-slate-500/10 text-slate-600",
-  },
-];
+const iconMap: Record<KpiCard["id"], React.ComponentType<{ className?: string }>> = {
+  publishedPages: FileText,
+  entries: Layers,
+  media: Image,
+};
 
-export function KpiCards() {
+const iconStylesMap: Record<KpiCard["id"], string> = {
+  publishedPages: "bg-primary/10 text-primary",
+  entries: "bg-emerald-500/10 text-emerald-600",
+  media: "bg-amber-500/10 text-amber-600",
+};
+
+export function KpiCards({ items }: { items: KpiCard[] }) {
   return (
     <div className="grid gap-6 md:grid-cols-3">
-      {kpiCards.map((card) => {
-        const Icon = card.icon;
+      {items.map((card) => {
+        const Icon = iconMap[card.id];
         const TrendIcon = card.trend === "up" ? TrendingUp : TrendingDown;
 
         return (
@@ -67,7 +45,7 @@ export function KpiCards() {
                 <div
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-lg",
-                    card.iconStyles
+                    iconStylesMap[card.id]
                   )}
                 >
                   <Icon className="h-5 w-5" />
@@ -83,9 +61,6 @@ export function KpiCards() {
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground">{card.label}</p>
                 <p className="text-3xl font-semibold text-foreground">{card.value}</p>
-                {card.helper ? (
-                  <p className="text-xs text-muted-foreground">{card.helper}</p>
-                ) : null}
               </div>
             </CardContent>
           </Card>

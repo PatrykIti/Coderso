@@ -361,6 +361,41 @@ Response:
 
 ---
 
+## Analytics (v1)
+
+Permissions: `content:read`
+
+Note: v1 analytics are derived from CMS data (counts + recent updates), not real traffic.
+
+- `GET /analytics/overview?rangeDays=30`
+- `GET /analytics/top-content?limit=10&type=page`
+
+Overview response:
+
+```json
+{
+  "rangeDays": 30,
+  "generatedAt": "2026-01-30T10:00:00Z",
+  "totals": { "pages": 12, "publishedPages": 7, "entries": 24, "media": 80, "users": 3 },
+  "current": { "pages": 3, "publishedPages": 2, "entries": 5, "media": 12, "users": 1 },
+  "previous": { "pages": 2, "publishedPages": 1, "entries": 4, "media": 9, "users": 1 },
+  "trend": [
+    { "date": "2026-01-24", "value": 3 },
+    { "date": "2026-01-25", "value": 2 }
+  ]
+}
+```
+
+Top content response:
+
+```json
+[
+  { "id": "page-id", "type": "page", "title": "Homepage", "slug": "/", "updatedAt": "2026-01-30T09:00:00Z", "score": 90 }
+]
+```
+
+---
+
 ## Audit logs
 
 Permissions: `audit:read`
