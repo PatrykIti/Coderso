@@ -70,6 +70,12 @@ export function MediaLibraryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const initialSelectedId = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const params = new URLSearchParams(window.location.search);
+    return params.get("selected");
+  }, []);
+
   const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -106,6 +112,15 @@ export function MediaLibraryPage() {
       setIsDrawerOpen(false);
     }
   }, [items, selectedId]);
+
+  useEffect(() => {
+    if (!initialSelectedId || selectedId) return;
+    const match = items.find((item) => item.id === initialSelectedId);
+    if (match) {
+      setSelectedId(match.id);
+      setIsDrawerOpen(true);
+    }
+  }, [items, initialSelectedId, selectedId]);
 
   const filteredItems = useMemo(() => {
     return items.filter((item) => {

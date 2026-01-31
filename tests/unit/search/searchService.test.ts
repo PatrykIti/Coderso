@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import {
+  buildPrefixQuery,
   normalizeSearchQuery,
   resolveSearchLimit,
   searchAll,
@@ -15,6 +16,13 @@ test("resolveSearchLimit clamps values", () => {
   expect(resolveSearchLimit(0, 20)).toBe(20);
   expect(resolveSearchLimit(5.7, 20)).toBe(5);
   expect(resolveSearchLimit(120, 20)).toBe(50);
+});
+
+test("buildPrefixQuery creates prefix tsquery", () => {
+  expect(buildPrefixQuery("about")).toBe("about:*");
+  expect(buildPrefixQuery("about us")).toBe("about:* & us:*");
+  expect(buildPrefixQuery("  ab#out   us  ")).toBe("about:* & us:*");
+  expect(buildPrefixQuery("###")).toBeNull();
 });
 
 test("searchAll returns empty for short queries", async () => {

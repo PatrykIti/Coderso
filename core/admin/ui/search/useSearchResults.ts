@@ -34,6 +34,7 @@ function mapSearchItem(item: ApiSearchItem): SearchItem {
       meta: item.categoryLabel ?? "Entry",
       categoryId: item.categoryId,
       categoryLabel: item.categoryLabel,
+      entryTypeSlug: item.entryTypeSlug,
     };
   }
 

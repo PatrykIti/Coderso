@@ -42,6 +42,9 @@ export function registerSearchRoutes(router: Router, deps: SearchRouteDeps) {
     const query = ctx.query.q ?? "";
     const normalized = normalizeSearchQuery(query);
     const limit = parseLimit(ctx.query.limit);
+    if (normalized.length < 2) {
+      return { items: [], categories: [] };
+    }
     const items = await searchAll(query, { limit });
     const categories = await buildSearchCategories(items);
     if (ctx.user?.id && normalized.length >= 2) {

@@ -45,6 +45,7 @@ function filterGroups(groups: SearchGroup[], value: ContentFilter) {
 
 export function SearchPage() {
   const [query, setQuery] = useState("");
+  const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentError, setRecentError] = useState<string | null>(null);
   const [categorySelection, setCategorySelection] = useState<string[]>([]);
@@ -93,6 +94,34 @@ export function SearchPage() {
     [filteredItems]
   );
 
+  const handleSelect = (item: SearchGroup["items"][number]) => {
+    if (typeof window === "undefined") return;
+    if (item.type === "page") {
+      window.location.assign(`/admin/pages/${encodeURIComponent(item.id)}`);
+      return;
+    }
+    if (item.type === "entry") {
+      const typeSlug =
+        item.entryTypeSlug ??
+        (item.categoryId?.startsWith("entry:")
+          ? item.categoryId.split(":")[1]
+          : null);
+      if (typeSlug) {
+        window.location.assign(
+          `/admin/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(item.id)}`
+        );
+      } else {
+        window.location.assign("/admin/entries");
+      }
+      return;
+    }
+    if (item.type === "media") {
+      window.location.assign(
+        `/admin/media?selected=${encodeURIComponent(item.id)}`
+      );
+    }
+  };
+
   const renderResults = (filter: ContentFilter) => {
     if (!shouldSearch) {
       return (
@@ -122,6 +151,8 @@ export function SearchPage() {
         variant="page"
         query={normalizedQuery}
         groups={filterGroups(filteredGroups, filter)}
+        onSelect={handleSelect}
+        onViewAll={(type) => setContentFilter(type)}
       />
     );
   };
@@ -274,7 +305,11 @@ export function SearchPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Content Type
               </p>
-              <Tabs defaultValue="all" className="space-y-4">
+              <Tabs
+                value={contentFilter}
+                onValueChange={(value) => setContentFilter(value as ContentFilter)}
+                className="space-y-4"
+              >
                 <TabsList variant="line">
                   {contentFilters.map((filter) => (
                     <TabsTrigger key={filter.value} value={filter.value}>

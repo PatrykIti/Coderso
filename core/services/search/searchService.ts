@@ -14,6 +14,7 @@ export type SearchItem = {
   updatedAt: string;
   categoryId?: string;
   categoryLabel?: string;
+  entryTypeSlug?: string;
 };
 
 export type SearchOptions = {
@@ -30,6 +31,15 @@ export function normalizeSearchQuery(input: string) {
   return input.trim().replace(/\s+/g, " ");
 }
 
+export function buildPrefixQuery(input: string) {
+  const tokens = input
+    .split(/\s+/)
+    .map((term) => term.replace(/[^\p{L}\p{N}_-]/gu, ""))
+    .filter(Boolean);
+  if (tokens.length === 0) return null;
+  return tokens.map((term) => `${term}:*`).join(" & ");
+}
+
 export function resolveSearchLimit(input?: number, fallback = 20) {
   if (!input || Number.isNaN(input)) return fallback;
   return Math.min(Math.max(Math.floor(input), 1), 50);
@@ -43,6 +53,8 @@ function toIso(value: Date | string | null) {
 export async function searchAll(query: string, options: SearchOptions = {}) {
   const normalized = normalizeSearchQuery(query);
   if (normalized.length < 2) return [] as SearchItem[];
+  const tsQuery = buildPrefixQuery(normalized);
+  if (!tsQuery) return [] as SearchItem[];
 
   const limit = resolveSearchLimit(options.limit);
   const perType = Math.max(1, Math.ceil(limit / 3));
@@ -56,7 +68,7 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
     })
     .from(pages)
     .where(
-      sql`to_tsvector('simple', ${pages.title} || ' ' || ${pages.slug}) @@ plainto_tsquery('simple', ${normalized})`
+      sql`to_tsvector('simple', ${pages.title} || ' ' || ${pages.slug}) @@ to_tsquery('simple', ${tsQuery})`
     )
     .limit(perType);
 
@@ -72,7 +84,7 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
     .from(contentEntries)
     .innerJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
     .where(
-      sql`to_tsvector('simple', ${contentEntries.title} || ' ' || ${contentEntries.slug}) @@ plainto_tsquery('simple', ${normalized})`
+      sql`to_tsvector('simple', ${contentEntries.title} || ' ' || ${contentEntries.slug}) @@ to_tsquery('simple', ${tsQuery})`
     )
     .limit(perType);
 
@@ -84,7 +96,7 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
     })
     .from(media)
     .where(
-      sql`to_tsvector('simple', coalesce(${media.title}, '') || ' ' || coalesce(${media.alt}, '') || ' ' || coalesce(${media.caption}, '')) @@ plainto_tsquery('simple', ${normalized})`
+      sql`to_tsvector('simple', coalesce(${media.title}, '') || ' ' || coalesce(${media.alt}, '') || ' ' || coalesce(${media.caption}, '')) @@ to_tsquery('simple', ${tsQuery})`
     )
     .limit(perType);
 
@@ -106,6 +118,7 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
       updatedAt: toIso(row.updatedAt),
       categoryId: row.typeSlug ? `entry:${row.typeSlug}` : "entry",
       categoryLabel: row.typeName ?? "Entries",
+      entryTypeSlug: row.typeSlug ?? undefined,
     })),
     ...mediaRows.map((row) => ({
       id: row.id,

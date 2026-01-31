@@ -8,6 +8,7 @@ export type SearchResultItem = {
   updatedAt: string;
   categoryId?: string;
   categoryLabel?: string;
+  entryTypeSlug?: string;
 };
 
 export type SearchResponse = {
