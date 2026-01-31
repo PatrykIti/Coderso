@@ -81,6 +81,14 @@ Rotacja klucza:
 - Nigdy nie logujemy tokenow/hasel.
 - ENV tylko po stronie serwera.
 
+## API Keys (v1)
+
+- API keys sa hashowane (argon2id), plaintext nie trafia do DB.
+- Kazdy klucz ma `prefix` (pierwsze 6 znakow) do szybkiego lookupu.
+- `lastUsedAt` aktualizowane przy kazdym poprawnym uzyciu klucza.
+- Secret jest zwracany tylko raz (create/rotate) i nie da sie go odzyskac.
+- Revoke ustawia `revokedAt` i uniemozliwia dalsze uzycie.
+
 ## Audit logs (v1.0)
 
 - Logowanie zdarzen admin: login, publish, plugin install, settings update.

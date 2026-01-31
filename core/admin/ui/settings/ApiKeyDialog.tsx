@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,49 +14,69 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-const scopeOptions = [
-  {
-    id: "content.read",
-    label: "Content Read",
-    description: "Read published entries and page content.",
-    defaultChecked: true,
-  },
-  {
-    id: "content.write",
-    label: "Content Write",
-    description: "Create and update entries or pages.",
-  },
-  {
-    id: "media.read",
-    label: "Media Read",
-    description: "Access media asset metadata and files.",
-    defaultChecked: true,
-  },
-  {
-    id: "media.manage",
-    label: "Media Manage",
-    description: "Upload, edit, and delete media assets.",
-  },
-  {
-    id: "settings.read",
-    label: "Settings Read",
-    description: "View configuration details and audit logs.",
-  },
-  {
-    id: "settings.write",
-    label: "Settings Write",
-    description: "Update settings, roles, and team access.",
-  },
-];
+import { apiKeyScopeOptions, getDefaultScopes } from "./apiKeyScopes";
 
 type ApiKeyDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreate: (payload: { name: string; scopes: string[] }) => Promise<void>;
+  isSubmitting?: boolean;
+  error?: string | null;
 };
 
-export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
+export function ApiKeyDialog({
+  open,
+  onOpenChange,
+  onCreate,
+  isSubmitting = false,
+  error,
+}: ApiKeyDialogProps) {
+  const [name, setName] = useState("");
+  const [scopes, setScopes] = useState<string[]>(getDefaultScopes());
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setName("");
+    setScopes(getDefaultScopes());
+    setLocalError(null);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetForm();
+    }
+    onOpenChange(nextOpen);
+  };
+
+  const selectedCount = scopes.length;
+  const canSubmit = name.trim().length > 0 && selectedCount > 0 && !isSubmitting;
+  const errorMessage = error ?? localError;
+
+  const handleToggleScope = (id: string, checked: boolean) => {
+    setScopes((prev) => {
+      if (checked) {
+        return prev.includes(id) ? prev : [...prev, id];
+      }
+      return prev.filter((scope) => scope !== id);
+    });
+  };
+
+  const handleSubmit = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setLocalError("Provide a name for the API key.");
+      return;
+    }
+    if (scopes.length === 0) {
+      setLocalError("Select at least one scope.");
+      return;
+    }
+    setLocalError(null);
+    await onCreate({ name: trimmed, scopes });
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-lg"
         showCloseButton={false}
@@ -87,6 +108,8 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
               </label>
               <Input
                 id="api-key-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="e.g. Analytics Pipeline"
                 className="bg-muted/40"
               />
@@ -101,14 +124,17 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
               </div>
               <div className="rounded-xl border bg-muted/30">
                 <div className="space-y-3 p-4">
-                  {scopeOptions.map((scope) => (
+                  {apiKeyScopeOptions.map((scope) => (
                     <label
                       key={scope.id}
                       className="flex items-start gap-3 rounded-xl border bg-background/60 p-3 transition-colors hover:bg-muted/40"
                     >
                       <Checkbox
                         className="mt-1"
-                        defaultChecked={scope.defaultChecked}
+                        checked={scopes.includes(scope.id)}
+                        onCheckedChange={(value) =>
+                          handleToggleScope(scope.id, value === true)
+                        }
                       />
                       <div>
                         <p className="text-sm font-semibold text-foreground">
@@ -122,7 +148,15 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
                   ))}
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {selectedCount} scope{selectedCount === 1 ? "" : "s"} selected
+              </p>
             </div>
+            {errorMessage ? (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                {errorMessage}
+              </div>
+            ) : null}
           </div>
         </ScrollArea>
         <Separator />
@@ -131,7 +165,9 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={() => onOpenChange(false)}>Create Key</Button>
+            <Button onClick={handleSubmit} disabled={!canSubmit}>
+              {isSubmitting ? "Creating..." : "Create Key"}
+            </Button>
           </div>
         </div>
       </DialogContent>

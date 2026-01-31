@@ -1,10 +1,4 @@
-import {
-  Copy,
-  KeyRound,
-  MoreHorizontal,
-  RefreshCw,
-  Trash2,
-} from "lucide-react";
+import { Copy, KeyRound, MoreHorizontal, RefreshCw, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,60 +18,70 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type ApiKeyStatus = "active" | "rotating" | "revoked";
+import type { ApiKeyRecord } from "@/services/apiKeysClient";
 
-type ApiKey = {
-  id: string;
-  name: string;
-  scopes: string[];
-  createdAt: string;
-  lastUsed: string;
-  status: ApiKeyStatus;
-};
+import { getScopeLabel } from "./apiKeyScopes";
 
-const apiKeys: ApiKey[] = [
-  {
-    id: "prod-frontend",
-    name: "Production Frontend",
-    scopes: ["Content Read", "Media Read"],
-    createdAt: "Oct 24, 2025",
-    lastUsed: "2 minutes ago",
-    status: "active",
-  },
-  {
-    id: "sync-bot",
-    name: "External Sync Bot",
-    scopes: ["Content Write", "Media Manage"],
-    createdAt: "Sep 12, 2025",
-    lastUsed: "5 days ago",
-    status: "rotating",
-  },
-  {
-    id: "mobile-dev",
-    name: "Mobile App Dev",
-    scopes: ["Content Read"],
-    createdAt: "Aug 05, 2025",
-    lastUsed: "Never",
-    status: "revoked",
-  },
-];
+type ApiKeyStatus = "active" | "revoked";
 
 const statusStyles: Record<ApiKeyStatus, string> = {
   active: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
-  rotating: "border-amber-500/30 bg-amber-500/10 text-amber-600",
   revoked: "border-rose-500/30 bg-rose-500/10 text-rose-600",
 };
 
 const statusLabels: Record<ApiKeyStatus, string> = {
   active: "Active",
-  rotating: "Rotating",
   revoked: "Revoked",
 };
 
 const scopeBadgeClass =
   "border-primary/20 bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wide";
 
-export function ApiKeysTable() {
+type ApiKeysTableProps = {
+  items: ApiKeyRecord[];
+  isLoading?: boolean;
+  busyId?: string | null;
+  copyableIds?: Set<string>;
+  onCopy?: (key: ApiKeyRecord) => void;
+  onRotate?: (key: ApiKeyRecord) => void;
+  onRevoke?: (key: ApiKeyRecord) => void;
+};
+
+const formatDate = (value: string | null) => {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "N/A";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
+};
+
+const formatRelative = (value: string | null) => {
+  if (!value) return "Never";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.max(Math.floor(diffMs / 60000), 0);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} mins ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hrs ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString();
+};
+
+export function ApiKeysTable({
+  items,
+  isLoading = false,
+  busyId,
+  copyableIds,
+  onCopy,
+  onRotate,
+  onRevoke,
+}: ApiKeysTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -104,75 +108,111 @@ export function ApiKeysTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {apiKeys.map((key) => (
-            <TableRow key={key.id}>
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/60">
-                    <KeyRound className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <span className="text-sm font-semibold text-foreground">
-                    {key.name}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1.5">
-                  {key.scopes.map((scope) => (
-                    <Badge
-                      key={scope}
-                      variant="outline"
-                      className={scopeBadgeClass}
-                    >
-                      {scope}
-                    </Badge>
-                  ))}
-                </div>
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {key.createdAt}
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {key.lastUsed}
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className={`${statusStyles[key.status]} text-[10px] font-semibold uppercase tracking-wide`}
-                >
-                  {statusLabels[key.status]}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Actions for ${key.name}`}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem>
-                      <Copy className="h-4 w-4" />
-                      Copy key
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <RefreshCw className="h-4 w-4" />
-                      Rotate key
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive">
-                      <Trash2 className="h-4 w-4" />
-                      Revoke key
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
+                Loading API keys...
               </TableCell>
             </TableRow>
-          ))}
+          ) : items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
+                No API keys created yet.
+              </TableCell>
+            </TableRow>
+          ) : (
+            items.map((key) => {
+              const status: ApiKeyStatus = key.revokedAt ? "revoked" : "active";
+              const isBusy = busyId === key.id;
+              const canCopy = copyableIds?.has(key.id) ?? false;
+
+              return (
+                <TableRow key={key.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/60">
+                        <KeyRound className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <span className="text-sm font-semibold text-foreground">
+                          {key.name}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {key.prefix}...
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {key.scopes.map((scope) => (
+                        <Badge
+                          key={scope}
+                          variant="outline"
+                          className={scopeBadgeClass}
+                        >
+                          {getScopeLabel(scope)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDate(key.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatRelative(key.lastUsedAt)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={`${statusStyles[status]} text-[10px] font-semibold uppercase tracking-wide`}
+                    >
+                      {statusLabels[status]}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Actions for ${key.name}`}
+                          disabled={isBusy}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          onClick={() => onCopy?.(key)}
+                          disabled={!canCopy}
+                        >
+                          <Copy className="h-4 w-4" />
+                          {canCopy ? "Copy key" : "Copy key (generated once)"}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onRotate?.(key)}
+                          disabled={status === "revoked" || isBusy}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Rotate key
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() => onRevoke?.(key)}
+                          disabled={status === "revoked" || isBusy}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Revoke key
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
     </div>

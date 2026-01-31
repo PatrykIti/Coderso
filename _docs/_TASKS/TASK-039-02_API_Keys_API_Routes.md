@@ -5,7 +5,7 @@
 **Category:** Settings/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-039-01, TASK-004-06  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 

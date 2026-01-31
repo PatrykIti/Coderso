@@ -190,6 +190,63 @@ List response (summary):
 }
 ```
 
+---
+
+## API Keys (v1)
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /settings/api-keys`
+- `POST /settings/api-keys`
+- `POST /settings/api-keys/:id/rotate`
+- `POST /settings/api-keys/:id/revoke`
+
+Create payload (summary):
+
+```json
+{
+  "name": "Analytics Pipeline",
+  "scopes": ["content.read", "media.read"]
+}
+```
+
+Create/rotate response (summary):
+
+```json
+{
+  "item": {
+    "id": "key-id",
+    "name": "Analytics Pipeline",
+    "scopes": ["content.read", "media.read"],
+    "prefix": "abc123",
+    "createdAt": "2026-01-31T09:10:00Z",
+    "lastUsedAt": null,
+    "revokedAt": null
+  },
+  "secret": "plaintext-key-shown-once"
+}
+```
+
+List response (summary):
+
+```json
+{
+  "items": [
+    {
+      "id": "key-id",
+      "name": "Analytics Pipeline",
+      "scopes": ["content.read", "media.read"],
+      "prefix": "abc123",
+      "createdAt": "2026-01-31T09:10:00Z",
+      "lastUsedAt": "2026-01-31T10:00:00Z",
+      "revokedAt": null
+    }
+  ]
+}
+```
+
+Secret jest zwracany tylko raz (create/rotate). Nie przechowujemy plaintext w DB.
+
 ## Pages
 
 Permissions: `content:read`, `content:write`, `content:publish`

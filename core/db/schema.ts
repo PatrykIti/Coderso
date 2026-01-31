@@ -70,6 +70,24 @@ export const sessions = pgTable(
   })
 );
 
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    scopes: jsonb("scopes").notNull(),
+    keyHash: text("key_hash").notNull(),
+    prefix: text("prefix").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    lastUsedAt: timestamp("last_used_at"),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (t) => ({
+    prefixIdx: index("api_keys_prefix_idx").on(t.prefix),
+    nameIdx: index("api_keys_name_idx").on(t.name),
+  })
+);
+
 export const passwordResets = pgTable(
   "password_resets",
   {

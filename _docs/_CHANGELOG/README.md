@@ -120,6 +120,9 @@ Project Change Log.
 | 093 | 2026-01-31 | Login alerts UI wiring | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |
+| 096 | 2026-01-31 | API keys service | Core/Security |
+| 097 | 2026-01-31 | API keys API | Core/Security |
+| 098 | 2026-01-31 | API keys UI | Admin/UI |
 
 
 ---

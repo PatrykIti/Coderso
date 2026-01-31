@@ -141,6 +141,13 @@
       "when": 1769858885161,
       "tag": "0019_giant_giant_man",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1769860785679,
+      "tag": "0020_flashy_eternity",
+      "breakpoints": true
     }
   ]
 }

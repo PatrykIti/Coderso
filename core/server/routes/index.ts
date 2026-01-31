@@ -21,6 +21,7 @@ import { registerSessionAdminRoutes } from "./sessionAdminRoutes";
 import { registerAccessLogRoutes } from "./accessLogRoutes";
 import { registerIpAllowlistRoutes } from "./ipAllowlistRoutes";
 import { registerFormsRoutes } from "./formsRoutes";
+import { registerApiKeysRoutes } from "./apiKeysRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -51,4 +52,5 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerAccessLogRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerIpAllowlistRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerFormsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerApiKeysRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
 }
