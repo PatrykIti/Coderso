@@ -65,6 +65,22 @@ const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: "forms",
+    label: "Forms",
+    permissions: [
+      {
+        id: "forms:read",
+        label: "View forms",
+        description: "Browse form definitions and submissions",
+      },
+      {
+        id: "forms:write",
+        label: "Manage forms",
+        description: "Create, edit, and publish form definitions",
+      },
+    ],
+  },
+  {
     id: "themes",
     label: "Themes",
     permissions: [

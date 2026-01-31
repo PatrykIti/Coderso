@@ -795,6 +795,64 @@ Uwaga: zmiany obowiazuja natychmiast, bez restartu serwera.
 
 ---
 
+## Forms
+
+Permissions: `forms:read`, `forms:write`
+
+- `GET /forms`
+- `POST /forms`
+- `GET /forms/:id`
+- `PATCH /forms/:id`
+- `DELETE /forms/:id`
+- `GET /forms/:id/fields`
+- `PUT /forms/:id/fields`
+- `GET /forms/:id/submissions`
+- `POST /forms/:id/submissions` (public submit)
+
+`POST /forms`
+
+```json
+{
+  "name": "Contact",
+  "slug": "contact",
+  "status": "draft",
+  "description": "Customer support form"
+}
+```
+
+`PUT /forms/:id/fields`
+
+```json
+[
+  {
+    "id": "uuid",
+    "type": "text",
+    "label": "Full name",
+    "name": "full_name",
+    "required": true,
+    "orderIndex": 0,
+    "settings": { "placeholder": "John Doe" }
+  }
+]
+```
+
+`POST /forms/:id/submissions`
+
+```json
+{
+  "data": {
+    "full_name": "Patryk",
+    "email": "patryk@example.com"
+  }
+}
+```
+
+Uwagi:
+- Payload submission jest walidowany na podstawie definicji pol.
+- Publiczny submit podlega rate limitowi; CSRF obowiazuje dla sesji admina.
+
+---
+
 ## Plugins (installed)
 
 Permissions: `plugins:read`, `plugins:manage`

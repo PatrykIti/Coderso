@@ -3,10 +3,8 @@ import { renderToString } from "react-dom/server";
 
 import { FormBuilderPage } from "../../../core/admin/ui/forms/FormBuilderPage";
 
-test("FormBuilderPage renders form builder layout", () => {
+test("FormBuilderPage renders skeleton", () => {
   const html = renderToString(<FormBuilderPage />);
-
+  expect(html).toContain("Forms");
   expect(html).toContain("Loading form builder");
-  expect(html).toContain("Fields Library");
-  expect(html).toContain("Select a field to configure.");
 });

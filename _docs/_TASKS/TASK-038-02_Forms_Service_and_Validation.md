@@ -5,7 +5,7 @@
 **Category:** CMS/Forms  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-038-01  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 

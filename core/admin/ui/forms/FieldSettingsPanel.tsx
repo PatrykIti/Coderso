@@ -13,18 +13,47 @@ export type FieldSettings = {
   id: string;
   label: string;
   type: string;
-  helper?: string;
+  name: string;
+  required: boolean;
+  settings: {
+    placeholder?: string;
+    helper?: string;
+    options?: string[];
+    defaultValue?: boolean | string;
+    pattern?: string;
+  };
 };
 
 type FieldSettingsPanelProps = {
-  field: FieldSettings;
+  field: FieldSettings | null;
+  onChange: (fieldId: string, updates: Partial<FieldSettings>) => void;
+  onSettingsChange: (
+    fieldId: string,
+    updates: Partial<FieldSettings["settings"]>
+  ) => void;
+  onDuplicate?: (fieldId: string) => void;
 };
 
-const supportsPlaceholder = new Set(["text", "email", "textarea"]);
+const supportsPlaceholder = new Set(["text", "email", "textarea", "phone", "date"]);
 const supportsOptions = new Set(["select"]);
 const supportsDefault = new Set(["checkbox"]);
 
-export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
+export function FieldSettingsPanel({
+  field,
+  onChange,
+  onSettingsChange,
+  onDuplicate,
+}: FieldSettingsPanelProps) {
+  if (!field) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Select a field to configure.
+      </div>
+    );
+  }
+
+  const optionsValue = field.settings.options?.join("\n") ?? "";
+
   return (
     <div className="flex h-full flex-col">
       <div className="border-b p-4">
@@ -62,14 +91,26 @@ export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
                 <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                   Label
                 </label>
-                <Input defaultValue={field.label} />
+                <Input
+                  value={field.label}
+                  onChange={(event) =>
+                    onChange(field.id, { label: event.target.value })
+                  }
+                />
               </div>
               {supportsPlaceholder.has(field.type) ? (
                 <div className="space-y-2">
                   <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     Placeholder
                   </label>
-                  <Input defaultValue="John Doe" />
+                  <Input
+                    value={field.settings.placeholder ?? ""}
+                    onChange={(event) =>
+                      onSettingsChange(field.id, {
+                        placeholder: event.target.value,
+                      })
+                    }
+                  />
                 </div>
               ) : null}
               <div className="space-y-2">
@@ -78,7 +119,10 @@ export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
                 </label>
                 <Textarea
                   rows={2}
-                  defaultValue={field.helper ?? "Additional guidance for this field."}
+                  value={field.settings.helper ?? ""}
+                  onChange={(event) =>
+                    onSettingsChange(field.id, { helper: event.target.value })
+                  }
                 />
               </div>
             </div>
@@ -89,9 +133,19 @@ export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
                   <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     Options
                   </label>
-                  <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-                    Define the selectable values for this field.
-                  </div>
+                  <Textarea
+                    rows={4}
+                    value={optionsValue}
+                    onChange={(event) => {
+                      const options = event.target.value
+                        .split(/\n+/)
+                        .map((option) => option.trim())
+                        .filter(Boolean);
+                      onSettingsChange(field.id, { options });
+                    }}
+                    className="text-xs"
+                    placeholder="Option 1&#10;Option 2"
+                  />
                 </div>
               </>
             ) : null}
@@ -105,7 +159,12 @@ export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
                       Pre-check this option for new submissions.
                     </p>
                   </div>
-                  <Switch />
+                  <Switch
+                    checked={Boolean(field.settings.defaultValue)}
+                    onCheckedChange={(value) =>
+                      onSettingsChange(field.id, { defaultValue: value })
+                    }
+                  />
                 </div>
               </>
             ) : null}
@@ -121,7 +180,12 @@ export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
                     Prevent empty submissions.
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={field.required}
+                  onCheckedChange={(value) =>
+                    onChange(field.id, { required: value })
+                  }
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">
@@ -129,7 +193,12 @@ export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
                 </label>
                 <div className="flex items-center gap-2">
                   <Input
-                    defaultValue="^[a-zA-Z ]*$"
+                    value={field.settings.pattern ?? ""}
+                    onChange={(event) =>
+                      onSettingsChange(field.id, {
+                        pattern: event.target.value,
+                      })
+                    }
                     className="font-mono text-xs"
                   />
                   <Button variant="outline" size="icon-sm" aria-label="Regex help">
@@ -166,7 +235,11 @@ export function FieldSettingsPanel({ field }: FieldSettingsPanelProps) {
         </Tabs>
       </ScrollArea>
       <div className="border-t p-4">
-        <Button variant="secondary" className="w-full">
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={() => onDuplicate?.(field.id)}
+        >
           Duplicate Field
         </Button>
       </div>

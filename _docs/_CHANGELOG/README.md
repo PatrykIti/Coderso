@@ -118,6 +118,8 @@ Project Change Log.
 | 091 | 2026-01-31 | IP allowlist core and UI wiring | Admin/Security |
 | 092 | 2026-01-31 | Login alerts settings | Admin/Security |
 | 093 | 2026-01-31 | Login alerts UI wiring | Admin/UI |
+| 094 | 2026-01-31 | Forms core | CMS/Forms |
+| 095 | 2026-01-31 | Forms UI wiring | Admin/UI |
 
 
 ---

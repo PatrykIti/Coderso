@@ -99,6 +99,13 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Przekierowania trzymane w tabeli `redirects` z kodami 301/302/307/308.
 - Admin UI zarzadza redirectami przez `/redirects`.
 
+## Forms (v1)
+
+- Definicje formularzy sa w tabeli `forms`, pola w `form_fields`.
+- Submissions trafiaja do `form_submissions` (payload JSONB, ip, userAgent).
+- Admin UI buduje formularze w `/forms` i zapisuje pola przez `/forms/:id/fields`.
+- Publiczny submit odbywa sie przez `POST /forms/:id/submissions`.
+
 ## Backups (v1)
 
 - Backupy w v1 to **metadata-only** zapisane w tabeli `backups`.

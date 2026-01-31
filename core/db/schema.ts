@@ -505,3 +505,64 @@ export const menuItems = pgTable(
     ),
   })
 );
+
+export const forms = pgTable(
+  "forms",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    status: text("status").notNull().default("draft"),
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("forms_slug_idx").on(t.slug),
+    statusIdx: index("forms_status_idx").on(t.status),
+    updatedIdx: index("forms_updated_idx").on(t.updatedAt),
+  })
+);
+
+export const formFields = pgTable(
+  "form_fields",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    label: text("label").notNull(),
+    name: text("name").notNull(),
+    required: boolean("required").notNull().default(false),
+    settings: jsonb("settings").notNull(),
+    orderIndex: integer("order_index").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    formIdx: index("form_fields_form_idx").on(t.formId),
+    orderIdx: index("form_fields_order_idx").on(t.formId, t.orderIndex),
+    nameIdx: uniqueIndex("form_fields_name_idx").on(t.formId, t.name),
+  })
+);
+
+export const formSubmissions = pgTable(
+  "form_submissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "restrict" }),
+    payload: jsonb("payload").notNull(),
+    status: text("status").notNull().default("new"),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    formIdx: index("form_submissions_form_idx").on(t.formId),
+    createdIdx: index("form_submissions_created_idx").on(t.createdAt),
+    statusIdx: index("form_submissions_status_idx").on(t.status),
+  })
+);

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 30 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 0
-- **Done:** 166 tasks
+- **Done:** 171 tasks
 
 ---
 
@@ -41,11 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-038 | Forms Core and UI | Medium | Large | Forms CRUD + submissions |
-| TASK-038-01 | Forms DB Schema | Medium | Medium | forms + fields + submissions |
-| TASK-038-02 | Forms Service and Validation | Medium | Medium | CRUD + validation |
-| TASK-038-03 | Forms API Routes | Medium | Medium | /forms endpoints |
-| TASK-038-04 | Forms UI Wiring | Medium | Medium | UI -> API |
 | TASK-039 | API Keys Core and UI | Medium | Medium | keys + scopes |
 | TASK-039-01 | API Keys DB and Service | Medium | Medium | api_keys table |
 | TASK-039-02 | API Keys API Routes | Medium | Medium | /settings/api-keys |
@@ -125,6 +120,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-037 | Login Alerts Core and UI | Medium | Medium | settings + alerts |
 | TASK-037-01 | Login Alerts Settings | Medium | Medium | security settings |
 | TASK-037-02 | Login Alerts UI Wiring | Medium | Medium | UI -> API |
+| TASK-038 | Forms Core and UI | Medium | Large | Forms CRUD + submissions |
+| TASK-038-01 | Forms DB Schema | Medium | Medium | forms + fields + submissions |
+| TASK-038-02 | Forms Service and Validation | Medium | Medium | CRUD + validation |
+| TASK-038-03 | Forms API Routes | Medium | Medium | /forms endpoints |
+| TASK-038-04 | Forms UI Wiring | Medium | Medium | UI -> API |
 | TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..05 |
 | TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
 | TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |

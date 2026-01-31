@@ -14,7 +14,9 @@ type FieldPreviewProps = {
   value?: string;
   selected?: boolean;
   multiline?: boolean;
+  kind?: "text" | "select" | "checkbox";
   onSelect?: (id: string) => void;
+  onRemove?: (id: string) => void;
 };
 
 function FieldPreview({
@@ -24,7 +26,9 @@ function FieldPreview({
   value,
   selected = false,
   multiline = false,
+  kind = "text",
   onSelect,
+  onRemove,
 }: FieldPreviewProps) {
   return (
     <div
@@ -49,6 +53,10 @@ function FieldPreview({
             size="icon-xs"
             className="border bg-background/90 shadow-sm"
             aria-label="Remove field"
+            onClick={(event) => {
+              event.stopPropagation();
+              onRemove?.(id);
+            }}
           >
             <Trash2 className="h-3 w-3 text-muted-foreground" />
           </Button>
@@ -76,6 +84,11 @@ function FieldPreview({
                 : "bg-muted/40 text-muted-foreground"
             )}
           />
+        ) : kind === "checkbox" ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="h-4 w-4 rounded border bg-background" />
+            <span>{value ?? "Yes, I agree"}</span>
+          </div>
         ) : (
           <Input
             placeholder={placeholder}
@@ -92,11 +105,30 @@ function FieldPreview({
 }
 
 type FormCanvasProps = {
-  selectedFieldId: string;
+  selectedFieldId: string | null;
+  fields: Array<{
+    id: string;
+    label: string;
+    type: string;
+    required: boolean;
+    settings: {
+      placeholder?: string;
+      helper?: string;
+      defaultValue?: string | boolean;
+    };
+  }>;
   onSelectField: (id: string) => void;
+  onRemoveField: (id: string) => void;
 };
 
-export function FormCanvas({ selectedFieldId, onSelectField }: FormCanvasProps) {
+export function FormCanvas({
+  selectedFieldId,
+  fields,
+  onSelectField,
+  onRemoveField,
+}: FormCanvasProps) {
+  const hasFields = fields.length > 0;
+
   return (
     <ScrollArea className="h-full">
       <div className="min-h-full bg-[radial-gradient(circle_at_1px_1px,_rgba(148,163,184,0.25),_transparent_0)] bg-[size:20px_20px] px-8 py-10 dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(51,65,85,0.45),_transparent_0)] lg:px-12">
@@ -111,34 +143,42 @@ export function FormCanvas({ selectedFieldId, onSelectField }: FormCanvasProps) 
               </p>
             </div>
             <div className="space-y-4">
-              <FieldPreview
-                id="text"
-                label="Full Name"
-                value="John Doe"
-                selected={selectedFieldId === "text"}
-                onSelect={onSelectField}
-              />
-              <FieldPreview
-                id="email"
-                label="Email Address"
-                placeholder="example@email.com"
-                selected={selectedFieldId === "email"}
-                onSelect={onSelectField}
-              />
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 py-10 text-center text-muted-foreground">
-                <CirclePlus className="mb-2 h-6 w-6" />
-                <p className="text-xs font-medium">
-                  Drop a field here to add to your form
-                </p>
-              </div>
-              <FieldPreview
-                id="textarea"
-                label="Message"
-                placeholder="Type your request..."
-                multiline
-                selected={selectedFieldId === "textarea"}
-                onSelect={onSelectField}
-              />
+              {hasFields ? (
+                fields.map((field) => {
+                  const kind =
+                    field.type === "checkbox"
+                      ? "checkbox"
+                      : field.type === "select"
+                      ? "select"
+                      : "text";
+                  const multiline = field.type === "textarea";
+                  const value =
+                    typeof field.settings.defaultValue === "string"
+                      ? field.settings.defaultValue
+                      : undefined;
+                  return (
+                    <FieldPreview
+                      key={field.id}
+                      id={field.id}
+                      label={field.label}
+                      placeholder={field.settings.placeholder}
+                      value={value}
+                      selected={selectedFieldId === field.id}
+                      multiline={multiline}
+                      kind={kind}
+                      onSelect={onSelectField}
+                      onRemove={onRemoveField}
+                    />
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 py-10 text-center text-muted-foreground">
+                  <CirclePlus className="mb-2 h-6 w-6" />
+                  <p className="text-xs font-medium">
+                    Drop a field here to add to your form
+                  </p>
+                </div>
+              )}
             </div>
             <div className="pt-4">
               <Button className="w-full">Submit Message</Button>
