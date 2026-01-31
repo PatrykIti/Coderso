@@ -5,7 +5,7 @@
 **Category:** Admin/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-004, TASK-020  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -42,6 +42,6 @@ Add `core/server/validation/sessionAdminSchemas.ts`:
 
 - `_docs/CMS_API.md` sessions endpoints.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-sessions-api.md`
+- `_docs/_CHANGELOG/088-2026-01-31-sessions-admin.md`

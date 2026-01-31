@@ -17,6 +17,7 @@ import { registerImportExportRoutes } from "./importExportRoutes";
 import { registerRedirectRoutes } from "./redirectRoutes";
 import { registerAdminUsersRoutes } from "./adminUsersRoutes";
 import { registerAdminRolesRoutes } from "./adminRolesRoutes";
+import { registerSessionAdminRoutes } from "./sessionAdminRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -43,4 +44,5 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerRedirectRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerAdminUsersRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerAdminRolesRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerSessionAdminRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
 }

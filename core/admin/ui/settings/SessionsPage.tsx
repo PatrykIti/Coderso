@@ -1,9 +1,25 @@
-import { Info, Laptop, LogOut, Monitor, ShieldCheck, Smartphone } from "lucide-react";
+import {
+  Info,
+  Laptop,
+  LogOut,
+  Monitor,
+  ShieldCheck,
+  Smartphone,
+  Tablet,
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  listSessions,
+  revokeAllSessions,
+  revokeSession,
+  type SessionRecord,
+} from "@/services/sessionsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { SessionsTable, type SessionItem } from "./SessionsTable";
@@ -16,43 +32,132 @@ const tabs = [
   { id: "two-factor", label: "Two-Factor Auth" },
 ];
 
-const sessions: SessionItem[] = [
-  {
-    id: "session-1",
-    device: "Chrome on macOS",
-    deviceDetail: "Apple MacBook Pro 14\"",
-    location: "San Francisco, USA",
-    ipAddress: "192.168.1.1",
-    lastActive: "Just now",
-    status: "current",
-    canRevoke: false,
-    icon: Monitor,
-  },
-  {
-    id: "session-2",
-    device: "Safari on iPhone 13",
-    deviceDetail: "iOS 16.2",
-    location: "London, UK",
-    ipAddress: "82.12.34.120",
-    lastActive: "2 hours ago",
-    status: "inactive",
-    canRevoke: true,
-    icon: Smartphone,
-  },
-  {
-    id: "session-3",
-    device: "Edge on Windows 11",
-    deviceDetail: "Dell XPS 15",
-    location: "Berlin, Germany",
-    ipAddress: "144.92.11.5",
-    lastActive: "3 days ago",
-    status: "inactive",
-    canRevoke: true,
-    icon: Laptop,
-  },
-];
+type DeviceMeta = {
+  device: string;
+  detail: string;
+  icon: typeof Monitor;
+};
+
+const resolveDeviceMeta = (userAgent: string | null): DeviceMeta => {
+  if (!userAgent) {
+    return { device: "Unknown device", detail: "Unknown OS", icon: Monitor };
+  }
+
+  const ua = userAgent.toLowerCase();
+  if (ua.includes("iphone")) {
+    return { device: "iPhone", detail: "iOS", icon: Smartphone };
+  }
+  if (ua.includes("android")) {
+    return { device: "Android phone", detail: "Android", icon: Smartphone };
+  }
+  if (ua.includes("ipad")) {
+    return { device: "iPad", detail: "iPadOS", icon: Tablet };
+  }
+  if (ua.includes("windows")) {
+    return { device: "Windows PC", detail: "Windows", icon: Monitor };
+  }
+  if (ua.includes("mac os") || ua.includes("macintosh")) {
+    return { device: "Mac", detail: "macOS", icon: Laptop };
+  }
+  if (ua.includes("linux")) {
+    return { device: "Linux", detail: "Linux", icon: Monitor };
+  }
+  return { device: "Desktop", detail: "Unknown OS", icon: Monitor };
+};
+
+const formatRelative = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.max(Math.floor(diffMs / 60000), 0);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} mins ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hrs ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString();
+};
+
+const mapSessionItem = (session: SessionRecord): SessionItem => {
+  const meta = resolveDeviceMeta(session.userAgent ?? null);
+  return {
+    id: session.id,
+    device: meta.device,
+    deviceDetail: meta.detail,
+    location: "Unknown",
+    ipAddress: session.ip ?? "—",
+    lastActive: formatRelative(session.createdAt),
+    status: session.current ? "current" : "active",
+    canRevoke: !session.current,
+    icon: meta.icon,
+  };
+};
 
 export function SessionsPage() {
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRevoking, setIsRevoking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const items = await listSessions();
+      setSessions(items.map(mapSessionItem));
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load sessions.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const activeCount = useMemo(() => sessions.length, [sessions.length]);
+
+  const handleRevoke = async (session: SessionItem) => {
+    if (!session.canRevoke) return;
+    setIsRevoking(true);
+    setError(null);
+    try {
+      await revokeSession(session.id);
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to revoke session.");
+      }
+    } finally {
+      setIsRevoking(false);
+    }
+  };
+
+  const handleRevokeAll = async () => {
+    setIsRevoking(true);
+    setError(null);
+    try {
+      await revokeAllSessions();
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to revoke sessions.");
+      }
+    } finally {
+      setIsRevoking(false);
+    }
+  };
+
   return (
     <SettingsShell
       activeHref="/admin/settings"
@@ -67,7 +172,13 @@ export function SessionsPage() {
         </div>
       }
       topbarActions={
-        <Button variant="destructive" size="sm" className="gap-2">
+        <Button
+          variant="destructive"
+          size="sm"
+          className="gap-2"
+          onClick={handleRevokeAll}
+          disabled={isRevoking || isLoading || sessions.length === 0}
+        >
           <LogOut className="h-4 w-4" />
           Revoke All Other Sessions
         </Button>
@@ -116,10 +227,20 @@ export function SessionsPage() {
                 className="gap-2 rounded-lg bg-muted/60 text-xs font-medium text-muted-foreground"
               >
                 <Info className="h-3 w-3" />
-                {sessions.length} Active Sessions
+                {activeCount} Active Sessions
               </Badge>
             </div>
-            <SessionsTable sessions={sessions} />
+            {error ? (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+                {error}
+              </div>
+            ) : null}
+            <SessionsTable
+              sessions={sessions}
+              isLoading={isLoading}
+              isRevoking={isRevoking}
+              onRevoke={handleRevoke}
+            />
             <div className="rounded-xl border border-blue-200/60 bg-blue-50/60 p-6 text-blue-900 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">
               <div className="flex flex-col gap-4 sm:flex-row">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200">

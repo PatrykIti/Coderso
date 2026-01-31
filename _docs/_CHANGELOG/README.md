@@ -112,6 +112,7 @@ Project Change Log.
 | 085 | 2026-01-30 | Backups core and UI wiring | CMS/Backups |
 | 086 | 2026-01-30 | Import / export core and UI wiring | CMS/Tools |
 | 087 | 2026-01-30 | Redirects core and UI wiring | CMS/SEO |
+| 088 | 2026-01-31 | Admin sessions API and UI wiring | Admin/Security |
 
 
 ---

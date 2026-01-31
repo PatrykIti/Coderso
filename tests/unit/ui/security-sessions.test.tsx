@@ -8,5 +8,5 @@ test("SessionsPage renders sessions table", () => {
 
   expect(html).toContain("Where you&#x27;re signed in");
   expect(html).toContain("Device/OS");
-  expect(html).toContain("Chrome on macOS");
+  expect(html).toContain("Loading sessions");
 });

@@ -162,6 +162,34 @@ Permissions catalog response (summary):
 
 ---
 
+## Sessions (v1)
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /sessions` (optional `?userId=...`)
+- `POST /sessions/:id/revoke`
+- `POST /sessions/revoke-all`
+
+List response (summary):
+
+```json
+{
+  "items": [
+    {
+      "id": "session-id",
+      "userId": "user-id",
+      "userEmail": "admin@example.com",
+      "userName": "Admin",
+      "ip": "127.0.0.1",
+      "userAgent": "Mozilla/5.0",
+      "createdAt": "2026-01-31T08:10:00Z",
+      "expiresAt": "2026-02-07T08:10:00Z",
+      "current": true
+    }
+  ]
+}
+```
+
 ## Pages
 
 Permissions: `content:read`, `content:write`, `content:publish`

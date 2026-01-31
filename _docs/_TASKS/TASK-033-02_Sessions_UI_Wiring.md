@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-033-01, TASK-006-38  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -16,7 +16,7 @@ Wire Security Sessions UI to real sessions API.
 ## UI Scope
 
 Use:
-- `core/admin/ui/security/SessionsPage.tsx`
+- `core/admin/ui/settings/SessionsPage.tsx`
 
 ## Implementation Checklist
 
@@ -34,6 +34,6 @@ Use:
 
 - `_docs/CMS_API.md` mention sessions list usage.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-sessions-ui-wiring.md`
+- `_docs/_CHANGELOG/088-2026-01-31-sessions-admin.md`

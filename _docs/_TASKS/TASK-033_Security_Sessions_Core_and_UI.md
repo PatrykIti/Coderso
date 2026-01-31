@@ -5,7 +5,7 @@
 **Category:** Admin/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-004, TASK-020, TASK-006-38  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -22,6 +22,6 @@ Expose active sessions list and revoke actions, and wire the Security Sessions U
 
 - `_docs/CMS_API.md` sessions endpoints.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-sessions-core.md`
+- `_docs/_CHANGELOG/088-2026-01-31-sessions-admin.md`
