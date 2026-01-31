@@ -89,6 +89,17 @@ Rotacja klucza:
 - Secret jest zwracany tylko raz (create/rotate) i nie da sie go odzyskac.
 - Revoke ustawia `revokedAt` i uniemozliwia dalsze uzycie.
 
+## Webhooks (v1)
+
+- Podpisywanie requestow webhookow: HMAC SHA256.
+- Naglowki:
+  - `X-Nextless-Signature` (hex HMAC)
+  - `X-Nextless-Timestamp` (ms timestamp)
+  - `X-Nextless-Event` (nazwa eventu)
+  - `X-Nextless-Delivery` (delivery id)
+- Payload do podpisu: `${timestamp}.${body}`.
+- Sekrety webhookow sa szyfrowane w DB (AES-256-GCM) z tym samym master key.
+
 ## Audit logs (v1.0)
 
 - Logowanie zdarzen admin: login, publish, plugin install, settings update.

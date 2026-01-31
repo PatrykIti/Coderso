@@ -247,6 +247,76 @@ List response (summary):
 
 Secret jest zwracany tylko raz (create/rotate). Nie przechowujemy plaintext w DB.
 
+---
+
+## Webhooks (v1)
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /settings/webhooks`
+- `POST /settings/webhooks`
+- `PATCH /settings/webhooks/:id`
+- `DELETE /settings/webhooks/:id`
+- `GET /settings/webhooks/:id/deliveries`
+- `POST /settings/webhooks/:id/test`
+
+Create payload (summary):
+
+```json
+{
+  "name": "Marketing Sync",
+  "url": "https://example.com/webhook",
+  "events": ["entry.created", "media.uploaded"],
+  "enabled": true,
+  "secret": "whsec_..."
+}
+```
+
+List response (summary):
+
+```json
+{
+  "items": [
+    {
+      "id": "webhook-id",
+      "name": "Marketing Sync",
+      "url": "https://example.com/webhook",
+      "events": ["entry.created"],
+      "enabled": true,
+      "hasSecret": true,
+      "createdAt": "2026-01-31T09:10:00Z",
+      "updatedAt": "2026-01-31T09:10:00Z",
+      "lastDelivery": {
+        "status": "success",
+        "deliveredAt": "2026-01-31T10:00:00Z"
+      }
+    }
+  ]
+}
+```
+
+Delivery log response (summary):
+
+```json
+{
+  "items": [
+    {
+      "id": "delivery-id",
+      "webhookId": "webhook-id",
+      "event": "entry.created",
+      "status": "success",
+      "responseCode": 200,
+      "attempts": 1,
+      "lastError": null,
+      "createdAt": "2026-01-31T10:00:00Z",
+      "deliveredAt": "2026-01-31T10:00:01Z"
+    }
+  ]
+}
+```
+
+Test endpoint wysyla przykladowy payload i zwraca rezultat delivery.
+
 ## Pages
 
 Permissions: `content:read`, `content:write`, `content:publish`

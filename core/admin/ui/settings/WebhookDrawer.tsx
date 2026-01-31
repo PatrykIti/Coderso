@@ -1,4 +1,5 @@
 import { Activity, Globe, RefreshCw, X } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +12,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 
 const webhookEvents = [
   {
@@ -33,13 +35,39 @@ const webhookEvents = [
     label: "media.deleted",
     description: "Fired when media is removed",
   },
+  {
+    id: "page.published",
+    label: "page.published",
+    description: "Fired when a page is published",
+  },
+  {
+    id: "page.unpublished",
+    label: "page.unpublished",
+    description: "Fired when a page is unpublished",
+  },
 ];
 
 type WebhookDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
-  webhook?: { url: string; events: string[] } | null;
+  webhook?: {
+    id: string;
+    name: string;
+    url: string;
+    events: string[];
+    enabled: boolean;
+  } | null;
+  isSaving?: boolean;
+  error?: string | null;
+  onSave: (payload: {
+    name: string;
+    url: string;
+    events: string[];
+    enabled: boolean;
+    secret?: string | null;
+  }) => void;
+  onTest?: () => void;
 };
 
 export function WebhookDrawer({
@@ -47,7 +75,69 @@ export function WebhookDrawer({
   onOpenChange,
   mode,
   webhook,
+  isSaving = false,
+  error,
+  onSave,
+  onTest,
 }: WebhookDrawerProps) {
+  const initialEvents = useMemo(
+    () => webhook?.events ?? webhookEvents.map((event) => event.id),
+    [webhook]
+  );
+  const [name, setName] = useState(webhook?.name ?? "");
+  const [url, setUrl] = useState(webhook?.url ?? "");
+  const [events, setEvents] = useState<string[]>(initialEvents);
+  const [secret, setSecret] = useState("");
+  const [enabled, setEnabled] = useState(webhook?.enabled ?? true);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const handleToggleEvent = (id: string, checked: boolean) => {
+    setEvents((prev) => {
+      if (checked) return prev.includes(id) ? prev : [...prev, id];
+      return prev.filter((event) => event !== id);
+    });
+  };
+
+  const handleGenerateSecret = () => {
+    if (typeof crypto === "undefined" || !crypto.getRandomValues) {
+      const fallback = Math.random().toString(36).slice(2, 14);
+      setSecret(`whsec_${fallback}`);
+      return;
+    }
+    const bytes = new Uint8Array(24);
+    crypto.getRandomValues(bytes);
+    const base64 = btoa(String.fromCharCode(...bytes)).replace(/=+$/g, "");
+    setSecret(`whsec_${base64}`);
+  };
+
+  const handleSave = () => {
+    const trimmedName = name.trim();
+    const trimmedUrl = url.trim();
+    if (!trimmedName) {
+      setLocalError("Provide a name for this webhook.");
+      return;
+    }
+    if (!trimmedUrl) {
+      setLocalError("Provide a destination URL.");
+      return;
+    }
+    if (events.length === 0) {
+      setLocalError("Select at least one event trigger.");
+      return;
+    }
+    setLocalError(null);
+    onSave({
+      name: trimmedName,
+      url: trimmedUrl,
+      events,
+      enabled,
+      secret: secret.trim() ? secret.trim() : undefined,
+    });
+  };
+
+  const errorMessage = error ?? localError;
+  const canTest = mode === "edit" && Boolean(onTest);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -66,6 +156,23 @@ export function WebhookDrawer({
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="space-y-6 px-6 py-6">
+            <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Webhook enabled</p>
+                <p className="text-xs text-muted-foreground">
+                  Toggle delivery without deleting the webhook.
+                </p>
+              </div>
+              <Switch checked={enabled} onCheckedChange={setEnabled} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Webhook Name</p>
+              <Input
+                placeholder="e.g. Marketing Sync"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <p className="text-sm font-semibold">Endpoint URL</p>
               <div className="relative">
@@ -74,7 +181,8 @@ export function WebhookDrawer({
                   type="url"
                   placeholder="https://your-domain.com/webhook"
                   className="pl-9"
-                  defaultValue={webhook?.url ?? ""}
+                  value={url}
+                  onChange={(event) => setUrl(event.target.value)}
                 />
               </div>
             </div>
@@ -88,7 +196,10 @@ export function WebhookDrawer({
                   >
                     <Checkbox
                       className="mt-1"
-                      defaultChecked={webhook?.events?.includes(event.id)}
+                      checked={events.includes(event.id)}
+                      onCheckedChange={(value) =>
+                        handleToggleEvent(event.id, value === true)
+                      }
                     />
                     <div>
                       <p className="text-sm font-semibold text-foreground">
@@ -109,8 +220,15 @@ export function WebhookDrawer({
                   type="password"
                   placeholder="whsec_..."
                   className="font-mono"
+                  value={secret}
+                  onChange={(event) => setSecret(event.target.value)}
                 />
-                <Button variant="outline" className="gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  type="button"
+                  onClick={handleGenerateSecret}
+                >
                   <RefreshCw className="h-4 w-4" />
                   Generate
                 </Button>
@@ -119,11 +237,22 @@ export function WebhookDrawer({
                 Used to verify that the webhook request came from our system.
               </p>
             </div>
+            {errorMessage ? (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                {errorMessage}
+              </div>
+            ) : null}
           </div>
         </ScrollArea>
         <Separator />
         <div className="space-y-3 bg-muted/30 px-6 py-4">
-          <Button variant="outline" className="w-full gap-2">
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            type="button"
+            onClick={onTest}
+            disabled={!canTest || isSaving}
+          >
             <Activity className="h-4 w-4" />
             Test Connection
           </Button>
@@ -131,8 +260,8 @@ export function WebhookDrawer({
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button onClick={() => onOpenChange(false)}>
-              {mode === "create" ? "Create Webhook" : "Save Changes"}
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "Saving..." : mode === "create" ? "Create Webhook" : "Save Changes"}
             </Button>
           </div>
         </div>

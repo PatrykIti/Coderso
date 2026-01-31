@@ -52,9 +52,18 @@ const deliveryMeta: Record<
 type WebhooksTableProps = {
   items: WebhookRow[];
   onEdit?: (row: WebhookRow) => void;
+  onDelete?: (row: WebhookRow) => void;
+  isLoading?: boolean;
+  busyId?: string | null;
 };
 
-export function WebhooksTable({ items, onEdit }: WebhooksTableProps) {
+export function WebhooksTable({
+  items,
+  onEdit,
+  onDelete,
+  isLoading = false,
+  busyId,
+}: WebhooksTableProps) {
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
       <Table>
@@ -78,9 +87,23 @@ export function WebhooksTable({ items, onEdit }: WebhooksTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((webhook) => {
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
+                Loading webhooks...
+              </TableCell>
+            </TableRow>
+          ) : items.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
+                No webhooks configured yet.
+              </TableCell>
+            </TableRow>
+          ) : (
+            items.map((webhook) => {
             const delivery = deliveryMeta[webhook.lastDelivery.status];
             const DeliveryIcon = delivery.icon;
+            const isBusy = busyId === webhook.id;
 
             return (
               <TableRow key={webhook.id} className="hover:bg-muted/30">
@@ -124,6 +147,7 @@ export function WebhooksTable({ items, onEdit }: WebhooksTableProps) {
                       size="icon-sm"
                       aria-label="Edit webhook"
                       onClick={() => onEdit?.(webhook)}
+                      disabled={isBusy}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -132,6 +156,8 @@ export function WebhooksTable({ items, onEdit }: WebhooksTableProps) {
                       size="icon-sm"
                       className="text-rose-500 hover:text-rose-600"
                       aria-label="Delete webhook"
+                      onClick={() => onDelete?.(webhook)}
+                      disabled={isBusy}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -139,7 +165,8 @@ export function WebhooksTable({ items, onEdit }: WebhooksTableProps) {
                 </TableCell>
               </TableRow>
             );
-          })}
+          })
+          )}
         </TableBody>
       </Table>
     </div>

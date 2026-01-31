@@ -22,6 +22,7 @@ import { registerAccessLogRoutes } from "./accessLogRoutes";
 import { registerIpAllowlistRoutes } from "./ipAllowlistRoutes";
 import { registerFormsRoutes } from "./formsRoutes";
 import { registerApiKeysRoutes } from "./apiKeysRoutes";
+import { registerWebhooksRoutes } from "./webhooksRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -53,4 +54,5 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerIpAllowlistRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerFormsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerApiKeysRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerWebhooksRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
 }

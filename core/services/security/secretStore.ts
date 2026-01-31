@@ -37,6 +37,15 @@ function resolveKeyFromEnv(): Buffer {
   throw new Error("secret_master_key_invalid");
 }
 
+export function hasValidSecretMasterKey() {
+  try {
+    resolveKeyFromEnv();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function isEncryptedSecret(input: unknown): input is EncryptedSecret {
   if (!input || typeof input !== "object") return false;
   const value = input as EncryptedSecret;

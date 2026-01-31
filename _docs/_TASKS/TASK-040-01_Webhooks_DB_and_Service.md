@@ -5,7 +5,7 @@
 **Category:** Settings/Integrations  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-001  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 

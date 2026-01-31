@@ -123,6 +123,9 @@ Project Change Log.
 | 096 | 2026-01-31 | API keys service | Core/Security |
 | 097 | 2026-01-31 | API keys API | Core/Security |
 | 098 | 2026-01-31 | API keys UI | Admin/UI |
+| 099 | 2026-01-31 | Webhooks schema and service | Core/Integrations |
+| 100 | 2026-01-31 | Webhooks delivery | Core/Integrations |
+| 101 | 2026-01-31 | Webhooks API and UI | Admin/UI |
 
 
 ---

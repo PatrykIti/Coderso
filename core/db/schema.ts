@@ -88,6 +88,45 @@ export const apiKeys = pgTable(
   })
 );
 
+export const webhooks = pgTable(
+  "webhooks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    events: jsonb("events").notNull(),
+    secret: jsonb("secret"),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    urlIdx: index("webhooks_url_idx").on(t.url),
+    enabledIdx: index("webhooks_enabled_idx").on(t.enabled),
+  })
+);
+
+export const webhookDeliveries = pgTable(
+  "webhook_deliveries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    webhookId: uuid("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "cascade" }),
+    event: text("event").notNull(),
+    status: text("status").notNull().default("pending"),
+    responseCode: integer("response_code"),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    deliveredAt: timestamp("delivered_at"),
+  },
+  (t) => ({
+    webhookIdx: index("webhook_deliveries_webhook_idx").on(t.webhookId),
+    createdAtIdx: index("webhook_deliveries_created_at_idx").on(t.createdAt),
+  })
+);
+
 export const passwordResets = pgTable(
   "password_resets",
   {
