@@ -63,12 +63,13 @@ testIfDb("add and list allowlist entries", async () => {
 });
 
 testIfDb("isIpAllowed respects allowlist", async () => {
-  const cidr = `172.16.${Math.floor(Math.random() * 200)}.0/24`;
+  const subnet = Math.floor(Math.random() * 200);
+  const cidr = `172.16.${subnet}.0/24`;
   const entry = await addAllowlistEntry(cidr, "Test", null);
   expect(entry).not.toBeNull();
   if (entry) entryIds.push(entry.id);
 
-  const allowed = await isIpAllowed("172.16.1.10");
+  const allowed = await isIpAllowed(`172.16.${subnet}.10`);
   const denied = await isIpAllowed("10.0.0.1");
   expect(allowed).toBe(true);
   expect(denied).toBe(false);
