@@ -16,6 +16,8 @@ export type SearchItem = {
   meta?: string;
   image?: string;
   initials?: string;
+  categoryId?: string;
+  categoryLabel?: string;
 };
 
 export type SearchGroup = {

@@ -6,10 +6,22 @@ export type SearchResultItem = {
   slug?: string | null;
   type: "page" | "entry" | "media";
   updatedAt: string;
+  categoryId?: string;
+  categoryLabel?: string;
 };
 
 export type SearchResponse = {
   items: SearchResultItem[];
+  categories?: Array<{
+    id: string;
+    label: string;
+    count: number;
+  }>;
+};
+
+export type RecentSearchItem = {
+  query: string;
+  createdAt: string;
 };
 
 export async function searchAll(
@@ -25,4 +37,12 @@ export async function searchAll(
     method: "GET",
     signal: options?.signal,
   });
+}
+
+export async function listRecentSearches() {
+  const response = await apiRequest<{ items: RecentSearchItem[] }>(
+    "/search/recent",
+    { method: "GET" }
+  );
+  return response.items ?? [];
 }

@@ -1,7 +1,8 @@
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { contentEntries, media, pages } from "../../db/schema";
+import { contentEntries, contentTypes, media, pages } from "../../db/schema";
+import { getSetting } from "../settings/settingsService";
 
 export type SearchItemType = "page" | "entry" | "media";
 
@@ -11,10 +12,18 @@ export type SearchItem = {
   slug?: string | null;
   type: SearchItemType;
   updatedAt: string;
+  categoryId?: string;
+  categoryLabel?: string;
 };
 
 export type SearchOptions = {
   limit?: number;
+};
+
+export type SearchCategory = {
+  id: string;
+  label: string;
+  count: number;
 };
 
 export function normalizeSearchQuery(input: string) {
@@ -57,8 +66,11 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
       title: contentEntries.title,
       slug: contentEntries.slug,
       updatedAt: contentEntries.updatedAt,
+      typeSlug: contentTypes.slug,
+      typeName: contentTypes.name,
     })
     .from(contentEntries)
+    .innerJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
     .where(
       sql`to_tsvector('simple', ${contentEntries.title} || ' ' || ${contentEntries.slug}) @@ plainto_tsquery('simple', ${normalized})`
     )
@@ -83,6 +95,8 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
       slug: row.slug,
       type: "page" as const,
       updatedAt: toIso(row.updatedAt),
+      categoryId: "page",
+      categoryLabel: "Pages",
     })),
     ...entryRows.map((row) => ({
       id: row.id,
@@ -90,12 +104,16 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
       slug: row.slug,
       type: "entry" as const,
       updatedAt: toIso(row.updatedAt),
+      categoryId: row.typeSlug ? `entry:${row.typeSlug}` : "entry",
+      categoryLabel: row.typeName ?? "Entries",
     })),
     ...mediaRows.map((row) => ({
       id: row.id,
       title: row.title,
       type: "media" as const,
       updatedAt: toIso(row.updatedAt),
+      categoryId: "media",
+      categoryLabel: "Media",
     })),
   ];
 
@@ -104,4 +122,52 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
   );
 
   return results.slice(0, limit);
+}
+
+type CategoryOverride = { label?: string; hidden?: boolean };
+type CategoryOverrides = Record<string, CategoryOverride>;
+
+async function getCategoryOverrides(): Promise<CategoryOverrides> {
+  try {
+    const value = await getSetting("search.categoryOverrides");
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return value as CategoryOverrides;
+  } catch {
+    return {};
+  }
+}
+
+export async function buildSearchCategories(
+  items: SearchItem[]
+): Promise<SearchCategory[]> {
+  const map = new Map<string, SearchCategory>();
+  for (const item of items) {
+    if (!item.categoryId) continue;
+    const existing = map.get(item.categoryId);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      map.set(item.categoryId, {
+        id: item.categoryId,
+        label: item.categoryLabel ?? item.categoryId,
+        count: 1,
+      });
+    }
+  }
+
+  const overrides = await getCategoryOverrides();
+
+  const categories = Array.from(map.values()).flatMap((category) => {
+    const override = overrides[category.id];
+    if (override?.hidden) return [];
+    return [
+      {
+        ...category,
+        label: override?.label ?? category.label,
+      },
+    ];
+  });
+
+  categories.sort((a, b) => a.label.localeCompare(b.label));
+  return categories;
 }

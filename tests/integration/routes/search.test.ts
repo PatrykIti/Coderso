@@ -37,7 +37,7 @@ test("registerSearchRoutes wires endpoints", () => {
 
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
-  expect(paths).toEqual(expect.arrayContaining(["GET /search"]));
+  expect(paths).toEqual(expect.arrayContaining(["GET /search", "GET /search/recent"]));
 });
 
 test("search route enforces minimum query length", async () => {
@@ -51,5 +51,5 @@ test("search route enforces minimum query length", async () => {
   const handler = route?.handlers[route.handlers.length - 1];
   const result = await handler?.({ params: {}, query: { q: "a" }, body: null });
 
-  expect(result).toEqual({ items: [] });
+  expect(result).toEqual({ items: [], categories: [] });
 });

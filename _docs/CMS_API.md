@@ -634,18 +634,51 @@ Preview response (example):
 Permissions: `content:read`
 
 - `GET /search?q=...&limit=20`
+- `GET /search/recent`
 
 Response:
 
 ```json
 {
   "items": [
-    { "id": "page-id", "type": "page", "title": "Homepage", "slug": "home" },
-    { "id": "entry-id", "type": "entry", "title": "Launch announcement", "slug": "launch" },
-    { "id": "media-id", "type": "media", "title": "Hero banner" }
+    {
+      "id": "page-id",
+      "type": "page",
+      "title": "Homepage",
+      "slug": "home",
+      "categoryId": "page",
+      "categoryLabel": "Pages"
+    },
+    {
+      "id": "entry-id",
+      "type": "entry",
+      "title": "Launch announcement",
+      "slug": "launch",
+      "categoryId": "entry:blog",
+      "categoryLabel": "Blog"
+    },
+    { "id": "media-id", "type": "media", "title": "Hero banner", "categoryId": "media", "categoryLabel": "Media" }
+  ],
+  "categories": [
+    { "id": "page", "label": "Pages", "count": 4 },
+    { "id": "entry:blog", "label": "Blog", "count": 2 },
+    { "id": "media", "label": "Media", "count": 1 }
   ]
 }
 ```
+
+Recent response (summary):
+
+```json
+{
+  "items": [
+    { "query": "pricing page", "createdAt": "2026-01-31T10:00:00Z" },
+    { "query": "hero banner", "createdAt": "2026-01-31T09:50:00Z" }
+  ]
+}
+```
+
+Category labels can be overridden via settings key `search.categoryOverrides` (map of categoryId -> { label, hidden }).
 
 ---
 

@@ -1,4 +1,12 @@
-import { searchAll } from "../../services/search/searchService";
+import {
+  buildSearchCategories,
+  normalizeSearchQuery,
+  searchAll,
+} from "../../services/search/searchService";
+import {
+  listRecentSearches,
+  recordSearch,
+} from "../../services/search/searchHistoryService";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -32,8 +40,25 @@ export function registerSearchRoutes(router: Router, deps: SearchRouteDeps) {
 
   router.get("/search", requirePermission("content:read"), async (ctx) => {
     const query = ctx.query.q ?? "";
+    const normalized = normalizeSearchQuery(query);
     const limit = parseLimit(ctx.query.limit);
     const items = await searchAll(query, { limit });
-    return { items };
+    const categories = await buildSearchCategories(items);
+    if (ctx.user?.id && normalized.length >= 2) {
+      await recordSearch(ctx.user.id, normalized, {
+        limit: limit ?? undefined,
+      });
+    }
+    return { items, categories };
   });
+
+  router.get(
+    "/search/recent",
+    requirePermission("content:read"),
+    async (ctx) => {
+      if (!ctx.user?.id) return { items: [] };
+      const items = await listRecentSearches(ctx.user.id, 10);
+      return { items };
+    }
+  );
 }

@@ -169,6 +169,13 @@
       "when": 1769868157894,
       "tag": "0023_awesome_groot",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1769874235862,
+      "tag": "0024_brief_bucky",
+      "breakpoints": true
     }
   ]
 }

@@ -8,10 +8,16 @@ const DEFAULT_SETTINGS = {
   "site.name": "Nextless",
   "site.locale": "en",
   "design.tokens": {} as DesignTokenOverrides,
+  "search.categoryOverrides": {} as SearchCategoryOverrides,
 };
 
 export type SettingKey = keyof typeof DEFAULT_SETTINGS;
 export type SettingValueMap = typeof DEFAULT_SETTINGS;
+
+export type SearchCategoryOverrides = Record<
+  string,
+  { label?: string; hidden?: boolean }
+>;
 
 const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_SETTINGS));
 
@@ -34,6 +40,25 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return value;
   }
 
+  if (key === "search.categoryOverrides") {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("settings_value_invalid");
+    }
+    for (const entry of Object.values(value as Record<string, unknown>)) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        throw new Error("settings_value_invalid");
+      }
+      const record = entry as { label?: unknown; hidden?: unknown };
+      if (record.label !== undefined && typeof record.label !== "string") {
+        throw new Error("settings_value_invalid");
+      }
+      if (record.hidden !== undefined && typeof record.hidden !== "boolean") {
+        throw new Error("settings_value_invalid");
+      }
+    }
+    return value as SearchCategoryOverrides;
+  }
+
   throw new Error("settings_value_invalid");
 }
 
@@ -49,6 +74,11 @@ export async function listSettings(): Promise<SettingValueMap> {
     const key = row.key as SettingKey;
     if (key === "design.tokens") {
       merged[key] = row.value as DesignTokenOverrides;
+      continue;
+    }
+
+    if (key === "search.categoryOverrides") {
+      merged[key] = row.value as SearchCategoryOverrides;
       continue;
     }
 

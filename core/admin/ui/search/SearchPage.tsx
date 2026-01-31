@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clock, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,23 +16,17 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isApiClientError } from "@/services/apiClient";
+import { listRecentSearches } from "@/services/searchClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
-import { SearchResults, type SearchGroup, type SearchItemType } from "./SearchResults";
+import {
+  SearchResults,
+  groupResults,
+  type SearchGroup,
+  type SearchItemType,
+} from "./SearchResults";
 import { useSearchResults } from "./useSearchResults";
-
-const recentSearches = [
-  "Summer Campaign 2024",
-  "Pricing Page Assets",
-  "User: Alex Rivera",
-];
-
-const categoryFilters = [
-  { id: "marketing", label: "Marketing", checked: true },
-  { id: "products", label: "Products", checked: false },
-  { id: "support", label: "Support", checked: false },
-  { id: "legal", label: "Legal", checked: false },
-];
 
 type ContentFilter = "all" | SearchItemType;
 
@@ -51,8 +45,53 @@ function filterGroups(groups: SearchGroup[], value: ContentFilter) {
 
 export function SearchPage() {
   const [query, setQuery] = useState("");
-  const { normalizedQuery, shouldSearch, groups, loading, error } =
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [recentError, setRecentError] = useState<string | null>(null);
+  const [categorySelection, setCategorySelection] = useState<string[]>([]);
+  const { normalizedQuery, shouldSearch, items, categories, loading, error } =
     useSearchResults(query, 50);
+
+  const refreshRecent = useCallback(async () => {
+    try {
+      const rows = await listRecentSearches();
+      setRecentSearches(rows.map((row) => row.query));
+      setRecentError(null);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setRecentError(err.message);
+      } else {
+        setRecentError("Failed to load recent searches.");
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void refreshRecent();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [refreshRecent]);
+
+  useEffect(() => {
+    if (!shouldSearch || !normalizedQuery) return;
+    const timer = setTimeout(() => {
+      void refreshRecent();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [normalizedQuery, shouldSearch, refreshRecent]);
+
+  const filteredItems = useMemo(() => {
+    if (!shouldSearch) return [];
+    if (categorySelection.length === 0) return items;
+    return items.filter(
+      (item) => item.categoryId && categorySelection.includes(item.categoryId)
+    );
+  }, [items, categorySelection, shouldSearch]);
+
+  const filteredGroups = useMemo(
+    () => groupResults(filteredItems),
+    [filteredItems]
+  );
 
   const renderResults = (filter: ContentFilter) => {
     if (!shouldSearch) {
@@ -82,7 +121,7 @@ export function SearchPage() {
       <SearchResults
         variant="page"
         query={normalizedQuery}
-        groups={filterGroups(groups, filter)}
+        groups={filterGroups(filteredGroups, filter)}
       />
     );
   };
@@ -103,6 +142,14 @@ export function SearchPage() {
                 </p>
                 <ScrollArea className="max-h-40 pr-2">
                   <div className="space-y-2">
+                    {recentError ? (
+                      <p className="text-xs text-destructive">{recentError}</p>
+                    ) : null}
+                    {recentSearches.length === 0 && !recentError ? (
+                      <p className="text-xs text-muted-foreground">
+                        No recent searches yet.
+                      </p>
+                    ) : null}
                     {recentSearches.map((item) => (
                       <button
                         key={item}
@@ -125,7 +172,11 @@ export function SearchPage() {
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     Filters
                   </p>
-                  <Button variant="ghost" size="xs">
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setCategorySelection([])}
+                  >
                     Clear
                   </Button>
                 </div>
@@ -152,15 +203,34 @@ export function SearchPage() {
                     Category
                   </p>
                   <div className="space-y-2">
-                    {categoryFilters.map((category) => (
-                      <label
-                        key={category.id}
-                        className="flex items-center gap-2 text-sm text-muted-foreground"
-                      >
-                        <Checkbox defaultChecked={category.checked} />
-                        <span>{category.label}</span>
-                      </label>
-                    ))}
+                    {categories.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Categories will appear after you search.
+                      </p>
+                    ) : (
+                      categories.map((category) => (
+                        <label
+                          key={category.id}
+                          className="flex items-center gap-2 text-sm text-muted-foreground"
+                        >
+                          <Checkbox
+                            checked={categorySelection.includes(category.id)}
+                            onCheckedChange={(checked) => {
+                              setCategorySelection((prev) => {
+                                if (!checked) {
+                                  return prev.filter((id) => id !== category.id);
+                                }
+                                return [...prev, category.id];
+                              });
+                            }}
+                          />
+                          <span>{category.label}</span>
+                          <span className="ml-auto text-xs text-muted-foreground">
+                            {category.count}
+                          </span>
+                        </label>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>

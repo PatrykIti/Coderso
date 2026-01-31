@@ -132,6 +132,7 @@ Project Change Log.
 | 105 | 2026-01-31 | Integrations service | Core/Integrations |
 | 106 | 2026-01-31 | Integrations API | Core/Integrations |
 | 107 | 2026-01-31 | Integrations UI | Admin/UI |
+| 108 | 2026-01-31 | Search history + categories | Admin/Search |
 
 
 ---

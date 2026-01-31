@@ -145,6 +145,23 @@ export const emailDeliveryLogs = pgTable(
   })
 );
 
+export const searchHistory = pgTable(
+  "search_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    query: text("query").notNull(),
+    filters: jsonb("filters"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    userIdx: index("search_history_user_idx").on(t.userId),
+    createdAtIdx: index("search_history_created_at_idx").on(t.createdAt),
+  })
+);
+
 export const integrations = pgTable(
   "integrations",
   {
