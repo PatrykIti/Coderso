@@ -5,7 +5,7 @@
 **Category:** Settings/Email  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-001, TASK-004, TASK-006-31, TASK-007  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 

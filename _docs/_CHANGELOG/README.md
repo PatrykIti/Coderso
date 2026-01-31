@@ -126,6 +126,9 @@ Project Change Log.
 | 099 | 2026-01-31 | Webhooks schema and service | Core/Integrations |
 | 100 | 2026-01-31 | Webhooks delivery | Core/Integrations |
 | 101 | 2026-01-31 | Webhooks API and UI | Admin/UI |
+| 102 | 2026-01-31 | Email settings service | Core/Email |
+| 103 | 2026-01-31 | Email settings API | Core/Email |
+| 104 | 2026-01-31 | Email settings UI | Admin/UI |
 
 
 ---

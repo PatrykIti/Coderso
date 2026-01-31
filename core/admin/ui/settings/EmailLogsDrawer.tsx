@@ -6,34 +6,21 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
+export type EmailLogItem = {
+  id: string;
+  recipient: string;
+  subject: string;
+  status: "delivered" | "queued" | "failed";
+  timestamp: string;
+};
+
 type EmailLogsDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  logs: EmailLogItem[];
+  isLoading?: boolean;
+  error?: string | null;
 };
-
-const deliveryLogs = [
-  {
-    id: "log-1",
-    recipient: "alex@nextless.io",
-    subject: "Password reset",
-    status: "delivered",
-    timestamp: "Jan 28, 09:20",
-  },
-  {
-    id: "log-2",
-    recipient: "sarah@nextless.io",
-    subject: "Weekly summary",
-    status: "queued",
-    timestamp: "Jan 28, 08:11",
-  },
-  {
-    id: "log-3",
-    recipient: "support@nextless.io",
-    subject: "Form submission alert",
-    status: "failed",
-    timestamp: "Jan 27, 21:02",
-  },
-];
 
 const statusStyles: Record<string, string> = {
   delivered: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
@@ -41,7 +28,13 @@ const statusStyles: Record<string, string> = {
   failed: "border-rose-500/20 bg-rose-500/10 text-rose-600",
 };
 
-export function EmailLogsDrawer({ open, onOpenChange }: EmailLogsDrawerProps) {
+export function EmailLogsDrawer({
+  open,
+  onOpenChange,
+  logs = [],
+  isLoading = false,
+  error,
+}: EmailLogsDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -64,23 +57,37 @@ export function EmailLogsDrawer({ open, onOpenChange }: EmailLogsDrawerProps) {
         </div>
         <ScrollArea className="flex-1 min-h-0">
           <div className="space-y-4 px-6 py-6">
-            {deliveryLogs.map((log) => (
-              <div key={log.id} className="rounded-xl border bg-muted/30 p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">{log.recipient}</p>
-                  <Badge variant="outline" className={statusStyles[log.status]}>
-                    {log.status}
-                  </Badge>
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {log.subject}
-                </p>
-                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-                  <Clock className="h-3.5 w-3.5" />
-                  {log.timestamp}
-                </div>
+            {isLoading ? (
+              <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+                Loading delivery logs...
               </div>
-            ))}
+            ) : error ? (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                {error}
+              </div>
+            ) : logs.length === 0 ? (
+              <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+                No delivery logs recorded yet.
+              </div>
+            ) : (
+              logs.map((log) => (
+                <div key={log.id} className="rounded-xl border bg-muted/30 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">{log.recipient}</p>
+                    <Badge variant="outline" className={statusStyles[log.status]}>
+                      {log.status}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {log.subject}
+                  </p>
+                  <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    {log.timestamp}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </ScrollArea>
         <Separator />

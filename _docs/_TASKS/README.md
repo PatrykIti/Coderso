@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 12 tasks
 - **In Progress:** 0
-- **Done:** 180 tasks
+- **Done:** 184 tasks
 
 ---
 
@@ -41,10 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-041 | Email Settings Core and UI | Medium | Medium | SMTP + logs |
-| TASK-041-01 | Email Settings Service | Medium | Medium | config + test |
-| TASK-041-02 | Email API Routes | Medium | Medium | /settings/email |
-| TASK-041-03 | Email UI Wiring | Medium | Medium | UI -> API |
 | TASK-042 | Integrations Core and UI | Medium | Medium | registry + configs |
 | TASK-042-01 | Integrations Service and Registry | Medium | Medium | tables + catalog |
 | TASK-042-02 | Integrations API Routes | Medium | Medium | /settings/integrations |
@@ -125,6 +121,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-040-02 | Webhooks Delivery and Retry | Medium | Medium | worker + signing |
 | TASK-040-03 | Webhooks API Routes | Medium | Medium | /settings/webhooks |
 | TASK-040-04 | Webhooks UI Wiring | Medium | Medium | UI -> API |
+| TASK-041 | Email Settings Core and UI | Medium | Medium | SMTP + logs |
+| TASK-041-01 | Email Settings Service | Medium | Medium | config + test |
+| TASK-041-02 | Email API Routes | Medium | Medium | /settings/email |
+| TASK-041-03 | Email UI Wiring | Medium | Medium | UI -> API |
 | TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..05 |
 | TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
 | TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |

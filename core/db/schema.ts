@@ -127,6 +127,24 @@ export const webhookDeliveries = pgTable(
   })
 );
 
+export const emailDeliveryLogs = pgTable(
+  "email_delivery_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    recipient: text("recipient").notNull(),
+    subject: text("subject").notNull(),
+    status: text("status").notNull(),
+    provider: text("provider").notNull().default("smtp"),
+    messageId: text("message_id"),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    statusIdx: index("email_delivery_logs_status_idx").on(t.status),
+    createdAtIdx: index("email_delivery_logs_created_at_idx").on(t.createdAt),
+  })
+);
+
 export const passwordResets = pgTable(
   "password_resets",
   {

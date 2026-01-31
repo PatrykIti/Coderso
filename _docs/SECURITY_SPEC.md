@@ -80,6 +80,7 @@ Rotacja klucza:
 
 - Nigdy nie logujemy tokenow/hasel.
 - ENV tylko po stronie serwera.
+- Hasla SMTP sa szyfrowane w DB (AES-256-GCM) tym samym master key.
 
 ## API Keys (v1)
 

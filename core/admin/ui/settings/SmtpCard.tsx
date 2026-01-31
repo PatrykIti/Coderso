@@ -10,8 +10,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 
-export function SmtpCard() {
+type SmtpCardProps = {
+  host: string;
+  port: string;
+  secure: boolean;
+  user: string;
+  password: string;
+  passwordConfigured: boolean;
+  updatePassword: boolean;
+  onHostChange: (value: string) => void;
+  onPortChange: (value: string) => void;
+  onSecureChange: (value: boolean) => void;
+  onUserChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onTogglePassword: (value: boolean) => void;
+};
+
+export function SmtpCard({
+  host,
+  port,
+  secure,
+  user,
+  password,
+  passwordConfigured,
+  updatePassword,
+  onHostChange,
+  onPortChange,
+  onSecureChange,
+  onUserChange,
+  onPasswordChange,
+  onTogglePassword,
+}: SmtpCardProps) {
   return (
     <Card className="border-muted/60">
       <CardHeader className="border-b">
@@ -33,7 +64,8 @@ export function SmtpCard() {
             <Input
               id="smtp-host"
               placeholder="smtp.example.com"
-              defaultValue="smtp.postmarkapp.com"
+              value={host}
+              onChange={(event) => onHostChange(event.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -43,7 +75,12 @@ export function SmtpCard() {
             >
               Port
             </label>
-            <Input id="smtp-port" placeholder="587" defaultValue="587" />
+            <Input
+              id="smtp-port"
+              placeholder="587"
+              value={port}
+              onChange={(event) => onPortChange(event.target.value)}
+            />
           </div>
         </div>
         <div className="space-y-2">
@@ -53,7 +90,10 @@ export function SmtpCard() {
           >
             Encryption Protocol
           </label>
-          <Select defaultValue="starttls">
+          <Select
+            value={secure ? "ssl-tls" : "starttls"}
+            onValueChange={(value) => onSecureChange(value === "ssl-tls")}
+          >
             <SelectTrigger id="smtp-encryption" className="w-full">
               <SelectValue placeholder="Select encryption" />
             </SelectTrigger>
@@ -64,6 +104,20 @@ export function SmtpCard() {
           </Select>
         </div>
         <Separator />
+        <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">
+              SMTP Password
+            </p>
+            <p className="text-sm font-semibold">
+              {passwordConfigured ? "Stored" : "Not configured"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Update</span>
+            <Switch checked={updatePassword} onCheckedChange={onTogglePassword} />
+          </div>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label
@@ -72,7 +126,12 @@ export function SmtpCard() {
             >
               Username
             </label>
-            <Input id="smtp-username" placeholder="smtp-user" defaultValue="api-token-7x92" />
+            <Input
+              id="smtp-username"
+              placeholder="smtp-user"
+              value={user}
+              onChange={(event) => onUserChange(event.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <label
@@ -85,7 +144,9 @@ export function SmtpCard() {
               id="smtp-password"
               type="password"
               placeholder="password"
-              defaultValue="password123"
+              value={password}
+              onChange={(event) => onPasswordChange(event.target.value)}
+              disabled={!updatePassword}
             />
           </div>
         </div>

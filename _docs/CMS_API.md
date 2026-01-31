@@ -317,6 +317,80 @@ Delivery log response (summary):
 
 Test endpoint wysyla przykladowy payload i zwraca rezultat delivery.
 
+---
+
+## Email Settings (v1)
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /settings/email`
+- `PUT /settings/email`
+- `POST /settings/email/test`
+- `GET /settings/email/logs`
+
+Update payload (summary):
+
+```json
+{
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "secure": false,
+    "user": "mailer@example.com",
+    "password": "secret"
+  },
+  "from": {
+    "name": "Nextless",
+    "email": "hello@example.com"
+  }
+}
+```
+
+Response (summary):
+
+```json
+{
+  "provider": "smtp",
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "secure": false,
+    "user": "mailer@example.com",
+    "password": { "configured": true }
+  },
+  "from": {
+    "name": "Nextless",
+    "email": "hello@example.com"
+  },
+  "status": { "configured": true }
+}
+```
+
+Test email payload:
+
+```json
+{ "to": "dev@example.com" }
+```
+
+Delivery logs response (summary):
+
+```json
+{
+  "items": [
+    {
+      "id": "log-id",
+      "recipient": "dev@example.com",
+      "subject": "Nextless SMTP test",
+      "status": "delivered",
+      "provider": "smtp",
+      "messageId": "mock",
+      "error": null,
+      "createdAt": "2026-01-31T10:00:00Z"
+    }
+  ]
+}
+```
+
 ## Pages
 
 Permissions: `content:read`, `content:write`, `content:publish`
