@@ -11,56 +11,152 @@
 
 ## Overview
 
-Extend entry services to expose metadata (tags, scheduling, author) and sync SEO data via `seo_documents`.
+Extend entry services to expose full metadata (tags, scheduling, author) and sync SEO data for entries via `seo_documents`.
 
 ---
 
-## Required API surface
+## Data & Type Contracts
 
-### New/updated types
-- `EntryStatus` should include: `draft | published | scheduled | archived`.
-- `EntryDetail` should include:
-  - `tags: string[]`
-  - `scheduledAt?: Date | null`
-  - `seo?: { title?: string | null; description?: string | null; canonicalUrl?: string | null; robots?: string | null }`
-  - `author?: { id; name; email } | null`
+### EntryStatus
+Update the union everywhere in the services layer:
 
-### New function
-- `updateEntryMetadata(entryId, input)`:
-  - updates `status`, `scheduledAt`, `tags`
-  - upserts SEO document for `targetType="entry"` with provided SEO fields
-  - validates `status` value
-  - if `status === "scheduled"`, require `scheduledAt`
+```ts
+export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
+```
 
-### Update existing functions
-- `getEntry()` should join `users` and fetch `seo_documents` for target entry.
-- `listEntries()` should include `tags`, `scheduledAt`, `author` (already joins users; extend fields).
+### EntryDetail (service return)
+
+```ts
+export type EntrySeo = {
+  title?: string | null;
+  description?: string | null;
+  canonicalUrl?: string | null;
+  robots?: string | null;
+};
+
+export type EntryDetail = {
+  id: string;
+  typeId: string;
+  title: string;
+  slug: string;
+  status: EntryStatus;
+  data: Record<string, unknown>;
+  tags: string[];
+  scheduledAt?: Date | null;
+  publishedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  author: { id: string; name: string | null; email: string } | null;
+  seo: EntrySeo | null;
+};
+```
+
+---
+
+## Service Behavior
+
+### getEntry()
+Must return metadata + author + SEO:
+- Join `users` on `author_id`.
+- Load SEO via `getSeoDocumentByTarget("entry", entry.id)` (or direct query).
+- Return `tags` + `scheduledAt`.
+
+### listEntries()
+Include:
+- `tags`, `scheduledAt`, `author`
+- SEO is optional here (do **not** load by default to avoid extra DB reads).
+
+### updateEntryMetadata(entryId, input, actorId?)
+**Core responsibilities:**
+- Normalize tags (trim, dedupe, strip empty).
+- Apply status change with correct side effects:
+  - `published` → call `publishEntry(entryId, actorId)`  
+    (must create revision + set `publishedAt`)
+  - `draft` → call `unpublishEntry(entryId)`  
+    (clears `publishedAt`)
+  - `scheduled` → update status + `scheduledAt` (no auto publish)
+  - `archived` → update status, clear `scheduledAt`
+- Update `tags` and `scheduledAt` in `content_entries`.
+- Upsert SEO in `seo_documents` for `targetType="entry"`.
+- Return updated `EntryDetail` (including SEO).
+
+### SEO sync on title/slug changes
+When `updateEntry()` modifies `title` or `slug`, ensure the SEO document stays aligned:
+- Call `upsertSeoDocument({ targetType: "entry", targetId, title, slug })`
 
 ---
 
 ## Implementation Checklist
 
-| File | Action |
-| --- | --- |
-| `core/services/content/entryService.ts` | Extend `EntryStatus`, `listEntries`, `getEntry`, add `updateEntryMetadata` |
-| `core/services/seo/seoService.ts` | Use `upsertSeoDocument` (no new files) |
+| File | Action | Notes |
+| --- | --- | --- |
+| `core/services/content/entryService.ts` | extend `EntryStatus` | include scheduled/archived |
+| `core/services/content/entryService.ts` | update `listEntries()` | include tags + scheduledAt + author |
+| `core/services/content/entryService.ts` | update `getEntry()` | join users + seo + tags |
+| `core/services/content/entryService.ts` | add `updateEntryMetadata()` | see behavior above |
+| `core/services/seo/seoService.ts` | reuse `upsertSeoDocument()` | no new files |
 
 ---
 
-## Validation Rules
+## Example: updateEntryMetadata (pseudo)
+
+```ts
+export async function updateEntryMetadata(
+  entryId: string,
+  input: EntryMetadataInput,
+  actorId?: string
+) {
+  const tags = normalizeTags(input.tags);
+
+  if (input.status === "published") {
+    if (!actorId) throw new Error("auth_required");
+    await publishEntry(entryId, actorId);
+  } else if (input.status === "draft") {
+    await unpublishEntry(entryId);
+  } else if (input.status) {
+    await db.update(contentEntries).set({
+      status: input.status,
+      scheduledAt: input.status === "scheduled" ? input.scheduledAt ?? null : null,
+      updatedAt: new Date(),
+    }).where(eq(contentEntries.id, entryId));
+  }
+
+  if (tags || input.scheduledAt || input.tags) {
+    await db.update(contentEntries).set({
+      tags: tags ?? sql`tags`,
+      scheduledAt: input.scheduledAt ?? sql`scheduled_at`,
+      updatedAt: new Date(),
+    }).where(eq(contentEntries.id, entryId));
+  }
+
+  if (input.seo) {
+    await upsertSeoDocument({
+      targetType: "entry",
+      targetId: entryId,
+      ...input.seo,
+    });
+  }
+
+  return getEntry(entryId);
+}
+```
+
+---
+
+## Validation Rules (Service Layer)
 
 - `status` must be one of: `draft`, `published`, `scheduled`, `archived`.
-- If `scheduled`, `scheduledAt` is required and must be a valid ISO timestamp.
-- `tags` limited to array of strings, max length 24 per tag, max 20 tags.
+- If `scheduled`, `scheduledAt` is required and must be valid.
+- `tags`: max 20 tags, max length 24 chars each.
 
 ---
 
 ## Testing Requirements
 
-- Add unit tests for `updateEntryMetadata`:
-  - updates tags + scheduledAt
-  - persists SEO description in `seo_documents`
-  - rejects invalid status / missing scheduledAt
+- `tests/unit/content/entryService.test.ts`
+  - metadata update stores tags + scheduledAt
+  - SEO upsert creates/updates `seo_documents`
+  - invalid status and missing `scheduledAt` rejected
 
 ---
 

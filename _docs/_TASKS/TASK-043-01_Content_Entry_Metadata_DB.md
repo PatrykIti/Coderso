@@ -11,38 +11,77 @@
 
 ## Overview
 
-Add dedicated metadata columns to `content_entries` for tags and scheduling.
-Do not store tags inside `data`. Keep SEO in `seo_documents`.
+Add dedicated metadata columns to `content_entries` for tags and scheduling.  
+Tags must **not** be stored inside `data`. SEO stays in `seo_documents`.
 
 ---
 
-## Scope
+## Data Model Changes
 
-### DB changes
-- Add `tags` column: `jsonb` default `[]` (not null).
-- Add `scheduled_at` column: `timestamp` nullable.
+**Table: `content_entries`**
+- `tags` (jsonb, NOT NULL, default `[]`)
+- `scheduled_at` (timestamp, nullable)
 
-### Schema changes
-- Update `core/db/schema.ts` so `contentEntries` includes:
-  - `tags: jsonb("tags").notNull().default([])`
-  - `scheduledAt: timestamp("scheduled_at")`
+**Indexes**
+- `content_entries_scheduled_at_idx` on `scheduled_at`
+
+---
+
+## Sub-Tasks
+
+1. Update Drizzle schema for `content_entries`.
+2. Generate migration and verify snapshot/journal updates.
+3. Ensure old rows get `tags = []` automatically (no NULLs).
 
 ---
 
 ## Implementation Checklist
 
-| File | Action |
-| --- | --- |
-| `core/db/schema.ts` | Add `tags` + `scheduledAt` to `contentEntries` |
-| `core/db/migrations/XXXX_*.sql` | Migration: `ALTER TABLE content_entries ADD COLUMN tags jsonb NOT NULL DEFAULT '[]';` and `ADD COLUMN scheduled_at timestamp;` |
-| `core/db/migrations/meta/XXXX_snapshot.json` | Regenerate snapshot |
-| `core/db/migrations/meta/_journal.json` | Update journal |
+| File | Action | Notes |
+| --- | --- | --- |
+| `core/db/schema.ts` | add `tags`, `scheduledAt` | `tags` must default to `[]` |
+| `core/db/schema.ts` | add index on `scheduledAt` | for future scheduler |
+| `core/db/migrations/XXXX_*.sql` | add columns + index | see SQL snippet |
+| `core/db/migrations/meta/XXXX_snapshot.json` | regenerate | keep in sync |
+| `core/db/migrations/meta/_journal.json` | update | new entry |
+
+---
+
+## Drizzle Schema Example
+
+```ts
+export const contentEntries = pgTable(
+  "content_entries",
+  {
+    // ...existing fields
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    scheduledAt: timestamp("scheduled_at"),
+  },
+  (t) => ({
+    // ...existing indexes
+    scheduledAtIdx: index("content_entries_scheduled_at_idx").on(t.scheduledAt),
+  })
+);
+```
+
+---
+
+## Migration SQL Example
+
+```sql
+ALTER TABLE "content_entries"
+  ADD COLUMN "tags" jsonb NOT NULL DEFAULT '[]',
+  ADD COLUMN "scheduled_at" timestamp;
+
+CREATE INDEX "content_entries_scheduled_at_idx"
+  ON "content_entries" ("scheduled_at");
+```
 
 ---
 
 ## Testing Requirements
 
-- No new tests required at DB layer, but existing DB tests must pass.
+- No new tests required at DB layer, but all existing DB tests must pass.
 
 ---
 

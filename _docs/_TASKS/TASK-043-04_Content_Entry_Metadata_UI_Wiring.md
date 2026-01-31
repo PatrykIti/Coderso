@@ -11,49 +11,95 @@
 
 ## Overview
 
-Wire Entry Editor metadata panel to the new metadata API and remove all mock data.
+Wire the Entry Editor metadata panel to the new metadata API. Remove all mock data and make the panel fully functional.
 
 ---
 
-## UI Changes
+## UI Alignment (must match current UI)
 
-### EntryMetadataPanel
-- Replace mock author with `entry.author` (name/email fallback).
-- Bind tags list to real `tags`.
-- Allow add/remove tags (max 20).
-- SEO description should be editable and persisted via `/metadata`.
-- Publish date + status should update via `/metadata` (scheduled flow).
-
-### EntryEditor
-- Load metadata fields from API (`tags`, `seo`, `scheduledAt`).
-- Add explicit “Save metadata” action or integrate into existing save flow.
-- Ensure saving metadata does not force schema validation for `data`.
-- Provide loading/error feedback on metadata updates.
+**Entry Editor** (`/admin/entries/:type/:id`)
+- Right sidebar panel with publishing/status, SEO snippet, tags, and author card.
+- Mobile: metadata drawer in `Sheet` (already present).
 
 ---
 
-## Implementation Checklist
+## Behavior Requirements
 
-| File | Action |
-| --- | --- |
-| `core/admin/ui/entries/EntryEditor.tsx` | Manage metadata state + call `updateEntryMetadata` |
-| `core/admin/ui/entries/EntryMetadataPanel.tsx` | Render real author/tags/seo + callbacks |
-| `core/admin/services/entriesClient.ts` | Use `updateEntryMetadata()` |
-| `tests/unit/ui/entry-metadata.test.tsx` | New test: renders author/tags + triggers save |
+- **Author card** shows actual entry author (name/email).  
+  If missing, display “Unknown author”.
+- **Tags** editable: add/remove with chip UI.
+  - Enter/Comma adds tag, Backspace removes last tag.
+  - Deduplicate and trim.
+- **SEO description** persists to `seo_documents` (entry target).
+- **Status + scheduledAt** persist to metadata endpoint.
+  - If status = `scheduled`, show date input.
+  - Scheduled entries are not auto-published (v1).
+- Metadata updates do **not** revalidate entry `data`.
 
 ---
 
-## UX Notes
+## File-by-File Plan
 
-- If status is `scheduled`, show scheduled date and disable Publish button (or show “Scheduled” state).
-- Tags input should trim and dedupe.
-- Author card should show “Unknown author” when no author is linked.
+### 1) `core/admin/services/entriesClient.ts`
+Add:
+```ts
+export type EntryMetadataPayload = {
+  status?: "draft" | "published" | "scheduled" | "archived";
+  scheduledAt?: string | null;
+  tags?: string[];
+  seo?: { title?: string; description?: string; canonicalUrl?: string; robots?: string };
+};
+
+export async function updateEntryMetadata(
+  typeSlug: string,
+  id: string,
+  payload: EntryMetadataPayload
+) { /* PATCH /metadata */ }
+```
+
+### 2) `core/admin/ui/entries/EntryEditor.tsx`
+- Add metadata state:
+  - `tags`, `scheduledAt`, `seoDescription`, `author`
+- Fetch metadata from `getEntry()` and set local state.
+- Add `handleMetadataSave()` calling `updateEntryMetadata()`.
+- Update UI to reflect scheduled status.
+
+### 3) `core/admin/ui/entries/EntryMetadataPanel.tsx`
+- Replace mock author block with props.
+- Replace mock tags with real tag list + input handlers.
+- Ensure SEO description is controlled by parent.
+
+---
+
+## Example: Tag Input Logic
+
+```ts
+const handleTagKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+  if (event.key !== "Enter" && event.key !== ",") return;
+  event.preventDefault();
+  const value = event.currentTarget.value.trim();
+  if (!value) return;
+  onTagsChange?.([...tags, value].slice(0, 20));
+  event.currentTarget.value = "";
+};
+```
+
+---
+
+## Testing Requirements
+
+- `tests/unit/ui/entry-metadata.test.tsx`
+  - renders author card from real data
+  - adds/removes tags
+  - triggers `updateEntryMetadata` on save
+- `tests/unit/admin/entriesClient.test.ts`
+  - metadata endpoint call uses PATCH + CSRF
 
 ---
 
 ## Documentation Updates Required
 
-- `_docs/CMS_API.md` (if UI wiring adds new fields to response expectations).
+- `_docs/CMS_API.md` if UI expects new response fields.
 
 ---
 
