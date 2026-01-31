@@ -5,7 +5,7 @@
 **Category:** Admin/Users  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-001, TASK-004, TASK-020, TASK-006-19, TASK-006-24, TASK-006-35  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 50 tasks
+- **To Do:** 45 tasks
 - **In Progress:** 0
-- **Done:** 146 tasks
+- **Done:** 151 tasks
 
 ---
 
@@ -41,11 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-032 | Admin Users and Roles Core and UI | High | Large | users + roles + permissions |
-| TASK-032-01 | Users and Roles Service | High | Medium | CRUD + permissions catalog |
-| TASK-032-02 | Users and Roles API Routes | High | Medium | /admin-users + /admin-roles |
-| TASK-032-03 | Users UI Wiring | High | Medium | users list + invite |
-| TASK-032-04 | Roles Matrix UI Wiring | High | Medium | permissions matrix |
 | TASK-033 | Security Sessions Core and UI | Medium | Medium | sessions list + revoke |
 | TASK-033-01 | Sessions Service and API | Medium | Medium | /sessions endpoints |
 | TASK-033-02 | Sessions UI Wiring | Medium | Medium | UI -> API |
