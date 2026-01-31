@@ -1,10 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { UserPlus, UserCog } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  createAdminRole,
+  deleteAdminRole,
+  listAdminRoles,
+  listPermissionCatalog,
+  updateAdminRole,
+} from "@/services/adminRolesClient";
+import {
+  createAdminUser,
+  deleteAdminUser,
+  disableAdminUser,
+  enableAdminUser,
+  listAdminUsers,
+  replaceAdminUserRoles,
+  updateAdminUser,
+  type AdminUser,
+} from "@/services/adminUsersClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { SectionHeader } from "@/ui/shared/SectionHeader";
@@ -12,6 +30,7 @@ import { SectionHeader } from "@/ui/shared/SectionHeader";
 import { RoleEditor } from "../roles/RoleEditor";
 import { RoleList } from "../roles/RoleList";
 import type { RoleDraft, RoleSummary } from "../roles/types";
+import { fallbackPermissionGroups } from "../roles/permissionCatalog";
 import { InviteUserDialog, type InviteUserValues } from "./InviteUserDialog";
 import { UserDetailsDrawer } from "./UserDetailsDrawer";
 import { UserEditor } from "./UserEditor";
@@ -21,102 +40,51 @@ import type { UserDraft, UserSummary } from "./types";
 
 const defaultPermissions = ["users:read", "users:write", "roles:read", "roles:write"];
 
-const seedRoles: RoleSummary[] = [
-  {
-    id: "admin",
-    name: "Admin",
-    description: "Full access to all admin modules.",
-    permissions: ["*"],
-    system: true,
-  },
-  {
-    id: "editor",
-    name: "Editor",
-    description: "Content and media management permissions.",
-    permissions: [
-      "content:read",
-      "content:write",
-      "content:publish",
-      "media:read",
-      "media:write",
-      "menus:read",
-      "menus:write",
-      "settings:read",
-    ],
-  },
-  {
-    id: "viewer",
-    name: "Viewer",
-    description: "Read-only access to content and settings.",
-    permissions: [
-      "content:read",
-      "media:read",
-      "menus:read",
-      "settings:read",
-    ],
-  },
-  {
-    id: "api",
-    name: "API Access",
-    description: "Programmatic access for automation workflows.",
-    permissions: ["content:read", "media:read"],
-  },
-];
-
-const seedUsers: UserSummary[] = [
-  {
-    id: "sarah",
-    name: "Sarah Jenks",
-    email: "sarah@nextless.com",
-    roleIds: ["admin"],
-    status: "active",
-    lastActive: "2 mins ago",
-    mfaEnabled: true,
-  },
-  {
-    id: "michael",
-    name: "Michael Chen",
-    email: "m.chen@nextless.com",
-    roleIds: ["editor"],
-    status: "inactive",
-    lastActive: "Yesterday",
-  },
-  {
-    id: "dev-bot",
-    name: "Dev Bot",
-    email: "bot@nextless.com",
-    roleIds: ["api"],
-    status: "active",
-    lastActive: "10 mins ago",
-  },
-  {
-    id: "alex",
-    name: "Alex Morgan",
-    email: "alex@nextless.com",
-    roleIds: ["viewer"],
-    status: "pending",
-    lastActive: "Pending invite",
-  },
-];
-
 const hasPermission = (permissions: string[], permission: string) =>
   permissions.includes("*") || permissions.includes(permission);
 
-const createLocalId = (prefix: string) =>
-  `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
+const formatLastActive = (value?: string | null) => {
+  if (!value) return "Never";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} mins ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hrs ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString();
+};
+
+const mapUserSummary = (user: AdminUser): UserSummary => ({
+  id: user.id,
+  name: user.name ?? user.email,
+  email: user.email,
+  roleIds: user.roleIds ?? [],
+  status: user.status,
+  lastActive: formatLastActive(user.lastLoginAt ?? user.updatedAt ?? user.createdAt),
+  mfaEnabled: false,
+});
 
 export type UsersRolesPageProps = {
   permissions?: string[];
 };
 
 export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesPageProps) {
-  const [users, setUsers] = useState<UserSummary[]>(seedUsers);
-  const [roles, setRoles] = useState<RoleSummary[]>(seedRoles);
+  const [users, setUsers] = useState<UserSummary[]>([]);
+  const [roles, setRoles] = useState<RoleSummary[]>([]);
+  const [permissionGroups, setPermissionGroups] = useState(
+    fallbackPermissionGroups
+  );
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("any");
-  const [selectedUserId, setSelectedUserId] = useState(seedUsers[0]?.id ?? "");
-  const [selectedRoleId, setSelectedRoleId] = useState(seedRoles[0]?.id ?? "");
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedRoleId, setSelectedRoleId] = useState("");
+  const [pendingSelectUserId, setPendingSelectUserId] = useState<string | null>(null);
+  const [pendingSelectRoleId, setPendingSelectRoleId] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
   const [editingRole, setEditingRole] = useState<RoleSummary | null>(null);
   const [userEditorOpen, setUserEditorOpen] = useState(false);
@@ -127,6 +95,9 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   const [inviteDialogSeed, setInviteDialogSeed] = useState(0);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [isLargeScreen, setIsLargeScreen] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const canManageUsers = hasPermission(permissions, "users:write");
   const canManageRoles = hasPermission(permissions, "roles:write");
@@ -139,6 +110,36 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [usersData, rolesData, permissionsData] = await Promise.all([
+        listAdminUsers(),
+        listAdminRoles(),
+        listPermissionCatalog(),
+      ]);
+      const roleList = rolesData as RoleSummary[];
+      setRoles(roleList);
+      setUsers(usersData.map(mapUserSummary));
+      setPermissionGroups(
+        permissionsData.length > 0 ? permissionsData : fallbackPermissionGroups
+      );
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load users and roles.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const filteredUsers = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -155,15 +156,58 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     });
   }, [query, roleFilter, statusFilter, users]);
 
+  useEffect(() => {
+    if (pendingSelectUserId) {
+      const exists = users.some((user) => user.id === pendingSelectUserId);
+      if (exists) {
+        setSelectedUserId(pendingSelectUserId);
+        setPendingSelectUserId(null);
+        return;
+      }
+    }
+    if (!selectedUserId || !users.some((user) => user.id === selectedUserId)) {
+      setSelectedUserId(users[0]?.id ?? "");
+    }
+  }, [pendingSelectUserId, selectedUserId, users]);
+
+  useEffect(() => {
+    if (pendingSelectRoleId) {
+      const exists = roles.some((role) => role.id === pendingSelectRoleId);
+      if (exists) {
+        setSelectedRoleId(pendingSelectRoleId);
+        setPendingSelectRoleId(null);
+        return;
+      }
+    }
+    if (!selectedRoleId || !roles.some((role) => role.id === selectedRoleId)) {
+      setSelectedRoleId(roles[0]?.id ?? "");
+    }
+  }, [pendingSelectRoleId, roles, selectedRoleId]);
+
   const selectedUser = useMemo(() => {
     return (
       users.find((user) => user.id === selectedUserId) ?? filteredUsers[0]
     );
   }, [filteredUsers, selectedUserId, users]);
 
+  const adminRoleIds = useMemo(
+    () =>
+      roles
+        .filter(
+          (role) =>
+            role.permissions.includes("*") ||
+            role.name.toLowerCase() === "admin"
+        )
+        .map((role) => role.id),
+    [roles]
+  );
+
   const adminUsers = useMemo(
-    () => users.filter((user) => user.roleIds.includes("admin")),
-    [users]
+    () =>
+      users.filter((user) =>
+        user.roleIds.some((roleId) => adminRoleIds.includes(roleId))
+      ),
+    [adminRoleIds, users]
   );
 
   const protectedUserIds = adminUsers.length === 1 ? [adminUsers[0]?.id] : [];
@@ -178,32 +222,45 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     return counts;
   }, [users]);
 
-  const handleSaveUser = (draft: UserDraft, mode: "create" | "edit") => {
-    if (mode === "edit" && editingUser) {
-      setUsers((prev) =>
-        prev.map((user) =>
-          user.id === editingUser.id
-            ? { ...user, ...draft, lastActive: user.lastActive }
-            : user
-        )
-      );
-      setSelectedUserId(editingUser.id);
-      return;
+  const handleSaveUser = async (draft: UserDraft, mode: "create" | "edit") => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      let selectedId: string | null = null;
+      if (mode === "edit" && editingUser) {
+        await updateAdminUser(editingUser.id, {
+          name: draft.name,
+          email: draft.email,
+          status: draft.status,
+        });
+        await replaceAdminUserRoles(editingUser.id, draft.roleIds);
+        selectedId = editingUser.id;
+      } else {
+        const created = await createAdminUser({
+          name: draft.name,
+          email: draft.email,
+          roleIds: draft.roleIds,
+          status: draft.status,
+        });
+        selectedId = created.id;
+      }
+      await refresh();
+      if (selectedId) {
+        setPendingSelectUserId(selectedId);
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to save user.");
+      }
+    } finally {
+      setIsSaving(false);
     }
-
-    const id = createLocalId("user");
-    const nextUser: UserSummary = {
-      id,
-      ...draft,
-      lastActive: "Invited just now",
-      mfaEnabled: false,
-    };
-    setUsers((prev) => [nextUser, ...prev]);
-    setSelectedUserId(id);
   };
 
-  const handleInviteUser = (values: InviteUserValues) => {
-    handleSaveUser(
+  const handleInviteUser = async (values: InviteUserValues) => {
+    await handleSaveUser(
       {
         name: values.name,
         email: values.email,
@@ -214,75 +271,111 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     );
   };
 
-  const handleSaveRole = (draft: RoleDraft, mode: "create" | "edit") => {
-    if (mode === "edit" && editingRole) {
-      setRoles((prev) =>
-        prev.map((role) =>
-          role.id === editingRole.id ? { ...role, ...draft } : role
-        )
-      );
-      setSelectedRoleId(editingRole.id);
-      return;
-    }
-
-    const id = createLocalId(draft.name.toLowerCase().replace(/\s+/g, "-"));
-    const nextRole: RoleSummary = {
-      id,
-      ...draft,
-      system: false,
-    };
-    setRoles((prev) => [nextRole, ...prev]);
-    setSelectedRoleId(id);
-  };
-
-  const handleToggleStatus = (user: UserSummary) => {
-    const nextStatus = user.status === "inactive" ? "active" : "inactive";
-    setUsers((prev) =>
-      prev.map((item) =>
-        item.id === user.id ? { ...item, status: nextStatus } : item
-      )
-    );
-  };
-
-  const handleDeleteUser = (user: UserSummary) => {
-    if (protectedUserIds.includes(user.id)) return;
-    setUsers((prev) => {
-      const next = prev.filter((item) => item.id !== user.id);
-      if (selectedUserId === user.id) {
-        setSelectedUserId(next[0]?.id ?? "");
+  const handleSaveRole = async (draft: RoleDraft, mode: "create" | "edit") => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      let selectedId: string | null = null;
+      if (mode === "edit" && editingRole) {
+        const updated = await updateAdminRole(editingRole.id, draft);
+        selectedId = updated.id;
+      } else {
+        const created = await createAdminRole(draft);
+        selectedId = created.id;
       }
-      return next;
-    });
+      await refresh();
+      if (selectedId) {
+        setPendingSelectRoleId(selectedId);
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to save role.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteRole = (role: RoleSummary) => {
-    if (role.system || role.id === "admin") return;
-    setRoles((prev) => prev.filter((item) => item.id !== role.id));
-    setUsers((prev) =>
-      prev.map((user) => {
-        const nextRoles = user.roleIds.filter((id) => id !== role.id);
-        const fallbackRole = roles.find((item) => item.id !== role.id);
-        return {
-          ...user,
-          roleIds: nextRoles.length
-            ? nextRoles
-            : fallbackRole
-              ? [fallbackRole.id]
-              : [],
-        };
-      })
-    );
+  const handleToggleStatus = async (user: UserSummary) => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      if (user.status === "inactive") {
+        await enableAdminUser(user.id);
+      } else {
+        await disableAdminUser(user.id);
+      }
+      await refresh();
+      setPendingSelectUserId(user.id);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to update user status.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDuplicateRole = (role: RoleSummary) => {
-    const duplicate: RoleSummary = {
-      ...role,
-      id: createLocalId(role.id),
-      name: `${role.name} copy`,
-      system: false,
-    };
-    setRoles((prev) => [duplicate, ...prev]);
-    setSelectedRoleId(duplicate.id);
+  const handleDeleteUser = async (user: UserSummary) => {
+    if (protectedUserIds.includes(user.id)) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      await deleteAdminUser(user.id);
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to delete user.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteRole = async (role: RoleSummary) => {
+    if (role.system || role.name.toLowerCase() === "admin") return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      await deleteAdminRole(role.id);
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to delete role.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDuplicateRole = async (role: RoleSummary) => {
+    setIsSaving(true);
+    setError(null);
+    try {
+      const created = await createAdminRole({
+        name: `${role.name} copy`,
+        description: role.description,
+        permissions: role.permissions,
+      });
+      await refresh();
+      setPendingSelectRoleId(created.id);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to duplicate role.");
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const openUserEditor = (user?: UserSummary) => {
@@ -312,6 +405,8 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
   };
 
   const readOnly = !canManageUsers || !canManageRoles;
+  const userActionsEnabled = canManageUsers && !isSaving && !isLoading;
+  const roleActionsEnabled = canManageRoles && !isSaving && !isLoading;
 
   return (
     <SplitShell
@@ -348,7 +443,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
                 variant="outline"
                 className="gap-2"
                 onClick={() => openRoleEditor()}
-                disabled={!canManageRoles}
+                disabled={!roleActionsEnabled}
               >
                 <UserCog className="h-4 w-4" />
                 Create Role
@@ -356,7 +451,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
               <Button
                 className="gap-2"
                 onClick={openInviteDialog}
-                disabled={!canManageUsers}
+                disabled={!userActionsEnabled}
               >
                 <UserPlus className="h-4 w-4" />
                 Invite User
@@ -364,6 +459,17 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
             </div>
           }
         />
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>Users & Roles unavailable</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {isLoading ? (
+          <div className="rounded-xl border bg-card/60 p-4 text-sm text-muted-foreground">
+            Loading users and roles...
+          </div>
+        ) : null}
         {readOnly ? (
           <Alert>
             <AlertTitle>Read-only permissions</AlertTitle>
@@ -386,7 +492,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
           roles={roles}
           selectedId={selectedUser?.id}
           protectedIds={protectedUserIds}
-          canManageUsers={canManageUsers}
+          canManageUsers={userActionsEnabled}
           onSelect={handleSelectUser}
           onViewProfile={handleViewProfile}
           onEdit={openUserEditor}
@@ -402,7 +508,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
                 variant="outline"
                 size="sm"
                 onClick={() => openRoleEditor()}
-                disabled={!canManageRoles}
+                disabled={!roleActionsEnabled}
               >
                 Create role
               </Button>
@@ -412,7 +518,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
             roles={roles}
             selectedId={selectedRoleId}
             usageCounts={roleUsageCounts}
-            canManageRoles={canManageRoles}
+            canManageRoles={roleActionsEnabled}
             onSelect={setSelectedRoleId}
             onEdit={openRoleEditor}
             onDuplicate={handleDuplicateRole}
@@ -427,10 +533,10 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         roles={roles}
         lockedRoleIds={
           editingUser && protectedUserIds.includes(editingUser.id)
-            ? ["admin"]
+            ? adminRoleIds
             : []
         }
-        canManageUsers={canManageUsers}
+        canManageUsers={userActionsEnabled}
         onOpenChange={setUserEditorOpen}
         onSave={handleSaveUser}
       />
@@ -445,9 +551,10 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         key={`${editingRole?.id ?? "new"}-${roleEditorSeed}`}
         open={roleEditorOpen}
         role={editingRole}
-        canManageRoles={canManageRoles}
+        canManageRoles={roleActionsEnabled}
         onOpenChange={setRoleEditorOpen}
         onSave={handleSaveRole}
+        permissionGroups={permissionGroups}
       />
       {!isLargeScreen ? (
         <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>

@@ -80,15 +80,17 @@ Reset confirm payload (summary):
 
 ---
 
-## Users
+## Admin users (v1)
 
 Permissions: `users:read`, `users:write`
 
-- `GET /users`
-- `POST /users`
-- `PATCH /users/:id`
-- `DELETE /users/:id`
-- `POST /users/:id/reset-password`
+- `GET /admin-users`
+- `POST /admin-users`
+- `PATCH /admin-users/:id`
+- `POST /admin-users/:id/disable`
+- `POST /admin-users/:id/enable`
+- `PUT /admin-users/:id/roles`
+- `DELETE /admin-users/:id`
 
 Create user payload (summary):
 
@@ -97,20 +99,38 @@ Create user payload (summary):
   "name": "Alex Morgan",
   "email": "alex@example.com",
   "roleIds": ["editor"],
-  "status": "pending"
+  "status": "pending",
+  "password": "optional"
 }
+```
+
+Update user payload (summary):
+
+```json
+{
+  "name": "Alex Morgan",
+  "email": "alex@example.com",
+  "status": "active"
+}
+```
+
+Replace roles payload:
+
+```json
+{ "roleIds": ["editor", "viewer"] }
 ```
 
 ---
 
-## Roles
+## Admin roles (v1)
 
 Permissions: `roles:read`, `roles:write`
 
-- `GET /roles`
-- `POST /roles`
-- `PATCH /roles/:id`
-- `DELETE /roles/:id`
+- `GET /admin-roles`
+- `GET /admin-roles/permissions`
+- `POST /admin-roles`
+- `PATCH /admin-roles/:id`
+- `DELETE /admin-roles/:id`
 
 Create role payload (summary):
 
@@ -120,6 +140,24 @@ Create role payload (summary):
   "description": "Content editors",
   "permissions": ["content:read", "content:write", "media:read"]
 }
+```
+
+Permissions catalog response (summary):
+
+```json
+[
+  {
+    "id": "content",
+    "label": "Content",
+    "permissions": [
+      {
+        "id": "content:read",
+        "label": "Read content",
+        "description": "View pages and content entries"
+      }
+    ]
+  }
+]
 ```
 
 ---

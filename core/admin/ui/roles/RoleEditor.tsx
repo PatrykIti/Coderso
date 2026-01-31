@@ -16,81 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
+import type { PermissionGroup } from "@/services/adminRolesClient";
+
 import type { RoleDraft, RoleSummary } from "./types";
-
-export type PermissionGroup = {
-  id: string;
-  label: string;
-  permissions: Array<{ id: string; label: string }>; 
-};
-
-export const permissionGroups: PermissionGroup[] = [
-  {
-    id: "content",
-    label: "Content",
-    permissions: [
-      { id: "content:read", label: "Read content" },
-      { id: "content:write", label: "Create & edit content" },
-      { id: "content:publish", label: "Publish content" },
-    ],
-  },
-  {
-    id: "media",
-    label: "Media",
-    permissions: [
-      { id: "media:read", label: "View media" },
-      { id: "media:write", label: "Upload & edit media" },
-    ],
-  },
-  {
-    id: "menus",
-    label: "Menus",
-    permissions: [
-      { id: "menus:read", label: "View menus" },
-      { id: "menus:write", label: "Edit menus" },
-    ],
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    permissions: [
-      { id: "settings:read", label: "View settings" },
-      { id: "settings:write", label: "Edit settings" },
-    ],
-  },
-  {
-    id: "plugins",
-    label: "Plugins & Store",
-    permissions: [
-      { id: "plugins:read", label: "View plugins" },
-      { id: "plugins:manage", label: "Manage plugins" },
-      { id: "store:browse", label: "Browse store" },
-    ],
-  },
-  {
-    id: "users",
-    label: "Users & Roles",
-    permissions: [
-      { id: "users:read", label: "View users" },
-      { id: "users:write", label: "Manage users" },
-      { id: "roles:read", label: "View roles" },
-      { id: "roles:write", label: "Manage roles" },
-    ],
-  },
-  {
-    id: "audit",
-    label: "Audit",
-    permissions: [{ id: "audit:read", label: "Read audit logs" }],
-  },
-  {
-    id: "themes",
-    label: "Themes",
-    permissions: [
-      { id: "themes:read", label: "View themes" },
-      { id: "themes:write", label: "Edit themes" },
-    ],
-  },
-];
+import { fallbackPermissionGroups } from "./permissionCatalog";
 
 const emptyRole: RoleDraft = {
   name: "",
@@ -104,6 +33,7 @@ export type RoleEditorProps = {
   canManageRoles?: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (draft: RoleDraft, mode: "create" | "edit") => void;
+  permissionGroups?: PermissionGroup[];
 };
 
 export function RoleEditor({
@@ -112,13 +42,19 @@ export function RoleEditor({
   canManageRoles = true,
   onOpenChange,
   onSave,
+  permissionGroups,
 }: RoleEditorProps) {
+  const resolvedGroups =
+    permissionGroups && permissionGroups.length > 0
+      ? permissionGroups
+      : fallbackPermissionGroups;
+
   const allPermissions = useMemo(
     () =>
-      permissionGroups.flatMap((group) =>
+      resolvedGroups.flatMap((group) =>
         group.permissions.map((permission) => permission.id)
       ),
-    []
+    [resolvedGroups]
   );
 
   const initialFullAccess = role?.permissions.includes("*") ?? false;
@@ -245,7 +181,7 @@ export function RoleEditor({
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {permissionGroups.map((group) => (
+            {resolvedGroups.map((group) => (
               <div key={group.id} className="rounded-lg border p-4">
                 <p className="text-sm font-semibold">{group.label}</p>
                 <div className="mt-3 space-y-2">

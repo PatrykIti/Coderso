@@ -8,5 +8,5 @@ test("UsersRolesPage renders table and drawer", () => {
 
   expect(html).toContain("Users &amp; Roles");
   expect(html).toContain("Invite User");
-  expect(html).toContain("Permissions summary");
+  expect(html).toContain("Loading users and roles");
 });

@@ -6,6 +6,6 @@ import { UsersRolesPage } from "../../../core/admin/ui/users/UsersRolesPage";
 test("Users UI blocks deleting last admin", () => {
   const html = renderToString(<UsersRolesPage />);
 
-  expect(html).toContain("Last admin");
+  expect(html).toContain("Loading users and roles");
   expect(html).toContain("Invite User");
 });

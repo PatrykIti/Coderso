@@ -88,6 +88,12 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Metadane SEO i wyniki audytu przechowywane w `seo_documents`.
 - Admin UI korzysta z endpointów `/seo` oraz `/seo/audit`.
 
+## Admin Users & Roles (v1)
+
+- Uzytkownicy trzymani sa w tabeli `users`, role w `roles`, mapowanie w `user_roles`.
+- Endpointy `/admin-users` i `/admin-roles` obsluguja CRUD + role assignment.
+- Katalog permissions jest dostarczany z API i wykorzystywany w macierzy uprawnien.
+
 ## Redirects (v1)
 
 - Przekierowania trzymane w tabeli `redirects` z kodami 301/302/307/308.

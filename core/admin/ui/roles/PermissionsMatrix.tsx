@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useMemo } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,108 +13,49 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type RoleId = "admin" | "editor" | "viewer" | "contributor";
+import type { PermissionGroup } from "@/services/adminRolesClient";
 
-type Role = {
-  id: RoleId;
-  label: string;
+import type { RoleSummary } from "./types";
+import { fallbackPermissionGroups, flattenPermissionGroups } from "./permissionCatalog";
+
+export type RolePermissionsMap = Record<string, string[]>;
+
+export type PermissionsMatrixProps = {
+  roles?: RoleSummary[];
+  permissionGroups?: PermissionGroup[];
+  rolePermissions?: RolePermissionsMap;
+  onTogglePermission?: (roleId: string, permissionId: string) => void;
+  onToggleRoleAll?: (roleId: string) => void;
 };
 
-type PermissionItem = {
-  id: string;
-  label: string;
-  description: string;
-  allowed: RoleId[];
-};
+export function PermissionsMatrix({
+  roles = [],
+  permissionGroups,
+  rolePermissions = {},
+  onTogglePermission,
+  onToggleRoleAll,
+}: PermissionsMatrixProps) {
+  const resolvedGroups =
+    permissionGroups && permissionGroups.length > 0
+      ? permissionGroups
+      : fallbackPermissionGroups;
+  const allPermissionIds = useMemo(
+    () => flattenPermissionGroups(resolvedGroups),
+    [resolvedGroups]
+  );
+  const permissionCount = resolvedGroups.reduce(
+    (total, group) => total + group.permissions.length,
+    0
+  );
 
-type PermissionGroup = {
-  id: string;
-  label: string;
-  permissions: PermissionItem[];
-};
+  const rolePermissionSets = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    roles.forEach((role) => {
+      map.set(role.id, new Set(rolePermissions[role.id] ?? []));
+    });
+    return map;
+  }, [roles, rolePermissions]);
 
-const roles: Role[] = [
-  { id: "admin", label: "Admin" },
-  { id: "editor", label: "Editor" },
-  { id: "viewer", label: "Viewer" },
-  { id: "contributor", label: "Contributor" },
-];
-
-const permissionGroups: PermissionGroup[] = [
-  {
-    id: "content",
-    label: "Content Management",
-    permissions: [
-      {
-        id: "pages:create",
-        label: "Create Pages",
-        description: "Ability to create new page entries",
-        allowed: ["admin", "editor"],
-      },
-      {
-        id: "content:edit",
-        label: "Edit Published Content",
-        description: "Modify entries that are already live",
-        allowed: ["admin", "editor"],
-      },
-      {
-        id: "content:delete",
-        label: "Delete Content",
-        description: "Permanently remove content items",
-        allowed: ["admin"],
-      },
-    ],
-  },
-  {
-    id: "media",
-    label: "Media Library",
-    permissions: [
-      {
-        id: "media:upload",
-        label: "Upload Assets",
-        description: "Upload images, videos and documents",
-        allowed: ["admin", "editor", "contributor"],
-      },
-      {
-        id: "media:delete",
-        label: "Delete Assets",
-        description: "Remove files from media library",
-        allowed: ["admin"],
-      },
-    ],
-  },
-  {
-    id: "admin",
-    label: "Administration",
-    permissions: [
-      {
-        id: "users:invite",
-        label: "Invite Users",
-        description: "Send invitations to new team members",
-        allowed: ["admin"],
-      },
-      {
-        id: "billing:manage",
-        label: "Manage Billing",
-        description: "Update payment methods and view invoices",
-        allowed: ["admin"],
-      },
-      {
-        id: "api:configure",
-        label: "Configure API",
-        description: "Generate and revoke API keys",
-        allowed: ["admin"],
-      },
-    ],
-  },
-];
-
-const permissionCount = permissionGroups.reduce(
-  (total, group) => total + group.permissions.length,
-  0
-);
-
-export function PermissionsMatrix() {
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
       <div className="flex flex-col gap-3 px-6 py-4">
@@ -135,18 +76,26 @@ export function PermissionsMatrix() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {roles.map((role) => (
+          {roles.map((role) => {
+            const selected = rolePermissionSets.get(role.id) ?? new Set();
+            const hasAll =
+              allPermissionIds.length > 0 &&
+              allPermissionIds.every((id) => selected.has(id));
+
+            return (
             <label
               key={role.id}
               className="flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
             >
               <Checkbox
-                defaultChecked={role.id === "admin"}
-                aria-label={`Toggle all ${role.label} permissions`}
+                checked={hasAll}
+                aria-label={`Toggle all ${role.name} permissions`}
+                onCheckedChange={() => onToggleRoleAll?.(role.id)}
+                disabled={!onToggleRoleAll}
               />
-              <span>{role.label}</span>
+              <span>{role.name}</span>
             </label>
-          ))}
+          )})}
         </div>
       </div>
       <Separator />
@@ -162,13 +111,13 @@ export function PermissionsMatrix() {
                   key={role.id}
                   className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground"
                 >
-                  {role.label}
+                  {role.name}
                 </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {permissionGroups.map((group) => (
+            {resolvedGroups.map((group) => (
               <Fragment key={group.id}>
                 <TableRow className="bg-muted/30">
                   <TableCell
@@ -185,13 +134,16 @@ export function PermissionsMatrix() {
                         <span className="text-sm font-semibold text-foreground">
                           {permission.label}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          {permission.description}
-                        </span>
+                        {permission.description ? (
+                          <span className="text-xs text-muted-foreground">
+                            {permission.description}
+                          </span>
+                        ) : null}
                       </div>
                     </TableCell>
                     {roles.map((role) => {
-                      const isChecked = permission.allowed.includes(role.id);
+                      const selected = rolePermissionSets.get(role.id);
+                      const isChecked = selected?.has(permission.id) ?? false;
                       return (
                         <TableCell
                           key={`${permission.id}-${role.id}`}
@@ -199,8 +151,12 @@ export function PermissionsMatrix() {
                         >
                           <div className="flex justify-center">
                             <Checkbox
-                              defaultChecked={isChecked}
-                              aria-label={`${permission.label} for ${role.label}`}
+                              checked={isChecked}
+                              aria-label={`${permission.label} for ${role.name}`}
+                              onCheckedChange={() =>
+                                onTogglePermission?.(role.id, permission.id)
+                              }
+                              disabled={!onTogglePermission}
                             />
                           </div>
                         </TableCell>

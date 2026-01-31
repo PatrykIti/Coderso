@@ -26,6 +26,7 @@ export const users = pgTable("users", {
 export const roles = pgTable("roles", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull().unique(),
+  description: text("description"),
   permissions: jsonb("permissions").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
