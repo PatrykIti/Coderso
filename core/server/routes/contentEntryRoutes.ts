@@ -62,6 +62,7 @@ export function registerContentEntryRoutes(
         title: body.title,
         slug: body.slug,
         data: body.data as Record<string, unknown>,
+        authorId: ctx.user?.id ?? null,
       });
     }
   );

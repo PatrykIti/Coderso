@@ -146,9 +146,19 @@ export function EntryTable({ entries, emptyMessage, onEdit }: EntryTableProps) {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Avatar size="sm">
-                      <AvatarFallback>NA</AvatarFallback>
+                      <AvatarFallback>
+                        {(entry.author?.name ?? entry.author?.email ?? "NA")
+                          .split(" ")
+                          .filter(Boolean)
+                          .map((chunk) => chunk[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-muted-foreground">System</span>
+                    <span className="text-sm text-muted-foreground">
+                      {entry.author?.name ?? entry.author?.email ?? "System"}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">

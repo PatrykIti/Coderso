@@ -2,6 +2,12 @@ import { apiRequest } from "./apiClient";
 
 export type EntryStatus = "draft" | "published";
 
+export type EntryAuthor = {
+  id: string;
+  name: string | null;
+  email: string;
+};
+
 export type EntrySummary = {
   id: string;
   typeId: string;
@@ -12,6 +18,7 @@ export type EntrySummary = {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;
+  author?: EntryAuthor | null;
 };
 
 export type EntryDetail = EntrySummary;

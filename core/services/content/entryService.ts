@@ -1,6 +1,6 @@
 import { and, desc, eq, max, ne } from "drizzle-orm";
 import { db } from "../../db/client";
-import { contentEntries, contentRevisions, contentTypes } from "../../db/schema";
+import { contentEntries, contentRevisions, contentTypes, users } from "../../db/schema";
 import { createPreviewToken } from "../pages/previewService";
 import {
   type ContentSchema,
@@ -14,6 +14,7 @@ export type CreateEntryInput = {
   title: string;
   slug: string;
   data: EntryData;
+  authorId?: string | null;
 };
 
 export type UpdateEntryInput = {
@@ -53,11 +54,44 @@ async function ensureEntrySlugAvailable(
 }
 
 export async function listEntries(typeId: string) {
-  return db
-    .select()
+  const rows = await db
+    .select({
+      id: contentEntries.id,
+      typeId: contentEntries.typeId,
+      authorId: contentEntries.authorId,
+      title: contentEntries.title,
+      slug: contentEntries.slug,
+      status: contentEntries.status,
+      data: contentEntries.data,
+      publishedAt: contentEntries.publishedAt,
+      createdAt: contentEntries.createdAt,
+      updatedAt: contentEntries.updatedAt,
+      authorName: users.name,
+      authorEmail: users.email,
+    })
     .from(contentEntries)
+    .leftJoin(users, eq(contentEntries.authorId, users.id))
     .where(eq(contentEntries.typeId, typeId))
     .orderBy(desc(contentEntries.updatedAt));
+
+  return rows.map((row) => ({
+    id: row.id,
+    typeId: row.typeId,
+    title: row.title,
+    slug: row.slug,
+    status: row.status,
+    data: row.data,
+    publishedAt: row.publishedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    author: row.authorId
+      ? {
+          id: row.authorId,
+          name: row.authorName ?? null,
+          email: row.authorEmail ?? "",
+        }
+      : null,
+  }));
 }
 
 export async function getEntry(id: string) {
@@ -84,6 +118,7 @@ export async function createEntry(typeId: string, input: CreateEntryInput) {
     .insert(contentEntries)
     .values({
       typeId,
+      authorId: input.authorId ?? null,
       title: input.title,
       slug: input.slug,
       status: "draft",

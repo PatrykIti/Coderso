@@ -84,7 +84,7 @@ export function EntryFilters({
               <SelectItem value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={author} onValueChange={onAuthorChange} disabled>
+          <Select value={author} onValueChange={onAuthorChange}>
             <SelectTrigger className="h-8 w-full sm:w-[160px]">
               <User className="h-3 w-3 text-muted-foreground" />
               <SelectValue placeholder="Author" />

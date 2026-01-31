@@ -422,6 +422,9 @@ export const contentEntries = pgTable(
     typeId: uuid("type_id")
       .notNull()
       .references(() => contentTypes.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     slug: text("slug").notNull(),
     title: text("title").notNull(),
     status: text("status").notNull().default("draft"),
@@ -435,6 +438,7 @@ export const contentEntries = pgTable(
       t.typeId,
       t.slug
     ),
+    authorIdx: index("content_entries_author_idx").on(t.authorId),
     statusIdx: index("content_entries_status_idx").on(t.status),
     titleIdx: index("content_entries_title_idx").on(t.title),
   })

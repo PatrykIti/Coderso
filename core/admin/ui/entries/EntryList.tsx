@@ -24,7 +24,8 @@ type EntryView = "list" | "grid";
 export function filterEntries(
   entries: Awaited<ReturnType<typeof listEntries>>,
   query: string,
-  status: string
+  status: string,
+  author: string
 ) {
   const normalized = query.trim().toLowerCase();
   return entries.filter((entry) => {
@@ -33,7 +34,9 @@ export function filterEntries(
       entry.title.toLowerCase().includes(normalized) ||
       entry.slug.toLowerCase().includes(normalized);
     const matchesStatus = status === "all" || entry.status === status;
-    return matchesQuery && matchesStatus;
+    const matchesAuthor =
+      author === "any" || entry.author?.id === author;
+    return matchesQuery && matchesStatus && matchesAuthor;
   });
 }
 
@@ -119,9 +122,20 @@ export function EntryList() {
     }));
   }, [types]);
 
+  const authorOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    entries.forEach((entry) => {
+      if (!entry.author) return;
+      map.set(entry.author.id, entry.author.name ?? entry.author.email);
+    });
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [entries]);
+
   const filteredEntries = useMemo(
-    () => filterEntries(entries, searchQuery, statusFilter),
-    [entries, searchQuery, statusFilter]
+    () => filterEntries(entries, searchQuery, statusFilter, authorFilter),
+    [entries, searchQuery, statusFilter, authorFilter]
   );
 
   const handleEditEntry = (id: string) => {
@@ -265,7 +279,7 @@ export function EntryList() {
               typeValue={activeSlug ?? (typeOptions[0]?.value ?? "")}
               typeOptions={typeOptions}
               author={authorFilter}
-              authorOptions={[]}
+              authorOptions={authorOptions}
               onSearchChange={setSearchQuery}
               onStatusChange={setStatusFilter}
               onTypeChange={handleSelectType}
