@@ -1,7 +1,9 @@
 import { Download } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { isApiClientError } from "@/services/apiClient";
+import { listAuditLogs, type AuditRecord } from "@/services/auditClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { ExportDialog } from "@/ui/shared/ExportDialog";
@@ -9,119 +11,128 @@ import { ExportDialog } from "@/ui/shared/ExportDialog";
 import { AuditDetailsDrawer } from "./AuditDetailsDrawer";
 import { AuditFilters } from "./AuditFilters";
 import { AuditTable } from "./AuditTable";
-import type { AuditLog } from "./types";
+import type { AuditCategory, AuditLog, AuditSeverity, AuditStatus } from "./types";
 
-const auditLogs: AuditLog[] = [
-  {
-    id: "log_92kLp023Xm",
-    event: "Updated Article",
-    category: "content",
+const categoryByTarget = new Set([
+  "page",
+  "content",
+  "entry",
+  "menu",
+  "media",
+  "seo",
+  "redirect",
+  "theme",
+  "admin-theme",
+]);
+
+const formatTitle = (value: string) =>
+  value
+    .split(/[.\-_]/g)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+
+const formatRelative = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const diffMs = Date.now() - date.getTime();
+  const minutes = Math.max(Math.floor(diffMs / 60000), 0);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} mins ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hrs ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} days ago`;
+  return date.toLocaleDateString();
+};
+
+const resolveCategory = (record: AuditRecord): AuditCategory => {
+  const action = record.action.toLowerCase();
+  if (action.startsWith("auth.") || action.startsWith("sessions.")) {
+    return "authentication";
+  }
+  if (categoryByTarget.has(record.targetType.toLowerCase())) {
+    return "content";
+  }
+  return "system";
+};
+
+const resolveSeverity = (
+  record: AuditRecord,
+  metadata: Record<string, unknown>
+): AuditSeverity => {
+  const metaSeverity = typeof metadata.severity === "string" ? metadata.severity : null;
+  if (metaSeverity === "info" || metaSeverity === "warning" || metaSeverity === "error") {
+    return metaSeverity;
+  }
+
+  const action = record.action.toLowerCase();
+  if (action.includes("error") || action.includes("fail")) return "error";
+  if (action.includes("warn") || action.includes("denied")) return "warning";
+  return "info";
+};
+
+const resolveStatus = (severity: AuditSeverity): AuditStatus => {
+  if (severity === "error") return "error";
+  if (severity === "warning") return "warning";
+  return "success";
+};
+
+const resolveActorName = (record: AuditRecord, metadata: Record<string, unknown>) => {
+  if (!record.actorId) return "System";
+  if (typeof metadata.actorName === "string") return metadata.actorName;
+  if (typeof metadata.actorEmail === "string") return metadata.actorEmail;
+  return `User ${record.actorId.slice(0, 6)}`;
+};
+
+const resolveRequestId = (metadata: Record<string, unknown>) => {
+  if (typeof metadata.requestId === "string") return metadata.requestId;
+  return "—";
+};
+
+const resolveIp = (metadata: Record<string, unknown>) => {
+  if (typeof metadata.ip === "string") return metadata.ip;
+  return "—";
+};
+
+const resolveDescription = (record: AuditRecord, metadata: Record<string, unknown>) => {
+  if (typeof metadata.description === "string") return metadata.description;
+  return `${formatTitle(record.action)} executed on ${record.targetType}.`;
+};
+
+const mapAuditRecord = (record: AuditRecord): AuditLog => {
+  const metadata = record.metadata ?? {};
+  const category = resolveCategory(record);
+  const severity = resolveSeverity(record, metadata);
+  const status = resolveStatus(severity);
+  const actorName = resolveActorName(record, metadata);
+
+  return {
+    id: record.id,
+    event: formatTitle(record.action),
+    category,
     actor: {
-      name: "Sarah Jenks",
-      role: "Admin",
-      type: "user",
+      name: actorName,
+      role: record.actorId ? "Admin" : "System",
+      type: record.actorId ? "user" : "system",
     },
-    resource: "/api/v1/posts/302",
-    resourceLabel: "Article #302 \"Introduction to CMS\"",
-    ipAddress: "192.168.1.45",
-    timestamp: "2 mins ago",
-    timestampLabel: "Oct 24, 14:22:10",
-    status: "success",
-    severity: "info",
-    requestId: "req_abc123",
-    description: "Article metadata updated and published.",
-    payload: {
-      action: "UPDATE",
-      entity: "post",
-      entity_id: 302,
-      diff: {
-        status: { old: "draft", new: "published" },
-        updated_at: "2023-10-24T14:22:10Z",
-      },
-      context: {
-        user_agent: "Mozilla/5.0...",
-        region: "us-east-1",
-      },
-    },
-  },
-  {
-    id: "log_83apQ712Lg",
-    event: "Failed Login Attempt",
-    category: "authentication",
-    actor: {
-      name: "Alex Morgan",
-      role: "Editor",
-      type: "user",
-    },
-    resource: "/auth/login",
-    resourceLabel: "Login endpoint",
-    ipAddress: "172.16.0.12",
-    timestamp: "18 mins ago",
-    timestampLabel: "Oct 24, 14:06:42",
-    status: "warning",
-    severity: "warning",
-    requestId: "req_login_42",
-    description: "Invalid credentials supplied from a known IP.",
-    payload: {
-      action: "LOGIN",
-      result: "DENIED",
-      reason: "invalid_password",
-      attempts: 3,
-    },
-  },
-  {
-    id: "log_55kLx118Py",
-    event: "Role Permissions Updated",
-    category: "system",
-    actor: {
-      name: "Dev Bot",
-      role: "Automation",
-      type: "system",
-    },
-    resource: "roles/editor",
-    resourceLabel: "Editor role",
-    ipAddress: "10.0.0.12",
-    timestamp: "42 mins ago",
-    timestampLabel: "Oct 24, 13:40:01",
-    status: "success",
-    severity: "info",
-    requestId: "req_role_219",
-    description: "Automation updated role permissions based on policy.",
-    payload: {
-      action: "UPDATE",
-      entity: "role",
-      permissions_added: ["content.publish", "content.archive"],
-      permissions_removed: ["settings.update"],
-    },
-  },
-  {
-    id: "log_12fKe498Qw",
-    event: "System Error",
-    category: "system",
-    actor: {
-      name: "Dev Bot",
-      role: "Automation",
-      type: "system",
-    },
-    resource: "db_connector_v2",
-    resourceLabel: "Database connector",
-    ipAddress: "10.0.0.5",
-    timestamp: "1 hour ago",
-    timestampLabel: "Oct 24, 13:10:05",
-    status: "error",
-    severity: "error",
-    requestId: "req_sys_522",
-    description: "Database connection timeout reported by worker.",
-    payload: {
-      action: "ERROR",
-      module: "db_connector_v2",
-      code: "ETIMEDOUT",
-      retry_count: 2,
-    },
-  },
-];
+    resource: `/${record.targetType}/${record.targetId}`,
+    resourceLabel: `${formatTitle(record.targetType)} ${record.targetId}`,
+    ipAddress: resolveIp(metadata),
+    timestamp: formatRelative(record.createdAt),
+    timestampLabel: new Date(record.createdAt).toLocaleString(),
+    status,
+    severity,
+    requestId: resolveRequestId(metadata),
+    description: resolveDescription(record, metadata),
+    payload: metadata,
+  };
+};
 
 export function AuditList() {
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [dateRange, setDateRange] = useState("last-7-days");
   const [eventType, setEventType] = useState("all");
@@ -130,10 +141,31 @@ export function AuditList() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const items = await listAuditLogs(200);
+      setLogs(items.map(mapAuditRecord));
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load audit logs.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
   const filteredLogs = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return auditLogs.filter((log) => {
+    return logs.filter((log) => {
       const matchesQuery =
         !normalizedQuery ||
         log.event.toLowerCase().includes(normalizedQuery) ||
@@ -144,11 +176,11 @@ export function AuditList() {
 
       return matchesQuery && matchesType && matchesSeverity;
     });
-  }, [query, eventType, severity]);
+  }, [logs, query, eventType, severity]);
 
   const selectedLog = useMemo(
-    () => auditLogs.find((log) => log.id === selectedId) ?? null,
-    [selectedId]
+    () => logs.find((log) => log.id === selectedId) ?? null,
+    [logs, selectedId]
   );
 
   const handleSelect = (log: AuditLog) => {
@@ -195,11 +227,26 @@ export function AuditList() {
           onEventTypeChange={setEventType}
           onSeverityChange={setSeverity}
         />
-        <AuditTable
-          logs={filteredLogs}
-          selectedId={selectedId}
-          onSelect={handleSelect}
-        />
+        {error ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
+        {isLoading ? (
+          <div className="rounded-xl border bg-muted/20 p-6 text-sm text-muted-foreground">
+            Loading audit logs...
+          </div>
+        ) : filteredLogs.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-muted/10 p-6 text-sm text-muted-foreground">
+            No audit logs match the current filters.
+          </div>
+        ) : (
+          <AuditTable
+            logs={filteredLogs}
+            selectedId={selectedId}
+            onSelect={handleSelect}
+          />
+        )}
       </div>
       <AuditDetailsDrawer
         log={selectedLog}

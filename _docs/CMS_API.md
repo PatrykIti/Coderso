@@ -643,6 +643,8 @@ Response:
 }
 ```
 
+Uwaga: Admin UI korzysta z `GET /audit` do listowania logow (limit 200).
+
 ---
 
 ## Settings

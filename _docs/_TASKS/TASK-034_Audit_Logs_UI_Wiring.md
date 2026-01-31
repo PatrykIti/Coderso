@@ -5,7 +5,7 @@
 **Category:** Admin/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-024, TASK-006-15  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -34,6 +34,6 @@ Wire Audit Logs UI to `/audit` endpoint.
 
 - `_docs/CMS_API.md` note audit logs list usage.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-audit-logs-ui-wiring.md`
+- `_docs/_CHANGELOG/089-2026-01-31-audit-logs-ui-wiring.md`
