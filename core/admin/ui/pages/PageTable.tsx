@@ -67,17 +67,17 @@ export function PageTable({
 }: PageTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
-      <Table className="min-w-[720px]">
+      <Table className="w-full table-fixed">
         <TableHeader className="bg-muted/40">
           <TableRow>
             <TableHead className="w-10 pl-4">
               <Checkbox aria-label="Select all pages" />
             </TableHead>
-            <TableHead>Page title</TableHead>
+            <TableHead className="w-full">Page title</TableHead>
             <TableHead className="hidden md:table-cell">Status</TableHead>
             <TableHead className="hidden lg:table-cell">Author</TableHead>
             <TableHead className="hidden xl:table-cell">Last updated</TableHead>
-            <TableHead className="pr-4 text-right">Actions</TableHead>
+            <TableHead className="w-12 pr-4 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -96,12 +96,12 @@ export function PageTable({
               <TableCell className="pl-4">
                 <Checkbox aria-label={`Select ${page.title}`} />
               </TableCell>
-              <TableCell>
+              <TableCell className="whitespace-normal">
                 <div className="flex flex-col">
-                  <span className="font-semibold text-foreground">
+                  <span className="break-words font-semibold text-foreground">
                     {page.title}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground break-all">
                     {page.slug}
                   </span>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
@@ -147,7 +147,7 @@ export function PageTable({
               <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
                 {formatDate(page.updatedAt)}
               </TableCell>
-              <TableCell className="pr-4 text-right">
+              <TableCell className="w-12 pr-4 text-right">
                 <PageRowActions
                   status={page.status}
                   onEdit={() => onEdit(page.id)}
