@@ -680,6 +680,44 @@ Uwaga: Admin UI korzysta z `GET /access-logs` do listowania (limit 200).
 
 ---
 
+## IP allowlist
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /ip-allowlist`
+- `POST /ip-allowlist`
+- `DELETE /ip-allowlist/:id`
+
+Create payload:
+
+```json
+{
+  "cidr": "192.168.1.0/24",
+  "label": "Office VPN",
+  "description": "HQ range"
+}
+```
+
+Response (list):
+
+```json
+{
+  "items": [
+    {
+      "id": "entry-id",
+      "cidr": "192.168.1.0/24",
+      "label": "Office VPN",
+      "description": "HQ range",
+      "createdAt": "2026-01-31T10:00:00Z"
+    }
+  ]
+}
+```
+
+Uwaga: Admin UI korzysta z `GET /ip-allowlist` do listowania.
+
+---
+
 ## Settings
 
 Permissions: `settings:read`, `settings:write`

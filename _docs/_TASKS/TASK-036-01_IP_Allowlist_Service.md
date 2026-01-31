@@ -5,7 +5,7 @@
 **Category:** Admin/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-001  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -19,6 +19,7 @@ Add `ip_allowlist` table:
 - `id` (uuid)
 - `cidr` (text, unique)
 - `label` (text, nullable)
+- `description` (text, nullable)
 - `createdAt`
 
 ## Service API
@@ -38,6 +39,6 @@ Add `ip_allowlist` table:
 
 - `_docs/SECURITY_SPEC.md` allowlist strategy.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-ip-allowlist-schema.md`
+- `_docs/_CHANGELOG/091-2026-01-31-ip-allowlist-core.md`

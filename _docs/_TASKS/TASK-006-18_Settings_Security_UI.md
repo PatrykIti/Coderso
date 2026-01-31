@@ -46,9 +46,9 @@ session TTL, IP allowlist, login alerts.
 
 - `GET /settings/security` (policy + alerts).
 - `PATCH /settings/security` (updates).
-- `GET /settings/security/ip-allowlist`.
-- `POST /settings/security/ip-allowlist`.
-- `DELETE /settings/security/ip-allowlist/:id`.
+- `GET /ip-allowlist`.
+- `POST /ip-allowlist`.
+- `DELETE /ip-allowlist/:id`.
 
 ## Unit Tests
 

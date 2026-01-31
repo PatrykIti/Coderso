@@ -5,7 +5,7 @@
 **Category:** Admin/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-036-01, TASK-020  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -42,6 +42,6 @@ Add `core/server/middleware/ipAllowlist.ts`:
 - `_docs/SECURITY_SPEC.md` enforcement details.
 - `_docs/CMS_API.md` allowlist endpoints.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-ip-allowlist-api.md`
+- `_docs/_CHANGELOG/091-2026-01-31-ip-allowlist-core.md`

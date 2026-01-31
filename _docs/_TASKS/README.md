@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 37 tasks
+- **To Do:** 33 tasks
 - **In Progress:** 0
-- **Done:** 159 tasks
+- **Done:** 163 tasks
 
 ---
 
@@ -41,10 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-036 | IP Allowlist Core and UI | Medium | Large | allowlist + enforcement |
-| TASK-036-01 | IP Allowlist Service | Medium | Medium | CRUD + CIDR |
-| TASK-036-02 | IP Allowlist API and Middleware | Medium | Medium | /ip-allowlist |
-| TASK-036-03 | IP Allowlist UI Wiring | Medium | Medium | UI -> API |
 | TASK-037 | Login Alerts Core and UI | Medium | Medium | settings + alerts |
 | TASK-037-01 | Login Alerts Settings | Medium | Medium | security settings |
 | TASK-037-02 | Login Alerts UI Wiring | Medium | Medium | UI -> API |
@@ -125,6 +121,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-035-01 | Access Logs DB and Service | Medium | Medium | access_logs table |
 | TASK-035-02 | Access Logs API Routes | Medium | Medium | /access-logs |
 | TASK-035-03 | Access Logs UI Wiring | Medium | Medium | UI -> API |
+| TASK-036 | IP Allowlist Core and UI | Medium | Large | allowlist + enforcement |
+| TASK-036-01 | IP Allowlist Service | Medium | Medium | CRUD + CIDR |
+| TASK-036-02 | IP Allowlist API and Middleware | Medium | Medium | /ip-allowlist |
+| TASK-036-03 | IP Allowlist UI Wiring | Medium | Medium | UI -> API |
 | TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..05 |
 | TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
 | TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |

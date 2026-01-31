@@ -9,5 +9,5 @@ test("IpAllowlistPage renders table and drawer", () => {
   expect(html).toContain("IP Allowlist");
   expect(html).toContain("Active Restrictions");
   expect(html).toContain("Add New IP Range");
-  expect(html).toContain("Add to Allowlist");
+  expect(html).toContain("Loading allowlist");
 });

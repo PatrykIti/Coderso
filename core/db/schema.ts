@@ -267,6 +267,20 @@ export const accessLogs = pgTable(
   })
 );
 
+export const ipAllowlist = pgTable(
+  "ip_allowlist",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    cidr: text("cidr").notNull().unique(),
+    label: text("label"),
+    description: text("description"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    createdAtIdx: index("ip_allowlist_created_at_idx").on(t.createdAt),
+  })
+);
+
 export const contentTypes = pgTable("content_types", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),

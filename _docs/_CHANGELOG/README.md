@@ -115,6 +115,7 @@ Project Change Log.
 | 088 | 2026-01-31 | Admin sessions API and UI wiring | Admin/Security |
 | 089 | 2026-01-31 | Audit logs UI wiring | Admin/Security |
 | 090 | 2026-01-31 | Access logs core and UI wiring | Admin/Security |
+| 091 | 2026-01-31 | IP allowlist core and UI wiring | Admin/Security |
 
 
 ---

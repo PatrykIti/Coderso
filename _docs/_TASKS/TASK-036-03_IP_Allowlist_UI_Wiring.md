@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-036-02, TASK-006-36  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -35,6 +35,6 @@ Use:
 
 - `_docs/CMS_API.md` mention allowlist UI usage.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-ip-allowlist-ui-wiring.md`
+- `_docs/_CHANGELOG/091-2026-01-31-ip-allowlist-core.md`

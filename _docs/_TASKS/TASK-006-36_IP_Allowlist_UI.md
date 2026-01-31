@@ -41,9 +41,9 @@ layer until security endpoints exist.
 
 ## Data + State
 
-- `GET /settings/security/ip-allowlist`
-- `POST /settings/security/ip-allowlist`
-- `DELETE /settings/security/ip-allowlist/:id`
+- `GET /ip-allowlist`
+- `POST /ip-allowlist`
+- `DELETE /ip-allowlist/:id`
 
 ## Unit Tests
 

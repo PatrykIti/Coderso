@@ -2,7 +2,6 @@ import { Info, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -12,49 +11,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-
-type AllowlistStatus = "active" | "inactive";
-
-type AllowlistEntry = {
-  id: string;
-  label: string;
-  description: string;
-  range: string;
-  addedBy: string;
-  status: AllowlistStatus;
-};
-
-const allowlistEntries: AllowlistEntry[] = [
-  {
-    id: "main-office",
-    label: "Main Office",
-    description: "Headquarters VPN",
-    range: "192.168.1.0/24",
-    addedBy: "Admin User",
-    status: "active",
-  },
-  {
-    id: "dev-team",
-    label: "Dev Team",
-    description: "Remote staging access",
-    range: "45.79.12.0/32",
-    addedBy: "Alex Rivet",
-    status: "active",
-  },
-  {
-    id: "legacy-api",
-    label: "Legacy API",
-    description: "Deprecated integration",
-    range: "10.0.0.45/32",
-    addedBy: "System",
-    status: "inactive",
-  },
-];
+import type { IpAllowlistEntry } from "@/services/ipAllowlistClient";
 
 const tableHeaderClassName =
   "px-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground";
 
-export function IpAllowlistTable() {
+type IpAllowlistTableProps = {
+  entries: IpAllowlistEntry[];
+  isLoading?: boolean;
+  error?: string | null;
+  onRemove?: (id: string) => void;
+};
+
+export function IpAllowlistTable({
+  entries,
+  isLoading = false,
+  error,
+  onRemove,
+}: IpAllowlistTableProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-1">
@@ -76,52 +50,63 @@ export function IpAllowlistTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {allowlistEntries.map((entry) => (
-              <TableRow
-                key={entry.id}
-                className={cn(entry.status === "inactive" && "opacity-60")}
-              >
-                <TableCell className="px-6 py-4">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-foreground">
-                      {entry.label}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {entry.description}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  <code
-                    className={cn(
-                      "rounded-md bg-muted px-2 py-1 text-xs font-mono text-primary",
-                      entry.status === "inactive" && "text-muted-foreground"
-                    )}
-                  >
-                    {entry.range}
-                  </code>
-                </TableCell>
-                <TableCell className="px-6 py-4 text-sm text-muted-foreground">
-                  {entry.addedBy}
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  <Switch
-                    defaultChecked={entry.status === "active"}
-                    aria-label={`${entry.label} status`}
-                  />
-                </TableCell>
-                <TableCell className="px-6 py-4 text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Remove ${entry.label}`}
-                    className="text-muted-foreground hover:text-rose-500"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
+                  Loading allowlist...
                 </TableCell>
               </TableRow>
-            ))}
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={5} className="px-6 py-6 text-sm text-destructive">
+                  {error}
+                </TableCell>
+              </TableRow>
+            ) : entries.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
+                  No IP ranges are currently allowlisted.
+                </TableCell>
+              </TableRow>
+            ) : (
+              entries.map((entry) => (
+                <TableRow key={entry.id}>
+                  <TableCell className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-foreground">
+                        {entry.label ?? "Untitled"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {entry.description ?? "No description"}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <code className="rounded-md bg-muted px-2 py-1 text-xs font-mono text-primary">
+                      {entry.cidr}
+                    </code>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-sm text-muted-foreground">
+                    System
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                    Active
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={`Remove ${entry.cidr}`}
+                      className="text-muted-foreground hover:text-rose-500"
+                      onClick={() => onRemove?.(entry.id)}
+                      disabled={!onRemove}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
         <Separator />

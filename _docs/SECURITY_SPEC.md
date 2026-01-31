@@ -87,6 +87,14 @@ Rotacja klucza:
 - Metadata jest czyszczona z sekretow (token/password/secret).
 - `ip` i `userAgent` zapisywane w metadata jesli dostepne.
 
+## IP allowlist (v1.0)
+
+- Allowlista CIDR trzymana w DB (`ip_allowlist`).
+- Jesli lista jest pusta → allow all.
+- Jesli lista niepusta → blokujemy `/admin/*` i `/admin/api/*` jesli IP nie pasuje.
+- Wymagane sa poprawne CIDR (IPv4, mask 0-32).
+- Zmiany dzialaja runtime (bez restartu).
+
 ## Access logs (v1.0)
 
 - Logujemy requesty admin API (method, path, status, ip, userAgent, userId, durationMs).

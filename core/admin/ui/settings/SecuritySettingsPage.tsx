@@ -36,6 +36,7 @@ import { IpAllowlistTable } from "./IpAllowlistTable";
 import { LoginAlertsCard } from "./LoginAlertsCard";
 import { SecurityPolicyCard } from "./SecurityPolicyCard";
 import { SettingsSidebar } from "./SettingsSidebar";
+import { useIpAllowlist } from "./useIpAllowlist";
 import {
   listToText,
   normalizeOptional,
@@ -140,6 +141,12 @@ export function SecuritySettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const {
+    entries: allowlistEntries,
+    isLoading: allowlistLoading,
+    error: allowlistError,
+    removeEntry,
+  } = useIpAllowlist();
 
   useEffect(() => {
     let active = true;
@@ -763,7 +770,12 @@ export function SecuritySettingsPage() {
               </div>
             </SecurityPolicyCard>
 
-            <IpAllowlistTable />
+            <IpAllowlistTable
+              entries={allowlistEntries}
+              isLoading={allowlistLoading}
+              error={allowlistError}
+              onRemove={removeEntry}
+            />
             <LoginAlertsCard
               title="Suspicious Login Alerts"
               description="Get notified whenever someone logs in from a new device, browser, or location."

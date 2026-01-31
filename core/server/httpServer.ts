@@ -9,6 +9,7 @@ import { checkRateLimit } from "./middleware/rateLimit";
 import { createRequestIdContext } from "./middleware/requestId";
 import { applySecurityHeaders } from "./middleware/securityHeaders";
 import { recordAccessLog } from "./middleware/accessLog";
+import { enforceIpAllowlist } from "./middleware/ipAllowlist";
 import { createRouter, matchRoute, normalizePath, type RouteContext } from "./router";
 import { registerAllRoutes } from "./routes";
 import { validate } from "./validation/schemaValidator";
@@ -132,6 +133,11 @@ const redirectToDev = (req: Request, devUrl: string) => {
 
 const handleAdmin = async (req: Request, devUrl?: string) => {
   const url = new URL(req.url);
+  try {
+    await enforceIpAllowlist(resolveIp(req));
+  } catch (error) {
+    return errorResponse(error);
+  }
   if (url.pathname === "/admin") {
     return Response.redirect("/admin/", 307);
   }
@@ -174,6 +180,23 @@ const handleApi = async (req: Request) => {
 
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: responseHeaders });
+  }
+
+  try {
+    await enforceIpAllowlist(resolveIp(req));
+  } catch (error) {
+    const response = errorResponse(error);
+    responseHeaders.forEach((value, key) => response.headers.append(key, value));
+    void recordAccessLog({
+      method: req.method,
+      path: url.pathname,
+      status: response.status,
+      ip: resolveIp(req) ?? null,
+      userAgent: req.headers.get("user-agent") ?? null,
+      userId: null,
+      durationMs: Date.now() - requestStart,
+    });
+    return response;
   }
 
   for (const route of router.routes) {
