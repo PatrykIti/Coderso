@@ -41,6 +41,7 @@ const statusLabels = {
 
 type EntryTableProps = {
   entries: EntrySummary[];
+  emptyMessage?: string;
   onEdit?: (id: string) => void;
 };
 
@@ -88,7 +89,7 @@ function EntryRowActions({
   );
 }
 
-export function EntryTable({ entries, onEdit }: EntryTableProps) {
+export function EntryTable({ entries, emptyMessage, onEdit }: EntryTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -118,7 +119,7 @@ export function EntryTable({ entries, onEdit }: EntryTableProps) {
           {entries.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} className="pl-4 text-sm text-muted-foreground">
-                No entries yet.
+                {emptyMessage ?? "No entries yet."}
               </TableCell>
             </TableRow>
           ) : (

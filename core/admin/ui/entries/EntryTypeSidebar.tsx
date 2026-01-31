@@ -1,4 +1,5 @@
 import { FileText, Plus, Search, ShoppingBag, Tag, User } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ type EntryTypeSidebarProps = {
   activeSlug?: string | null;
   onSelect?: (slug: string) => void;
   onCreateCollection?: () => void;
+  className?: string;
 };
 
 export function EntryTypeSidebar({
@@ -33,22 +35,39 @@ export function EntryTypeSidebar({
   activeSlug,
   onSelect,
   onCreateCollection,
+  className,
 }: EntryTypeSidebarProps) {
+  const [query, setQuery] = useState("");
+  const filteredTypes = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return types;
+    return types.filter(
+      (type) =>
+        type.name.toLowerCase().includes(normalized) ||
+        type.slug.toLowerCase().includes(normalized)
+    );
+  }, [types, query]);
+
   return (
-    <div className="flex h-full flex-col">
+    <div className={cn("flex h-full flex-col", className)}>
       <div className="p-5">
         <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Content Types
         </p>
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search types..." className="pl-9" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search types..."
+            className="pl-9"
+          />
         </div>
       </div>
       <Separator />
       <ScrollArea className="flex-1">
         <div className="space-y-1 p-3">
-          {types.map((type) => {
+          {filteredTypes.map((type) => {
             const Icon = resolveIcon(type.slug);
             const isActive = type.slug === activeSlug;
             return (

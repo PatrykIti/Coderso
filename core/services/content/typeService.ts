@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../../db/client";
-import { contentTypes } from "../../db/schema";
+import { contentEntries, contentTypes } from "../../db/schema";
 import {
   assertContentSchema,
   invalidateValidator,
@@ -20,7 +20,29 @@ export type UpdateContentTypeInput = {
 };
 
 export async function listContentTypes() {
-  return db.select().from(contentTypes).orderBy(contentTypes.createdAt);
+  return db
+    .select({
+      id: contentTypes.id,
+      name: contentTypes.name,
+      slug: contentTypes.slug,
+      schema: contentTypes.schema,
+      createdAt: contentTypes.createdAt,
+      updatedAt: contentTypes.updatedAt,
+      entryCount: sql<number>`count(${contentEntries.id})`
+        .mapWith(Number)
+        .as("entryCount"),
+    })
+    .from(contentTypes)
+    .leftJoin(contentEntries, eq(contentEntries.typeId, contentTypes.id))
+    .groupBy(
+      contentTypes.id,
+      contentTypes.name,
+      contentTypes.slug,
+      contentTypes.schema,
+      contentTypes.createdAt,
+      contentTypes.updatedAt
+    )
+    .orderBy(contentTypes.createdAt);
 }
 
 export async function getContentType(id: string) {

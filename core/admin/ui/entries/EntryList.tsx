@@ -15,8 +15,27 @@ import { SplitShell } from "@/ui/layouts/SplitShell";
 import { ContentTypeCreateDrawer } from "../content-types/ContentTypeCreateDrawer";
 import { EntryCreateDrawer } from "./EntryCreateDrawer";
 import { EntryFilters } from "./EntryFilters";
+import { EntryGrid } from "./EntryGrid";
 import { EntryTable } from "./EntryTable";
 import { EntryTypeSidebar } from "./EntryTypeSidebar";
+
+type EntryView = "list" | "grid";
+
+export function filterEntries(
+  entries: Awaited<ReturnType<typeof listEntries>>,
+  query: string,
+  status: string
+) {
+  const normalized = query.trim().toLowerCase();
+  return entries.filter((entry) => {
+    const matchesQuery =
+      !normalized ||
+      entry.title.toLowerCase().includes(normalized) ||
+      entry.slug.toLowerCase().includes(normalized);
+    const matchesStatus = status === "all" || entry.status === status;
+    return matchesQuery && matchesStatus;
+  });
+}
 
 export function EntryList() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -26,6 +45,10 @@ export function EntryList() {
   const [entries, setEntries] = useState([] as Awaited<ReturnType<typeof listEntries>>);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<EntryView>("list");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [authorFilter, setAuthorFilter] = useState("any");
 
   useEffect(() => {
     let active = true;
@@ -59,6 +82,13 @@ export function EntryList() {
       .then((result) => {
         if (!active) return;
         setEntries(result);
+        setTypes((prev) =>
+          prev.map((type) =>
+            type.slug === activeSlug
+              ? { ...type, entryCount: result.length }
+              : type
+          )
+        );
         setError(null);
       })
       .catch((err) => {
@@ -82,6 +112,18 @@ export function EntryList() {
     [types, activeSlug]
   );
 
+  const typeOptions = useMemo(() => {
+    return types.map((type) => ({
+      value: type.slug,
+      label: `${type.name} (${type.entryCount ?? 0})`,
+    }));
+  }, [types]);
+
+  const filteredEntries = useMemo(
+    () => filterEntries(entries, searchQuery, statusFilter),
+    [entries, searchQuery, statusFilter]
+  );
+
   const handleEditEntry = (id: string) => {
     if (typeof window !== "undefined" && activeSlug) {
       window.location.assign(`/admin/entries/${encodeURIComponent(activeSlug)}/${encodeURIComponent(id)}`);
@@ -96,7 +138,16 @@ export function EntryList() {
 
   const handleEntryCreated = (entry: { id: string }, typeSlug: string) => {
     if (typeSlug === activeSlug) {
-      listEntries(typeSlug).then((result) => setEntries(result));
+      listEntries(typeSlug).then((result) => {
+        setEntries(result);
+        setTypes((prev) =>
+          prev.map((type) =>
+            type.slug === typeSlug
+              ? { ...type, entryCount: result.length }
+              : type
+          )
+        );
+      });
     }
     if (typeof window !== "undefined") {
       window.location.assign(`/admin/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`);
@@ -106,6 +157,12 @@ export function EntryList() {
   const handleTypeCreated = (type: ContentTypeSummary) => {
     setTypes((prev) => [type, ...prev]);
     setActiveSlug(type.slug);
+  };
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setAuthorFilter("any");
   };
 
   return (
@@ -126,6 +183,20 @@ export function EntryList() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
+        <div className="rounded-xl border bg-background lg:hidden">
+          <EntryTypeSidebar
+            className="h-[360px]"
+            types={types.map((type) => ({
+              id: type.id,
+              slug: type.slug,
+              name: type.name,
+              count: type.entryCount ?? 0,
+            }))}
+            activeSlug={activeSlug}
+            onSelect={handleSelectType}
+            onCreateCollection={() => setCollectionOpen(true)}
+          />
+        </div>
         <div className="flex flex-col gap-6 lg:flex-row">
           <aside className="hidden w-72 shrink-0 overflow-hidden rounded-xl border bg-background lg:block">
             <EntryTypeSidebar
@@ -133,7 +204,7 @@ export function EntryList() {
                 id: type.id,
                 slug: type.slug,
                 name: type.name,
-                count: activeSlug === type.slug ? entries.length : 0,
+                count: type.entryCount ?? 0,
               }))}
               activeSlug={activeSlug}
               onSelect={handleSelectType}
@@ -158,14 +229,26 @@ export function EntryList() {
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    className="bg-primary/10 text-primary hover:bg-primary/15"
+                    className={
+                      view === "list"
+                        ? "bg-primary/10 text-primary hover:bg-primary/15"
+                        : "text-muted-foreground hover:text-foreground"
+                    }
+                    aria-pressed={view === "list"}
+                    onClick={() => setView("list")}
                   >
                     <List className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    className="text-muted-foreground hover:text-foreground"
+                    className={
+                      view === "grid"
+                        ? "bg-primary/10 text-primary hover:bg-primary/15"
+                        : "text-muted-foreground hover:text-foreground"
+                    }
+                    aria-pressed={view === "grid"}
+                    onClick={() => setView("grid")}
                   >
                     <LayoutGrid className="h-4 w-4" />
                   </Button>
@@ -176,13 +259,43 @@ export function EntryList() {
                 </Button>
               </div>
             </div>
-            <EntryFilters />
+            <EntryFilters
+              search={searchQuery}
+              status={statusFilter}
+              typeValue={activeSlug ?? (typeOptions[0]?.value ?? "")}
+              typeOptions={typeOptions}
+              author={authorFilter}
+              authorOptions={[]}
+              onSearchChange={setSearchQuery}
+              onStatusChange={setStatusFilter}
+              onTypeChange={handleSelectType}
+              onAuthorChange={setAuthorFilter}
+              onClear={handleClearFilters}
+            />
             {isLoading ? (
               <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
                 Loading entries...
               </div>
+            ) : view === "grid" ? (
+              <EntryGrid
+                entries={filteredEntries}
+                onEdit={handleEditEntry}
+                emptyMessage={
+                  entries.length > 0
+                    ? "No entries match your current filters."
+                    : undefined
+                }
+              />
             ) : (
-              <EntryTable entries={entries} onEdit={handleEditEntry} />
+              <EntryTable
+                entries={filteredEntries}
+                onEdit={handleEditEntry}
+                emptyMessage={
+                  entries.length > 0
+                    ? "No entries match your current filters."
+                    : undefined
+                }
+              />
             )}
           </div>
         </div>

@@ -22,6 +22,7 @@ export type ContentTypeSummary = {
   schema: ContentSchema;
   createdAt: string;
   updatedAt: string;
+  entryCount?: number;
 };
 
 export type ContentTypePayload = {
