@@ -303,8 +303,8 @@ export function SearchResults({
                   )}
                   onMouseDown={(event) => {
                     event.preventDefault();
-                    onSelect?.(item);
                   }}
+                  onClick={() => onSelect?.(item)}
                 >
                   <div>
                     <p className="font-medium">{highlight(item.title, query)}</p>
