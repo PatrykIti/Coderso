@@ -9,7 +9,5 @@ test("AccessLogsPage renders filters and table", () => {
   expect(html).toContain("Access Logs");
   expect(html).toContain("Export CSV");
   expect(html).toContain("Search user or IP");
-  expect(html).toContain("IP Address");
-  expect(html).toContain("Device / Browser");
-  expect(html).toContain("Status");
+  expect(html).toContain("Loading access logs");
 });

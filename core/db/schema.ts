@@ -244,6 +244,29 @@ export const auditLogs = pgTable(
   })
 );
 
+export const accessLogs = pgTable(
+  "access_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    method: text("method").notNull(),
+    path: text("path").notNull(),
+    status: integer("status").notNull(),
+    ip: text("ip"),
+    userAgent: text("user_agent"),
+    userId: uuid("user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    durationMs: integer("duration_ms"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    createdAtIdx: index("access_logs_created_at_idx").on(t.createdAt),
+    statusIdx: index("access_logs_status_idx").on(t.status),
+    pathIdx: index("access_logs_path_idx").on(t.path),
+    userIdx: index("access_logs_user_id_idx").on(t.userId),
+  })
+);
+
 export const contentTypes = pgTable("content_types", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: text("name").notNull(),

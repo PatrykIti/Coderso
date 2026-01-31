@@ -114,6 +114,7 @@ Project Change Log.
 | 087 | 2026-01-30 | Redirects core and UI wiring | CMS/SEO |
 | 088 | 2026-01-31 | Admin sessions API and UI wiring | Admin/Security |
 | 089 | 2026-01-31 | Audit logs UI wiring | Admin/Security |
+| 090 | 2026-01-31 | Access logs core and UI wiring | Admin/Security |
 
 
 ---

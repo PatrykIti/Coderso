@@ -5,7 +5,7 @@
 **Category:** Admin/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-001  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -49,6 +49,6 @@ Add middleware in `core/server/middleware/accessLog.ts` that records on response
 
 - `_docs/SECURITY_SPEC.md` mention retention.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-access-logs-schema.md`
+- `_docs/_CHANGELOG/090-2026-01-31-access-logs-core.md`

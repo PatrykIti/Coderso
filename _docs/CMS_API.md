@@ -647,6 +647,39 @@ Uwaga: Admin UI korzysta z `GET /audit` do listowania logow (limit 200).
 
 ---
 
+## Access logs
+
+Permissions: `audit:read`
+
+- `GET /access-logs?limit=100`
+- Optional filters: `status=success|failed`, `q=search`, `from`, `to`
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "id": "access-id",
+      "method": "POST",
+      "path": "/admin/api/auth/login",
+      "status": 401,
+      "ip": "127.0.0.1",
+      "userAgent": "Mozilla/5.0",
+      "userId": "user-id",
+      "userName": "Admin",
+      "userEmail": "admin@example.com",
+      "durationMs": 120,
+      "createdAt": "2026-01-31T10:00:00Z"
+    }
+  ]
+}
+```
+
+Uwaga: Admin UI korzysta z `GET /access-logs` do listowania (limit 200).
+
+---
+
 ## Settings
 
 Permissions: `settings:read`, `settings:write`

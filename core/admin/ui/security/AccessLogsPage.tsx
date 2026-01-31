@@ -2,11 +2,16 @@ import {
   CalendarDays,
   Download,
   Filter,
+  Laptop,
+  Monitor,
   Search,
   SlidersHorizontal,
+  Smartphone,
+  Terminal,
+  Tablet,
   User,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { isApiClientError } from "@/services/apiClient";
+import { listAccessLogs, type AccessLogRecord } from "@/services/accessLogsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { ExportDialog } from "@/ui/shared/ExportDialog";
@@ -25,15 +32,140 @@ import { AccessLogDetailsDrawer } from "./AccessLogDetailsDrawer";
 import { AccessLogsTable } from "./AccessLogsTable";
 import type { AccessLogItem } from "./types";
 
+type AccessFilterStatus = "all" | "success" | "failed";
+
+const resolveDateRange = (value: string) => {
+  const now = new Date();
+  if (value === "last-7-days") {
+    return { from: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) };
+  }
+  if (value === "last-30-days") {
+    return { from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) };
+  }
+  if (value === "this-month") {
+    return { from: new Date(now.getFullYear(), now.getMonth(), 1) };
+  }
+  return {};
+};
+
+const resolveDevice = (userAgent: string | null) => {
+  if (!userAgent) {
+    return { label: "Unknown device", icon: Monitor };
+  }
+  const ua = userAgent.toLowerCase();
+  if (ua.includes("iphone")) {
+    return { label: "iPhone / iOS", icon: Smartphone };
+  }
+  if (ua.includes("android")) {
+    return { label: "Android / Mobile", icon: Smartphone };
+  }
+  if (ua.includes("ipad")) {
+    return { label: "iPad / iPadOS", icon: Tablet };
+  }
+  if (ua.includes("postman") || ua.includes("curl")) {
+    return { label: "API client", icon: Terminal };
+  }
+  if (ua.includes("windows")) {
+    return { label: "Windows / Desktop", icon: Monitor };
+  }
+  if (ua.includes("mac os") || ua.includes("macintosh")) {
+    return { label: "macOS / Desktop", icon: Laptop };
+  }
+  if (ua.includes("linux")) {
+    return { label: "Linux / Desktop", icon: Monitor };
+  }
+  return { label: "Desktop / Unknown", icon: Monitor };
+};
+
+const mapAccessLog = (log: AccessLogRecord): AccessLogItem => {
+  const timestamp = new Date(log.createdAt);
+  const status = log.status >= 400 ? "failed" : "success";
+  const device = resolveDevice(log.userAgent ?? null);
+  const userName = log.userName ?? log.userEmail ?? "System";
+  const userDetail = log.userEmail ?? "System";
+
+  return {
+    id: log.id,
+    user: {
+      name: userName,
+      detail: userDetail,
+    },
+    ipAddress: log.ip ?? "—",
+    method: log.method,
+    path: log.path,
+    statusCode: log.status,
+    durationMs: log.durationMs ?? null,
+    userAgent: log.userAgent ?? null,
+    device: {
+      label: device.label,
+      icon: device.icon,
+    },
+    timestamp: {
+      date: Number.isNaN(timestamp.getTime())
+        ? "Unknown"
+        : timestamp.toLocaleDateString(),
+      time: Number.isNaN(timestamp.getTime())
+        ? "Unknown"
+        : timestamp.toLocaleTimeString(),
+    },
+    status,
+  };
+};
+
 export function AccessLogsPage() {
   const [selectedLog, setSelectedLog] = useState<AccessLogItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [userFilter, setUserFilter] = useState("all");
+  const [dateRange, setDateRange] = useState("last-7-days");
+  const [statusFilter, setStatusFilter] = useState<AccessFilterStatus>("all");
+  const [logs, setLogs] = useState<AccessLogItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const handleViewLog = (log: AccessLogItem) => {
     setSelectedLog(log);
     setDrawerOpen(true);
   };
+
+  const filters = useMemo(() => {
+    const range = resolveDateRange(dateRange);
+    const normalizedQuery = [query.trim(), userFilter === "all" ? "" : userFilter]
+      .filter(Boolean)
+      .join(" ");
+    return {
+      query: normalizedQuery || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+      from: range.from?.toISOString(),
+    };
+  }, [query, statusFilter, dateRange, userFilter]);
+
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const items = await listAccessLogs({
+        limit: 200,
+        status: filters.status,
+        query: filters.query,
+        from: filters.from,
+      });
+      setLogs(items.map(mapAccessLog));
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to load access logs.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   return (
     <AdminShell
@@ -64,10 +196,12 @@ export function AccessLogsPage() {
             <Input
               placeholder="Search user or IP..."
               className="pl-9"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select defaultValue="all">
+            <Select value={userFilter} onValueChange={setUserFilter}>
               <SelectTrigger className="h-9 w-[160px]">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="User" />
@@ -80,7 +214,7 @@ export function AccessLogsPage() {
               </SelectContent>
             </Select>
 
-            <Select defaultValue="last-7-days">
+            <Select value={dateRange} onValueChange={setDateRange}>
               <SelectTrigger className="h-9 w-[180px]">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Date range" />
@@ -93,7 +227,7 @@ export function AccessLogsPage() {
               </SelectContent>
             </Select>
 
-            <Select defaultValue="all">
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AccessFilterStatus)}>
               <SelectTrigger className="h-9 w-[150px]">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Status" />
@@ -111,7 +245,12 @@ export function AccessLogsPage() {
           </div>
         </div>
 
-        <AccessLogsTable onView={handleViewLog} />
+        {error ? (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
+        <AccessLogsTable logs={logs} isLoading={isLoading} onView={handleViewLog} />
       </div>
       <AccessLogDetailsDrawer
         log={selectedLog}

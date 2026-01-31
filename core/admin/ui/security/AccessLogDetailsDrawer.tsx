@@ -53,7 +53,7 @@ export function AccessLogDetailsDrawer({
                       Status
                     </span>
                     <Badge variant="outline" className="text-[10px] uppercase">
-                      {log.status}
+                      {log.status} ({log.statusCode})
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border p-3">
@@ -78,6 +78,22 @@ export function AccessLogDetailsDrawer({
                     </span>
                     <span className="text-xs text-foreground">
                       {log.timestamp.date} · {log.timestamp.time}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">
+                      Request
+                    </span>
+                    <span className="text-xs font-mono text-foreground">
+                      {log.method} {log.path}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <span className="text-xs font-semibold uppercase text-muted-foreground">
+                      Duration
+                    </span>
+                    <span className="text-xs text-foreground">
+                      {log.durationMs ? `${log.durationMs} ms` : "—"}
                     </span>
                   </div>
                 </div>

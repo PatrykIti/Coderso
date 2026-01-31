@@ -1,12 +1,4 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  Laptop,
-  Monitor,
-  MoreHorizontal,
-  Smartphone,
-  Terminal,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -24,77 +16,6 @@ import { cn } from "@/lib/utils";
 
 import type { AccessLogItem, AccessLogStatus } from "./types";
 
-const accessLogs: AccessLogItem[] = [
-  {
-    id: "log-1",
-    user: {
-      name: "Alex Rivers",
-      detail: "alex@nextless.io",
-    },
-    ipAddress: "192.168.1.42",
-    device: {
-      label: "Chrome / macOS",
-      icon: Monitor,
-    },
-    timestamp: {
-      date: "Oct 19, 2023",
-      time: "14:23:45",
-    },
-    status: "success",
-  },
-  {
-    id: "log-2",
-    user: {
-      name: "Sarah Chen",
-      detail: "s.chen@nextless.io",
-    },
-    ipAddress: "104.28.14.9",
-    device: {
-      label: "Safari / iPhone",
-      icon: Smartphone,
-    },
-    timestamp: {
-      date: "Oct 19, 2023",
-      time: "12:15:02",
-    },
-    status: "failed",
-  },
-  {
-    id: "log-3",
-    user: {
-      name: "Jordan Smith",
-      detail: "jsmith@nextless.io",
-    },
-    ipAddress: "82.165.23.111",
-    device: {
-      label: "Firefox / Windows",
-      icon: Laptop,
-    },
-    timestamp: {
-      date: "Oct 18, 2023",
-      time: "22:45:18",
-    },
-    status: "success",
-  },
-  {
-    id: "log-4",
-    user: {
-      name: "External API",
-      detail: "Service Account",
-    },
-    ipAddress: "35.192.10.4",
-    device: {
-      label: "Postman / Linux",
-      icon: Terminal,
-    },
-    timestamp: {
-      date: "Oct 18, 2023",
-      time: "09:12:33",
-    },
-    status: "success",
-  },
-];
-
 const statusStyles: Record<AccessLogStatus, string> = {
   success: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
   failed: "bg-rose-500/10 text-rose-600 border-rose-500/20",
@@ -110,10 +31,14 @@ function getInitials(name: string) {
 }
 
 type AccessLogsTableProps = {
+  logs: AccessLogItem[];
+  isLoading?: boolean;
   onView?: (log: AccessLogItem) => void;
 };
 
-export function AccessLogsTable({ onView }: AccessLogsTableProps) {
+export function AccessLogsTable({ logs, isLoading = false, onView }: AccessLogsTableProps) {
+  const countLabel = logs.length === 0 ? "0" : `1 - ${logs.length}`;
+
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -140,7 +65,20 @@ export function AccessLogsTable({ onView }: AccessLogsTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {accessLogs.map((log) => {
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
+                Loading access logs...
+              </TableCell>
+            </TableRow>
+          ) : logs.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="px-6 py-6 text-sm text-muted-foreground">
+                No access logs found.
+              </TableCell>
+            </TableRow>
+          ) : (
+            logs.map((log) => {
             const DeviceIcon = log.device.icon;
 
             return (
@@ -202,14 +140,14 @@ export function AccessLogsTable({ onView }: AccessLogsTableProps) {
                 </TableCell>
               </TableRow>
             );
-          })}
+          }))}
         </TableBody>
       </Table>
       <Separator />
       <div className="flex flex-col gap-3 px-6 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
         <p>
-          Showing <span className="font-semibold text-foreground">1 - 4</span> of
-          152 logs
+          Showing <span className="font-semibold text-foreground">{countLabel}</span> of
+          {logs.length} logs
         </p>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon-sm" disabled>

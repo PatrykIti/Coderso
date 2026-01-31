@@ -8,6 +8,7 @@ import { requirePermission } from "./middleware/rbac";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { createRequestIdContext } from "./middleware/requestId";
 import { applySecurityHeaders } from "./middleware/securityHeaders";
+import { recordAccessLog } from "./middleware/accessLog";
 import { createRouter, matchRoute, normalizePath, type RouteContext } from "./router";
 import { registerAllRoutes } from "./routes";
 import { validate } from "./validation/schemaValidator";
@@ -163,6 +164,7 @@ const handleApi = async (req: Request) => {
   const pathname = normalizePath(url.pathname).replace(API_PREFIX, "") || "/";
   const security = await getSecuritySettings();
   const requestContext = createRequestIdContext(security.requestId);
+  const requestStart = requestContext?.requestStart ?? Date.now();
   const responseHeaders = new Headers();
   if (requestContext) {
     responseHeaders.set(requestContext.headerName, requestContext.requestId);
@@ -226,15 +228,44 @@ const handleApi = async (req: Request) => {
         const output = await handler(ctx);
         if (output !== undefined) result = output;
       }
-      return jsonResponse(result ?? { ok: true }, { headers: responseHeaders });
+      const response = jsonResponse(result ?? { ok: true }, { headers: responseHeaders });
+      void recordAccessLog({
+        method: req.method,
+        path: url.pathname,
+        status: response.status,
+        ip: ctx.ip ?? null,
+        userAgent: ctx.userAgent ?? null,
+        userId: ctx.user?.id ?? null,
+        durationMs: Date.now() - requestStart,
+      });
+      return response;
     } catch (error) {
       const response = errorResponse(error);
       responseHeaders.forEach((value, key) => response.headers.append(key, value));
+      void recordAccessLog({
+        method: req.method,
+        path: url.pathname,
+        status: response.status,
+        ip: ctx.ip ?? null,
+        userAgent: ctx.userAgent ?? null,
+        userId: ctx.user?.id ?? null,
+        durationMs: Date.now() - requestStart,
+      });
       return response;
     }
   }
 
-  return new Response("Not Found", { status: 404, headers: responseHeaders });
+  const response = new Response("Not Found", { status: 404, headers: responseHeaders });
+  void recordAccessLog({
+    method: req.method,
+    path: url.pathname,
+    status: response.status,
+    ip: resolveIp(req) ?? null,
+    userAgent: req.headers.get("user-agent") ?? null,
+    userId: null,
+    durationMs: Date.now() - requestStart,
+  });
+  return response;
 };
 
 const handleMedia = async (req: Request) => {

@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-035-02, TASK-006-30  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -16,8 +16,8 @@ Wire Access Logs UI to real API.
 ## UI Scope
 
 Use:
-- `core/admin/ui/access-logs/AccessLogsPage.tsx`
-- `core/admin/ui/access-logs/AccessLogDetailsDrawer.tsx`
+- `core/admin/ui/security/AccessLogsPage.tsx`
+- `core/admin/ui/security/AccessLogDetailsDrawer.tsx`
 
 ## Implementation Checklist
 
@@ -36,6 +36,6 @@ Use:
 
 - `_docs/CMS_API.md` access logs UI usage.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-access-logs-ui-wiring.md`
+- `_docs/_CHANGELOG/090-2026-01-31-access-logs-core.md`

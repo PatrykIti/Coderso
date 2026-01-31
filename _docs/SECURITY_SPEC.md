@@ -87,6 +87,13 @@ Rotacja klucza:
 - Metadata jest czyszczona z sekretow (token/password/secret).
 - `ip` i `userAgent` zapisywane w metadata jesli dostepne.
 
+## Access logs (v1.0)
+
+- Logujemy requesty admin API (method, path, status, ip, userAgent, userId, durationMs).
+- Dane trafiaja do `access_logs`.
+- Uzywane w panelu: Security → Access Logs.
+- Retencja: v1 nie ma automatycznego czyszczenia; rekomendowany pruning w v2 (np. 90 dni).
+
 ## Session policy
 
 - Konfigurowalne w Admin UI: Settings → Security → Session Limits.

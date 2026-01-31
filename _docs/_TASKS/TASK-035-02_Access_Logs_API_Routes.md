@@ -5,7 +5,7 @@
 **Category:** Admin/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-035-01, TASK-020  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -31,6 +31,6 @@ Add `core/server/routes/accessLogRoutes.ts`:
 
 - `_docs/CMS_API.md` add access logs endpoint.
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-access-logs-api.md`
+- `_docs/_CHANGELOG/090-2026-01-31-access-logs-core.md`

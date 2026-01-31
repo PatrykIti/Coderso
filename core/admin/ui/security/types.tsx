@@ -9,6 +9,11 @@ export type AccessLogItem = {
     detail: string;
   };
   ipAddress: string;
+  method: string;
+  path: string;
+  statusCode: number;
+  durationMs?: number | null;
+  userAgent?: string | null;
   device: {
     label: string;
     icon: LucideIcon;
