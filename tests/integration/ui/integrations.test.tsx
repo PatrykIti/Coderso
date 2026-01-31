@@ -3,9 +3,8 @@ import { renderToString } from "react-dom/server";
 
 import { IntegrationsPage } from "../../../core/admin/ui/settings/IntegrationsPage";
 
-test("IntegrationsPage renders integrations shell", () => {
+test("IntegrationsPage renders", () => {
   const html = renderToString(<IntegrationsPage />);
-
   expect(html).toContain("Integrations");
   expect(html).toContain("Request new");
 });

@@ -162,6 +162,13 @@
       "when": 1769863324768,
       "tag": "0022_safe_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1769868157894,
+      "tag": "0023_awesome_groot",
+      "breakpoints": true
     }
   ]
 }

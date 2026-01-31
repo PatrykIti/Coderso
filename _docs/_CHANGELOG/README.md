@@ -129,6 +129,9 @@ Project Change Log.
 | 102 | 2026-01-31 | Email settings service | Core/Email |
 | 103 | 2026-01-31 | Email settings API | Core/Email |
 | 104 | 2026-01-31 | Email settings UI | Admin/UI |
+| 105 | 2026-01-31 | Integrations service | Core/Integrations |
+| 106 | 2026-01-31 | Integrations API | Core/Integrations |
+| 107 | 2026-01-31 | Integrations UI | Admin/UI |
 
 
 ---

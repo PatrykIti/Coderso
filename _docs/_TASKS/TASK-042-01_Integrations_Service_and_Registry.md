@@ -5,7 +5,7 @@
 **Category:** Settings/Integrations  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-007-01  
-**Status:** To Do
+**Status:** Done
 
 ---
 

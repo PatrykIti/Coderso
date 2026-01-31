@@ -319,6 +319,72 @@ Test endpoint wysyla przykladowy payload i zwraca rezultat delivery.
 
 ---
 
+## Integrations (v1)
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /settings/integrations`
+- `GET /settings/integrations/:id`
+- `PATCH /settings/integrations/:id`
+- `POST /settings/integrations/requests`
+
+List response (summary):
+
+```json
+{
+  "items": [
+    {
+      "id": "slack",
+      "name": "Slack",
+      "description": "Send instant notifications to team channels.",
+      "category": "Communication",
+      "scopes": ["notifications:send", "events:read"],
+      "status": "connected",
+      "health": {
+        "status": "healthy",
+        "lastCheckedAt": null,
+        "lastError": null
+      },
+      "updatedAt": "2026-01-31T11:00:00Z",
+      "fields": [
+        {
+          "key": "webhookUrl",
+          "label": "Webhook URL",
+          "type": "secret",
+          "required": true,
+          "secret": true,
+          "value": null,
+          "configured": true
+        }
+      ]
+    }
+  ]
+}
+```
+
+Update payload (summary):
+
+```json
+{
+  "config": {
+    "measurementId": "G-XXXXXXX",
+    "webhookUrl": "https://hooks.example.com/..."
+  }
+}
+```
+
+Request payload (summary):
+
+```json
+{
+  "name": "HubSpot",
+  "website": "https://hubspot.com",
+  "notes": "Need CRM sync"
+}
+```
+
+---
+
 ## Email Settings (v1)
 
 Permissions: `settings:read`, `settings:write`

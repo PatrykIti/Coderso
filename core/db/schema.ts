@@ -145,6 +145,39 @@ export const emailDeliveryLogs = pgTable(
   })
 );
 
+export const integrations = pgTable(
+  "integrations",
+  {
+    id: text("id").primaryKey(),
+    config: jsonb("config").notNull(),
+    status: text("status").notNull().default("disconnected"),
+    healthStatus: text("health_status").notNull().default("unknown"),
+    lastCheckedAt: timestamp("last_checked_at"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    statusIdx: index("integrations_status_idx").on(t.status),
+    healthIdx: index("integrations_health_idx").on(t.healthStatus),
+  })
+);
+
+export const integrationRequests = pgTable(
+  "integration_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    website: text("website"),
+    notes: text("notes"),
+    status: text("status").notNull().default("pending"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    statusIdx: index("integration_requests_status_idx").on(t.status),
+  })
+);
+
 export const passwordResets = pgTable(
   "password_resets",
   {

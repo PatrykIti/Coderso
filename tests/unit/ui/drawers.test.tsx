@@ -150,9 +150,21 @@ test("IntegrationDrawer renders integration", () => {
       open
       onOpenChange={() => undefined}
       integration={{
+        id: "slack",
         name: "Slack",
         status: "connected",
         description: "Team notifications",
+        scopes: ["notifications:send"],
+        fields: [
+          {
+            key: "webhookUrl",
+            label: "Webhook URL",
+            type: "secret",
+            required: true,
+            configured: true,
+            value: null,
+          },
+        ],
       }}
     />
   );
