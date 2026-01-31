@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -36,7 +37,7 @@ type EntryCreateDrawerProps = {
   onOpenChange: (open: boolean) => void;
   types: Array<{ id: string; slug: string; name: string }>;
   defaultTypeSlug?: string | null;
-  onCreated?: (entry: EntryDetail, typeSlug: string) => void;
+  onCreated?: (entry: EntryDetail, typeSlug: string, openAfterCreate: boolean) => void;
 };
 
 export function EntryCreateDrawer({
@@ -50,6 +51,7 @@ export function EntryCreateDrawer({
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
+  const [openAfterCreate, setOpenAfterCreate] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -64,6 +66,7 @@ export function EntryCreateDrawer({
     setTitle("");
     setSlug("");
     setSlugTouched(false);
+    setOpenAfterCreate(true);
     setError(null);
     setIsSaving(false);
   }, [open]);
@@ -85,7 +88,7 @@ export function EntryCreateDrawer({
         slug: slug.trim(),
         data: {},
       });
-      onCreated?.(created, typeSlug);
+      onCreated?.(created, typeSlug, openAfterCreate);
       onOpenChange(false);
     } catch (err) {
       if (isApiClientError(err)) {
@@ -182,13 +185,28 @@ export function EntryCreateDrawer({
         </div>
         <Separator />
         <div className="bg-muted/30 px-6 py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isDisabled}>
-              {isSaving ? "Creating..." : "Create Draft"}
-            </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label
+              htmlFor="entry-open-after-create"
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              <Checkbox
+                id="entry-open-after-create"
+                checked={openAfterCreate}
+                onCheckedChange={(checked) =>
+                  setOpenAfterCreate(checked === true)
+                }
+              />
+              Open in editor after create
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit} disabled={isDisabled}>
+                {isSaving ? "Creating..." : "Create Draft"}
+              </Button>
+            </div>
           </div>
         </div>
       </SheetContent>

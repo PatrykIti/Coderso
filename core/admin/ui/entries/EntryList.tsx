@@ -177,7 +177,18 @@ export function EntryList() {
     setActiveSlug(slug);
   };
 
-  const handleEntryCreated = (entry: { id: string }, typeSlug: string) => {
+  const handleEntryCreated = (
+    entry: { id: string },
+    typeSlug: string,
+    openAfterCreate: boolean
+  ) => {
+    setTypes((prev) =>
+      prev.map((type) =>
+        type.slug === typeSlug
+          ? { ...type, entryCount: (type.entryCount ?? 0) + 1 }
+          : type
+      )
+    );
     if (typeSlug === activeSlug) {
       listEntries(typeSlug).then((result) => {
         setEntries(result);
@@ -190,8 +201,10 @@ export function EntryList() {
         );
       });
     }
-    if (typeof window !== "undefined") {
-      window.location.assign(`/admin/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`);
+    if (openAfterCreate && typeof window !== "undefined") {
+      window.location.assign(
+        `/admin/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`
+      );
     }
   };
 
