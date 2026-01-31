@@ -43,6 +43,7 @@ type EntryTableProps = {
   entries: EntrySummary[];
   emptyMessage?: string;
   onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
 };
 
 const formatUpdatedAt = (value?: string | null) => {
@@ -58,9 +59,11 @@ const formatUpdatedAt = (value?: string | null) => {
 
 function EntryRowActions({
   onEdit,
+  onDelete,
   entryId,
 }: {
   onEdit?: (id: string) => void;
+  onDelete?: (id: string) => void;
   entryId: string;
 }) {
   return (
@@ -80,7 +83,7 @@ function EntryRowActions({
           Duplicate
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive">
+        <DropdownMenuItem variant="destructive" onClick={() => onDelete?.(entryId)}>
           <Trash2 className="h-4 w-4" />
           Delete
         </DropdownMenuItem>
@@ -89,7 +92,12 @@ function EntryRowActions({
   );
 }
 
-export function EntryTable({ entries, emptyMessage, onEdit }: EntryTableProps) {
+export function EntryTable({
+  entries,
+  emptyMessage,
+  onEdit,
+  onDelete,
+}: EntryTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <Table>
@@ -166,7 +174,11 @@ export function EntryTable({ entries, emptyMessage, onEdit }: EntryTableProps) {
                 </TableCell>
                 <TableCell className="pr-4 text-right">
                   <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
-                    <EntryRowActions onEdit={onEdit} entryId={entry.id} />
+                    <EntryRowActions
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      entryId={entry.id}
+                    />
                   </div>
                 </TableCell>
               </TableRow>

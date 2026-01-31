@@ -99,6 +99,14 @@ export async function getEntry(id: string) {
   return row ?? null;
 }
 
+export async function deleteEntry(id: string) {
+  const [row] = await db
+    .delete(contentEntries)
+    .where(eq(contentEntries.id, id))
+    .returning();
+  return row ?? null;
+}
+
 export async function getEntryBySlug(typeId: string, slug: string) {
   const [row] = await db
     .select()

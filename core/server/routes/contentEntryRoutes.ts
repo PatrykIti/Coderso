@@ -1,6 +1,7 @@
 import {
   createEntry,
   createEntryPreview,
+  deleteEntry,
   getEntry,
   listEntries,
   publishEntry,
@@ -27,6 +28,7 @@ export type Router = {
   get: (path: string, ...handlers: RouteHandler[]) => void;
   post: (path: string, ...handlers: RouteHandler[]) => void;
   patch: (path: string, ...handlers: RouteHandler[]) => void;
+  delete: (path: string, ...handlers: RouteHandler[]) => void;
 };
 
 export type ContentEntryRouteDeps = {
@@ -95,6 +97,19 @@ export function registerContentEntryRoutes(
         data?: Record<string, unknown>;
       };
       return updateEntry(entry.id, body);
+    }
+  );
+
+  router.delete(
+    "/content/:type/entries/:id",
+    requirePermission("content:write"),
+    async (ctx) => {
+      const type = await getContentTypeBySlug(ctx.params.type);
+      if (!type) throw new Error("content_type_not_found");
+      const entry = await getEntry(ctx.params.id);
+      if (!entry || entry.typeId !== type.id) throw new Error("entry_not_found");
+      await deleteEntry(entry.id);
+      return { ok: true };
     }
   );
 

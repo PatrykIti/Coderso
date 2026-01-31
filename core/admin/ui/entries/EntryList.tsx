@@ -9,7 +9,7 @@ import {
   listContentTypes,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
-import { listEntries } from "@/services/entriesClient";
+import { deleteEntry, listEntries } from "@/services/entriesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 
 import { ContentTypeCreateDrawer } from "../content-types/ContentTypeCreateDrawer";
@@ -141,6 +141,33 @@ export function EntryList() {
   const handleEditEntry = (id: string) => {
     if (typeof window !== "undefined" && activeSlug) {
       window.location.assign(`/admin/entries/${encodeURIComponent(activeSlug)}/${encodeURIComponent(id)}`);
+    }
+  };
+
+  const handleDeleteEntry = async (id: string) => {
+    if (!activeSlug) return;
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm("Delete this entry? This cannot be undone.");
+      if (!confirmed) return;
+    }
+    setError(null);
+    try {
+      await deleteEntry(activeSlug, id);
+      const updated = await listEntries(activeSlug);
+      setEntries(updated);
+      setTypes((prev) =>
+        prev.map((type) =>
+          type.slug === activeSlug
+            ? { ...type, entryCount: updated.length }
+            : type
+        )
+      );
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to delete entry.");
+      }
     }
   };
 
@@ -304,6 +331,7 @@ export function EntryList() {
               <EntryTable
                 entries={filteredEntries}
                 onEdit={handleEditEntry}
+                onDelete={handleDeleteEntry}
                 emptyMessage={
                   entries.length > 0
                     ? "No entries match your current filters."

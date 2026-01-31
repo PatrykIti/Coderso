@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import {
   createEntry,
+  deleteEntry,
   getEntry,
   listEntries,
   previewEntry,
@@ -168,6 +169,30 @@ test("unpublishEntry uses CSRF", async () => {
     await unpublishEntry("blog", "entry-1");
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/content/blog/entries/entry-1/unpublish");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("deleteEntry uses CSRF and DELETE", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ ok: true });
+  };
+
+  try {
+    resetCsrfToken();
+    await deleteEntry("blog", "entry-1");
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/content/blog/entries/entry-1");
+    expect(calls[1]?.init?.method).toBe("DELETE");
   } finally {
     globalThis.fetch = originalFetch;
   }

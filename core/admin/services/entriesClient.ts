@@ -106,3 +106,11 @@ export async function unpublishEntry(typeSlug: string, id: string) {
     { withCsrf: true }
   );
 }
+
+export async function deleteEntry(typeSlug: string, id: string) {
+  return apiRequest<{ ok: boolean }>(
+    `/content/${typeSlug}/entries/${id}`,
+    { method: "DELETE" },
+    { withCsrf: true }
+  );
+}
