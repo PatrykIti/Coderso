@@ -60,7 +60,7 @@ export function AdminShell({
         footerItems={footerItems}
         activeHref={activeHref}
       />
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <TopBar
           breadcrumbs={breadcrumbs}
           search={showSearch ? (search ?? <SearchBar />) : search}
