@@ -72,6 +72,9 @@ type SecurityFormState = {
   sessionTtlDays: string;
   sessionMaxPerUser: string;
   sessionSingleSession: boolean;
+  loginAlertsEnabled: boolean;
+  loginAlertsNewDevice: boolean;
+  loginAlertsNewLocation: boolean;
 };
 
 const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => ({
@@ -102,6 +105,9 @@ const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => (
   sessionTtlDays: String(settings.session.ttlDays),
   sessionMaxPerUser: String(settings.session.maxPerUser),
   sessionSingleSession: settings.session.singleSession,
+  loginAlertsEnabled: settings.loginAlerts.enabled,
+  loginAlertsNewDevice: settings.loginAlerts.notifyOnNewDevice,
+  loginAlertsNewLocation: settings.loginAlerts.notifyOnNewLocation,
 });
 
 const defaultFormState: SecurityFormState = {
@@ -132,6 +138,9 @@ const defaultFormState: SecurityFormState = {
   sessionTtlDays: "7",
   sessionMaxPerUser: "3",
   sessionSingleSession: false,
+  loginAlertsEnabled: true,
+  loginAlertsNewDevice: true,
+  loginAlertsNewLocation: true,
 };
 
 export function SecuritySettingsPage() {
@@ -273,6 +282,11 @@ export function SecuritySettingsPage() {
           ttlDays: parsePositiveNumber(form.sessionTtlDays, "session_ttl"),
           maxPerUser: parsePositiveNumber(form.sessionMaxPerUser, "session_max"),
           singleSession: form.sessionSingleSession,
+        },
+        loginAlerts: {
+          enabled: form.loginAlertsEnabled,
+          notifyOnNewDevice: form.loginAlertsNewDevice,
+          notifyOnNewLocation: form.loginAlertsNewLocation,
         },
       };
 
@@ -781,6 +795,11 @@ export function SecuritySettingsPage() {
               description="Get notified whenever someone logs in from a new device, browser, or location."
               icon={<BellRing className="h-4 w-4" />}
               iconWrapperClassName="bg-primary/10 text-primary"
+              checked={form.loginAlertsEnabled}
+              onCheckedChange={(value) =>
+                handleFieldChange("loginAlertsEnabled", value)
+              }
+              disabled={busy}
             />
 
             <div className="flex flex-wrap justify-end gap-3">

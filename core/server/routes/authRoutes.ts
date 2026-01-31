@@ -4,6 +4,8 @@ import {
   buildSessionCookieOptions,
   createCsrfToken,
   createSession,
+  evaluateLoginAlert,
+  getLastSessionFingerprint,
   revokeAllSessions,
   revokeSessionByToken,
   SESSION_COOKIE_NAME,
@@ -16,6 +18,7 @@ import {
 } from "../../services/auth/userService";
 import { hashPassword, verifyPassword } from "../../services/auth/password";
 import { logAudit } from "../../services/audit/auditService";
+import { getSecuritySettings } from "../../services/settings/securitySettings";
 import {
   authLoginSchema,
   authResetConfirmSchema,
@@ -68,6 +71,13 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       throw new ApiError("auth_failed", "Invalid credentials", 401);
     }
 
+    const securitySettings = await getSecuritySettings();
+    const lastFingerprint = await getLastSessionFingerprint(user.id);
+    const alertFlags = evaluateLoginAlert(lastFingerprint, {
+      ip: ctx.ip ?? null,
+      userAgent: ctx.userAgent ?? null,
+    });
+
     const { token, session, ttlDays } = await createSession({
       userId: user.id,
       ip: ctx.ip,
@@ -86,6 +96,28 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       ip: ctx.ip,
       userAgent: ctx.userAgent,
     });
+
+    const shouldAlert =
+      securitySettings.loginAlerts.enabled &&
+      ((securitySettings.loginAlerts.notifyOnNewDevice && alertFlags.newDevice) ||
+        (securitySettings.loginAlerts.notifyOnNewLocation && alertFlags.newLocation));
+
+    if (shouldAlert) {
+      await logAudit({
+        actorId: user.id,
+        action: "auth.login.alert",
+        targetType: "user",
+        targetId: user.id,
+        metadata: {
+          newDevice: alertFlags.newDevice,
+          newLocation: alertFlags.newLocation,
+          lastIp: lastFingerprint?.ip ?? null,
+          lastUserAgent: lastFingerprint?.userAgent ?? null,
+        },
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+      });
+    }
 
     return {
       user: toPublicUser(user),

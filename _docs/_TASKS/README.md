@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 33 tasks
+- **To Do:** 30 tasks
 - **In Progress:** 0
-- **Done:** 163 tasks
+- **Done:** 166 tasks
 
 ---
 
@@ -41,9 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-037 | Login Alerts Core and UI | Medium | Medium | settings + alerts |
-| TASK-037-01 | Login Alerts Settings | Medium | Medium | security settings |
-| TASK-037-02 | Login Alerts UI Wiring | Medium | Medium | UI -> API |
 | TASK-038 | Forms Core and UI | Medium | Large | Forms CRUD + submissions |
 | TASK-038-01 | Forms DB Schema | Medium | Medium | forms + fields + submissions |
 | TASK-038-02 | Forms Service and Validation | Medium | Medium | CRUD + validation |
@@ -125,6 +122,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-036-01 | IP Allowlist Service | Medium | Medium | CRUD + CIDR |
 | TASK-036-02 | IP Allowlist API and Middleware | Medium | Medium | /ip-allowlist |
 | TASK-036-03 | IP Allowlist UI Wiring | Medium | Medium | UI -> API |
+| TASK-037 | Login Alerts Core and UI | Medium | Medium | settings + alerts |
+| TASK-037-01 | Login Alerts Settings | Medium | Medium | security settings |
+| TASK-037-02 | Login Alerts UI Wiring | Medium | Medium | UI -> API |
 | TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..05 |
 | TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
 | TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |

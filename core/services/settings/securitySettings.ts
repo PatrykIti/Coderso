@@ -45,6 +45,11 @@ export type SecuritySettings = {
     maxPerUser: number;
     singleSession: boolean;
   };
+  loginAlerts: {
+    enabled: boolean;
+    notifyOnNewDevice: boolean;
+    notifyOnNewLocation: boolean;
+  };
 };
 
 export type SecuritySettingsUpdate = {
@@ -60,6 +65,7 @@ export type SecuritySettingsUpdate = {
   validation?: Partial<SecuritySettings["validation"]>;
   plugins?: Partial<SecuritySettings["plugins"]>;
   session?: Partial<SecuritySettings["session"]>;
+  loginAlerts?: Partial<SecuritySettings["loginAlerts"]>;
 };
 
 const SECURITY_SETTINGS_KEY = "security.settings";
@@ -105,6 +111,11 @@ const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
     ttlDays: 7,
     maxPerUser: 3,
     singleSession: false,
+  },
+  loginAlerts: {
+    enabled: true,
+    notifyOnNewDevice: true,
+    notifyOnNewLocation: true,
   },
 };
 
@@ -211,6 +222,7 @@ const mergeSecuritySettings = (
   assertObjectOrUndefined(update.validation);
   assertObjectOrUndefined(update.plugins);
   assertObjectOrUndefined(update.session);
+  assertObjectOrUndefined(update.loginAlerts);
   assertObjectOrUndefined(update.rateLimit?.admin);
   assertObjectOrUndefined(update.rateLimit?.auth);
 
@@ -223,6 +235,7 @@ const mergeSecuritySettings = (
     "validation",
     "plugins",
     "session",
+    "loginAlerts",
   ]);
   if (update.requestId) {
     assertAllowedKeys(update.requestId, ["enabled", "headerName"]);
@@ -267,6 +280,13 @@ const mergeSecuritySettings = (
   }
   if (update.session) {
     assertAllowedKeys(update.session, ["ttlDays", "maxPerUser", "singleSession"]);
+  }
+  if (update.loginAlerts) {
+    assertAllowedKeys(update.loginAlerts, [
+      "enabled",
+      "notifyOnNewDevice",
+      "notifyOnNewLocation",
+    ]);
   }
 
   const requestId = {
@@ -368,6 +388,18 @@ const mergeSecuritySettings = (
     singleSession: normalizeBoolean(update.session?.singleSession, base.session.singleSession),
   };
 
+  const loginAlerts = {
+    enabled: normalizeBoolean(update.loginAlerts?.enabled, base.loginAlerts.enabled),
+    notifyOnNewDevice: normalizeBoolean(
+      update.loginAlerts?.notifyOnNewDevice,
+      base.loginAlerts.notifyOnNewDevice
+    ),
+    notifyOnNewLocation: normalizeBoolean(
+      update.loginAlerts?.notifyOnNewLocation,
+      base.loginAlerts.notifyOnNewLocation
+    ),
+  };
+
   return {
     requestId,
     csrf,
@@ -377,6 +409,7 @@ const mergeSecuritySettings = (
     validation,
     plugins,
     session,
+    loginAlerts,
   };
 };
 

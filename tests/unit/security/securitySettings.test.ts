@@ -47,6 +47,11 @@ testIfDb("getSecuritySettings returns defaults when missing", async () => {
     maxPerUser: 3,
     singleSession: false,
   });
+  expect(current.loginAlerts).toEqual({
+    enabled: true,
+    notifyOnNewDevice: true,
+    notifyOnNewLocation: true,
+  });
 });
 
 testIfDb("setSecuritySettings merges partial updates", async () => {
@@ -56,6 +61,7 @@ testIfDb("setSecuritySettings merges partial updates", async () => {
     rateLimit: { admin: { maxRequests: 50 } },
     plugins: { safeMode: true },
     session: { ttlDays: 5, maxPerUser: 2, singleSession: true },
+    loginAlerts: { enabled: false, notifyOnNewDevice: false },
   });
 
   const updated = await getSecuritySettings();
@@ -69,6 +75,9 @@ testIfDb("setSecuritySettings merges partial updates", async () => {
   expect(updated.session.ttlDays).toBe(5);
   expect(updated.session.maxPerUser).toBe(2);
   expect(updated.session.singleSession).toBe(true);
+  expect(updated.loginAlerts.enabled).toBe(false);
+  expect(updated.loginAlerts.notifyOnNewDevice).toBe(false);
+  expect(updated.loginAlerts.notifyOnNewLocation).toBe(true);
 });
 
 testIfDb("setSecuritySettings validates input", async () => {

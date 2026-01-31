@@ -782,6 +782,11 @@ Permissions: `settings:read`, `settings:write`
     "ttlDays": 7,
     "maxPerUser": 3,
     "singleSession": false
+  },
+  "loginAlerts": {
+    "enabled": true,
+    "notifyOnNewDevice": true,
+    "notifyOnNewLocation": true
   }
 }
 ```

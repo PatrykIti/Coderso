@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db } from "../../db/client";
 import { sessions } from "../../db/schema";
 import { getSecuritySettings } from "../settings/securitySettings";
@@ -8,6 +8,16 @@ export const SESSION_COOKIE_NAME = "session";
 export const DEFAULT_SESSION_TTL_DAYS = 7;
 
 export type SessionRow = typeof sessions.$inferSelect;
+
+export type SessionFingerprint = {
+  ip: string | null;
+  userAgent: string | null;
+};
+
+export type LoginAlertFlags = {
+  newDevice: boolean;
+  newLocation: boolean;
+};
 
 export type CreateSessionInput = {
   userId: string;
@@ -57,6 +67,33 @@ export function createCsrfToken() {
   const issuedAt = Date.now();
   const token = `${issuedAt}.${generateToken()}`;
   return { token, tokenHash: hashToken(token), issuedAt };
+}
+
+export async function getLastSessionFingerprint(userId: string) {
+  const [row] = await db
+    .select({ ip: sessions.ip, userAgent: sessions.userAgent })
+    .from(sessions)
+    .where(eq(sessions.userId, userId))
+    .orderBy(desc(sessions.createdAt))
+    .limit(1);
+
+  return row ?? null;
+}
+
+export function evaluateLoginAlert(
+  previous: SessionFingerprint | null,
+  current: SessionFingerprint
+): LoginAlertFlags {
+  if (!previous) {
+    return { newDevice: false, newLocation: false };
+  }
+
+  const newDevice = Boolean(
+    previous.userAgent && current.userAgent && previous.userAgent !== current.userAgent
+  );
+  const newLocation = Boolean(previous.ip && current.ip && previous.ip !== current.ip);
+
+  return { newDevice, newLocation };
 }
 
 async function getSessionPolicy() {

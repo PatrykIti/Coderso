@@ -116,6 +116,8 @@ Project Change Log.
 | 089 | 2026-01-31 | Audit logs UI wiring | Admin/Security |
 | 090 | 2026-01-31 | Access logs core and UI wiring | Admin/Security |
 | 091 | 2026-01-31 | IP allowlist core and UI wiring | Admin/Security |
+| 092 | 2026-01-31 | Login alerts settings | Admin/Security |
+| 093 | 2026-01-31 | Login alerts UI wiring | Admin/UI |
 
 
 ---

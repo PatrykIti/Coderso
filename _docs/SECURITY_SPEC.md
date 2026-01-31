@@ -111,6 +111,19 @@ Rotacja klucza:
   - `session.singleSession` (domyslnie false)
 - `singleSession` uniewaznia poprzednie sesje przy nowym logowaniu.
 
+## Login alerts (v1.0)
+
+- Konfigurowalne w Admin UI: Settings → Security → Login Alerts.
+- Pola:
+  - `loginAlerts.enabled`
+  - `loginAlerts.notifyOnNewDevice`
+  - `loginAlerts.notifyOnNewLocation` (proxy: zmiana IP)
+- W momencie logowania porownujemy `ip` i `userAgent` z ostatnia sesja.
+- Gdy ustawienia aktywne i wykryjemy zmiane, zapisujemy audit event:
+  - `action = auth.login.alert`
+  - `metadata = { newDevice, newLocation, lastIp, lastUserAgent }`
+- Wysylka email/SMS/webhook w v2 (v1 tylko audit).
+
 ## Plugin security
 
 - Permissions gate na API core.

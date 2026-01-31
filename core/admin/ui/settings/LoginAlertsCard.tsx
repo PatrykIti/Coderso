@@ -9,6 +9,8 @@ export type LoginAlertsCardProps = {
   description: string;
   icon?: React.ReactNode;
   checked?: boolean;
+  onCheckedChange?: (value: boolean) => void;
+  disabled?: boolean;
   className?: string;
   contentClassName?: string;
   iconWrapperClassName?: string;
@@ -20,11 +22,17 @@ export function LoginAlertsCard({
   description,
   icon,
   checked = true,
+  onCheckedChange,
+  disabled = false,
   className,
   contentClassName,
   iconWrapperClassName,
   switchSize = "default",
 }: LoginAlertsCardProps) {
+  const switchProps = onCheckedChange
+    ? { checked, onCheckedChange }
+    : { defaultChecked: checked };
+
   return (
     <Card className={cn("border-border/60 shadow-sm", className)}>
       <CardContent
@@ -49,7 +57,8 @@ export function LoginAlertsCard({
         </div>
         <Switch
           size={switchSize}
-          defaultChecked={checked}
+          disabled={disabled}
+          {...switchProps}
           aria-label={`${title} toggle`}
         />
       </CardContent>
