@@ -4,7 +4,7 @@ export type SearchResultItem = {
   id: string;
   title: string;
   slug?: string | null;
-  type: "page" | "entry" | "media";
+  type: "page" | "entry" | "media" | "user";
   updatedAt: string;
   categoryId?: string;
   categoryLabel?: string;

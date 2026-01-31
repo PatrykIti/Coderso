@@ -1,10 +1,10 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, ilike, or, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { contentEntries, contentTypes, media, pages } from "../../db/schema";
+import { contentEntries, contentTypes, media, pages, users } from "../../db/schema";
 import { getSetting } from "../settings/settingsService";
 
-export type SearchItemType = "page" | "entry" | "media";
+export type SearchItemType = "page" | "entry" | "media" | "user";
 
 export type SearchItem = {
   id: string;
@@ -32,10 +32,10 @@ export function normalizeSearchQuery(input: string) {
 }
 
 export function buildPrefixQuery(input: string) {
-  const tokens = input
-    .split(/\s+/)
-    .map((term) => term.replace(/[^\p{L}\p{N}_-]/gu, ""))
-    .filter(Boolean);
+  const normalized = input
+    .replace(/[^\p{L}\p{N}_-]+/gu, " ")
+    .trim();
+  const tokens = normalized.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return null;
   return tokens.map((term) => `${term}:*`).join(" & ");
 }
@@ -55,9 +55,10 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
   if (normalized.length < 2) return [] as SearchItem[];
   const tsQuery = buildPrefixQuery(normalized);
   if (!tsQuery) return [] as SearchItem[];
+  const likeQuery = `%${normalized}%`;
 
   const limit = resolveSearchLimit(options.limit);
-  const perType = Math.max(1, Math.ceil(limit / 3));
+  const perType = Math.max(1, Math.ceil(limit / 4));
 
   const pagesRows = await db
     .select({
@@ -68,14 +69,20 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
     })
     .from(pages)
     .where(
-      sql`to_tsvector('simple', ${pages.title} || ' ' || ${pages.slug}) @@ to_tsquery('simple', ${tsQuery})`
+      or(
+        sql`to_tsvector('simple', ${pages.title} || ' ' || ${pages.slug}) @@ to_tsquery('simple', ${tsQuery})`,
+        ilike(pages.title, likeQuery),
+        ilike(pages.slug, likeQuery)
+      )
     )
     .limit(perType);
 
   const entryRows = await db
     .select({
       id: contentEntries.id,
-      title: contentEntries.title,
+      title: sql<string>`coalesce(${contentEntries.title}, ${contentEntries.data} ->> 'title')`.as(
+        "title"
+      ),
       slug: contentEntries.slug,
       updatedAt: contentEntries.updatedAt,
       typeSlug: contentTypes.slug,
@@ -84,7 +91,12 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
     .from(contentEntries)
     .innerJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
     .where(
-      sql`to_tsvector('simple', ${contentEntries.title} || ' ' || ${contentEntries.slug}) @@ to_tsquery('simple', ${tsQuery})`
+      or(
+        sql`to_tsvector('simple', coalesce(${contentEntries.title}, '') || ' ' || coalesce(${contentEntries.data} ->> 'title', '') || ' ' || ${contentEntries.slug}) @@ to_tsquery('simple', ${tsQuery})`,
+        ilike(contentEntries.title, likeQuery),
+        ilike(sql`${contentEntries.data} ->> 'title'`, likeQuery),
+        ilike(contentEntries.slug, likeQuery)
+      )
     )
     .limit(perType);
 
@@ -96,7 +108,30 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
     })
     .from(media)
     .where(
-      sql`to_tsvector('simple', coalesce(${media.title}, '') || ' ' || coalesce(${media.alt}, '') || ' ' || coalesce(${media.caption}, '')) @@ to_tsquery('simple', ${tsQuery})`
+      or(
+        sql`to_tsvector('simple', coalesce(${media.title}, '') || ' ' || coalesce(${media.alt}, '') || ' ' || coalesce(${media.caption}, '') || ' ' || ${media.key}) @@ to_tsquery('simple', ${tsQuery})`,
+        ilike(media.title, likeQuery),
+        ilike(media.alt, likeQuery),
+        ilike(media.caption, likeQuery),
+        ilike(media.key, likeQuery)
+      )
+    )
+    .limit(perType);
+
+  const userRows = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      updatedAt: users.updatedAt,
+    })
+    .from(users)
+    .where(
+      or(
+        sql`to_tsvector('simple', coalesce(${users.name}, '') || ' ' || ${users.email}) @@ to_tsquery('simple', ${tsQuery})`,
+        ilike(users.name, likeQuery),
+        ilike(users.email, likeQuery)
+      )
     )
     .limit(perType);
 
@@ -127,6 +162,15 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
       updatedAt: toIso(row.updatedAt),
       categoryId: "media",
       categoryLabel: "Media",
+    })),
+    ...userRows.map((row) => ({
+      id: row.id,
+      title: row.name ?? row.email,
+      slug: row.email,
+      type: "user" as const,
+      updatedAt: toIso(row.updatedAt),
+      categoryId: "user",
+      categoryLabel: "Users",
     })),
   ];
 

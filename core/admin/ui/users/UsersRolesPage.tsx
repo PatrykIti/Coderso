@@ -111,6 +111,18 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
     return () => media.removeEventListener("change", update);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get("user");
+    if (userId) {
+      setPendingSelectUserId(userId);
+      if (!isLargeScreen) {
+        setDetailsOpen(true);
+      }
+    }
+  }, [isLargeScreen]);
+
   const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);

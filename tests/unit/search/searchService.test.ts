@@ -21,7 +21,10 @@ test("resolveSearchLimit clamps values", () => {
 test("buildPrefixQuery creates prefix tsquery", () => {
   expect(buildPrefixQuery("about")).toBe("about:*");
   expect(buildPrefixQuery("about us")).toBe("about:* & us:*");
-  expect(buildPrefixQuery("  ab#out   us  ")).toBe("about:* & us:*");
+  expect(buildPrefixQuery("  ab#out   us  ")).toBe("ab:* & out:* & us:*");
+  expect(buildPrefixQuery("user@example.com")).toBe(
+    "user:* & example:* & com:*"
+  );
   expect(buildPrefixQuery("###")).toBeNull();
 });
 

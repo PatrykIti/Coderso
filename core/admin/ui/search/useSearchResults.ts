@@ -38,6 +38,24 @@ function mapSearchItem(item: ApiSearchItem): SearchItem {
     };
   }
 
+  if (item.type === "user") {
+    const initials = item.title
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part[0]?.toUpperCase())
+      .slice(0, 2)
+      .join("");
+    return {
+      id: item.id,
+      type: "user",
+      title: item.title,
+      subtitle: item.slug ?? undefined,
+      initials: initials || undefined,
+      categoryId: item.categoryId,
+      categoryLabel: item.categoryLabel,
+    };
+  }
+
   return {
     id: item.id,
     type: "page",

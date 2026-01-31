@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -119,6 +118,12 @@ export function SearchPage() {
       window.location.assign(
         `/admin/media?selected=${encodeURIComponent(item.id)}`
       );
+      return;
+    }
+    if (item.type === "user") {
+      window.location.assign(
+        `/admin/users?user=${encodeURIComponent(item.id)}`
+      );
     }
   };
 
@@ -171,7 +176,7 @@ export function SearchPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                   Recent Searches
                 </p>
-                <ScrollArea className="max-h-40 pr-2">
+                <div className="max-h-40 overflow-y-auto pr-2">
                   <div className="space-y-2">
                     {recentError ? (
                       <p className="text-xs text-destructive">{recentError}</p>
@@ -193,7 +198,7 @@ export function SearchPage() {
                       </button>
                     ))}
                   </div>
-                </ScrollArea>
+                </div>
               </div>
 
               <Separator />
