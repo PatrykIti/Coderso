@@ -2,7 +2,12 @@ import { Menu } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
   defaultFooterItems,
@@ -84,6 +89,10 @@ export function AdminShell({
       </div>
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetContent side="left" className="w-72 p-0">
+          <SheetTitle className="sr-only">Main navigation</SheetTitle>
+          <SheetDescription className="sr-only">
+            Primary navigation links for the admin dashboard.
+          </SheetDescription>
           <SidebarNav
             sections={navSections}
             footerItems={footerItems}
