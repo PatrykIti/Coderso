@@ -51,9 +51,9 @@ export function RecentEditsTable() {
       <TableHeader>
         <TableRow>
           <TableHead>Document</TableHead>
-          <TableHead>Author</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Last Edited</TableHead>
+          <TableHead className="hidden md:table-cell">Author</TableHead>
+          <TableHead className="hidden md:table-cell">Status</TableHead>
+          <TableHead className="hidden lg:table-cell text-right">Last Edited</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -62,11 +62,23 @@ export function RecentEditsTable() {
             <TableCell>
               <div className="font-medium">{row.title}</div>
               <div className="text-xs text-muted-foreground">{row.path}</div>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                <span>{row.author}</span>
+                <span className="text-muted-foreground/60">•</span>
+                <Badge
+                  variant="outline"
+                  className={statusClassMap[row.status] ?? ""}
+                >
+                  {row.status}
+                </Badge>
+                <span className="text-muted-foreground/60">•</span>
+                <span>{row.updatedAt}</span>
+              </div>
             </TableCell>
-            <TableCell className="text-sm text-muted-foreground">
+            <TableCell className="hidden text-sm text-muted-foreground md:table-cell">
               {row.author}
             </TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               <Badge
                 variant="outline"
                 className={statusClassMap[row.status] ?? ""}
@@ -74,7 +86,7 @@ export function RecentEditsTable() {
                 {row.status}
               </Badge>
             </TableCell>
-            <TableCell className="text-right text-sm text-muted-foreground">
+            <TableCell className="hidden text-right text-sm text-muted-foreground lg:table-cell">
               {row.updatedAt}
             </TableCell>
           </TableRow>
