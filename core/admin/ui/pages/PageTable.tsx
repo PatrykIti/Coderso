@@ -50,6 +50,7 @@ const toInitials = (value: string) =>
 
 export type PageTableProps = {
   items: PageSummary[];
+  emptyMessage?: string;
   onEdit: (id: string) => void;
   onPreview: (id: string) => void;
   onPublish: (id: string) => void;
@@ -59,6 +60,7 @@ export type PageTableProps = {
 
 export function PageTable({
   items,
+  emptyMessage,
   onEdit,
   onPreview,
   onPublish,
@@ -87,7 +89,7 @@ export function PageTable({
                 colSpan={6}
                 className="py-10 text-center text-sm text-muted-foreground"
               >
-                No pages yet. Create your first page to get started.
+                {emptyMessage ?? "No pages yet. Create your first page to get started."}
               </TableCell>
             </TableRow>
           ) : null}

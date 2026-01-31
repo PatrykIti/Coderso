@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,24 @@ import { PageFilters } from "./PageFilters";
 import { PageTable } from "./PageTable";
 import { PageCreateDrawer } from "./PageCreateDrawer";
 
+export function filterPages(
+  pages: PageSummary[],
+  query: string,
+  status: string,
+  author: string
+) {
+  const normalized = query.trim().toLowerCase();
+  return pages.filter((page) => {
+    const matchesQuery =
+      !normalized ||
+      page.title.toLowerCase().includes(normalized) ||
+      page.slug.toLowerCase().includes(normalized);
+    const matchesStatus = status === "all" || page.status === status;
+    const matchesAuthor = author === "any" || page.author?.id === author;
+    return matchesQuery && matchesStatus && matchesAuthor;
+  });
+}
+
 export function PageListPage() {
   const [items, setItems] = useState<PageSummary[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
@@ -27,6 +45,9 @@ export function PageListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [authorFilter, setAuthorFilter] = useState("any");
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -55,6 +76,22 @@ export function PageListPage() {
       active = false;
     };
   }, [refresh]);
+
+  const authorOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    items.forEach((item) => {
+      if (!item.author) return;
+      map.set(item.author.id, item.author.name ?? item.author.email);
+    });
+    return Array.from(map.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [items]);
+
+  const filteredItems = useMemo(
+    () => filterPages(items, searchQuery, statusFilter, authorFilter),
+    [items, searchQuery, statusFilter, authorFilter]
+  );
 
   const handleCreate = async (payload: {
     title: string;
@@ -185,14 +222,27 @@ export function PageListPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
-        <PageFilters />
+        <PageFilters
+          search={searchQuery}
+          status={statusFilter}
+          author={authorFilter}
+          authorOptions={authorOptions}
+          onSearchChange={setSearchQuery}
+          onStatusChange={setStatusFilter}
+          onAuthorChange={setAuthorFilter}
+        />
         {isLoading ? (
           <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
             Loading pages...
           </div>
         ) : (
           <PageTable
-            items={items}
+            items={filteredItems}
+            emptyMessage={
+              items.length > 0
+                ? "No pages match your current filters."
+                : undefined
+            }
             onEdit={handleEdit}
             onPreview={handlePreview}
             onPublish={handlePublish}
@@ -201,7 +251,9 @@ export function PageListPage() {
           />
         )}
         <div className="flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>Showing 1-4 of 32 pages</span>
+          <span>
+            Showing {filteredItems.length} of {items.length} pages
+          </span>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm">
               Previous
