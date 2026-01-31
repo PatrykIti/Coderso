@@ -124,7 +124,7 @@ const NotFound = () => (
 );
 
 const Loading = () => (
-  <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+  <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
     Loading...
   </div>
 );
@@ -431,7 +431,12 @@ export function AdminApp({ path }: AdminAppProps) {
   }, [authState, isProtected, isPublic, normalizedPath]);
 
   if (isProtected && authState !== "authenticated") {
-    return <Loading />;
+    return (
+      <>
+        <style id="nextless-theme-tokens">{tokenCss}</style>
+        <Loading />
+      </>
+    );
   }
 
   return (

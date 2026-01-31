@@ -12,6 +12,7 @@
 - Recent searches list scrolls when long lists are present.
 - Users can be searched by name or email (and open the user panel).
 - Global header search now navigates to selected results.
+- Loading screen now respects admin theme tokens (no light flash on dark themes).
 
 ### Core/Search
 - Search uses prefix matching for partial queries (e.g., “ab” matches “about”).
