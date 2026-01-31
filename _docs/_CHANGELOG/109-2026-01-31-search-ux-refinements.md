@@ -11,6 +11,7 @@
 - View All actions switch the Search tab to the selected content type.
 - Recent searches list scrolls when long lists are present.
 - Users can be searched by name or email (and open the user panel).
+- Global header search now navigates to selected results.
 
 ### Core/Search
 - Search uses prefix matching for partial queries (e.g., “ab” matches “about”).

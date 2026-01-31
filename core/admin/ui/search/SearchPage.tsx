@@ -25,6 +25,7 @@ import {
   type SearchGroup,
   type SearchItemType,
 } from "./SearchResults";
+import { resolveSearchDestination } from "./searchNavigation";
 import { useSearchResults } from "./useSearchResults";
 
 type ContentFilter = "all" | SearchItemType;
@@ -95,35 +96,9 @@ export function SearchPage() {
 
   const handleSelect = (item: SearchGroup["items"][number]) => {
     if (typeof window === "undefined") return;
-    if (item.type === "page") {
-      window.location.assign(`/admin/pages/${encodeURIComponent(item.id)}`);
-      return;
-    }
-    if (item.type === "entry") {
-      const typeSlug =
-        item.entryTypeSlug ??
-        (item.categoryId?.startsWith("entry:")
-          ? item.categoryId.split(":")[1]
-          : null);
-      if (typeSlug) {
-        window.location.assign(
-          `/admin/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(item.id)}`
-        );
-      } else {
-        window.location.assign("/admin/entries");
-      }
-      return;
-    }
-    if (item.type === "media") {
-      window.location.assign(
-        `/admin/media?selected=${encodeURIComponent(item.id)}`
-      );
-      return;
-    }
-    if (item.type === "user") {
-      window.location.assign(
-        `/admin/users?user=${encodeURIComponent(item.id)}`
-      );
+    const destination = resolveSearchDestination(item);
+    if (destination) {
+      window.location.assign(destination);
     }
   };
 

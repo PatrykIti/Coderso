@@ -4,20 +4,34 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-import { SearchResults } from "./SearchResults";
+import { SearchResults, type SearchItem } from "./SearchResults";
+import { resolveSearchDestination } from "./searchNavigation";
 import { useSearchResults } from "./useSearchResults";
 
 export function SearchBar() {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const { normalizedQuery, shouldSearch, groups, items, loading, error } =
+  const { normalizedQuery, shouldSearch, groups, loading, error } =
     useSearchResults(query, 8);
   const shouldShow = shouldSearch;
 
-  const totalItems = items.length;
+  const flatItems = groups.flatMap((group) => group.items);
+  const totalItems = flatItems.length;
 
-  const highlightIndex = totalItems > 0 ? Math.min(activeIndex, totalItems - 1) : 0;
+  const highlightIndex =
+    totalItems > 0 ? Math.min(activeIndex, totalItems - 1) : 0;
+
+  const handleSelect = (item: SearchItem) => {
+    if (typeof window !== "undefined") {
+      const destination = resolveSearchDestination(item);
+      if (destination) {
+        window.location.assign(destination);
+      }
+    }
+    setQuery("");
+    setActiveIndex(0);
+  };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (!shouldSearch || totalItems === 0) return;
@@ -31,8 +45,10 @@ export function SearchBar() {
     }
     if (event.key === "Enter") {
       event.preventDefault();
-      setQuery("");
-      setActiveIndex(0);
+      const activeItem = flatItems[highlightIndex];
+      if (activeItem) {
+        handleSelect(activeItem);
+      }
     }
   };
 
@@ -63,10 +79,7 @@ export function SearchBar() {
             query={normalizedQuery}
             groups={groups}
             activeIndex={highlightIndex}
-            onSelect={() => {
-              setQuery("");
-              setActiveIndex(0);
-            }}
+            onSelect={handleSelect}
           />
         )}
       </div>
