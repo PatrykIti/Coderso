@@ -5,7 +5,7 @@
 **Category:** Content / DB  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-043  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -94,4 +94,3 @@ CREATE INDEX "content_entries_scheduled_at_idx"
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-entry-metadata-db.md`
-

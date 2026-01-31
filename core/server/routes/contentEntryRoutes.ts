@@ -6,11 +6,13 @@ import {
   listEntries,
   publishEntry,
   unpublishEntry,
+  updateEntryMetadata,
   updateEntry,
 } from "../../services/content/entryService";
 import { getContentTypeBySlug } from "../../services/content/typeService";
 import {
   contentEntryCreateSchema,
+  contentEntryMetadataSchema,
   contentEntryPreviewSchema,
   contentEntryUpdateSchema,
 } from "../validation/contentSchemas";
@@ -97,6 +99,50 @@ export function registerContentEntryRoutes(
         data?: Record<string, unknown>;
       };
       return updateEntry(entry.id, body);
+    }
+  );
+
+  router.patch(
+    "/content/:type/entries/:id/metadata",
+    requirePermission("content:write"),
+    async (ctx) => {
+      validate(contentEntryMetadataSchema, ctx.body);
+      const type = await getContentTypeBySlug(ctx.params.type);
+      if (!type) throw new Error("content_type_not_found");
+      const entry = await getEntry(ctx.params.id);
+      if (!entry || entry.typeId !== type.id) throw new Error("entry_not_found");
+
+      const body = ctx.body as {
+        status?: "draft" | "published" | "scheduled" | "archived";
+        scheduledAt?: string | null;
+        tags?: string[];
+        seo?: {
+          title?: string;
+          description?: string;
+          canonicalUrl?: string;
+          robots?: string;
+        };
+      };
+
+      const scheduledAt =
+        body.scheduledAt === null ||
+        body.scheduledAt === undefined ||
+        body.scheduledAt === ""
+          ? null
+          : new Date(body.scheduledAt);
+
+      const metadata = await updateEntryMetadata(
+        entry.id,
+        {
+          status: body.status,
+          scheduledAt,
+          tags: body.tags,
+          seo: body.seo,
+        },
+        ctx.user?.id
+      );
+      if (!metadata) throw new Error("entry_not_found");
+      return metadata;
     }
   );
 

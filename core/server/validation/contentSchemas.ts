@@ -47,3 +47,30 @@ export const contentEntryPreviewSchema = {
   },
   additionalProperties: false,
 };
+
+export const contentEntryMetadataSchema = {
+  type: "object",
+  properties: {
+    status: {
+      type: "string",
+      enum: ["draft", "published", "scheduled", "archived"],
+    },
+    scheduledAt: { type: ["string", "null"], format: "date-time" },
+    tags: {
+      type: "array",
+      maxItems: 20,
+      items: { type: "string", minLength: 1, maxLength: 24 },
+    },
+    seo: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        canonicalUrl: { type: "string" },
+        robots: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
+};

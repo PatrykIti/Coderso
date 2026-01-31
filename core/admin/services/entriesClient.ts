@@ -1,6 +1,6 @@
 import { apiRequest } from "./apiClient";
 
-export type EntryStatus = "draft" | "published";
+export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 
 export type EntryAuthor = {
   id: string;
@@ -15,18 +15,35 @@ export type EntrySummary = {
   slug: string;
   status: EntryStatus;
   data: Record<string, unknown>;
+  tags?: string[];
+  scheduledAt?: string | null;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string | null;
   author?: EntryAuthor | null;
+  seo?: EntrySeo | null;
 };
 
 export type EntryDetail = EntrySummary;
+
+export type EntrySeo = {
+  title?: string | null;
+  description?: string | null;
+  canonicalUrl?: string | null;
+  robots?: string | null;
+};
 
 export type EntryPayload = {
   title: string;
   slug: string;
   data: Record<string, unknown>;
+};
+
+export type EntryMetadataPayload = {
+  status?: EntryStatus;
+  scheduledAt?: string | null;
+  tags?: string[];
+  seo?: EntrySeo;
 };
 
 export type PreviewResponse = {
@@ -66,6 +83,22 @@ export async function updateEntry(
 ) {
   return apiRequest<EntryDetail>(
     `/content/${typeSlug}/entries/${id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+}
+
+export async function updateEntryMetadata(
+  typeSlug: string,
+  id: string,
+  payload: EntryMetadataPayload
+) {
+  return apiRequest<EntryDetail>(
+    `/content/${typeSlug}/entries/${id}/metadata`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

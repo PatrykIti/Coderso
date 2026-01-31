@@ -5,7 +5,7 @@
 **Category:** Content / Admin UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-003-03, TASK-003-04, TASK-003-06, TASK-027-01, TASK-027-02, TASK-027-03, TASK-027-04  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -40,4 +40,3 @@ Implementation is split into subtasks:
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-entry-metadata-integration.md`
-

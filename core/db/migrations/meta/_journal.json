@@ -183,6 +183,13 @@
       "when": 1769893089496,
       "tag": "0025_reflective_prodigy",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1769896556928,
+      "tag": "0026_sparkling_shuri",
+      "breakpoints": true
     }
   ]
 }

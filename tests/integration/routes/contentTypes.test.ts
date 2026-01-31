@@ -43,6 +43,7 @@ test("content routes are registered", () => {
       "POST /content/:type/entries",
       "GET /content/:type/entries/:id",
       "PATCH /content/:type/entries/:id",
+      "PATCH /content/:type/entries/:id/metadata",
       "DELETE /content/:type/entries/:id",
       "POST /content/:type/entries/:id/preview",
       "POST /content/:type/entries/:id/publish",

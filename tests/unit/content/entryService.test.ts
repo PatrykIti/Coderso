@@ -12,9 +12,11 @@ import {
 import {
   createEntry,
   createEntryPreview,
+  getEntry,
   listEntryRevisions,
   publishEntry,
   unpublishEntry,
+  updateEntryMetadata,
 } from "../../../core/services/content/entryService";
 import { createContentType } from "../../../core/services/content/typeService";
 
@@ -130,4 +132,64 @@ testIfDb("enforces slug uniqueness per type", async () => {
 
   await cleanup();
   contentTypeId = undefined;
+});
+
+testIfDb("updateEntryMetadata stores tags, schedule, and SEO", async () => {
+  const type = await createContentType({
+    name: "Blog",
+    slug: `blog-${randomUUID()}`,
+    schema,
+  });
+  contentTypeId = type.id;
+
+  const entry = await createEntry(type.id, {
+    title: "Entry",
+    slug: `entry-${randomUUID()}`,
+    data: { title: "Hello" },
+  });
+  entryId = entry?.id;
+
+  const scheduledAt = new Date(Date.now() + 60 * 60 * 1000);
+  await updateEntryMetadata(entry.id, {
+    status: "scheduled",
+    scheduledAt,
+    tags: ["alpha", "beta", "alpha"],
+    seo: { description: "SEO summary" },
+  });
+
+  const updated = await getEntry(entry.id);
+  expect(updated?.status).toBe("scheduled");
+  expect(updated?.scheduledAt?.toISOString()).toBe(scheduledAt.toISOString());
+  expect(updated?.tags).toEqual(["alpha", "beta"]);
+  expect(updated?.seo?.description).toBe("SEO summary");
+
+  await cleanup();
+  contentTypeId = undefined;
+  entryId = undefined;
+});
+
+testIfDb("updateEntryMetadata requires scheduledAt for scheduled status", async () => {
+  const type = await createContentType({
+    name: "FAQ",
+    slug: `faq-${randomUUID()}`,
+    schema,
+  });
+  contentTypeId = type.id;
+
+  const entry = await createEntry(type.id, {
+    title: "Entry",
+    slug: `entry-${randomUUID()}`,
+    data: { title: "Hello" },
+  });
+  entryId = entry?.id;
+
+  await expect(
+    updateEntryMetadata(entry.id, {
+      status: "scheduled",
+    })
+  ).rejects.toThrow("scheduled_at_required");
+
+  await cleanup();
+  contentTypeId = undefined;
+  entryId = undefined;
 });

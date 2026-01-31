@@ -9,6 +9,7 @@ import {
   publishEntry,
   unpublishEntry,
   updateEntry,
+  updateEntryMetadata,
 } from "../../../core/admin/services/entriesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 
@@ -99,6 +100,35 @@ test("updateEntry uses CSRF and patches payload", async () => {
     await updateEntry("blog", "entry-1", { title: "Updated" });
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/content/blog/entries/entry-1");
+    expect(calls[1]?.init?.method).toBe("PATCH");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("updateEntryMetadata uses CSRF and PATCH /metadata", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ id: "entry-1" });
+  };
+
+  try {
+    resetCsrfToken();
+    await updateEntryMetadata("blog", "entry-1", {
+      status: "scheduled",
+      scheduledAt: "2026-02-01T10:00:00Z",
+      tags: ["news"],
+      seo: { description: "Meta" },
+    });
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/content/blog/entries/entry-1/metadata");
     expect(calls[1]?.init?.method).toBe("PATCH");
   } finally {
     globalThis.fetch = originalFetch;

@@ -27,8 +27,8 @@ import {
   getEntry,
   previewEntry,
   publishEntry,
+  updateEntryMetadata,
   updateEntry,
-  unpublishEntry,
   type EntryDetail,
 } from "@/services/entriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
@@ -97,14 +97,15 @@ export function EntryEditor() {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [status, setStatus] = useState<EntryStatus>("draft");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [publishDate, setPublishDate] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
-  const [tags] = useState(["HEADLESS", "ARCHITECTURE", "PERFORMANCE"]);
+  const [tags, setTags] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -132,7 +133,9 @@ export function EntryEditor() {
         setValues(buildInitialValues(mappedFields, entryResult.data ?? {}));
         setStatus(entryResult.status);
         setHasUnsavedChanges(false);
-        setPublishDate(entryResult.publishedAt ?? "");
+        setScheduledAt(entryResult.scheduledAt ?? "");
+        setTags(entryResult.tags ?? []);
+        setSeoDescription(entryResult.seo?.description ?? "");
         setError(null);
       })
       .catch((err) => {
@@ -211,6 +214,9 @@ export function EntryEditor() {
       });
       setEntry(updated);
       setStatus(updated.status);
+      setScheduledAt(updated.scheduledAt ?? scheduledAt);
+      setTags(updated.tags ?? tags);
+      setSeoDescription(updated.seo?.description ?? seoDescription);
       setHasUnsavedChanges(false);
     } catch (err) {
       if (isApiClientError(err)) {
@@ -235,6 +241,9 @@ export function EntryEditor() {
         const updated = await getEntry(type, id);
         setEntry(updated);
         setStatus(updated.status);
+        setScheduledAt(updated.scheduledAt ?? "");
+        setTags(updated.tags ?? []);
+        setSeoDescription(updated.seo?.description ?? "");
         setHasUnsavedChanges(false);
       }
     } catch (err) {
@@ -251,18 +260,55 @@ export function EntryEditor() {
   const handleStatusChange = async (nextStatus: EntryStatus) => {
     if (!type || !id) return;
     setStatus(nextStatus);
-    if (nextStatus === "draft") {
-      await unpublishEntry(type, id);
-      setHasUnsavedChanges(false);
-    }
-    if (nextStatus === "published") {
-      await publishEntry(type, id);
-      setHasUnsavedChanges(false);
-    }
   };
 
   const handleGenerateSlug = () => {
     handleSlugChange(slugify(title));
+  };
+
+  const handleSaveMetadata = async () => {
+    if (!type || !id) return;
+    setIsSavingMetadata(true);
+    setError(null);
+
+    let scheduledAtIso: string | null = null;
+    if (scheduledAt.trim()) {
+      const parsed = new Date(scheduledAt);
+      if (Number.isNaN(parsed.getTime())) {
+        setError("Schedule date must be a valid ISO timestamp.");
+        setIsSavingMetadata(false);
+        return;
+      }
+      scheduledAtIso = parsed.toISOString();
+    }
+
+    if (status === "scheduled" && !scheduledAtIso) {
+      setError("Schedule date is required for scheduled entries.");
+      setIsSavingMetadata(false);
+      return;
+    }
+
+    try {
+      const updated = await updateEntryMetadata(type, id, {
+        status,
+        scheduledAt: status === "scheduled" ? scheduledAtIso : null,
+        tags,
+        seo: { description: seoDescription },
+      });
+      setEntry(updated);
+      setStatus(updated.status);
+      setScheduledAt(updated.scheduledAt ?? "");
+      setTags(updated.tags ?? []);
+      setSeoDescription(updated.seo?.description ?? "");
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to save metadata.");
+      }
+    } finally {
+      setIsSavingMetadata(false);
+    }
   };
 
   const contentFields = fields.filter(
@@ -432,13 +478,17 @@ export function EntryEditor() {
               <EntryMetadataPanel
                 status={status}
                 onStatusChange={handleStatusChange}
-                publishDate={publishDate}
-                onPublishDateChange={setPublishDate}
+                scheduledAt={scheduledAt}
+                onScheduledAtChange={setScheduledAt}
                 title={title}
                 slug={slug}
                 seoDescription={seoDescription}
                 onSeoDescriptionChange={setSeoDescription}
                 tags={tags}
+                onTagsChange={setTags}
+                author={entry?.author ?? null}
+                onSave={handleSaveMetadata}
+                isSaving={isSavingMetadata}
               />
             </div>
           </ScrollArea>
@@ -464,13 +514,17 @@ export function EntryEditor() {
               <EntryMetadataPanel
                 status={status}
                 onStatusChange={handleStatusChange}
-                publishDate={publishDate}
-                onPublishDateChange={setPublishDate}
+                scheduledAt={scheduledAt}
+                onScheduledAtChange={setScheduledAt}
                 title={title}
                 slug={slug}
                 seoDescription={seoDescription}
                 onSeoDescriptionChange={setSeoDescription}
                 tags={tags}
+                onTagsChange={setTags}
+                author={entry?.author ?? null}
+                onSave={handleSaveMetadata}
+                isSaving={isSavingMetadata}
               />
             </div>
             <div className="border-t px-6 py-4">

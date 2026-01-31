@@ -87,6 +87,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 - Metadane SEO i wyniki audytu przechowywane w `seo_documents`.
 - Admin UI korzysta z endpointów `/seo` oraz `/seo/audit`.
+- Entry Editor zapisuje opis SEO do `seo_documents` (targetType = `entry`), niezaleznie od danych `content_entries.data`.
 
 ## Admin Users & Roles (v1)
 

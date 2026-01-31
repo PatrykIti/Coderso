@@ -5,7 +5,7 @@
 **Category:** Admin / UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-043-03  
-**Status:** To Do
+**Status:** Done (2026-01-31)
 
 ---
 
@@ -106,4 +106,3 @@ const handleTagKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-entry-metadata-ui.md`
-

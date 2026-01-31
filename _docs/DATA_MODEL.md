@@ -72,13 +72,16 @@ Note (v2+):
 `content_entries`
 - id (uuid, pk)
 - type_id (fk content_types)
+- author_id (fk users, nullable)
 - slug
 - title
-- status (draft|published)
+- status (draft|published|scheduled|archived)
+- tags (jsonb, default [])
 - data (jsonb)
 - created_at
 - updated_at
 - published_at
+- scheduled_at
 
 `content_revisions`
 - id (uuid, pk)

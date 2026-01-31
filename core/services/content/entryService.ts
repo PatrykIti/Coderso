@@ -3,12 +3,38 @@ import { db } from "../../db/client";
 import { contentEntries, contentRevisions, contentTypes, users } from "../../db/schema";
 import { createPreviewToken } from "../pages/previewService";
 import {
+  getSeoDocumentByTarget,
+  upsertSeoDocument,
+} from "../seo/seoService";
+import {
   type ContentSchema,
   validateEntryData,
 } from "./validation";
 
-export type EntryStatus = "draft" | "published";
+export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 export type EntryData = Record<string, unknown>;
+export type EntrySeo = {
+  title?: string | null;
+  description?: string | null;
+  canonicalUrl?: string | null;
+  robots?: string | null;
+};
+
+export type EntryDetail = {
+  id: string;
+  typeId: string;
+  title: string;
+  slug: string;
+  status: EntryStatus;
+  data: EntryData;
+  tags: string[];
+  scheduledAt?: Date | null;
+  publishedAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  author: { id: string; name: string | null; email: string } | null;
+  seo: EntrySeo | null;
+};
 
 export type CreateEntryInput = {
   title: string;
@@ -21,6 +47,13 @@ export type UpdateEntryInput = {
   title?: string;
   slug?: string;
   data?: EntryData;
+};
+
+export type UpdateEntryMetadataInput = {
+  status?: EntryStatus;
+  scheduledAt?: Date | null;
+  tags?: string[];
+  seo?: EntrySeo;
 };
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -53,6 +86,20 @@ async function ensureEntrySlugAvailable(
   }
 }
 
+const normalizeTags = (tags?: string[]) => {
+  if (!tags) return null;
+  const trimmed = tags
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0)
+    .slice(0, 20);
+  return Array.from(new Set(trimmed)).slice(0, 20);
+};
+
+const normalizeSeoSlug = (slug: string | null) => {
+  if (!slug) return null;
+  return slug.startsWith("/") ? slug : `/${slug}`;
+};
+
 export async function listEntries(typeId: string) {
   const rows = await db
     .select({
@@ -62,8 +109,10 @@ export async function listEntries(typeId: string) {
       title: contentEntries.title,
       slug: contentEntries.slug,
       status: contentEntries.status,
+      tags: contentEntries.tags,
       data: contentEntries.data,
       publishedAt: contentEntries.publishedAt,
+      scheduledAt: contentEntries.scheduledAt,
       createdAt: contentEntries.createdAt,
       updatedAt: contentEntries.updatedAt,
       authorName: users.name,
@@ -79,9 +128,11 @@ export async function listEntries(typeId: string) {
     typeId: row.typeId,
     title: row.title,
     slug: row.slug,
-    status: row.status,
+    status: row.status as EntryStatus,
+    tags: (row.tags ?? []) as string[],
     data: row.data,
     publishedAt: row.publishedAt,
+    scheduledAt: row.scheduledAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     author: row.authorId
@@ -94,9 +145,60 @@ export async function listEntries(typeId: string) {
   }));
 }
 
-export async function getEntry(id: string) {
-  const [row] = await db.select().from(contentEntries).where(eq(contentEntries.id, id));
-  return row ?? null;
+export async function getEntry(id: string): Promise<EntryDetail | null> {
+  const [row] = await db
+    .select({
+      id: contentEntries.id,
+      typeId: contentEntries.typeId,
+      authorId: contentEntries.authorId,
+      title: contentEntries.title,
+      slug: contentEntries.slug,
+      status: contentEntries.status,
+      tags: contentEntries.tags,
+      data: contentEntries.data,
+      publishedAt: contentEntries.publishedAt,
+      scheduledAt: contentEntries.scheduledAt,
+      createdAt: contentEntries.createdAt,
+      updatedAt: contentEntries.updatedAt,
+      authorName: users.name,
+      authorEmail: users.email,
+    })
+    .from(contentEntries)
+    .leftJoin(users, eq(contentEntries.authorId, users.id))
+    .where(eq(contentEntries.id, id));
+
+  if (!row) return null;
+
+  const seo = await getSeoDocumentByTarget("entry", row.id);
+
+  return {
+    id: row.id,
+    typeId: row.typeId,
+    title: row.title,
+    slug: row.slug,
+    status: row.status as EntryStatus,
+    tags: (row.tags ?? []) as string[],
+    data: row.data as EntryData,
+    publishedAt: row.publishedAt,
+    scheduledAt: row.scheduledAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    author: row.authorId
+      ? {
+          id: row.authorId,
+          name: row.authorName ?? null,
+          email: row.authorEmail ?? "",
+        }
+      : null,
+    seo: seo
+      ? {
+          title: seo.title ?? null,
+          description: seo.description ?? null,
+          canonicalUrl: seo.canonicalUrl ?? null,
+          robots: seo.robots ?? null,
+        }
+      : null,
+  };
 }
 
 export async function deleteEntry(id: string) {
@@ -161,6 +263,15 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
     .where(eq(contentEntries.id, entry.id))
     .returning();
 
+  if (input.title || input.slug) {
+    await upsertSeoDocument({
+      targetType: "entry",
+      targetId: entry.id,
+      title: input.title ?? entry.title,
+      slug: normalizeSeoSlug(nextSlug),
+    });
+  }
+
   return row ?? null;
 }
 
@@ -188,6 +299,7 @@ export async function publishEntry(entryId: string, userId: string) {
       .set({
         status: "published",
         publishedAt: new Date(),
+        scheduledAt: null,
         updatedAt: new Date(),
       })
       .where(eq(contentEntries.id, entry.id))
@@ -203,12 +315,83 @@ export async function unpublishEntry(entryId: string) {
     .set({
       status: "draft",
       publishedAt: null,
+      scheduledAt: null,
       updatedAt: new Date(),
     })
     .where(eq(contentEntries.id, entryId))
     .returning();
 
   return row ?? null;
+}
+
+export async function updateEntryMetadata(
+  entryId: string,
+  input: UpdateEntryMetadataInput,
+  actorId?: string
+) {
+  const entry = await getEntry(entryId);
+  if (!entry) throw new Error("entry_not_found");
+
+  const nextStatus = input.status ?? entry.status;
+  const normalizedTags = normalizeTags(input.tags);
+
+  if (input.scheduledAt && Number.isNaN(input.scheduledAt.getTime())) {
+    throw new Error("scheduled_at_invalid");
+  }
+
+  if (nextStatus === "scheduled") {
+    if (!input.scheduledAt && !entry.scheduledAt) {
+      throw new Error("scheduled_at_required");
+    }
+  }
+
+  if (input.status === "published" && entry.status !== "published") {
+    if (!actorId) throw new Error("auth_required");
+    await publishEntry(entry.id, actorId);
+  } else if (input.status === "draft" && entry.status !== "draft") {
+    await unpublishEntry(entry.id);
+  } else if (input.status && input.status !== entry.status) {
+    await db
+      .update(contentEntries)
+      .set({
+        status: input.status,
+        scheduledAt: input.status === "scheduled" ? (input.scheduledAt ?? null) : null,
+        updatedAt: new Date(),
+      })
+      .where(eq(contentEntries.id, entry.id));
+  }
+
+  const metadataUpdate: Partial<typeof contentEntries.$inferInsert> = {};
+  if (normalizedTags) {
+    metadataUpdate.tags = normalizedTags;
+  }
+  if (input.scheduledAt !== undefined) {
+    metadataUpdate.scheduledAt = input.scheduledAt;
+  }
+  if (input.status && input.status !== "scheduled") {
+    metadataUpdate.scheduledAt = null;
+  }
+
+  if (Object.keys(metadataUpdate).length > 0) {
+    await db
+      .update(contentEntries)
+      .set({ ...metadataUpdate, updatedAt: new Date() })
+      .where(eq(contentEntries.id, entry.id));
+  }
+
+  if (input.seo) {
+    await upsertSeoDocument({
+      targetType: "entry",
+      targetId: entry.id,
+      title: input.seo.title ?? undefined,
+      description: input.seo.description ?? undefined,
+      canonicalUrl: input.seo.canonicalUrl ?? undefined,
+      robots: input.seo.robots ?? undefined,
+      slug: normalizeSeoSlug(entry.slug),
+    });
+  }
+
+  return getEntry(entry.id);
 }
 
 export async function listEntryRevisions(entryId: string) {

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 13 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 0
-- **Done:** 188 tasks
+- **Done:** 193 tasks
 
 ---
 
@@ -41,11 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-043 | Content Entry Metadata Integration | High | Large | Index for TASK-043-01..04 |
-| TASK-043-01 | Entry Metadata DB + Schema | High | Medium | tags + scheduled_at |
-| TASK-043-02 | Entry Metadata Services | High | Medium | tags + seo + author |
-| TASK-043-03 | Entry Metadata API + Validation | High | Medium | /metadata endpoint |
-| TASK-043-04 | Entry Metadata UI Wiring | High | Medium | Admin UI metadata panel |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
@@ -66,6 +61,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-043 | Content Entry Metadata Integration | High | Large | Index for TASK-043-01..04 |
+| TASK-043-01 | Entry Metadata DB + Schema | High | Medium | tags + scheduled_at |
+| TASK-043-02 | Entry Metadata Services | High | Medium | tags + seo + author |
+| TASK-043-03 | Entry Metadata API + Validation | High | Medium | /metadata endpoint |
+| TASK-043-04 | Entry Metadata UI Wiring | High | Medium | Admin UI metadata panel |
 | TASK-020 | Security Middleware and Request Pipeline | High | Medium | Request pipeline security |
 | TASK-020-01 | Security Settings Model and Defaults | High | Medium | DB-backed security config |
 | TASK-020-02 | Security Settings API and Validation | High | Medium | /settings/security |

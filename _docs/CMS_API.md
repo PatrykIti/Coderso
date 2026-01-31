@@ -580,6 +580,7 @@ Przyklad payload:
 ```
 - `GET /content/:type/entries/:id`
 - `PATCH /content/:type/entries/:id`
+- `PATCH /content/:type/entries/:id/metadata`
 - `POST /content/:type/entries/:id/preview`
 - `POST /content/:type/entries/:id/publish`
 - `POST /content/:type/entries/:id/unpublish`
@@ -618,12 +619,33 @@ Create entry payload (summary):
 }
 ```
 
+Entry response fields include:
+- `tags` (string[])
+- `scheduledAt` (timestamp | null)
+- `seo` (object with `title`, `description`, `canonicalUrl`, `robots`)
+
 Preview response (example):
 
 ```json
 {
   "previewToken": "token",
   "expiresAt": "2026-01-27T10:00:00Z"
+}
+```
+
+Metadata update payload (example):
+
+```json
+{
+  "status": "scheduled",
+  "scheduledAt": "2026-02-01T10:00:00Z",
+  "tags": ["launch", "news"],
+  "seo": {
+    "title": "Launch announcement",
+    "description": "Short summary for search results",
+    "canonicalUrl": "https://example.com/blog/launch",
+    "robots": "index,follow"
+  }
 }
 ```
 

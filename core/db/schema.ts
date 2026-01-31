@@ -428,8 +428,10 @@ export const contentEntries = pgTable(
     slug: text("slug").notNull(),
     title: text("title").notNull(),
     status: text("status").notNull().default("draft"),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
     data: jsonb("data").notNull(),
     publishedAt: timestamp("published_at"),
+    scheduledAt: timestamp("scheduled_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -441,6 +443,7 @@ export const contentEntries = pgTable(
     authorIdx: index("content_entries_author_idx").on(t.authorId),
     statusIdx: index("content_entries_status_idx").on(t.status),
     titleIdx: index("content_entries_title_idx").on(t.title),
+    scheduledAtIdx: index("content_entries_scheduled_at_idx").on(t.scheduledAt),
   })
 );
 
