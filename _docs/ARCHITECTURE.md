@@ -88,6 +88,11 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Metadane SEO i wyniki audytu przechowywane w `seo_documents`.
 - Admin UI korzysta z endpointów `/seo` oraz `/seo/audit`.
 
+## Redirects (v1)
+
+- Przekierowania trzymane w tabeli `redirects` z kodami 301/302/307/308.
+- Admin UI zarzadza redirectami przez `/redirects`.
+
 ## Backups (v1)
 
 - Backupy w v1 to **metadata-only** zapisane w tabeli `backups`.

@@ -1,4 +1,5 @@
 import { Info, Link2, X } from "lucide-react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +18,7 @@ import {
   SheetContent,
 } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
+import type { RedirectStatusCode } from "@/services/redirectsClient"
 
 export type RedirectDrawerProps = {
   open: boolean
@@ -25,17 +27,47 @@ export type RedirectDrawerProps = {
   redirect?: {
     from: string
     to: string
-    type: "301" | "302"
+    type: "301" | "302" | "307" | "308"
     active: boolean
   } | null
+  isSaving: boolean
+  onSave: (payload: { fromPath: string; toPath: string; statusCode: RedirectStatusCode; enabled: boolean }) => Promise<boolean>
 }
+
+type StatusCodeValue = "301" | "302" | "307" | "308"
 
 export function RedirectDrawer({
   open,
   onOpenChange,
   mode,
   redirect,
+  isSaving,
+  onSave,
 }: RedirectDrawerProps) {
+  const [fromPath, setFromPath] = useState(
+    (redirect?.from ?? "").replace(/^\/+/, "")
+  )
+  const [toPath, setToPath] = useState(redirect?.to ?? "")
+  const [statusCode, setStatusCode] = useState<StatusCodeValue>(
+    redirect?.type ?? "301"
+  )
+  const [enabled, setEnabled] = useState(redirect?.active ?? true)
+
+  const canSave = fromPath.trim().length > 0 && toPath.trim().length > 0
+
+  const handleSave = async () => {
+    if (!canSave) return
+    const ok = await onSave({
+      fromPath: fromPath.startsWith("/") ? fromPath : `/${fromPath}`,
+      toPath,
+      statusCode: Number(statusCode) as RedirectStatusCode,
+      enabled,
+    })
+    if (ok) {
+      onOpenChange(false)
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -85,7 +117,8 @@ export function RedirectDrawer({
                       id="redirect-source"
                       placeholder="old-page-link"
                       className="pl-6"
-                      defaultValue={redirect?.from ?? ""}
+                      value={fromPath}
+                      onChange={(event) => setFromPath(event.target.value)}
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -102,7 +135,8 @@ export function RedirectDrawer({
                   <Input
                     id="redirect-destination"
                     placeholder="https://... or /new-path"
-                    defaultValue={redirect?.to ?? ""}
+                    value={toPath}
+                    onChange={(event) => setToPath(event.target.value)}
                   />
                 </div>
               </div>
@@ -120,13 +154,18 @@ export function RedirectDrawer({
                   >
                     Redirect type
                   </label>
-                  <Select defaultValue={redirect?.type ?? "301"}>
+                  <Select
+                    value={statusCode}
+                    onValueChange={(value) => setStatusCode(value as StatusCodeValue)}
+                  >
                     <SelectTrigger id="redirect-type">
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="301">301 - Permanent</SelectItem>
                       <SelectItem value="302">302 - Temporary</SelectItem>
+                      <SelectItem value="307">307 - Temporary (keep method)</SelectItem>
+                      <SelectItem value="308">308 - Permanent (keep method)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -138,7 +177,11 @@ export function RedirectDrawer({
                     Active status
                   </label>
                   <div className="flex h-10 items-center gap-2">
-                    <Switch id="redirect-active" defaultChecked={redirect?.active ?? true} />
+                    <Switch
+                      id="redirect-active"
+                      checked={enabled}
+                      onCheckedChange={setEnabled}
+                    />
                     <span className="text-sm text-muted-foreground">
                       Enabled
                     </span>
@@ -163,9 +206,14 @@ export function RedirectDrawer({
         <div className="border-t bg-muted/30 px-6 py-4">
           <div className="grid grid-cols-2 gap-3">
             <SheetClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" disabled={isSaving}>Cancel</Button>
             </SheetClose>
-            <Button>{mode === "create" ? "Add redirect" : "Save changes"}</Button>
+            <Button
+              onClick={handleSave}
+              disabled={!canSave || isSaving}
+            >
+              {isSaving ? "Saving..." : mode === "create" ? "Add redirect" : "Save changes"}
+            </Button>
           </div>
         </div>
       </SheetContent>

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 54 tasks
+- **To Do:** 50 tasks
 - **In Progress:** 0
-- **Done:** 142 tasks
+- **Done:** 146 tasks
 
 ---
 
@@ -41,10 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-031 | Redirects Core and UI | Medium | Large | redirect CRUD |
-| TASK-031-01 | Redirects DB and Service | Medium | Medium | redirects table |
-| TASK-031-02 | Redirects API Routes | Medium | Medium | /redirects endpoints |
-| TASK-031-03 | Redirects UI Wiring | Medium | Medium | UI -> API |
 | TASK-032 | Admin Users and Roles Core and UI | High | Large | users + roles + permissions |
 | TASK-032-01 | Users and Roles Service | High | Medium | CRUD + permissions catalog |
 | TASK-032-02 | Users and Roles API Routes | High | Medium | /admin-users + /admin-roles |
@@ -130,6 +126,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-030-01 | Import / Export Service | Medium | Medium | export/import |
 | TASK-030-02 | Import / Export API Routes | Medium | Medium | /tools/export |
 | TASK-030-03 | Import / Export UI Wiring | Medium | Medium | UI -> API |
+| TASK-031 | Redirects Core and UI | Medium | Large | redirect CRUD |
+| TASK-031-01 | Redirects DB and Service | Medium | Medium | redirects table |
+| TASK-031-02 | Redirects API Routes | Medium | Medium | /redirects endpoints |
+| TASK-031-03 | Redirects UI Wiring | Medium | Medium | UI -> API |
 | TASK-002 | Pages, Revisions, and Preview (Index) | High | Medium | Index for TASK-002-01..05 |
 | TASK-002-01 | Page DB Schema & Migrations | High | Medium | Pages tables + revisions + preview tokens |
 | TASK-002-02 | Page Services & Revisions | High | Medium | CRUD + publish + restore |

@@ -322,6 +322,23 @@ export const seoDocuments = pgTable(
   })
 );
 
+export const redirects = pgTable(
+  "redirects",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    fromPath: text("from_path").notNull(),
+    toPath: text("to_path").notNull(),
+    statusCode: integer("status_code").notNull().default(301),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    fromPathIdx: uniqueIndex("redirects_from_path_idx").on(t.fromPath),
+    enabledIdx: index("redirects_enabled_idx").on(t.enabled),
+  })
+);
+
 export const themeProfiles = pgTable(
   "theme_profiles",
   {

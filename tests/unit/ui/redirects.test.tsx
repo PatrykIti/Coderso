@@ -17,12 +17,14 @@ test("Redirects UI renders table and drawer", () => {
   ];
   const html = renderToString(
     <>
-      <RedirectsTable items={rows} />
+      <RedirectsTable items={rows} isLoading={false} isSaving={false} />
       <RedirectDrawer
         open
         onOpenChange={() => undefined}
         mode="create"
         redirect={null}
+        isSaving={false}
+        onSave={async () => true}
       />
     </>
   );

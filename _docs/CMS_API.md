@@ -515,6 +515,44 @@ Preview/import response:
 
 ---
 
+## Redirects (v1)
+
+Permissions: `settings:read`, `settings:write`
+
+- `GET /redirects`
+- `POST /redirects`
+- `PATCH /redirects/:id`
+- `DELETE /redirects/:id`
+
+Create/update payload:
+
+```json
+{
+  "fromPath": "/old-path",
+  "toPath": "/new-path",
+  "statusCode": 301,
+  "enabled": true
+}
+```
+
+List response (array):
+
+```json
+[
+  {
+    "id": "redirect-id",
+    "fromPath": "/old-path",
+    "toPath": "/new-path",
+    "statusCode": 301,
+    "enabled": true,
+    "createdAt": "2026-01-30T10:00:00Z",
+    "updatedAt": "2026-01-30T10:00:00Z"
+  }
+]
+```
+
+---
+
 ## Audit logs
 
 Permissions: `audit:read`
