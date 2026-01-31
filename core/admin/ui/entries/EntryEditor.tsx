@@ -1,4 +1,4 @@
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, SlidersHorizontal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,6 +13,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
@@ -100,6 +106,7 @@ export function EntryEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const schemaFieldNames = useMemo(
     () => new Set(fields.map((field) => field.name)),
@@ -278,11 +285,22 @@ export function EntryEditor() {
         />
       }
       topbarActions={
-        <EntryEditorHeaderActions
-          status={status}
-          onPreview={handlePreview}
-          onPublish={handlePublish}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 lg:hidden"
+            onClick={() => setDetailsOpen(true)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            Details
+          </Button>
+          <EntryEditorHeaderActions
+            status={status}
+            onPreview={handlePreview}
+            onPublish={handlePublish}
+          />
+        </div>
       }
     >
       <div className="flex h-full min-h-[calc(100vh-4rem)]">
@@ -408,18 +426,22 @@ export function EntryEditor() {
             )}
           </div>
         </ScrollArea>
-        <aside className="hidden w-96 shrink-0 border-l bg-muted/30 lg:block">
-          <EntryMetadataPanel
-            status={status}
-            onStatusChange={handleStatusChange}
-            publishDate={publishDate}
-            onPublishDateChange={setPublishDate}
-            title={title}
-            slug={slug}
-            seoDescription={seoDescription}
-            onSeoDescriptionChange={setSeoDescription}
-            tags={tags}
-          />
+        <aside className="hidden w-96 shrink-0 border-l bg-muted/30 lg:flex lg:flex-col">
+          <ScrollArea className="flex-1">
+            <div className="px-6 py-6">
+              <EntryMetadataPanel
+                status={status}
+                onStatusChange={handleStatusChange}
+                publishDate={publishDate}
+                onPublishDateChange={setPublishDate}
+                title={title}
+                slug={slug}
+                seoDescription={seoDescription}
+                onSeoDescriptionChange={setSeoDescription}
+                tags={tags}
+              />
+            </div>
+          </ScrollArea>
           <div className="border-t px-6 py-4">
             <Button
               className="w-full"
@@ -431,6 +453,38 @@ export function EntryEditor() {
           </div>
         </aside>
       </div>
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+          <SheetTitle className="sr-only">Entry details</SheetTitle>
+          <SheetDescription className="sr-only">
+            Edit status, SEO, and metadata for this entry.
+          </SheetDescription>
+          <ScrollArea className="h-full">
+            <div className="px-6 py-6">
+              <EntryMetadataPanel
+                status={status}
+                onStatusChange={handleStatusChange}
+                publishDate={publishDate}
+                onPublishDateChange={setPublishDate}
+                title={title}
+                slug={slug}
+                seoDescription={seoDescription}
+                onSeoDescriptionChange={setSeoDescription}
+                tags={tags}
+              />
+            </div>
+            <div className="border-t px-6 py-4">
+              <Button
+                className="w-full"
+                onClick={handleSaveDraft}
+                disabled={isSaving || isPublishing}
+              >
+                {isSaving ? "Saving..." : "Save draft"}
+              </Button>
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </AdminShell>
   );
 }
