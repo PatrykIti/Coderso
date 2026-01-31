@@ -24,22 +24,26 @@ export function TopBar({
   return (
     <header
       className={cn(
-        "flex h-16 shrink-0 items-center justify-between border-b border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] px-6",
+        "flex w-full flex-wrap items-center gap-3 border-b border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] px-4 py-3 sm:h-16 sm:flex-nowrap sm:px-6 sm:py-0",
         className
       )}
     >
-      <div className="flex items-center gap-4 text-sm text-[var(--admin-topbar-text)]">
+      <div className="flex min-w-0 items-center gap-3 text-sm text-[var(--admin-topbar-text)]">
         {navToggle}
-        {breadcrumbs ?? (
-          <div className="flex items-center gap-2">
-            <span>Home</span>
-            <span className="text-[var(--admin-topbar-text)]/60">/</span>
-            <span className="text-[var(--admin-base-text)]">Dashboard</span>
-          </div>
-        )}
+        <div className="min-w-0 truncate">
+          {breadcrumbs ?? (
+            <div className="flex items-center gap-2">
+              <span>Home</span>
+              <span className="text-[var(--admin-topbar-text)]/60">/</span>
+              <span className="text-[var(--admin-base-text)]">Dashboard</span>
+            </div>
+          )}
+        </div>
       </div>
-      <div className="flex flex-1 justify-center px-6">{search}</div>
-      <div className="flex items-center gap-2">
+      <div className="order-3 w-full sm:order-none sm:flex-1 sm:px-6">
+        {search}
+      </div>
+      <div className="ml-auto flex flex-wrap items-center gap-2 sm:ml-0 sm:flex-nowrap">
         <AdminThemeSwitcher />
         {actions}
         <Button variant="ghost" size="icon">
