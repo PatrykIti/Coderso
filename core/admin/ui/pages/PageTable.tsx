@@ -66,24 +66,27 @@ export function PageTable({
   onDuplicate,
 }: PageTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <Table>
+    <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
+      <Table className="min-w-[720px]">
         <TableHeader className="bg-muted/40">
           <TableRow>
             <TableHead className="w-10 pl-4">
               <Checkbox aria-label="Select all pages" />
             </TableHead>
             <TableHead>Page title</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Author</TableHead>
-            <TableHead>Last updated</TableHead>
+            <TableHead className="hidden md:table-cell">Status</TableHead>
+            <TableHead className="hidden lg:table-cell">Author</TableHead>
+            <TableHead className="hidden xl:table-cell">Last updated</TableHead>
             <TableHead className="pr-4 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
+              <TableCell
+                colSpan={6}
+                className="py-10 text-center text-sm text-muted-foreground"
+              >
                 No pages yet. Create your first page to get started.
               </TableCell>
             </TableRow>
@@ -101,9 +104,23 @@ export function PageTable({
                   <span className="text-xs text-muted-foreground">
                     {page.slug}
                   </span>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                    <Badge
+                      variant="outline"
+                      className={statusStyles[page.status] ?? statusStyles.draft}
+                    >
+                      {statusLabels[page.status] ?? page.status}
+                    </Badge>
+                    <span className="text-muted-foreground/60">•</span>
+                    <span>
+                      {page.author?.name ?? page.author?.email ?? "Unknown"}
+                    </span>
+                    <span className="text-muted-foreground/60">•</span>
+                    <span>{formatDate(page.updatedAt)}</span>
+                  </div>
                 </div>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden md:table-cell">
                 <Badge
                   variant="outline"
                   className={statusStyles[page.status] ?? statusStyles.draft}
@@ -111,7 +128,7 @@ export function PageTable({
                   {statusLabels[page.status] ?? page.status}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="hidden lg:table-cell">
                 <div className="flex items-center gap-2">
                   <Avatar size="sm">
                     <AvatarFallback>
@@ -127,7 +144,7 @@ export function PageTable({
                   </span>
                 </div>
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
+              <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
                 {formatDate(page.updatedAt)}
               </TableCell>
               <TableCell className="pr-4 text-right">

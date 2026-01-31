@@ -19,7 +19,7 @@ export function PageFilters() {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Select defaultValue="all">
-          <SelectTrigger className="h-8 w-[140px]">
+          <SelectTrigger className="h-8 w-full sm:w-[140px]">
             <Filter className="h-3 w-3 text-muted-foreground" />
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -31,7 +31,7 @@ export function PageFilters() {
           </SelectContent>
         </Select>
         <Select defaultValue="any">
-          <SelectTrigger className="h-8 w-[160px]">
+          <SelectTrigger className="h-8 w-full sm:w-[160px]">
             <User className="h-3 w-3 text-muted-foreground" />
             <SelectValue placeholder="Author" />
           </SelectTrigger>
