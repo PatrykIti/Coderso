@@ -299,68 +299,72 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           ) : null}
         </div>
       }
-      topbarActions={
-        <div className="flex flex-wrap items-center gap-3">
-          <DeviceSwitcher />
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={handlePreview}
-            disabled={isLoading}
-          >
-            <Eye className="h-4 w-4" />
-            Preview
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            className="gap-2"
-            onClick={handleSaveDraft}
-            disabled={isSaving || isLoading}
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save draft"}
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={handlePublish}
-            disabled={isPublishing || isLoading}
-          >
-            <Eye className="h-4 w-4" />
-            {isPublishing ? "Publishing..." : "Publish"}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2"
-            onClick={() => setSettingsOpen(true)}
-            disabled={!page}
-          >
-            <Settings2 className="h-4 w-4" />
-            Page settings
-          </Button>
-        </div>
-      }
     >
-      <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 lg:hidden">
-        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setMobileLibraryOpen(true)}
-          >
-            Components
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setMobileDetailsOpen(true)}
-            disabled={!selectedBlock || !selectedWidget}
-          >
-            Details
-          </Button>
+      <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <DeviceSwitcher />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handlePreview}
+              disabled={isLoading}
+            >
+              <Eye className="h-4 w-4" />
+              Preview
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2"
+              onClick={handleSaveDraft}
+              disabled={isSaving || isLoading}
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? "Saving..." : "Save draft"}
+            </Button>
+            <Button
+              size="sm"
+              className="gap-2"
+              onClick={handlePublish}
+              disabled={isPublishing || isLoading}
+            >
+              <Eye className="h-4 w-4" />
+              {isPublishing ? "Publishing..." : "Publish"}
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={() => setSettingsOpen(true)}
+              disabled={!page}
+            >
+              <Settings2 className="h-4 w-4" />
+              Page settings
+            </Button>
+            <div className="ml-auto flex flex-wrap items-center gap-2 lg:hidden">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileLibraryOpen(true)}
+              >
+                Components
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileDetailsOpen(true)}
+                disabled={!selectedBlock || !selectedWidget}
+              >
+                Details
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
       <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8">
