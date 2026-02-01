@@ -3,6 +3,12 @@ import { Eye, Save, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import {
   getPage,
@@ -92,6 +98,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [isUpdatingMeta, setIsUpdatingMeta] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
+  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedBlock = blocks.find((block) => block.id === selectedId) ?? null;
@@ -336,6 +344,25 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         </div>
       }
     >
+      <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 lg:hidden">
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMobileLibraryOpen(true)}
+          >
+            Components
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMobileDetailsOpen(true)}
+            disabled={!selectedBlock || !selectedWidget}
+          >
+            Details
+          </Button>
+        </div>
+      </div>
       <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8">
         {error ? (
           <Alert variant="destructive">
@@ -367,6 +394,37 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         isSubmitting={isUpdatingMeta}
         error={metaError}
       />
+      <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
+        <SheetContent side="left" className="w-80 p-0">
+          <SheetTitle className="sr-only">Components</SheetTitle>
+          <SheetDescription className="sr-only">
+            Browse available components and widgets.
+          </SheetDescription>
+          <div className="flex h-full flex-col overflow-y-auto">
+            <WidgetPicker
+              onAdd={(type) => {
+                handleAddBlock(type);
+                setMobileLibraryOpen(false);
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
+        <SheetContent side="right" className="w-80 p-0">
+          <SheetTitle className="sr-only">Block details</SheetTitle>
+          <SheetDescription className="sr-only">
+            Edit settings for the selected block.
+          </SheetDescription>
+          <div className="flex h-full flex-col overflow-y-auto p-6">
+            <BlockSettings
+              block={selectedBlock}
+              widget={selectedWidget}
+              onChange={handleChangeBlock}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
     </EditorShell>
   );
 }
