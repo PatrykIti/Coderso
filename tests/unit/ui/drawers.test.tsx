@@ -91,6 +91,8 @@ test("PageCreateDrawer renders title", () => {
       open
       onOpenChange={() => undefined}
       onCreate={() => undefined}
+      openAfterCreate
+      onOpenAfterCreateChange={() => undefined}
     />
   );
 

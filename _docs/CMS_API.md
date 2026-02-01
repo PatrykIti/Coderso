@@ -1073,6 +1073,25 @@ Response:
 
 ---
 
+## User settings
+
+Auth: wymagane zalogowanie (session cookie). Dotyczy preferencji per użytkownik.
+
+- `GET /user-settings`
+- `GET /user-settings/:key`
+- `PATCH /user-settings/:key`
+
+`PATCH /user-settings/:key`
+
+```json
+{ "value": true }
+```
+
+Przykładowe klucze:
+- `pages.openAfterCreate` (bool)
+
+---
+
 ## Security settings
 
 Permissions: `settings:read`, `settings:write`

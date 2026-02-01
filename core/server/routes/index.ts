@@ -25,6 +25,7 @@ import { registerApiKeysRoutes } from "./apiKeysRoutes";
 import { registerWebhooksRoutes } from "./webhooksRoutes";
 import { registerEmailSettingsRoutes } from "./emailSettingsRoutes";
 import { registerIntegrationsRoutes } from "./integrationsRoutes";
+import { registerUserSettingsRoutes } from "./userSettingsRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -59,4 +60,5 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerWebhooksRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerEmailSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerIntegrationsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerUserSettingsRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
 }

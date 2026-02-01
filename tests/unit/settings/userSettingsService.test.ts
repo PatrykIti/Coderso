@@ -1,0 +1,68 @@
+import { afterAll, expect, test } from "bun:test";
+import { randomUUID } from "node:crypto";
+import { eq, sql } from "drizzle-orm";
+
+import { db } from "../../../core/db/client";
+import { users } from "../../../core/db/schema";
+import {
+  getUserSetting,
+  listUserSettings,
+  setUserSetting,
+} from "../../../core/services/settings/userSettingsService";
+
+const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
+const testIfDb = hasDb ? test : test.skip;
+
+async function canConnect() {
+  try {
+    await db.execute(sql`select 1`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const cleanupUserIds: string[] = [];
+
+afterAll(async () => {
+  if (!hasDb) return;
+  for (const userId of cleanupUserIds) {
+    await db.delete(users).where(eq(users.id, userId));
+  }
+});
+
+testIfDb("set/get/list user settings", async () => {
+  const userId = randomUUID();
+  cleanupUserIds.push(userId);
+
+  await db.insert(users).values({
+    id: userId,
+    email: `user-${userId}@example.com`,
+    passwordHash: "hash",
+  });
+
+  const defaultValue = await getUserSetting(userId, "pages.openAfterCreate");
+  expect(defaultValue).toBe(true);
+
+  await setUserSetting(userId, "pages.openAfterCreate", false);
+  const updated = await getUserSetting(userId, "pages.openAfterCreate");
+  expect(updated).toBe(false);
+
+  const list = await listUserSettings(userId);
+  expect(list["pages.openAfterCreate"]).toBe(false);
+});
+
+testIfDb("rejects unknown key", async () => {
+  const userId = randomUUID();
+  cleanupUserIds.push(userId);
+
+  await db.insert(users).values({
+    id: userId,
+    email: `user-${userId}@example.com`,
+    passwordHash: "hash",
+  });
+
+  await expect(
+    setUserSetting(userId, "unknown.key", true)
+  ).rejects.toThrow("user_settings_key_invalid");
+});

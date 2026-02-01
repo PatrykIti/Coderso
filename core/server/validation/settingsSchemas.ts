@@ -13,6 +13,15 @@ export const settingsBulkSchema = {
   additionalProperties: true,
 };
 
+export const userSettingsUpdateSchema = {
+  type: "object",
+  required: ["value"],
+  properties: {
+    value: {},
+  },
+  additionalProperties: false,
+};
+
 export const storageSettingsSchema = {
   type: "object",
   additionalProperties: false,

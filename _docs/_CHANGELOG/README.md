@@ -136,6 +136,7 @@ Project Change Log.
 | 109 | 2026-01-31 | Search UX refinements | Admin/Search |
 | 110 | 2026-01-31 | Entries filters and authors | CMS/Content |
 | 111 | 2026-01-31 | Entry metadata integration | CMS/Content |
+| 112 | 2026-02-01 | User settings preferences | Core/Settings |
 
 
 ---

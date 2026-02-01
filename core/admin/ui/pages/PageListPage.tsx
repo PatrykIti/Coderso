@@ -13,6 +13,10 @@ import {
   type PageSummary,
   unpublishPage,
 } from "@/services/pagesClient";
+import {
+  getUserSettings,
+  setUserSetting,
+} from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -48,6 +52,7 @@ export function PageListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [authorFilter, setAuthorFilter] = useState("any");
+  const [openAfterCreate, setOpenAfterCreate] = useState(true);
 
   const refresh = useCallback(async () => {
     setIsLoading(true);
@@ -76,6 +81,22 @@ export function PageListPage() {
       active = false;
     };
   }, [refresh]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const prefs = await getUserSettings();
+        if (!active) return;
+        setOpenAfterCreate(prefs["pages.openAfterCreate"]);
+      } catch {
+        // Ignore preference load failures; defaults will be used.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const authorOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -198,6 +219,15 @@ export function PageListPage() {
     }
   };
 
+  const handleOpenAfterCreateChange = async (next: boolean) => {
+    setOpenAfterCreate(next);
+    try {
+      await setUserSetting("pages.openAfterCreate", next);
+    } catch {
+      // Keep UI responsive even if preference persistence fails.
+    }
+  };
+
   return (
     <AdminShell
       activeHref="/admin/pages"
@@ -273,6 +303,8 @@ export function PageListPage() {
         open={createOpen}
         onOpenChange={handleDrawerOpenChange}
         onCreate={handleCreate}
+        openAfterCreate={openAfterCreate}
+        onOpenAfterCreateChange={handleOpenAfterCreateChange}
         isSubmitting={isSubmitting}
         error={error}
       />

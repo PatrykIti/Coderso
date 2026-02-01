@@ -172,6 +172,12 @@ profile oraz mapowanie tras.
 - value (jsonb)
 - updated_at
 
+`user_settings`
+- user_id (fk users)
+- key
+- value (jsonb)
+- updated_at
+
 ## Audit logs
 
 `audit_logs`

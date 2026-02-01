@@ -29,6 +29,8 @@ type PageCreateDrawerProps = {
     template?: string;
     openAfterCreate: boolean;
   }) => Promise<void> | void;
+  openAfterCreate: boolean;
+  onOpenAfterCreateChange: (value: boolean) => void;
   isSubmitting?: boolean;
   error?: string | null;
 };
@@ -44,6 +46,8 @@ export function PageCreateDrawer({
   open,
   onOpenChange,
   onCreate,
+  openAfterCreate,
+  onOpenAfterCreateChange,
   isSubmitting = false,
   error,
 }: PageCreateDrawerProps) {
@@ -51,7 +55,6 @@ export function PageCreateDrawer({
   const [slug, setSlug] = useState("");
   const [template, setTemplate] = useState("landing");
   const [slugTouched, setSlugTouched] = useState(false);
-  const [openAfterCreate, setOpenAfterCreate] = useState(true);
 
   const canSubmit = useMemo(() => {
     return title.trim().length > 0 && slug.trim().length > 0;
@@ -161,7 +164,7 @@ export function PageCreateDrawer({
                 id="page-open-after-create"
                 checked={openAfterCreate}
                 onCheckedChange={(checked) =>
-                  setOpenAfterCreate(checked === true)
+                  onOpenAfterCreateChange(checked === true)
                 }
               />
               Open in editor after create
