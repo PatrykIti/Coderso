@@ -1,5 +1,5 @@
-import { RefreshCcw, SlidersHorizontal } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Eye, RefreshCcw, Save, Send, SlidersHorizontal } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ import {
 } from "@/services/entriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
-import { EntryEditorHeader, EntryEditorHeaderActions } from "./EntryEditorHeader";
+import { EntryEditorHeader } from "./EntryEditorHeader";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { FieldRenderer } from "./FieldRenderer";
 import type { ContentField } from "../content-types/SchemaBuilder";
@@ -316,6 +316,14 @@ export function EntryEditor() {
   );
   const mediaFields = fields.filter((field) => field.type === "media");
   const relationFields = fields.filter((field) => field.type === "relation");
+  const titleRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title]);
 
   return (
     <AdminShell
@@ -330,17 +338,59 @@ export function EntryEditor() {
           entryLabel={entry?.title ?? "Edit Entry"}
         />
       }
-      topbarActions={
-        <EntryEditorHeaderActions
-          status={status}
-          onPreview={handlePreview}
-          onPublish={handlePublish}
-        />
-      }
     >
       <div className="flex h-full min-h-[calc(100vh-4rem)]">
-        <ScrollArea className="flex-1 bg-background">
-          <div className="mx-auto flex max-w-4xl flex-col gap-8 px-10 py-10">
+        <div className="flex min-h-0 flex-1 flex-col bg-background">
+          <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-6 py-3 backdrop-blur">
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={handlePreview}
+                  disabled={isLoading}
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleSaveDraft}
+                    disabled={isSaving || isLoading}
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving..." : "Save draft"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handlePublish}
+                    disabled={isPublishing || isLoading}
+                  >
+                    <Send className="h-4 w-4" />
+                    {status === "published" ? "Update" : "Publish"}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 lg:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setDetailsOpen(true)}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Details
+                </Button>
+              </div>
+            </div>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="mx-auto flex max-w-4xl flex-col gap-8 px-10 py-10">
             {error ? (
               <Alert variant="destructive">
                 <AlertTitle>Unable to load entry</AlertTitle>
@@ -357,10 +407,11 @@ export function EntryEditor() {
             ) : null}
             <div className="space-y-4">
               <Textarea
+                ref={titleRef}
                 value={title}
                 onChange={(event) => handleTitleChange(event.target.value)}
-                rows={2}
-                className="min-h-[96px] resize-none border-none bg-transparent p-0 text-4xl font-semibold leading-tight tracking-tight focus-visible:ring-0"
+                rows={1}
+                className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border bg-background px-3 py-1 text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-1 focus-visible:ring-ring"
                 placeholder="Enter post title..."
               />
               <div className="flex items-center gap-3">
@@ -384,17 +435,6 @@ export function EntryEditor() {
                   </Button>
                 </div>
               </div>
-            </div>
-            <div className="flex justify-end lg:hidden">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() => setDetailsOpen(true)}
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                Details
-              </Button>
             </div>
 
             {isLoading ? (
@@ -470,8 +510,9 @@ export function EntryEditor() {
                 </TabsContent>
               </Tabs>
             )}
-          </div>
-        </ScrollArea>
+            </div>
+          </ScrollArea>
+        </div>
         <aside className="hidden w-96 shrink-0 border-l bg-muted/30 lg:flex lg:flex-col">
           <ScrollArea className="flex-1">
             <div className="px-6 py-6">
