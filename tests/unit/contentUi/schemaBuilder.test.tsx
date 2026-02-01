@@ -36,7 +36,14 @@ test("validateFieldName enforces kebab-case and uniqueness", () => {
 });
 
 test("SchemaBuilder renders field editor", () => {
-  const html = renderToString(<SchemaBuilder fields={fields} onChange={() => {}} />);
+  const html = renderToString(
+    <SchemaBuilder
+      fields={fields}
+      selectedId={fields[0]?.id ?? null}
+      onSelect={() => {}}
+      onChange={() => {}}
+    />
+  );
 
   expect(html).toContain("Field settings");
   expect(html).toContain("Field name");

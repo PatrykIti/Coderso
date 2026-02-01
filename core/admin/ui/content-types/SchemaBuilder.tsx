@@ -228,7 +228,10 @@ export function SchemaBuilder({
         defaultError={defaultError}
         relationError={relationError}
         onChange={handleUpdateField}
-        onRemove={() => handleRemoveField(selectedField.id)}
+        onRemove={() => {
+          if (!selectedField) return;
+          handleRemoveField(selectedField.id);
+        }}
         className="hidden lg:flex"
       />
     </div>
