@@ -6,6 +6,8 @@ export type ContentSchemaProperty = {
   description?: string;
   enum?: string[];
   default?: string | number | boolean;
+  xFieldType?: FieldType;
+  xRelationTarget?: string;
 };
 
 export type ContentSchema = {
@@ -46,12 +48,16 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
     (acc, field) => {
       const definition: ContentSchemaProperty = {
         type: fieldTypeMap[field.type],
+        xFieldType: field.type,
       };
 
       if (field.label) definition.title = field.label;
       if (field.help) definition.description = field.help;
       if (field.type === "select" && field.options?.length) {
         definition.enum = field.options;
+      }
+      if (field.type === "relation" && field.relation?.target) {
+        definition.xRelationTarget = field.relation.target;
       }
 
       const defaultValue = normalizeDefaultValue(field);
@@ -79,6 +85,7 @@ const parseDefaultValue = (value: unknown) => {
 };
 
 const resolveFieldType = (definition: ContentSchemaProperty): FieldType => {
+  if (definition.xFieldType) return definition.xFieldType;
   if (definition.enum && definition.enum.length > 0) return "select";
   if (definition.type === "number") return "number";
   if (definition.type === "boolean") return "boolean";
@@ -96,6 +103,10 @@ export function fieldsFromSchema(schema: ContentSchema): ContentField[] {
     required: required.has(name),
     options: definition.enum,
     defaultValue: parseDefaultValue(definition.default),
+    relation:
+      definition.xFieldType === "relation" && definition.xRelationTarget
+        ? { target: definition.xRelationTarget }
+        : undefined,
   }));
 }
 

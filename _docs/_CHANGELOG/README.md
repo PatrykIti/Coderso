@@ -119,6 +119,7 @@ Project Change Log.
 | 092 | 2026-01-31 | Login alerts settings | Admin/Security |
 | 093 | 2026-01-31 | Login alerts UI wiring | Admin/UI |
 | 123 | 2026-02-01 | Content labels update | Admin/UI |
+| 124 | 2026-02-01 | Content type relation metadata | CMS/Content |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |
 | 096 | 2026-01-31 | API keys service | Core/Security |

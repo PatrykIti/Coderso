@@ -1,6 +1,16 @@
 import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 
 const ajv = new Ajv({ allErrors: true, strict: true });
+ajv.addKeyword({
+  keyword: "xFieldType",
+  schemaType: "string",
+  valid: true,
+});
+ajv.addKeyword({
+  keyword: "xRelationTarget",
+  schemaType: "string",
+  valid: true,
+});
 const validatorCache = new Map<string, ValidateFunction>();
 
 export type ContentSchema = Record<string, unknown>;
