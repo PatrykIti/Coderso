@@ -2,7 +2,7 @@
 ARG BUILDPLATFORM
 ARG TARGETPLATFORM
 
-FROM --platform=$BUILDPLATFORM oven/bun:1.3.6 AS builder
+FROM oven/bun:1.3.6 AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -18,7 +18,7 @@ COPY themes themes
 
 RUN cd core && bun x vite build --config vite.config.ts
 
-FROM --platform=$TARGETPLATFORM oven/bun:1.3.6 AS runner
+FROM oven/bun:1.3.6 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
