@@ -15,16 +15,16 @@ import {
   getContentType,
   updateContentType,
 } from "@/services/contentTypesClient";
-import { SplitShell } from "@/ui/layouts/SplitShell";
+import { EditorShell } from "@/ui/layouts/EditorShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { ContentTypePreviewPanel } from "./ContentTypePreviewPanel";
 import {
-  SchemaBuilder,
+  FieldSettingsPanel,
+  FieldsListPanel,
   validateFieldName,
   type ContentField,
 } from "./SchemaBuilder";
-import { FieldEditor } from "./FieldEditor";
 import {
   buildSchemaFromFields,
   fieldsFromSchema,
@@ -70,6 +70,7 @@ export function ContentTypeEditor() {
     defaultFields[0]?.id ?? null
   );
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [mobileFieldsOpen, setMobileFieldsOpen] = useState(false);
   const [previewHidden, setPreviewHidden] = useState(false);
   const [previewSheetOpen, setPreviewSheetOpen] = useState(false);
 
@@ -114,6 +115,20 @@ export function ContentTypeEditor() {
   }, [fields, selectedFieldId]);
 
   const schema = useMemo(() => buildSchemaFromFields(fields), [fields]);
+
+  const handleAddField = () => {
+    const suffix = fields.length + 1;
+    const nameValue = `field-${suffix}`;
+    const nextField: ContentField = {
+      id: crypto.randomUUID(),
+      name: nameValue,
+      type: "text",
+      label: "New field",
+      required: false,
+    };
+    handleFieldChange([...fields, nextField]);
+    setSelectedFieldId(nextField.id);
+  };
 
   const handleSave = async () => {
     if (!typeId) return;
@@ -165,9 +180,16 @@ export function ContentTypeEditor() {
       : null;
 
   return (
-    <SplitShell
+    <EditorShell
       activeHref="/admin/content-types"
-      contentClassName="p-0 overflow-hidden"
+      leftPanel={
+        <FieldsListPanel
+          fields={fields}
+          selectedId={selectedFieldId}
+          onSelect={(id) => setSelectedFieldId(id)}
+          onAdd={handleAddField}
+        />
+      }
       rightPanel={
         previewHidden ? null : (
           <div className="flex h-full min-h-0 flex-col overflow-y-auto p-6">
@@ -175,7 +197,7 @@ export function ContentTypeEditor() {
           </div>
         )
       }
-      rightPanelClassName="p-0 overflow-hidden"
+      rightPanelClassName="p-0"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Content</span>
@@ -215,7 +237,7 @@ export function ContentTypeEditor() {
         </div>
       }
     >
-      <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col">
+      <div className="flex h-full min-h-0 flex-col">
         <div className="border-b px-6 py-6">
           <PageHeader
             title="Content Type Editor"
@@ -241,6 +263,13 @@ export function ContentTypeEditor() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setMobileFieldsOpen(true)}
+            >
+              Fields
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setDetailsOpen(true)}
               disabled={!selectedField}
             >
@@ -255,7 +284,7 @@ export function ContentTypeEditor() {
             </Button>
           </div>
         </div>
-        <div className="flex flex-1 min-h-0 flex-col gap-6 px-6 py-6">
+        <div className="flex min-h-0 flex-1 flex-col gap-6 px-6 py-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -289,29 +318,15 @@ export function ContentTypeEditor() {
               Loading schema builder...
             </div>
           ) : (
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <SchemaBuilder
+            <div className="flex min-h-0 flex-1 flex-col gap-6">
+              <FieldsListPanel
+                className="lg:hidden"
                 fields={fields}
                 selectedId={selectedFieldId}
                 onSelect={(id) => setSelectedFieldId(id)}
-                onChange={handleFieldChange}
-                nameError={nameError}
-                defaultError={defaultError}
-                relationError={relationError}
+                onAdd={handleAddField}
               />
-            </div>
-          )}
-        </div>
-      </div>
-      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent side="right" className="w-80 p-0">
-          <SheetTitle className="sr-only">Field details</SheetTitle>
-          <SheetDescription className="sr-only">
-            Edit the selected field details.
-          </SheetDescription>
-          <div className="flex h-full flex-col overflow-y-auto p-6">
-            {selectedField ? (
-              <FieldEditor
+              <FieldSettingsPanel
                 field={selectedField}
                 nameError={nameError}
                 defaultError={defaultError}
@@ -322,20 +337,65 @@ export function ContentTypeEditor() {
                   );
                 }}
                 onRemove={() => {
+                  if (!selectedField) return;
                   handleFieldChange(fields.filter((field) => field.id !== selectedField.id));
-                  setDetailsOpen(false);
                 }}
+                className="hidden lg:flex"
               />
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                Select a field to edit its settings.
-              </div>
-            )}
+            </div>
+          )}
+        </div>
+      </div>
+      <Sheet open={mobileFieldsOpen} onOpenChange={setMobileFieldsOpen}>
+        <SheetContent side="left" className="w-full p-0 sm:max-w-md">
+          <SheetTitle className="sr-only">Fields</SheetTitle>
+          <SheetDescription className="sr-only">
+            Browse fields in this content type.
+          </SheetDescription>
+          <div className="flex h-full flex-col overflow-y-auto p-6">
+            <FieldsListPanel
+              fields={fields}
+              selectedId={selectedFieldId}
+              onSelect={(id) => {
+                setSelectedFieldId(id);
+                setMobileFieldsOpen(false);
+              }}
+              onAdd={() => {
+                handleAddField();
+                setMobileFieldsOpen(false);
+              }}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent side="right" className="w-full p-0 sm:max-w-md">
+          <SheetTitle className="sr-only">Field details</SheetTitle>
+          <SheetDescription className="sr-only">
+            Edit the selected field details.
+          </SheetDescription>
+          <div className="flex h-full flex-col overflow-y-auto p-6">
+            <FieldSettingsPanel
+              field={selectedField}
+              nameError={nameError}
+              defaultError={defaultError}
+              relationError={relationError}
+              onChange={(next) => {
+                handleFieldChange(
+                  fields.map((field) => (field.id === next.id ? next : field))
+                );
+              }}
+              onRemove={() => {
+                if (!selectedField) return;
+                handleFieldChange(fields.filter((field) => field.id !== selectedField.id));
+                setDetailsOpen(false);
+              }}
+            />
           </div>
         </SheetContent>
       </Sheet>
       <Sheet open={previewSheetOpen} onOpenChange={setPreviewSheetOpen}>
-        <SheetContent side="right" className="w-80 p-0">
+        <SheetContent side="right" className="w-full p-0 sm:max-w-md">
           <SheetTitle className="sr-only">Schema preview</SheetTitle>
           <SheetDescription className="sr-only">
             View the generated JSON schema.
@@ -345,6 +405,6 @@ export function ContentTypeEditor() {
           </div>
         </SheetContent>
       </Sheet>
-    </SplitShell>
+    </EditorShell>
   );
 }

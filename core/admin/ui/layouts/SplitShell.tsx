@@ -15,12 +15,12 @@ export function SplitShell({
 }: SplitShellProps) {
   return (
     <AdminShell {...props}>
-      <div className="flex h-full gap-6">
-        <div className="min-w-0 flex-1">{children}</div>
+      <div className="flex h-full min-h-0 gap-6">
+        <div className="min-h-0 min-w-0 flex-1">{children}</div>
         {rightPanel ? (
           <aside
             className={cn(
-              "hidden w-90 shrink-0 border-l bg-background px-6 py-4 lg:block",
+              "hidden min-h-0 w-90 shrink-0 border-l bg-background px-6 py-4 lg:block",
               rightPanelClassName
             )}
           >
