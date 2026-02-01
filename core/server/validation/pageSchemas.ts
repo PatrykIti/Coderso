@@ -124,3 +124,11 @@ export const pagePreviewSchema = {
     ttlMinutes: { type: "number", minimum: 1, maximum: 120 },
   },
 };
+
+export const pagePublishSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    data: pageDataSchema,
+  },
+};

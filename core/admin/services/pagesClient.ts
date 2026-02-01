@@ -67,10 +67,18 @@ export async function updatePage(id: string, payload: Partial<PagePayload>) {
   }, { withCsrf: true });
 }
 
-export async function publishPage(id: string) {
-  return apiRequest<{ ok: boolean }>(`/pages/${id}/publish`, {
-    method: "POST",
-  }, { withCsrf: true });
+export async function publishPage(id: string, data?: Record<string, unknown>) {
+  return apiRequest<{ ok: boolean }>(
+    `/pages/${id}/publish`,
+    data
+      ? {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data }),
+        }
+      : { method: "POST" },
+    { withCsrf: true }
+  );
 }
 
 export async function unpublishPage(id: string) {

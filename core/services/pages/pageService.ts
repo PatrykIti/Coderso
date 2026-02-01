@@ -129,17 +129,20 @@ export async function updatePage(id: string, input: UpdatePageInput) {
   return page ?? null;
 }
 
-export async function publishPage(id: string, userId: string) {
+export async function publishPage(id: string, userId: string, data?: PageData) {
   return db.transaction(async (tx) => {
     const [page] = await tx.select().from(pages).where(eq(pages.id, id));
     if (!page) throw new Error("page_not_found");
 
-    await createRevisionTx(tx, id, page.currentData as RevisionData, userId);
+    const nextData = (data ?? page.currentData) as PageData;
 
-    const publishedData = toPublishedData(page.currentData as PageData);
+    await createRevisionTx(tx, id, nextData as RevisionData, userId);
+
+    const publishedData = toPublishedData(nextData);
     const [updated] = await tx
       .update(pages)
       .set({
+        currentData: nextData,
         publishedData,
         status: "published",
         publishedAt: new Date(),

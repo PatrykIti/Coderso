@@ -18,6 +18,7 @@ import { logAudit } from "../../services/audit/auditService";
 import {
   pageCreateSchema,
   pagePreviewSchema,
+  pagePublishSchema,
   pageUpdateSchema,
 } from "../validation/pageSchemas";
 
@@ -92,8 +93,10 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
     "/pages/:id/publish",
     requirePermission("content:publish"),
     async (ctx) => {
+      validate(pagePublishSchema, ctx.body);
       if (!ctx.user?.id) throw new Error("auth_required");
-      const page = await publishPage(ctx.params.id, ctx.user.id);
+      const body = ctx.body as { data?: PageData };
+      const page = await publishPage(ctx.params.id, ctx.user.id, body.data);
       if (!page) throw new Error("page_not_found");
       await logAudit({
         actorId: ctx.user.id,

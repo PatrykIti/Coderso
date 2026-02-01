@@ -484,6 +484,14 @@ Create/Update payload (summary):
 }
 ```
 
+`POST /pages/:id/publish` (optional draft data)
+
+```json
+{
+  "data": { "schemaVersion": 1, "blocks": [] }
+}
+```
+
 ---
 
 ## Media

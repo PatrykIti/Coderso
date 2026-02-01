@@ -82,7 +82,16 @@ testIfDb("create/update/publish/unpublish page", async () => {
   const updated = await updatePage(page.id, { title: "Home Updated" });
   expect(updated?.title).toBe("Home Updated");
 
-  const published = await publishPage(page.id, createdUserId);
+  const published = await publishPage(page.id, createdUserId, {
+    schemaVersion: 1,
+    blocks: [
+      {
+        id: "b2",
+        type: "compare-timeline",
+        editor: { mode: "visual", wizardCompleted: true },
+      },
+    ],
+  });
   expect(published?.status).toBe("published");
   expect(
     (published?.publishedData as { blocks?: Array<Record<string, unknown>> })

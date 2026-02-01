@@ -204,7 +204,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setIsPublishing(true);
     setError(null);
     try {
-      await publishPage(pageId);
+      await publishPage(pageId, pageData);
       const updated = await getPage(pageId);
       setPage(updated);
       setHasUnsavedChanges(false);
