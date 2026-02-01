@@ -24,7 +24,7 @@ export function TopBar({
   return (
     <header
       className={cn(
-        "flex w-full flex-wrap items-center gap-3 border-b border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] px-4 py-3 sm:h-16 sm:flex-nowrap sm:px-6 sm:py-0",
+        "flex w-full flex-wrap items-center gap-3 border-b border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] px-4 py-3 lg:h-16 lg:flex-nowrap lg:px-6 lg:py-0",
         className
       )}
     >
@@ -40,10 +40,10 @@ export function TopBar({
           )}
         </div>
       </div>
-      <div className="order-3 w-full sm:order-none sm:flex-1 sm:px-6">
+      <div className="order-3 w-full lg:order-none lg:flex-1 lg:px-6">
         {search}
       </div>
-      <div className="ml-auto flex flex-wrap items-center gap-2 sm:ml-0 sm:flex-nowrap">
+      <div className="ml-auto flex flex-wrap items-center gap-2 lg:ml-0 lg:flex-nowrap">
         <AdminThemeSwitcher />
         {actions}
         <Button variant="ghost" size="icon">

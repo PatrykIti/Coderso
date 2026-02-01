@@ -300,7 +300,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         </div>
       }
       topbarActions={
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <DeviceSwitcher />
           <Button
             variant="outline"
