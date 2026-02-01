@@ -8,6 +8,7 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
+  SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
@@ -94,9 +95,9 @@ export function ContentTypeCreateDrawer({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Create New Collection</SheetTitle>
-            <p className="text-xs text-muted-foreground">
+            <SheetDescription className="text-xs text-muted-foreground">
               Define the content type before building fields.
-            </p>
+            </SheetDescription>
           </div>
           <SheetClose asChild>
             <Button variant="ghost" size="icon" aria-label="Close content type drawer">
