@@ -150,6 +150,28 @@ const collectDescendants = (items: MenuItemDisplay[], id: string) => {
   return descendants;
 };
 
+export const validateMenuItemsPayload = (items: MenuItemRecord[]) => {
+  for (const entry of items) {
+    if (!entry.label.trim()) {
+      return {
+        ok: false,
+        message: "Each menu item must have a label.",
+        itemId: entry.id,
+      } as const;
+    }
+    const hasHref = Boolean(entry.href && entry.href.trim().length > 0);
+    const hasPage = Boolean(entry.pageId);
+    if ((hasHref && hasPage) || (!hasHref && !hasPage)) {
+      return {
+        ok: false,
+        message: "Each menu item must link to a page or a custom URL.",
+        itemId: entry.id,
+      } as const;
+    }
+  }
+  return { ok: true } as const;
+};
+
 export function MenuEditorPage() {
   const [menus, setMenus] = useState<MenuSummary[]>([]);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -394,25 +416,14 @@ export function MenuEditorPage() {
     if (!activeMenuId) return;
     setError(null);
 
-    for (const entry of items) {
-      if (!entry.label.trim()) {
-        setError("Each menu item must have a label.");
-        setActiveItemId(entry.id);
-        if (!isLargeScreen) {
-          setDetailsOpen(true);
-        }
-        return;
+    const validation = validateMenuItemsPayload(items);
+    if (!validation.ok) {
+      setError(validation.message);
+      setActiveItemId(validation.itemId);
+      if (!isLargeScreen) {
+        setDetailsOpen(true);
       }
-      const hasHref = Boolean(entry.href && entry.href.trim().length > 0);
-      const hasPage = Boolean(entry.pageId);
-      if ((hasHref && hasPage) || (!hasHref && !hasPage)) {
-        setError("Each menu item must link to a page or a custom URL.");
-        setActiveItemId(entry.id);
-        if (!isLargeScreen) {
-          setDetailsOpen(true);
-        }
-        return;
-      }
+      return;
     }
 
     setIsSaving(true);
