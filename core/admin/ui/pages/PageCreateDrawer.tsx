@@ -2,6 +2,7 @@ import { Globe, LayoutTemplate, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -26,6 +27,7 @@ type PageCreateDrawerProps = {
     title: string;
     slug: string;
     template?: string;
+    openAfterCreate: boolean;
   }) => Promise<void> | void;
   isSubmitting?: boolean;
   error?: string | null;
@@ -49,6 +51,7 @@ export function PageCreateDrawer({
   const [slug, setSlug] = useState("");
   const [template, setTemplate] = useState("landing");
   const [slugTouched, setSlugTouched] = useState(false);
+  const [openAfterCreate, setOpenAfterCreate] = useState(true);
 
   const canSubmit = useMemo(() => {
     return title.trim().length > 0 && slug.trim().length > 0;
@@ -61,6 +64,7 @@ export function PageCreateDrawer({
       title: title.trim(),
       slug: normalizedSlug,
       template,
+      openAfterCreate,
     });
   };
 
@@ -148,16 +152,31 @@ export function PageCreateDrawer({
         </div>
         <Separator />
         <div className="bg-muted/30 px-6 py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!canSubmit || isSubmitting}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label
+              htmlFor="page-open-after-create"
+              className="flex items-center gap-2 text-sm text-muted-foreground"
             >
-              {isSubmitting ? "Creating..." : "Create Page"}
-            </Button>
+              <Checkbox
+                id="page-open-after-create"
+                checked={openAfterCreate}
+                onCheckedChange={(checked) =>
+                  setOpenAfterCreate(checked === true)
+                }
+              />
+              Open in editor after create
+            </label>
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={!canSubmit || isSubmitting}
+              >
+                {isSubmitting ? "Creating..." : "Create Page"}
+              </Button>
+            </div>
           </div>
         </div>
       </SheetContent>

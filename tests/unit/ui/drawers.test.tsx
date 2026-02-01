@@ -87,10 +87,15 @@ const templates = [
 
 test("PageCreateDrawer renders title", () => {
   const html = renderToString(
-    <PageCreateDrawer open onOpenChange={() => undefined} />
+    <PageCreateDrawer
+      open
+      onOpenChange={() => undefined}
+      onCreate={() => undefined}
+    />
   );
 
   expect(html).toContain("Create New Page");
+  expect(html).toContain("Open in editor after create");
 });
 
 test("EntryCreateDrawer renders title", () => {

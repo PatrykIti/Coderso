@@ -97,6 +97,7 @@ export function PageListPage() {
     title: string;
     slug: string;
     template?: string;
+    openAfterCreate: boolean;
   }) => {
     setIsSubmitting(true);
     setError(null);
@@ -107,9 +108,12 @@ export function PageListPage() {
         template: payload.template,
         data: { blocks: [], settings: { template: payload.template } },
       });
-      if (typeof window !== "undefined") {
+      if (payload.openAfterCreate && typeof window !== "undefined") {
         window.location.assign(`/admin/pages/${encodeURIComponent(page.id)}`);
+        return;
       }
+      await refresh();
+      setCreateOpen(false);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);

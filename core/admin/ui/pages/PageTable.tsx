@@ -68,18 +68,28 @@ export function PageTable({
   onDuplicate,
 }: PageTableProps) {
   return (
-    <div className="overflow-x-auto rounded-xl border bg-card shadow-sm">
-      <Table className="w-full table-fixed">
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+      <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
             <TableHead className="w-10 pl-4">
               <Checkbox aria-label="Select all pages" />
             </TableHead>
-            <TableHead className="w-full">Page title</TableHead>
-            <TableHead className="hidden md:table-cell">Status</TableHead>
-            <TableHead className="hidden lg:table-cell">Author</TableHead>
-            <TableHead className="hidden xl:table-cell">Last updated</TableHead>
-            <TableHead className="w-12 pr-4 text-right">Actions</TableHead>
+            <TableHead className="min-w-[12rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Page title
+            </TableHead>
+            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
+              Status
+            </TableHead>
+            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
+              Author
+            </TableHead>
+            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">
+              Last updated
+            </TableHead>
+            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Actions
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -98,7 +108,7 @@ export function PageTable({
               <TableCell className="pl-4">
                 <Checkbox aria-label={`Select ${page.title}`} />
               </TableCell>
-              <TableCell className="whitespace-normal">
+              <TableCell>
                 <div className="flex flex-col">
                   <span className="break-words font-semibold text-foreground">
                     {page.title}
