@@ -109,7 +109,7 @@ test("EntryCreateDrawer renders title", () => {
     />
   );
 
-  expect(html).toContain("Create New Entry");
+  expect(html).toContain("Create New Content");
 });
 
 test("ContentTypeCreateDrawer renders title", () => {
