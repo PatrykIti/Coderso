@@ -204,37 +204,6 @@ export function ContentTypeEditor() {
           <span className="text-foreground">Content Types</span>
         </div>
       }
-      topbarActions={
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="hidden gap-2 lg:inline-flex"
-            onClick={() => setPreviewHidden((prev) => !prev)}
-          >
-            {previewHidden ? "Show preview" : "Hide preview"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={handleSave}
-            disabled={isSaving || isLoading}
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save draft"}
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={handlePublish}
-            disabled={isSaving || isLoading}
-          >
-            <Send className="h-4 w-4" />
-            Publish
-          </Button>
-        </div>
-      }
     >
       <div className="flex h-full min-h-0 flex-col">
         <div className="border-b px-6 py-6">
@@ -256,6 +225,39 @@ export function ContentTypeEditor() {
               </AlertDescription>
             </Alert>
           ) : null}
+        </div>
+        <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={() => setPreviewHidden((prev) => !prev)}
+            >
+              {previewHidden ? "Show preview" : "Hide preview"}
+            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={handleSave}
+                disabled={isSaving || isLoading}
+              >
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving..." : "Save draft"}
+              </Button>
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={handlePublish}
+                disabled={isSaving || isLoading}
+              >
+                <Send className="h-4 w-4" />
+                Publish
+              </Button>
+            </div>
+          </div>
         </div>
         <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 lg:hidden">
           <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">

@@ -144,6 +144,7 @@ Project Change Log.
 | 117 | 2026-02-01 | Page editor UX fixes | Admin/UI |
 | 118 | 2026-02-01 | Content type editor layout refinements | Admin/UI |
 | 119 | 2026-02-01 | Content type fields search | Admin/UI |
+| 120 | 2026-02-01 | Admin input controls theming | Admin/UI |
 
 
 ---

@@ -1,4 +1,5 @@
 import { GripVertical } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,19 @@ export function BlockList({
   onDelete,
 }: BlockListProps) {
   const widgetRegistry = getWidgetRegistry();
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
+  const handleDrop = (from: number, to: number) => {
+    if (from === to) return;
+    onMove(from, to);
+  };
+
+  const resetDragState = () => {
+    setDragIndex(null);
+    setHoverIndex(null);
+  };
+
   return (
     <div className="space-y-3">
       {blocks.map((block, index) => {
@@ -36,7 +50,8 @@ export function BlockList({
             key={block.id}
             className={cn(
               "cursor-pointer rounded-xl border bg-background p-4 shadow-sm",
-              selectedId === block.id && "border-primary/50 ring-2 ring-primary/10"
+              selectedId === block.id && "border-primary/50 ring-2 ring-primary/10",
+              hoverIndex === index && dragIndex !== null && "border-primary/40"
             )}
             onClick={() => onSelect(block.id)}
             role="button"
@@ -47,6 +62,22 @@ export function BlockList({
                 onSelect(block.id);
               }
             }}
+            onDragOver={(event) => {
+              if (dragIndex === null) return;
+              event.preventDefault();
+              setHoverIndex(index);
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const from = Number(event.dataTransfer.getData("text/plain"));
+              if (!Number.isNaN(from)) {
+                handleDrop(from, index);
+              }
+              resetDragState();
+            }}
+            onDragLeave={() => {
+              if (hoverIndex === index) setHoverIndex(null);
+            }}
           >
             <div className="flex items-start justify-between gap-3">
               <button
@@ -54,7 +85,19 @@ export function BlockList({
                 className="flex flex-1 items-start gap-3 text-left"
                 onClick={() => onSelect(block.id)}
               >
-                <span className="rounded-md border bg-muted/40 p-2 text-muted-foreground">
+                <span
+                  className="rounded-md border bg-muted/40 p-2 text-muted-foreground"
+                  role="button"
+                  tabIndex={0}
+                  draggable
+                  aria-label={`Reorder ${label}`}
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData("text/plain", String(index));
+                    event.dataTransfer.effectAllowed = "move";
+                    setDragIndex(index);
+                  }}
+                  onDragEnd={() => resetDragState()}
+                >
                   <GripVertical className="h-4 w-4" />
                 </span>
                 <div>

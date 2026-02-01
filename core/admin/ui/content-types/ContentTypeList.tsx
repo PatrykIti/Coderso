@@ -111,30 +111,40 @@ export function ContentTypeList() {
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead>Fields</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Name
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Slug
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Fields
+                </TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Status
+                </TableHead>
+                <TableHead className="pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={5} className="px-4 py-6 text-sm text-muted-foreground">
                     Loading content types...
                   </TableCell>
                 </TableRow>
               ) : rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-sm text-muted-foreground">
+                  <TableCell colSpan={5} className="px-4 py-6 text-sm text-muted-foreground">
                     No content types yet. Create the first one to get started.
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((type) => (
                   <TableRow key={type.id}>
-                    <TableCell>
+                    <TableCell className="pl-4 py-4">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold">{type.name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -142,13 +152,13 @@ export function ContentTypeList() {
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="py-4 text-sm text-muted-foreground">
                       {type.slug}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4">
                       <Badge variant="outline">{type.fieldCount}</Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4">
                       <Badge
                         variant="outline"
                         className={statusStyles[type.status]}
@@ -156,7 +166,7 @@ export function ContentTypeList() {
                         {type.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="py-4 pr-4 text-right">
                       <Button variant="ghost" size="sm" asChild>
                         <a
                           href={withAdminBasePath(

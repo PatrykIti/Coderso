@@ -177,7 +177,7 @@ export function EntryTable({
                   {formatUpdatedAt(entry.updatedAt)}
                 </TableCell>
                 <TableCell className="pr-4 text-right">
-                  <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex justify-end opacity-100 transition-opacity">
                     <EntryRowActions
                       onEdit={onEdit}
                       onDelete={onDelete}
