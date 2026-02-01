@@ -331,22 +331,11 @@ export function EntryEditor() {
         />
       }
       topbarActions={
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 lg:hidden"
-            onClick={() => setDetailsOpen(true)}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Details
-          </Button>
-          <EntryEditorHeaderActions
-            status={status}
-            onPreview={handlePreview}
-            onPublish={handlePublish}
-          />
-        </div>
+        <EntryEditorHeaderActions
+          status={status}
+          onPreview={handlePreview}
+          onPublish={handlePublish}
+        />
       }
     >
       <div className="flex h-full min-h-[calc(100vh-4rem)]">
@@ -395,6 +384,17 @@ export function EntryEditor() {
                   </Button>
                 </div>
               </div>
+            </div>
+            <div className="flex justify-end lg:hidden">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setDetailsOpen(true)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Details
+              </Button>
             </div>
 
             {isLoading ? (
