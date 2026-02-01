@@ -18,12 +18,7 @@ export function WidgetPicker({ onAdd }: WidgetPickerProps) {
   const filteredWidgets = useMemo(() => {
     if (!normalizedQuery) return widgetRegistry;
     return widgetRegistry.filter((widget) => {
-      const haystack = [
-        widget.title,
-        widget.description,
-        widget.type,
-        ...(widget.tags ?? []),
-      ]
+      const haystack = [widget.title, widget.description, widget.type]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
