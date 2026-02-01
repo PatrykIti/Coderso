@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS = {
   "site.locale": "en",
   "site.adminBaseUrl": null as string | null,
   "site.publicBaseUrl": null as string | null,
+  "site.adminPath": "/admin",
+  "site.adminRedirectEnabled": false,
   "design.tokens": {} as DesignTokenOverrides,
   "search.categoryOverrides": {} as SearchCategoryOverrides,
 };
@@ -25,6 +27,9 @@ const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_SETTINGS));
 
 const isBaseUrlKey = (key: SettingKey) =>
   key === "site.adminBaseUrl" || key === "site.publicBaseUrl";
+
+const isAdminPathKey = (key: SettingKey) => key === "site.adminPath";
+const isAdminRedirectKey = (key: SettingKey) => key === "site.adminRedirectEnabled";
 
 function assertSettingKey(key: string): asserts key is SettingKey {
   if (!ALLOWED_KEYS.has(key)) {
@@ -56,6 +61,23 @@ const normalizeBaseUrlOutput = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const normalizeAdminPathValue = (value: unknown) => {
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return "/admin";
+  const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  const normalized =
+    prefixed.length > 1 && prefixed.endsWith("/")
+      ? prefixed.slice(0, -1)
+      : prefixed;
+  if (!/^\/[a-zA-Z0-9_-]+$/.test(normalized)) {
+    throw new Error("settings_value_invalid");
+  }
+  return normalized;
+};
+
 function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[SettingKey] {
   if (key === "site.name" || key === "site.locale") {
     if (typeof value !== "string") {
@@ -66,6 +88,17 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
 
   if (isBaseUrlKey(key)) {
     return normalizeBaseUrlValue(value);
+  }
+
+  if (isAdminPathKey(key)) {
+    return normalizeAdminPathValue(value);
+  }
+
+  if (isAdminRedirectKey(key)) {
+    if (typeof value !== "boolean") {
+      throw new Error("settings_value_invalid");
+    }
+    return value;
   }
 
   if (key === "design.tokens") {
@@ -120,6 +153,16 @@ export async function listSettings(): Promise<SettingValueMap> {
       continue;
     }
 
+    if (isAdminPathKey(key)) {
+      merged[key] = normalizeAdminPathValue(row.value);
+      continue;
+    }
+
+    if (isAdminRedirectKey(key)) {
+      merged[key] = Boolean(row.value);
+      continue;
+    }
+
     if (key in merged) {
       merged[key] = row.value as string;
     }
@@ -134,6 +177,12 @@ export async function getSetting(key: string) {
   if (!row) return DEFAULT_SETTINGS[key];
   if (isBaseUrlKey(key)) {
     return normalizeBaseUrlOutput(row.value);
+  }
+  if (isAdminPathKey(key)) {
+    return normalizeAdminPathValue(row.value);
+  }
+  if (isAdminRedirectKey(key)) {
+    return Boolean(row.value);
   }
   return row.value as SettingValueMap[SettingKey];
 }

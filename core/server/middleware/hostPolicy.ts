@@ -20,7 +20,15 @@ const hostFromBaseUrl = (value: string | null) => {
   }
 };
 
-const isAdminPath = (pathname: string) => pathname.startsWith("/admin");
+const normalizeAdminPath = (path: string) => {
+  const trimmed = path.trim();
+  if (!trimmed) return "/admin";
+  const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return prefixed.length > 1 && prefixed.endsWith("/") ? prefixed.slice(0, -1) : prefixed;
+};
+
+const isAdminPath = (pathname: string, adminPath: string) =>
+  pathname === adminPath || pathname.startsWith(`${adminPath}/`);
 const isMediaPath = (pathname: string) => pathname.startsWith("/media");
 
 export const evaluateHostPolicy = (input: {
@@ -28,9 +36,11 @@ export const evaluateHostPolicy = (input: {
   pathname: string;
   adminBaseUrl: string | null;
   publicBaseUrl: string | null;
+  adminPath: string;
 }): HostPolicyDecision => {
   const adminHost = hostFromBaseUrl(input.adminBaseUrl);
   const publicHost = hostFromBaseUrl(input.publicBaseUrl);
+  const adminPath = normalizeAdminPath(input.adminPath);
 
   if (!adminHost && !publicHost) return { allow: true };
   if (adminHost && !publicHost) return { allow: true };
@@ -41,14 +51,14 @@ export const evaluateHostPolicy = (input: {
   if (!requestHost) return { allow: true };
 
   if (requestHost === adminHost) {
-    if (isAdminPath(input.pathname) || isMediaPath(input.pathname)) {
+    if (isAdminPath(input.pathname, adminPath) || isMediaPath(input.pathname)) {
       return { allow: true };
     }
     return { allow: false, reason: "public_host_required" };
   }
 
   if (requestHost === publicHost) {
-    if (isAdminPath(input.pathname)) {
+    if (isAdminPath(input.pathname, adminPath)) {
       return { allow: false, reason: "admin_host_required" };
     }
     return { allow: true };
@@ -58,16 +68,35 @@ export const evaluateHostPolicy = (input: {
 };
 
 export async function enforceHostPolicy(req: Request) {
-  const [adminBaseUrl, publicBaseUrl] = await Promise.all([
+  const [adminBaseUrl, publicBaseUrl, adminPath, adminRedirectEnabled] = await Promise.all([
     getSetting("site.adminBaseUrl"),
     getSetting("site.publicBaseUrl"),
+    getSetting("site.adminPath"),
+    getSetting("site.adminRedirectEnabled"),
   ]);
+  const adminHost = hostFromBaseUrl(
+    typeof adminBaseUrl === "string" ? adminBaseUrl : null
+  );
   const url = new URL(req.url);
+  const requestHost = extractHost(req);
+  const normalizedAdminPath = normalizeAdminPath(
+    typeof adminPath === "string" ? adminPath : "/admin"
+  );
+
+  if (
+    adminHost &&
+    requestHost === adminHost &&
+    adminRedirectEnabled === true &&
+    (url.pathname === "/" || url.pathname === "")
+  ) {
+    return Response.redirect(`${normalizedAdminPath}/`, 307);
+  }
   const decision = evaluateHostPolicy({
-    requestHost: extractHost(req),
+    requestHost,
     pathname: url.pathname,
     adminBaseUrl: typeof adminBaseUrl === "string" ? adminBaseUrl : null,
     publicBaseUrl: typeof publicBaseUrl === "string" ? publicBaseUrl : null,
+    adminPath: normalizedAdminPath,
   });
 
   if (decision.allow) return null;

@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
+import { resolveAdminHref } from "@/utils/adminPaths";
 
 const items = [
   { id: "general", label: "General", icon: Settings, href: "/admin/settings/general" },
@@ -25,6 +27,7 @@ type SettingsSidebarProps = {
 };
 
 export function SettingsSidebar({ activeId = "general" }: SettingsSidebarProps) {
+  const adminBasePath = useAdminBasePath();
   return (
     <div className="flex h-full flex-col gap-4 p-4">
       <p className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -34,10 +37,11 @@ export function SettingsSidebar({ activeId = "general" }: SettingsSidebarProps) 
         {items.map((item) => {
           const isActive = item.id === activeId;
           const Icon = item.icon;
+          const href = resolveAdminHref(adminBasePath, item.href);
           return (
             <a
               key={item.id}
-              href={item.href}
+              href={href}
               aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",

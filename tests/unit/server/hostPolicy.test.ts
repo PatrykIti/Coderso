@@ -4,6 +4,7 @@ import { evaluateHostPolicy } from "../../../core/server/middleware/hostPolicy";
 
 const adminBaseUrl = "https://cms.example.com";
 const publicBaseUrl = "https://www.example.com";
+const adminPath = "/control-panel";
 
 test("allows when base urls are not configured", () => {
   const decision = evaluateHostPolicy({
@@ -11,6 +12,7 @@ test("allows when base urls are not configured", () => {
     pathname: "/admin",
     adminBaseUrl: null,
     publicBaseUrl: null,
+    adminPath: "/admin",
   });
 
   expect(decision.allow).toBe(true);
@@ -19,9 +21,10 @@ test("allows when base urls are not configured", () => {
 test("allows admin routes on admin host and blocks public routes", () => {
   const adminOk = evaluateHostPolicy({
     requestHost: "cms.example.com",
-    pathname: "/admin",
+    pathname: "/control-panel",
     adminBaseUrl,
     publicBaseUrl,
+    adminPath,
   });
   expect(adminOk.allow).toBe(true);
 
@@ -30,6 +33,7 @@ test("allows admin routes on admin host and blocks public routes", () => {
     pathname: "/",
     adminBaseUrl,
     publicBaseUrl,
+    adminPath,
   });
   expect(publicBlocked.allow).toBe(false);
   expect(publicBlocked.reason).toBe("public_host_required");
@@ -38,9 +42,10 @@ test("allows admin routes on admin host and blocks public routes", () => {
 test("blocks admin routes on public host and allows public routes", () => {
   const adminBlocked = evaluateHostPolicy({
     requestHost: "www.example.com",
-    pathname: "/admin",
+    pathname: "/control-panel",
     adminBaseUrl,
     publicBaseUrl,
+    adminPath,
   });
   expect(adminBlocked.allow).toBe(false);
   expect(adminBlocked.reason).toBe("admin_host_required");
@@ -50,6 +55,7 @@ test("blocks admin routes on public host and allows public routes", () => {
     pathname: "/pages",
     adminBaseUrl,
     publicBaseUrl,
+    adminPath,
   });
   expect(publicOk.allow).toBe(true);
 });
@@ -60,6 +66,7 @@ test("allows media on admin host", () => {
     pathname: "/media/uploads/logo.png",
     adminBaseUrl,
     publicBaseUrl,
+    adminPath,
   });
   expect(decision.allow).toBe(true);
 });
@@ -67,9 +74,10 @@ test("allows media on admin host", () => {
 test("blocks unknown host when both are configured", () => {
   const decision = evaluateHostPolicy({
     requestHost: "other.example.com",
-    pathname: "/admin",
+    pathname: "/control-panel",
     adminBaseUrl,
     publicBaseUrl,
+    adminPath,
   });
   expect(decision.allow).toBe(false);
   expect(decision.reason).toBe("host_mismatch");

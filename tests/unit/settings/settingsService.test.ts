@@ -27,6 +27,8 @@ const cleanupKeys = [
   "site.locale",
   "site.adminBaseUrl",
   "site.publicBaseUrl",
+  "site.adminPath",
+  "site.adminRedirectEnabled",
   "design.tokens",
 ];
 
@@ -43,6 +45,8 @@ testIfDb("set/get/list/delete settings", async () => {
   await setSetting("site.locale", "pl-PL");
   await setSetting("site.adminBaseUrl", "https://admin.example.com");
   await setSetting("site.publicBaseUrl", "https://www.example.com");
+  await setSetting("site.adminPath", "/super-admin");
+  await setSetting("site.adminRedirectEnabled", true);
   await setSetting("design.tokens", {
     colors: { primary: "#111111" },
   });
@@ -55,6 +59,8 @@ testIfDb("set/get/list/delete settings", async () => {
   expect(list["site.locale"]).toBe("pl-PL");
   expect(list["site.adminBaseUrl"]).toBe("https://admin.example.com/");
   expect(list["site.publicBaseUrl"]).toBe("https://www.example.com/");
+  expect(list["site.adminPath"]).toBe("/super-admin");
+  expect(list["site.adminRedirectEnabled"]).toBe(true);
   expect(list["design.tokens"]).toEqual({
     colors: { primary: "#111111" },
   });
@@ -64,11 +70,15 @@ testIfDb("set/get/list/delete settings", async () => {
     "site.locale": "en-US",
     "site.adminBaseUrl": null,
     "site.publicBaseUrl": "https://public.example.com",
+    "site.adminPath": "admin-panel",
+    "site.adminRedirectEnabled": false,
   });
   expect(bulk["site.name"]).toBe("Nextless Updated");
   expect(bulk["site.locale"]).toBe("en-US");
   expect(bulk["site.adminBaseUrl"]).toBeNull();
   expect(bulk["site.publicBaseUrl"]).toBe("https://public.example.com/");
+  expect(bulk["site.adminPath"]).toBe("/admin-panel");
+  expect(bulk["site.adminRedirectEnabled"]).toBe(false);
 
   await deleteSetting("site.name");
   const defaultName = await getSetting("site.name");

@@ -8,6 +8,7 @@ import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { BrandingCard } from "./BrandingCard";
 import { BaseUrlCard } from "./BaseUrlCard";
+import { AdminAccessCard } from "./AdminAccessCard";
 import { LogoUploadCard } from "./LogoUploadCard";
 import { SettingsSidebar } from "./SettingsSidebar";
 
@@ -16,6 +17,8 @@ type GeneralSettingsValues = {
   siteLocale: string;
   adminBaseUrl: string;
   publicBaseUrl: string;
+  adminPath: string;
+  adminRedirectEnabled: boolean;
 };
 
 type GeneralSettingsPageProps = {
@@ -31,6 +34,8 @@ const defaultValues: GeneralSettingsValues = {
   siteLocale: "en",
   adminBaseUrl: "",
   publicBaseUrl: "",
+  adminPath: "/admin",
+  adminRedirectEnabled: false,
 };
 
 export function GeneralSettingsPage({
@@ -64,7 +69,21 @@ export function GeneralSettingsPage({
 
   const adminBaseUrlError = validateBaseUrl(form.adminBaseUrl);
   const publicBaseUrlError = validateBaseUrl(form.publicBaseUrl);
-  const hasValidationErrors = Boolean(adminBaseUrlError || publicBaseUrlError);
+  const validateAdminPath = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return "Admin path is required.";
+    const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+    if (normalized.length <= 1) return "Admin path must be longer than '/'.";
+    if (!/^\/[a-zA-Z0-9_-]+$/.test(normalized)) {
+      return "Use only letters, numbers, dashes, and underscores (single segment).";
+    }
+    return null;
+  };
+
+  const adminPathError = validateAdminPath(form.adminPath);
+  const hasValidationErrors = Boolean(
+    adminBaseUrlError || publicBaseUrlError || adminPathError
+  );
 
   useEffect(() => {
     setForm(values);
@@ -159,6 +178,19 @@ export function GeneralSettingsPage({
                   ...prev,
                   adminBaseUrl: next.adminBaseUrl,
                   publicBaseUrl: next.publicBaseUrl,
+                }))
+              }
+              disabled={busy}
+            />
+            <AdminAccessCard
+              adminPath={form.adminPath}
+              redirectEnabled={form.adminRedirectEnabled}
+              error={adminPathError}
+              onChange={(next) =>
+                setForm((prev) => ({
+                  ...prev,
+                  adminPath: next.adminPath,
+                  adminRedirectEnabled: next.redirectEnabled,
                 }))
               }
               disabled={busy}

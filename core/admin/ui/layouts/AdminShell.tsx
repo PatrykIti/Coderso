@@ -1,5 +1,5 @@
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,8 @@ import {
 import { SearchBar } from "@/ui/search/SearchBar";
 import { SidebarNav } from "@/ui/shared/SidebarNav";
 import { TopBar } from "@/ui/shared/TopBar";
+import { mapNavItems, mapNavSections, resolveAdminHref } from "@/utils/adminPaths";
+import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 
 type AdminShellProps = {
   children: React.ReactNode;
@@ -47,6 +49,19 @@ export function AdminShell({
   contentClassName,
 }: AdminShellProps) {
   const [navOpen, setNavOpen] = useState(false);
+  const adminBasePath = useAdminBasePath();
+
+  const resolvedSections = useMemo(
+    () => mapNavSections(navSections, adminBasePath),
+    [adminBasePath, navSections]
+  );
+  const resolvedFooter = useMemo(
+    () => (footerItems ? mapNavItems(footerItems, adminBasePath) : footerItems),
+    [adminBasePath, footerItems]
+  );
+  const resolvedActiveHref = activeHref
+    ? resolveAdminHref(adminBasePath, activeHref)
+    : activeHref;
 
   return (
     <div
@@ -56,9 +71,9 @@ export function AdminShell({
       )}
     >
       <SidebarNav
-        sections={navSections}
-        footerItems={footerItems}
-        activeHref={activeHref}
+        sections={resolvedSections}
+        footerItems={resolvedFooter}
+        activeHref={resolvedActiveHref}
       />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <TopBar
@@ -94,9 +109,9 @@ export function AdminShell({
             Primary navigation links for the admin dashboard.
           </SheetDescription>
           <SidebarNav
-            sections={navSections}
-            footerItems={footerItems}
-            activeHref={activeHref}
+            sections={resolvedSections}
+            footerItems={resolvedFooter}
+            activeHref={resolvedActiveHref}
             variant="mobile"
           />
         </SheetContent>

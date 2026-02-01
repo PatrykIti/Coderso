@@ -19,9 +19,8 @@ import { getSecuritySettings } from "../services/settings/securitySettings";
 import { getStorageSettingsInternal } from "../services/settings/storageSettings";
 import { ensureThemesLoaded } from "../themes/registry";
 import { handlePublicRequest } from "./publicSite";
+import { resolveAdminPath } from "./utils/adminPath";
 
-const API_PREFIX = "/admin/api";
-const ADMIN_PREFIX = "/admin";
 const MEDIA_PREFIX = "/media";
 
 const parseCookies = (header: string | null) => {
@@ -116,12 +115,12 @@ export type HttpServerOptions = {
   port?: number;
 };
 
-const isAdminAsset = (pathname: string) =>
-  pathname.startsWith("/admin/assets/") || pathname === "/admin/favicon.ico";
+const isAdminAsset = (pathname: string, adminPath: string) =>
+  pathname.startsWith(`${adminPath}/assets/`) || pathname === `${adminPath}/favicon.ico`;
 
-const resolveAdminFile = (pathname: string) => {
+const resolveAdminFile = (pathname: string, adminPath: string) => {
   const distDir = path.resolve(process.cwd(), "dist/client");
-  const relative = pathname.replace("/admin", "") || "/index.html";
+  const relative = pathname.replace(adminPath, "") || "/index.html";
   const filePath = path.resolve(distDir, `.${relative}`);
   if (!filePath.startsWith(distDir)) return null;
   return filePath;
@@ -133,23 +132,23 @@ const redirectToDev = (req: Request, devUrl: string) => {
   return Response.redirect(target.toString(), 307);
 };
 
-const handleAdmin = async (req: Request, devUrl?: string) => {
+const handleAdmin = async (req: Request, adminPath: string, devUrl?: string) => {
   const url = new URL(req.url);
   try {
     await enforceIpAllowlist(resolveIp(req));
   } catch (error) {
     return errorResponse(error);
   }
-  if (url.pathname === "/admin") {
-    return Response.redirect("/admin/", 307);
+  if (url.pathname === adminPath) {
+    return Response.redirect(`${adminPath}/`, 307);
   }
 
   if (devUrl) return redirectToDev(req, devUrl);
 
   const security = await getSecuritySettings();
 
-  if (isAdminAsset(url.pathname)) {
-    const filePath = resolveAdminFile(url.pathname);
+  if (isAdminAsset(url.pathname, adminPath)) {
+    const filePath = resolveAdminFile(url.pathname, adminPath);
     if (!filePath) return new Response("Forbidden", { status: 403 });
     const file = Bun.file(filePath);
     if (!(await file.exists())) return new Response("Not Found", { status: 404 });
@@ -158,7 +157,7 @@ const handleAdmin = async (req: Request, devUrl?: string) => {
     return new Response(file, { headers });
   }
 
-  const indexPath = resolveAdminFile("/admin/index.html");
+  const indexPath = resolveAdminFile(`${adminPath}/index.html`, adminPath);
   if (!indexPath) return new Response("Not Found", { status: 404 });
   const indexFile = Bun.file(indexPath);
   if (!(await indexFile.exists())) return new Response("Not Found", { status: 404 });
@@ -167,9 +166,9 @@ const handleAdmin = async (req: Request, devUrl?: string) => {
   return new Response(indexFile, { headers });
 };
 
-const handleApi = async (req: Request) => {
+const handleApi = async (req: Request, apiPrefix: string) => {
   const url = new URL(req.url);
-  const pathname = normalizePath(url.pathname).replace(API_PREFIX, "") || "/";
+  const pathname = normalizePath(url.pathname).replace(apiPrefix, "") || "/";
   const security = await getSecuritySettings();
   const requestContext = createRequestIdContext(security.requestId);
   const requestStart = requestContext?.requestStart ?? Date.now();
@@ -330,16 +329,19 @@ export function startHttpServer(options: HttpServerOptions = {}) {
     port,
     async fetch(req) {
       const url = new URL(req.url);
+      const adminPath = await resolveAdminPath();
+      const apiPrefix = `${adminPath}/api`;
+
       const hostPolicy = await enforceHostPolicy(req);
       if (hostPolicy) return hostPolicy;
-      if (url.pathname.startsWith(API_PREFIX)) {
-        return handleApi(req);
+      if (url.pathname.startsWith(apiPrefix)) {
+        return handleApi(req, apiPrefix);
       }
       if (url.pathname.startsWith(MEDIA_PREFIX)) {
         return handleMedia(req);
       }
-      if (url.pathname.startsWith(ADMIN_PREFIX)) {
-        return handleAdmin(req, adminDevUrl);
+      if (url.pathname.startsWith(adminPath)) {
+        return handleAdmin(req, adminPath, adminDevUrl);
       }
       return handlePublicRequest(req);
     },

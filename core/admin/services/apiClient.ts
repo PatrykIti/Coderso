@@ -1,3 +1,5 @@
+import { resolveAdminBasePath } from "@/utils/adminPaths";
+
 export type ApiErrorPayload = {
   error: {
     code: string;
@@ -20,7 +22,7 @@ export class ApiClientError extends Error {
   }
 }
 
-const API_BASE = "/admin/api";
+const getApiBase = () => `${resolveAdminBasePath()}/api`;
 let cachedCsrfToken: string | null = null;
 
 export function isApiClientError(error: unknown): error is ApiClientError {
@@ -35,7 +37,7 @@ export async function getCsrfToken(options?: { force?: boolean }) {
   if (cachedCsrfToken && !options?.force) return cachedCsrfToken;
 
   try {
-    const response = await fetch(`${API_BASE}/auth/csrf`, {
+    const response = await fetch(`${getApiBase()}/auth/csrf`, {
       method: "GET",
       credentials: "include",
     });
@@ -92,7 +94,7 @@ export async function apiRequest<T>(
     if (csrf) headers.set("X-CSRF-Token", csrf);
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${getApiBase()}${path}`, {
     ...init,
     headers,
     credentials: "include",

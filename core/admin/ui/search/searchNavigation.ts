@@ -1,8 +1,10 @@
 import type { SearchItem } from "./SearchResults";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 export function resolveSearchDestination(item: SearchItem): string | null {
+  const basePath = resolveAdminBasePath();
   if (item.type === "page") {
-    return `/admin/pages/${encodeURIComponent(item.id)}`;
+    return withAdminBasePath(basePath, `/pages/${encodeURIComponent(item.id)}`);
   }
 
   if (item.type === "entry") {
@@ -12,17 +14,20 @@ export function resolveSearchDestination(item: SearchItem): string | null {
         ? item.categoryId.split(":")[1]
         : null);
     if (typeSlug) {
-      return `/admin/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(item.id)}`;
+      return withAdminBasePath(
+        basePath,
+        `/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(item.id)}`
+      );
     }
-    return "/admin/entries";
+    return withAdminBasePath(basePath, "/entries");
   }
 
   if (item.type === "media") {
-    return `/admin/media?selected=${encodeURIComponent(item.id)}`;
+    return withAdminBasePath(basePath, `/media?selected=${encodeURIComponent(item.id)}`);
   }
 
   if (item.type === "user") {
-    return `/admin/users?user=${encodeURIComponent(item.id)}`;
+    return withAdminBasePath(basePath, `/users?user=${encodeURIComponent(item.id)}`);
   }
 
   return null;

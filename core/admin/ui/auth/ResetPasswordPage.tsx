@@ -10,6 +10,7 @@ import { AuthShell } from "@/ui/layouts/AuthShell";
 import { InfoBanner } from "@/ui/auth/InfoBanner";
 import { isApiClientError } from "@/services/apiClient";
 import { requestPasswordReset } from "@/services/authClient";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 type ResetPasswordPageProps = {
   initialEmail?: string;
@@ -20,6 +21,7 @@ export function ResetPasswordPage({
   initialEmail = "",
   initialError = "",
 }: ResetPasswordPageProps) {
+  const basePath = resolveAdminBasePath();
   const [email, setEmail] = useState(initialEmail);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -113,7 +115,7 @@ export function ResetPasswordPage({
               {loading ? "Sending..." : "Send reset link"}
             </Button>
             <Button className="w-full" type="button" variant="ghost" asChild>
-              <a href="/admin/login">Back to login</a>
+              <a href={withAdminBasePath(basePath, "/login")}>Back to login</a>
             </Button>
           </form>
         </CardContent>

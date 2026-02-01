@@ -882,6 +882,8 @@ Export response (bundle):
     "site.locale": "en",
     "site.adminBaseUrl": null,
     "site.publicBaseUrl": "https://www.example.com",
+    "site.adminPath": "/admin",
+    "site.adminRedirectEnabled": false,
     "design.tokens": {}
   },
   "menus": [
@@ -1092,6 +1094,8 @@ Payloady:
   "site.locale": "pl-PL",
   "site.adminBaseUrl": "https://cms.example.com",
   "site.publicBaseUrl": "https://www.example.com",
+  "site.adminPath": "/admin-panel",
+  "site.adminRedirectEnabled": true,
   "design.tokens": { "colors": { "primary": "#111111" } }
 }
 ```
@@ -1100,6 +1104,7 @@ Response:
 - `GET /settings` zwraca merged view (z defaultami).
 - `design.tokens` zwracane jako resolved tokens (defaults + overrides).
 - `site.adminBaseUrl` i `site.publicBaseUrl` sterują rozdzieleniem hostów admin/public.
+- `site.adminPath` i `site.adminRedirectEnabled` sterują ścieżką panelu admina.
 
 ---
 

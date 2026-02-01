@@ -11,12 +11,14 @@ import { OtpInput } from "@/ui/auth/OtpInput";
 import { RecoveryCodesPanel } from "@/ui/auth/RecoveryCodesPanel";
 import { isApiClientError } from "@/services/apiClient";
 import { verifyOtp } from "@/services/authClient";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 type TwoFactorPageProps = {
   initialError?: string;
 };
 
 export function TwoFactorPage({ initialError = "" }: TwoFactorPageProps) {
+  const basePath = resolveAdminBasePath();
   const [otp, setOtp] = useState("");
   const [recoveryCode, setRecoveryCode] = useState("");
   const [useRecovery, setUseRecovery] = useState(false);
@@ -31,7 +33,7 @@ export function TwoFactorPage({ initialError = "" }: TwoFactorPageProps) {
         useRecovery ? { recoveryCode } : { code: otp }
       );
       if (typeof window !== "undefined") {
-        window.location.assign("/admin");
+        window.location.assign(withAdminBasePath(basePath, "/"));
       }
     } catch (err) {
       if (isApiClientError(err)) {

@@ -9,6 +9,7 @@ import { AuthShell } from "@/ui/layouts/AuthShell";
 import { PasswordStrengthList } from "@/ui/auth/PasswordStrengthList";
 import { isApiClientError } from "@/services/apiClient";
 import { confirmPasswordReset } from "@/services/authClient";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 const hasNumber = (value: string) => /\\d/.test(value);
 const hasSpecial = (value: string) => /[^a-zA-Z0-9]/.test(value);
@@ -26,6 +27,7 @@ type SetPasswordPageProps = {
 };
 
 export function SetPasswordPage({ token, initialError = "" }: SetPasswordPageProps) {
+  const basePath = resolveAdminBasePath();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -64,7 +66,7 @@ export function SetPasswordPage({ token, initialError = "" }: SetPasswordPagePro
       setSuccess(true);
       if (typeof window !== "undefined") {
         window.setTimeout(() => {
-          window.location.assign("/admin/login");
+          window.location.assign(withAdminBasePath(basePath, "/login"));
         }, 1200);
       }
     } catch (err) {
@@ -176,7 +178,7 @@ export function SetPasswordPage({ token, initialError = "" }: SetPasswordPagePro
           <div className="text-center">
             <a
               className="text-sm text-muted-foreground hover:text-foreground"
-              href="/admin/login"
+              href={withAdminBasePath(basePath, "/login")}
             >
               Back to login
             </a>

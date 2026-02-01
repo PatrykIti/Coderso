@@ -13,6 +13,7 @@ import { AuthBrandPanel } from "@/ui/auth/AuthBrandPanel";
 import { SsoButtons } from "@/ui/auth/SsoButtons";
 import { isApiClientError } from "@/services/apiClient";
 import { login, toFieldErrors } from "@/services/authClient";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 type LoginPageProps = {
   initialEmail?: string;
@@ -36,7 +37,8 @@ export function LoginPage({ initialEmail = "", initialError = "" }: LoginPagePro
     try {
       await login({ email, password });
       if (typeof window !== "undefined") {
-        window.location.assign("/admin/");
+        const basePath = resolveAdminBasePath();
+        window.location.assign(withAdminBasePath(basePath, "/"));
       }
     } catch (err) {
       if (isApiClientError(err)) {
@@ -136,7 +138,10 @@ export function LoginPage({ initialEmail = "", initialError = "" }: LoginPagePro
                 />
                 Remember me
               </label>
-              <a className="text-primary hover:underline" href="/admin/reset">
+              <a
+                className="text-primary hover:underline"
+                href={withAdminBasePath(resolveAdminBasePath(), "/reset")}
+              >
                 Forgot password?
               </a>
             </div>

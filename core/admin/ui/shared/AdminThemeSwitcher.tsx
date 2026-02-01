@@ -18,6 +18,7 @@ import {
   listAdminThemeProfiles,
   type AdminThemeProfile,
 } from "@/services/adminThemeClient";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 export function AdminThemeSwitcher() {
   const [profiles, setProfiles] = useState<AdminThemeProfile[]>([]);
@@ -67,6 +68,7 @@ export function AdminThemeSwitcher() {
   };
 
   const activeProfile = profiles.find((profile) => profile.id === activeId) ?? null;
+  const basePath = resolveAdminBasePath();
 
   return (
     <DropdownMenu>
@@ -93,7 +95,7 @@ export function AdminThemeSwitcher() {
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <a href="/admin/themes">Manage themes</a>
+          <a href={withAdminBasePath(basePath, "/themes")}>Manage themes</a>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

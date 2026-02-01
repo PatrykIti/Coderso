@@ -3,9 +3,9 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   root: path.resolve(__dirname, "./admin"),
-  base: "/admin/",
+  base: command === "build" ? "./" : "/admin/",
   plugins: [
     react(),
     tailwindcss(),
@@ -46,4 +46,4 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "./dist/client"),
     emptyOutDir: true,
   },
-});
+}));

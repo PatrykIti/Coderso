@@ -51,13 +51,19 @@ import { toAdminThemeCssVariables } from "../../ui/theme/tokenCss";
 import { DEFAULT_ADMIN_THEME_TOKENS } from "../../services/adminThemes/tokenTypes";
 import { mergeAdminThemeTokens } from "../../services/adminThemes/tokenUtils";
 import { assertAdminThemeTokens } from "../../services/adminThemes/tokenValidation";
+import {
+  resolveAdminBasePath,
+  stripAdminBasePath,
+  withAdminBasePath,
+} from "@/utils/adminPaths";
+import { AdminBasePathProvider } from "@/ui/contexts/AdminBasePathContext";
 
 const publicRoutes = new Set([
-  "/admin/login",
-  "/admin/2fa",
-  "/admin/reset",
-  "/admin/reset/confirm",
-  "/admin/preview",
+  "/login",
+  "/2fa",
+  "/reset",
+  "/reset/confirm",
+  "/preview",
 ]);
 
 type RouteMatch = {
@@ -93,6 +99,8 @@ type SettingsValues = {
   siteLocale: string;
   adminBaseUrl: string;
   publicBaseUrl: string;
+  adminPath: string;
+  adminRedirectEnabled: boolean;
 };
 
 const defaultSettingsValues: SettingsValues = {
@@ -100,6 +108,8 @@ const defaultSettingsValues: SettingsValues = {
   siteLocale: "en",
   adminBaseUrl: "",
   publicBaseUrl: "",
+  adminPath: "/admin",
+  adminRedirectEnabled: false,
 };
 
 type SettingsState = {
@@ -157,8 +167,23 @@ const resolveSettingsPayload = (
       : typeof payload["site.publicBaseUrl"] === "string"
         ? payload["site.publicBaseUrl"]
         : fallback.values.publicBaseUrl;
+  const adminPath =
+    typeof payload["site.adminPath"] === "string"
+      ? payload["site.adminPath"]
+      : fallback.values.adminPath;
+  const adminRedirectEnabled =
+    typeof payload["site.adminRedirectEnabled"] === "boolean"
+      ? payload["site.adminRedirectEnabled"]
+      : fallback.values.adminRedirectEnabled;
   return {
-    values: { siteName, siteLocale, adminBaseUrl, publicBaseUrl },
+    values: {
+      siteName,
+      siteLocale,
+      adminBaseUrl,
+      publicBaseUrl,
+      adminPath,
+      adminRedirectEnabled,
+    },
   };
 };
 
@@ -173,8 +198,12 @@ type AdminAppProps = {
 
 export function AdminApp({ path }: AdminAppProps) {
   const normalizedPath = normalizePath(path);
-  const isPublic = publicRoutes.has(normalizedPath);
-  const isProtected = normalizedPath.startsWith("/admin") && !isPublic;
+  const adminBasePath = resolveAdminBasePath(path);
+  const relativePath = stripAdminBasePath(normalizedPath, adminBasePath);
+  const isAdminPath =
+    normalizedPath === adminBasePath || normalizedPath.startsWith(`${adminBasePath}/`);
+  const isPublic = publicRoutes.has(relativePath);
+  const isProtected = isAdminPath && !isPublic;
 
   const [authState, setAuthState] = useState<
     "checking" | "authenticated" | "unauthenticated"
@@ -205,36 +234,36 @@ export function AdminApp({ path }: AdminAppProps) {
 
   const match = useMemo(() => {
     const routes: RouteDefinition[] = [
-      { pattern: "/admin", element: <DashboardPage /> },
-      { pattern: "/admin/login", element: <LoginPage /> },
-      { pattern: "/admin/2fa", element: <TwoFactorPage /> },
-      { pattern: "/admin/reset", element: <ResetPasswordPage /> },
-      { pattern: "/admin/reset/confirm", element: <SetPasswordPage /> },
-      { pattern: "/admin/analytics", element: <AnalyticsPage /> },
-      { pattern: "/admin/audit", element: <AuditList /> },
-      { pattern: "/admin/access-logs", element: <AccessLogsPage /> },
-      { pattern: "/admin/backups", element: <BackupsPage /> },
-      { pattern: "/admin/search", element: <SearchPage /> },
-      { pattern: "/admin/seo", element: <SeoManagerPage /> },
-      { pattern: "/admin/redirects", element: <RedirectsPage /> },
-      { pattern: "/admin/tools/import-export", element: <ImportExportPage /> },
-      { pattern: "/admin/forms", element: <FormBuilderPage /> },
-      { pattern: "/admin/content-types", element: <ContentTypeList /> },
-      { pattern: "/admin/content-types/:id", element: <ContentTypeEditor /> },
-      { pattern: "/admin/content-types/:id/schema", element: <SchemaBuilderPage /> },
-      { pattern: "/admin/entries", element: <EntryList /> },
-      { pattern: "/admin/entries/:type/:id", element: <EntryEditor /> },
-      { pattern: "/admin/pages", element: <PageListPage /> },
-      { pattern: "/admin/pages/:id", element: <PageEditor /> },
-      { pattern: "/admin/preview", element: <PagePreview /> },
-      { pattern: "/admin/media", element: <MediaLibraryPage /> },
-      { pattern: "/admin/menus", element: <MenuEditorPage /> },
-      { pattern: "/admin/users", element: <UsersRolesPage /> },
-      { pattern: "/admin/roles", element: <PermissionsMatrixPage /> },
-      { pattern: "/admin/themes", element: <ThemesPage /> },
-      { pattern: "/admin/widgets", element: <WidgetLibraryPage /> },
+      { pattern: "/", element: <DashboardPage /> },
+      { pattern: "/login", element: <LoginPage /> },
+      { pattern: "/2fa", element: <TwoFactorPage /> },
+      { pattern: "/reset", element: <ResetPasswordPage /> },
+      { pattern: "/reset/confirm", element: <SetPasswordPage /> },
+      { pattern: "/analytics", element: <AnalyticsPage /> },
+      { pattern: "/audit", element: <AuditList /> },
+      { pattern: "/access-logs", element: <AccessLogsPage /> },
+      { pattern: "/backups", element: <BackupsPage /> },
+      { pattern: "/search", element: <SearchPage /> },
+      { pattern: "/seo", element: <SeoManagerPage /> },
+      { pattern: "/redirects", element: <RedirectsPage /> },
+      { pattern: "/tools/import-export", element: <ImportExportPage /> },
+      { pattern: "/forms", element: <FormBuilderPage /> },
+      { pattern: "/content-types", element: <ContentTypeList /> },
+      { pattern: "/content-types/:id", element: <ContentTypeEditor /> },
+      { pattern: "/content-types/:id/schema", element: <SchemaBuilderPage /> },
+      { pattern: "/entries", element: <EntryList /> },
+      { pattern: "/entries/:type/:id", element: <EntryEditor /> },
+      { pattern: "/pages", element: <PageListPage /> },
+      { pattern: "/pages/:id", element: <PageEditor /> },
+      { pattern: "/preview", element: <PagePreview /> },
+      { pattern: "/media", element: <MediaLibraryPage /> },
+      { pattern: "/menus", element: <MenuEditorPage /> },
+      { pattern: "/users", element: <UsersRolesPage /> },
+      { pattern: "/roles", element: <PermissionsMatrixPage /> },
+      { pattern: "/themes", element: <ThemesPage /> },
+      { pattern: "/widgets", element: <WidgetLibraryPage /> },
       {
-        pattern: "/admin/settings",
+        pattern: "/settings",
         element: (
           <GeneralSettingsPage
             values={settingsState.values}
@@ -250,6 +279,8 @@ export function AdminApp({ path }: AdminAppProps) {
                   "site.locale": values.siteLocale,
                   "site.adminBaseUrl": normalizeBaseUrlInput(values.adminBaseUrl),
                   "site.publicBaseUrl": normalizeBaseUrlInput(values.publicBaseUrl),
+                  "site.adminPath": values.adminPath,
+                  "site.adminRedirectEnabled": values.adminRedirectEnabled,
                 });
                 setSettingsState((prev) => {
                   const resolved = resolveSettingsPayload(updated, prev);
@@ -277,7 +308,7 @@ export function AdminApp({ path }: AdminAppProps) {
         ),
       },
       {
-        pattern: "/admin/settings/general",
+        pattern: "/settings/general",
         element: (
           <GeneralSettingsPage
             values={settingsState.values}
@@ -293,6 +324,8 @@ export function AdminApp({ path }: AdminAppProps) {
                   "site.locale": values.siteLocale,
                   "site.adminBaseUrl": normalizeBaseUrlInput(values.adminBaseUrl),
                   "site.publicBaseUrl": normalizeBaseUrlInput(values.publicBaseUrl),
+                  "site.adminPath": values.adminPath,
+                  "site.adminRedirectEnabled": values.adminRedirectEnabled,
                 });
                 setSettingsState((prev) => {
                   const resolved = resolveSettingsPayload(updated, prev);
@@ -319,21 +352,21 @@ export function AdminApp({ path }: AdminAppProps) {
           />
         ),
       },
-      { pattern: "/admin/settings/security", element: <SecuritySettingsPage /> },
-      { pattern: "/admin/settings/security/ip-allowlist", element: <IpAllowlistPage /> },
-      { pattern: "/admin/settings/security/sessions", element: <SessionsPage /> },
-      { pattern: "/admin/settings/security/login-alerts", element: <LoginAlertsPage /> },
-      { pattern: "/admin/settings/api-keys", element: <ApiKeysPage /> },
-      { pattern: "/admin/settings/webhooks", element: <WebhooksPage /> },
-      { pattern: "/admin/settings/email", element: <EmailSettingsPage /> },
-      { pattern: "/admin/settings/storage", element: <StorageSettingsPage /> },
-      { pattern: "/admin/settings/integrations", element: <IntegrationsPage /> },
-      { pattern: "/admin/store", element: <PluginStorePage /> },
-      { pattern: "/admin/store/plugins/:id", element: <PluginDetailsPage /> },
+      { pattern: "/settings/security", element: <SecuritySettingsPage /> },
+      { pattern: "/settings/security/ip-allowlist", element: <IpAllowlistPage /> },
+      { pattern: "/settings/security/sessions", element: <SessionsPage /> },
+      { pattern: "/settings/security/login-alerts", element: <LoginAlertsPage /> },
+      { pattern: "/settings/api-keys", element: <ApiKeysPage /> },
+      { pattern: "/settings/webhooks", element: <WebhooksPage /> },
+      { pattern: "/settings/email", element: <EmailSettingsPage /> },
+      { pattern: "/settings/storage", element: <StorageSettingsPage /> },
+      { pattern: "/settings/integrations", element: <IntegrationsPage /> },
+      { pattern: "/store", element: <PluginStorePage /> },
+      { pattern: "/store/plugins/:id", element: <PluginDetailsPage /> },
     ];
 
-    return resolveRoute(normalizedPath, routes);
-  }, [normalizedPath, settingsSaving, settingsState]);
+    return resolveRoute(relativePath, routes);
+  }, [relativePath, settingsSaving, settingsState]);
 
   const refreshSettings = useCallback(() => {
     setSettingsState((prev) => ({
@@ -448,12 +481,12 @@ export function AdminApp({ path }: AdminAppProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (authState === "unauthenticated" && isProtected) {
-      window.location.assign("/admin/login");
+      window.location.assign(withAdminBasePath(adminBasePath, "/login"));
     }
-    if (authState === "authenticated" && isPublic && normalizedPath !== "/admin/preview") {
-      window.location.assign("/admin/");
+    if (authState === "authenticated" && isPublic && relativePath !== "/preview") {
+      window.location.assign(withAdminBasePath(adminBasePath, "/"));
     }
-  }, [authState, isProtected, isPublic, normalizedPath]);
+  }, [adminBasePath, authState, isProtected, isPublic, relativePath]);
 
   if (isProtected && authState !== "authenticated") {
     return (
@@ -465,9 +498,11 @@ export function AdminApp({ path }: AdminAppProps) {
   }
 
   return (
-    <>
-      <style id="nextless-theme-tokens">{tokenCss}</style>
-      {match.element}
-    </>
+    <AdminBasePathProvider value={adminBasePath}>
+      <>
+        <style id="nextless-theme-tokens">{tokenCss}</style>
+        {match.element}
+      </>
+    </AdminBasePathProvider>
   );
 }
