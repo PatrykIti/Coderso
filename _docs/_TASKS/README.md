@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 20 tasks
+- **To Do:** 27 tasks
 - **In Progress:** 0
 - **Done:** 198 tasks
 
@@ -53,6 +53,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-046-03 | Content Entry Rendering | High | Large | list + detail templates |
 | TASK-046-04 | SSR Cache & Revalidation | High | Medium | cache + invalidation |
 | TASK-046-05 | Admin UI — Site Settings | High | Large | site settings UI |
+| TASK-048 | Content Types & Content UX Expansion | Medium | Large | Index for TASK-048-01..06 |
+| TASK-048-01 | Field Types & Schema Meta | Medium | Medium | Preserve field types |
+| TASK-048-02 | Relation Field UX & Data Model | Medium | Medium | Relation dropdown + picker |
+| TASK-048-03 | Media Field UX & Storage Integration | Medium | Medium | Media picker |
+| TASK-048-04 | Taxonomy System & Terms | Medium | Large | Categories + tags |
+| TASK-048-05 | Content Editor Help & Tooltips | Low | Small | UI guidance |
+| TASK-048-06 | Content Modeling Docs & Examples | Medium | Medium | Cookbook + docs |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
