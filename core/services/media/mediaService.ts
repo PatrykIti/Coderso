@@ -64,7 +64,12 @@ export async function uploadMedia(
   }
 
   const adapter = await getMediaStorageAdapter();
-  const stored = await adapter.put(file);
+  let stored: UploadResult;
+  try {
+    stored = await adapter.put(file);
+  } catch {
+    throw new Error("media_storage_unavailable");
+  }
 
   const [row] = await db
     .insert(media)
@@ -112,7 +117,11 @@ export async function deleteMedia(id: string) {
   if (!row) throw new Error("media_not_found");
 
   const adapter = await getMediaStorageAdapter();
-  await adapter.delete(row.key);
+  try {
+    await adapter.delete(row.key);
+  } catch {
+    throw new Error("media_storage_unavailable");
+  }
 
   await db.delete(media).where(eq(media.id, id));
   return { ok: true };

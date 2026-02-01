@@ -10,7 +10,9 @@ export type LocalStorageOptions = {
 };
 
 function getLocalMediaDir(options?: LocalStorageOptions) {
-  return options?.dir ?? process.env.MEDIA_DIR ?? "/data/media";
+  if (options?.dir) return options.dir;
+  if (process.env.MEDIA_DIR) return process.env.MEDIA_DIR;
+  return path.resolve(process.cwd(), "data", "media");
 }
 
 function getBaseUrl(options?: LocalStorageOptions) {

@@ -88,6 +88,38 @@ const errorResponse = (error: unknown) => {
         status: 400,
       });
     }
+    if (error.message === "media_file_invalid") {
+      return jsonResponse(
+        toErrorResponse(new ApiError("media_file_invalid", "Invalid upload payload", 400)),
+        { status: 400 }
+      );
+    }
+    if (error.message === "media_file_too_large") {
+      return jsonResponse(
+        toErrorResponse(new ApiError("media_file_too_large", "File exceeds size limit", 413)),
+        { status: 413 }
+      );
+    }
+    if (error.message === "media_mime_not_allowed") {
+      return jsonResponse(
+        toErrorResponse(new ApiError("media_mime_not_allowed", "File type not allowed", 400)),
+        { status: 400 }
+      );
+    }
+    if (error.message === "media_not_found") {
+      return jsonResponse(
+        toErrorResponse(new ApiError("media_not_found", "Media item not found", 404)),
+        { status: 404 }
+      );
+    }
+    if (error.message === "media_storage_unavailable") {
+      return jsonResponse(
+        toErrorResponse(
+          new ApiError("media_storage_unavailable", "Storage path is not writable", 503)
+        ),
+        { status: 503 }
+      );
+    }
   }
   return jsonResponse(toErrorResponse(error), { status: 500 });
 };

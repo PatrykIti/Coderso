@@ -296,7 +296,7 @@ export async function getStorageSettingsInternal(): Promise<StorageSettingsInter
   );
   const localDir = resolveStringWithFallback(
     map.get(STORAGE_KEYS.localDir)?.value,
-    process.env.MEDIA_DIR ?? "/data/media"
+    process.env.MEDIA_DIR ?? null
   );
 
   const maxSizeBytes = resolveMaxSizeWithFallback(
