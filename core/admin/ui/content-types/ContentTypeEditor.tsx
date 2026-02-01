@@ -13,6 +13,7 @@ import {
 import { isApiClientError } from "@/services/apiClient";
 import {
   getContentType,
+  listContentTypes,
   updateContentType,
 } from "@/services/contentTypesClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
@@ -66,6 +67,9 @@ export function ContentTypeEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [relationTargets, setRelationTargets] = useState<
+    Array<{ slug: string; name: string }>
+  >([]);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
     defaultFields[0]?.id ?? null
   );
@@ -102,6 +106,19 @@ export function ContentTypeEditor() {
       active = false;
     };
   }, [typeId]);
+
+  useEffect(() => {
+    let active = true;
+    listContentTypes()
+      .then((types) => {
+        if (!active) return;
+        setRelationTargets(types.map((type) => ({ slug: type.slug, name: type.name })));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (fields.length === 0) {
@@ -175,7 +192,7 @@ export function ContentTypeEditor() {
       : null;
   const relationError =
     selectedField?.type === "relation" && !selectedField.relation?.target
-      ? "Relation target slug is required."
+      ? "Select a related content type."
       : null;
 
   return (
@@ -325,6 +342,7 @@ export function ContentTypeEditor() {
                 nameError={nameError}
                 defaultError={defaultError}
                 relationError={relationError}
+                relationTargets={relationTargets}
                 onChange={(next) => {
                   handleFieldChange(
                     fields.map((field) => (field.id === next.id ? next : field))
@@ -352,6 +370,7 @@ export function ContentTypeEditor() {
               nameError={nameError}
               defaultError={defaultError}
               relationError={relationError}
+              relationTargets={relationTargets}
               onChange={(next) => {
                 handleFieldChange(
                   fields.map((field) => (field.id === next.id ? next : field))

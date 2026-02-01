@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
-import { getContentTypeBySlug } from "@/services/contentTypesClient";
+import { getContentTypeBySlug, listContentTypes } from "@/services/contentTypesClient";
 import {
   getEntry,
   previewEntry,
@@ -109,6 +109,9 @@ export function EntryEditor() {
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [relationTargets, setRelationTargets] = useState<
+    Array<{ slug: string; name: string }>
+  >([]);
 
   const schemaFieldNames = useMemo(
     () => new Set(fields.map((field) => field.name)),
@@ -154,6 +157,19 @@ export function EntryEditor() {
       active = false;
     };
   }, [id, type]);
+
+  useEffect(() => {
+    let active = true;
+    listContentTypes()
+      .then((types) => {
+        if (!active) return;
+        setRelationTargets(types.map((item) => ({ slug: item.slug, name: item.name })));
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleFieldChange = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -468,6 +484,7 @@ export function EntryEditor() {
                           field={field}
                           value={values[field.name]}
                           onChange={(value) => handleFieldChange(field.name, value)}
+                          relationTargets={relationTargets}
                         />
                       </CardContent>
                     </Card>
@@ -488,6 +505,7 @@ export function EntryEditor() {
                           field={field}
                           value={values[field.name]}
                           onChange={(value) => handleFieldChange(field.name, value)}
+                          relationTargets={relationTargets}
                         />
                       </CardContent>
                     </Card>
@@ -508,6 +526,7 @@ export function EntryEditor() {
                           field={field}
                           value={values[field.name]}
                           onChange={(value) => handleFieldChange(field.name, value)}
+                          relationTargets={relationTargets}
                         />
                       </CardContent>
                     </Card>

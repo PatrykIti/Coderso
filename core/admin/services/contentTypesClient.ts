@@ -6,6 +6,8 @@ export type ContentSchemaProperty = {
   description?: string;
   enum?: string[];
   default?: string | number | boolean;
+  xFieldType?: string;
+  xRelationTarget?: string;
 };
 
 export type ContentSchema = {

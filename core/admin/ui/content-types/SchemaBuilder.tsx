@@ -97,6 +97,7 @@ type FieldSettingsPanelProps = {
   nameError?: string | null;
   defaultError?: string | null;
   relationError?: string | null;
+  relationTargets?: Array<{ slug: string; name: string }>;
   onChange: (next: ContentField) => void;
   onRemove: () => void;
   className?: string;
@@ -107,6 +108,7 @@ export function FieldSettingsPanel({
   nameError,
   defaultError,
   relationError,
+  relationTargets,
   onChange,
   onRemove,
   className,
@@ -120,6 +122,7 @@ export function FieldSettingsPanel({
             nameError={nameError}
             defaultError={defaultError}
             relationError={relationError}
+            relationTargets={relationTargets}
             onChange={onChange}
             onRemove={onRemove}
           />

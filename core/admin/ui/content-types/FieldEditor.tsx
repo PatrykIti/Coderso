@@ -29,6 +29,7 @@ type FieldEditorProps = {
   nameError?: string | null;
   defaultError?: string | null;
   relationError?: string | null;
+  relationTargets?: Array<{ slug: string; name: string }>;
   onChange: (next: ContentField) => void;
   onRemove: () => void;
 };
@@ -38,9 +39,17 @@ export function FieldEditor({
   nameError,
   defaultError,
   relationError,
+  relationTargets = [],
   onChange,
   onRemove,
 }: FieldEditorProps) {
+  const relationOptions =
+    relationTargets.length > 0
+      ? relationTargets
+      : field.relation?.target
+        ? [{ slug: field.relation.target, name: field.relation.target }]
+        : [];
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-2">
@@ -122,17 +131,44 @@ export function FieldEditor({
       {field.type === "relation" ? (
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase text-muted-foreground">
-            Relation target slug
+            Related content type
           </label>
-          <Input
-            value={field.relation?.target ?? ""}
-            onChange={(event) =>
-              onChange({
-                ...field,
-                relation: { target: event.target.value },
-              })
-            }
-          />
+          {relationOptions.length > 0 ? (
+            <Select
+              value={field.relation?.target ?? ""}
+              onValueChange={(value) =>
+                onChange({
+                  ...field,
+                  relation: { target: value },
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select content type" />
+              </SelectTrigger>
+              <SelectContent>
+                {relationOptions.map((option) => (
+                  <SelectItem key={option.slug} value={option.slug}>
+                    {option.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              value={field.relation?.target ?? ""}
+              onChange={(event) =>
+                onChange({
+                  ...field,
+                  relation: { target: event.target.value },
+                })
+              }
+              placeholder="Create a content type first"
+            />
+          )}
+          <p className="text-xs text-muted-foreground">
+            Pick which content type this field should link to (e.g. Team → Projects).
+          </p>
           {relationError ? (
             <div className="flex items-center gap-2 text-xs text-destructive">
               <AlertTriangle className="h-3 w-3" />
