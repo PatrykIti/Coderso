@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 20 tasks
+- **To Do:** 24 tasks
 - **In Progress:** 0
 - **Done:** 194 tasks
 
@@ -53,6 +53,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-046-03 | Content Entry Rendering | High | Large | list + detail templates |
 | TASK-046-04 | SSR Cache & Revalidation | High | Medium | cache + invalidation |
 | TASK-046-05 | Admin UI — Site Settings | High | Large | site settings UI |
+| TASK-047 | Admin/Public Base URLs (Routing Policy) | High | Medium | split admin/public hosts |
+| TASK-047-01 | Admin/Public Base URL Settings | High | Small | settings keys |
+| TASK-047-02 | Routing Policy Middleware | High | Medium | host-based routing |
+| TASK-047-03 | Admin UI — Base URL Settings | High | Small | site settings fields |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
