@@ -288,7 +288,7 @@ export function MenuEditorPage() {
     const defaultPageId = pages[0]?.id ?? "";
     const newItem: MenuItemRecord = {
       id: createTempId(),
-      label: "",
+      label: "New item",
       href: defaultLinkType === "url" ? "" : null,
       pageId: defaultLinkType === "page" ? defaultPageId : null,
       parentId: null,
@@ -392,8 +392,30 @@ export function MenuEditorPage() {
 
   const handleSave = async () => {
     if (!activeMenuId) return;
-    setIsSaving(true);
     setError(null);
+
+    for (const entry of items) {
+      if (!entry.label.trim()) {
+        setError("Each menu item must have a label.");
+        setActiveItemId(entry.id);
+        if (!isLargeScreen) {
+          setDetailsOpen(true);
+        }
+        return;
+      }
+      const hasHref = Boolean(entry.href && entry.href.trim().length > 0);
+      const hasPage = Boolean(entry.pageId);
+      if ((hasHref && hasPage) || (!hasHref && !hasPage)) {
+        setError("Each menu item must link to a page or a custom URL.");
+        setActiveItemId(entry.id);
+        if (!isLargeScreen) {
+          setDetailsOpen(true);
+        }
+        return;
+      }
+    }
+
+    setIsSaving(true);
     try {
       if (hasMetaChanges) {
         await updateMenu(activeMenuId, {
@@ -402,7 +424,28 @@ export function MenuEditorPage() {
         });
       }
       if (isDirty) {
-        await replaceMenuItems(activeMenuId, items);
+        const payload = items.map((entry) => {
+          const base = {
+            id: entry.id,
+            label: entry.label.trim(),
+            parentId: entry.parentId ?? null,
+            orderIndex: entry.orderIndex,
+          };
+          const href = entry.href?.trim() ?? "";
+          const hasPage = Boolean(entry.pageId);
+          const hasHref = href.length > 0;
+          if (hasPage && !hasHref) {
+            return { ...base, pageId: entry.pageId };
+          }
+          if (hasHref && !hasPage) {
+            return { ...base, href };
+          }
+          if (hasPage && hasHref) {
+            return { ...base, pageId: entry.pageId };
+          }
+          return base;
+        });
+        await replaceMenuItems(activeMenuId, payload);
       }
       await loadMenu(activeMenuId);
     } catch (err) {

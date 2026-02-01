@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
-import { menuItems, menus } from "../../db/schema";
+import { menuItems, menus, pages } from "../../db/schema";
 import {
   assertNoCycles,
   buildMenuTree,
@@ -171,6 +171,25 @@ export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
   if (!menu) throw new Error("menu_not_found");
 
   const normalized = normalizeMenuItems(items);
+  const pageIds = Array.from(
+    new Set(
+      normalized
+        .map((item) => item.pageId)
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  if (pageIds.length > 0) {
+    const rows = await db
+      .select({ id: pages.id })
+      .from(pages)
+      .where(inArray(pages.id, pageIds));
+    const found = new Set(rows.map((row) => row.id));
+    const missing = pageIds.filter((id) => !found.has(id));
+    if (missing.length > 0) {
+      throw new Error("menu_item_page_missing");
+    }
+  }
 
   const inserted = await db.transaction(async (tx) => {
     await tx.delete(menuItems).where(eq(menuItems.menuId, menuId));

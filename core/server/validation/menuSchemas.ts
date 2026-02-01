@@ -34,10 +34,6 @@ export const menuItemsSchema = {
           parentId: { type: ["string", "null"] },
           orderIndex: { type: "number" },
         },
-        oneOf: [
-          { required: ["href"], not: { required: ["pageId"] } },
-          { required: ["pageId"], not: { required: ["href"] } },
-        ],
         additionalProperties: false,
       },
     },

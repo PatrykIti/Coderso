@@ -117,3 +117,22 @@ testIfDb("replaceMenuItems stores items", async () => {
   await cleanupMenu(createdMenuId);
   createdMenuId = undefined;
 });
+
+testIfDb("replaceMenuItems rejects missing page ids", async () => {
+  const menu = await createMenu({
+    name: `Primary-${randomUUID()}`,
+    location: "primary",
+  });
+
+  createdMenuId = menu?.id;
+  if (!createdMenuId) throw new Error("menu_missing");
+
+  await expect(
+    replaceMenuItems(createdMenuId, [
+      { label: "Home", pageId: randomUUID() },
+    ])
+  ).rejects.toThrow("menu_item_page_missing");
+
+  await cleanupMenu(createdMenuId);
+  createdMenuId = undefined;
+});
