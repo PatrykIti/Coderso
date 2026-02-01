@@ -56,6 +56,7 @@ export type PageTableProps = {
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
   onDuplicate: (id: string) => void;
+  onDelete?: (id: string) => void;
 };
 
 export function PageTable({
@@ -66,6 +67,7 @@ export function PageTable({
   onPublish,
   onUnpublish,
   onDuplicate,
+  onDelete,
 }: PageTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -167,6 +169,7 @@ export function PageTable({
                   onPublish={() => onPublish(page.id)}
                   onUnpublish={() => onUnpublish(page.id)}
                   onDuplicate={() => onDuplicate(page.id)}
+                  onDelete={onDelete ? () => onDelete(page.id) : undefined}
                 />
               </TableCell>
             </TableRow>

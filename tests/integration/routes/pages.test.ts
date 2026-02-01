@@ -11,6 +11,7 @@ const makeRouter = () => {
       get: (path: string) => routes.push({ method: "GET", path }),
       post: (path: string) => routes.push({ method: "POST", path }),
       patch: (path: string) => routes.push({ method: "PATCH", path }),
+      delete: (path: string) => routes.push({ method: "DELETE", path }),
     },
   };
 };
@@ -35,6 +36,7 @@ test("registerPageRoutes wires endpoints", () => {
       "POST /pages/:id/unpublish",
       "POST /pages/:id/preview",
       "POST /pages/:id/duplicate",
+      "DELETE /pages/:id",
       "GET /pages/:id/revisions",
       "POST /pages/:id/revisions/:revisionId/restore",
     ])

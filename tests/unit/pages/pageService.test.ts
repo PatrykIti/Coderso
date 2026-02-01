@@ -5,6 +5,7 @@ import { db } from "../../../core/db/client";
 import { pageRevisions, pages, users } from "../../../core/db/schema";
 import {
   createPage,
+  deletePage,
   duplicatePage,
   publishPage,
   unpublishPage,
@@ -103,4 +104,18 @@ testIfDb("create/update/publish/unpublish page", async () => {
   await cleanup(page.id, createdUserId);
   createdPageId = undefined;
   createdUserId = undefined;
+});
+
+testIfDb("delete page removes it", async () => {
+  const page = await createPage({
+    title: "Delete Me",
+    slug: `delete-${randomUUID()}`,
+    data: { schemaVersion: 1, blocks: [] },
+  });
+
+  const deleted = await deletePage(page.id);
+  expect(deleted?.id).toBe(page.id);
+
+  const [row] = await db.select().from(pages).where(eq(pages.id, page.id));
+  expect(row).toBeUndefined();
 });

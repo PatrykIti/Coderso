@@ -1,6 +1,7 @@
 import {
   createPage,
   duplicatePage,
+  deletePage,
   getPage,
   listPages,
   publishPage,
@@ -33,6 +34,7 @@ export type Router = {
   get: (path: string, ...handlers: RouteHandler[]) => void;
   post: (path: string, ...handlers: RouteHandler[]) => void;
   patch: (path: string, ...handlers: RouteHandler[]) => void;
+  delete: (path: string, ...handlers: RouteHandler[]) => void;
 };
 
 export type PageRouteDeps = {
@@ -147,6 +149,25 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
       const clone = await duplicatePage(ctx.params.id, ctx.user?.id);
       if (!clone) throw new Error("page_not_found");
       return clone;
+    }
+  );
+
+  router.delete(
+    "/pages/:id",
+    requirePermission("content:write"),
+    async (ctx) => {
+      const page = await getPage(ctx.params.id);
+      if (!page) throw new Error("page_not_found");
+      const deleted = await deletePage(ctx.params.id);
+      if (!deleted) throw new Error("page_not_found");
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "pages.delete",
+        targetType: "page",
+        targetId: deleted.id,
+        metadata: { slug: deleted.slug, title: deleted.title },
+      });
+      return { ok: true };
     }
   );
 

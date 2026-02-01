@@ -468,6 +468,8 @@ Permissions: `content:read`, `content:write`, `content:publish`
 - `POST /pages/:id/publish`
 - `POST /pages/:id/unpublish`
 - `POST /pages/:id/preview`
+- `POST /pages/:id/duplicate`
+- `DELETE /pages/:id`
 - `GET /pages/:id/revisions`
 - `POST /pages/:id/revisions/:revisionId/restore`
 

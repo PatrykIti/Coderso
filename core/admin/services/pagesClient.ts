@@ -92,3 +92,9 @@ export async function duplicatePage(id: string) {
     method: "POST",
   }, { withCsrf: true });
 }
+
+export async function deletePage(id: string) {
+  return apiRequest<{ ok: boolean }>(`/pages/${id}`, {
+    method: "DELETE",
+  }, { withCsrf: true });
+}

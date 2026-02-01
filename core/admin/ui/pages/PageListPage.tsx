@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
   createPage,
+  deletePage,
   duplicatePage,
   listPages,
   previewPage,
@@ -212,6 +213,26 @@ export function PageListPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        "Delete this page? This cannot be undone."
+      );
+      if (!confirmed) return;
+    }
+    setError(null);
+    try {
+      await deletePage(id);
+      await refresh();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to delete page.");
+      }
+    }
+  };
+
   const handleDrawerOpenChange = (next: boolean) => {
     setCreateOpen(next);
     if (next) {
@@ -282,6 +303,7 @@ export function PageListPage() {
             onPublish={handlePublish}
             onUnpublish={handleUnpublish}
             onDuplicate={handleDuplicate}
+            onDelete={handleDelete}
           />
         )}
         <div className="flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">

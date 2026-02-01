@@ -188,3 +188,11 @@ export async function duplicatePage(id: string, actorId?: string) {
 
   return clone ?? null;
 }
+
+export async function deletePage(id: string) {
+  const [page] = await db
+    .delete(pages)
+    .where(eq(pages.id, id))
+    .returning();
+  return page ?? null;
+}
