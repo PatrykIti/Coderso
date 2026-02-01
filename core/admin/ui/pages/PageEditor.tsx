@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Eye, Save } from "lucide-react";
+import { Eye, Save, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { DeviceSwitcher } from "@/ui/pages/DeviceSwitcher";
 import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
 import { WidgetPicker } from "./builder/WidgetPicker";
+import { PageSettingsDrawer } from "./PageSettingsDrawer";
 import {
   applyWizardSelection,
   createBlock,
@@ -88,6 +89,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   );
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isUpdatingMeta, setIsUpdatingMeta] = useState(false);
+  const [metaError, setMetaError] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedBlock = blocks.find((block) => block.id === selectedId) ?? null;
@@ -236,6 +240,27 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     }
   };
 
+  const handleSaveSettings = async (payload: { title: string; slug: string }) => {
+    if (!pageId) return;
+    setMetaError(null);
+    setIsUpdatingMeta(true);
+    try {
+      const updated = await updatePage(pageId, payload);
+      if (updated) {
+        setPage((prev) => (prev ? { ...prev, ...updated } : updated));
+      }
+      setSettingsOpen(false);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setMetaError(err.message);
+      } else {
+        setMetaError("Failed to update page settings.");
+      }
+    } finally {
+      setIsUpdatingMeta(false);
+    }
+  };
+
   const status = page?.status ?? "draft";
   const title = page?.title ?? "Homepage";
 
@@ -298,6 +323,16 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             <Eye className="h-4 w-4" />
             {isPublishing ? "Publishing..." : "Publish"}
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2"
+            onClick={() => setSettingsOpen(true)}
+            disabled={!page}
+          >
+            <Settings2 className="h-4 w-4" />
+            Page settings
+          </Button>
         </div>
       }
     >
@@ -323,6 +358,15 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           />
         )}
       </div>
+      <PageSettingsDrawer
+        key={`${page?.id ?? "page-settings"}-${settingsOpen ? "open" : "closed"}`}
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        page={page}
+        onSave={handleSaveSettings}
+        isSubmitting={isUpdatingMeta}
+        error={metaError}
+      />
     </EditorShell>
   );
 }

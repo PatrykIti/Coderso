@@ -116,14 +116,22 @@ export async function getPageBySlug(slug: string) {
 }
 
 export async function updatePage(id: string, input: UpdatePageInput) {
+  const updates: Partial<typeof pages.$inferInsert> = {
+    updatedAt: new Date(),
+  };
+  if (typeof input.title !== "undefined") {
+    updates.title = input.title;
+  }
+  if (typeof input.slug !== "undefined") {
+    updates.slug = input.slug;
+  }
+  if (typeof input.data !== "undefined") {
+    updates.currentData = input.data;
+  }
+
   const [page] = await db
     .update(pages)
-    .set({
-      title: input.title,
-      slug: input.slug,
-      currentData: input.data,
-      updatedAt: new Date(),
-    })
+    .set(updates)
     .where(eq(pages.id, id))
     .returning();
   return page ?? null;

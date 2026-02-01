@@ -141,6 +141,7 @@ Project Change Log.
 | 114 | 2026-02-01 | Public pages rendering and preview | CMS/Pages |
 | 115 | 2026-02-01 | Admin/public base URLs | Core/Platform |
 | 116 | 2026-02-01 | Admin access path and redirect | Core/Platform |
+| 117 | 2026-02-01 | Page editor UX fixes | Admin/UI |
 
 
 ---

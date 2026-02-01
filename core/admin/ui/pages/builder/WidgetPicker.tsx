@@ -1,4 +1,5 @@
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +13,44 @@ type WidgetPickerProps = {
 
 export function WidgetPicker({ onAdd }: WidgetPickerProps) {
   const widgetRegistry = getWidgetRegistry();
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredWidgets = useMemo(() => {
+    if (!normalizedQuery) return widgetRegistry;
+    return widgetRegistry.filter((widget) => {
+      const haystack = [
+        widget.title,
+        widget.description,
+        widget.type,
+        ...(widget.tags ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [normalizedQuery, widgetRegistry]);
   return (
     <div className="flex h-full flex-col">
       <div className="border-b p-4">
-        <Input placeholder="Find components..." />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Find components..."
+            className="pl-9"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
       </div>
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-3">
-          {widgetRegistry.map((widget) => (
+          {filteredWidgets.length === 0 ? (
+            <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+              No components match this search.
+            </div>
+          ) : null}
+          {filteredWidgets.map((widget) => (
             <div
               key={widget.type}
               className="rounded-lg border bg-background p-3 shadow-sm"

@@ -18,25 +18,33 @@ export function EditorShell({
   ...props
 }: EditorShellProps) {
   return (
-    <AdminShell contentClassName="p-0" {...props}>
-      <div className="flex h-full min-h-[calc(100vh-4rem)]">
+    <AdminShell contentClassName="p-0 overflow-hidden" {...props}>
+      <div className="flex h-full min-h-[calc(100vh-4rem)] min-h-0">
         <aside
           className={cn(
-            "hidden w-72 shrink-0 border-r bg-background lg:block",
+            "hidden w-72 shrink-0 border-r bg-background lg:flex",
             leftPanelClassName
           )}
         >
-          {leftPanel}
+          <div className="flex h-full w-full flex-col overflow-y-auto">
+            {leftPanel}
+          </div>
         </aside>
-        <section className="min-w-0 flex-1 bg-muted/20">{children}</section>
+        <section className="min-w-0 flex-1 bg-muted/20">
+          <div className="flex h-full min-h-0 flex-col overflow-y-auto">
+            {children}
+          </div>
+        </section>
         {rightPanel ? (
           <aside
             className={cn(
-              "hidden w-80 shrink-0 border-l bg-background lg:block",
+              "hidden w-80 shrink-0 border-l bg-background lg:flex",
               rightPanelClassName
             )}
           >
-            {rightPanel}
+            <div className="flex h-full w-full flex-col overflow-y-auto">
+              {rightPanel}
+            </div>
           </aside>
         ) : null}
       </div>
