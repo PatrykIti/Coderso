@@ -1,8 +1,8 @@
 import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 import { FieldEditor } from "./FieldEditor";
@@ -45,30 +45,24 @@ export function validateFieldName(
 
 type SchemaBuilderProps = {
   fields: ContentField[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
   onChange: (next: ContentField[]) => void;
+  nameError?: string | null;
+  defaultError?: string | null;
+  relationError?: string | null;
 };
 
-export function SchemaBuilder({ fields, onChange }: SchemaBuilderProps) {
-  const [selectedId, setSelectedId] = useState(fields[0]?.id ?? null);
-
+export function SchemaBuilder({
+  fields,
+  selectedId,
+  onSelect,
+  onChange,
+  nameError,
+  defaultError,
+  relationError,
+}: SchemaBuilderProps) {
   const selectedField = fields.find((field) => field.id === selectedId) ?? null;
-
-  const nameErrors = useMemo(() => {
-    const names = fields.map((field) => ({ id: field.id, name: field.name }));
-    return fields.reduce<Record<string, string | null>>((acc, field) => {
-      acc[field.id] = validateFieldName(field.name, names, field.id);
-      return acc;
-    }, {});
-  }, [fields]);
-
-  const defaultError = selectedField?.required && !selectedField.defaultValue
-    ? "Required fields need a default value."
-    : null;
-
-  const relationError =
-    selectedField?.type === "relation" && !selectedField.relation?.target
-      ? "Relation target slug is required."
-      : null;
 
   const handleAddField = () => {
     const suffix = fields.length + 1;
@@ -81,7 +75,7 @@ export function SchemaBuilder({ fields, onChange }: SchemaBuilderProps) {
       required: false,
     };
     onChange([...fields, nextField]);
-    setSelectedId(nextField.id);
+    onSelect(nextField.id);
   };
 
   const handleUpdateField = (next: ContentField) => {
@@ -91,14 +85,12 @@ export function SchemaBuilder({ fields, onChange }: SchemaBuilderProps) {
   const handleRemoveField = (id: string) => {
     const next = fields.filter((field) => field.id !== id);
     onChange(next);
-    setSelectedId(next[0]?.id ?? null);
+    onSelect(next[0]?.id ?? null);
   };
 
-  const handleSelect = (id: string) => setSelectedId(id);
-
   return (
-    <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
-      <Card className="gap-3 p-4">
+    <div className="grid h-full min-h-0 gap-4 lg:grid-cols-[240px_1fr]">
+      <Card className="flex min-h-0 flex-col gap-3 p-4">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Fields
@@ -107,37 +99,41 @@ export function SchemaBuilder({ fields, onChange }: SchemaBuilderProps) {
             <Plus className="h-3 w-3" />
           </Button>
         </div>
-        <div className="space-y-2">
-          {fields.map((field) => (
-            <button
-              key={field.id}
-              type="button"
-              onClick={() => handleSelect(field.id)}
-              className={cn(
-                "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm",
-                field.id === selectedId
-                  ? "border-primary/50 bg-primary/5"
-                  : "border-transparent bg-muted/30"
-              )}
-            >
-              <span>{field.label}</span>
-              <span className="text-[10px] uppercase text-muted-foreground">
-                {field.type}
-              </span>
-            </button>
-          ))}
-        </div>
+        <ScrollArea className="flex-1 pr-1">
+          <div className="space-y-2">
+            {fields.map((field) => (
+              <button
+                key={field.id}
+                type="button"
+                onClick={() => onSelect(field.id)}
+                className={cn(
+                  "flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm",
+                  field.id === selectedId
+                    ? "border-primary/50 bg-primary/5"
+                    : "border-transparent bg-muted/30"
+                )}
+              >
+                <span>{field.label}</span>
+                <span className="text-[10px] uppercase text-muted-foreground">
+                  {field.type}
+                </span>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
       </Card>
-      <Card className="p-5">
+      <Card className="hidden min-h-0 flex-col p-5 lg:flex">
         {selectedField ? (
-          <FieldEditor
-            field={selectedField}
-            nameError={nameErrors[selectedField.id]}
-            defaultError={defaultError}
-            relationError={relationError}
-            onChange={handleUpdateField}
-            onRemove={() => handleRemoveField(selectedField.id)}
-          />
+          <ScrollArea className="flex-1 pr-2">
+            <FieldEditor
+              field={selectedField}
+              nameError={nameError}
+              defaultError={defaultError}
+              relationError={relationError}
+              onChange={handleUpdateField}
+              onRemove={() => handleRemoveField(selectedField.id)}
+            />
+          </ScrollArea>
         ) : (
           <div className="text-sm text-muted-foreground">
             Select a field to edit its settings.

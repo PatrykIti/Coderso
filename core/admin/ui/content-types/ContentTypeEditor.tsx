@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import {
   getContentType,
@@ -13,7 +19,12 @@ import { SplitShell } from "@/ui/layouts/SplitShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { ContentTypePreviewPanel } from "./ContentTypePreviewPanel";
-import { SchemaBuilder, type ContentField } from "./SchemaBuilder";
+import {
+  SchemaBuilder,
+  validateFieldName,
+  type ContentField,
+} from "./SchemaBuilder";
+import { FieldEditor } from "./FieldEditor";
 import {
   buildSchemaFromFields,
   fieldsFromSchema,
@@ -55,6 +66,12 @@ export function ContentTypeEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
+    defaultFields[0]?.id ?? null
+  );
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [previewHidden, setPreviewHidden] = useState(false);
+  const [previewSheetOpen, setPreviewSheetOpen] = useState(false);
 
   useEffect(() => {
     if (!typeId) return;
@@ -64,8 +81,10 @@ export function ContentTypeEditor() {
         if (!active) return;
         setName(result.name);
         setSlug(result.slug);
-        setFields(fieldsFromSchema(result.schema));
+        const mappedFields = fieldsFromSchema(result.schema);
+        setFields(mappedFields);
         setHasUnsavedChanges(false);
+        setSelectedFieldId(mappedFields[0]?.id ?? null);
         setError(null);
       })
       .catch((err) => {
@@ -83,6 +102,16 @@ export function ContentTypeEditor() {
       active = false;
     };
   }, [typeId]);
+
+  useEffect(() => {
+    if (fields.length === 0) {
+      setSelectedFieldId(null);
+      return;
+    }
+    if (!selectedFieldId || !fields.some((field) => field.id === selectedFieldId)) {
+      setSelectedFieldId(fields[0]?.id ?? null);
+    }
+  }, [fields, selectedFieldId]);
 
   const schema = useMemo(() => buildSchemaFromFields(fields), [fields]);
 
@@ -120,12 +149,33 @@ export function ContentTypeEditor() {
     setHasUnsavedChanges(true);
   };
 
+  const selectedField = fields.find((field) => field.id === selectedFieldId) ?? null;
+  const nameError = useMemo(() => {
+    if (!selectedField) return null;
+    const names = fields.map((field) => ({ id: field.id, name: field.name }));
+    return validateFieldName(selectedField.name, names, selectedField.id);
+  }, [fields, selectedField]);
+  const defaultError =
+    selectedField?.required && !selectedField.defaultValue
+      ? "Required fields need a default value."
+      : null;
+  const relationError =
+    selectedField?.type === "relation" && !selectedField.relation?.target
+      ? "Relation target slug is required."
+      : null;
+
   return (
     <SplitShell
       activeHref="/admin/content-types"
+      contentClassName="p-0 overflow-hidden"
       rightPanel={
-        <ContentTypePreviewPanel name={name} slug={slug} fields={fields} />
+        previewHidden ? null : (
+          <div className="flex h-full min-h-0 flex-col overflow-y-auto p-6">
+            <ContentTypePreviewPanel name={name} slug={slug} fields={fields} />
+          </div>
+        )
       }
+      rightPanelClassName="p-0 overflow-hidden"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Content</span>
@@ -135,6 +185,14 @@ export function ContentTypeEditor() {
       }
       topbarActions={
         <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="hidden gap-2 lg:inline-flex"
+            onClick={() => setPreviewHidden((prev) => !prev)}
+          >
+            {previewHidden ? "Show preview" : "Hide preview"}
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -157,61 +215,136 @@ export function ContentTypeEditor() {
         </div>
       }
     >
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <PageHeader
-          title="Content Type Editor"
-          description="Define schema fields and validation rules."
-        />
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>Unable to load content type</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-        {hasUnsavedChanges ? (
-          <Alert>
-            <AlertTitle>Unsaved changes</AlertTitle>
-            <AlertDescription>
-              Remember to save your content type before leaving this screen.
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Name
-            </label>
-            <Input
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                setHasUnsavedChanges(true);
-              }}
-              disabled={isLoading}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Slug
-            </label>
-            <Input
-              value={slug}
-              onChange={(event) => {
-                setSlug(event.target.value);
-                setHasUnsavedChanges(true);
-              }}
-              disabled={isLoading}
-            />
+      <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col">
+        <div className="border-b px-6 py-6">
+          <PageHeader
+            title="Content Type Editor"
+            description="Define schema fields and validation rules."
+          />
+          {error ? (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTitle>Unable to load content type</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          {hasUnsavedChanges ? (
+            <Alert className="mt-4">
+              <AlertTitle>Unsaved changes</AlertTitle>
+              <AlertDescription>
+                Remember to save your content type before leaving this screen.
+              </AlertDescription>
+            </Alert>
+          ) : null}
+        </div>
+        <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 lg:hidden">
+          <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDetailsOpen(true)}
+              disabled={!selectedField}
+            >
+              Field details
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewSheetOpen(true)}
+            >
+              Schema preview
+            </Button>
           </div>
         </div>
-        {isLoading ? (
-          <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-            Loading schema builder...
+        <div className="flex flex-1 min-h-0 flex-col gap-6 px-6 py-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Name
+              </label>
+              <Input
+                value={name}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  setHasUnsavedChanges(true);
+                }}
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Slug
+              </label>
+              <Input
+                value={slug}
+                onChange={(event) => {
+                  setSlug(event.target.value);
+                  setHasUnsavedChanges(true);
+                }}
+                disabled={isLoading}
+              />
+            </div>
           </div>
-        ) : (
-          <SchemaBuilder fields={fields} onChange={handleFieldChange} />
-        )}
+          {isLoading ? (
+            <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+              Loading schema builder...
+            </div>
+          ) : (
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <SchemaBuilder
+                fields={fields}
+                selectedId={selectedFieldId}
+                onSelect={(id) => setSelectedFieldId(id)}
+                onChange={handleFieldChange}
+                nameError={nameError}
+                defaultError={defaultError}
+                relationError={relationError}
+              />
+            </div>
+          )}
+        </div>
       </div>
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent side="right" className="w-80 p-0">
+          <SheetTitle className="sr-only">Field details</SheetTitle>
+          <SheetDescription className="sr-only">
+            Edit the selected field details.
+          </SheetDescription>
+          <div className="flex h-full flex-col overflow-y-auto p-6">
+            {selectedField ? (
+              <FieldEditor
+                field={selectedField}
+                nameError={nameError}
+                defaultError={defaultError}
+                relationError={relationError}
+                onChange={(next) => {
+                  handleFieldChange(
+                    fields.map((field) => (field.id === next.id ? next : field))
+                  );
+                }}
+                onRemove={() => {
+                  handleFieldChange(fields.filter((field) => field.id !== selectedField.id));
+                  setDetailsOpen(false);
+                }}
+              />
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Select a field to edit its settings.
+              </div>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={previewSheetOpen} onOpenChange={setPreviewSheetOpen}>
+        <SheetContent side="right" className="w-80 p-0">
+          <SheetTitle className="sr-only">Schema preview</SheetTitle>
+          <SheetDescription className="sr-only">
+            View the generated JSON schema.
+          </SheetDescription>
+          <div className="flex h-full flex-col overflow-y-auto p-6">
+            <ContentTypePreviewPanel name={name} slug={slug} fields={fields} />
+          </div>
+        </SheetContent>
+      </Sheet>
     </SplitShell>
   );
 }
