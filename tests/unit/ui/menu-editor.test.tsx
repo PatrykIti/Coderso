@@ -3,9 +3,9 @@ import { renderToString } from "react-dom/server";
 
 import { MenuEditorPage } from "../../../core/admin/ui/menus/MenuEditorPage";
 
-test("MenuEditorPage renders menu structure", () => {
+test("MenuEditorPage renders menus shell", () => {
   const html = renderToString(<MenuEditorPage />);
 
-  expect(html).toContain("Main Menu Structure");
-  expect(html).toContain("Add Menu Item");
+  expect(html).toContain("Menus");
+  expect(html).toContain("New Menu");
 });

@@ -1,8 +1,7 @@
-export type MenuItemNode = {
-  id: string;
-  label: string;
-  href?: string;
-  pageTitle?: string;
+import type { MenuItemRecord } from "@/services/menusClient";
+
+export type MenuItemDisplay = MenuItemRecord & {
+  pageTitle?: string | null;
   status?: "ok" | "error";
-  children?: MenuItemNode[];
+  children?: MenuItemDisplay[];
 };
