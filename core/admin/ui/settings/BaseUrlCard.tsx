@@ -9,6 +9,7 @@ const labelClassName =
 type BaseUrlCardProps = {
   adminBaseUrl: string;
   publicBaseUrl: string;
+  errors?: { adminBaseUrl?: string | null; publicBaseUrl?: string | null };
   onChange?: (next: { adminBaseUrl: string; publicBaseUrl: string }) => void;
   disabled?: boolean;
 };
@@ -16,9 +17,13 @@ type BaseUrlCardProps = {
 export function BaseUrlCard({
   adminBaseUrl,
   publicBaseUrl,
+  errors,
   onChange,
   disabled = false,
 }: BaseUrlCardProps) {
+  const adminError = errors?.adminBaseUrl ?? null;
+  const publicError = errors?.publicBaseUrl ?? null;
+
   const handleAdminChange = (value: string) => {
     onChange?.({ adminBaseUrl: value, publicBaseUrl });
   };
@@ -54,10 +59,14 @@ export function BaseUrlCard({
               placeholder="https://cms.example.com"
               onChange={(event) => handleAdminChange(event.target.value)}
               disabled={disabled}
+              aria-invalid={adminError ? true : undefined}
             />
             <p className="text-xs text-muted-foreground">
               Leave blank to use the current host for /admin.
             </p>
+            {adminError ? (
+              <p className="text-xs text-destructive">{adminError}</p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <label className={labelClassName} htmlFor="public-base-url">
@@ -69,10 +78,14 @@ export function BaseUrlCard({
               placeholder="https://www.example.com"
               onChange={(event) => handlePublicChange(event.target.value)}
               disabled={disabled}
+              aria-invalid={publicError ? true : undefined}
             />
             <p className="text-xs text-muted-foreground">
               Used for preview URLs and public routing.
             </p>
+            {publicError ? (
+              <p className="text-xs text-destructive">{publicError}</p>
+            ) : null}
           </div>
         </div>
       </CardContent>

@@ -45,12 +45,34 @@ export function GeneralSettingsPage({
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
 
+  const validateBaseUrl = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    try {
+      const parsed = new URL(trimmed);
+      const host = parsed.hostname.toLowerCase();
+      if (parsed.protocol !== "https:") {
+        if (host !== "localhost" && host !== "127.0.0.1") {
+          return "HTTPS is required for non-localhost URLs.";
+        }
+      }
+      return null;
+    } catch {
+      return "Enter a valid URL (e.g. https://example.com).";
+    }
+  };
+
+  const adminBaseUrlError = validateBaseUrl(form.adminBaseUrl);
+  const publicBaseUrlError = validateBaseUrl(form.publicBaseUrl);
+  const hasValidationErrors = Boolean(adminBaseUrlError || publicBaseUrlError);
+
   useEffect(() => {
     setForm(values);
   }, [values]);
 
   const handleSave = async () => {
     if (!onSave) return;
+    if (hasValidationErrors) return;
     setSaveError(null);
     setSaveSuccess(null);
     setLocalSaving(true);
@@ -69,6 +91,7 @@ export function GeneralSettingsPage({
   };
 
   const busy = isLoading || isSaving || localSaving;
+  const disableSave = busy || hasValidationErrors;
 
   return (
     <SettingsShell
@@ -127,6 +150,10 @@ export function GeneralSettingsPage({
             <BaseUrlCard
               adminBaseUrl={form.adminBaseUrl}
               publicBaseUrl={form.publicBaseUrl}
+              errors={{
+                adminBaseUrl: adminBaseUrlError,
+                publicBaseUrl: publicBaseUrlError,
+              }}
               onChange={(next) =>
                 setForm((prev) => ({
                   ...prev,
@@ -149,7 +176,12 @@ export function GeneralSettingsPage({
               <Button variant="ghost" size="sm" disabled={busy}>
                 Discard changes
               </Button>
-              <Button size="sm" className="gap-2" onClick={handleSave} disabled={busy}>
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={handleSave}
+                disabled={disableSave}
+              >
                 <CheckCircle2 className="h-4 w-4" />
                 {busy ? "Saving..." : "Save changes"}
               </Button>
