@@ -20,6 +20,7 @@ import {
 } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 import { PageFilters } from "./PageFilters";
 import { PageTable } from "./PageTable";
@@ -44,6 +45,7 @@ export function filterPages(
 }
 
 export function PageListPage() {
+  const basePath = resolveAdminBasePath();
   const [items, setItems] = useState<PageSummary[]>([]);
   const [createOpen, setCreateOpen] = useState(false);
   const [drawerKey, setDrawerKey] = useState(0);
@@ -131,7 +133,9 @@ export function PageListPage() {
         data: { blocks: [], settings: { template: payload.template } },
       });
       if (payload.openAfterCreate && typeof window !== "undefined") {
-        window.location.assign(`/admin/pages/${encodeURIComponent(page.id)}`);
+        window.location.assign(
+          withAdminBasePath(basePath, `/pages/${encodeURIComponent(page.id)}`)
+        );
         return;
       }
       await refresh();
@@ -149,7 +153,9 @@ export function PageListPage() {
 
   const handleEdit = (id: string) => {
     if (typeof window !== "undefined") {
-      window.location.assign(`/admin/pages/${encodeURIComponent(id)}`);
+      window.location.assign(
+        withAdminBasePath(basePath, `/pages/${encodeURIComponent(id)}`)
+      );
     }
   };
 
@@ -202,7 +208,9 @@ export function PageListPage() {
     try {
       const clone = await duplicatePage(id);
       if (typeof window !== "undefined") {
-        window.location.assign(`/admin/pages/${encodeURIComponent(clone.id)}`);
+        window.location.assign(
+          withAdminBasePath(basePath, `/pages/${encodeURIComponent(clone.id)}`)
+        );
       }
     } catch (err) {
       if (isApiClientError(err)) {

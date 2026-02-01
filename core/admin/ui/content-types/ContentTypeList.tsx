@@ -19,6 +19,7 @@ import {
 } from "@/services/contentTypesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 import { ContentTypeCreateDrawer } from "./ContentTypeCreateDrawer";
 import { countSchemaFields } from "./schemaMapping";
@@ -34,6 +35,7 @@ type ContentTypeRow = ContentTypeSummary & {
 };
 
 export function ContentTypeList() {
+  const basePath = resolveAdminBasePath();
   const [types, setTypes] = useState<ContentTypeSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -156,7 +158,14 @@ export function ContentTypeList() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" asChild>
-                        <a href={`/admin/content-types/${type.id}`}>Edit</a>
+                        <a
+                          href={withAdminBasePath(
+                            basePath,
+                            `/content-types/${type.id}`
+                          )}
+                        >
+                          Edit
+                        </a>
                       </Button>
                     </TableCell>
                   </TableRow>

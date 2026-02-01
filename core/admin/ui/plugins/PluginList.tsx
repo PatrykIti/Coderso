@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 import type { InstalledPlugin } from "./types";
 
@@ -26,6 +27,7 @@ export type PluginListProps = {
 
 export function PluginList(props: PluginListProps) {
   const { items, selectedName } = props;
+  const basePath = resolveAdminBasePath();
   return (
     <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
       <Table>
@@ -67,7 +69,12 @@ export function PluginList(props: PluginListProps) {
               </TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="sm" asChild>
-                  <a href={`/admin/store/plugins/${encodeURIComponent(plugin.name)}`}>
+                  <a
+                    href={withAdminBasePath(
+                      basePath,
+                      `/store/plugins/${encodeURIComponent(plugin.name)}`
+                    )}
+                  >
                     Manage
                   </a>
                 </Button>

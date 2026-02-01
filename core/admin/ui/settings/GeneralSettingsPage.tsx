@@ -45,7 +45,19 @@ export function GeneralSettingsPage({
   isSaving = false,
   error = null,
 }: GeneralSettingsPageProps) {
-  const [form, setForm] = useState(values);
+  const normalizeValues = (input: Partial<GeneralSettingsValues>) => ({
+    ...defaultValues,
+    ...input,
+    siteName: input.siteName ?? defaultValues.siteName,
+    siteLocale: input.siteLocale ?? defaultValues.siteLocale,
+    adminBaseUrl: input.adminBaseUrl ?? defaultValues.adminBaseUrl,
+    publicBaseUrl: input.publicBaseUrl ?? defaultValues.publicBaseUrl,
+    adminPath: input.adminPath ?? defaultValues.adminPath,
+    adminRedirectEnabled:
+      input.adminRedirectEnabled ?? defaultValues.adminRedirectEnabled,
+  });
+
+  const [form, setForm] = useState(() => normalizeValues(values));
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
@@ -86,7 +98,7 @@ export function GeneralSettingsPage({
   );
 
   useEffect(() => {
-    setForm(values);
+    setForm(normalizeValues(values));
   }, [values]);
 
   const handleSave = async () => {

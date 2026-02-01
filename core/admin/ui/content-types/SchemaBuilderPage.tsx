@@ -18,6 +18,7 @@ import {
 } from "@/services/contentTypesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 import { ContentTypeSidebar } from "./ContentTypeSidebar";
 import { FieldCard } from "./FieldCard";
@@ -66,6 +67,7 @@ const typeLabel = (type: string) => {
 };
 
 export function SchemaBuilderPage() {
+  const basePath = resolveAdminBasePath();
   const [typeId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return resolveContentTypeId(window.location.pathname);
@@ -198,7 +200,9 @@ export function SchemaBuilderPage() {
               activeId={contentType?.id}
               onSelect={(id) => {
                 if (typeof window !== "undefined") {
-                  window.location.assign(`/admin/content-types/${id}/schema`);
+                  window.location.assign(
+                    withAdminBasePath(basePath, `/content-types/${id}/schema`)
+                  );
                 }
               }}
             />

@@ -11,6 +11,7 @@ import {
 } from "@/services/contentTypesClient";
 import { deleteEntry, listEntries } from "@/services/entriesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
+import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 import { ContentTypeCreateDrawer } from "../content-types/ContentTypeCreateDrawer";
 import { EntryCreateDrawer } from "./EntryCreateDrawer";
@@ -41,6 +42,7 @@ export function filterEntries(
 }
 
 export function EntryList() {
+  const basePath = resolveAdminBasePath();
   const [createOpen, setCreateOpen] = useState(false);
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [types, setTypes] = useState<ContentTypeSummary[]>([]);
@@ -140,7 +142,12 @@ export function EntryList() {
 
   const handleEditEntry = (id: string) => {
     if (typeof window !== "undefined" && activeSlug) {
-      window.location.assign(`/admin/entries/${encodeURIComponent(activeSlug)}/${encodeURIComponent(id)}`);
+      window.location.assign(
+        withAdminBasePath(
+          basePath,
+          `/entries/${encodeURIComponent(activeSlug)}/${encodeURIComponent(id)}`
+        )
+      );
     }
   };
 
@@ -203,7 +210,10 @@ export function EntryList() {
     }
     if (openAfterCreate && typeof window !== "undefined") {
       window.location.assign(
-        `/admin/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`
+        withAdminBasePath(
+          basePath,
+          `/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`
+        )
       );
     }
   };
