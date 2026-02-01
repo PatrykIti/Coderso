@@ -35,9 +35,10 @@ export function BlockList({
           <div
             key={block.id}
             className={cn(
-              "rounded-xl border bg-background p-4 shadow-sm",
+              "cursor-pointer rounded-xl border bg-background p-4 shadow-sm",
               selectedId === block.id && "border-primary/50 ring-2 ring-primary/10"
             )}
+            onClick={() => onSelect(block.id)}
           >
             <div className="flex items-start justify-between gap-3">
               <button
