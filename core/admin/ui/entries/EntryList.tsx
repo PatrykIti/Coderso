@@ -15,6 +15,7 @@ import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 import { ContentTypeCreateDrawer } from "../content-types/ContentTypeCreateDrawer";
 import { EntryCreateDrawer } from "./EntryCreateDrawer";
+import { getContentTypeLabels } from "./contentTypeLabels";
 import { EntryFilters } from "./EntryFilters";
 import { EntryGrid } from "./EntryGrid";
 import { EntryTable } from "./EntryTable";
@@ -229,6 +230,10 @@ export function EntryList() {
     setAuthorFilter("any");
   };
 
+  const typeLabelSource = activeType?.name ?? activeSlug ?? "";
+  const { singular: typeSingular, plural: typePlural } =
+    getContentTypeLabels(typeLabelSource);
+
   return (
     <SplitShell
       activeHref="/admin/entries"
@@ -236,7 +241,7 @@ export function EntryList() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Content</span>
           <span>/</span>
-          <span className="text-foreground">Entries</span>
+          <span className="text-foreground">{typePlural}</span>
         </div>
       }
     >
@@ -279,13 +284,13 @@ export function EntryList() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-3">
                 <h1 className="text-3xl font-semibold tracking-tight">
-                  {activeType?.name ?? "Entries"}
+                  {typePlural}
                 </h1>
                 <Badge
                   variant="secondary"
                   className="rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest"
                 >
-                  Entries
+                  {typePlural}
                 </Badge>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -319,7 +324,7 @@ export function EntryList() {
                 </div>
                 <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                   <Plus className="h-4 w-4" />
-                  Create New
+                  {`Create New ${typeSingular}`}
                 </Button>
               </div>
             </div>

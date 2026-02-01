@@ -35,6 +35,7 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 
 import { EntryEditorHeader } from "./EntryEditorHeader";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
+import { getContentTypeLabels } from "./contentTypeLabels";
 import { FieldRenderer } from "./FieldRenderer";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import {
@@ -325,6 +326,10 @@ export function EntryEditor() {
     el.style.height = `${el.scrollHeight}px`;
   }, [title]);
 
+  const { singular: typeSingular, plural: typePlural } = getContentTypeLabels(
+    contentTypeName ?? type ?? ""
+  );
+
   return (
     <AdminShell
       activeHref="/admin/entries"
@@ -334,8 +339,8 @@ export function EntryEditor() {
         <EntryEditorHeader
           status={status}
           hasUnsavedChanges={hasUnsavedChanges}
-          contentType={contentTypeName ?? type ?? "Entries"}
-          entryLabel={entry?.title ?? "Edit Entry"}
+          contentType={typePlural}
+          entryLabel={entry?.title ?? `Edit ${typeSingular}`}
         />
       }
     >
@@ -546,7 +551,7 @@ export function EntryEditor() {
       </div>
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent side="right" className="w-full p-0 sm:max-w-md">
-          <SheetTitle className="sr-only">Entry details</SheetTitle>
+          <SheetTitle className="sr-only">Content details</SheetTitle>
           <SheetDescription className="sr-only">
             Edit status, SEO, and metadata for this entry.
           </SheetDescription>

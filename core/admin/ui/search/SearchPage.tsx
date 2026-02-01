@@ -33,7 +33,7 @@ type ContentFilter = "all" | SearchItemType;
 const contentFilters: { value: ContentFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "page", label: "Pages" },
-  { value: "entry", label: "Entries" },
+  { value: "entry", label: "Content" },
   { value: "media", label: "Media" },
   { value: "user", label: "Users" },
 ];

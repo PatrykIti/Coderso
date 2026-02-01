@@ -41,7 +41,7 @@ export const defaultNavSections: NavSection[] = [
     items: [
       { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { label: "Pages", href: "/admin/pages", icon: FileText },
-      { label: "Entries", href: "/admin/entries", icon: Layers },
+      { label: "Content", href: "/admin/entries", icon: Layers },
       { label: "Content Types", href: "/admin/content-types", icon: Database },
       { label: "Menus", href: "/admin/menus", icon: List },
       { label: "Media", href: "/admin/media", icon: Image },

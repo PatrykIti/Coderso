@@ -29,7 +29,7 @@ export type SearchGroup = {
 
 const typeLabels: Record<SearchItemType, string> = {
   page: "Pages",
-  entry: "Entries",
+  entry: "Content",
   media: "Media",
   user: "Users",
 };

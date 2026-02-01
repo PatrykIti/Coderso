@@ -64,7 +64,9 @@ export function EntryMetadataPanel({
   isSaving,
 }: EntryMetadataPanelProps) {
   const [tagInput, setTagInput] = useState("");
-  const previewTitle = title ? `${title} | Nextless CMS` : "Entry title | Nextless CMS";
+  const previewTitle = title
+    ? `${title} | Nextless CMS`
+    : "Content title | Nextless CMS";
   const previewUrl = `https://nextless.cms/blog/${slug || "entry-slug"}`;
   const canSchedule = status === "scheduled";
 

@@ -18,6 +18,6 @@ test("SearchResults highlights active item", () => {
   );
 
   expect(html).toContain("Pages");
-  expect(html).toContain("Entries");
+  expect(html).toContain("Content");
   expect(html).toContain('data-active="true"');
 });

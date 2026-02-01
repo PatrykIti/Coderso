@@ -25,6 +25,7 @@ import {
   type EntryDetail,
 } from "@/services/entriesClient";
 
+import { getContentTypeLabels } from "./contentTypeLabels";
 const slugify = (value: string) =>
   value
     .toLowerCase()
@@ -77,6 +78,13 @@ export function EntryCreateDrawer({
   }, [defaultTypeSlug]);
 
   const typeOptions = useMemo(() => types, [types]);
+  const selectedType = useMemo(
+    () => types.find((type) => type.slug === typeSlug) ?? null,
+    [types, typeSlug]
+  );
+  const { singular: typeSingular } = getContentTypeLabels(
+    selectedType?.name ?? typeSlug
+  );
 
   const handleSubmit = async () => {
     if (!typeSlug || !title.trim() || !slug.trim()) return;
@@ -112,9 +120,9 @@ export function EntryCreateDrawer({
       >
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
-            <SheetTitle>Create New Entry</SheetTitle>
+            <SheetTitle>{`Create New ${typeSingular}`}</SheetTitle>
             <p className="text-xs text-muted-foreground">
-              Select a collection and start drafting.
+              Select a content type and start drafting.
             </p>
           </div>
           <SheetClose asChild>
@@ -132,12 +140,12 @@ export function EntryCreateDrawer({
           <div className="space-y-5">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Collection
+                Content type
               </label>
               <Select value={typeSlug} onValueChange={setTypeSlug}>
                 <SelectTrigger className="h-10">
                   <FileText className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="Select collection" />
+                  <SelectValue placeholder="Select content type" />
                 </SelectTrigger>
                 <SelectContent>
                   {typeOptions.map((type) => (

@@ -31,7 +31,7 @@ function mapSearchItem(item: ApiSearchItem): SearchItem {
       type: "entry",
       title: item.title,
       subtitle: item.slug ?? undefined,
-      meta: item.categoryLabel ?? "Entry",
+      meta: item.categoryLabel ?? "Content item",
       categoryId: item.categoryId,
       categoryLabel: item.categoryLabel,
       entryTypeSlug: item.entryTypeSlug,
