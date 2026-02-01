@@ -339,7 +339,7 @@ export function EntryEditor() {
         />
       }
     >
-      <div className="flex h-full min-h-[calc(100vh-4rem)]">
+      <div className="flex h-full min-h-0">
         <div className="flex min-h-0 flex-1 flex-col bg-background">
           <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-6 py-3 backdrop-blur">
             <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
@@ -389,7 +389,7 @@ export function EntryEditor() {
               </div>
             </div>
           </div>
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="mx-auto flex max-w-4xl flex-col gap-8 px-10 py-10">
             {error ? (
               <Alert variant="destructive">
@@ -513,8 +513,8 @@ export function EntryEditor() {
             </div>
           </ScrollArea>
         </div>
-        <aside className="hidden w-96 shrink-0 border-l bg-muted/30 lg:flex lg:flex-col">
-          <ScrollArea className="flex-1">
+        <aside className="hidden min-h-0 w-96 shrink-0 border-l bg-muted/30 lg:flex lg:flex-col">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="px-6 py-6">
               <EntryMetadataPanel
                 status={status}
