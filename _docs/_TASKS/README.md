@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 24 tasks
+- **To Do:** 20 tasks
 - **In Progress:** 0
-- **Done:** 194 tasks
+- **Done:** 198 tasks
 
 ---
 
@@ -53,10 +53,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-046-03 | Content Entry Rendering | High | Large | list + detail templates |
 | TASK-046-04 | SSR Cache & Revalidation | High | Medium | cache + invalidation |
 | TASK-046-05 | Admin UI — Site Settings | High | Large | site settings UI |
-| TASK-047 | Admin/Public Base URLs (Routing Policy) | High | Medium | split admin/public hosts |
-| TASK-047-01 | Admin/Public Base URL Settings | High | Small | settings keys |
-| TASK-047-02 | Routing Policy Middleware | High | Medium | host-based routing |
-| TASK-047-03 | Admin UI — Base URL Settings | High | Small | site settings fields |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
@@ -78,6 +74,10 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-044 | Public Pages Rendering and Preview | High | Medium | Public site + preview |
+| TASK-047 | Admin/Public Base URLs (Routing Policy) | High | Medium | split admin/public hosts |
+| TASK-047-01 | Admin/Public Base URL Settings | High | Small | settings keys |
+| TASK-047-02 | Routing Policy Middleware | High | Medium | host-based routing |
+| TASK-047-03 | Admin UI — Base URL Settings | High | Small | general settings fields |
 | TASK-043 | Content Entry Metadata Integration | High | Large | Index for TASK-043-01..04 |
 | TASK-043-01 | Entry Metadata DB + Schema | High | Medium | tags + scheduled_at |
 | TASK-043-02 | Entry Metadata Services | High | Medium | tags + seo + author |

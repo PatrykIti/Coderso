@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-047-01, TASK-046-05  
-**Status:** 🟡 To Do
+**Status:** ✅ Done (2026-02-01)
 
 ---
 
@@ -23,8 +23,9 @@ Z opisem i walidacją (https://…).
 
 | Layer | File | Change |
 |------|------|--------|
-| UI | `core/admin/ui/site/SiteSettingsPage.tsx` | new fields |
-| Client | `core/admin/services/siteSettingsClient.ts` | include keys |
+| UI | `core/admin/ui/settings/GeneralSettingsPage.tsx` | new fields |
+| UI | `core/admin/ui/settings/BaseUrlCard.tsx` | base url card |
+| Client | `core/admin/services/settingsClient.ts` | reuse bulk update |
 | Docs | `_docs/SITE_RUNTIME.md` | UI instructions |
 
 ---

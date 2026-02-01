@@ -877,7 +877,13 @@ Export response (bundle):
 {
   "version": 1,
   "exportedAt": "2026-01-30T10:00:00Z",
-  "settings": { "site.name": "Nextless", "site.locale": "en", "design.tokens": {} },
+  "settings": {
+    "site.name": "Nextless",
+    "site.locale": "en",
+    "site.adminBaseUrl": null,
+    "site.publicBaseUrl": "https://www.example.com",
+    "design.tokens": {}
+  },
   "menus": [
     {
       "name": "Main",
@@ -1084,6 +1090,8 @@ Payloady:
 {
   "site.name": "Nextless",
   "site.locale": "pl-PL",
+  "site.adminBaseUrl": "https://cms.example.com",
+  "site.publicBaseUrl": "https://www.example.com",
   "design.tokens": { "colors": { "primary": "#111111" } }
 }
 ```
@@ -1091,6 +1099,7 @@ Payloady:
 Response:
 - `GET /settings` zwraca merged view (z defaultami).
 - `design.tokens` zwracane jako resolved tokens (defaults + overrides).
+- `site.adminBaseUrl` i `site.publicBaseUrl` sterują rozdzieleniem hostów admin/public.
 
 ---
 

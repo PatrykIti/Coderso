@@ -7,12 +7,15 @@ import { isApiClientError } from "@/services/apiClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { BrandingCard } from "./BrandingCard";
+import { BaseUrlCard } from "./BaseUrlCard";
 import { LogoUploadCard } from "./LogoUploadCard";
 import { SettingsSidebar } from "./SettingsSidebar";
 
 type GeneralSettingsValues = {
   siteName: string;
   siteLocale: string;
+  adminBaseUrl: string;
+  publicBaseUrl: string;
 };
 
 type GeneralSettingsPageProps = {
@@ -26,6 +29,8 @@ type GeneralSettingsPageProps = {
 const defaultValues: GeneralSettingsValues = {
   siteName: "Nextless",
   siteLocale: "en",
+  adminBaseUrl: "",
+  publicBaseUrl: "",
 };
 
 export function GeneralSettingsPage({
@@ -110,7 +115,25 @@ export function GeneralSettingsPage({
             <BrandingCard
               siteName={form.siteName}
               siteLocale={form.siteLocale}
-              onChange={(next) => setForm(next)}
+              onChange={(next) =>
+                setForm((prev) => ({
+                  ...prev,
+                  siteName: next.siteName,
+                  siteLocale: next.siteLocale,
+                }))
+              }
+              disabled={busy}
+            />
+            <BaseUrlCard
+              adminBaseUrl={form.adminBaseUrl}
+              publicBaseUrl={form.publicBaseUrl}
+              onChange={(next) =>
+                setForm((prev) => ({
+                  ...prev,
+                  adminBaseUrl: next.adminBaseUrl,
+                  publicBaseUrl: next.publicBaseUrl,
+                }))
+              }
               disabled={busy}
             />
             <LogoUploadCard />

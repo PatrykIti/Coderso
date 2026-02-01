@@ -5,7 +5,7 @@
 **Category:** Site/Runtime  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-046-01 (Site Settings Model), TASK-046-05 (Admin UI — Site Settings)  
-**Status:** 🟡 To Do
+**Status:** ✅ Done (2026-02-01)
 
 ---
 

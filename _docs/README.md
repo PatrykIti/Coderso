@@ -16,6 +16,7 @@
 - `SEARCH_SPEC.md` - search and indexing
 - `AUDIT_SPEC.md` - audit logs
 - `SECURITY_SPEC.md` - baseline security middleware
+- `SITE_RUNTIME.md` - public/admin runtime behavior
 - `SDK_SPEC.md` - plugin SDK contract
 - `STORE_SPEC.md` - store + security pipeline
 - `WIDGETS.md` - core widgets and configuration model

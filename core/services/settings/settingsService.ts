@@ -7,6 +7,8 @@ import type { DesignTokenOverrides } from "../theme/tokenTypes";
 const DEFAULT_SETTINGS = {
   "site.name": "Nextless",
   "site.locale": "en",
+  "site.adminBaseUrl": null as string | null,
+  "site.publicBaseUrl": null as string | null,
   "design.tokens": {} as DesignTokenOverrides,
   "search.categoryOverrides": {} as SearchCategoryOverrides,
 };
@@ -21,11 +23,38 @@ export type SearchCategoryOverrides = Record<
 
 const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_SETTINGS));
 
+const isBaseUrlKey = (key: SettingKey) =>
+  key === "site.adminBaseUrl" || key === "site.publicBaseUrl";
+
 function assertSettingKey(key: string): asserts key is SettingKey {
   if (!ALLOWED_KEYS.has(key)) {
     throw new Error("settings_key_invalid");
   }
 }
+
+const normalizeBaseUrlValue = (value: unknown) => {
+  if (value === null) return "";
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      throw new Error("settings_value_invalid");
+    }
+    return parsed.toString();
+  } catch {
+    throw new Error("settings_value_invalid");
+  }
+};
+
+const normalizeBaseUrlOutput = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
 
 function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[SettingKey] {
   if (key === "site.name" || key === "site.locale") {
@@ -33,6 +62,10 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
       throw new Error("settings_value_invalid");
     }
     return value;
+  }
+
+  if (isBaseUrlKey(key)) {
+    return normalizeBaseUrlValue(value);
   }
 
   if (key === "design.tokens") {
@@ -82,6 +115,11 @@ export async function listSettings(): Promise<SettingValueMap> {
       continue;
     }
 
+    if (isBaseUrlKey(key)) {
+      merged[key] = normalizeBaseUrlOutput(row.value);
+      continue;
+    }
+
     if (key in merged) {
       merged[key] = row.value as string;
     }
@@ -94,6 +132,9 @@ export async function getSetting(key: string) {
   assertSettingKey(key);
   const [row] = await db.select().from(settings).where(eq(settings.key, key));
   if (!row) return DEFAULT_SETTINGS[key];
+  if (isBaseUrlKey(key)) {
+    return normalizeBaseUrlOutput(row.value);
+  }
   return row.value as SettingValueMap[SettingKey];
 }
 

@@ -16,6 +16,7 @@ import {
   contentEntryPreviewSchema,
   contentEntryUpdateSchema,
 } from "../validation/contentSchemas";
+import { resolvePublicBaseUrl } from "../utils/baseUrl";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -175,7 +176,7 @@ export function registerContentEntryRoutes(
         body.ttlMinutes
       );
       const previewPath = `/preview?type=content&contentType=${type.slug}&slug=${entry.slug}&token=${token}`;
-      const baseUrl = process.env.PUBLIC_BASE_URL;
+      const baseUrl = await resolvePublicBaseUrl();
       const fallbackBase = "/";
       const previewUrl = baseUrl
         ? new URL(previewPath, baseUrl).toString()

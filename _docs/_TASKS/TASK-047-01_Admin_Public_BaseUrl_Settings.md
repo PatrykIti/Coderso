@@ -5,7 +5,7 @@
 **Category:** Site/Runtime  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-047  
-**Status:** 🟡 To Do
+**Status:** ✅ Done (2026-02-01)
 
 ---
 

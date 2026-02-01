@@ -22,7 +22,13 @@ async function canConnect() {
   }
 }
 
-const cleanupKeys = ["site.name", "site.locale", "design.tokens"];
+const cleanupKeys = [
+  "site.name",
+  "site.locale",
+  "site.adminBaseUrl",
+  "site.publicBaseUrl",
+  "design.tokens",
+];
 
 afterAll(async () => {
   if (!hasDb) return;
@@ -35,6 +41,8 @@ testIfDb("set/get/list/delete settings", async () => {
   const siteName = `Nextless-${randomUUID()}`;
   await setSetting("site.name", siteName);
   await setSetting("site.locale", "pl-PL");
+  await setSetting("site.adminBaseUrl", "https://admin.example.com");
+  await setSetting("site.publicBaseUrl", "https://www.example.com");
   await setSetting("design.tokens", {
     colors: { primary: "#111111" },
   });
@@ -45,6 +53,8 @@ testIfDb("set/get/list/delete settings", async () => {
   const list = await listSettings();
   expect(list["site.name"]).toBe(siteName);
   expect(list["site.locale"]).toBe("pl-PL");
+  expect(list["site.adminBaseUrl"]).toBe("https://admin.example.com/");
+  expect(list["site.publicBaseUrl"]).toBe("https://www.example.com/");
   expect(list["design.tokens"]).toEqual({
     colors: { primary: "#111111" },
   });
@@ -52,9 +62,13 @@ testIfDb("set/get/list/delete settings", async () => {
   const bulk = await setSettings({
     "site.name": "Nextless Updated",
     "site.locale": "en-US",
+    "site.adminBaseUrl": null,
+    "site.publicBaseUrl": "https://public.example.com",
   });
   expect(bulk["site.name"]).toBe("Nextless Updated");
   expect(bulk["site.locale"]).toBe("en-US");
+  expect(bulk["site.adminBaseUrl"]).toBeNull();
+  expect(bulk["site.publicBaseUrl"]).toBe("https://public.example.com/");
 
   await deleteSetting("site.name");
   const defaultName = await getSetting("site.name");

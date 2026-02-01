@@ -10,6 +10,7 @@ import { createRequestIdContext } from "./middleware/requestId";
 import { applySecurityHeaders } from "./middleware/securityHeaders";
 import { recordAccessLog } from "./middleware/accessLog";
 import { enforceIpAllowlist } from "./middleware/ipAllowlist";
+import { enforceHostPolicy } from "./middleware/hostPolicy";
 import { createRouter, matchRoute, normalizePath, type RouteContext } from "./router";
 import { registerAllRoutes } from "./routes";
 import { validate } from "./validation/schemaValidator";
@@ -329,6 +330,8 @@ export function startHttpServer(options: HttpServerOptions = {}) {
     port,
     async fetch(req) {
       const url = new URL(req.url);
+      const hostPolicy = await enforceHostPolicy(req);
+      if (hostPolicy) return hostPolicy;
       if (url.pathname.startsWith(API_PREFIX)) {
         return handleApi(req);
       }
