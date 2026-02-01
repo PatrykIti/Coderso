@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 20 tasks
 - **In Progress:** 0
 - **Done:** 194 tasks
 
@@ -41,6 +41,18 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-045 | Public Site Themes | High | Large | Index for TASK-045-01..05 |
+| TASK-045-01 | Site Theme DB Schema | High | Medium | Templates + profiles |
+| TASK-045-02 | Site Theme Service + Resolver | High | Medium | Active theme + css vars |
+| TASK-045-03 | Public CSS Build Pipeline | High | Medium | dist/site css build |
+| TASK-045-04 | Admin UI — Site Themes | High | Large | Theme editor + preview |
+| TASK-045-05 | Site Themes API Routes | High | Medium | /site-themes |
+| TASK-046 | Public Site Runtime | High | Large | Index for TASK-046-01..05 |
+| TASK-046-01 | Site Settings Model | High | Medium | baseUrl + homepage |
+| TASK-046-02 | Public Routes & Preview | High | Medium | content routes |
+| TASK-046-03 | Content Entry Rendering | High | Large | list + detail templates |
+| TASK-046-04 | SSR Cache & Revalidation | High | Medium | cache + invalidation |
+| TASK-046-05 | Admin UI — Site Settings | High | Large | site settings UI |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
