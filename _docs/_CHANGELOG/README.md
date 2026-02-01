@@ -138,6 +138,7 @@ Project Change Log.
 | 111 | 2026-01-31 | Entry metadata integration | CMS/Content |
 | 112 | 2026-02-01 | User settings preferences | Core/Settings |
 | 113 | 2026-02-01 | Pages delete endpoint | CMS/Pages |
+| 114 | 2026-02-01 | Public pages rendering and preview | CMS/Pages |
 
 
 ---

@@ -176,7 +176,7 @@ export function registerContentEntryRoutes(
       );
       const previewPath = `/preview?type=content&contentType=${type.slug}&slug=${entry.slug}&token=${token}`;
       const baseUrl = process.env.PUBLIC_BASE_URL;
-      const fallbackBase = "/admin";
+      const fallbackBase = "/";
       const previewUrl = baseUrl
         ? new URL(previewPath, baseUrl).toString()
         : `${fallbackBase}${previewPath}`;

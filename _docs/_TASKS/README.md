@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 0
-- **Done:** 193 tasks
+- **Done:** 194 tasks
 
 ---
 
@@ -61,6 +61,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-044 | Public Pages Rendering and Preview | High | Medium | Public site + preview |
 | TASK-043 | Content Entry Metadata Integration | High | Large | Index for TASK-043-01..04 |
 | TASK-043-01 | Entry Metadata DB + Schema | High | Medium | tags + scheduled_at |
 | TASK-043-02 | Entry Metadata Services | High | Medium | tags + seo + author |

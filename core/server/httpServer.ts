@@ -17,6 +17,7 @@ import { getMediaStorageAdapter } from "../services/media/storage";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 import { getStorageSettingsInternal } from "../services/settings/storageSettings";
 import { ensureThemesLoaded } from "../themes/registry";
+import { handlePublicRequest } from "./publicSite";
 
 const API_PREFIX = "/admin/api";
 const ADMIN_PREFIX = "/admin";
@@ -337,7 +338,7 @@ export function startHttpServer(options: HttpServerOptions = {}) {
       if (url.pathname.startsWith(ADMIN_PREFIX)) {
         return handleAdmin(req, adminDevUrl);
       }
-      return new Response("Not Found", { status: 404 });
+      return handlePublicRequest(req);
     },
   });
 }

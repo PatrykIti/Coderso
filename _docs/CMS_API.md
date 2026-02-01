@@ -494,6 +494,17 @@ Create/Update payload (summary):
 
 ---
 
+## Public site rendering
+
+Publiczne renderowanie stron działa bez `/admin`.
+
+- `GET /` oraz `GET /:slug` → published pages
+- `GET /preview?type=page&token=...` → podgląd draftu (token)
+
+Uwaga: podgląd wymaga ważnego tokena z `/pages/:id/preview`.
+
+---
+
 ## Media
 
 Permissions: `media:read`, `media:write`
