@@ -1,8 +1,8 @@
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 import { FieldEditor } from "./FieldEditor";
@@ -22,14 +22,22 @@ export function FieldsListPanel({
   onAdd,
   className,
 }: FieldsListPanelProps) {
+  const [query, setQuery] = useState("");
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredFields = useMemo(() => {
+    if (!normalizedQuery) return fields;
+    return fields.filter((field) => {
+      const haystack = [field.label, field.name, field.type]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [fields, normalizedQuery]);
+
   return (
-    <Card
-      className={cn(
-        "flex h-full min-h-0 flex-col gap-3 overflow-hidden p-4",
-        className
-      )}
-    >
-      <div className="flex items-center justify-between">
+    <div className={cn("flex h-full min-h-0 flex-col", className)}>
+      <div className="flex items-center justify-between border-b px-4 py-3">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Fields
         </p>
@@ -37,14 +45,29 @@ export function FieldsListPanel({
           <Plus className="h-3 w-3" />
         </Button>
       </div>
-      <ScrollArea className="flex-1 pr-1">
+      <div className="border-b px-4 py-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search fields..."
+            className="pl-9"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-2">
           {fields.length === 0 ? (
-            <div className="rounded-lg border border-dashed px-3 py-4 text-xs text-muted-foreground">
+            <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-4 text-xs text-muted-foreground">
               Add your first field to start building the schema.
             </div>
+          ) : filteredFields.length === 0 ? (
+            <div className="rounded-lg border border-dashed bg-muted/30 px-3 py-4 text-xs text-muted-foreground">
+              No fields match this search.
+            </div>
           ) : (
-            fields.map((field) => (
+            filteredFields.map((field) => (
               <button
                 key={field.id}
                 type="button"
@@ -64,8 +87,8 @@ export function FieldsListPanel({
             ))
           )}
         </div>
-      </ScrollArea>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -89,14 +112,9 @@ export function FieldSettingsPanel({
   className,
 }: FieldSettingsPanelProps) {
   return (
-    <Card
-      className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden p-5",
-        className
-      )}
-    >
+    <div className={cn("flex h-full min-h-0 flex-col overflow-y-auto", className)}>
       {field ? (
-        <ScrollArea className="flex-1 pr-2">
+        <div className="p-6">
           <FieldEditor
             field={field}
             nameError={nameError}
@@ -105,13 +123,13 @@ export function FieldSettingsPanel({
             onChange={onChange}
             onRemove={onRemove}
           />
-        </ScrollArea>
+        </div>
       ) : (
-        <div className="text-sm text-muted-foreground">
+        <div className="p-6 text-sm text-muted-foreground">
           Select a field to edit its settings.
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 

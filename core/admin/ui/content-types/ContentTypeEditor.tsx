@@ -70,7 +70,6 @@ export function ContentTypeEditor() {
     defaultFields[0]?.id ?? null
   );
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [mobileFieldsOpen, setMobileFieldsOpen] = useState(false);
   const [previewHidden, setPreviewHidden] = useState(false);
   const [previewSheetOpen, setPreviewSheetOpen] = useState(false);
 
@@ -263,13 +262,6 @@ export function ContentTypeEditor() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setMobileFieldsOpen(true)}
-            >
-              Fields
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
               onClick={() => setDetailsOpen(true)}
               disabled={!selectedField}
             >
@@ -318,9 +310,9 @@ export function ContentTypeEditor() {
               Loading schema builder...
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col gap-6">
+            <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden">
               <FieldsListPanel
-                className="lg:hidden"
+                className="lg:hidden flex-1 min-h-0"
                 fields={fields}
                 selectedId={selectedFieldId}
                 onSelect={(id) => setSelectedFieldId(id)}
@@ -340,34 +332,12 @@ export function ContentTypeEditor() {
                   if (!selectedField) return;
                   handleFieldChange(fields.filter((field) => field.id !== selectedField.id));
                 }}
-                className="hidden lg:flex"
+                className="hidden lg:flex flex-1 min-h-0"
               />
             </div>
           )}
         </div>
       </div>
-      <Sheet open={mobileFieldsOpen} onOpenChange={setMobileFieldsOpen}>
-        <SheetContent side="left" className="w-full p-0 sm:max-w-md">
-          <SheetTitle className="sr-only">Fields</SheetTitle>
-          <SheetDescription className="sr-only">
-            Browse fields in this content type.
-          </SheetDescription>
-          <div className="flex h-full flex-col overflow-y-auto p-6">
-            <FieldsListPanel
-              fields={fields}
-              selectedId={selectedFieldId}
-              onSelect={(id) => {
-                setSelectedFieldId(id);
-                setMobileFieldsOpen(false);
-              }}
-              onAdd={() => {
-                handleAddField();
-                setMobileFieldsOpen(false);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent side="right" className="w-full p-0 sm:max-w-md">
           <SheetTitle className="sr-only">Field details</SheetTitle>
