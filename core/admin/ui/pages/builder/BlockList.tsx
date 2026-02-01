@@ -39,6 +39,14 @@ export function BlockList({
               selectedId === block.id && "border-primary/50 ring-2 ring-primary/10"
             )}
             onClick={() => onSelect(block.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSelect(block.id);
+              }
+            }}
           >
             <div className="flex items-start justify-between gap-3">
               <button
