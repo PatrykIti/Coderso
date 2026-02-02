@@ -40,6 +40,10 @@ export default defineConfig(({ command }) => ({
         target: process.env.VITE_API_ORIGIN ?? "http://localhost:3000",
         changeOrigin: true,
       },
+      "/media": {
+        target: process.env.VITE_API_ORIGIN ?? "http://localhost:3000",
+        changeOrigin: true,
+      },
     },
   },
   build: {
