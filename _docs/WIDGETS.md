@@ -189,6 +189,15 @@ Flow:
 
 ---
 
+## Widget Library (Preview konfiguracji)
+
+- Drawer szczegolow widgetu pokazuje ten sam zestaw paneli (Wizard/Visual/Advanced),
+  ktory jest uzywany po wstawieniu widgetu.
+- Zmiany wykonane w podgladzie NIE zapisuja sie automatycznie — zapis nastepuje
+  dopiero po wstawieniu widgetu do strony lub template.
+
+---
+
 ## Authoring Guide (plugin widgets)
 
 - Definiuj wlasne `schema` i `defaults`.

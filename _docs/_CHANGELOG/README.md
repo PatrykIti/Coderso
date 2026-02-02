@@ -125,6 +125,7 @@ Project Change Log.
 | 127 | 2026-02-02 | Media library previews | Admin/UI |
 | 128 | 2026-02-02 | Media display name | Admin/UI |
 | 129 | 2026-02-02 | Widget templates core + UI wiring | Admin/UI |
+| 130 | 2026-02-02 | Widget details configuration preview | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |
 | 096 | 2026-01-31 | API keys service | Core/Security |

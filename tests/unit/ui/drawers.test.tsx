@@ -24,10 +24,11 @@ const accessLog: AccessLogItem = {
 };
 
 const widget: WidgetItem = {
-  id: "hero-split",
-  name: "Hero Split",
+  id: "hero",
+  name: "Hero",
   category: "layout",
   categoryLabel: "Layout",
+  source: "core",
 };
 
 const themeProfile: AdminThemeProfileCard = {
@@ -135,15 +136,11 @@ test("WidgetDetailsDrawer renders widget name", () => {
       widget={widget}
       open
       onOpenChange={() => undefined}
-      configSummary={{
-        variants: [{ id: "split", label: "Split" }],
-        fields: [{ name: "headline", type: "string", required: true }],
-      }}
     />
   );
 
-  expect(html).toContain("Hero Split");
-  expect(html).toContain("headline");
+  expect(html).toContain("Hero");
+  expect(html).toContain("Wizard");
 });
 
 test("ThemeProfileDrawer renders profile name", () => {
