@@ -43,6 +43,7 @@ import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import { createBlock } from "@/ui/pages/builder/blockUtils";
 import type { Block } from "@/ui/pages/builder/types";
+import type { WidgetDefinition } from "../../../widgets/types";
 
 import { WidgetCard } from "./WidgetCard";
 import { WidgetTemplateCategoryDrawer } from "./WidgetTemplateCategoryDrawer";
@@ -71,6 +72,10 @@ type CategoryItem = {
   icon: LucideIcon;
 };
 type WidgetWithPreview = WidgetItem & { preview: WidgetPreview; source: WidgetSource };
+type WidgetConfigSummary = {
+  variants: Array<{ id: string; label: string }>;
+  fields: Array<{ name: string; type: string; required: boolean; enumValues?: string[] }>;
+};
 
 const primaryCategories: CategoryItem[] = [
   { id: "all-items", label: "All Items", icon: LayoutGrid },
@@ -102,6 +107,43 @@ const widgetCategories: CategoryItem[] = [
     icon: meta.icon,
   })),
 ];
+
+const resolveSchemaType = (value: unknown) => {
+  if (!value || typeof value !== "object") return "value";
+  const schema = value as { type?: unknown; enum?: unknown; properties?: unknown };
+  if (Array.isArray(schema.enum)) return "enum";
+  if (Array.isArray(schema.type)) return schema.type.join(" | ");
+  if (typeof schema.type === "string") return schema.type;
+  if (schema.properties && typeof schema.properties === "object") return "object";
+  return "value";
+};
+
+const buildConfigSummary = (definition?: WidgetDefinition): WidgetConfigSummary | null => {
+  if (!definition || !definition.schema || typeof definition.schema !== "object") return null;
+  const schema = definition.schema as {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+  const required = new Set(schema.required ?? []);
+  const fields = Object.entries(schema.properties ?? {}).map(([name, field]) => {
+    const fieldSchema = field as { enum?: unknown };
+    return {
+      name,
+      type: resolveSchemaType(field),
+      required: required.has(name),
+      enumValues: Array.isArray(fieldSchema.enum)
+        ? fieldSchema.enum.map((value) => String(value))
+        : undefined,
+    };
+  });
+  return {
+    variants: definition.variants.map((variant: { id: string; label: string }) => ({
+      id: variant.id,
+      label: variant.label,
+    })),
+    fields,
+  };
+};
 
 function PreviewFrame({
   children,
@@ -255,7 +297,7 @@ export function WidgetLibraryPage() {
   const templateEditHref = (id: string) =>
     resolveAdminHref(adminBasePath, `/admin/widgets/templates/${id}`);
 
-  const coreWidgets = useMemo(() => {
+  const coreWidgets = useMemo<Array<WidgetWithPreview & { definition: WidgetDefinition }>>(() => {
     const definitions = listRegisteredWidgets();
     return definitions.map((definition) => {
       const meta = categoryMeta[definition.category];
@@ -267,6 +309,7 @@ export function WidgetLibraryPage() {
         preview: meta.preview,
         source: "core" as const,
         description: definition.description,
+        definition,
       };
     });
   }, []);
@@ -575,6 +618,13 @@ export function WidgetLibraryPage() {
 
   const showTemplateAction = activeScope === "templates";
   const showWidgetAction = activeScope === "widgets";
+  const configSummary = useMemo(() => {
+    if (!selectedWidget || selectedWidget.source !== "core") return null;
+    const definition = (selectedWidget as WidgetWithPreview & {
+      definition?: WidgetDefinition;
+    }).definition;
+    return buildConfigSummary(definition);
+  }, [selectedWidget]);
 
   return (
     <AdminShell
@@ -849,6 +899,7 @@ export function WidgetLibraryPage() {
       <WidgetDetailsDrawer
         widget={selectedWidget}
         preview={selectedWidget ? renderPreview(selectedWidget.preview) : undefined}
+        configSummary={configSummary}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         onInsert={

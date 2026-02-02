@@ -8,11 +8,17 @@ import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/she
 
 import type { WidgetItem } from "./types";
 
+type WidgetConfigSummary = {
+  variants: Array<{ id: string; label: string }>;
+  fields: Array<{ name: string; type: string; required: boolean; enumValues?: string[] }>;
+};
+
 type WidgetDetailsDrawerProps = {
   widget: WidgetItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   preview?: React.ReactNode;
+  configSummary?: WidgetConfigSummary | null;
   onInsert?: () => void;
   onPrimaryAction?: () => void;
   primaryActionLabel?: string;
@@ -23,6 +29,7 @@ export function WidgetDetailsDrawer({
   open,
   onOpenChange,
   preview,
+  configSummary,
   onInsert,
   onPrimaryAction,
   primaryActionLabel,
@@ -83,9 +90,65 @@ export function WidgetDetailsDrawer({
                   <p className="text-xs font-semibold uppercase text-muted-foreground">
                     Configuration
                   </p>
-                  <div className="rounded-xl border bg-background/60 p-4 text-xs text-muted-foreground">
-                    Widget settings will appear here once the widget is inserted.
-                  </div>
+                  {configSummary ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Variants
+                        </p>
+                        {configSummary.variants.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            No variants defined.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {configSummary.variants.map((variant) => (
+                              <Badge key={variant.id} variant="secondary" className="text-[10px] uppercase">
+                                {variant.label}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Fields
+                        </p>
+                        {configSummary.fields.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            No editable fields defined.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {configSummary.fields.map((field) => (
+                              <div
+                                key={field.name}
+                                className="flex items-center justify-between rounded-lg border border-border/60 bg-background/60 px-3 py-2"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-foreground">
+                                    {field.name}
+                                  </span>
+                                  {field.required ? (
+                                    <Badge variant="secondary" className="text-[10px] uppercase">
+                                      Required
+                                    </Badge>
+                                  ) : null}
+                                </div>
+                                <span className="text-[10px] uppercase text-muted-foreground">
+                                  {field.type}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border bg-background/60 p-4 text-xs text-muted-foreground">
+                      Widget settings will appear here once the widget is inserted.
+                    </div>
+                  )}
                 </div>
               </div>
             </ScrollArea>

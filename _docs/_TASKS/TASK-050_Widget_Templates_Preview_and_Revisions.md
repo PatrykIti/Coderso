@@ -20,6 +20,7 @@ validate layouts before saving and recover from mistakes quickly.
 
 - **TASK-050-01:** Widget Template Preview
 - **TASK-050-02:** Widget Template Revision History
+- **TASK-050-03:** Widget Nesting (Insert Into Existing Block)
 
 ---
 
@@ -35,6 +36,7 @@ validate layouts before saving and recover from mistakes quickly.
 - `_docs/WIDGETS.md` (template authoring + preview/revisions)
 - `_docs/PREVIEW_SPEC.md` (template preview flow)
 - `_docs/DATA_MODEL.md` (revisions table + fields)
+- `_docs/PAGE_MODEL.md` (nested blocks model update)
 - `_docs/README.md` (index if new docs are added)
 
 ---

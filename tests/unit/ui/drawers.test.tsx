@@ -131,10 +131,19 @@ test("AccessLogDetailsDrawer renders log info", () => {
 
 test("WidgetDetailsDrawer renders widget name", () => {
   const html = renderToString(
-    <WidgetDetailsDrawer widget={widget} open onOpenChange={() => undefined} />
+    <WidgetDetailsDrawer
+      widget={widget}
+      open
+      onOpenChange={() => undefined}
+      configSummary={{
+        variants: [{ id: "split", label: "Split" }],
+        fields: [{ name: "headline", type: "string", required: true }],
+      }}
+    />
   );
 
   expect(html).toContain("Hero Split");
+  expect(html).toContain("headline");
 });
 
 test("ThemeProfileDrawer renders profile name", () => {
