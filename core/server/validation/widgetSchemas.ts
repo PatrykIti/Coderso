@@ -113,3 +113,20 @@ export const widgetTemplateCategoryUpdateSchema = {
     name: { type: "string", minLength: 1 },
   },
 };
+
+export const widgetTemplatePreviewSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    device: { type: "string", enum: ["desktop", "tablet", "mobile"] },
+    viewport: {
+      type: "object",
+      required: ["width", "height"],
+      additionalProperties: false,
+      properties: {
+        width: { type: "number", minimum: 1 },
+        height: { type: "number", minimum: 1 },
+      },
+    },
+  },
+};

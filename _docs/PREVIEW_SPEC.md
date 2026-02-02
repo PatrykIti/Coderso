@@ -22,6 +22,7 @@ Content entry:
 
 - `POST /pages/:id/preview` -> `{ url }`
 - `POST /content/:type/entries/:id/preview` -> `{ url }`
+- `POST /widget-templates/:id/preview` -> `{ html, blocksCount }`
 
 ## Security
 

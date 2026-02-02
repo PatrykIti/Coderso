@@ -10,6 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  previewWidgetTemplate,
+  type WidgetTemplatePreviewResponse,
+} from "@/services/widgetTemplatePreviewClient";
+import {
   createWidgetTemplate,
   getWidgetTemplate,
   updateWidgetTemplate,
@@ -38,6 +42,7 @@ import {
 } from "@/utils/adminPaths";
 import type { WidgetCategoryId } from "./types";
 import { WidgetCard } from "./WidgetCard";
+import { WidgetTemplatePreviewDialog } from "./WidgetTemplatePreviewDialog";
 
 const widgetCategoryLabels: Record<WidgetCategoryId, string> = {
   layout: "Layout",
@@ -83,6 +88,11 @@ export function WidgetTemplateEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] =
+    useState<WidgetTemplatePreviewResponse | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const displayError = error ?? categoriesError;
 
@@ -211,40 +221,69 @@ export function WidgetTemplateEditorPage() {
     void loadTemplate();
   };
 
+  const canPreview = !isNew && Boolean(templateId);
+
+  const handlePreviewOpen = async () => {
+    setPreviewOpen(true);
+    if (!canPreview || !templateId) {
+      setPreviewData(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const result = await previewWidgetTemplate(templateId);
+      setPreviewData(result);
+    } catch {
+      setPreviewError("Failed to load template preview.");
+      setPreviewData(null);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   return (
-    <AdminShell
-      activeHref="/admin/widgets"
-      showSearch={false}
-      breadcrumbs={
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Widgets</span>
-          <ChevronRight className="h-4 w-4" />
-          <span>Templates</span>
-          <ChevronRight className="h-4 w-4" />
-          <span className="text-foreground">
-            {isNew ? "New Template" : name || "Template"}
-          </span>
-          <Badge variant="secondary" className="ml-2 text-[10px] uppercase">
-            {status}
-          </Badge>
-        </div>
-      }
-      topbarActions={
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm">
-            Preview
-          </Button>
-          <Button variant="ghost" size="sm" onClick={handleDiscard}>
-            Discard
-          </Button>
-          <Button size="sm" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? "Saving..." : "Save Template"}
-          </Button>
-        </div>
-      }
-      contentClassName="p-0 overflow-hidden"
-    >
-      <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col">
+    <>
+      <AdminShell
+        activeHref="/admin/widgets"
+        showSearch={false}
+        breadcrumbs={
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Widgets</span>
+            <ChevronRight className="h-4 w-4" />
+            <span>Templates</span>
+            <ChevronRight className="h-4 w-4" />
+            <span className="text-foreground">
+              {isNew ? "New Template" : name || "Template"}
+            </span>
+            <Badge variant="secondary" className="ml-2 text-[10px] uppercase">
+              {status}
+            </Badge>
+          </div>
+        }
+        topbarActions={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isNew}
+              onClick={() => void handlePreviewOpen()}
+            >
+              Preview
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleDiscard}>
+              Discard
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Template"}
+            </Button>
+          </div>
+        }
+        contentClassName="p-0 overflow-hidden"
+      >
+        <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col">
         <div className="border-b bg-card px-6 py-4">
           <div className="flex flex-wrap items-start gap-4">
             <div className="flex min-w-[220px] flex-1 flex-col gap-2">
@@ -449,7 +488,17 @@ export function WidgetTemplateEditorPage() {
             </div>
           </aside>
         </div>
-      </div>
-    </AdminShell>
+        </div>
+      </AdminShell>
+      <WidgetTemplatePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        templateName={name || undefined}
+        canPreview={canPreview}
+        preview={previewData}
+        isLoading={previewLoading}
+        error={previewError}
+      />
+    </>
   );
 }

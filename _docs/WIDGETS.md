@@ -198,6 +198,14 @@ Flow:
 
 ---
 
+## Template Preview (Admin)
+
+- Podglad template renderuje bloki przez runtime `WidgetRenderer` (server-side).
+- Podglad jest read-only i pokazuje ostatnia zapisana wersje template.
+- Wynik zwracany jako HTML do iframe w edytorze template.
+
+---
+
 ## Authoring Guide (plugin widgets)
 
 - Definiuj wlasne `schema` i `defaults`.

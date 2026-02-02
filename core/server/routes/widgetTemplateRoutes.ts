@@ -9,9 +9,11 @@ import {
   type WidgetTemplateCreateInput,
   type WidgetTemplateUpdateInput,
 } from "../../services/widgets/widgetTemplateService";
+import { renderWidgetTemplatePreview } from "../../services/widgets/widgetTemplatePreviewService";
 import { logAudit } from "../../services/audit/auditService";
 import {
   widgetTemplateCreateSchema,
+  widgetTemplatePreviewSchema,
   widgetTemplateUpdateSchema,
 } from "../validation/widgetSchemas";
 
@@ -87,6 +89,21 @@ export function registerWidgetTemplateRoutes(
         const template = await getWidgetTemplate(ctx.params.id);
         if (!template) throw new Error("widget_template_not_found");
         return template;
+      });
+    }
+  );
+
+  router.post(
+    "/widget-templates/:id/preview",
+    requirePermission("widgets:read"),
+    async (ctx) => {
+      return withWidgetTemplateErrors(async () => {
+        const input = (ctx.body ?? {}) as Parameters<
+          typeof renderWidgetTemplatePreview
+        >[1];
+        validate(widgetTemplatePreviewSchema, input);
+        const preview = await renderWidgetTemplatePreview(ctx.params.id, input);
+        return preview;
       });
     }
   );
