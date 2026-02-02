@@ -43,13 +43,19 @@ testIfDb("set/get/list user settings", async () => {
 
   const defaultValue = await getUserSetting(userId, "pages.openAfterCreate");
   expect(defaultValue).toBe(true);
+  const defaultMedia = await getUserSetting(userId, "media.openAfterUpload");
+  expect(defaultMedia).toBe(false);
 
   await setUserSetting(userId, "pages.openAfterCreate", false);
+  await setUserSetting(userId, "media.openAfterUpload", true);
   const updated = await getUserSetting(userId, "pages.openAfterCreate");
   expect(updated).toBe(false);
+  const updatedMedia = await getUserSetting(userId, "media.openAfterUpload");
+  expect(updatedMedia).toBe(true);
 
   const list = await listUserSettings(userId);
   expect(list["pages.openAfterCreate"]).toBe(false);
+  expect(list["media.openAfterUpload"]).toBe(true);
 });
 
 testIfDb("rejects unknown key", async () => {

@@ -13,7 +13,7 @@ export function MediaGrid({ items, selectedId, onSelect }: MediaGridProps) {
     <div className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
       {items.map((item) => (
         <MediaCard
-          key={item.id}
+          key={`${item.id}-${item.url}`}
           item={item}
           selected={item.id === selectedId}
           onSelect={onSelect}

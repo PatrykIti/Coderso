@@ -2,6 +2,7 @@ import { apiRequest } from "./apiClient";
 
 export type UserSettings = {
   "pages.openAfterCreate": boolean;
+  "media.openAfterUpload": boolean;
 };
 
 export type UserSettingResponse = {

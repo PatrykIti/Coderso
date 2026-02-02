@@ -602,6 +602,7 @@ export const media = pgTable("media", {
   id: uuid("id").defaultRandom().primaryKey(),
   key: text("key").notNull(),
   url: text("url").notNull(),
+  originalName: text("original_name"),
   type: text("type").notNull(),
   mimeType: text("mime_type").notNull(),
   size: integer("size").notNull(),

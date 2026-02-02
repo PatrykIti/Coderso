@@ -1,6 +1,7 @@
 import { Grid2X2, List, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 
 export type MediaFilter = "all" | "image" | "document" | "audio";
@@ -10,6 +11,8 @@ type MediaToolbarProps = {
   search: string;
   filter: MediaFilter;
   view: MediaView;
+  openAfterUpload?: boolean;
+  onOpenAfterUploadChange?: (value: boolean) => void;
   onSearchChange: (value: string) => void;
   onFilterChange: (value: MediaFilter) => void;
   onViewChange: (value: MediaView) => void;
@@ -19,6 +22,8 @@ export function MediaToolbar({
   search,
   filter,
   view,
+  openAfterUpload,
+  onOpenAfterUploadChange,
   onSearchChange,
   onFilterChange,
   onViewChange,
@@ -66,7 +71,18 @@ export function MediaToolbar({
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-4">
+        {onOpenAfterUploadChange ? (
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Checkbox
+              checked={Boolean(openAfterUpload)}
+              onCheckedChange={(next) =>
+                onOpenAfterUploadChange(next === true)
+              }
+            />
+            Open details after upload
+          </label>
+        ) : null}
         <Button
           variant={view === "grid" ? "outline" : "ghost"}
           size="icon"

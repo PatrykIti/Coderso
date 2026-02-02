@@ -12,6 +12,7 @@ import {
   uploadMedia,
   type MediaRecord,
 } from "@/services/mediaClient";
+import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { MediaDetailsDrawer } from "@/ui/media/MediaDetailsDrawer";
 import { MediaGrid } from "@/ui/media/MediaGrid";
@@ -34,6 +35,7 @@ function resolveKindFromMime(mimeType: string): MediaKind {
 }
 
 function resolveName(record: MediaRecord) {
+  if (record.originalName) return record.originalName;
   const fromKey = record.key?.split("/").pop();
   if (fromKey) return fromKey;
   const fromUrl = record.url?.split("/").pop();
@@ -44,6 +46,7 @@ function toMediaItem(record: MediaRecord): MediaItem {
   return {
     id: record.id,
     name: resolveName(record),
+    originalName: record.originalName ?? undefined,
     type: resolveKindFromMime(record.mimeType),
     sizeBytes: record.size,
     url: record.url,
@@ -65,6 +68,7 @@ export function MediaLibraryPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<MediaFilter>("all");
   const [view, setView] = useState<MediaView>("grid");
+  const [openAfterUpload, setOpenAfterUpload] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -103,6 +107,22 @@ export function MediaLibraryPage() {
       active = false;
     };
   }, [refresh]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const prefs = await getUserSettings();
+        if (!active) return;
+        setOpenAfterUpload(prefs["media.openAfterUpload"]);
+      } catch {
+        // Ignore preference load failures; defaults will be used.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectedId) return;
@@ -148,7 +168,7 @@ export function MediaLibraryPage() {
       await refresh();
       if (uploaded[0]?.id) {
         setSelectedId(uploaded[0].id);
-        setIsDrawerOpen(false);
+        setIsDrawerOpen(openAfterUpload);
       }
     } catch (err) {
       if (isApiClientError(err)) {
@@ -251,6 +271,11 @@ export function MediaLibraryPage() {
           search={search}
           filter={filter}
           view={view}
+          openAfterUpload={openAfterUpload}
+          onOpenAfterUploadChange={(next) => {
+            setOpenAfterUpload(next);
+            setUserSetting("media.openAfterUpload", next).catch(() => undefined);
+          }}
           onSearchChange={setSearch}
           onFilterChange={setFilter}
           onViewChange={setView}

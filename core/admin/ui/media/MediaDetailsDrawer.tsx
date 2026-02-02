@@ -71,7 +71,8 @@ export function MediaDetailsDrawer({
   onCopy,
   onOpen,
 }: MediaDetailsDrawerProps) {
-  const [title, setTitle] = useState(item?.title ?? item?.name ?? "")
+  const displayName = item?.originalName ?? item?.name ?? "";
+  const [title, setTitle] = useState(item?.title ?? displayName)
   const [alt, setAlt] = useState(item?.alt ?? "")
   const [caption, setCaption] = useState(item?.caption ?? "")
 
@@ -96,7 +97,7 @@ export function MediaDetailsDrawer({
   }
 
   const PreviewIcon = item ? previewIconMap[item.type] : ImageIcon
-  const fileExtension = item?.name.split(".").pop()?.toUpperCase()
+  const fileExtension = displayName.split(".").pop()?.toUpperCase()
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -109,7 +110,7 @@ export function MediaDetailsDrawer({
           <div className="space-y-1">
             <SheetTitle>Media Details</SheetTitle>
             <p className="text-xs text-muted-foreground">
-              {item ? item.name : "Select a file to preview details."}
+              {item ? displayName : "Select a file to preview details."}
             </p>
           </div>
           <SheetClose asChild>
@@ -128,7 +129,7 @@ export function MediaDetailsDrawer({
                       {item.type === "image" ? (
                         <img
                           src={item.url}
-                          alt={item.alt ?? item.title ?? item.name}
+                          alt={item.alt ?? item.title ?? displayName}
                           className="h-full w-full object-cover"
                         />
                       ) : (
@@ -159,7 +160,7 @@ export function MediaDetailsDrawer({
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p className="text-sm font-semibold">
-                        {item.title ?? item.name}
+                        {item.title ?? displayName}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {formatBytes(item.sizeBytes)} · {item.mimeType}
@@ -177,6 +178,22 @@ export function MediaDetailsDrawer({
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Metadata
                   </div>
+                  {displayName ? (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor={`media-original-${item.id}`}
+                        className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                      >
+                        Original File Name
+                      </label>
+                      <Input
+                        id={`media-original-${item.id}`}
+                        value={displayName}
+                        readOnly
+                        className="bg-muted/30"
+                      />
+                    </div>
+                  ) : null}
                   <div className="space-y-2">
                     <label
                       htmlFor={`media-alt-${item.id}`}

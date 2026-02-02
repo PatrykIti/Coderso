@@ -3,6 +3,7 @@ export type MediaKind = "image" | "document" | "audio";
 export type MediaItem = {
   id: string;
   name: string;
+  originalName?: string | null;
   type: MediaKind;
   sizeBytes: number;
   url: string;

@@ -5,6 +5,7 @@ import { userSettings } from "../../db/schema";
 
 const DEFAULT_USER_SETTINGS = {
   "pages.openAfterCreate": true,
+  "media.openAfterUpload": false,
 };
 
 export type UserSettingKey = keyof typeof DEFAULT_USER_SETTINGS;
@@ -23,6 +24,12 @@ function validateUserSettingValue(
   value: unknown
 ): UserSettingValueMap[UserSettingKey] {
   if (key === "pages.openAfterCreate") {
+    if (typeof value !== "boolean") {
+      throw new Error("user_settings_value_invalid");
+    }
+    return value;
+  }
+  if (key === "media.openAfterUpload") {
     if (typeof value !== "boolean") {
       throw new Error("user_settings_value_invalid");
     }

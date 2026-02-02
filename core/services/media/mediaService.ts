@@ -76,6 +76,7 @@ export async function uploadMedia(
     .values({
       key: stored.key,
       url: stored.url,
+      originalName: file.name,
       type: resolveMediaType(file.type),
       mimeType: file.type,
       size: file.size,

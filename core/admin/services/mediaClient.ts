@@ -4,6 +4,7 @@ export type MediaRecord = {
   id: string;
   key: string;
   url: string;
+  originalName?: string | null;
   type: "image" | "file";
   mimeType: string;
   size: number;

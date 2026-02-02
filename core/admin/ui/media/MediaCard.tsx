@@ -1,4 +1,5 @@
 import { FileAudio, FileText, Image as ImageIcon } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,11 @@ const typeIconMap = {
 
 export function MediaCard({ item, selected, onSelect }: MediaCardProps) {
   const Icon = typeIconMap[item.type];
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isError, setIsError] = useState(false);
   const hasPreview = item.type === "image" && Boolean(item.url);
+  const showImage = hasPreview && !isError;
+  const showSkeleton = showImage && !isLoaded;
   return (
     <button
       type="button"
@@ -33,16 +38,28 @@ export function MediaCard({ item, selected, onSelect }: MediaCardProps) {
           selected && "border-primary ring-2 ring-primary/10"
         )}
       >
-        {hasPreview ? (
+        {!showImage ? (
+          <Icon className="h-10 w-10 text-muted-foreground" />
+        ) : null}
+        {showImage ? (
           <img
             src={item.url}
             alt={item.alt ?? item.name}
-            className="h-full w-full object-cover"
+            className={cn(
+              "absolute inset-0 h-full w-full object-cover transition-opacity duration-200",
+              isLoaded ? "opacity-100" : "opacity-0"
+            )}
             loading="lazy"
+            onLoad={() => setIsLoaded(true)}
+            onError={() => {
+              setIsError(true);
+              setIsLoaded(true);
+            }}
           />
-        ) : (
-          <Icon className="h-10 w-10 text-muted-foreground" />
-        )}
+        ) : null}
+        {showSkeleton ? (
+          <div className="absolute inset-0 animate-pulse bg-muted/40" />
+        ) : null}
         {selected ? (
           <span className="absolute right-2 top-2 rounded bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground">
             Selected
