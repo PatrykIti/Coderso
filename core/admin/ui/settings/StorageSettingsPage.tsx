@@ -83,6 +83,7 @@ type StorageField = {
   placeholder?: string;
   icon: LucideIcon;
   options?: StorageFieldOption[];
+  helper?: string;
 };
 
 type ProviderConfig = {
@@ -253,10 +254,12 @@ const providerConfigs: Record<StorageProviderId, ProviderConfig> = {
 const globalFields: StorageField[] = [
   {
     id: "publicBaseUrl",
-    label: "Public Base URL",
+    label: "Storage File URL (Override)",
     type: "text",
     placeholder: "https://cdn.example.com",
     icon: Link2,
+    helper:
+      "Leave blank to auto-generate (S3/Azure endpoint or your public site URL + /media).",
   },
   {
     id: "maxSizeBytes",
@@ -483,13 +486,18 @@ export function StorageSettingsPage() {
     }
 
     return (
-      <Input
-        type={field.type === "password" ? "password" : "text"}
-        value={value}
-        placeholder={showSecretHint ? "••••••••" : field.placeholder}
-        onChange={(event) => handleFieldChange(field.id, event.target.value)}
-        className="bg-muted/30"
-      />
+      <div className="space-y-2">
+        <Input
+          type={field.type === "password" ? "password" : "text"}
+          value={value}
+          placeholder={showSecretHint ? "••••••••" : field.placeholder}
+          onChange={(event) => handleFieldChange(field.id, event.target.value)}
+          className="bg-muted/30"
+        />
+        {field.helper ? (
+          <p className="text-xs text-muted-foreground">{field.helper}</p>
+        ) : null}
+      </div>
     );
   };
 

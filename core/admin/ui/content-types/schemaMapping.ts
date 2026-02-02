@@ -6,7 +6,7 @@ export type ContentSchemaProperty = {
   description?: string;
   enum?: string[];
   default?: string | number | boolean;
-  xFieldType?: FieldType;
+  xFieldType?: FieldType | string;
   xRelationTarget?: string;
 };
 
@@ -85,7 +85,10 @@ const parseDefaultValue = (value: unknown) => {
 };
 
 const resolveFieldType = (definition: ContentSchemaProperty): FieldType => {
-  if (definition.xFieldType) return definition.xFieldType;
+  if (definition.xFieldType) {
+    const candidate = String(definition.xFieldType) as FieldType;
+    if (candidate in fieldTypeMap) return candidate;
+  }
   if (definition.enum && definition.enum.length > 0) return "select";
   if (definition.type === "number") return "number";
   if (definition.type === "boolean") return "boolean";

@@ -3,7 +3,7 @@ import { db } from "../../db/client";
 import { media } from "../../db/schema";
 import { getMediaStorageAdapter } from "./storage";
 import { getStorageSettingsInternal } from "../settings/storageSettings";
-import type { UploadFile } from "./storage/adapter";
+import type { StoredMedia, UploadFile } from "./storage/adapter";
 
 export type MediaType = "image" | "file";
 
@@ -64,7 +64,7 @@ export async function uploadMedia(
   }
 
   const adapter = await getMediaStorageAdapter();
-  let stored: UploadResult;
+  let stored: StoredMedia;
   try {
     stored = await adapter.put(file);
   } catch {

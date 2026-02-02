@@ -43,8 +43,6 @@ function RelationSelect({
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
-    setError(null);
     listEntries(targetSlug)
       .then((result) => {
         if (!active) return;
@@ -200,6 +198,7 @@ export function FieldRenderer({
       if (relationTarget) {
         return (
           <RelationSelect
+            key={relationTarget}
             targetSlug={relationTarget}
             targetName={relationLabel}
             value={value}
