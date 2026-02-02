@@ -122,6 +122,7 @@ Project Change Log.
 | 124 | 2026-02-01 | Content type relation metadata | CMS/Content |
 | 125 | 2026-02-01 | Relation field UX improvements | Admin/UI |
 | 126 | 2026-02-02 | Storage URL autoderive | CMS/Media |
+| 127 | 2026-02-02 | Media library previews | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |
 | 096 | 2026-01-31 | API keys service | Core/Security |

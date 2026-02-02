@@ -148,7 +148,7 @@ export function MediaLibraryPage() {
       await refresh();
       if (uploaded[0]?.id) {
         setSelectedId(uploaded[0].id);
-        setIsDrawerOpen(true);
+        setIsDrawerOpen(false);
       }
     } catch (err) {
       if (isApiClientError(err)) {
