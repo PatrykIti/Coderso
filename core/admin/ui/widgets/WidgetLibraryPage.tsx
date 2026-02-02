@@ -394,6 +394,8 @@ export function WidgetLibraryPage() {
 
   const filteredWidgets = useMemo(() => {
     const normalized = query.trim().toLowerCase();
+    const normalizedTemplateCategory =
+      templateCategory === "all" ? "all" : templateCategory.toLowerCase();
     return widgets.filter((widget) => {
       const matchesQuery =
         normalized.length === 0 ||
@@ -405,7 +407,11 @@ export function WidgetLibraryPage() {
         if (activeScope === "favorites") return widget.isFavorite;
         if (activeScope === "templates") {
           if (widget.source !== "template") return false;
-          return templateCategory === "all" || widget.category === templateCategory;
+          if (normalizedTemplateCategory === "all") return true;
+          return (
+            typeof widget.category === "string" &&
+            widget.category.toLowerCase() === normalizedTemplateCategory
+          );
         }
         if (activeScope === "widgets") {
           if (widget.source !== "core") return false;
@@ -593,244 +599,252 @@ export function WidgetLibraryPage() {
         </div>
       }
     >
-      <div className="mx-auto w-full max-w-7xl">
+      <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col">
         <PageHeader
           title="Widget Library"
           description="Manage and reuse your custom interface components across all pages."
         />
         <Separator className="my-6" />
-      </div>
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col gap-6 lg:flex-row">
-        <aside className="flex w-full min-h-0 flex-col lg:w-72">
-          <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border/60 bg-card px-4 py-5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                Library
-              </p>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px]">
-                  {scopeCounts.allItems}
-                </Badge>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => setCategoriesOpen(true)}
-                >
-                  Categories
-                </Button>
+        <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
+          <aside className="flex w-full min-h-0 flex-col lg:w-72">
+            <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border/60 bg-card px-4 py-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                  Library
+                </p>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[10px]">
+                    {scopeCounts.allItems}
+                  </Badge>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => setCategoriesOpen(true)}
+                  >
+                    Categories
+                  </Button>
+                </div>
               </div>
-            </div>
-            <Separator className="my-4" />
-            <ScrollArea className="flex-1 min-h-0 pr-2">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                    Items
-                  </p>
-                  {primaryCategories.map((category) => {
-                    const isActive = activeScope === category.id;
-                    const count =
-                      category.id === "all-items"
-                        ? scopeCounts.allItems
-                        : category.id === "favorites"
-                          ? scopeCounts.favorites
-                          : scopeCounts.templates;
+              <Separator className="my-4" />
+              <ScrollArea className="flex-1 min-h-0 pr-2">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                      Items
+                    </p>
+                    {primaryCategories.map((category) => {
+                      const isActive = activeScope === category.id;
+                      const count =
+                        category.id === "all-items"
+                          ? scopeCounts.allItems
+                          : category.id === "favorites"
+                            ? scopeCounts.favorites
+                            : scopeCounts.templates;
 
-                    return (
-                      <button
-                        key={category.id}
-                        type="button"
-                        onClick={() => handleSelectScope(category.id as LibraryScope)}
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition",
-                          isActive
-                            ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border/60 bg-muted/30 text-muted-foreground hover:border-primary/30 hover:text-primary"
-                        )}
-                      >
-                        <category.icon className="h-4 w-4" />
-                        <span>{category.label}</span>
-                        <Badge variant="outline" className="ml-auto text-[10px]">
-                          {count}
-                        </Badge>
-                      </button>
-                    );
-                  })}
-                </div>
-                <Separator />
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                    Widgets
-                  </p>
-                  {widgetCategories.map((category) => {
-                    const isAllWidgets = category.id === "widgets-all";
-                    const isActive = isAllWidgets
-                      ? activeScope === "widgets" && widgetCategory === "all"
-                      : activeScope === "widgets" && widgetCategory === category.id;
-                    const count = isAllWidgets
-                      ? scopeCounts.widgets
-                      : widgetCategoryCounts[category.id as WidgetCategoryId] ?? 0;
-
-                    return (
-                      <button
-                        key={category.id}
-                        type="button"
-                        onClick={() =>
-                          handleSelectWidgetCategory(
-                            isAllWidgets ? "all" : (category.id as WidgetCategoryId)
-                          )
-                        }
-                        className={cn(
-                          "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition",
-                          isActive
-                            ? "border-primary/40 bg-primary/10 text-primary"
-                            : "border-border/60 bg-muted/30 text-muted-foreground hover:border-primary/30 hover:text-primary"
-                        )}
-                      >
-                        <category.icon className="h-4 w-4" />
-                        <span>{category.label}</span>
-                        <Badge variant="outline" className="ml-auto text-[10px]">
-                          {count}
-                        </Badge>
-                      </button>
-                    );
-                  })}
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                    Favorites
-                  </p>
-                  <div className="mt-4 space-y-3">
-                    {favoriteWidgets.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        No favorites yet.
-                      </p>
-                    ) : (
-                      favoriteWidgets.map((widget) => (
+                      return (
                         <button
-                          key={widget.id}
+                          key={category.id}
                           type="button"
-                          onClick={() => handleSelectWidget(widget)}
-                          className="flex w-full items-center gap-3 rounded-lg px-2 py-1 text-left text-sm text-muted-foreground transition hover:text-foreground"
+                          onClick={() => handleSelectScope(category.id as LibraryScope)}
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition",
+                            isActive
+                              ? "border-primary/40 bg-primary/10 text-primary"
+                              : "border-border/60 bg-muted/30 text-muted-foreground hover:border-primary/30 hover:text-primary"
+                          )}
                         >
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/40 text-primary">
-                            <Star className="h-4 w-4" />
-                          </div>
-                          <span className="truncate">{widget.name}</span>
+                          <category.icon className="h-4 w-4" />
+                          <span>{category.label}</span>
+                          <Badge variant="outline" className="ml-auto text-[10px]">
+                            {count}
+                          </Badge>
                         </button>
-                      ))
-                    )}
+                      );
+                    })}
+                  </div>
+                  <Separator />
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                      Widgets
+                    </p>
+                    {widgetCategories.map((category) => {
+                      const isAllWidgets = category.id === "widgets-all";
+                      const isActive = isAllWidgets
+                        ? activeScope === "widgets" && widgetCategory === "all"
+                        : activeScope === "widgets" &&
+                          widgetCategory === category.id;
+                      const count = isAllWidgets
+                        ? scopeCounts.widgets
+                        : widgetCategoryCounts[category.id as WidgetCategoryId] ??
+                          0;
+
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() =>
+                            handleSelectWidgetCategory(
+                              isAllWidgets
+                                ? "all"
+                                : (category.id as WidgetCategoryId)
+                            )
+                          }
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition",
+                            isActive
+                              ? "border-primary/40 bg-primary/10 text-primary"
+                              : "border-border/60 bg-muted/30 text-muted-foreground hover:border-primary/30 hover:text-primary"
+                          )}
+                        >
+                          <category.icon className="h-4 w-4" />
+                          <span>{category.label}</span>
+                          <Badge variant="outline" className="ml-auto text-[10px]">
+                            {count}
+                          </Badge>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Separator />
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                      Favorites
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      {favoriteWidgets.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          No favorites yet.
+                        </p>
+                      ) : (
+                        favoriteWidgets.map((widget) => (
+                          <button
+                            key={widget.id}
+                            type="button"
+                            onClick={() => handleSelectWidget(widget)}
+                            className="flex w-full items-center gap-3 rounded-lg px-2 py-1 text-left text-sm text-muted-foreground transition hover:text-foreground"
+                          >
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/40 text-primary">
+                              <Star className="h-4 w-4" />
+                            </div>
+                            <span className="truncate">{widget.name}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
+              </ScrollArea>
+            </div>
+          </aside>
+
+          <section className="flex min-h-0 flex-1 flex-col gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant="secondary">
+                  {filteredWidgets.length}{" "}
+                  {activeScope === "widgets"
+                    ? "widgets"
+                    : activeScope === "templates"
+                      ? "templates"
+                      : "items"}
+                </Badge>
+                {activeScope === "templates" ? (
+                  <Select
+                    value={templateCategory}
+                    onValueChange={setTemplateCategory}
+                  >
+                    <SelectTrigger className="h-9 w-[180px] text-xs">
+                      <SelectValue placeholder="All categories" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templateCategoryOptions.map((category) => (
+                        <SelectItem key={category.id} value={category.value}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+                <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
+                  <Button
+                    variant={view === "grid" ? "secondary" : "ghost"}
+                    size="icon-sm"
+                    onClick={() => setView("grid")}
+                  >
+                    <Grid2X2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={view === "list" ? "secondary" : "ghost"}
+                    size="icon-sm"
+                    onClick={() => setView("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {showTemplateAction ? (
+                  <Button size="sm" variant="outline" className="gap-2" asChild>
+                    <a href={templateCreateHref}>
+                      <Plus className="h-4 w-4" />
+                      New Template
+                    </a>
+                  </Button>
+                ) : null}
+                {showWidgetAction ? (
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setCreateOpen(true)}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Widget
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            <ScrollArea className="flex-1 min-h-0 pr-2">
+              <div
+                className={cn(
+                  "grid gap-6",
+                  view === "grid"
+                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                    : "grid-cols-1"
+                )}
+              >
+                {filteredWidgets.length === 0 ? (
+                  <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+                    No items match your search.
+                  </div>
+                ) : (
+                  filteredWidgets.map((widget) => (
+                    <WidgetCard
+                      key={widget.id}
+                      name={widget.name}
+                      categoryLabel={widget.categoryLabel}
+                      preview={renderPreview(widget.preview)}
+                      badge={widget.badge}
+                      isFavorite={widget.isFavorite}
+                      onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
+                      onInsert={
+                        widget.source === "core"
+                          ? () => handleInsertWidget(widget)
+                          : undefined
+                      }
+                      onAction={
+                        widget.source === "template"
+                          ? () => handleEditTemplate(widget)
+                          : undefined
+                      }
+                      actionLabel={widget.source === "template" ? "Edit" : "Insert"}
+                      onSelect={() => handleSelectWidget(widget)}
+                    />
+                  ))
+                )}
               </div>
             </ScrollArea>
-          </div>
-        </aside>
-
-        <section className="flex min-h-0 flex-1 flex-col gap-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge variant="secondary">
-                {filteredWidgets.length}{" "}
-                {activeScope === "widgets"
-                  ? "widgets"
-                  : activeScope === "templates"
-                    ? "templates"
-                    : "items"}
-              </Badge>
-              {activeScope === "templates" ? (
-                <Select
-                  value={templateCategory}
-                  onValueChange={setTemplateCategory}
-                >
-                  <SelectTrigger className="h-9 w-[180px] text-xs">
-                    <SelectValue placeholder="All categories" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templateCategoryOptions.map((category) => (
-                      <SelectItem key={category.id} value={category.value}>
-                        {category.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
-              <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
-                <Button
-                  variant={view === "grid" ? "secondary" : "ghost"}
-                  size="icon-sm"
-                  onClick={() => setView("grid")}
-                >
-                  <Grid2X2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={view === "list" ? "secondary" : "ghost"}
-                  size="icon-sm"
-                  onClick={() => setView("list")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {showTemplateAction ? (
-                <Button size="sm" variant="outline" className="gap-2" asChild>
-                  <a href={templateCreateHref}>
-                    <Plus className="h-4 w-4" />
-                    New Template
-                  </a>
-                </Button>
-              ) : null}
-              {showWidgetAction ? (
-                <Button size="sm" className="gap-2" onClick={() => setCreateOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  Create Widget
-                </Button>
-              ) : null}
-            </div>
-          </div>
-          <ScrollArea className="flex-1 min-h-0 pr-2">
-            <div
-              className={cn(
-                "grid gap-6",
-                view === "grid"
-                  ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                  : "grid-cols-1"
-              )}
-            >
-              {filteredWidgets.length === 0 ? (
-                <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-                  No items match your search.
-                </div>
-              ) : (
-                filteredWidgets.map((widget) => (
-                  <WidgetCard
-                    key={widget.id}
-                    name={widget.name}
-                    categoryLabel={widget.categoryLabel}
-                    preview={renderPreview(widget.preview)}
-                    badge={widget.badge}
-                    isFavorite={widget.isFavorite}
-                    onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
-                    onInsert={
-                      widget.source === "core"
-                        ? () => handleInsertWidget(widget)
-                        : undefined
-                    }
-                    onAction={
-                      widget.source === "template"
-                        ? () => handleEditTemplate(widget)
-                        : undefined
-                    }
-                    actionLabel={widget.source === "template" ? "Edit" : "Insert"}
-                    onSelect={() => handleSelectWidget(widget)}
-                  />
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </section>
+          </section>
+        </div>
       </div>
       <WidgetDetailsDrawer
         widget={selectedWidget}
