@@ -33,6 +33,22 @@ const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: "widgets",
+    label: "Widgets",
+    permissions: [
+      {
+        id: "widgets:read",
+        label: "View widgets",
+        description: "Browse widget library and templates",
+      },
+      {
+        id: "widgets:write",
+        label: "Manage widgets",
+        description: "Create, edit, and delete widget templates",
+      },
+    ],
+  },
+  {
     id: "media",
     label: "Media",
     permissions: [

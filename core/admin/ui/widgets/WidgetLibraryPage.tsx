@@ -20,20 +20,27 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { listPages, type PageSummary } from "@/services/pagesClient";
+import { getPage, listPages, updatePage, type PageSummary } from "@/services/pagesClient";
+import {
+  createWidgetTemplate,
+  listWidgetTemplates,
+  type WidgetTemplate,
+} from "@/services/widgetTemplatesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
+import { createBlock } from "@/ui/pages/builder/blockUtils";
+import type { Block } from "@/ui/pages/builder/types";
 
 import { WidgetCard } from "./WidgetCard";
 import { WidgetCreateDialog } from "./WidgetCreateDialog";
 import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
 import { WidgetInsertDialog } from "./WidgetInsertDialog";
-import type { WidgetCategoryId, WidgetItem } from "./types";
+import type { WidgetCategoryId, WidgetItem, WidgetSource } from "./types";
 
-type WidgetCategoryFilter = "all" | "favorites" | WidgetCategoryId;
+type WidgetCategoryFilter = "all" | "favorites" | "templates" | WidgetCategoryId;
 type WidgetView = "grid" | "list";
 type WidgetPreview =
   | "hero"
@@ -50,11 +57,12 @@ type CategoryItem = {
   label: string;
   icon: LucideIcon;
 };
-type WidgetWithPreview = WidgetItem & { preview: WidgetPreview };
+type WidgetWithPreview = WidgetItem & { preview: WidgetPreview; source: WidgetSource };
 
 const primaryCategories: CategoryItem[] = [
   { id: "all", label: "All Widgets", icon: LayoutGrid },
   { id: "favorites", label: "Favorites", icon: Star },
+  { id: "templates", label: "Templates", icon: LayoutGrid },
 ];
 
 const categoryMeta: Record<
@@ -203,19 +211,8 @@ export function WidgetLibraryPage() {
   const [view, setView] = useState<WidgetView>("grid");
   const [activeCategory, setActiveCategory] =
     useState<WidgetCategoryFilter>("all");
-  const [widgets, setWidgets] = useState<WidgetWithPreview[]>(() => {
-    const definitions = listRegisteredWidgets();
-    return definitions.map((definition) => {
-      const meta = categoryMeta[definition.category];
-      return {
-        id: definition.type,
-        name: definition.title,
-        category: definition.category,
-        categoryLabel: meta.label,
-        preview: meta.preview,
-      };
-    });
-  });
+  const [templates, setTemplates] = useState<WidgetTemplate[]>([]);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
@@ -227,8 +224,50 @@ export function WidgetLibraryPage() {
   );
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [pagesError, setPagesError] = useState<string | null>(null);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [insertError, setInsertError] = useState<string | null>(null);
   const adminBasePath = useAdminBasePath();
   const templateCreateHref = resolveAdminHref(adminBasePath, "/admin/widgets/templates/new");
+  const templateEditHref = (id: string) =>
+    resolveAdminHref(adminBasePath, `/admin/widgets/templates/${id}`);
+
+  const coreWidgets = useMemo(() => {
+    const definitions = listRegisteredWidgets();
+    return definitions.map((definition) => {
+      const meta = categoryMeta[definition.category];
+      return {
+        id: definition.type,
+        name: definition.title,
+        category: definition.category,
+        categoryLabel: meta.label,
+        preview: meta.preview,
+        source: "core" as const,
+        description: definition.description,
+      };
+    });
+  }, []);
+
+  const widgets = useMemo<WidgetWithPreview[]>(() => {
+    const templateItems = templates.map((template) => {
+      const meta = categoryMeta[template.category];
+      return {
+        id: template.id,
+        name: template.name,
+        category: template.category,
+        categoryLabel: meta?.label ?? "Template",
+        preview: meta?.preview ?? "hero",
+        badge: "Template",
+        source: "template" as const,
+        description: template.description,
+        status: template.status,
+      };
+    });
+    const combined = [...coreWidgets, ...templateItems];
+    return combined.map((item) => ({
+      ...item,
+      isFavorite: favoriteIds.has(item.id),
+    }));
+  }, [coreWidgets, templates, favoriteIds]);
 
   useEffect(() => {
     let active = true;
@@ -246,9 +285,26 @@ export function WidgetLibraryPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    listWidgetTemplates()
+      .then((result) => {
+        if (!active) return;
+        setTemplates(result.items);
+      })
+      .catch(() => {
+        if (!active) return;
+        setTemplatesError("Failed to load templates.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const categoryCounts = useMemo(() => {
     const counts: Record<WidgetCategoryFilter, number> = {
       all: widgets.length,
+      templates: widgets.filter((widget) => widget.source === "template").length,
       favorites: widgets.filter((widget) => widget.isFavorite).length,
       layout: widgets.filter((widget) => widget.category === "layout").length,
       content: widgets.filter((widget) => widget.category === "content").length,
@@ -271,20 +327,21 @@ export function WidgetLibraryPage() {
         activeCategory === "all" ||
         (activeCategory === "favorites"
           ? widget.isFavorite
-          : widget.category === activeCategory);
+          : activeCategory === "templates"
+            ? widget.source === "template"
+            : widget.category === activeCategory);
 
       return matchesQuery && matchesCategory;
     });
   }, [widgets, query, activeCategory]);
 
   const handleFavoriteToggle = (id: string) => {
-    setWidgets((prev) =>
-      prev.map((widget) =>
-        widget.id === id
-          ? { ...widget, isFavorite: !widget.isFavorite }
-          : widget
-      )
-    );
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const handleSelectWidget = (widget: WidgetWithPreview) => {
@@ -296,6 +353,44 @@ export function WidgetLibraryPage() {
     if (!widget) return;
     setInsertWidget(widget);
     setInsertOpen(true);
+  };
+
+  const handleInsert = async (payload: { pageId: string | null }) => {
+    if (!insertWidget || insertWidget.source !== "core" || !payload.pageId) return;
+    setInsertError(null);
+    try {
+      const page = await getPage(payload.pageId);
+      const currentData = (page.currentData ?? {}) as Record<string, unknown>;
+      const blocks = Array.isArray(currentData.blocks)
+        ? (currentData.blocks as Block[])
+        : [];
+      const nextBlocks = [...blocks, createBlock(insertWidget.id)];
+      await updatePage(payload.pageId, {
+        data: { ...currentData, blocks: nextBlocks },
+      });
+    } catch {
+      setInsertError("Failed to insert widget into page.");
+    }
+  };
+
+  const handleCreateTemplate = async (payload: {
+    name: string;
+    description?: string | null;
+    category: WidgetCategoryId;
+    blocks: Array<Record<string, unknown>>;
+  }) => {
+    const created = await createWidgetTemplate({
+      name: payload.name,
+      description: payload.description ?? null,
+      category: payload.category,
+      blocks: payload.blocks,
+    });
+    window.location.assign(templateEditHref(created.id));
+  };
+
+  const handleEditTemplate = (widget: WidgetWithPreview | null) => {
+    if (!widget || widget.source !== "template") return;
+    window.location.assign(templateEditHref(widget.id));
   };
 
   const favoriteWidgets = useMemo(
@@ -465,7 +560,13 @@ export function WidgetLibraryPage() {
                   badge={widget.badge}
                   isFavorite={widget.isFavorite}
                   onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
-                  onInsert={() => handleInsertWidget(widget)}
+                  onInsert={widget.source === "core" ? () => handleInsertWidget(widget) : undefined}
+                  onAction={
+                    widget.source === "template"
+                      ? () => handleEditTemplate(widget)
+                      : undefined
+                  }
+                  actionLabel={widget.source === "template" ? "Edit" : "Insert"}
                   onSelect={() => handleSelectWidget(widget)}
                 />
               ))
@@ -478,20 +579,46 @@ export function WidgetLibraryPage() {
         preview={selectedWidget ? renderPreview(selectedWidget.preview) : undefined}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
-        onInsert={() => handleInsertWidget(selectedWidget)}
+        onInsert={
+          selectedWidget?.source === "core"
+            ? () => handleInsertWidget(selectedWidget)
+            : undefined
+        }
+        onPrimaryAction={
+          selectedWidget?.source === "template"
+            ? () => handleEditTemplate(selectedWidget)
+            : undefined
+        }
+        primaryActionLabel={
+          selectedWidget?.source === "template" ? "Edit Template" : undefined
+        }
       />
-      <WidgetCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <WidgetCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreate={handleCreateTemplate}
+      />
       <WidgetInsertDialog
         open={insertOpen}
         onOpenChange={setInsertOpen}
         widget={insertWidget}
         preview={insertWidget ? renderPreview(insertWidget.preview) : undefined}
         pages={pages.map((page) => ({ id: page.id, title: page.title }))}
-        onInsert={() => undefined}
+        onInsert={({ pageId }) => handleInsert({ pageId })}
       />
       {pagesError ? (
         <span className="sr-only" role="status">
           {pagesError}
+        </span>
+      ) : null}
+      {templatesError ? (
+        <span className="sr-only" role="status">
+          {templatesError}
+        </span>
+      ) : null}
+      {insertError ? (
+        <span className="sr-only" role="status">
+          {insertError}
         </span>
       ) : null}
     </AdminShell>

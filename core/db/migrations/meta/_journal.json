@@ -204,6 +204,13 @@
       "when": 1770017716019,
       "tag": "0028_sparkling_molten_man",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1770036744975,
+      "tag": "0029_amused_the_hunter",
+      "breakpoints": true
     }
   ]
 }

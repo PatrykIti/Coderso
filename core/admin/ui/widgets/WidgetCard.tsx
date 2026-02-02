@@ -13,6 +13,8 @@ type WidgetCardProps = {
   isFavorite?: boolean;
   onFavoriteToggle?: () => void;
   onInsert?: () => void;
+  onAction?: () => void;
+  actionLabel?: string;
   onSelect?: () => void;
   className?: string;
 };
@@ -25,9 +27,13 @@ export function WidgetCard({
   isFavorite = false,
   onFavoriteToggle,
   onInsert,
+  onAction,
+  actionLabel,
   onSelect,
   className,
 }: WidgetCardProps) {
+  const resolvedAction = onAction ?? onInsert;
+  const resolvedLabel = actionLabel ?? "Insert";
   return (
     <Card
       className={cn(
@@ -75,10 +81,10 @@ export function WidgetCard({
             size="xs"
             onClick={(event) => {
               event.stopPropagation();
-              onInsert?.();
+              resolvedAction?.();
             }}
           >
-            Insert
+            {resolvedLabel}
           </Button>
         </div>
       </CardContent>

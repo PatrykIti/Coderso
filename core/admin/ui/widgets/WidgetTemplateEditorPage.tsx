@@ -1,36 +1,185 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronRight,
   History,
   LayoutGrid,
-  Palette,
   Search,
   Settings2,
 } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { isApiClientError } from "@/services/apiClient";
+import {
+  createWidgetTemplate,
+  getWidgetTemplate,
+  updateWidgetTemplate,
+  type WidgetTemplateStatus,
+} from "@/services/widgetTemplatesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
+import { BlockList } from "@/ui/pages/builder/BlockList";
+import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
+import {
+  createBlock,
+  duplicateBlock,
+  reorderBlocks,
+} from "@/ui/pages/builder/blockUtils";
+import type { Block } from "@/ui/pages/builder/types";
+import { getWidgetRegistry } from "@/ui/pages/builder/widgetRegistry";
+import {
+  resolveAdminBasePath,
+  resolveAdminHref,
+  stripAdminBasePath,
+} from "@/utils/adminPaths";
+import type { WidgetCategoryId } from "./types";
 
-const categoryLabels = {
+const categoryLabels: Record<WidgetCategoryId, string> = {
   layout: "Layout",
   content: "Content",
   forms: "Forms",
   navigation: "Navigation",
   media: "Media",
-} as const;
+};
 
-type TemplateTab = "wizard" | "visual" | "advanced";
+const resolveTemplateId = (pathname: string) => {
+  const adminBasePath = resolveAdminBasePath(pathname);
+  const relativePath = stripAdminBasePath(pathname, adminBasePath);
+  const parts = relativePath.split("/").filter(Boolean);
+  const index = parts.findIndex((segment) => segment === "widgets");
+  if (index === -1) return null;
+  if (parts[index + 1] !== "templates") return null;
+  return parts[index + 2] ?? null;
+};
 
 export function WidgetTemplateEditorPage() {
+  const adminBasePath = useAdminBasePath();
+  const [templateId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return resolveTemplateId(window.location.pathname);
+  });
+  const isNew = !templateId || templateId === "new";
+
   const widgets = useMemo(() => listRegisteredWidgets(), []);
-  const [activeTab, setActiveTab] = useState<TemplateTab>("wizard");
+  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<WidgetCategoryId>("content");
+  const [status, setStatus] = useState<WidgetTemplateStatus>("draft");
+  const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<
+    WidgetCategoryId | "all"
+  >("all");
+  const [isLoading, setIsLoading] = useState(!isNew);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const selectedBlock = blocks.find((block) => block.id === selectedId) ?? null;
+  const selectedWidget = useMemo(() => {
+    if (!selectedBlock) return undefined;
+    return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
+  }, [selectedBlock]);
+
+  const filteredWidgets = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return widgets.filter((widget) => {
+      const matchesQuery =
+        normalized.length === 0 ||
+        widget.title.toLowerCase().includes(normalized) ||
+        widget.description?.toLowerCase().includes(normalized);
+      const matchesCategory =
+        activeCategory === "all" || widget.category === activeCategory;
+      return matchesQuery && matchesCategory;
+    });
+  }, [widgets, query, activeCategory]);
+
+  const handleAddBlock = (type: string) => {
+    const next = createBlock(type);
+    setBlocks((prev) => [...prev, next]);
+    setSelectedId(next.id);
+  };
+
+  const loadTemplate = useCallback(async () => {
+    if (!templateId || templateId === "new") {
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    try {
+      const template = await getWidgetTemplate(templateId);
+      setName(template.name ?? "");
+      setDescription(template.description ?? "");
+      setCategory(template.category);
+      setStatus(template.status);
+      setBlocks((template.blocks as Block[]) ?? []);
+    } catch (err) {
+      const message = isApiClientError(err)
+        ? err.message
+        : "Failed to load template.";
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [templateId]);
+
+  useEffect(() => {
+    void loadTemplate();
+  }, [loadTemplate]);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      setError("Template name is required.");
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      if (isNew) {
+        const created = await createWidgetTemplate({
+          name: name.trim(),
+          description: description.trim() ? description.trim() : null,
+          category,
+          status,
+          blocks,
+        });
+        window.location.assign(
+          resolveAdminHref(adminBasePath, `/admin/widgets/templates/${created.id}`)
+        );
+        return;
+      }
+      if (!templateId) return;
+      await updateWidgetTemplate(templateId, {
+        name: name.trim(),
+        description: description.trim() ? description.trim() : null,
+        category,
+        status,
+        blocks,
+      });
+    } catch (err) {
+      const message = isApiClientError(err)
+        ? err.message
+        : "Failed to save template.";
+      setError(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDiscard = () => {
+    if (isNew) {
+      window.location.assign(resolveAdminHref(adminBasePath, "/admin/widgets"));
+      return;
+    }
+    void loadTemplate();
+  };
 
   return (
     <AdminShell
@@ -42,9 +191,11 @@ export function WidgetTemplateEditorPage() {
           <ChevronRight className="h-4 w-4" />
           <span>Templates</span>
           <ChevronRight className="h-4 w-4" />
-          <span className="text-foreground">New Template</span>
+          <span className="text-foreground">
+            {isNew ? "New Template" : name || "Template"}
+          </span>
           <Badge variant="secondary" className="ml-2 text-[10px] uppercase">
-            Draft
+            {status}
           </Badge>
         </div>
       }
@@ -53,54 +204,108 @@ export function WidgetTemplateEditorPage() {
           <Button variant="ghost" size="sm">
             Preview
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" onClick={handleDiscard}>
             Discard
           </Button>
-          <Button size="sm">Save Template</Button>
+          <Button size="sm" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Saving..." : "Save Template"}
+          </Button>
         </div>
       }
       contentClassName="p-0 overflow-hidden"
     >
       <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col">
         <div className="border-b bg-card px-6 py-4">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-start gap-4">
             <div className="flex min-w-[220px] flex-1 flex-col gap-2">
               <Input
                 className="text-lg font-semibold"
-                defaultValue="New Marketing Template"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
                 placeholder="Template name"
               />
               <Textarea
                 className="min-h-[0px] resize-none text-xs"
-                defaultValue="Standard layout for conversion landing pages"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
                 placeholder="Add description..."
               />
             </div>
+            <div className="min-w-[200px] space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Category
+              </p>
+              <Select
+                value={category}
+                onValueChange={(value) => setCategory(value as WidgetCategoryId)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(categoryLabels).map(([id, label]) => (
+                    <SelectItem key={id} value={id}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          {error ? (
+            <div className="mt-4">
+              <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-1 min-h-0">
-          <aside className="hidden w-72 flex-col border-r bg-card lg:flex">
+          <aside className="hidden w-72 min-h-0 flex-col border-r bg-card lg:flex">
             <div className="border-b p-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input className="pl-9 text-xs" placeholder="Search widgets..." />
+                <Input
+                  className="pl-9 text-xs"
+                  placeholder="Search widgets..."
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
               </div>
             </div>
-            <ScrollArea className="flex-1">
+            <ScrollArea className="flex-1 min-h-0">
               <div className="p-4">
                 <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Categories
                 </p>
                 <div className="space-y-2">
-                  {(Object.keys(categoryLabels) as Array<keyof typeof categoryLabels>).map(
-                    (category) => (
+                  <button
+                    type="button"
+                    className={
+                      activeCategory === "all"
+                        ? "flex w-full items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
+                        : "flex w-full items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                    }
+                    onClick={() => setActiveCategory("all")}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                    All
+                  </button>
+                  {(Object.keys(categoryLabels) as WidgetCategoryId[]).map(
+                    (cat) => (
                       <button
-                        key={category}
+                        key={cat}
                         type="button"
-                        className="flex w-full items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                        className={
+                          activeCategory === cat
+                            ? "flex w-full items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
+                            : "flex w-full items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                        }
+                        onClick={() => setActiveCategory(cat)}
                       >
-                        <LayoutGrid className="h-4 w-4 text-primary" />
-                        {categoryLabels[category]}
+                        <LayoutGrid className="h-4 w-4" />
+                        {categoryLabels[cat]}
                       </button>
                     )
                   )}
@@ -110,17 +315,25 @@ export function WidgetTemplateEditorPage() {
                     Draggable items
                   </p>
                   <div className="space-y-3">
-                    {widgets.slice(0, 6).map((widget) => (
+                    {filteredWidgets.map((widget) => (
                       <div
                         key={widget.type}
-                        className="rounded-xl border border-border/60 bg-muted/20 p-3"
+                        className="rounded-xl border border-border/60 bg-muted/20 p-3 transition hover:border-primary/40 hover:bg-muted/40"
+                        draggable
+                        onDragStart={(event) => {
+                          event.dataTransfer.setData("widget-type", widget.type);
+                          event.dataTransfer.effectAllowed = "copy";
+                        }}
+                        onClick={() => handleAddBlock(widget.type)}
                       >
                         <div className="mb-3 aspect-video rounded-lg border border-border/60 bg-muted/30" />
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-medium text-foreground">
                             {widget.title}
                           </span>
-                          <span className="text-[10px] text-muted-foreground">Drag</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            Drag
+                          </span>
                         </div>
                       </div>
                     ))}
@@ -131,117 +344,90 @@ export function WidgetTemplateEditorPage() {
           </aside>
 
           <main
-            className={cn(
-              "flex-1 overflow-auto p-10",
-              "bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)]",
-              "bg-[size:24px_24px]"
-            )}
+            className={
+              "flex-1 overflow-auto p-10 bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)] bg-[size:24px_24px]"
+            }
+            onDragOver={(event) => {
+              event.preventDefault();
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const type = event.dataTransfer.getData("widget-type");
+              if (type) handleAddBlock(type);
+            }}
           >
-            <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                <Settings2 className="h-10 w-10" />
+            {isLoading ? (
+              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                  <Settings2 className="h-10 w-10" />
+                </div>
+                <h2 className="text-2xl font-semibold text-foreground">
+                  Loading template
+                </h2>
               </div>
-              <h2 className="text-2xl font-semibold text-foreground">
-                Build your template
-              </h2>
-              <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                Drag widgets from the library to build a reusable template layout.
-              </p>
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
-                <span className="rounded-full border border-border/60 px-3 py-1">Section 1</span>
-                <span className="rounded-full border border-primary/30 px-3 py-1 text-primary">
-                  Drop target
-                </span>
+            ) : blocks.length === 0 ? (
+              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                  <Settings2 className="h-10 w-10" />
+                </div>
+                <h2 className="text-2xl font-semibold text-foreground">
+                  Build your template
+                </h2>
+                <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+                  Drag widgets from the library to build a reusable template layout.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <span className="rounded-full border border-border/60 px-3 py-1">
+                    Section 1
+                  </span>
+                  <span className="rounded-full border border-primary/30 px-3 py-1 text-primary">
+                    Drop target
+                  </span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="mx-auto w-full max-w-4xl">
+                <BlockList
+                  blocks={blocks}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onMove={(from, to) =>
+                    setBlocks((prev) => reorderBlocks(prev, from, to))
+                  }
+                  onDuplicate={(id) =>
+                    setBlocks((prev) => duplicateBlock(prev, id))
+                  }
+                  onDelete={(id) =>
+                    setBlocks((prev) => prev.filter((block) => block.id !== id))
+                  }
+                />
+              </div>
+            )}
           </main>
 
-          <aside className="hidden w-80 flex-col border-l bg-card lg:flex">
-            <Tabs
-              value={activeTab}
-              onValueChange={(value) => setActiveTab(value as TemplateTab)}
-              className="flex h-full flex-col"
-            >
-              <TabsList variant="line" className="w-full justify-between border-b px-4">
-                <TabsTrigger value="wizard" className="flex-1 justify-center text-xs">
-                  Wizard
-                </TabsTrigger>
-                <TabsTrigger value="visual" className="flex-1 justify-center text-xs">
-                  Visual
-                </TabsTrigger>
-                <TabsTrigger
-                  value="advanced"
-                  className="flex-1 justify-center text-xs"
-                >
-                  Advanced
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value={activeTab} className="flex-1">
-                <ScrollArea className="h-full">
-                  <div className="space-y-8 p-6">
-                    <div>
-                      <h3 className="text-xs font-semibold text-foreground">Layout</h3>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        {["Stacked", "Parallel"].map((label, index) => (
-                          <button
-                            key={label}
-                            type="button"
-                            className={cn(
-                              "rounded-xl border px-3 py-2 text-xs",
-                              index === 0
-                                ? "border-primary/40 bg-primary/10 text-primary"
-                                : "border-border/60 text-muted-foreground"
-                            )}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-semibold text-foreground">Spacing</h3>
-                      <div className="mt-4 space-y-4 text-xs text-muted-foreground">
-                        <div className="flex items-center justify-between">
-                          <span>Global padding</span>
-                          <span>48px</span>
-                        </div>
-                        <div className="h-1 rounded-full bg-muted" />
-                        <div className="flex items-center justify-between">
-                          <span>Section gap</span>
-                          <span>24px</span>
-                        </div>
-                        <div className="h-1 rounded-full bg-muted" />
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-semibold text-foreground">Colors</h3>
-                      <div className="mt-3 grid grid-cols-4 gap-2">
-                        {["bg-primary", "bg-indigo-500", "bg-rose-500", "bg-amber-500"].map(
-                          (color) => (
-                            <div
-                              key={color}
-                              className={cn(
-                                "h-8 w-8 rounded-lg border border-border/60",
-                                color
-                              )}
-                            />
-                          )
-                        )}
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-dashed border-border/60 text-muted-foreground">
-                          <Palette className="h-3 w-3" />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </ScrollArea>
-              </TabsContent>
-              <div className="border-t bg-muted/20 p-4">
-                <Button variant="secondary" className="w-full gap-2">
-                  <History className="h-4 w-4" />
-                  Revision History
-                </Button>
+          <aside className="hidden w-80 min-h-0 flex-col border-l bg-card lg:flex">
+            <div className="border-b px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Details
+            </div>
+            <ScrollArea className="flex-1 min-h-0">
+              <div className="p-6">
+                <BlockSettings
+                  block={selectedBlock}
+                  widget={selectedWidget}
+                  onChange={(next) =>
+                    setBlocks((prev) =>
+                      prev.map((block) => (block.id === next.id ? next : block))
+                    )
+                  }
+                />
               </div>
-            </Tabs>
+            </ScrollArea>
+            <div className="border-t bg-muted/20 p-4">
+              <Button variant="secondary" className="w-full gap-2">
+                <History className="h-4 w-4" />
+                Revision History
+              </Button>
+            </div>
           </aside>
         </div>
       </div>

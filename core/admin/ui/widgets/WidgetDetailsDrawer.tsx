@@ -14,6 +14,8 @@ type WidgetDetailsDrawerProps = {
   onOpenChange: (open: boolean) => void;
   preview?: React.ReactNode;
   onInsert?: () => void;
+  onPrimaryAction?: () => void;
+  primaryActionLabel?: string;
 };
 
 export function WidgetDetailsDrawer({
@@ -22,7 +24,13 @@ export function WidgetDetailsDrawer({
   onOpenChange,
   preview,
   onInsert,
+  onPrimaryAction,
+  primaryActionLabel,
 }: WidgetDetailsDrawerProps) {
+  const actionLabel =
+    primaryActionLabel ??
+    (widget?.source === "template" ? "Edit Template" : "Insert Widget");
+  const actionHandler = onPrimaryAction ?? onInsert;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -51,6 +59,11 @@ export function WidgetDetailsDrawer({
                   <div className="overflow-hidden rounded-xl border border-border/70 bg-muted/30">
                     <div className="aspect-video">{preview}</div>
                   </div>
+                ) : null}
+                {widget.description ? (
+                  <p className="text-xs text-muted-foreground">
+                    {widget.description}
+                  </p>
                 ) : null}
                 <div className="rounded-xl border bg-muted/30 p-4">
                   <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
@@ -84,10 +97,10 @@ export function WidgetDetailsDrawer({
               <Button
                 onClick={() => {
                   onOpenChange(false);
-                  onInsert?.();
+                  actionHandler?.();
                 }}
               >
-                Insert Widget
+                {actionLabel}
               </Button>
             </div>
           </>

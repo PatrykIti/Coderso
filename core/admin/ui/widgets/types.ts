@@ -1,4 +1,5 @@
 export type WidgetCategoryId = "layout" | "content" | "forms" | "navigation" | "media";
+export type WidgetSource = "core" | "template";
 
 export type WidgetItem = {
   id: string;
@@ -7,4 +8,7 @@ export type WidgetItem = {
   categoryLabel: string;
   badge?: string;
   isFavorite?: boolean;
+  source?: WidgetSource;
+  description?: string | null;
+  status?: "draft" | "published";
 };
