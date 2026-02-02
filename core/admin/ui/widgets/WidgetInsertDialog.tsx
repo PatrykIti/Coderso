@@ -36,6 +36,9 @@ type PlacementOption = "new" | "inside";
 type WidgetInsertPayload = Parameters<
   NonNullable<WidgetInsertDialogProps["onInsert"]>
 >[0];
+const NO_PAGES_VALUE = "no-pages";
+const NO_TEMPLATES_VALUE = "no-templates";
+const NO_BLOCKS_VALUE = "no-blocks";
 
 export function WidgetInsertDialog({
   open,
@@ -52,22 +55,22 @@ export function WidgetInsertDialog({
     () => new Map(listRegisteredWidgets().map((item) => [item.type, item.title])),
     []
   );
-  const [pageId, setPageId] = useState<string | null>(() => pageOptions[0]?.id ?? null);
+  const [pageId, setPageId] = useState<string>(() => pageOptions[0]?.id ?? "");
   const [placement, setPlacement] = useState<PlacementOption>("new");
   const [targetType, setTargetType] = useState<"page" | "template">("page");
-  const [targetId, setTargetId] = useState<string | null>(null);
-  const [blockId, setBlockId] = useState<string | null>(null);
+  const [targetId, setTargetId] = useState<string>("");
+  const [blockId, setBlockId] = useState<string>("");
   const [blocks, setBlocks] = useState<Array<{ id: string; label: string }>>([]);
   const [blocksError, setBlocksError] = useState<string | null>(null);
   const [blocksLoading, setBlocksLoading] = useState(false);
-  const resolvedPageId = pageId ?? pageOptions[0]?.id ?? null;
+  const resolvedPageId = pageId || pageOptions[0]?.id || "";
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
-      setPageId(pageOptions[0]?.id ?? null);
+      setPageId(pageOptions[0]?.id ?? "");
       setPlacement("new");
       setTargetType("page");
-      setTargetId(null);
-      setBlockId(null);
+      setTargetId("");
+      setBlockId("");
       setBlocks([]);
       setBlocksError(null);
     }
@@ -83,13 +86,13 @@ export function WidgetInsertDialog({
     if (placement !== "inside") return;
     const options = targetType === "page" ? pageOptions : templateOptions;
     if (targetId || options.length === 0) return;
-    setTargetId(options[0]?.id ?? null);
+    setTargetId(options[0]?.id ?? "");
   }, [placement, targetType, pageOptions, templateOptions, targetId]);
 
   useEffect(() => {
     if (placement !== "inside" || !targetId) {
       setBlocks([]);
-      setBlockId(null);
+      setBlockId("");
       return;
     }
     let active = true;
@@ -115,7 +118,7 @@ export function WidgetInsertDialog({
             .filter(Boolean) as Array<{ id: string; label: string }>;
           if (!active) return;
           setBlocks(mapped);
-          setBlockId(mapped[0]?.id ?? null);
+          setBlockId(mapped[0]?.id ?? "");
         } else {
           const page = await getPage(targetId);
           const data = (page.currentData ?? {}) as Record<string, unknown>;
@@ -135,13 +138,13 @@ export function WidgetInsertDialog({
             .filter(Boolean) as Array<{ id: string; label: string }>;
           if (!active) return;
           setBlocks(mapped);
-          setBlockId(mapped[0]?.id ?? null);
+          setBlockId(mapped[0]?.id ?? "");
         }
       } catch {
         if (!active) return;
         setBlocksError("Failed to load blocks.");
         setBlocks([]);
-        setBlockId(null);
+        setBlockId("");
       } finally {
         if (active) {
           setBlocksLoading(false);
@@ -245,7 +248,7 @@ export function WidgetInsertDialog({
                 Target page
               </label>
               <Select
-                value={resolvedPageId ?? undefined}
+                value={resolvedPageId}
                 onValueChange={(value) => setPageId(value)}
               >
                 <SelectTrigger>
@@ -253,7 +256,7 @@ export function WidgetInsertDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {pageOptions.length === 0 ? (
-                    <SelectItem value="" disabled>
+                    <SelectItem value={NO_PAGES_VALUE} disabled>
                       No pages available
                     </SelectItem>
                   ) : (
@@ -277,8 +280,8 @@ export function WidgetInsertDialog({
                   value={targetType}
                   onValueChange={(value) => {
                     setTargetType(value as "page" | "template");
-                    setTargetId(null);
-                    setBlockId(null);
+                    setTargetId("");
+                    setBlockId("");
                   }}
                 >
                   <SelectTrigger>
@@ -295,7 +298,7 @@ export function WidgetInsertDialog({
                   {targetType === "template" ? "Target template" : "Target page"}
                 </label>
                 <Select
-                  value={targetId ?? undefined}
+                  value={targetId}
                   onValueChange={(value) => setTargetId(value)}
                 >
                   <SelectTrigger>
@@ -310,7 +313,7 @@ export function WidgetInsertDialog({
                   <SelectContent>
                     {targetType === "template" ? (
                       templateOptions.length === 0 ? (
-                        <SelectItem value="" disabled>
+                        <SelectItem value={NO_TEMPLATES_VALUE} disabled>
                           No templates available
                         </SelectItem>
                       ) : (
@@ -321,7 +324,7 @@ export function WidgetInsertDialog({
                         ))
                       )
                     ) : pageOptions.length === 0 ? (
-                      <SelectItem value="" disabled>
+                      <SelectItem value={NO_PAGES_VALUE} disabled>
                         No pages available
                       </SelectItem>
                     ) : (
@@ -339,7 +342,7 @@ export function WidgetInsertDialog({
                   Existing block
                 </label>
                 <Select
-                  value={blockId ?? undefined}
+                  value={blockId}
                   onValueChange={(value) => setBlockId(value)}
                   disabled={blocksLoading || blocks.length === 0}
                 >
@@ -356,7 +359,7 @@ export function WidgetInsertDialog({
                   </SelectTrigger>
                   <SelectContent>
                     {blocks.length === 0 ? (
-                      <SelectItem value="" disabled>
+                      <SelectItem value={NO_BLOCKS_VALUE} disabled>
                         No blocks available
                       </SelectItem>
                     ) : (
