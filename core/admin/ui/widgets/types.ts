@@ -4,7 +4,7 @@ export type WidgetSource = "core" | "template";
 export type WidgetItem = {
   id: string;
   name: string;
-  category: WidgetCategoryId;
+  category: string;
   categoryLabel: string;
   badge?: string;
   isFavorite?: boolean;

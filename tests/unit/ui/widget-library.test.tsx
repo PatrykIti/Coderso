@@ -7,8 +7,10 @@ test("WidgetLibraryPage renders categories and widget grid", () => {
   const html = renderToString(<WidgetLibraryPage />);
 
   expect(html).toContain("Widget Library");
+  expect(html).toContain("All Items");
   expect(html).toContain("All Widgets");
+  expect(html).toContain("Templates");
   expect(html).toContain("Favorites");
-  expect(html).toContain("Layout");
+  expect(html).toContain("Categories");
   expect(html).toContain("Insert");
 });

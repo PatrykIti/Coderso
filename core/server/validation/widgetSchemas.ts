@@ -76,10 +76,7 @@ const templateSchema = {
   properties: {
     name: { type: "string", minLength: 1 },
     description: { type: ["string", "null"] },
-    category: {
-      type: "string",
-      enum: ["layout", "content", "forms", "navigation", "media"],
-    },
+    category: { type: "string", minLength: 1 },
     status: { type: "string", enum: ["draft", "published"] },
     blocks: { type: "array", items: blockSchema },
   },
@@ -93,11 +90,26 @@ export const widgetTemplateUpdateSchema = {
   properties: {
     name: { type: "string", minLength: 1 },
     description: { type: ["string", "null"] },
-    category: {
-      type: "string",
-      enum: ["layout", "content", "forms", "navigation", "media"],
-    },
+    category: { type: "string", minLength: 1 },
     status: { type: "string", enum: ["draft", "published"] },
     blocks: { type: "array", items: blockSchema },
+  },
+};
+
+export const widgetTemplateCategoryCreateSchema = {
+  type: "object",
+  required: ["name"],
+  additionalProperties: false,
+  properties: {
+    name: { type: "string", minLength: 1 },
+  },
+};
+
+export const widgetTemplateCategoryUpdateSchema = {
+  type: "object",
+  required: ["name"],
+  additionalProperties: false,
+  properties: {
+    name: { type: "string", minLength: 1 },
   },
 };

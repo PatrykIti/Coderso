@@ -1,5 +1,5 @@
 import { Code2, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,15 +15,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { createBlock } from "@/ui/pages/builder/blockUtils";
-import type { WidgetCategoryId } from "./types";
+import type { WidgetTemplateCategory } from "@/services/widgetTemplateCategoriesClient";
 
 type WidgetCreateDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  categories: WidgetTemplateCategory[];
   onCreate?: (payload: {
     name: string;
     description?: string | null;
-    category: WidgetCategoryId;
+    category: string;
     blocks: Array<Record<string, unknown>>;
   }) => Promise<void> | void;
 };
@@ -31,12 +32,13 @@ type WidgetCreateDialogProps = {
 export function WidgetCreateDialog({
   open,
   onOpenChange,
+  categories,
   onCreate,
 }: WidgetCreateDialogProps) {
   const widgets = useMemo(() => listRegisteredWidgets(), []);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<WidgetCategoryId>("content");
+  const [category, setCategory] = useState("");
   const [baseTemplate, setBaseTemplate] = useState("blank");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,16 +47,27 @@ export function WidgetCreateDialog({
     if (nextOpen) {
       setName("");
       setDescription("");
-      setCategory("content");
+      setCategory(categories[0]?.name ?? "");
       setBaseTemplate("blank");
       setError(null);
     }
     onOpenChange(nextOpen);
   };
 
+  useEffect(() => {
+    if (!open) return;
+    if (!category && categories.length > 0) {
+      setCategory(categories[0].name);
+    }
+  }, [open, category, categories]);
+
   const handleCreate = async () => {
     if (!name.trim()) {
       setError("Please enter a widget name.");
+      return;
+    }
+    if (!category) {
+      setError("Please select a category.");
       return;
     }
     setIsSaving(true);
@@ -121,16 +134,22 @@ export function WidgetCreateDialog({
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Category
               </label>
-              <Select value={category} onValueChange={(value) => setCategory(value as WidgetCategoryId)}>
+              <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="layout">Layout</SelectItem>
-                  <SelectItem value="content">Content</SelectItem>
-                  <SelectItem value="forms">Forms</SelectItem>
-                  <SelectItem value="navigation">Navigation</SelectItem>
-                  <SelectItem value="media">Media</SelectItem>
+                  {categories.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      Add a category first
+                    </SelectItem>
+                  ) : (
+                    categories.map((item) => (
+                      <SelectItem key={item.id} value={item.name}>
+                        {item.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

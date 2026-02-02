@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { getPage } from "@/services/pagesClient";
+import { getWidgetTemplate } from "@/services/widgetTemplatesClient";
+import { listRegisteredWidgets } from "@/ui/widgets/registry";
 
 import type { WidgetItem } from "./types";
 
@@ -20,10 +23,19 @@ export type WidgetInsertDialogProps = {
   widget?: WidgetItem | null;
   preview?: React.ReactNode;
   pages?: { id: string; title: string }[];
-  onInsert?: (payload: { pageId: string | null; placement: "new" | "inside" }) => void;
+  templates?: { id: string; name: string }[];
+  onInsert?: (payload: {
+    placement: "new" | "inside";
+    targetType?: "page" | "template";
+    targetId?: string | null;
+    blockId?: string | null;
+  }) => void;
 };
 
 type PlacementOption = "new" | "inside";
+type WidgetInsertPayload = Parameters<
+  NonNullable<WidgetInsertDialogProps["onInsert"]>
+>[0];
 
 export function WidgetInsertDialog({
   open,
@@ -31,19 +43,116 @@ export function WidgetInsertDialog({
   widget,
   preview,
   pages,
+  templates,
   onInsert,
 }: WidgetInsertDialogProps) {
   const pageOptions = useMemo(() => pages ?? [], [pages]);
+  const templateOptions = useMemo(() => templates ?? [], [templates]);
+  const widgetTitleMap = useMemo(
+    () => new Map(listRegisteredWidgets().map((item) => [item.type, item.title])),
+    []
+  );
   const [pageId, setPageId] = useState<string | null>(() => pageOptions[0]?.id ?? null);
   const [placement, setPlacement] = useState<PlacementOption>("new");
+  const [targetType, setTargetType] = useState<"page" | "template">("page");
+  const [targetId, setTargetId] = useState<string | null>(null);
+  const [blockId, setBlockId] = useState<string | null>(null);
+  const [blocks, setBlocks] = useState<Array<{ id: string; label: string }>>([]);
+  const [blocksError, setBlocksError] = useState<string | null>(null);
+  const [blocksLoading, setBlocksLoading] = useState(false);
   const resolvedPageId = pageId ?? pageOptions[0]?.id ?? null;
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       setPageId(pageOptions[0]?.id ?? null);
       setPlacement("new");
+      setTargetType("page");
+      setTargetId(null);
+      setBlockId(null);
+      setBlocks([]);
+      setBlocksError(null);
     }
     onOpenChange(nextOpen);
   };
+
+  const canSubmit =
+    placement === "new"
+      ? Boolean(resolvedPageId)
+      : Boolean(targetId && blockId);
+
+  useEffect(() => {
+    if (placement !== "inside") return;
+    const options = targetType === "page" ? pageOptions : templateOptions;
+    if (targetId || options.length === 0) return;
+    setTargetId(options[0]?.id ?? null);
+  }, [placement, targetType, pageOptions, templateOptions, targetId]);
+
+  useEffect(() => {
+    if (placement !== "inside" || !targetId) {
+      setBlocks([]);
+      setBlockId(null);
+      return;
+    }
+    let active = true;
+    setBlocksLoading(true);
+    setBlocksError(null);
+    const loadBlocks = async () => {
+      try {
+        if (targetType === "template") {
+          const template = await getWidgetTemplate(targetId);
+          const items = Array.isArray(template.blocks) ? template.blocks : [];
+          const mapped = items
+            .map((block) => {
+              if (!block || typeof block !== "object") return null;
+              const record = block as { id?: unknown; type?: unknown };
+              if (typeof record.id !== "string" || typeof record.type !== "string") {
+                return null;
+              }
+              return {
+                id: record.id,
+                label: widgetTitleMap.get(record.type) ?? record.type,
+              };
+            })
+            .filter(Boolean) as Array<{ id: string; label: string }>;
+          if (!active) return;
+          setBlocks(mapped);
+          setBlockId(mapped[0]?.id ?? null);
+        } else {
+          const page = await getPage(targetId);
+          const data = (page.currentData ?? {}) as Record<string, unknown>;
+          const items = Array.isArray(data.blocks) ? (data.blocks as unknown[]) : [];
+          const mapped = items
+            .map((block) => {
+              if (!block || typeof block !== "object") return null;
+              const record = block as { id?: unknown; type?: unknown };
+              if (typeof record.id !== "string" || typeof record.type !== "string") {
+                return null;
+              }
+              return {
+                id: record.id,
+                label: widgetTitleMap.get(record.type) ?? record.type,
+              };
+            })
+            .filter(Boolean) as Array<{ id: string; label: string }>;
+          if (!active) return;
+          setBlocks(mapped);
+          setBlockId(mapped[0]?.id ?? null);
+        }
+      } catch {
+        if (!active) return;
+        setBlocksError("Failed to load blocks.");
+        setBlocks([]);
+        setBlockId(null);
+      } finally {
+        if (active) {
+          setBlocksLoading(false);
+        }
+      }
+    };
+    void loadBlocks();
+    return () => {
+      active = false;
+    };
+  }, [placement, targetId, targetType, widgetTitleMap]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -81,35 +190,9 @@ export function WidgetInsertDialog({
                 ) : null}
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Insert this widget into a page layout.
+                Insert this widget into a layout.
               </p>
             </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Target page
-            </label>
-            <Select
-              value={resolvedPageId ?? undefined}
-              onValueChange={(value) => setPageId(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a page" />
-              </SelectTrigger>
-              <SelectContent>
-                {pageOptions.length === 0 ? (
-                  <SelectItem value="" disabled>
-                    No pages available
-                  </SelectItem>
-                ) : (
-                  pageOptions.map((page) => (
-                    <SelectItem key={page.id} value={page.id}>
-                      {page.title}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
           </div>
           <div className="space-y-3">
             <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -156,14 +239,163 @@ export function WidgetInsertDialog({
               ))}
             </div>
           </div>
+          {placement === "new" ? (
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Target page
+              </label>
+              <Select
+                value={resolvedPageId ?? undefined}
+                onValueChange={(value) => setPageId(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a page" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pageOptions.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      No pages available
+                    </SelectItem>
+                  ) : (
+                    pageOptions.map((page) => (
+                      <SelectItem key={page.id} value={page.id}>
+                        {page.title}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          {placement === "inside" ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Target type
+                </label>
+                <Select
+                  value={targetType}
+                  onValueChange={(value) => {
+                    setTargetType(value as "page" | "template");
+                    setTargetId(null);
+                    setBlockId(null);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose target" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="page">Page</SelectItem>
+                    <SelectItem value="template">Template</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {targetType === "template" ? "Target template" : "Target page"}
+                </label>
+                <Select
+                  value={targetId ?? undefined}
+                  onValueChange={(value) => setTargetId(value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        targetType === "template"
+                          ? "Select a template"
+                          : "Select a page"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {targetType === "template" ? (
+                      templateOptions.length === 0 ? (
+                        <SelectItem value="" disabled>
+                          No templates available
+                        </SelectItem>
+                      ) : (
+                        templateOptions.map((template) => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.name}
+                          </SelectItem>
+                        ))
+                      )
+                    ) : pageOptions.length === 0 ? (
+                      <SelectItem value="" disabled>
+                        No pages available
+                      </SelectItem>
+                    ) : (
+                      pageOptions.map((page) => (
+                        <SelectItem key={page.id} value={page.id}>
+                          {page.title}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Existing block
+                </label>
+                <Select
+                  value={blockId ?? undefined}
+                  onValueChange={(value) => setBlockId(value)}
+                  disabled={blocksLoading || blocks.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        blocksLoading
+                          ? "Loading blocks..."
+                          : blocks.length === 0
+                            ? "No blocks available"
+                            : "Select a block"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {blocks.length === 0 ? (
+                      <SelectItem value="" disabled>
+                        No blocks available
+                      </SelectItem>
+                    ) : (
+                      blocks.map((block) => (
+                        <SelectItem key={block.id} value={block.id}>
+                          {block.label}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                {blocksError ? (
+                  <p className="text-xs text-destructive">{blocksError}</p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-col gap-3 border-t bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button
+            disabled={!canSubmit}
             onClick={() => {
-              onInsert?.({ pageId: resolvedPageId, placement });
+              const payload: WidgetInsertPayload =
+                placement === "new"
+                  ? {
+                      placement: "new",
+                      targetType: "page",
+                      targetId: resolvedPageId,
+                    }
+                  : {
+                      placement: "inside",
+                      targetType,
+                      targetId,
+                      blockId,
+                    };
+              onInsert?.(payload);
               handleOpenChange(false);
             }}
           >

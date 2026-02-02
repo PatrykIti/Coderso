@@ -1,12 +1,7 @@
 import { apiRequest } from "./apiClient";
 
 export type WidgetTemplateStatus = "draft" | "published";
-export type WidgetTemplateCategory =
-  | "layout"
-  | "content"
-  | "forms"
-  | "navigation"
-  | "media";
+export type WidgetTemplateCategory = string;
 
 export type WidgetTemplate = {
   id: string;

@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  ChevronRight,
-  History,
-  LayoutGrid,
-  Search,
-  Settings2,
-} from "lucide-react";
+import { ChevronRight, History, Search, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +15,10 @@ import {
   updateWidgetTemplate,
   type WidgetTemplateStatus,
 } from "@/services/widgetTemplatesClient";
+import {
+  listWidgetTemplateCategories,
+  type WidgetTemplateCategory,
+} from "@/services/widgetTemplateCategoriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
@@ -39,8 +37,9 @@ import {
   stripAdminBasePath,
 } from "@/utils/adminPaths";
 import type { WidgetCategoryId } from "./types";
+import { WidgetCard } from "./WidgetCard";
 
-const categoryLabels: Record<WidgetCategoryId, string> = {
+const widgetCategoryLabels: Record<WidgetCategoryId, string> = {
   layout: "Layout",
   content: "Content",
   forms: "Forms",
@@ -71,15 +70,21 @@ export function WidgetTemplateEditorPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<WidgetCategoryId>("content");
+  const [category, setCategory] = useState("");
   const [status, setStatus] = useState<WidgetTemplateStatus>("draft");
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<
     WidgetCategoryId | "all"
   >("all");
+  const [templateCategories, setTemplateCategories] = useState<
+    WidgetTemplateCategory[]
+  >([]);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  const displayError = error ?? categoriesError;
 
   const selectedBlock = blocks.find((block) => block.id === selectedId) ?? null;
   const selectedWidget = useMemo(() => {
@@ -134,9 +139,34 @@ export function WidgetTemplateEditorPage() {
     void loadTemplate();
   }, [loadTemplate]);
 
+  useEffect(() => {
+    let active = true;
+    listWidgetTemplateCategories()
+      .then((result) => {
+        if (!active) return;
+        setTemplateCategories(result.items);
+      })
+      .catch(() => {
+        if (!active) return;
+        setCategoriesError("Failed to load categories.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (category || templateCategories.length === 0) return;
+    setCategory(templateCategories[0].name);
+  }, [category, templateCategories]);
+
   const handleSave = async () => {
     if (!name.trim()) {
       setError("Template name is required.");
+      return;
+    }
+    if (!category.trim()) {
+      setError("Template category is required.");
       return;
     }
     setIsSaving(true);
@@ -146,7 +176,7 @@ export function WidgetTemplateEditorPage() {
         const created = await createWidgetTemplate({
           name: name.trim(),
           description: description.trim() ? description.trim() : null,
-          category,
+          category: category.trim(),
           status,
           blocks,
         });
@@ -159,7 +189,7 @@ export function WidgetTemplateEditorPage() {
       await updateWidgetTemplate(templateId, {
         name: name.trim(),
         description: description.trim() ? description.trim() : null,
-        category,
+        category: category.trim(),
         status,
         blocks,
       });
@@ -237,26 +267,32 @@ export function WidgetTemplateEditorPage() {
               </p>
               <Select
                 value={category}
-                onValueChange={(value) => setCategory(value as WidgetCategoryId)}
+                onValueChange={setCategory}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(categoryLabels).map(([id, label]) => (
-                    <SelectItem key={id} value={id}>
-                      {label}
+                  {templateCategories.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      Add a category first
                     </SelectItem>
-                  ))}
+                  ) : (
+                    templateCategories.map((item) => (
+                      <SelectItem key={item.id} value={item.name}>
+                        {item.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          {error ? (
+          {displayError ? (
             <div className="mt-4">
               <Alert variant="destructive">
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>{displayError}</AlertDescription>
               </Alert>
             </div>
           ) : null}
@@ -276,66 +312,49 @@ export function WidgetTemplateEditorPage() {
             </div>
             <ScrollArea className="flex-1 min-h-0">
               <div className="p-4">
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Categories
-                </p>
                 <div className="space-y-2">
-                  <button
-                    type="button"
-                    className={
-                      activeCategory === "all"
-                        ? "flex w-full items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
-                        : "flex w-full items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Category
+                  </p>
+                  <Select
+                    value={activeCategory}
+                    onValueChange={(value) =>
+                      setActiveCategory(value as WidgetCategoryId | "all")
                     }
-                    onClick={() => setActiveCategory("all")}
                   >
-                    <LayoutGrid className="h-4 w-4" />
-                    All
-                  </button>
-                  {(Object.keys(categoryLabels) as WidgetCategoryId[]).map(
-                    (cat) => (
-                      <button
-                        key={cat}
-                        type="button"
-                        className={
-                          activeCategory === cat
-                            ? "flex w-full items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-medium text-primary"
-                            : "flex w-full items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs font-medium text-muted-foreground transition hover:text-foreground"
-                        }
-                        onClick={() => setActiveCategory(cat)}
-                      >
-                        <LayoutGrid className="h-4 w-4" />
-                        {categoryLabels[cat]}
-                      </button>
-                    )
-                  )}
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="All widgets" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All widgets</SelectItem>
+                      {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map(
+                        (cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {widgetCategoryLabels[cat]}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="mt-6">
                   <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Draggable items
                   </p>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {filteredWidgets.map((widget) => (
-                      <div
+                      <WidgetCard
                         key={widget.type}
-                        className="rounded-xl border border-border/60 bg-muted/20 p-3 transition hover:border-primary/40 hover:bg-muted/40"
+                        name={widget.title}
+                        categoryLabel={widgetCategoryLabels[widget.category]}
+                        variant="compact"
                         draggable
                         onDragStart={(event) => {
                           event.dataTransfer.setData("widget-type", widget.type);
                           event.dataTransfer.effectAllowed = "copy";
                         }}
-                        onClick={() => handleAddBlock(widget.type)}
-                      >
-                        <div className="mb-3 aspect-video rounded-lg border border-border/60 bg-muted/30" />
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-foreground">
-                            {widget.title}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            Drag
-                          </span>
-                        </div>
-                      </div>
+                        onSelect={() => handleAddBlock(widget.type)}
+                      />
                     ))}
                   </div>
                 </div>

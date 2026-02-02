@@ -38,7 +38,7 @@ testIfDb("create/update/list/delete widget templates", async () => {
   const template = await createWidgetTemplate({
     name: `Template-${randomUUID()}`,
     description: "Reusable hero layout",
-    category: "content",
+    category: "Content",
     blocks: [],
   });
 

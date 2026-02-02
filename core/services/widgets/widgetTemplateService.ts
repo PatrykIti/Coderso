@@ -2,7 +2,8 @@ import { desc, eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { widgetTemplates } from "../../db/schema";
-import type { WidgetBlock, WidgetCategory } from "../../widgets/types";
+import type { WidgetBlock } from "../../widgets/types";
+import { listWidgetTemplateCategories } from "./widgetTemplateCategoryService";
 
 export type WidgetTemplateStatus = "draft" | "published";
 
@@ -13,7 +14,7 @@ export type WidgetTemplateRecord = typeof widgetTemplates.$inferSelect & {
 export type WidgetTemplateCreateInput = {
   name: string;
   description?: string | null;
-  category: WidgetCategory;
+  category: string;
   status?: WidgetTemplateStatus;
   blocks?: WidgetBlock[] | null;
 };
@@ -21,25 +22,22 @@ export type WidgetTemplateCreateInput = {
 export type WidgetTemplateUpdateInput = {
   name?: string;
   description?: string | null;
-  category?: WidgetCategory;
+  category?: string;
   status?: WidgetTemplateStatus;
   blocks?: WidgetBlock[] | null;
 };
 
-const allowedCategories: WidgetCategory[] = [
-  "layout",
-  "content",
-  "forms",
-  "navigation",
-  "media",
-];
-
 const allowedStatuses: WidgetTemplateStatus[] = ["draft", "published"];
 
-function assertCategory(category: string) {
-  if (!allowedCategories.includes(category as WidgetCategory)) {
-    throw new Error("widget_template_category_invalid");
-  }
+async function resolveCategory(category: string) {
+  const normalized = category.trim();
+  if (!normalized) throw new Error("widget_template_category_invalid");
+  const categories = await listWidgetTemplateCategories();
+  const match = categories.find(
+    (item) => item.name.toLowerCase() === normalized.toLowerCase()
+  );
+  if (!match) throw new Error("widget_template_category_invalid");
+  return match.name;
 }
 
 function assertStatus(status: string) {
@@ -76,7 +74,7 @@ export async function createWidgetTemplate(input: WidgetTemplateCreateInput) {
     throw new Error("widget_template_invalid");
   }
 
-  assertCategory(input.category);
+  const resolvedCategory = await resolveCategory(input.category);
   if (input.status) assertStatus(input.status);
 
   const now = new Date();
@@ -85,7 +83,7 @@ export async function createWidgetTemplate(input: WidgetTemplateCreateInput) {
     .values({
       name: input.name.trim(),
       description: input.description?.trim() ?? null,
-      category: input.category,
+      category: resolvedCategory,
       status: input.status ?? "draft",
       blocks: normalizeBlocks(input.blocks),
       createdAt: now,
@@ -116,8 +114,7 @@ export async function updateWidgetTemplate(
   }
 
   if (input.category !== undefined) {
-    assertCategory(input.category);
-    update.category = input.category;
+    update.category = await resolveCategory(input.category);
   }
 
   if (input.status !== undefined) {

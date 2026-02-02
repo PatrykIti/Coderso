@@ -51,7 +51,11 @@ test("ThemeExportDialog renders title", () => {
 
 test("WidgetCreateDialog renders title", () => {
   const html = renderToString(
-    <WidgetCreateDialog open onOpenChange={() => undefined} />
+    <WidgetCreateDialog
+      open
+      onOpenChange={() => undefined}
+      categories={[{ id: "layout", name: "Layout" }]}
+    />
   );
 
   expect(html).toContain("Custom Widget");

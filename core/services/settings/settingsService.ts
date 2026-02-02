@@ -4,6 +4,19 @@ import { settings } from "../../db/schema";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
 
+type WidgetTemplateCategorySetting = {
+  id: string;
+  name: string;
+};
+
+const DEFAULT_WIDGET_TEMPLATE_CATEGORIES: WidgetTemplateCategorySetting[] = [
+  { id: "layout", name: "Layout" },
+  { id: "content", name: "Content" },
+  { id: "forms", name: "Forms" },
+  { id: "navigation", name: "Navigation" },
+  { id: "media", name: "Media" },
+];
+
 const DEFAULT_SETTINGS = {
   "site.name": "Nextless",
   "site.locale": "en",
@@ -13,6 +26,7 @@ const DEFAULT_SETTINGS = {
   "site.adminRedirectEnabled": false,
   "design.tokens": {} as DesignTokenOverrides,
   "search.categoryOverrides": {} as SearchCategoryOverrides,
+  "widgets.templateCategories": DEFAULT_WIDGET_TEMPLATE_CATEGORIES,
 };
 
 export type SettingKey = keyof typeof DEFAULT_SETTINGS;
@@ -125,6 +139,28 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return value as SearchCategoryOverrides;
   }
 
+  if (key === "widgets.templateCategories") {
+    if (!Array.isArray(value)) {
+      throw new Error("settings_value_invalid");
+    }
+    const normalized = value.map((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        throw new Error("settings_value_invalid");
+      }
+      const record = entry as { id?: unknown; name?: unknown };
+      if (typeof record.id !== "string" || typeof record.name !== "string") {
+        throw new Error("settings_value_invalid");
+      }
+      const id = record.id.trim();
+      const name = record.name.trim();
+      if (!id || !name) {
+        throw new Error("settings_value_invalid");
+      }
+      return { id, name };
+    });
+    return normalized as WidgetTemplateCategorySetting[];
+  }
+
   throw new Error("settings_value_invalid");
 }
 
@@ -145,6 +181,11 @@ export async function listSettings(): Promise<SettingValueMap> {
 
     if (key === "search.categoryOverrides") {
       merged[key] = row.value as SearchCategoryOverrides;
+      continue;
+    }
+
+    if (key === "widgets.templateCategories") {
+      merged[key] = row.value as WidgetTemplateCategorySetting[];
       continue;
     }
 

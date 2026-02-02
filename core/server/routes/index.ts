@@ -27,6 +27,7 @@ import { registerEmailSettingsRoutes } from "./emailSettingsRoutes";
 import { registerIntegrationsRoutes } from "./integrationsRoutes";
 import { registerUserSettingsRoutes } from "./userSettingsRoutes";
 import { registerWidgetTemplateRoutes } from "./widgetTemplateRoutes";
+import { registerWidgetTemplateCategoryRoutes } from "./widgetTemplateCategoryRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -63,4 +64,8 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerIntegrationsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerUserSettingsRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
   registerWidgetTemplateRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerWidgetTemplateCategoryRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
 }
