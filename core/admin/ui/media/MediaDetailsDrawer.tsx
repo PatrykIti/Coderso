@@ -71,7 +71,8 @@ export function MediaDetailsDrawer({
   onCopy,
   onOpen,
 }: MediaDetailsDrawerProps) {
-  const displayName = item?.originalName ?? item?.name ?? "";
+  const displayName = item?.name ?? "";
+  const originalName = item?.originalName ?? "";
   const [title, setTitle] = useState(item?.title ?? displayName)
   const [alt, setAlt] = useState(item?.alt ?? "")
   const [caption, setCaption] = useState(item?.caption ?? "")
@@ -178,7 +179,7 @@ export function MediaDetailsDrawer({
                   <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                     Metadata
                   </div>
-                  {displayName ? (
+                  {originalName ? (
                     <div className="space-y-2">
                       <label
                         htmlFor={`media-original-${item.id}`}
@@ -188,12 +189,21 @@ export function MediaDetailsDrawer({
                       </label>
                       <Input
                         id={`media-original-${item.id}`}
-                        value={displayName}
+                        value={originalName}
                         readOnly
                         className="bg-muted/30"
                       />
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Original File Name
+                      </div>
+                      <div className="rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                        Not available for this asset.
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <label
                       htmlFor={`media-alt-${item.id}`}

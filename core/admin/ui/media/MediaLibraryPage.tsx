@@ -35,11 +35,12 @@ function resolveKindFromMime(mimeType: string): MediaKind {
 }
 
 function resolveName(record: MediaRecord) {
-  if (record.originalName) return record.originalName;
   const fromKey = record.key?.split("/").pop();
   if (fromKey) return fromKey;
   const fromUrl = record.url?.split("/").pop();
-  return fromUrl ?? "asset";
+  if (fromUrl) return fromUrl;
+  if (record.originalName) return record.originalName;
+  return "asset";
 }
 
 function toMediaItem(record: MediaRecord): MediaItem {
@@ -147,6 +148,7 @@ export function MediaLibraryPage() {
       const matchesSearch =
         !search ||
         item.name.toLowerCase().includes(search.toLowerCase()) ||
+        (item.originalName ?? "").toLowerCase().includes(search.toLowerCase()) ||
         (item.title ?? "").toLowerCase().includes(search.toLowerCase());
       const matchesFilter = filter === "all" || item.type === filter;
       return matchesSearch && matchesFilter;

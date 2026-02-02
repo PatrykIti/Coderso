@@ -25,7 +25,8 @@ export function MediaDetailsPanel({
   onCopy,
   onOpen,
 }: MediaDetailsPanelProps) {
-  const displayName = item?.originalName ?? item?.name ?? "";
+  const displayName = item?.name ?? "";
+  const originalName = item?.originalName ?? "";
   const [title, setTitle] = useState(item?.title ?? "");
   const [alt, setAlt] = useState(item?.alt ?? "");
   const [caption, setCaption] = useState(item?.caption ?? "");
@@ -88,6 +89,12 @@ export function MediaDetailsPanel({
           <label className="text-sm font-medium">File Name</label>
           <Input value={displayName} readOnly />
         </div>
+        {originalName ? (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Original File Name</label>
+            <Input value={originalName} readOnly />
+          </div>
+        ) : null}
         <div className="space-y-2">
           <label className="text-sm font-medium">Title</label>
           <Input value={title} onChange={(event) => setTitle(event.target.value)} />

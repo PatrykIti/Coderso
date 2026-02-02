@@ -35,7 +35,7 @@ export async function listMedia() {
 
 export async function uploadMedia(file: File, meta?: MediaUpdatePayload) {
   const formData = new FormData();
-  formData.set("file", file);
+  formData.set("file", file, file.name);
   if (meta?.alt) formData.set("alt", meta.alt);
   if (meta?.title) formData.set("title", meta.title);
   if (meta?.caption) formData.set("caption", meta.caption);
