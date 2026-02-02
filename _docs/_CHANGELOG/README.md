@@ -153,6 +153,7 @@ Project Change Log.
 | 120 | 2026-02-01 | Admin input controls theming | Admin/UI |
 | 121 | 2026-02-01 | Menus editor wiring | Admin/UI |
 | 122 | 2026-02-01 | Menus editor validation | Admin/UI |
+| 123 | 2026-02-02 | Widgets library UI refresh | Admin/UI |
 
 
 ---

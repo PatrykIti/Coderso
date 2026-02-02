@@ -26,8 +26,8 @@ const accessLog: AccessLogItem = {
 const widget: WidgetItem = {
   id: "hero-split",
   name: "Hero Split",
-  category: "hero",
-  categoryLabel: "Hero Section",
+  category: "layout",
+  categoryLabel: "Layout",
 };
 
 const themeProfile: AdminThemeProfileCard = {

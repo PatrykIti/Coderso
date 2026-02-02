@@ -34,6 +34,7 @@ import { SeoManagerPage } from "@/ui/seo/SeoManagerPage";
 import { UsersRolesPage } from "@/ui/users/UsersRolesPage";
 import { ThemesPage } from "@/ui/themes/ThemesPage";
 import { WidgetLibraryPage } from "@/ui/widgets/WidgetLibraryPage";
+import { WidgetTemplateEditorPage } from "@/ui/widgets/WidgetTemplateEditorPage";
 import { ApiKeysPage } from "@/ui/settings/ApiKeysPage";
 import { EmailSettingsPage } from "@/ui/settings/EmailSettingsPage";
 import { GeneralSettingsPage } from "@/ui/settings/GeneralSettingsPage";
@@ -262,6 +263,7 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/roles", element: <PermissionsMatrixPage /> },
       { pattern: "/themes", element: <ThemesPage /> },
       { pattern: "/widgets", element: <WidgetLibraryPage /> },
+      { pattern: "/widgets/templates/:id", element: <WidgetTemplateEditorPage /> },
       {
         pattern: "/settings",
         element: (

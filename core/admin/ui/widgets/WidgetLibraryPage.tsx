@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Columns,
   FileText,
-  Filter,
   GalleryVerticalEnd,
   Grid2X2,
   Image as ImageIcon,
@@ -17,18 +16,21 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { listPages, type PageSummary } from "@/services/pagesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
+import { resolveAdminHref } from "@/utils/adminPaths";
 
 import { WidgetCard } from "./WidgetCard";
 import { WidgetCreateDialog } from "./WidgetCreateDialog";
 import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
+import { WidgetInsertDialog } from "./WidgetInsertDialog";
 import type { WidgetCategoryId, WidgetItem } from "./types";
 
 type WidgetCategoryFilter = "all" | "favorites" | WidgetCategoryId;
@@ -216,7 +218,33 @@ export function WidgetLibraryPage() {
   });
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [selectedWidget, setSelectedWidget] = useState<WidgetItem | null>(null);
+  const [insertOpen, setInsertOpen] = useState(false);
+  const [selectedWidget, setSelectedWidget] = useState<WidgetWithPreview | null>(
+    null
+  );
+  const [insertWidget, setInsertWidget] = useState<WidgetWithPreview | null>(
+    null
+  );
+  const [pages, setPages] = useState<PageSummary[]>([]);
+  const [pagesError, setPagesError] = useState<string | null>(null);
+  const adminBasePath = useAdminBasePath();
+  const templateCreateHref = resolveAdminHref(adminBasePath, "/admin/widgets/templates/new");
+
+  useEffect(() => {
+    let active = true;
+    listPages()
+      .then((result) => {
+        if (!active) return;
+        setPages(result);
+      })
+      .catch(() => {
+        if (!active) return;
+        setPagesError("Failed to load pages.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const categoryCounts = useMemo(() => {
     const counts: Record<WidgetCategoryFilter, number> = {
@@ -259,10 +287,21 @@ export function WidgetLibraryPage() {
     );
   };
 
-  const handleSelectWidget = (widget: WidgetItem) => {
+  const handleSelectWidget = (widget: WidgetWithPreview) => {
     setSelectedWidget(widget);
     setDetailsOpen(true);
   };
+
+  const handleInsertWidget = (widget: WidgetWithPreview | null) => {
+    if (!widget) return;
+    setInsertWidget(widget);
+    setInsertOpen(true);
+  };
+
+  const favoriteWidgets = useMemo(
+    () => widgets.filter((widget) => widget.isFavorite).slice(0, 3),
+    [widgets]
+  );
 
   return (
     <AdminShell
@@ -287,144 +326,174 @@ export function WidgetLibraryPage() {
       }
       topbarActions={
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="gap-2">
-            <Filter className="h-4 w-4" />
-            Filters
+          <Button size="sm" variant="outline" className="gap-2" asChild>
+            <a href={templateCreateHref}>
+              <Plus className="h-4 w-4" />
+              New Template
+            </a>
           </Button>
-          <Separator orientation="vertical" className="h-6" />
           <Button size="sm" className="gap-2" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4" />
-            Custom Widget
+            Create Widget
           </Button>
         </div>
       }
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <PageHeader
-          title="Widget Library"
-          description="Select and insert widgets to your content pages."
-          actions={
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary">{filteredWidgets.length} widgets</Badge>
-              <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
-                <Button
-                  variant={view === "grid" ? "secondary" : "ghost"}
-                  size="icon-sm"
-                  onClick={() => setView("grid")}
-                >
-                  <Grid2X2 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={view === "list" ? "secondary" : "ghost"}
-                  size="icon-sm"
-                  onClick={() => setView("list")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 lg:flex-row">
+        <aside className="w-full lg:w-72">
+          <div className="rounded-2xl border border-border/60 bg-card px-4 py-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                Library
+              </p>
+              <Badge variant="outline" className="text-[10px]">
+                {categoryCounts.all}
+              </Badge>
             </div>
-          }
-        />
+            <Separator className="my-4" />
+            <ScrollArea className="max-h-[360px] pr-2">
+              <div className="space-y-2">
+                {[...primaryCategories, ...secondaryCategories].map(
+                  (category, index) => {
+                    const isActive = activeCategory === category.id;
+                    const count = categoryCounts[category.id] ?? 0;
+                    const isDivider =
+                      index === primaryCategories.length - 1 &&
+                      secondaryCategories.length > 0;
 
-        <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
-          <Card className="h-fit border-border/60 py-0 shadow-sm">
-            <CardContent className="space-y-4 px-4 pb-4 pt-4">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                  Categories
-                </p>
-                <Badge variant="outline" className="text-[10px]">
-                  {categoryCounts.all}
-                </Badge>
+                    return (
+                      <div key={category.id}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveCategory(category.id)}
+                          className={cn(
+                            "flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-sm font-medium transition",
+                            isActive
+                              ? "border-primary/40 bg-primary/10 text-primary"
+                              : "border-border/60 bg-muted/30 text-muted-foreground hover:border-primary/30 hover:text-primary"
+                          )}
+                        >
+                          <category.icon className="h-4 w-4" />
+                          <span>{category.label}</span>
+                          <Badge variant="outline" className="ml-auto text-[10px]">
+                            {count}
+                          </Badge>
+                        </button>
+                        {isDivider ? <Separator className="my-3" /> : null}
+                      </div>
+                    );
+                  }
+                )}
               </div>
-              <Separator />
-              <ScrollArea className="h-[420px] pr-2">
-                <div className="space-y-2">
-                  {[...primaryCategories, ...secondaryCategories].map(
-                    (category, index) => {
-                      const isActive = activeCategory === category.id;
-                      const count = categoryCounts[category.id] ?? 0;
-                      const isDivider =
-                        index === primaryCategories.length - 1 &&
-                        secondaryCategories.length > 0;
-
-                      return (
-                        <div key={category.id}>
-                          <button
-                            type="button"
-                            onClick={() => setActiveCategory(category.id)}
-                            className={cn(
-                              "flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium transition",
-                              isActive
-                                ? "border-primary/40 bg-primary/10 text-primary"
-                                : "border-border/60 bg-muted/30 text-muted-foreground hover:border-primary/30 hover:text-primary"
-                            )}
-                          >
-                            <category.icon className="h-4 w-4" />
-                            <span>{category.label}</span>
-                            <Badge
-                              variant="outline"
-                              className="ml-auto text-[10px]"
-                            >
-                              {count}
-                            </Badge>
-                          </button>
-                          {isDivider ? <Separator className="my-3" /> : null}
-                        </div>
-                      );
-                    }
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-4">
-            <div
-              className={cn(
-                "grid gap-6",
-                view === "grid"
-                  ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                  : "grid-cols-1"
-              )}
-            >
-              {filteredWidgets.length === 0 ? (
-                <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-                  No widgets match your search.
-                </div>
-              ) : (
-                filteredWidgets.map((widget) => (
-                  <WidgetCard
-                    key={widget.id}
-                    name={widget.name}
-                    categoryLabel={widget.categoryLabel}
-                    preview={renderPreview(widget.preview)}
-                    badge={widget.badge}
-                    isFavorite={widget.isFavorite}
-                    onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
-                    onSelect={() =>
-                      handleSelectWidget({
-                        id: widget.id,
-                        name: widget.name,
-                        category: widget.category,
-                        categoryLabel: widget.categoryLabel,
-                        badge: widget.badge,
-                        isFavorite: widget.isFavorite,
-                      })
-                    }
-                  />
-                ))
-              )}
+            </ScrollArea>
+            <Separator className="my-4" />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                Favorites
+              </p>
+              <div className="mt-4 space-y-3">
+                {favoriteWidgets.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No favorites yet.
+                  </p>
+                ) : (
+                  favoriteWidgets.map((widget) => (
+                    <button
+                      key={widget.id}
+                      type="button"
+                      onClick={() => handleSelectWidget(widget)}
+                      className="flex w-full items-center gap-3 rounded-lg px-2 py-1 text-left text-sm text-muted-foreground transition hover:text-foreground"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/40 text-primary">
+                        <Star className="h-4 w-4" />
+                      </div>
+                      <span className="truncate">{widget.name}</span>
+                    </button>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </aside>
+
+        <section className="flex-1 space-y-6">
+          <PageHeader
+            title="Widget Library"
+            description="Manage and reuse your custom interface components across all pages."
+            actions={
+              <div className="flex items-center gap-3">
+                <Badge variant="secondary">{filteredWidgets.length} widgets</Badge>
+                <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
+                  <Button
+                    variant={view === "grid" ? "secondary" : "ghost"}
+                    size="icon-sm"
+                    onClick={() => setView("grid")}
+                  >
+                    <Grid2X2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={view === "list" ? "secondary" : "ghost"}
+                    size="icon-sm"
+                    onClick={() => setView("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            }
+          />
+
+          <div
+            className={cn(
+              "grid gap-6",
+              view === "grid"
+                ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                : "grid-cols-1"
+            )}
+          >
+            {filteredWidgets.length === 0 ? (
+              <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+                No widgets match your search.
+              </div>
+            ) : (
+              filteredWidgets.map((widget) => (
+                <WidgetCard
+                  key={widget.id}
+                  name={widget.name}
+                  categoryLabel={widget.categoryLabel}
+                  preview={renderPreview(widget.preview)}
+                  badge={widget.badge}
+                  isFavorite={widget.isFavorite}
+                  onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
+                  onInsert={() => handleInsertWidget(widget)}
+                  onSelect={() => handleSelectWidget(widget)}
+                />
+              ))
+            )}
+          </div>
+        </section>
       </div>
       <WidgetDetailsDrawer
         widget={selectedWidget}
+        preview={selectedWidget ? renderPreview(selectedWidget.preview) : undefined}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
+        onInsert={() => handleInsertWidget(selectedWidget)}
       />
       <WidgetCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <WidgetInsertDialog
+        open={insertOpen}
+        onOpenChange={setInsertOpen}
+        widget={insertWidget}
+        preview={insertWidget ? renderPreview(insertWidget.preview) : undefined}
+        pages={pages.map((page) => ({ id: page.id, title: page.title }))}
+        onInsert={() => undefined}
+      />
+      {pagesError ? (
+        <span className="sr-only" role="status">
+          {pagesError}
+        </span>
+      ) : null}
     </AdminShell>
   );
 }

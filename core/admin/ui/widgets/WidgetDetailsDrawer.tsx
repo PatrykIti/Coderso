@@ -12,12 +12,16 @@ type WidgetDetailsDrawerProps = {
   widget: WidgetItem | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preview?: React.ReactNode;
+  onInsert?: () => void;
 };
 
 export function WidgetDetailsDrawer({
   widget,
   open,
   onOpenChange,
+  preview,
+  onInsert,
 }: WidgetDetailsDrawerProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -43,19 +47,24 @@ export function WidgetDetailsDrawer({
           <>
             <ScrollArea className="flex-1 min-h-0">
               <div className="space-y-6 px-6 py-6">
+                {preview ? (
+                  <div className="overflow-hidden rounded-xl border border-border/70 bg-muted/30">
+                    <div className="aspect-video">{preview}</div>
+                  </div>
+                ) : null}
                 <div className="rounded-xl border bg-muted/30 p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
+                  <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                     <Sparkles className="h-4 w-4 text-primary" />
                     {widget.categoryLabel}
+                    {widget.badge ? (
+                      <Badge variant="secondary" className="text-[10px] uppercase">
+                        {widget.badge}
+                      </Badge>
+                    ) : null}
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     Drag & drop this widget into your layout or insert directly.
                   </p>
-                  {widget.badge ? (
-                    <Badge variant="secondary" className="mt-3 text-[10px] uppercase">
-                      {widget.badge}
-                    </Badge>
-                  ) : null}
                 </div>
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase text-muted-foreground">
@@ -72,7 +81,14 @@ export function WidgetDetailsDrawer({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => onOpenChange(false)}>Insert Widget</Button>
+              <Button
+                onClick={() => {
+                  onOpenChange(false);
+                  onInsert?.();
+                }}
+              >
+                Insert Widget
+              </Button>
             </div>
           </>
         ) : null}

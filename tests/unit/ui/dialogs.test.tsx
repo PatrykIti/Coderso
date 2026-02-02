@@ -6,6 +6,7 @@ import { ExportDialog } from "../../../core/admin/ui/shared/ExportDialog";
 import { BackupNowDialog } from "../../../core/admin/ui/backups/BackupNowDialog";
 import { ThemeExportDialog } from "../../../core/admin/ui/themes/ThemeExportDialog";
 import { WidgetCreateDialog } from "../../../core/admin/ui/widgets/WidgetCreateDialog";
+import { WidgetInsertDialog } from "../../../core/admin/ui/widgets/WidgetInsertDialog";
 import { IntegrationRequestDialog } from "../../../core/admin/ui/settings/IntegrationRequestDialog";
 
 test("SeoAuditDialog renders audit options", () => {
@@ -54,6 +55,14 @@ test("WidgetCreateDialog renders title", () => {
   );
 
   expect(html).toContain("Custom Widget");
+});
+
+test("WidgetInsertDialog renders title", () => {
+  const html = renderToString(
+    <WidgetInsertDialog open onOpenChange={() => undefined} pages={[]} />
+  );
+
+  expect(html).toContain("Insert Widget");
 });
 
 test("IntegrationRequestDialog renders title", () => {
