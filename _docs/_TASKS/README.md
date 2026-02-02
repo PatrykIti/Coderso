@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 27 tasks
+- **To Do:** 34 tasks
 - **In Progress:** 0
 - **Done:** 198 tasks
 
@@ -60,6 +60,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-048-04 | Taxonomy System & Terms | Medium | Large | Categories + tags |
 | TASK-048-05 | Content Editor Help & Tooltips | Low | Small | UI guidance |
 | TASK-048-06 | Content Modeling Docs & Examples | Medium | Medium | Cookbook + docs |
+| TASK-049 | Widget Library — Core + Templates + Favorites | High | Large | Index for TASK-049-01..06 |
+| TASK-049-01 | Widget Templates DB Schema | High | Medium | widget_templates table |
+| TASK-049-02 | Widget Templates Service | High | Medium | CRUD + validation |
+| TASK-049-03 | Widget Catalog + API Routes | High | Medium | /widgets + templates CRUD |
+| TASK-049-04 | Widget Favorites (User Settings) | Medium | Small | widgets.favorites key |
+| TASK-049-05 | Widget Library UI Wiring | High | Large | API wiring + insert |
+| TASK-049-06 | Widget Template Editor UI | Medium | Medium | builder reuse |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |

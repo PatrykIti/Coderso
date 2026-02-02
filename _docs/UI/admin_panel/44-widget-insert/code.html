@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Widget Template Editor - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#14b8a6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0a0f14",
+                        "card-dark": "#15202b",
+                        "border-dark": "#1e293b",
+                        "modal-surface": "#0f172a",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 10px;
+        }
+        .canvas-grid {
+            background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-300 overflow-hidden h-screen w-full flex flex-col">
+<div class="flex flex-col h-full w-full blur-sm pointer-events-none">
+<header class="h-16 bg-card-dark border-b border-border-dark flex items-center justify-between px-6 shrink-0 z-30">
+<div class="flex items-center gap-6 flex-1">
+<div class="flex items-center gap-2 text-xs font-display tracking-wide text-slate-500">
+<span>Widgets</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span>Templates</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-slate-300">New Template</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="px-5 py-2 bg-primary/20 text-primary rounded-xl font-bold font-display text-xs">Save Template</div>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden relative">
+<aside class="w-72 bg-card-dark border-r border-border-dark flex flex-col h-full"></aside>
+<main class="flex-1 canvas-grid relative overflow-auto p-12 flex items-center justify-center"></main>
+<aside class="w-80 bg-card-dark border-l border-border-dark flex flex-col h-full"></aside>
+</div>
+</div>
+<div class="fixed inset-0 bg-background-dark/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+<div class="w-full max-w-md bg-modal-surface border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+<div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+<h2 class="text-lg font-display font-bold text-white">Insert Widget</h2>
+<button class="text-slate-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-6 space-y-6">
+<div class="flex gap-4 p-3 bg-slate-900/50 rounded-xl border border-slate-800">
+<div class="w-24 aspect-video bg-slate-800 rounded-lg overflow-hidden shrink-0 border border-slate-700">
+<img alt="Modern Hero" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAv0fsP04YzL_wJbxHCl_SF6OiSBljUIoTKPoZn5nVV6FZ-TVBKuOm5dDWp1QyVdxs9UbTZqsv-MShrDePQ3UPmEExtHZPSmddh8Hxg4LUMUGqcP5gZ1lJ-YhTo24mPpEa-m9F6Cw5GLk5P86sj9bIh0fJU5jUYC6YN_pTi4gWcZ1QMYqtAeCoL-9vESeLrX012OgYRvCnJ99Cweo2CDq8JyAARna-bUZ2bg1VAYjM5wdkUYq5uBuWv-0hcFAgJZBXWQ4YfWjGIZXQ"/>
+</div>
+<div class="flex flex-col justify-center gap-1.5">
+<div class="flex items-center gap-2">
+<span class="text-sm font-bold text-white font-display">Modern Hero</span>
+<span class="px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-md text-[9px] uppercase font-bold text-primary tracking-wider">Hero</span>
+</div>
+<p class="text-[10px] text-slate-500">A clean, high-conversion hero section with primary call-to-action.</p>
+</div>
+</div>
+<div class="space-y-5">
+<div>
+<label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Target Page</label>
+<div class="relative">
+<select class="w-full bg-slate-900 border border-slate-800 rounded-xl py-2.5 pl-4 pr-10 text-xs text-white focus:ring-1 focus:ring-primary focus:border-primary appearance-none transition-all">
+<option>Home</option>
+<option>About Us</option>
+<option>Services</option>
+<option>Contact</option>
+<option>Blog Archive</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">expand_more</span>
+</div>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Placement</label>
+<div class="space-y-2">
+<label class="flex items-center gap-3 p-3 bg-slate-900/30 border border-slate-800 rounded-xl cursor-pointer hover:bg-slate-900/60 transition-colors group">
+<input checked="" class="w-4 h-4 text-primary bg-slate-900 border-slate-700 focus:ring-primary focus:ring-offset-slate-900" name="placement" type="radio"/>
+<div class="flex flex-col">
+<span class="text-xs font-medium text-slate-200">Insert as new section</span>
+<span class="text-[10px] text-slate-500">Adds at the bottom of the page layout</span>
+</div>
+</label>
+<label class="flex items-center gap-3 p-3 bg-slate-900/30 border border-slate-800 rounded-xl cursor-pointer hover:bg-slate-900/60 transition-colors group">
+<input class="w-4 h-4 text-primary bg-slate-900 border-slate-700 focus:ring-primary focus:ring-offset-slate-900" name="placement" type="radio"/>
+<div class="flex flex-col">
+<span class="text-xs font-medium text-slate-200">Insert into existing block</span>
+<span class="text-[10px] text-slate-500">Allows selection of specific container</span>
+</div>
+</label>
+</div>
+</div>
+</div>
+</div>
+<div class="px-6 py-4 bg-slate-900/50 border-t border-slate-800 flex items-center justify-end gap-3">
+<button class="px-4 py-2 text-slate-400 hover:text-white transition-colors text-xs font-bold font-display">
+                    Cancel
+                </button>
+<button class="px-6 py-2 bg-primary text-background-dark rounded-xl font-bold font-display text-xs hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
+                    Insert Widget
+                </button>
+</div>
+</div>
+</div>
+
+</body></html>

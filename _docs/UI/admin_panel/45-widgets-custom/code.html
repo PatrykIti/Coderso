@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Widget Template Editor - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#14b8a6", // Teal accent highlight
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0a0f14",
+                        "card-dark": "#15202b",
+                        "modal-surface": "#0f172a",
+                        "border-dark": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 10px;
+        }
+        .canvas-grid {
+            background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .glow-teal {
+            box-shadow: 0 0 20px rgba(20, 184, 166, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-300 overflow-hidden h-screen w-full flex flex-col relative">
+<header class="h-16 bg-card-dark border-b border-border-dark flex items-center justify-between px-6 shrink-0 z-10 blur-[2px]">
+<div class="flex items-center gap-6 flex-1">
+<div class="flex items-center gap-2 text-xs font-display tracking-wide text-slate-500">
+<span>Widgets</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span>Templates</span>
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+<span class="text-slate-300">New Template</span>
+<div class="ml-4 px-2 py-0.5 bg-slate-800 border border-slate-700 rounded-full text-[10px] uppercase font-bold text-slate-400">Draft</div>
+</div>
+<div class="h-8 w-px bg-border-dark hidden md:block"></div>
+<div class="flex flex-col max-w-md">
+<input class="bg-transparent border-none p-0 text-white font-display font-bold text-lg focus:ring-0 w-full placeholder:text-slate-700" placeholder="Template Name" readonly="" type="text" value="New Marketing Template"/>
+</div>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden relative blur-[2px]">
+<aside class="w-72 bg-card-dark border-r border-border-dark flex flex-col h-full z-10 overflow-hidden">
+<div class="p-4 border-b border-border-dark">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
+<input class="w-full bg-slate-900/50 border border-border-dark rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none transition-all text-white placeholder:text-slate-600" placeholder="Search widgets..." readonly="" type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-6">
+<div>
+<h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Categories</h3>
+<div class="space-y-1">
+<button class="w-full flex items-center gap-3 px-3 py-2 rounded-xl bg-slate-800/50 text-white text-xs font-medium border border-border-dark">
+<span class="material-symbols-outlined text-lg text-primary">category</span>
+                        All Widgets
+                    </button>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 canvas-grid relative overflow-auto p-12 flex items-center justify-center">
+<div class="max-w-2xl w-full border-2 border-dashed border-slate-800 rounded-3xl p-16 flex flex-col items-center justify-center text-center bg-background-dark/30 backdrop-blur-sm">
+<div class="w-20 h-20 bg-primary/5 border border-primary/20 rounded-2xl flex items-center justify-center text-primary mb-6">
+<span class="material-symbols-outlined text-4xl">add_circle</span>
+</div>
+<h2 class="text-2xl font-display font-bold text-white mb-3">Build your template</h2>
+</div>
+</main>
+</div>
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+<div class="w-full max-w-lg bg-modal-surface border border-border-dark rounded-2xl shadow-2xl overflow-hidden glow-teal">
+<div class="px-6 py-5 border-b border-border-dark flex items-center justify-between">
+<h2 class="text-lg font-display font-bold text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">extension</span>
+                Create Custom Widget
+            </h2>
+<button class="text-slate-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-6 space-y-5">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    Widget Name <span class="text-rose-500">*</span>
+</label>
+<input class="w-full bg-slate-900 border border-border-dark rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="e.g. Featured Service Card" type="text"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Description</label>
+<textarea class="w-full bg-slate-900 border border-border-dark rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-600 focus:ring-1 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all resize-none" placeholder="Explain the purpose of this widget..." rows="3"></textarea>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Category</label>
+<div class="relative">
+<select class="w-full bg-slate-900 border border-border-dark rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all appearance-none">
+<option value="layout">Layout</option>
+<option value="content">Content</option>
+<option value="forms">Forms</option>
+<option value="navigation">Navigation</option>
+<option value="media">Media</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-lg">expand_more</span>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Base Template</label>
+<div class="relative">
+<select class="w-full bg-slate-900 border border-border-dark rounded-xl px-4 py-2.5 text-sm text-white focus:ring-1 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all appearance-none">
+<option value="hero">Start from Hero</option>
+<option value="timeline">Timeline</option>
+<option value="blank">Blank</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-lg">expand_more</span>
+</div>
+</div>
+</div>
+<div class="bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-xl mt-0.5">info</span>
+<p class="text-[11px] text-slate-400 leading-relaxed">
+                    Custom widgets can be reused across pages and templates. Edits to the base widget reflect everywhere it's used.
+                </p>
+</div>
+</div>
+<div class="px-6 py-4 bg-slate-900/50 border-t border-border-dark flex items-center justify-end gap-3">
+<button class="px-5 py-2 text-slate-400 hover:text-white transition-colors text-xs font-bold font-display uppercase tracking-wider">
+                Cancel
+            </button>
+<button class="px-6 py-2.5 bg-primary text-background-dark rounded-xl font-bold font-display text-xs hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 uppercase tracking-wider">
+                Create Widget
+            </button>
+</div>
+</div>
+</div>
+
+</body></html>

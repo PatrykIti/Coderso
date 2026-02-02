@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Widget Library - Nextless CMS</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Noto+Sans:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1392ec",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#0a0f14",
+                        "card-dark": "#15202b",
+                        "border-dark": "#1e293b",
+                    },
+                    fontFamily: {
+                        "display": ["Space Grotesk", "sans-serif"],
+                        "body": ["Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+        h1, h2, h3, h4, h5, h6, .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 10px;
+        }
+        .glow-subtle {
+            box-shadow: 0 0 20px rgba(19, 146, 236, 0.05);
+        }
+        .card-hover:hover {
+            box-shadow: 0 0 25px rgba(19, 146, 236, 0.15);
+            border-color: rgba(19, 146, 236, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-300 overflow-hidden h-screen w-full flex">
+<aside class="w-20 bg-card-dark border-r border-border-dark flex flex-col h-full shrink-0 z-30">
+<div class="p-4 flex flex-col items-center gap-8 h-full">
+<div class="h-10 w-10 bg-primary rounded-lg flex items-center justify-center text-white shadow-lg shadow-primary/20 cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">widgets</span>
+</div>
+<nav class="flex-1 flex flex-col gap-6">
+<button class="p-3 rounded-xl text-slate-500 hover:text-primary hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">dashboard</span>
+</button>
+<button class="p-3 rounded-xl text-slate-500 hover:text-primary hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">article</span>
+</button>
+<button class="p-3 rounded-xl text-primary bg-primary/10 transition-all ring-1 ring-primary/20">
+<span class="material-symbols-outlined text-[26px]">widgets</span>
+</button>
+<button class="p-3 rounded-xl text-slate-500 hover:text-primary hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">perm_media</span>
+</button>
+<div class="h-px w-8 bg-slate-800 mx-auto"></div>
+<button class="p-3 rounded-xl text-slate-500 hover:text-primary hover:bg-slate-800 transition-all">
+<span class="material-symbols-outlined text-[26px]">settings</span>
+</button>
+</nav>
+<div class="pb-2">
+<div class="h-10 w-10 rounded-full bg-cover bg-center ring-2 ring-slate-700 cursor-pointer" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBQte0bThsfneqWpptAAUESsuErncJirlV8jbp8FjAush8_RYkFA5hHU-L8tJkeaLOhwEkV3b6haFQQjODtalxySPXPMmJJHqrjSxdGnQzAq7LDbJgwblQzRK_xwPiZ57weg6XwQp0KGzHMb9uDdsUeVxVyLsi9NHXPFtCEPOO7HlJpN3f7jdNRGNjNcNBA70ESuRUhWjLJqUyVtyKyxYKuSwZAAtEQB1oWG02d9nZ3KUIe89y1AIxbJs950p9RlzjpbwAcdPMo91M');"></div>
+</div>
+</div>
+</aside>
+<div class="flex-1 flex flex-col h-full overflow-hidden">
+<header class="h-16 bg-card-dark border-b border-border-dark flex items-center justify-between px-8 shrink-0 z-20">
+<div class="flex items-center gap-6 w-1/3">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
+<input class="w-full bg-slate-800/50 border border-border-dark rounded-xl py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-white placeholder:text-slate-500" placeholder="Search widgets..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-400 hover:text-white transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-card-dark"></span>
+</button>
+<button class="p-2 text-slate-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<div class="h-8 w-px bg-slate-800 mx-2"></div>
+<button class="px-4 py-2 bg-primary text-white rounded-lg font-bold font-display text-xs hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Create Widget
+                </button>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<aside class="w-64 bg-card-dark/50 border-r border-border-dark p-6 overflow-y-auto custom-scrollbar">
+<h2 class="text-xs font-bold font-display text-slate-500 uppercase tracking-widest mb-6">Library</h2>
+<nav class="space-y-1">
+<button class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-primary/10 text-primary font-medium text-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl">grid_view</span>
+                            All Widgets
+                        </div>
+<span class="text-xs font-bold opacity-60">24</span>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-all text-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl">view_quilt</span>
+                            Hero Sections
+                        </div>
+<span class="text-xs font-bold opacity-40">8</span>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-all text-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl">grid_on</span>
+                            Grids
+                        </div>
+<span class="text-xs font-bold opacity-40">6</span>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-all text-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl">list_alt</span>
+                            Forms
+                        </div>
+<span class="text-xs font-bold opacity-40">4</span>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-all text-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl">play_circle</span>
+                            Media
+                        </div>
+<span class="text-xs font-bold opacity-40">3</span>
+</button>
+<button class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 transition-all text-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl">code</span>
+                            Custom
+                        </div>
+<span class="text-xs font-bold opacity-40">3</span>
+</button>
+</nav>
+<div class="mt-10">
+<h2 class="text-xs font-bold font-display text-slate-500 uppercase tracking-widest mb-4">Favorites</h2>
+<div class="space-y-4">
+<div class="flex items-center gap-3 group cursor-pointer">
+<div class="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+<span class="material-symbols-outlined text-base">star</span>
+</div>
+<span class="text-sm text-slate-400 group-hover:text-white transition-colors">Pricing Table</span>
+</div>
+<div class="flex items-center gap-3 group cursor-pointer">
+<div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+<span class="material-symbols-outlined text-base">star</span>
+</div>
+<span class="text-sm text-slate-400 group-hover:text-white transition-colors">Hero Modern</span>
+</div>
+</div>
+</div>
+</aside>
+<main class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+<header class="mb-8">
+<h1 class="text-2xl font-display font-bold text-white mb-2">Widget Library</h1>
+<p class="text-slate-500">Manage and reuse your custom interface components across all pages.</p>
+</header>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="bg-card-dark border border-primary/40 rounded-2xl p-4 glow-subtle transition-all card-hover group relative">
+<div class="aspect-video bg-slate-800 rounded-xl mb-4 overflow-hidden relative border border-slate-700">
+<img alt="Hero Preview" class="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAv0fsP04YzL_wJbxHCl_SF6OiSBljUIoTKPoZn5nVV6FZ-TVBKuOm5dDWp1QyVdxs9UbTZqsv-MShrDePQ3UPmEExtHZPSmddh8Hxg4LUMUGqcP5gZ1lJ-YhTo24mPpEa-m9F6Cw5GLk5P86sj9bIh0fJU5jUYC6YN_pTi4gWcZ1QMYqtAeCoL-9vESeLrX012OgYRvCnJ99Cweo2CDq8JyAARna-bUZ2bg1VAYjM5wdkUYq5uBuWv-0hcFAgJZBXWQ4YfWjGIZXQ"/>
+<button class="absolute top-2 right-2 h-8 w-8 bg-black/40 backdrop-blur-md rounded-lg flex items-center justify-center text-yellow-500">
+<span class="material-symbols-outlined text-lg fill-1">star</span>
+</button>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+</div>
+<div class="flex items-start justify-between mb-3">
+<div>
+<span class="text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/10 px-2 py-0.5 rounded-full mb-1 inline-block">Hero</span>
+<h3 class="font-display font-bold text-white text-base">Modern Landing Hero</h3>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-2">
+<div class="flex -space-x-2">
+<div class="h-6 w-6 rounded-full border-2 border-card-dark bg-slate-700"></div>
+<div class="h-6 w-6 rounded-full border-2 border-card-dark bg-slate-600"></div>
+</div>
+<button class="px-4 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-lg font-bold font-display text-xs transition-all">
+                                Insert
+                            </button>
+</div>
+</div>
+<div class="bg-card-dark border border-border-dark rounded-2xl p-4 transition-all card-hover group relative">
+<div class="aspect-video bg-slate-800 rounded-xl mb-4 overflow-hidden relative border border-slate-700">
+<img alt="Grid Preview" class="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBc2DBbjfVGgpGrqMnQSfqvMlyhtANkbzFBpkUcjfSYmGVFpTfNIgXs_fcBXyrKqNOZQMNNvarTz7FqgMOIf6opr0jGORLZ-egCL0QyKI_pocs0qXAiXgywMiEMqzO9_7ImiQbx-7oc9T5wkbft1Y57tkLxZXP0WFDHxTj6sOQcqZAMltBE2UN_aM3K7mYVK_lmblNZiTu-1VXmxvVHe1zE5IgOy5w04fOpK9cEsdiMcuikz-y0UKX0lXwtcTTEEhhSxtR4FpachXc"/>
+<button class="absolute top-2 right-2 h-8 w-8 bg-black/40 backdrop-blur-md rounded-lg flex items-center justify-center text-slate-400 hover:text-yellow-500 transition-colors">
+<span class="material-symbols-outlined text-lg">star</span>
+</button>
+</div>
+<div class="flex items-start justify-between mb-3">
+<div>
+<span class="text-[10px] font-bold text-amber-500 uppercase tracking-wider bg-amber-500/10 px-2 py-0.5 rounded-full mb-1 inline-block">Grid</span>
+<h3 class="font-display font-bold text-white text-base">Dynamic Feature Grid</h3>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-2">
+<span class="text-xs text-slate-500 italic">Used 12 times</span>
+<button class="px-4 py-1.5 bg-slate-800 hover:bg-primary text-slate-300 hover:text-white rounded-lg font-bold font-display text-xs transition-all">
+                                Insert
+                            </button>
+</div>
+</div>
+<div class="bg-card-dark border border-border-dark rounded-2xl p-4 transition-all card-hover group relative">
+<div class="aspect-video bg-slate-800 rounded-xl mb-4 overflow-hidden relative border border-slate-700">
+<img alt="Forms Preview" class="w-full h-full object-cover opacity-50 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAQzIugHKDSt6BGFYmPPltrAikkujOZuKsEa2naT4JsGBwXT5wJOE1HgY3I1EtcZm9RlVipqJ89DUSckMFOby-ClziS5UHuLHy8PVk_IHuKgPIK30oQqopIa3wo-tjWpqUgYfu81TU-aLrO25-eo_uM8kwevCReH_TdI9q3eUVekMonqg-SFcrvjBUGkBrVtwev8Ugua3MNHT0-ZEepZzK1wW0FKrUruYcdtC8XmeC6QHi4rwFk-MqTSRxfRdsAvqSSMzN_uRAI5mU"/>
+<button class="absolute top-2 right-2 h-8 w-8 bg-black/40 backdrop-blur-md rounded-lg flex items-center justify-center text-slate-400 hover:text-yellow-500 transition-colors">
+<span class="material-symbols-outlined text-lg">star</span>
+</button>
+</div>
+<div class="flex items-start justify-between mb-3">
+<div>
+<span class="text-[10px] font-bold text-purple-500 uppercase tracking-wider bg-purple-500/10 px-2 py-0.5 rounded-full mb-1 inline-block">Forms</span>
+<h3 class="font-display font-bold text-white text-base">Newsletter Opt-in</h3>
+</div>
+</div>
+<div class="flex items-center justify-between mt-auto pt-2">
+<span class="text-xs text-slate-500 italic">Used 8 times</span>
+<button class="px-4 py-1.5 bg-slate-800 hover:bg-primary text-slate-300 hover:text-white rounded-lg font-bold font-display text-xs transition-all">
+                                Insert
+                            </button>
+</div>
+</div>
+</div>
+</main>
+<aside class="w-96 bg-card-dark border-l border-border-dark flex flex-col h-full shrink-0 z-10">
+<div class="p-6 border-b border-border-dark flex items-center justify-between">
+<h2 class="font-display font-bold text-white text-lg">Widget Details</h2>
+<button class="text-slate-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-8">
+<div class="space-y-3">
+<div class="aspect-video bg-slate-900 rounded-2xl border border-border-dark overflow-hidden shadow-inner flex items-center justify-center">
+<img alt="Full Preview" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJHcI8dPs2DTXce_tEGgNwoFJirsmuXEi0XY4ZJprv6dRS7lMoD5rgb51PAcGXDCfOQE7BtubnHZ4kQx-9K0Y4P5Hfk7EvPW8OwhzdclqoMR4QUGkjBl-9my_HyNFrM9ZgPWFXWwKW6Wgp4rQktmnLcQYiJW32CLHBl94dhVHJHwFBHAfOwJ7O8LMMFgQYC9UKKeXqB9FaeaB6u1gin3qYnrkwaaLXNdWBxtK-2fxtduPQ2VZN6ddn-3ga9qiWcjjvc0g_9G_aZco"/>
+</div>
+<button class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold font-display transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">fullscreen</span>
+                            Live Preview
+                        </button>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-slate-800/50 p-3 rounded-xl border border-border-dark/50">
+<p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Status</p>
+<div class="flex items-center gap-2 text-xs font-bold text-green-400">
+<span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+                                Active
+                            </div>
+</div>
+<div class="bg-slate-800/50 p-3 rounded-xl border border-border-dark/50">
+<p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Source</p>
+<p class="text-xs font-bold text-white">System Core</p>
+</div>
+<div class="bg-slate-800/50 p-3 rounded-xl border border-border-dark/50">
+<p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Last Updated</p>
+<p class="text-xs font-bold text-white">2 days ago</p>
+</div>
+<div class="bg-slate-800/50 p-3 rounded-xl border border-border-dark/50">
+<p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Slug</p>
+<p class="text-xs font-mono font-bold text-primary">hero-modern-v1</p>
+</div>
+</div>
+<div class="space-y-4">
+<div>
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Widget Name</label>
+<input class="w-full bg-slate-900 border border-border-dark rounded-xl px-4 py-2.5 text-sm text-white focus:ring-primary focus:border-primary" type="text" value="Modern Landing Hero"/>
+</div>
+<div>
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Description</label>
+<textarea class="w-full bg-slate-900 border border-border-dark rounded-xl px-4 py-2.5 text-sm text-white focus:ring-primary focus:border-primary resize-none" rows="3">Standard hero section with centered typography and call-to-action buttons. Fully responsive and optimized.</textarea>
+</div>
+<div>
+<label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Category</label>
+<select class="w-full bg-slate-900 border border-border-dark rounded-xl px-4 py-2.5 text-sm text-white focus:ring-primary focus:border-primary">
+<option selected="">Hero Sections</option>
+<option>Grids</option>
+<option>Forms</option>
+<option>Media</option>
+<option>Custom</option>
+</select>
+</div>
+</div>
+</div>
+<div class="p-6 border-t border-border-dark bg-slate-800/30 flex gap-3">
+<button class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold font-display text-sm transition-all">
+                        Save Changes
+                    </button>
+<button class="flex-1 py-3 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold font-display text-sm transition-all shadow-lg shadow-primary/20">
+                        Insert
+                    </button>
+</div>
+</aside>
+</div>
+</div>
+
+</body></html>
