@@ -567,14 +567,8 @@ export function WidgetLibraryPage() {
     [widgets]
   );
 
-  const showTemplateAction =
-    activeScope === "templates" ||
-    activeScope === "all-items" ||
-    activeScope === "favorites";
-  const showWidgetAction =
-    activeScope === "widgets" ||
-    activeScope === "all-items" ||
-    activeScope === "favorites";
+  const showTemplateAction = activeScope === "templates";
+  const showWidgetAction = activeScope === "widgets";
 
   return (
     <AdminShell
@@ -598,25 +592,14 @@ export function WidgetLibraryPage() {
           />
         </div>
       }
-      topbarActions={
-        <div className="flex items-center gap-2">
-          {showTemplateAction ? (
-            <Button size="sm" variant="outline" className="gap-2" asChild>
-              <a href={templateCreateHref}>
-                <Plus className="h-4 w-4" />
-                New Template
-              </a>
-            </Button>
-          ) : null}
-          {showWidgetAction ? (
-            <Button size="sm" className="gap-2" onClick={() => setCreateOpen(true)}>
-              <Plus className="h-4 w-4" />
-              Create Widget
-            </Button>
-          ) : null}
-        </div>
-      }
     >
+      <div className="mx-auto w-full max-w-7xl">
+        <PageHeader
+          title="Widget Library"
+          description="Manage and reuse your custom interface components across all pages."
+        />
+        <Separator className="my-6" />
+      </div>
       <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-col gap-6 lg:flex-row">
         <aside className="flex w-full min-h-0 flex-col lg:w-72">
           <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border/60 bg-card px-4 py-5 shadow-sm">
@@ -745,56 +728,68 @@ export function WidgetLibraryPage() {
           </div>
         </aside>
 
-        <section className="flex min-h-0 flex-1 flex-col gap-6">
-          <PageHeader
-            title="Widget Library"
-            description="Manage and reuse your custom interface components across all pages."
-            actions={
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge variant="secondary">
-                  {filteredWidgets.length}{" "}
-                  {activeScope === "widgets"
-                    ? "widgets"
-                    : activeScope === "templates"
-                      ? "templates"
-                      : "items"}
-                </Badge>
-                {activeScope === "templates" ? (
-                  <Select
-                    value={templateCategory}
-                    onValueChange={setTemplateCategory}
-                  >
-                    <SelectTrigger className="h-9 w-[180px] text-xs">
-                      <SelectValue placeholder="All categories" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templateCategoryOptions.map((category) => (
-                        <SelectItem key={category.id} value={category.value}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
-                <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
-                  <Button
-                    variant={view === "grid" ? "secondary" : "ghost"}
-                    size="icon-sm"
-                    onClick={() => setView("grid")}
-                  >
-                    <Grid2X2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={view === "list" ? "secondary" : "ghost"}
-                    size="icon-sm"
-                    onClick={() => setView("list")}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                </div>
+        <section className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="secondary">
+                {filteredWidgets.length}{" "}
+                {activeScope === "widgets"
+                  ? "widgets"
+                  : activeScope === "templates"
+                    ? "templates"
+                    : "items"}
+              </Badge>
+              {activeScope === "templates" ? (
+                <Select
+                  value={templateCategory}
+                  onValueChange={setTemplateCategory}
+                >
+                  <SelectTrigger className="h-9 w-[180px] text-xs">
+                    <SelectValue placeholder="All categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templateCategoryOptions.map((category) => (
+                      <SelectItem key={category.id} value={category.value}>
+                        {category.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
+              <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
+                <Button
+                  variant={view === "grid" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  onClick={() => setView("grid")}
+                >
+                  <Grid2X2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={view === "list" ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  onClick={() => setView("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
               </div>
-            }
-          />
+            </div>
+            <div className="flex items-center gap-2">
+              {showTemplateAction ? (
+                <Button size="sm" variant="outline" className="gap-2" asChild>
+                  <a href={templateCreateHref}>
+                    <Plus className="h-4 w-4" />
+                    New Template
+                  </a>
+                </Button>
+              ) : null}
+              {showWidgetAction ? (
+                <Button size="sm" className="gap-2" onClick={() => setCreateOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Create Widget
+                </Button>
+              ) : null}
+            </div>
+          </div>
           <ScrollArea className="flex-1 min-h-0 pr-2">
             <div
               className={cn(

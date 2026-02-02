@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 34 tasks
+- **To Do:** 37 tasks
 - **In Progress:** 0
 - **Done:** 198 tasks
 
@@ -67,6 +67,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-049-04 | Widget Favorites (User Settings) | Medium | Small | widgets.favorites key |
 | TASK-049-05 | Widget Library UI Wiring | High | Large | API wiring + insert |
 | TASK-049-06 | Widget Template Editor UI | Medium | Medium | builder reuse |
+| TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..02 |
+| TASK-050-01 | Widget Template Preview | Medium | Medium | Preview modal + API |
+| TASK-050-02 | Widget Template Revision History | Medium | Medium | Revisions table + restore |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
