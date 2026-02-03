@@ -10,6 +10,7 @@ test("EmailSettingsPage renders email settings cards", () => {
   expect(html).toContain("Default Sender Info");
   expect(html).toContain("Test Email");
   expect(html).toContain("Connection Status");
+  expect(html).toContain("Auto-save settings across all screens");
 });
 
 test("EmailSettingsPage renders test email CTA", () => {

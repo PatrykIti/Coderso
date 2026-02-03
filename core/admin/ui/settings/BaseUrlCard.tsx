@@ -70,7 +70,7 @@ export function BaseUrlCard({
           </div>
           <div className="space-y-2">
             <label className={labelClassName} htmlFor="public-base-url">
-              Public site base URL
+              Public site URL
             </label>
             <Input
               id="public-base-url"

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  CheckCircle2,
   Database,
   Globe2,
   HardDrive,
@@ -7,7 +8,6 @@ import {
   KeyRound,
   Link2,
   Lock,
-  Save,
   ShieldCheck,
   UploadCloud,
   Wifi,
@@ -17,6 +17,7 @@ import type { LucideIcon } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardAction,
@@ -41,6 +42,7 @@ import {
   type StorageDriver,
 } from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
 import { SettingsSidebar } from "./SettingsSidebar";
 import {
@@ -334,6 +336,8 @@ export function StorageSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
+    useSettingsAutoSave();
 
   const activeConfig = providerConfigs[activeProvider];
   const ActiveIcon = activeConfig.icon;
@@ -391,7 +395,25 @@ export function StorageSettingsPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = async () => {
+  const busy = isLoading || isSaving;
+  const maxSizeInvalid = (() => {
+    const trimmed = form.maxSizeBytes.trim();
+    if (!trimmed) return false;
+    const parsed = Number(trimmed);
+    return !Number.isFinite(parsed);
+  })();
+  const hasValidationErrors = maxSizeInvalid;
+
+  const autoSaveValue = useMemo(
+    () => ({
+      ...form,
+      activeProvider,
+    }),
+    [activeProvider, form]
+  );
+
+  const handleSave = useCallback(async () => {
+    if (busy) return false;
     setError(null);
     setSuccess(null);
     setIsSaving(true);
@@ -442,6 +464,7 @@ export function StorageSettingsPage() {
         azureConnectionString: updated.azure.connectionString.configured,
       });
       setSuccess("Storage settings updated.");
+      return true;
     } catch (err) {
       if (err instanceof Error && err.message === "max_size_invalid") {
         setError("Max upload size must be a number.");
@@ -450,10 +473,19 @@ export function StorageSettingsPage() {
       } else {
         setError("Failed to update storage settings.");
       }
+      return false;
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [activeProvider, busy, form]);
+
+  useAutoSaveEffect({
+    enabled: autoSaveEnabled,
+    isReady: !busy,
+    hasErrors: hasValidationErrors,
+    value: autoSaveValue,
+    onSave: handleSave,
+  });
 
   const fieldValues = useMemo(() => form, [form]);
 
@@ -514,200 +546,205 @@ export function StorageSettingsPage() {
         </div>
       }
     >
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className="border-primary/20 text-primary">
-              Storage Settings
-            </Badge>
-            <span className="text-sm text-muted-foreground">
-              Configure where assets are stored and delivered.
-            </span>
-          </div>
-        </div>
+      <div className="flex min-h-full flex-col">
+        <div className="flex-1">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-10 pb-28">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-3">
+                <Badge variant="outline" className="border-primary/20 text-primary">
+                  Storage Settings
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  Configure where assets are stored and delivered.
+                </span>
+              </div>
+            </div>
 
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>Storage settings error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        ) : null}
-        {success ? (
-          <Alert>
-            <AlertTitle>Saved</AlertTitle>
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
-        ) : null}
+            {error ? (
+              <Alert variant="destructive">
+                <AlertTitle>Storage settings error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            {success ? (
+              <Alert>
+                <AlertTitle>Saved</AlertTitle>
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            ) : null}
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {providerOptions.map((provider) => (
-            <StorageProviderCard
-              key={provider.id}
-              id={provider.id}
-              title={provider.title}
-              description={provider.description}
-              icon={provider.icon}
-              badge={provider.badge}
-              isActive={provider.id === activeProvider}
-              onSelect={(id) => {
-                setActiveProvider(id);
-                setForm((prev) => ({ ...prev, driver: id }));
-              }}
-            />
-          ))}
-        </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              {providerOptions.map((provider) => (
+                <StorageProviderCard
+                  key={provider.id}
+                  id={provider.id}
+                  title={provider.title}
+                  description={provider.description}
+                  icon={provider.icon}
+                  badge={provider.badge}
+                  isActive={provider.id === activeProvider}
+                  onSelect={(id) => {
+                    setActiveProvider(id);
+                    setForm((prev) => ({ ...prev, driver: id }));
+                  }}
+                />
+              ))}
+            </div>
 
-        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-          <div className="space-y-6">
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <ActiveIcon className="h-5 w-5 text-primary" />
-                      {activeConfig.title}
-                    </CardTitle>
-                    <CardDescription>{activeConfig.description}</CardDescription>
-                  </div>
-                  <CardAction>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                      disabled={isLoading}
-                    >
-                      <Wifi className="h-4 w-4" />
-                      Test Connection
-                    </Button>
-                  </CardAction>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {activeConfig.fields.map((field) => {
-                  const FieldIcon = field.icon;
-                  return (
-                    <div key={field.id} className="space-y-2">
-                      <label className={labelClassName}>{field.label}</label>
-                      <div className="relative">
-                        <FieldIcon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <div className="pl-7">
-                          {renderField(field)}
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+              <div className="space-y-6">
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <ActiveIcon className="h-5 w-5 text-primary" />
+                          {activeConfig.title}
+                        </CardTitle>
+                        <CardDescription>{activeConfig.description}</CardDescription>
+                      </div>
+                      <CardAction>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                          disabled={isLoading}
+                        >
+                          <Wifi className="h-4 w-4" />
+                          Test Connection
+                        </Button>
+                      </CardAction>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    {activeConfig.fields.map((field) => {
+                      const FieldIcon = field.icon;
+                      return (
+                        <div key={field.id} className="space-y-2">
+                          <label className={labelClassName}>{field.label}</label>
+                          <div className="relative">
+                            <FieldIcon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <div className="pl-7">
+                              {renderField(field)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <Separator />
+                    <div className="rounded-lg border border-dashed border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+                      <div className="flex items-start gap-3">
+                        <Info className="mt-0.5 h-4 w-4 text-primary" />
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {activeConfig.noteTitle}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {activeConfig.noteDescription}
+                          </p>
                         </div>
                       </div>
                     </div>
-                  );
-                })}
-                <Separator />
-                <div className="rounded-lg border border-dashed border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
-                  <div className="flex items-start gap-3">
-                    <Info className="mt-0.5 h-4 w-4 text-primary" />
-                    <div>
-                      <p className="font-medium text-foreground">
-                        {activeConfig.noteTitle}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activeConfig.noteDescription}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  Upload Policies
-                </CardTitle>
-                <CardDescription>
-                  Defaults used for all uploads across the CMS.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                {globalFields.map((field) => (
-                  <div key={field.id} className="space-y-2">
-                    <label className={labelClassName}>{field.label}</label>
-                    <div className="relative">
-                      <field.icon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <div className="pl-7">
-                        {renderField(field)}
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      Upload Policies
+                    </CardTitle>
+                    <CardDescription>
+                      Defaults used for all uploads across the CMS.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-5">
+                    {globalFields.map((field) => (
+                      <div key={field.id} className="space-y-2">
+                        <label className={labelClassName}>{field.label}</label>
+                        <div className="relative">
+                          <field.icon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <div className="pl-7">
+                            {renderField(field)}
+                          </div>
+                        </div>
                       </div>
+                    ))}
+                    <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+                      Changing the storage driver does not migrate existing files.
+                      New uploads will use the selected provider immediately.
                     </div>
-                  </div>
-                ))}
-                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-xs text-muted-foreground">
-                  Changing the storage driver does not migrate existing files. New uploads
-                  will use the selected provider immediately.
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="space-y-6">
+                <Card className="border-border/60 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      Security Summary
+                    </CardTitle>
+                    <CardDescription>
+                      Secrets are encrypted at rest. Update fields to rotate.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span>S3 Access Key</span>
+                      <Badge variant={secrets.s3AccessKey ? "default" : "secondary"}>
+                        {secrets.s3AccessKey ? "Configured" : "Missing"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>S3 Secret Key</span>
+                      <Badge variant={secrets.s3SecretKey ? "default" : "secondary"}>
+                        {secrets.s3SecretKey ? "Configured" : "Missing"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Azure Account Key</span>
+                      <Badge variant={secrets.azureKey ? "default" : "secondary"}>
+                        {secrets.azureKey ? "Configured" : "Missing"}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span>Azure Connection String</span>
+                      <Badge
+                        variant={
+                          secrets.azureConnectionString ? "default" : "secondary"
+                        }
+                      >
+                        {secrets.azureConnectionString ? "Configured" : "Missing"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
-
-          <div className="space-y-6">
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  Security Summary
-                </CardTitle>
-                <CardDescription>
-                  Secrets are encrypted at rest. Update fields to rotate.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span>S3 Access Key</span>
-                  <Badge variant={secrets.s3AccessKey ? "default" : "secondary"}>
-                    {secrets.s3AccessKey ? "Configured" : "Missing"}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>S3 Secret Key</span>
-                  <Badge variant={secrets.s3SecretKey ? "default" : "secondary"}>
-                    {secrets.s3SecretKey ? "Configured" : "Missing"}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Azure Account Key</span>
-                  <Badge variant={secrets.azureKey ? "default" : "secondary"}>
-                    {secrets.azureKey ? "Configured" : "Missing"}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span>Azure Connection String</span>
-                  <Badge
-                    variant={
-                      secrets.azureConnectionString ? "default" : "secondary"
-                    }
-                  >
-                    {secrets.azureConnectionString ? "Configured" : "Missing"}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Save className="h-5 w-5 text-primary" />
-                  Save Changes
-                </CardTitle>
-                <CardDescription>
-                  Apply your storage settings instantly without restarting the server.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  className="w-full gap-2"
-                  onClick={handleSave}
-                  disabled={isSaving || isLoading}
-                >
-                  <Save className="h-4 w-4" />
-                  {isSaving ? "Saving..." : "Save Configuration"}
-                </Button>
-              </CardContent>
-            </Card>
+        </div>
+        <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox
+                checked={autoSaveEnabled}
+                onCheckedChange={(checked) => setAutoSaveEnabled(Boolean(checked))}
+                disabled={busy}
+              />
+              <span>Auto-save settings across all screens</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={handleSave}
+                disabled={busy || hasValidationErrors}
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {busy ? "Saving..." : "Save changes"}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

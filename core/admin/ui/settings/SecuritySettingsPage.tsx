@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BellRing,
   CheckCircle2,
@@ -13,6 +13,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -31,6 +32,7 @@ import {
   type SecuritySettingsResponse,
 } from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
 import { IpAllowlistTable } from "./IpAllowlistTable";
 import { LoginAlertsCard } from "./LoginAlertsCard";
@@ -150,6 +152,8 @@ export function SecuritySettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
+    useSettingsAutoSave();
   const {
     entries: allowlistEntries,
     isLoading: allowlistLoading,
@@ -186,6 +190,23 @@ export function SecuritySettingsPage() {
 
   const busy = isLoading || isSaving;
 
+  const headerInvalid =
+    !form.requestIdHeaderName.trim() || !form.csrfHeaderName.trim();
+  const numericInvalid = [
+    form.csrfTtlMinutes,
+    form.corsMaxAgeSeconds,
+    form.rateLimitAdminWindowSeconds,
+    form.rateLimitAdminMaxRequests,
+    form.rateLimitAuthWindowSeconds,
+    form.rateLimitAuthMaxRequests,
+    form.sessionTtlDays,
+    form.sessionMaxPerUser,
+  ].some((value) => {
+    const parsed = Number(value);
+    return !Number.isFinite(parsed) || parsed <= 0;
+  });
+  const hasValidationErrors = headerInvalid || numericInvalid;
+
   const handleFieldChange = <K extends keyof SecurityFormState>(
     key: K,
     value: SecurityFormState[K]
@@ -193,16 +214,8 @@ export function SecuritySettingsPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleDiscard = () => {
-    if (settings) {
-      setForm(toFormState(settings));
-      setSuccess(null);
-      setError(null);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!settings) return;
+  const handleSave = useCallback(async () => {
+    if (!settings || busy) return false;
     setError(null);
     setSuccess(null);
     setIsSaving(true);
@@ -294,6 +307,7 @@ export function SecuritySettingsPage() {
       setSettings(updated);
       setForm(toFormState(updated));
       setSuccess("Security settings updated.");
+      return true;
     } catch (err) {
       if (err instanceof Error && err.message.endsWith("_missing")) {
         setError("Please fill in all required numeric fields.");
@@ -306,15 +320,24 @@ export function SecuritySettingsPage() {
       } else {
         setError("Failed to update security settings.");
       }
+      return false;
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [busy, form, settings]);
 
   const statusBadge = useMemo(
     () => (form.csrfEnabled || form.rateLimitEnabled ? "Protected" : "Relaxed"),
     [form.csrfEnabled, form.rateLimitEnabled]
   );
+
+  useAutoSaveEffect({
+    enabled: autoSaveEnabled,
+    isReady: !busy,
+    hasErrors: hasValidationErrors,
+    value: form,
+    onSave: handleSave,
+  });
 
   return (
     <SettingsShell
@@ -327,13 +350,9 @@ export function SecuritySettingsPage() {
           <span className="text-foreground">Security</span>
         </div>
       }
-      topbarActions={
-        <Button size="sm" className="px-4" disabled={busy} onClick={handleSave}>
-          {busy ? "Saving..." : "Save changes"}
-        </Button>
-      }
+      topbarActions={null}
     >
-      <div className="flex h-full flex-col">
+      <div className="flex min-h-full flex-col">
         <div className="border-b bg-background/70 px-6 py-4">
           <div className="flex items-center gap-3">
             <Badge variant="outline" className="border-primary/20 text-primary">
@@ -802,13 +821,27 @@ export function SecuritySettingsPage() {
               disabled={busy}
             />
 
-            <div className="flex flex-wrap justify-end gap-3">
-              <Button variant="outline" onClick={handleDiscard} disabled={busy}>
-                Discard
-              </Button>
-              <Button onClick={handleSave} disabled={busy}>
+          </div>
+        </div>
+        <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox
+                checked={autoSaveEnabled}
+                onCheckedChange={(checked) => setAutoSaveEnabled(Boolean(checked))}
+                disabled={busy}
+              />
+              <span>Auto-save settings across all screens</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleSave}
+                disabled={busy || hasValidationErrors}
+                size="sm"
+                className="gap-2"
+              >
                 <CheckCircle2 className="h-4 w-4" />
-                Save changes
+                {busy ? "Saving..." : "Save changes"}
               </Button>
             </div>
           </div>

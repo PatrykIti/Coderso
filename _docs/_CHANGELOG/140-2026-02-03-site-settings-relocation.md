@@ -2,4 +2,4 @@
 
 - Moved admin base URL and admin access path controls into Settings → Site.
 - Removed public base URL inputs from General settings to avoid duplication.
-- Site wizard now owns all runtime URL configuration.
+- Site settings now own all runtime URL configuration.

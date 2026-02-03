@@ -16,4 +16,5 @@ test("SecuritySettingsPage renders cards and allowlist table", () => {
   expect(html).toContain("Active Restrictions");
   expect(html).toContain("Login Alerts");
   expect(html).toContain("IP Range (CIDR)");
+  expect(html).toContain("Auto-save settings across all screens");
 });

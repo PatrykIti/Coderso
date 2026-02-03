@@ -11,4 +11,5 @@ test("StorageSettingsPage renders provider cards and config panel", () => {
   expect(html).toContain("Amazon S3");
   expect(html).toContain("Azure Blob");
   expect(html).toContain("Test Connection");
+  expect(html).toContain("Auto-save settings across all screens");
 });

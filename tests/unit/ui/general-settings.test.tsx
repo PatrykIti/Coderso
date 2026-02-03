@@ -9,4 +9,5 @@ test("GeneralSettingsPage renders general settings cards", () => {
   expect(html).toContain("Site Identity");
   expect(html).toContain("Branding");
   expect(html).toContain("Save changes");
+  expect(html).toContain("Auto-save settings across all screens");
 });

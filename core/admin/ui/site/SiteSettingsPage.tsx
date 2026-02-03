@@ -1,17 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Eye,
   Gauge,
   Home,
   LayoutList,
+  Link2,
   Timer,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -21,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { listContentTypes, type ContentTypeSummary } from "@/services/contentTypesClient";
 import { listPages, previewPage, type PageSummary } from "@/services/pagesClient";
@@ -36,6 +36,8 @@ import { resolveAdminHref } from "@/utils/adminPaths";
 import { SettingsSidebar } from "@/ui/settings/SettingsSidebar";
 import { AdminAccessCard } from "@/ui/settings/AdminAccessCard";
 import { BaseUrlCard } from "@/ui/settings/BaseUrlCard";
+import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
+import { cn } from "@/lib/utils";
 
 import { SiteRouteEditor } from "./SiteRouteEditor";
 import {
@@ -58,39 +60,55 @@ type SiteSettingsForm = {
   contentRoutes: SiteContentRouteForm[];
 };
 
-type SiteStep = "base" | "pages" | "routes" | "cache" | "performance";
+type SiteSectionId =
+  | "base"
+  | "pages"
+  | "preview"
+  | "routes"
+  | "cache"
+  | "performance";
 
-type StepConfig = {
-  id: SiteStep;
+const SITE_SECTIONS: Array<{
+  id: SiteSectionId;
   title: string;
   description: string;
-};
-
-const steps: StepConfig[] = [
+  icon: typeof Link2;
+}> = [
   {
     id: "base",
-    title: "Base URL",
-    description: "Define where the public site lives.",
+    title: "Base URLs",
+    description: "Admin domain, public site URL, and access path.",
+    icon: Link2,
   },
   {
     id: "pages",
     title: "Homepage & 404",
-    description: "Pick default pages and preview behavior.",
+    description: "Pick the default public entry points.",
+    icon: Home,
+  },
+  {
+    id: "preview",
+    title: "Preview access",
+    description: "Enable and test preview links.",
+    icon: Eye,
   },
   {
     id: "routes",
     title: "Content routes",
-    description: "Configure list and detail URLs for entries.",
+    description: "Define list and detail paths per type.",
+    icon: LayoutList,
   },
   {
     id: "cache",
-    title: "Cache",
-    description: "Control HTML cache behavior for the public site.",
+    title: "Cache settings",
+    description: "Control HTML cache lifetime.",
+    icon: Timer,
   },
   {
     id: "performance",
     title: "Performance",
-    description: "Optional optimization controls for future use.",
+    description: "Future runtime optimization toggles.",
+    icon: Gauge,
   },
 ];
 
@@ -166,7 +184,9 @@ export function SiteSettingsPage() {
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activeStep, setActiveStep] = useState<SiteStep>("base");
+  const [activeSection, setActiveSection] = useState<SiteSectionId>("base");
+  const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
+    useSettingsAutoSave();
 
   useEffect(() => {
     let active = true;
@@ -235,7 +255,7 @@ export function SiteSettingsPage() {
 
   const busy = saving || status === "loading";
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (hasValidationErrors) return;
     setSaveError(null);
     setSaveSuccess(null);
@@ -260,15 +280,17 @@ export function SiteSettingsPage() {
       });
       setForm((prev) => ({ ...prev, ...toFormValues(updated) }));
       setSaveSuccess("Site settings updated.");
+      return true;
     } catch (err) {
       const message = isApiClientError(err)
         ? err.message
         : "Failed to save site settings.";
       setSaveError(message);
+      return false;
     } finally {
       setSaving(false);
     }
-  };
+  }, [cacheTtlValue, form, hasValidationErrors]);
 
   const handleViewHomepage = () => {
     setActionError(null);
@@ -304,7 +326,13 @@ export function SiteSettingsPage() {
     }
   };
 
-  const stepIndex = steps.findIndex((step) => step.id === activeStep);
+  useAutoSaveEffect({
+    enabled: autoSaveEnabled,
+    isReady: status === "ready",
+    hasErrors: hasValidationErrors,
+    value: form,
+    onSave: handleSave,
+  });
 
   return (
     <SettingsShell
@@ -321,26 +349,7 @@ export function SiteSettingsPage() {
           </span>
         </div>
       }
-      topbarActions={
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleViewHomepage}
-            disabled={busy}
-          >
-            View homepage
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTestPreview}
-            disabled={busy}
-          >
-            Test preview URL
-          </Button>
-        </div>
-      }
+      topbarActions={null}
     >
       <div className="flex min-h-full flex-col">
         <div className="flex-1">
@@ -370,379 +379,381 @@ export function SiteSettingsPage() {
               </Alert>
             ) : null}
 
-            <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-              <div className="space-y-4">
-                <Card className="border-border/60">
-                  <CardHeader className="border-b">
-                    <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground">
-                      Setup steps
-                    </CardTitle>
-                    <CardDescription>
-                      Follow the wizard to configure the public site.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3 pt-6">
-                    {steps.map((step, index) => {
-                      const isActive = step.id === activeStep;
-                      const isComplete = index < stepIndex;
-                      return (
-                        <button
-                          key={step.id}
-                          type="button"
-                          className={cn(
-                            "flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition",
-                            isActive
-                              ? "border-primary/60 bg-primary/5"
-                              : "border-transparent hover:border-border"
-                          )}
-                          onClick={() => setActiveStep(step.id)}
-                        >
-                          <div
-                            className={cn(
-                              "flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold",
-                              isActive
-                                ? "bg-primary text-primary-foreground"
-                                : isComplete
-                                  ? "bg-primary/10 text-primary"
-                                  : "bg-muted text-muted-foreground"
-                            )}
-                          >
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">
-                              {step.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {step.description}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </CardContent>
-                </Card>
+            <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+              <div className="space-y-2">
+                {SITE_SECTIONS.map((section) => {
+                  const isActive = section.id === activeSection;
+                  const Icon = section.icon;
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => setActiveSection(section.id)}
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition",
+                        isActive
+                          ? "border-primary/40 bg-primary/5 text-foreground"
+                          : "border-border/60 bg-background text-muted-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "mt-0.5 flex h-8 w-8 items-center justify-center rounded-md",
+                          isActive
+                            ? "bg-primary/15 text-primary"
+                            : "bg-muted/60 text-muted-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold">{section.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {section.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+
               <div className="space-y-6">
-                {activeStep === "base" ? (
-                  <>
-                    <BaseUrlCard
-                      adminBaseUrl={form.adminBaseUrl}
-                      publicBaseUrl={form.publicBaseUrl}
-                      errors={{
-                        adminBaseUrl: adminBaseUrlError,
-                        publicBaseUrl: publicBaseUrlError,
-                      }}
-                      onChange={(next) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          adminBaseUrl: next.adminBaseUrl,
-                          publicBaseUrl: next.publicBaseUrl,
-                        }))
-                      }
+                {activeSection === "base" ? (
+                <div className="space-y-4">
+                  <BaseUrlCard
+                    adminBaseUrl={form.adminBaseUrl}
+                    publicBaseUrl={form.publicBaseUrl}
+                    errors={{
+                      adminBaseUrl: adminBaseUrlError,
+                      publicBaseUrl: publicBaseUrlError,
+                    }}
+                    onChange={(next) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        adminBaseUrl: next.adminBaseUrl,
+                        publicBaseUrl: next.publicBaseUrl,
+                      }))
+                    }
+                    disabled={busy}
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+                    <span>
+                      Test how the public base URL resolves in a new tab.
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleViewHomepage}
                       disabled={busy}
-                    />
-                    <AdminAccessCard
-                      adminPath={form.adminPath}
-                      redirectEnabled={form.adminRedirectEnabled}
-                      error={adminPathError}
-                      onChange={(next) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          adminPath: next.adminPath,
-                          adminRedirectEnabled: next.redirectEnabled,
-                        }))
-                      }
-                      disabled={busy}
-                    />
-                  </>
+                    >
+                      View homepage
+                    </Button>
+                  </div>
+                  <AdminAccessCard
+                    adminPath={form.adminPath}
+                    redirectEnabled={form.adminRedirectEnabled}
+                    error={adminPathError}
+                    onChange={(next) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        adminPath: next.adminPath,
+                        adminRedirectEnabled: next.redirectEnabled,
+                      }))
+                    }
+                    disabled={busy}
+                  />
+                </div>
                 ) : null}
 
-                {activeStep === "pages" ? (
-                  <>
-                    <Card className="border-border/60">
-                      <CardHeader className="border-b">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Home className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <CardTitle>Homepage & 404</CardTitle>
-                            <CardDescription>
-                              Choose the pages that represent your public entry
-                              points.
-                            </CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-6 pt-6">
-                        <div className="grid gap-6 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              Homepage
-                            </label>
-                            <Select
-                              value={form.homepageId ?? "none"}
-                              onValueChange={(value) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  homepageId: value === "none" ? null : value,
-                                }))
-                              }
-                              disabled={busy}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select homepage" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Not set</SelectItem>
-                                {pages.map((page) => (
-                                  <SelectItem key={page.id} value={page.id}>
-                                    {page.title || "Untitled page"} ({page.status})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                              404 page
-                            </label>
-                            <Select
-                              value={form.notFoundPageId ?? "none"}
-                              onValueChange={(value) =>
-                                setForm((prev) => ({
-                                  ...prev,
-                                  notFoundPageId:
-                                    value === "none" ? null : value,
-                                }))
-                              }
-                              disabled={busy}
-                            >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select 404 page" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="none">Not set</SelectItem>
-                                {pages.map((page) => (
-                                  <SelectItem key={page.id} value={page.id}>
-                                    {page.title || "Untitled page"} ({page.status})
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        {homepageError ? (
-                          <p className="text-xs text-destructive">{homepageError}</p>
-                        ) : null}
-                        {pages.length === 0 ? (
-                          <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-                            No pages yet. Create one in the
-                            <a
-                              className="ml-1 text-primary underline-offset-4 hover:underline"
-                              href={resolveAdminHref(adminBasePath, "/admin/pages")}
-                            >
-                              Pages section
-                            </a>
-                            .
-                          </div>
-                        ) : null}
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border-border/60">
-                      <CardHeader className="border-b">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Eye className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <CardTitle>Preview access</CardTitle>
-                            <CardDescription>
-                              Allow editors to generate preview links.
-                            </CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="flex items-center justify-between gap-4 pt-6">
-                        <div>
-                          <p className="text-sm font-medium">Preview enabled</p>
-                          <p className="text-xs text-muted-foreground">
-                            Disable to block all preview URLs.
-                          </p>
-                        </div>
-                        <Switch
-                          checked={form.previewEnabled}
-                          onCheckedChange={(checked) =>
+                {activeSection === "pages" ? (
+                <Card className="border-border/60">
+                  <CardHeader className="border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Home className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle>Homepage & 404</CardTitle>
+                        <CardDescription>
+                          Choose the pages that represent your public entry points.
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6 pt-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          Homepage
+                        </label>
+                        <Select
+                          value={form.homepageId ?? "none"}
+                          onValueChange={(value) =>
                             setForm((prev) => ({
                               ...prev,
-                              previewEnabled: checked,
+                              homepageId: value === "none" ? null : value,
                             }))
                           }
                           disabled={busy}
-                        />
-                      </CardContent>
-                    </Card>
-                  </>
-                ) : null}
-
-                {activeStep === "routes" ? (
-                  <>
-                    <Card className="border-border/60">
-                      <CardHeader className="border-b">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <LayoutList className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <CardTitle>Content routes</CardTitle>
-                            <CardDescription>
-                              Configure how each content type is published on the
-                              public site.
-                            </CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-5 pt-6">
-                        {contentTypes.length === 0 ? (
-                          <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-                            No content types yet. Create one in
-                            <a
-                              className="ml-1 text-primary underline-offset-4 hover:underline"
-                              href={resolveAdminHref(
-                                adminBasePath,
-                                "/admin/content-types"
-                              )}
-                            >
-                              Content Types
-                            </a>
-                            .
-                          </div>
-                        ) : null}
-                        {routeValidation.hasErrors ? (
-                          <Alert variant="destructive">
-                            <AlertTitle>Resolve route conflicts</AlertTitle>
-                            <AlertDescription>
-                              Fix highlighted paths before saving. Routes must be
-                              unique across content types.
-                            </AlertDescription>
-                          </Alert>
-                        ) : null}
-                        <div className="space-y-6">
-                          {form.contentRoutes.map((route) => {
-                            const contentType = contentTypes.find(
-                              (entry) => entry.slug === route.type
-                            );
-                            const displayName = contentType?.name ?? route.type;
-                            const suggested = buildDefaultRoute(route.type);
-                            return (
-                              <SiteRouteEditor
-                                key={route.type}
-                                name={displayName}
-                                slug={route.type}
-                                route={route}
-                                suggested={suggested}
-                                errors={routeValidation.errorsByType[route.type]}
-                                missing={!contentType}
-                                disabled={busy}
-                                onChange={(next) =>
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    contentRoutes: prev.contentRoutes.map((item) =>
-                                      item.type === route.type ? next : item
-                                    ),
-                                  }))
-                                }
-                                onUseSuggested={() =>
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    contentRoutes: prev.contentRoutes.map((item) =>
-                                      item.type === route.type
-                                        ? {
-                                            ...item,
-                                            listPath: suggested.listPath,
-                                            detailPath: suggested.detailPath,
-                                          }
-                                        : item
-                                    ),
-                                  }))
-                                }
-                              />
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </>
-                ) : null}
-
-                {activeStep === "cache" ? (
-                  <Card className="border-border/60">
-                    <CardHeader className="border-b">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <Timer className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <CardTitle>Cache settings</CardTitle>
-                          <CardDescription>
-                            Control the HTML cache lifespan for public pages.
-                          </CardDescription>
-                        </div>
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select homepage" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Not set</SelectItem>
+                            {pages.map((page) => (
+                              <SelectItem key={page.id} value={page.id}>
+                                {page.title || "Untitled page"} ({page.status})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2 pt-6">
-                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Cache TTL (seconds)
-                      </label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={form.cacheTtlSeconds}
-                        onChange={(event) =>
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          404 page
+                        </label>
+                        <Select
+                          value={form.notFoundPageId ?? "none"}
+                          onValueChange={(value) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              notFoundPageId: value === "none" ? null : value,
+                            }))
+                          }
+                          disabled={busy}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select 404 page" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Not set</SelectItem>
+                            {pages.map((page) => (
+                              <SelectItem key={page.id} value={page.id}>
+                                {page.title || "Untitled page"} ({page.status})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    {homepageError ? (
+                      <p className="text-xs text-destructive">{homepageError}</p>
+                    ) : null}
+                    {pages.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+                        No pages yet. Create one in the
+                        <a
+                          className="ml-1 text-primary underline-offset-4 hover:underline"
+                          href={resolveAdminHref(adminBasePath, "/admin/pages")}
+                        >
+                          Pages section
+                        </a>
+                        .
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+                ) : null}
+
+                {activeSection === "preview" ? (
+                <Card className="border-border/60">
+                  <CardHeader className="border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Eye className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle>Preview access</CardTitle>
+                        <CardDescription>
+                          Allow editors to generate preview links.
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4 pt-6 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-sm font-medium">Preview enabled</p>
+                      <p className="text-xs text-muted-foreground">
+                        Disable to block all preview URLs.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Switch
+                        checked={form.previewEnabled}
+                        onCheckedChange={(checked) =>
                           setForm((prev) => ({
                             ...prev,
-                            cacheTtlSeconds: event.target.value,
+                            previewEnabled: checked,
                           }))
                         }
                         disabled={busy}
-                        aria-invalid={cacheTtlError ? true : undefined}
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Set to 0 to disable caching. Default is 30 seconds.
-                      </p>
-                      {cacheTtlError ? (
-                        <p className="text-xs text-destructive">
-                          {cacheTtlError}
-                        </p>
-                      ) : null}
-                    </CardContent>
-                  </Card>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleTestPreview}
+                        disabled={busy}
+                      >
+                        Test preview URL
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
                 ) : null}
 
-                {activeStep === "performance" ? (
-                  <Card className="border-border/60">
-                    <CardHeader className="border-b">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <Gauge className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <CardTitle>Performance</CardTitle>
-                          <CardDescription>
-                            Additional performance controls will appear here.
-                          </CardDescription>
-                        </div>
+                {activeSection === "routes" ? (
+                <Card className="border-border/60">
+                  <CardHeader className="border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <LayoutList className="h-5 w-5" />
                       </div>
-                    </CardHeader>
-                    <CardContent className="pt-6">
+                      <div>
+                        <CardTitle>Content routes</CardTitle>
+                        <CardDescription>
+                          Configure how each content type is published on the public
+                          site.
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-5 pt-6">
+                    {contentTypes.length === 0 ? (
                       <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-                        No performance settings yet. We will add options like
-                        prefetch, critical CSS, and image strategy controls here.
+                        No content types yet. Create one in
+                        <a
+                          className="ml-1 text-primary underline-offset-4 hover:underline"
+                          href={resolveAdminHref(
+                            adminBasePath,
+                            "/admin/content-types"
+                          )}
+                        >
+                          Content Types
+                        </a>
+                        .
                       </div>
-                    </CardContent>
-                  </Card>
+                    ) : null}
+                    {routeValidation.hasErrors ? (
+                      <Alert variant="destructive">
+                        <AlertTitle>Resolve route conflicts</AlertTitle>
+                        <AlertDescription>
+                          Fix highlighted paths before saving. Routes must be unique
+                          across content types.
+                        </AlertDescription>
+                      </Alert>
+                    ) : null}
+                    <div className="space-y-6">
+                      {form.contentRoutes.map((route) => {
+                        const contentType = contentTypes.find(
+                          (entry) => entry.slug === route.type
+                        );
+                        const displayName = contentType?.name ?? route.type;
+                        const suggested = buildDefaultRoute(route.type);
+                        return (
+                          <SiteRouteEditor
+                            key={route.type}
+                            name={displayName}
+                            slug={route.type}
+                            route={route}
+                            suggested={suggested}
+                            errors={routeValidation.errorsByType[route.type]}
+                            missing={!contentType}
+                            disabled={busy}
+                            onChange={(next) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                contentRoutes: prev.contentRoutes.map((item) =>
+                                  item.type === route.type ? next : item
+                                ),
+                              }))
+                            }
+                            onUseSuggested={() =>
+                              setForm((prev) => ({
+                                ...prev,
+                                contentRoutes: prev.contentRoutes.map((item) =>
+                                  item.type === route.type
+                                    ? {
+                                        ...item,
+                                        listPath: suggested.listPath,
+                                        detailPath: suggested.detailPath,
+                                      }
+                                    : item
+                                ),
+                              }))
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+                ) : null}
+
+                {activeSection === "cache" ? (
+                <Card className="border-border/60">
+                  <CardHeader className="border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Timer className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle>Cache settings</CardTitle>
+                        <CardDescription>
+                          Control the HTML cache lifespan for public pages.
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2 pt-6">
+                    <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Cache TTL (seconds)
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.cacheTtlSeconds}
+                      onChange={(event) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          cacheTtlSeconds: event.target.value,
+                        }))
+                      }
+                      disabled={busy}
+                      aria-invalid={cacheTtlError ? true : undefined}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Set to 0 to disable caching. Default is 30 seconds.
+                    </p>
+                    {cacheTtlError ? (
+                      <p className="text-xs text-destructive">{cacheTtlError}</p>
+                    ) : null}
+                  </CardContent>
+                </Card>
+                ) : null}
+
+                {activeSection === "performance" ? (
+                <Card className="border-border/60">
+                  <CardHeader className="border-b">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Gauge className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <CardTitle>Performance</CardTitle>
+                        <CardDescription>
+                          Additional performance controls will appear here.
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-6">
+                    <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+                      No performance settings yet. We will add options like prefetch,
+                      critical CSS, and image strategy controls here.
+                    </div>
+                  </CardContent>
+                </Card>
                 ) : null}
               </div>
             </div>
@@ -752,30 +763,14 @@ export function SiteSettingsPage() {
         <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="secondary">Step {stepIndex + 1} of {steps.length}</Badge>
-              <span>{steps[stepIndex]?.title}</span>
+              <Checkbox
+                checked={autoSaveEnabled}
+                onCheckedChange={(checked) => setAutoSaveEnabled(Boolean(checked))}
+                disabled={busy}
+              />
+              <span>Auto-save settings across all screens</span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setActiveStep(steps[Math.max(stepIndex - 1, 0)].id)
-                }
-                disabled={busy || stepIndex === 0}
-              >
-                Back
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setActiveStep(steps[Math.min(stepIndex + 1, steps.length - 1)].id)
-                }
-                disabled={busy || stepIndex === steps.length - 1}
-              >
-                Next
-              </Button>
               <Button
                 size="sm"
                 className="gap-2"

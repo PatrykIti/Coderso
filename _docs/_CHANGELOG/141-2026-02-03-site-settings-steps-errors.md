@@ -1,4 +1,5 @@
-# Site settings steps & errors
+# Site settings sections & errors
 
-- Split Site Settings wizard into separate Content Routes, Cache, and Performance steps.
+- Replaced the Site Settings stepper with section cards (no next/previous flow).
 - Added explicit settings error mapping for invalid keys/values in /settings updates.
+- Added a shared auto-save toggle for settings screens.
