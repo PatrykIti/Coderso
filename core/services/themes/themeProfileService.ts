@@ -4,6 +4,7 @@ import { db } from "../../db/client";
 import { themeProfiles, themeRoutes } from "../../db/schema";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
 import { assertTokenOverrides } from "../theme/tokenValidation";
+import { clearSiteCache } from "../../site/cache/siteCache";
 
 export type ThemeProfile = typeof themeProfiles.$inferSelect & {
   routes: ThemeRoute[];
@@ -122,7 +123,7 @@ export async function createThemeProfile(input: ThemeProfileCreateInput) {
   };
 
   if (input.isActive) {
-    return db.transaction(async (tx) => {
+    const created = await db.transaction(async (tx) => {
       await tx.update(themeProfiles).set({ isActive: false, updatedAt: now });
       const [row] = await tx
         .insert(themeProfiles)
@@ -138,9 +139,17 @@ export async function createThemeProfile(input: ThemeProfileCreateInput) {
         .returning();
       return row;
     });
+    if (created) {
+      clearSiteCache();
+    }
+    return created;
   }
 
-  return createProfile();
+  const created = await createProfile();
+  if (created?.isActive) {
+    clearSiteCache();
+  }
+  return created;
 }
 
 export async function updateThemeProfile(id: string, input: ThemeProfileUpdateInput) {
@@ -167,6 +176,10 @@ export async function updateThemeProfile(id: string, input: ThemeProfileUpdateIn
     .where(eq(themeProfiles.id, id))
     .returning();
 
+  if (row) {
+    clearSiteCache();
+  }
+
   return row ?? null;
 }
 
@@ -186,6 +199,7 @@ export async function activateThemeProfile(profileId: string) {
       .where(eq(themeProfiles.id, profileId));
   });
 
+  clearSiteCache();
   return { ok: true };
 }
 
@@ -215,6 +229,7 @@ export async function setThemeRoutes(profileId: string, routes: ThemeRouteInput[
     await tx.update(themeProfiles).set({ updatedAt: now }).where(eq(themeProfiles.id, profileId));
   });
 
+  clearSiteCache();
   return getThemeProfile(profileId);
 }
 

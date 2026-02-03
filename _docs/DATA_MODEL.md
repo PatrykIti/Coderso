@@ -202,6 +202,7 @@ Przykładowe klucze:
 - `site.adminPath`, `site.adminRedirectEnabled`
 - `site.homepageId`, `site.notFoundPageId`
 - `site.previewEnabled`
+- `site.cacheTtlSeconds`
 - `site.contentRoutes`
 - `design.tokens`
 - `search.categoryOverrides`

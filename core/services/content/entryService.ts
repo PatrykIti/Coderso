@@ -2,6 +2,8 @@ import { and, desc, eq, max, ne } from "drizzle-orm";
 import { db } from "../../db/client";
 import { contentEntries, contentRevisions, contentTypes, users } from "../../db/schema";
 import { createPreviewToken } from "../pages/previewService";
+import { invalidateContentEntryCache } from "../../site/cache/siteCache";
+import { getContentType } from "./typeService";
 import {
   getSeoDocumentByTarget,
   upsertSeoDocument,
@@ -276,7 +278,7 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
 }
 
 export async function publishEntry(entryId: string, userId: string) {
-  return db.transaction(async (tx) => {
+  const updated = await db.transaction(async (tx) => {
     const [entry] = await tx
       .select()
       .from(contentEntries)
@@ -307,6 +309,19 @@ export async function publishEntry(entryId: string, userId: string) {
 
     return updated ?? null;
   });
+
+  if (updated) {
+    const contentType = await getContentType(updated.typeId);
+    if (contentType) {
+      await invalidateContentEntryCache({
+        typeSlug: contentType.slug,
+        entrySlug: updated.slug,
+        entryId: updated.id,
+      });
+    }
+  }
+
+  return updated;
 }
 
 export async function unpublishEntry(entryId: string) {
@@ -320,6 +335,17 @@ export async function unpublishEntry(entryId: string) {
     })
     .where(eq(contentEntries.id, entryId))
     .returning();
+
+  if (row) {
+    const contentType = await getContentType(row.typeId);
+    if (contentType) {
+      await invalidateContentEntryCache({
+        typeSlug: contentType.slug,
+        entrySlug: row.slug,
+        entryId: row.id,
+      });
+    }
+  }
 
   return row ?? null;
 }

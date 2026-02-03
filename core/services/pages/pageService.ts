@@ -2,6 +2,8 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { pages, users } from "../../db/schema";
 import { createRevisionTx, type RevisionData } from "./revisionService";
+import { invalidateSiteCachePath, normalizeSitePath } from "../../site/cache/siteCache";
+import { getSetting } from "../settings/settingsService";
 
 export type PageStatus = "draft" | "published" | "scheduled" | "archived";
 export type PageData = Record<string, unknown>;
@@ -138,7 +140,7 @@ export async function updatePage(id: string, input: UpdatePageInput) {
 }
 
 export async function publishPage(id: string, userId: string, data?: PageData) {
-  return db.transaction(async (tx) => {
+  const updated = await db.transaction(async (tx) => {
     const [page] = await tx.select().from(pages).where(eq(pages.id, id));
     if (!page) throw new Error("page_not_found");
 
@@ -161,6 +163,23 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
 
     return updated ?? null;
   });
+
+  if (updated) {
+    const normalizedSlug = normalizeSitePath(updated.slug);
+    invalidateSiteCachePath(normalizedSlug);
+
+    const homepageId = await getSetting("site.homepageId");
+    if (homepageId && homepageId === updated.id) {
+      invalidateSiteCachePath("/");
+    }
+
+    const notFoundPageId = await getSetting("site.notFoundPageId");
+    if (notFoundPageId && notFoundPageId === updated.id) {
+      invalidateSiteCachePath("/404");
+    }
+  }
+
+  return updated;
 }
 
 export async function unpublishPage(id: string) {
@@ -174,6 +193,21 @@ export async function unpublishPage(id: string) {
     })
     .where(eq(pages.id, id))
     .returning();
+
+  if (page) {
+    const normalizedSlug = normalizeSitePath(page.slug);
+    invalidateSiteCachePath(normalizedSlug);
+
+    const homepageId = await getSetting("site.homepageId");
+    if (homepageId && homepageId === page.id) {
+      invalidateSiteCachePath("/");
+    }
+
+    const notFoundPageId = await getSetting("site.notFoundPageId");
+    if (notFoundPageId && notFoundPageId === page.id) {
+      invalidateSiteCachePath("/404");
+    }
+  }
 
   return page ?? null;
 }

@@ -1103,6 +1103,7 @@ Payloady:
   "site.homepageId": "page-id",
   "site.notFoundPageId": "page-id",
   "site.previewEnabled": true,
+  "site.cacheTtlSeconds": 30,
   "site.contentRoutes": [
     { "type": "blog", "listPath": "/blog", "detailPath": "/blog/:slug", "enabled": true }
   ],
@@ -1117,6 +1118,7 @@ Response:
 - `site.adminPath` i `site.adminRedirectEnabled` sterują ścieżką panelu admina.
 - `site.homepageId` i `site.notFoundPageId` sterują stronami start/404.
 - `site.previewEnabled` włącza/wyłącza preview.
+- `site.cacheTtlSeconds` kontroluje TTL cache HTML (0 = off).
 - `site.contentRoutes` mapuje content types na trasy (list + detail).
 
 ---

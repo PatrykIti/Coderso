@@ -40,7 +40,7 @@ System template dla content types (list + detail):
 - resolve template przez `core/themes/resolver.ts`
 - fallback na domyślne template’y, gdy theme nie dostarcza
 
-### TASK-046-04: SSR Cache & Revalidation
+### TASK-046-04: SSR Cache & Revalidation (✅ Done — 2026-02-03)
 Cache HTML na publicznym runtime (memory + TTL):
 - cache per path + per theme profile
 - rewalidacja po publish/unpublish i po zmianie theme/profile

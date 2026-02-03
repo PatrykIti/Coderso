@@ -39,6 +39,7 @@ Ustawienia sterowane z panelu (Settings → Site):
 - `site.notFoundPageId` — ID strony 404
 - `site.previewEnabled` — globalny toggle preview
 - `site.contentRoutes` — mapowanie tras dla content types (list + detail)
+- `site.cacheTtlSeconds` — TTL cache HTML w sekundach (0 = off)
 
 Przykład `site.contentRoutes`:
 
@@ -75,6 +76,13 @@ Publiczny frontend używa **osobnego CSS** (nie admin build).
 - Build: `bun --cwd core build:site` → `core/dist/site`
 - Runtime odczytuje `dist/site/manifest.json` i linkuje CSS jako `/site/assets/...`
 - Tokeny z aktywnego **theme profile** są wstrzykiwane jako CSS variables w `<style>` (server‑side).
+
+## SSR Cache
+
+Public runtime cache’uje HTML per **path + aktywny theme profile**:
+- domyślny TTL: `30s`
+- `site.cacheTtlSeconds = 0` wyłącza cache
+- cache jest czyszczony po publish/unpublish strony lub wpisu oraz po zmianie aktywnego profilu
 
 ## UI
 

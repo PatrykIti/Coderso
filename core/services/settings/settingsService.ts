@@ -37,6 +37,7 @@ const DEFAULT_SETTINGS = {
   "site.notFoundPageId": null as string | null,
   "site.previewEnabled": true,
   "site.contentRoutes": DEFAULT_CONTENT_ROUTES,
+  "site.cacheTtlSeconds": 30,
   "design.tokens": {} as DesignTokenOverrides,
   "search.categoryOverrides": {} as SearchCategoryOverrides,
   "widgets.templateCategories": DEFAULT_WIDGET_TEMPLATE_CATEGORIES,
@@ -205,6 +206,16 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return value;
   }
 
+  if (key === "site.cacheTtlSeconds") {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new Error("settings_value_invalid");
+    }
+    if (value < 0) {
+      throw new Error("settings_value_invalid");
+    }
+    return Math.floor(value);
+  }
+
   if (key === "site.contentRoutes") {
     return normalizeContentRoutes(value);
   }
@@ -308,6 +319,11 @@ export async function listSettings(): Promise<SettingValueMap> {
       continue;
     }
 
+    if (key === "site.cacheTtlSeconds") {
+      merged[key] = typeof row.value === "number" ? row.value : DEFAULT_SETTINGS[key];
+      continue;
+    }
+
     if (key === "site.contentRoutes") {
       merged[key] = row.value as ContentRouteSetting[];
       continue;
@@ -339,6 +355,9 @@ export async function getSetting(key: string) {
   }
   if (key === "site.previewEnabled") {
     return Boolean(row.value);
+  }
+  if (key === "site.cacheTtlSeconds") {
+    return typeof row.value === "number" ? row.value : DEFAULT_SETTINGS[key];
   }
   if (key === "site.contentRoutes") {
     return row.value as ContentRouteSetting[];

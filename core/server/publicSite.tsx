@@ -8,6 +8,13 @@ import {
   renderPublicEntryDetailHtml,
   renderPublicEntryListHtml,
 } from "../site/renderPublicEntry";
+import {
+  buildSiteCacheKey,
+  configureSiteCache,
+  getSiteCacheEntry,
+  normalizeSitePath,
+  setSiteCacheEntry,
+} from "../site/cache/siteCache";
 import { matchContentRoute } from "../site/contentRouteMatcher";
 import { toCssVariables } from "../ui/theme/tokenCss";
 import { getPageBySlug, getPage } from "../services/pages/pageService";
@@ -22,7 +29,6 @@ import { getSetting, type ContentRouteSetting } from "../services/settings/setti
 import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import type { ContentSchema } from "../services/content/validation";
-import { normalizePath } from "./router";
 
 export type PublicPageData = {
   title: string;
@@ -103,26 +109,34 @@ const toBlocks = (data?: Record<string, unknown> | null): WidgetBlock[] => {
   return blocks as WidgetBlock[];
 };
 
-export async function renderPublicPage(
+const buildHtmlResponse = (html: string) =>
+  new Response(html, { headers: { "Content-Type": "text/html" } });
+
+const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
   options?: { preview?: boolean }
-) {
+) => {
   ensureRuntimeWidgetsRegistered();
 
   const { inlineCss, cssHref } = await resolvePublicStyles();
   const blocks = toBlocks(
     options?.preview ? page.currentData : page.publishedData
   );
-  const html = renderPublicPageHtml({
+  return renderPublicPageHtml({
     title: page.title ?? "Page",
     blocks,
     cssHref,
     inlineCss,
     isPreview: options?.preview ?? false,
   });
-  return new Response(html, {
-    headers: { "Content-Type": "text/html" },
-  });
+};
+
+export async function renderPublicPage(
+  page: PublicPageData,
+  options?: { preview?: boolean }
+) {
+  const html = await renderPublicPageHtmlInternal(page, options);
+  return buildHtmlResponse(html);
 }
 
 const buildDetailHref = (pattern: string, slug: string, id?: string) => {
@@ -138,13 +152,13 @@ const buildDetailHref = (pattern: string, slug: string, id?: string) => {
 const isEntryPublished = (entry: { status?: string; publishedAt?: Date | null }) =>
   entry.status === "published" && Boolean(entry.publishedAt ?? true);
 
-const renderEntryList = async (
+const renderEntryListHtml = async (
   typeSlug: string,
   detailPath: string,
-  options?: { preview?: boolean }
+  options?: { preview?: boolean; themeName?: string }
 ) => {
   const contentType = await getContentTypeBySlug(typeSlug);
-  if (!contentType) return new Response("Not Found", { status: 404 });
+  if (!contentType) return null;
 
   const entries = await listEntries(contentType.id);
   const items = entries
@@ -157,7 +171,7 @@ const renderEntryList = async (
     }));
 
   const { inlineCss, cssHref } = await resolvePublicStyles();
-  const html = await renderPublicEntryListHtml({
+  return renderPublicEntryListHtml({
     title: contentType.name,
     contentType: {
       id: contentType.id,
@@ -169,30 +183,29 @@ const renderEntryList = async (
     cssHref,
     inlineCss,
     isPreview: options?.preview ?? false,
-    themeName: await resolvePublicThemeName(),
+    themeName: options?.themeName ?? (await resolvePublicThemeName()),
   });
-  return new Response(html, { headers: { "Content-Type": "text/html" } });
 };
 
-const renderEntryDetail = async (
+const renderEntryDetailHtml = async (
   typeSlug: string,
   slug: string,
-  options?: { preview?: boolean }
+  options?: { preview?: boolean; themeName?: string }
 ) => {
   const contentType = await getContentTypeBySlug(typeSlug);
-  if (!contentType) return new Response("Not Found", { status: 404 });
+  if (!contentType) return null;
 
   const entry = await getEntryBySlug(contentType.id, slug);
-  if (!entry) return new Response("Not Found", { status: 404 });
+  if (!entry) return null;
   if (!options?.preview && !isEntryPublished(entry)) {
-    return new Response("Not Found", { status: 404 });
+    return null;
   }
 
   const entryDetail = await getEntry(entry.id);
-  if (!entryDetail) return new Response("Not Found", { status: 404 });
+  if (!entryDetail) return null;
 
   const { inlineCss, cssHref } = await resolvePublicStyles();
-  const html = await renderPublicEntryDetailHtml({
+  return renderPublicEntryDetailHtml({
     title: entryDetail.title ?? contentType.name,
     contentType: {
       id: contentType.id,
@@ -204,13 +217,12 @@ const renderEntryDetail = async (
     cssHref,
     inlineCss,
     isPreview: options?.preview ?? false,
-    themeName: await resolvePublicThemeName(),
+    themeName: options?.themeName ?? (await resolvePublicThemeName()),
     metaDescription:
       "seo" in entryDetail && entryDetail.seo
         ? entryDetail.seo.description ?? null
         : null,
   });
-  return new Response(html, { headers: { "Content-Type": "text/html" } });
 };
 
 export async function handlePublicRequest(req: Request) {
@@ -235,7 +247,10 @@ export async function handlePublicRequest(req: Request) {
     if (preview.targetType === "page") {
       const page = await getPage(preview.targetId);
       if (!page) return new Response("Not Found", { status: 404 });
-      return renderPublicPage(page as PublicPageData, { preview: true });
+      const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
+        preview: true,
+      });
+      return buildHtmlResponse(html);
     }
 
     if (preview.targetType === "content") {
@@ -243,25 +258,59 @@ export async function handlePublicRequest(req: Request) {
       if (!entry) return new Response("Not Found", { status: 404 });
       const contentType = await getContentType(entry.typeId);
       if (!contentType) return new Response("Not Found", { status: 404 });
-      return renderEntryDetail(contentType.slug, entry.slug, { preview: true });
+      const html = await renderEntryDetailHtml(contentType.slug, entry.slug, {
+        preview: true,
+      });
+      if (!html) return new Response("Not Found", { status: 404 });
+      return buildHtmlResponse(html);
     }
   }
 
-  const slugPath = normalizePath(url.pathname);
+  const slugPath = normalizeSitePath(url.pathname);
+  const cacheTtlSeconds = (await getSetting("site.cacheTtlSeconds")) as number;
+  const activeProfile = await getActiveThemeProfile();
+  const cacheProfileId = activeProfile?.id ?? "default";
+  const themeName = activeProfile?.themeName ?? "default";
+  configureSiteCache(cacheTtlSeconds);
+
+  const cacheKey = buildSiteCacheKey(cacheProfileId, slugPath);
+  if (cacheTtlSeconds > 0) {
+    const cachedHtml = getSiteCacheEntry(cacheKey);
+    if (cachedHtml) {
+      return buildHtmlResponse(cachedHtml);
+    }
+  }
+
   const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
   const match = matchContentRoute(slugPath, contentRoutes);
   if (match) {
     if (match.mode === "list") {
-      return renderEntryList(match.type, match.detailPath);
+      const html = await renderEntryListHtml(match.type, match.detailPath, {
+        themeName,
+      });
+      if (!html) return new Response("Not Found", { status: 404 });
+      if (cacheTtlSeconds > 0) {
+        setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+      }
+      return buildHtmlResponse(html);
     }
     const slug = match.params.slug ?? match.params.id ?? "";
     if (!slug) return new Response("Not Found", { status: 404 });
-    return renderEntryDetail(match.type, slug);
+    const html = await renderEntryDetailHtml(match.type, slug, { themeName });
+    if (!html) return new Response("Not Found", { status: 404 });
+    if (cacheTtlSeconds > 0) {
+      setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+    }
+    return buildHtmlResponse(html);
   }
   const page = await getPageBySlug(slugPath);
   if (!page) return new Response("Not Found", { status: 404 });
   if (page.status !== "published" || !page.publishedData) {
     return new Response("Not Found", { status: 404 });
   }
-  return renderPublicPage(page as PublicPageData);
+  const html = await renderPublicPageHtmlInternal(page as PublicPageData);
+  if (cacheTtlSeconds > 0) {
+    setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+  }
+  return buildHtmlResponse(html);
 }
