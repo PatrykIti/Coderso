@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 36 tasks
-- **In Progress:** 0
-- **Done:** 200 tasks
+- **To Do:** 34 tasks
+- **In Progress:** 1
+- **Done:** 204 tasks
 
 ---
 
@@ -41,25 +41,23 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-045 | Public Site Themes | High | Large | Index for TASK-045-01..05 |
-| TASK-045-01 | Site Theme DB Schema | High | Medium | Templates + profiles |
-| TASK-045-02 | Site Theme Service + Resolver | High | Medium | Active theme + css vars |
 | TASK-045-03 | Public CSS Build Pipeline | High | Medium | dist/site css build |
-| TASK-045-04 | Admin UI — Site Themes | High | Large | Theme editor + preview |
-| TASK-045-05 | Site Themes API Routes | High | Medium | /site-themes |
 | TASK-046 | Public Site Runtime | High | Large | Index for TASK-046-01..05 |
 | TASK-046-01 | Site Settings Model | High | Medium | baseUrl + homepage |
 | TASK-046-02 | Public Routes & Preview | High | Medium | content routes |
 | TASK-046-03 | Content Entry Rendering | High | Large | list + detail templates |
 | TASK-046-04 | SSR Cache & Revalidation | High | Medium | cache + invalidation |
 | TASK-046-05 | Admin UI — Site Settings | High | Large | site settings UI |
-| TASK-048 | Content Types & Content UX Expansion | Medium | Large | Index for TASK-048-01..06 |
+| TASK-048 | Content Types & Content UX Expansion | Medium | Large | Index for TASK-048-01..09 |
 | TASK-048-01 | Field Types & Schema Meta | Medium | Medium | Preserve field types |
 | TASK-048-02 | Relation Field UX & Data Model | Medium | Medium | Relation dropdown + picker |
 | TASK-048-03 | Media Field UX & Storage Integration | Medium | Medium | Media picker |
 | TASK-048-04 | Taxonomy System & Terms | Medium | Large | Categories + tags |
 | TASK-048-05 | Content Editor Help & Tooltips | Low | Small | UI guidance |
 | TASK-048-06 | Content Modeling Docs & Examples | Medium | Medium | Cookbook + docs |
+| TASK-048-07 | Field Layout & Grouping UX | Medium | Medium | Sections + display |
+| TASK-048-08 | Entry Workflow & Validation UX | Medium | Medium | Checklist + required |
+| TASK-048-09 | Entry List UX & Bulk Actions | Medium | Medium | Filters + bulk |
 | TASK-049 | Widget Library — Core + Templates + Favorites | High | Large | Index for TASK-049-01..06 |
 | TASK-049-01 | Widget Templates DB Schema | High | Medium | widget_templates table |
 | TASK-049-02 | Widget Templates Service | High | Medium | CRUD + validation |
@@ -92,7 +90,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| _empty_ | _n/a_ | _n/a_ | _n/a_ | _n/a_ |
+| TASK-045 | Public Site Themes | High | Large | Only TASK-045-03 remaining |
 
 ---
 
@@ -104,6 +102,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050-02 | Widget Template Revision History | Medium | Medium | Revisions table + restore |
 | TASK-050-03 | Widget Nesting (Insert Into Existing Block) | Medium | Large | Nested blocks support |
 | TASK-044 | Public Pages Rendering and Preview | High | Medium | Public site + preview |
+| TASK-045-01 | Site Theme DB Schema | High | Medium | theme_profiles + theme_routes |
+| TASK-045-02 | Site Theme Service + Resolver | High | Medium | Active theme + css vars |
+| TASK-045-04 | Admin UI — Site Themes | High | Large | Theme editor + preview |
+| TASK-045-05 | Site Themes API Routes | High | Medium | /themes + profiles |
 | TASK-047 | Admin/Public Base URLs (Routing Policy) | High | Medium | split admin/public hosts |
 | TASK-047-01 | Admin/Public Base URL Settings | High | Small | settings keys |
 | TASK-047-02 | Routing Policy Middleware | High | Medium | host-based routing |

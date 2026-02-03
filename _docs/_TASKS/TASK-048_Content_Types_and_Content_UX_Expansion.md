@@ -12,6 +12,7 @@
 ## Overview
 
 Make Content Types and Content (Entries) **WordPress‑like**, non‑technical, and production‑ready.  
+Everything should be manageable from the UI (no manual JSON/SQL).  
 This epic expands the backend model and admin UX to support:
 
 - Rich field types (text, rich text, select, media, relation, etc.)
@@ -35,6 +36,9 @@ This epic expands the backend model and admin UX to support:
 | TASK-048-04 | Taxonomy System & Terms | Categories/tags per type |
 | TASK-048-05 | Content Editor Help & Tooltips | Hints, examples, guidance |
 | TASK-048-06 | Content Modeling Docs & Examples | Mabudo‑style cookbook |
+| TASK-048-07 | Field Layout & Grouping UX | Sections/tabs, widths, display options |
+| TASK-048-08 | Entry Workflow & Validation UX | Required markers, publish checklist, draft clarity |
+| TASK-048-09 | Entry List UX & Bulk Actions | Filters, quick edit, bulk publish/unpublish |
 
 ---
 
@@ -54,15 +58,20 @@ core/services/search/
 core/admin/ui/content-types/
   FieldEditor.tsx             # UPDATE: non‑technical relation target select
   ContentTypeEditor.tsx       # UPDATE: taxonomy config UI
+  FieldLayoutEditor.tsx       # NEW: sections/tabs + field grouping
 core/admin/ui/entries/
   FieldRenderer.tsx           # UPDATE: relation/media pickers
   EntryEditor.tsx             # UPDATE: help & tooltips
+  EntryWorkflowPanel.tsx      # NEW: publish checklist + validation summary
+  EntryBulkActions.tsx        # NEW: bulk actions UI for list/grid
 
 _docs/
   CONTENT_TYPES_SPEC.md       # UPDATE: fields + relations + taxonomy
   CONTENT_FIELDS.md           # ADD
   CONTENT_RELATIONS.md        # ADD
   CONTENT_MODELING_COOKBOOK.md# ADD
+  CONTENT_WORKFLOW.md         # ADD
+  CONTENT_LIST_UX.md          # ADD
 ```
 
 ---
@@ -73,15 +82,19 @@ _docs/
 2) Relation picker UX + multi‑relation  
 3) Media picker UX + validation  
 4) Taxonomies (categories/tags)  
-5) UI hints & documentation
+5) Field layout/grouping UX  
+6) Workflow/validation UX  
+7) List UX + bulk actions  
+8) UI hints & documentation
 
 ---
 
 ## Testing Requirements
 
 - Unit tests for schema mapping and content validation
-- UI tests for relation/media pickers
+- UI tests for relation/media pickers and layout/grouping
 - Integration tests for taxonomy CRUD + entry assignment
+- UI tests for workflow checklist + bulk actions
 
 ---
 
@@ -95,6 +108,9 @@ Update or add:
 - `CONTENT_FIELDS.md` (new)
 - `CONTENT_RELATIONS.md` (new)
 - `CONTENT_MODELING_COOKBOOK.md` (new)
+- `CONTENT_WORKFLOW.md` (new)
+- `CONTENT_LIST_UX.md` (new)
+- `_docs/README.md` (docs index)
 
 ---
 
