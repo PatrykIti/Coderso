@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 29 tasks
+- **To Do:** 27 tasks
 - **In Progress:** 0
-- **Done:** 210 tasks
+- **Done:** 212 tasks
 
 ---
 
@@ -41,8 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-046 | Public Site Runtime | High | Large | Index for TASK-046-01..05 |
-| TASK-046-05 | Admin UI — Site Settings | High | Large | site settings UI |
 | TASK-048 | Content Types & Content UX Expansion | Medium | Large | Index for TASK-048-01..09 |
 | TASK-048-01 | Field Types & Schema Meta | Medium | Medium | Preserve field types |
 | TASK-048-02 | Relation Field UX & Data Model | Medium | Medium | Relation dropdown + picker |
@@ -107,6 +105,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-046-02 | Public Routes & Preview | High | Medium | content routes |
 | TASK-046-03 | Content Entry Rendering | High | Large | list + detail templates |
 | TASK-046-04 | SSR Cache & Revalidation | High | Medium | cache + invalidation |
+| TASK-046-05 | Admin UI — Site Settings | High | Large | site settings UI |
+| TASK-046 | Public Site Runtime | High | Large | Index for TASK-046-01..05 |
 | TASK-047 | Admin/Public Base URLs (Routing Policy) | High | Medium | split admin/public hosts |
 | TASK-047-01 | Admin/Public Base URL Settings | High | Small | settings keys |
 | TASK-047-02 | Routing Policy Middleware | High | Medium | host-based routing |

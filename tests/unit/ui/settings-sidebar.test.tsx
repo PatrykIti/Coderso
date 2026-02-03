@@ -8,6 +8,8 @@ test("SettingsSidebar renders settings navigation items", () => {
 
   expect(html).toContain("General");
   expect(html).toContain("/admin/settings/general");
+  expect(html).toContain("Site");
+  expect(html).toContain("/admin/settings/site");
   expect(html).toContain("Security");
   expect(html).toContain("/admin/settings/security");
   expect(html).toContain("API Keys");

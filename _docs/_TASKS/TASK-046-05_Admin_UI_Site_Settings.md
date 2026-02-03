@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-046-01  
-**Status:** 🟡 To Do
+**Status:** ✅ Done (2026-02-03)
 
 ---
 
@@ -46,7 +46,7 @@ Dodaj **Site Settings** w panelu admina (user‑friendly):
 | UI | `core/admin/ui/site/SiteSettingsPage.tsx` | main page |
 | UI | `core/admin/ui/site/SiteRouteEditor.tsx` | route per content type |
 | Client | `core/admin/services/siteSettingsClient.ts` | GET/PATCH |
-| Nav | `core/admin/ui/layouts/AdminShell.tsx` | add menu section |
+| Nav | `core/admin/ui/settings/SettingsSidebar.tsx` | add Site entry |
 
 ---
 

@@ -48,6 +48,7 @@ import { WebhooksPage } from "@/ui/settings/WebhooksPage";
 import { PluginDetailsPage } from "@/ui/store/PluginDetailsPage";
 import { PluginStorePage } from "@/ui/store/PluginStorePage";
 import { PagePreview } from "@/ui/pages/PagePreview";
+import { SiteSettingsPage } from "@/ui/site/SiteSettingsPage";
 import { toAdminThemeCssVariables } from "../../ui/theme/tokenCss";
 import { DEFAULT_ADMIN_THEME_TOKENS } from "../../services/adminThemes/tokenTypes";
 import { mergeAdminThemeTokens } from "../../services/adminThemes/tokenUtils";
@@ -354,6 +355,7 @@ export function AdminApp({ path }: AdminAppProps) {
           />
         ),
       },
+      { pattern: "/settings/site", element: <SiteSettingsPage /> },
       { pattern: "/settings/security", element: <SecuritySettingsPage /> },
       { pattern: "/settings/security/ip-allowlist", element: <IpAllowlistPage /> },
       { pattern: "/settings/security/sessions", element: <SessionsPage /> },

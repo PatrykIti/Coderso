@@ -5,7 +5,7 @@
 **Category:** Site/Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-044 (Public Pages Rendering), TASK-045-03 (Public CSS Build)  
-**Status:** 🟡 To Do
+**Status:** ✅ Done (2026-02-03)
 
 ---
 
@@ -45,7 +45,7 @@ Cache HTML na publicznym runtime (memory + TTL):
 - cache per path + per theme profile
 - rewalidacja po publish/unpublish i po zmianie theme/profile
 
-### TASK-046-05: Admin UI — Site Settings
+### TASK-046-05: Admin UI — Site Settings (✅ Done — 2026-02-03)
 Nowa sekcja w panelu:
 - wybór homepage/404 (select page)
 - konfiguracja content routes (per content type)

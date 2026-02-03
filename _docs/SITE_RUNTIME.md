@@ -91,3 +91,7 @@ Base URLs konfiguruje się w panelu admina:
 
 Admin path konfiguruje się w tym samym miejscu:
 **Settings → General → Admin Access Path**.
+
+Pozostałe ustawienia runtime (homepage, 404, preview, content routes, cache TTL)
+edytuje się w:
+**Settings → Site**.
