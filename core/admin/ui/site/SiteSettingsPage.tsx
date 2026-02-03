@@ -256,7 +256,7 @@ export function SiteSettingsPage() {
   const busy = saving || status === "loading";
 
   const handleSave = useCallback(async () => {
-    if (hasValidationErrors) return;
+    if (hasValidationErrors) return false;
     setSaveError(null);
     setSaveSuccess(null);
     setActionError(null);

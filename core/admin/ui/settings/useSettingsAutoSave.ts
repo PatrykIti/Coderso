@@ -17,14 +17,12 @@ export type AutoSaveEffectOptions<T> = {
 };
 
 export function useSettingsAutoSave(): AutoSaveState {
-  const [enabled, setEnabled] = useState(false);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  const [enabled, setEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === null) return;
-    setEnabled(stored === "true");
-  }, []);
+    if (stored === null) return false;
+    return stored === "true";
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
