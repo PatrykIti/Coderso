@@ -86,12 +86,9 @@ Public runtime cache’uje HTML per **path + aktywny theme profile**:
 
 ## UI
 
-Base URLs konfiguruje się w panelu admina:
-**Settings → General → Base URLs**.
-
-Admin path konfiguruje się w tym samym miejscu:
-**Settings → General → Admin Access Path**.
+Base URLs oraz admin path konfiguruje się w panelu admina:
+**Settings → Site**.
 
 Pozostałe ustawienia runtime (homepage, 404, preview, content routes, cache TTL)
-edytuje się w:
+również edytuje się w:
 **Settings → Site**.

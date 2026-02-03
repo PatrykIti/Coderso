@@ -4,6 +4,7 @@ import {
   setSetting,
   setSettings,
 } from "../../services/settings/settingsService";
+import { ApiError } from "../errorHandler";
 import {
   getStorageSettings,
   setStorageSettings,
@@ -44,6 +45,35 @@ export type SettingsRouteDeps = {
 
 export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) {
   const { requirePermission, validate } = deps;
+
+  const mapSettingsError = (error: unknown) => {
+    if (!(error instanceof Error)) return null;
+    switch (error.message) {
+      case "settings_payload_invalid":
+        return new ApiError("settings_payload_invalid", "Invalid settings payload", 400);
+      case "settings_key_invalid":
+        return new ApiError("settings_key_invalid", "Unknown setting key", 400);
+      case "settings_value_invalid":
+        return new ApiError("settings_value_invalid", "Invalid setting value", 400);
+      case "design_tokens_invalid":
+        return new ApiError("design_tokens_invalid", "Invalid design tokens", 400);
+      default:
+        return null;
+    }
+  };
+
+  const withSettingsErrors = async <T>(fn: () => Promise<T>) => {
+    try {
+      return await fn();
+    } catch (error) {
+      const mapped = mapSettingsError(error);
+      if (mapped) throw mapped;
+      if (process.env.NODE_ENV !== "production" && error instanceof Error) {
+        throw new ApiError("settings_error", error.message, 500);
+      }
+      throw error;
+    }
+  };
 
   router.get("/settings", requirePermission("settings:read"), async () => {
     const current = await listSettings();
@@ -123,7 +153,9 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     async (ctx) => {
       validate(settingsUpdateSchema, ctx.body);
       const body = ctx.body as { value: unknown };
-      const updated = await setSetting(ctx.params.key, body.value);
+      const updated = await withSettingsErrors(() =>
+        setSetting(ctx.params.key, body.value)
+      );
       await logAudit({
         actorId: ctx.user?.id ?? null,
         action: "settings.update",
@@ -141,7 +173,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     async (ctx) => {
       validate(settingsBulkSchema, ctx.body);
       const payload = ctx.body as Record<string, unknown>;
-      const updated = await setSettings(payload);
+      const updated = await withSettingsErrors(() => setSettings(payload));
       const tokens = await getResolvedTokens();
       await logAudit({
         actorId: ctx.user?.id ?? null,

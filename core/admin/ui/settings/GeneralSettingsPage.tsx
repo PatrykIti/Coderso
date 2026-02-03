@@ -7,18 +7,12 @@ import { isApiClientError } from "@/services/apiClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 
 import { BrandingCard } from "./BrandingCard";
-import { BaseUrlCard } from "./BaseUrlCard";
-import { AdminAccessCard } from "./AdminAccessCard";
 import { LogoUploadCard } from "./LogoUploadCard";
 import { SettingsSidebar } from "./SettingsSidebar";
 
 type GeneralSettingsValues = {
   siteName: string;
   siteLocale: string;
-  adminBaseUrl: string;
-  publicBaseUrl: string;
-  adminPath: string;
-  adminRedirectEnabled: boolean;
 };
 
 type GeneralSettingsPageProps = {
@@ -32,10 +26,6 @@ type GeneralSettingsPageProps = {
 const defaultValues: GeneralSettingsValues = {
   siteName: "Nextless",
   siteLocale: "en",
-  adminBaseUrl: "",
-  publicBaseUrl: "",
-  adminPath: "/admin",
-  adminRedirectEnabled: false,
 };
 
 export function GeneralSettingsPage({
@@ -50,11 +40,6 @@ export function GeneralSettingsPage({
     ...input,
     siteName: input.siteName ?? defaultValues.siteName,
     siteLocale: input.siteLocale ?? defaultValues.siteLocale,
-    adminBaseUrl: input.adminBaseUrl ?? defaultValues.adminBaseUrl,
-    publicBaseUrl: input.publicBaseUrl ?? defaultValues.publicBaseUrl,
-    adminPath: input.adminPath ?? defaultValues.adminPath,
-    adminRedirectEnabled:
-      input.adminRedirectEnabled ?? defaultValues.adminRedirectEnabled,
   });
 
   const [form, setForm] = useState(() => normalizeValues(values));
@@ -62,40 +47,7 @@ export function GeneralSettingsPage({
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
 
-  const validateBaseUrl = (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    try {
-      const parsed = new URL(trimmed);
-      const host = parsed.hostname.toLowerCase();
-      if (parsed.protocol !== "https:") {
-        if (host !== "localhost" && host !== "127.0.0.1") {
-          return "HTTPS is required for non-localhost URLs.";
-        }
-      }
-      return null;
-    } catch {
-      return "Enter a valid URL (e.g. https://example.com).";
-    }
-  };
-
-  const adminBaseUrlError = validateBaseUrl(form.adminBaseUrl);
-  const publicBaseUrlError = validateBaseUrl(form.publicBaseUrl);
-  const validateAdminPath = (value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return "Admin path is required.";
-    const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-    if (normalized.length <= 1) return "Admin path must be longer than '/'.";
-    if (!/^\/[a-zA-Z0-9_-]+$/.test(normalized)) {
-      return "Use only letters, numbers, dashes, and underscores (single segment).";
-    }
-    return null;
-  };
-
-  const adminPathError = validateAdminPath(form.adminPath);
-  const hasValidationErrors = Boolean(
-    adminBaseUrlError || publicBaseUrlError || adminPathError
-  );
+  const hasValidationErrors = false;
 
   useEffect(() => {
     setForm(normalizeValues(values));
@@ -141,7 +93,7 @@ export function GeneralSettingsPage({
       }
       topbarActions={
         <span className="text-xs text-muted-foreground">
-          {busy ? "Saving changes..." : "Manage defaults for the public site"}
+          {busy ? "Saving changes..." : "Manage site identity and branding"}
         </span>
       }
     >
@@ -174,35 +126,6 @@ export function GeneralSettingsPage({
                   ...prev,
                   siteName: next.siteName,
                   siteLocale: next.siteLocale,
-                }))
-              }
-              disabled={busy}
-            />
-            <BaseUrlCard
-              adminBaseUrl={form.adminBaseUrl}
-              publicBaseUrl={form.publicBaseUrl}
-              errors={{
-                adminBaseUrl: adminBaseUrlError,
-                publicBaseUrl: publicBaseUrlError,
-              }}
-              onChange={(next) =>
-                setForm((prev) => ({
-                  ...prev,
-                  adminBaseUrl: next.adminBaseUrl,
-                  publicBaseUrl: next.publicBaseUrl,
-                }))
-              }
-              disabled={busy}
-            />
-            <AdminAccessCard
-              adminPath={form.adminPath}
-              redirectEnabled={form.adminRedirectEnabled}
-              error={adminPathError}
-              onChange={(next) =>
-                setForm((prev) => ({
-                  ...prev,
-                  adminPath: next.adminPath,
-                  adminRedirectEnabled: next.redirectEnabled,
                 }))
               }
               disabled={busy}

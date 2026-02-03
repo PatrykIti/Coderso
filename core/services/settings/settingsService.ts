@@ -115,6 +115,15 @@ const normalizeOptionalId = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const normalizeOptionalIdValue = (value: unknown) => {
+  if (value === null) return "";
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : "";
+};
+
 const normalizeRoutePath = (value: unknown, allowRoot = false) => {
   if (typeof value !== "string") {
     throw new Error("settings_value_invalid");
@@ -196,7 +205,7 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
   }
 
   if (key === "site.homepageId" || key === "site.notFoundPageId") {
-    return normalizeOptionalId(value);
+    return normalizeOptionalIdValue(value);
   }
 
   if (key === "site.previewEnabled") {

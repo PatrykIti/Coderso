@@ -135,6 +135,8 @@ Project Change Log.
 | 137 | 2026-02-03 | Content entry templates | CMS/Site |
 | 138 | 2026-02-03 | Public SSR cache | CMS/Site |
 | 139 | 2026-02-03 | Site settings UI | Admin/UI |
+| 140 | 2026-02-03 | Site settings relocation | Admin/UI |
+| 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |
 | 096 | 2026-01-31 | API keys service | Core/Security |

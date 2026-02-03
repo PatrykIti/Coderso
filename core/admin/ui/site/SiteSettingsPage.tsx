@@ -2,10 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   Eye,
-  Globe,
+  Gauge,
   Home,
   LayoutList,
-  Settings2,
+  Timer,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -34,6 +34,8 @@ import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import { SettingsSidebar } from "@/ui/settings/SettingsSidebar";
+import { AdminAccessCard } from "@/ui/settings/AdminAccessCard";
+import { BaseUrlCard } from "@/ui/settings/BaseUrlCard";
 
 import { SiteRouteEditor } from "./SiteRouteEditor";
 import {
@@ -45,7 +47,10 @@ import {
 } from "./siteSettingsValidation";
 
 type SiteSettingsForm = {
+  adminBaseUrl: string;
   publicBaseUrl: string;
+  adminPath: string;
+  adminRedirectEnabled: boolean;
   homepageId: string | null;
   notFoundPageId: string | null;
   previewEnabled: boolean;
@@ -53,7 +58,7 @@ type SiteSettingsForm = {
   contentRoutes: SiteContentRouteForm[];
 };
 
-type SiteStep = "base" | "pages" | "routes";
+type SiteStep = "base" | "pages" | "routes" | "cache" | "performance";
 
 type StepConfig = {
   id: SiteStep;
@@ -77,10 +82,23 @@ const steps: StepConfig[] = [
     title: "Content routes",
     description: "Configure list and detail URLs for entries.",
   },
+  {
+    id: "cache",
+    title: "Cache",
+    description: "Control HTML cache behavior for the public site.",
+  },
+  {
+    id: "performance",
+    title: "Performance",
+    description: "Optional optimization controls for future use.",
+  },
 ];
 
 const defaultForm: SiteSettingsForm = {
+  adminBaseUrl: "",
   publicBaseUrl: "",
+  adminPath: "/admin",
+  adminRedirectEnabled: false,
   homepageId: null,
   notFoundPageId: null,
   previewEnabled: true,
@@ -89,7 +107,10 @@ const defaultForm: SiteSettingsForm = {
 };
 
 const toFormValues = (settings: SiteSettingsResponse): SiteSettingsForm => ({
+  adminBaseUrl: settings.adminBaseUrl ?? "",
   publicBaseUrl: settings.publicBaseUrl ?? "",
+  adminPath: settings.adminPath ?? "/admin",
+  adminRedirectEnabled: settings.adminRedirectEnabled ?? false,
   homepageId: settings.homepageId ?? null,
   notFoundPageId: settings.notFoundPageId ?? null,
   previewEnabled: settings.previewEnabled ?? true,
@@ -112,6 +133,17 @@ const validateBaseUrl = (value: string) => {
   } catch {
     return "Enter a valid URL (e.g. https://example.com).";
   }
+};
+
+const validateAdminPath = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "Admin path is required.";
+  const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  if (normalized.length <= 1) return "Admin path must be longer than '/'.";
+  if (!/^\/[a-zA-Z0-9_-]+$/.test(normalized)) {
+    return "Use only letters, numbers, dashes, and underscores (single segment).";
+  }
+  return null;
 };
 
 const resolvePublicBaseUrl = (value: string) => {
@@ -180,6 +212,8 @@ export function SiteSettingsPage() {
   );
 
   const publicBaseUrlError = validateBaseUrl(form.publicBaseUrl);
+  const adminBaseUrlError = validateBaseUrl(form.adminBaseUrl);
+  const adminPathError = validateAdminPath(form.adminPath);
   const homepageError =
     form.homepageId && form.homepageId === form.notFoundPageId
       ? "Homepage and 404 page should be different."
@@ -191,7 +225,12 @@ export function SiteSettingsPage() {
       : "Cache TTL must be a number greater than or equal to 0.";
 
   const hasValidationErrors = Boolean(
-    publicBaseUrlError || homepageError || cacheTtlError || routeValidation.hasErrors
+    publicBaseUrlError ||
+      adminBaseUrlError ||
+      adminPathError ||
+      homepageError ||
+      cacheTtlError ||
+      routeValidation.hasErrors
   );
 
   const busy = saving || status === "loading";
@@ -209,7 +248,10 @@ export function SiteSettingsPage() {
         detailPath: normalizeRouteInput(route.detailPath, false) ?? route.detailPath,
       }));
       const updated = await updateSiteSettings({
+        adminBaseUrl: form.adminBaseUrl.trim() || null,
         publicBaseUrl: form.publicBaseUrl.trim() || null,
+        adminPath: form.adminPath,
+        adminRedirectEnabled: form.adminRedirectEnabled,
         homepageId: form.homepageId,
         notFoundPageId: form.notFoundPageId,
         previewEnabled: form.previewEnabled,
@@ -384,66 +426,35 @@ export function SiteSettingsPage() {
               <div className="space-y-6">
                 {activeStep === "base" ? (
                   <>
-                    <Card className="border-border/60">
-                      <CardHeader className="border-b">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Globe className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <CardTitle>Public base URL</CardTitle>
-                            <CardDescription>
-                              Used for preview links and public routing.
-                            </CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4 pt-6">
-                        <div className="space-y-2">
-                          <label
-                            htmlFor="site-public-base-url"
-                            className="text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                          >
-                            Public site URL
-                          </label>
-                          <Input
-                            id="site-public-base-url"
-                            value={form.publicBaseUrl}
-                            placeholder="https://www.example.com"
-                            onChange={(event) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                publicBaseUrl: event.target.value,
-                              }))
-                            }
-                            disabled={busy}
-                            aria-invalid={publicBaseUrlError ? true : undefined}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Preview URLs use this host. Leave blank to use the
-                            current domain.
-                          </p>
-                          {publicBaseUrlError ? (
-                            <p className="text-xs text-destructive">
-                              {publicBaseUrlError}
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
-                          Admin base URL is managed in
-                          <a
-                            className="ml-1 text-primary underline-offset-4 hover:underline"
-                            href={resolveAdminHref(
-                              adminBasePath,
-                              "/admin/settings/general"
-                            )}
-                          >
-                            General Settings
-                          </a>
-                          .
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <BaseUrlCard
+                      adminBaseUrl={form.adminBaseUrl}
+                      publicBaseUrl={form.publicBaseUrl}
+                      errors={{
+                        adminBaseUrl: adminBaseUrlError,
+                        publicBaseUrl: publicBaseUrlError,
+                      }}
+                      onChange={(next) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          adminBaseUrl: next.adminBaseUrl,
+                          publicBaseUrl: next.publicBaseUrl,
+                        }))
+                      }
+                      disabled={busy}
+                    />
+                    <AdminAccessCard
+                      adminPath={form.adminPath}
+                      redirectEnabled={form.adminRedirectEnabled}
+                      error={adminPathError}
+                      onChange={(next) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          adminPath: next.adminPath,
+                          adminRedirectEnabled: next.redirectEnabled,
+                        }))
+                      }
+                      disabled={busy}
+                    />
                   </>
                 ) : null}
 
@@ -663,49 +674,75 @@ export function SiteSettingsPage() {
                         </div>
                       </CardContent>
                     </Card>
-
-                    <Card className="border-border/60">
-                      <CardHeader className="border-b">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Settings2 className="h-5 w-5" />
-                          </div>
-                          <div>
-                            <CardTitle>Cache & performance</CardTitle>
-                            <CardDescription>
-                              Control the HTML cache lifespan for public pages.
-                            </CardDescription>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2 pt-6">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Cache TTL (seconds)
-                        </label>
-                        <Input
-                          type="number"
-                          min={0}
-                          value={form.cacheTtlSeconds}
-                          onChange={(event) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              cacheTtlSeconds: event.target.value,
-                            }))
-                          }
-                          disabled={busy}
-                          aria-invalid={cacheTtlError ? true : undefined}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Set to 0 to disable caching. Default is 30 seconds.
-                        </p>
-                        {cacheTtlError ? (
-                          <p className="text-xs text-destructive">
-                            {cacheTtlError}
-                          </p>
-                        ) : null}
-                      </CardContent>
-                    </Card>
                   </>
+                ) : null}
+
+                {activeStep === "cache" ? (
+                  <Card className="border-border/60">
+                    <CardHeader className="border-b">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Timer className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <CardTitle>Cache settings</CardTitle>
+                          <CardDescription>
+                            Control the HTML cache lifespan for public pages.
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 pt-6">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Cache TTL (seconds)
+                      </label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.cacheTtlSeconds}
+                        onChange={(event) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            cacheTtlSeconds: event.target.value,
+                          }))
+                        }
+                        disabled={busy}
+                        aria-invalid={cacheTtlError ? true : undefined}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Set to 0 to disable caching. Default is 30 seconds.
+                      </p>
+                      {cacheTtlError ? (
+                        <p className="text-xs text-destructive">
+                          {cacheTtlError}
+                        </p>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                ) : null}
+
+                {activeStep === "performance" ? (
+                  <Card className="border-border/60">
+                    <CardHeader className="border-b">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <Gauge className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <CardTitle>Performance</CardTitle>
+                          <CardDescription>
+                            Additional performance controls will appear here.
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="rounded-lg border border-dashed border-border/60 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+                        No performance settings yet. We will add options like
+                        prefetch, critical CSS, and image strategy controls here.
+                      </div>
+                    </CardContent>
+                  </Card>
                 ) : null}
               </div>
             </div>

@@ -8,7 +8,10 @@ export type SiteContentRoute = {
 };
 
 export type SiteSettingsResponse = {
+  adminBaseUrl: string | null;
   publicBaseUrl: string | null;
+  adminPath: string;
+  adminRedirectEnabled: boolean;
   homepageId: string | null;
   notFoundPageId: string | null;
   previewEnabled: boolean;
@@ -67,7 +70,16 @@ const resolveSiteSettings = (
   payload: Record<string, unknown>
 ): SiteSettingsResponse => {
   return {
+    adminBaseUrl: normalizeOptionalString(payload["site.adminBaseUrl"]),
     publicBaseUrl: normalizeOptionalString(payload["site.publicBaseUrl"]),
+    adminPath:
+      typeof payload["site.adminPath"] === "string"
+        ? payload["site.adminPath"]
+        : "/admin",
+    adminRedirectEnabled: normalizeOptionalBoolean(
+      payload["site.adminRedirectEnabled"],
+      false
+    ),
     homepageId: normalizeOptionalString(payload["site.homepageId"]),
     notFoundPageId: normalizeOptionalString(payload["site.notFoundPageId"]),
     previewEnabled: normalizeOptionalBoolean(payload["site.previewEnabled"], true),
@@ -90,6 +102,15 @@ export async function updateSiteSettings(update: SiteSettingsUpdate) {
   const payload: Record<string, unknown> = {};
   if ("publicBaseUrl" in update) {
     payload["site.publicBaseUrl"] = normalizeBaseUrlInput(update.publicBaseUrl);
+  }
+  if ("adminBaseUrl" in update) {
+    payload["site.adminBaseUrl"] = normalizeBaseUrlInput(update.adminBaseUrl);
+  }
+  if ("adminPath" in update) {
+    payload["site.adminPath"] = update.adminPath;
+  }
+  if ("adminRedirectEnabled" in update) {
+    payload["site.adminRedirectEnabled"] = update.adminRedirectEnabled;
   }
   if ("homepageId" in update) {
     payload["site.homepageId"] = normalizeOptionalIdInput(update.homepageId);

@@ -99,19 +99,11 @@ const matchRoute = (pattern: string, path: string) => {
 type SettingsValues = {
   siteName: string;
   siteLocale: string;
-  adminBaseUrl: string;
-  publicBaseUrl: string;
-  adminPath: string;
-  adminRedirectEnabled: boolean;
 };
 
 const defaultSettingsValues: SettingsValues = {
   siteName: "Nextless",
   siteLocale: "en",
-  adminBaseUrl: "",
-  publicBaseUrl: "",
-  adminPath: "/admin",
-  adminRedirectEnabled: false,
 };
 
 type SettingsState = {
@@ -157,41 +149,12 @@ const resolveSettingsPayload = (
     typeof payload["site.locale"] === "string"
       ? payload["site.locale"]
       : fallback.values.siteLocale;
-  const adminBaseUrl =
-    payload["site.adminBaseUrl"] === null
-      ? ""
-      : typeof payload["site.adminBaseUrl"] === "string"
-        ? payload["site.adminBaseUrl"]
-        : fallback.values.adminBaseUrl;
-  const publicBaseUrl =
-    payload["site.publicBaseUrl"] === null
-      ? ""
-      : typeof payload["site.publicBaseUrl"] === "string"
-        ? payload["site.publicBaseUrl"]
-        : fallback.values.publicBaseUrl;
-  const adminPath =
-    typeof payload["site.adminPath"] === "string"
-      ? payload["site.adminPath"]
-      : fallback.values.adminPath;
-  const adminRedirectEnabled =
-    typeof payload["site.adminRedirectEnabled"] === "boolean"
-      ? payload["site.adminRedirectEnabled"]
-      : fallback.values.adminRedirectEnabled;
   return {
     values: {
       siteName,
       siteLocale,
-      adminBaseUrl,
-      publicBaseUrl,
-      adminPath,
-      adminRedirectEnabled,
     },
   };
-};
-
-const normalizeBaseUrlInput = (value: string) => {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
 };
 
 type AdminAppProps = {
@@ -280,10 +243,6 @@ export function AdminApp({ path }: AdminAppProps) {
                 const updated = await updateSettings({
                   "site.name": values.siteName,
                   "site.locale": values.siteLocale,
-                  "site.adminBaseUrl": normalizeBaseUrlInput(values.adminBaseUrl),
-                  "site.publicBaseUrl": normalizeBaseUrlInput(values.publicBaseUrl),
-                  "site.adminPath": values.adminPath,
-                  "site.adminRedirectEnabled": values.adminRedirectEnabled,
                 });
                 setSettingsState((prev) => {
                   const resolved = resolveSettingsPayload(updated, prev);
@@ -325,10 +284,6 @@ export function AdminApp({ path }: AdminAppProps) {
                 const updated = await updateSettings({
                   "site.name": values.siteName,
                   "site.locale": values.siteLocale,
-                  "site.adminBaseUrl": normalizeBaseUrlInput(values.adminBaseUrl),
-                  "site.publicBaseUrl": normalizeBaseUrlInput(values.publicBaseUrl),
-                  "site.adminPath": values.adminPath,
-                  "site.adminRedirectEnabled": values.adminRedirectEnabled,
                 });
                 setSettingsState((prev) => {
                   const resolved = resolveSettingsPayload(updated, prev);
