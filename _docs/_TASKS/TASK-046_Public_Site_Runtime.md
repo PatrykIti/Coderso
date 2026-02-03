@@ -22,14 +22,14 @@ Założenie: prawie wszystko w UI; tylko krytyczne env po stronie deployu/serwer
 
 ## Sub-Tasks
 
-### TASK-046-01: Site Settings Model (routes + homepage)
+### TASK-046-01: Site Settings Model (routes + homepage) (✅ Done — 2026-02-03)
 Ustawienia strony przez `settings`:
 - `site.homepageId`, `site.notFoundPageId`
 - `site.contentRoutes` (mapa typu → slug/ścieżka)
 - `site.previewEnabled` (toggle)
 - walidacja + domyślne wartości (settingsService)
 
-### TASK-046-02: Public Routes & Preview
+### TASK-046-02: Public Routes & Preview (✅ Done — 2026-02-03)
 Rozszerz publiczny handler:
 - routing dla entries (list + detail) wg `site.contentRoutes`
 - `preview` dla entries (token + target type)

@@ -196,6 +196,17 @@ profile oraz mapowanie tras.
 - value (jsonb)
 - updated_at
 
+Przykładowe klucze:
+- `site.name`, `site.locale`
+- `site.adminBaseUrl`, `site.publicBaseUrl`
+- `site.adminPath`, `site.adminRedirectEnabled`
+- `site.homepageId`, `site.notFoundPageId`
+- `site.previewEnabled`
+- `site.contentRoutes`
+- `design.tokens`
+- `search.categoryOverrides`
+- `widgets.templateCategories`
+
 `user_settings`
 - user_id (fk users)
 - key

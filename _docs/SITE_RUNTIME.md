@@ -29,6 +29,29 @@ Preview URL dla stron oraz wpisów:
 - najpierw używa `site.publicBaseUrl`
 - jeśli brak, korzysta z `PUBLIC_BASE_URL` (ENV)
 - jeśli brak, generuje ścieżkę względną `/preview?...`
+- `type=content` używa tokenów z `/content/:type/entries/:id/preview`
+- `site.previewEnabled` może globalnie wyłączyć preview
+
+## Homepage / 404 / Content Routes
+
+Ustawienia sterowane z panelu (Settings → Site):
+- `site.homepageId` — ID strony startowej
+- `site.notFoundPageId` — ID strony 404
+- `site.previewEnabled` — globalny toggle preview
+- `site.contentRoutes` — mapowanie tras dla content types (list + detail)
+
+Przykład `site.contentRoutes`:
+
+```json
+[
+  {
+    "type": "blog",
+    "listPath": "/blog",
+    "detailPath": "/blog/:slug",
+    "enabled": true
+  }
+]
+```
 
 ## Public CSS Build
 

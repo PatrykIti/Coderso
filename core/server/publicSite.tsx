@@ -4,9 +4,21 @@ import path from "node:path";
 import type { WidgetBlock } from "../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
 import { renderPublicPageHtml } from "../site/renderPublicPage";
+import {
+  renderPublicEntryDetailHtml,
+  renderPublicEntryListHtml,
+} from "../site/renderPublicEntry";
+import { matchContentRoute } from "../site/contentRouteMatcher";
 import { toCssVariables } from "../ui/theme/tokenCss";
 import { getPageBySlug, getPage } from "../services/pages/pageService";
 import { validatePreviewToken } from "../services/pages/previewService";
+import {
+  getEntry,
+  getEntryBySlug,
+  listEntries,
+} from "../services/content/entryService";
+import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
+import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
 import { getResolvedTokens } from "../services/theme/tokenService";
 import { normalizePath } from "./router";
 
@@ -69,6 +81,14 @@ const serveSiteAsset = async (pathname: string) => {
   return new Response(file, { headers: { "Content-Type": file.type } });
 };
 
+const resolvePublicStyles = async () => {
+  const tokens = await getResolvedTokens();
+  return {
+    inlineCss: toCssVariables(tokens),
+    cssHref: resolveSiteCss() ?? resolveAdminCss(),
+  };
+};
+
 const toBlocks = (data?: Record<string, unknown> | null): WidgetBlock[] => {
   if (!data || typeof data !== "object") return [];
   const blocks = (data as { blocks?: unknown }).blocks;
@@ -82,12 +102,10 @@ export async function renderPublicPage(
 ) {
   ensureRuntimeWidgetsRegistered();
 
-  const tokens = await getResolvedTokens();
-  const inlineCss = toCssVariables(tokens);
+  const { inlineCss, cssHref } = await resolvePublicStyles();
   const blocks = toBlocks(
     options?.preview ? page.currentData : page.publishedData
   );
-  const cssHref = resolveSiteCss() ?? resolveAdminCss();
   const html = renderPublicPageHtml({
     title: page.title ?? "Page",
     blocks,
@@ -100,6 +118,80 @@ export async function renderPublicPage(
   });
 }
 
+const buildDetailHref = (pattern: string, slug: string, id?: string) => {
+  if (pattern.includes(":slug")) {
+    return pattern.replace(":slug", encodeURIComponent(slug));
+  }
+  if (id && pattern.includes(":id")) {
+    return pattern.replace(":id", encodeURIComponent(id));
+  }
+  return pattern;
+};
+
+const isEntryPublished = (entry: { status?: string; publishedAt?: Date | null }) =>
+  entry.status === "published" && Boolean(entry.publishedAt ?? true);
+
+const renderEntryList = async (
+  typeSlug: string,
+  detailPath: string,
+  options?: { preview?: boolean }
+) => {
+  const contentType = await getContentTypeBySlug(typeSlug);
+  if (!contentType) return new Response("Not Found", { status: 404 });
+
+  const entries = await listEntries(contentType.id);
+  const items = entries
+    .filter((entry) => isEntryPublished(entry))
+    .map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      href: buildDetailHref(detailPath, entry.slug, entry.id),
+    }));
+
+  const { inlineCss, cssHref } = await resolvePublicStyles();
+  const html = renderPublicEntryListHtml({
+    title: contentType.name,
+    items,
+    cssHref,
+    inlineCss,
+    isPreview: options?.preview ?? false,
+  });
+  return new Response(html, { headers: { "Content-Type": "text/html" } });
+};
+
+const renderEntryDetail = async (
+  typeSlug: string,
+  slug: string,
+  options?: { preview?: boolean }
+) => {
+  const contentType = await getContentTypeBySlug(typeSlug);
+  if (!contentType) return new Response("Not Found", { status: 404 });
+
+  const entry = await getEntryBySlug(contentType.id, slug);
+  if (!entry) return new Response("Not Found", { status: 404 });
+  if (!options?.preview && !isEntryPublished(entry)) {
+    return new Response("Not Found", { status: 404 });
+  }
+
+  const entryDetail = options?.preview ? await getEntry(entry.id) : entry;
+  if (!entryDetail) return new Response("Not Found", { status: 404 });
+
+  const { inlineCss, cssHref } = await resolvePublicStyles();
+  const html = renderPublicEntryDetailHtml({
+    title: entryDetail.title ?? contentType.name,
+    entryTitle: entryDetail.title ?? contentType.name,
+    entryData: (entryDetail as { data?: Record<string, unknown> }).data ?? {},
+    cssHref,
+    inlineCss,
+    isPreview: options?.preview ?? false,
+    metaDescription:
+      "seo" in entryDetail && entryDetail.seo
+        ? entryDetail.seo.description ?? null
+        : null,
+  });
+  return new Response(html, { headers: { "Content-Type": "text/html" } });
+};
+
 export async function handlePublicRequest(req: Request) {
   const url = new URL(req.url);
   if (isSiteAsset(url.pathname)) {
@@ -109,6 +201,9 @@ export async function handlePublicRequest(req: Request) {
     const token = url.searchParams.get("token");
     const type = url.searchParams.get("type");
     if (!token || !type) return new Response("Not Found", { status: 404 });
+
+    const previewEnabled = await getSetting("site.previewEnabled");
+    if (!previewEnabled) return new Response("Not Found", { status: 404 });
 
     const preview = await validatePreviewToken(
       token,
@@ -121,9 +216,27 @@ export async function handlePublicRequest(req: Request) {
       if (!page) return new Response("Not Found", { status: 404 });
       return renderPublicPage(page as PublicPageData, { preview: true });
     }
+
+    if (preview.targetType === "content") {
+      const entry = await getEntry(preview.targetId);
+      if (!entry) return new Response("Not Found", { status: 404 });
+      const contentType = await getContentType(entry.typeId);
+      if (!contentType) return new Response("Not Found", { status: 404 });
+      return renderEntryDetail(contentType.slug, entry.slug, { preview: true });
+    }
   }
 
   const slugPath = normalizePath(url.pathname);
+  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+  const match = matchContentRoute(slugPath, contentRoutes);
+  if (match) {
+    if (match.mode === "list") {
+      return renderEntryList(match.type, match.detailPath);
+    }
+    const slug = match.params.slug ?? match.params.id ?? "";
+    if (!slug) return new Response("Not Found", { status: 404 });
+    return renderEntryDetail(match.type, slug);
+  }
   const page = await getPageBySlug(slugPath);
   if (!page) return new Response("Not Found", { status: 404 });
   if (page.status !== "published" || !page.publishedData) {

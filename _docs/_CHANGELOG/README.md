@@ -130,6 +130,8 @@ Project Change Log.
 | 132 | 2026-02-02 | Widget template revisions and library fixes | Admin/UI |
 | 133 | 2026-02-03 | Widget nesting support | CMS/Widgets |
 | 134 | 2026-02-03 | Public site CSS pipeline | CMS/Site |
+| 135 | 2026-02-03 | Site runtime settings model | CMS/Site |
+| 136 | 2026-02-03 | Public content routes and preview | CMS/Site |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |
 | 096 | 2026-01-31 | API keys service | Core/Security |

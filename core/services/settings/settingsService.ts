@@ -9,6 +9,13 @@ type WidgetTemplateCategorySetting = {
   name: string;
 };
 
+export type ContentRouteSetting = {
+  type: string;
+  listPath: string;
+  detailPath: string;
+  enabled: boolean;
+};
+
 const DEFAULT_WIDGET_TEMPLATE_CATEGORIES: WidgetTemplateCategorySetting[] = [
   { id: "layout", name: "Layout" },
   { id: "content", name: "Content" },
@@ -17,6 +24,8 @@ const DEFAULT_WIDGET_TEMPLATE_CATEGORIES: WidgetTemplateCategorySetting[] = [
   { id: "media", name: "Media" },
 ];
 
+const DEFAULT_CONTENT_ROUTES: ContentRouteSetting[] = [];
+
 const DEFAULT_SETTINGS = {
   "site.name": "Nextless",
   "site.locale": "en",
@@ -24,6 +33,10 @@ const DEFAULT_SETTINGS = {
   "site.publicBaseUrl": null as string | null,
   "site.adminPath": "/admin",
   "site.adminRedirectEnabled": false,
+  "site.homepageId": null as string | null,
+  "site.notFoundPageId": null as string | null,
+  "site.previewEnabled": true,
+  "site.contentRoutes": DEFAULT_CONTENT_ROUTES,
   "design.tokens": {} as DesignTokenOverrides,
   "search.categoryOverrides": {} as SearchCategoryOverrides,
   "widgets.templateCategories": DEFAULT_WIDGET_TEMPLATE_CATEGORIES,
@@ -92,6 +105,72 @@ const normalizeAdminPathValue = (value: unknown) => {
   return normalized;
 };
 
+const normalizeOptionalId = (value: unknown) => {
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeRoutePath = (value: unknown, allowRoot = false) => {
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error("settings_value_invalid");
+  }
+  if (allowRoot && trimmed === "/") return "/";
+  const prefixed = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return prefixed.endsWith("/") && prefixed.length > 1
+    ? prefixed.slice(0, -1)
+    : prefixed;
+};
+
+export const normalizeContentRoutes = (
+  value: unknown
+): ContentRouteSetting[] => {
+  if (!Array.isArray(value)) {
+    throw new Error("settings_value_invalid");
+  }
+  const seenTypes = new Set<string>();
+  return value.map((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new Error("settings_value_invalid");
+    }
+    const record = entry as {
+      type?: unknown;
+      listPath?: unknown;
+      detailPath?: unknown;
+      enabled?: unknown;
+    };
+    if (typeof record.type !== "string") {
+      throw new Error("settings_value_invalid");
+    }
+    const type = record.type.trim();
+    if (!type) {
+      throw new Error("settings_value_invalid");
+    }
+    if (seenTypes.has(type)) {
+      throw new Error("settings_value_invalid");
+    }
+    seenTypes.add(type);
+    const listPath = normalizeRoutePath(record.listPath, true);
+    const detailPath = normalizeRoutePath(record.detailPath, false);
+    if (record.enabled !== undefined && typeof record.enabled !== "boolean") {
+      throw new Error("settings_value_invalid");
+    }
+    return {
+      type,
+      listPath,
+      detailPath,
+      enabled: record.enabled ?? true,
+    };
+  });
+};
+
 function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[SettingKey] {
   if (key === "site.name" || key === "site.locale") {
     if (typeof value !== "string") {
@@ -113,6 +192,21 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
       throw new Error("settings_value_invalid");
     }
     return value;
+  }
+
+  if (key === "site.homepageId" || key === "site.notFoundPageId") {
+    return normalizeOptionalId(value);
+  }
+
+  if (key === "site.previewEnabled") {
+    if (typeof value !== "boolean") {
+      throw new Error("settings_value_invalid");
+    }
+    return value;
+  }
+
+  if (key === "site.contentRoutes") {
+    return normalizeContentRoutes(value);
   }
 
   if (key === "design.tokens") {
@@ -204,6 +298,21 @@ export async function listSettings(): Promise<SettingValueMap> {
       continue;
     }
 
+    if (key === "site.homepageId" || key === "site.notFoundPageId") {
+      merged[key] = normalizeOptionalId(row.value);
+      continue;
+    }
+
+    if (key === "site.previewEnabled") {
+      merged[key] = Boolean(row.value);
+      continue;
+    }
+
+    if (key === "site.contentRoutes") {
+      merged[key] = row.value as ContentRouteSetting[];
+      continue;
+    }
+
     if (key in merged) {
       merged[key] = row.value as string;
     }
@@ -224,6 +333,15 @@ export async function getSetting(key: string) {
   }
   if (isAdminRedirectKey(key)) {
     return Boolean(row.value);
+  }
+  if (key === "site.homepageId" || key === "site.notFoundPageId") {
+    return normalizeOptionalId(row.value);
+  }
+  if (key === "site.previewEnabled") {
+    return Boolean(row.value);
+  }
+  if (key === "site.contentRoutes") {
+    return row.value as ContentRouteSetting[];
   }
   return row.value as SettingValueMap[SettingKey];
 }

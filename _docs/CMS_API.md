@@ -499,9 +499,13 @@ Create/Update payload (summary):
 Publiczne renderowanie stron działa bez `/admin`.
 
 - `GET /` oraz `GET /:slug` → published pages
-- `GET /preview?type=page&token=...` → podgląd draftu (token)
+- `GET /preview?type=page&token=...` → podgląd draftu strony (token)
+- `GET /preview?type=content&token=...` → podgląd draftu wpisu (token)
+- `GET <content list route>` → lista wpisów dla danego content type
+- `GET <content detail route>` → pojedynczy wpis (slug)
 
 Uwaga: podgląd wymaga ważnego tokena z `/pages/:id/preview`.
+Uwaga: trasy list/detail są konfigurowane przez `site.contentRoutes` (Settings).
 
 ---
 
@@ -1096,6 +1100,12 @@ Payloady:
   "site.publicBaseUrl": "https://www.example.com",
   "site.adminPath": "/admin-panel",
   "site.adminRedirectEnabled": true,
+  "site.homepageId": "page-id",
+  "site.notFoundPageId": "page-id",
+  "site.previewEnabled": true,
+  "site.contentRoutes": [
+    { "type": "blog", "listPath": "/blog", "detailPath": "/blog/:slug", "enabled": true }
+  ],
   "design.tokens": { "colors": { "primary": "#111111" } }
 }
 ```
@@ -1105,6 +1115,9 @@ Response:
 - `design.tokens` zwracane jako resolved tokens (defaults + overrides).
 - `site.adminBaseUrl` i `site.publicBaseUrl` sterują rozdzieleniem hostów admin/public.
 - `site.adminPath` i `site.adminRedirectEnabled` sterują ścieżką panelu admina.
+- `site.homepageId` i `site.notFoundPageId` sterują stronami start/404.
+- `site.previewEnabled` włącza/wyłącza preview.
+- `site.contentRoutes` mapuje content types na trasy (list + detail).
 
 ---
 
