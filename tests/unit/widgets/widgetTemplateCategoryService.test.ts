@@ -1,8 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
-
-import { db } from "../../../core/db/client";
 import { getSetting, setSetting } from "../../../core/services/settings/settingsService";
 import {
   createWidgetTemplateCategory,
@@ -14,18 +11,16 @@ import {
   deleteWidgetTemplate,
   getWidgetTemplate,
 } from "../../../core/services/widgets/widgetTemplateService";
+import {
+  canConnect,
+  hasWidgetTemplateRevisionsTable,
+} from "../../utils/db";
 
-const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
+const hasDb =
+  Boolean(process.env.DATABASE_URL) &&
+  (await canConnect()) &&
+  (await hasWidgetTemplateRevisionsTable());
 const testIfDb = hasDb ? test : test.skip;
-
-async function canConnect() {
-  try {
-    await db.execute(sql`select 1`);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 const originalCategories = hasDb
   ? await getSetting("widgets.templateCategories")

@@ -26,6 +26,7 @@
 - `tests/integration/routes/widgetTemplateRevisions.test.ts`
 - `tests/unit/ui/widgetLibraryUtils.test.ts`
 - `tests/unit/ui/widgetInsertUtils.test.ts`
+- `tests/utils/db.ts`
 - `_docs/WIDGETS.md`
 - `_docs/DATA_MODEL.md`
 - `_docs/AUDIT_SPEC.md`
