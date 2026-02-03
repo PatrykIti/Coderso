@@ -94,6 +94,7 @@ Storage:
 - Szczegoly: `CONTENT_TYPES_SPEC.md`.
 - Content types sa tworzone w panelu admina (schema builder).
 - Brak migracji tabel, dane w JSONB.
+- Schema zawiera meta‑pola UI (`xFieldType`, `xFieldConfig`) dla stabilnego round‑trip.
 
 ---
 

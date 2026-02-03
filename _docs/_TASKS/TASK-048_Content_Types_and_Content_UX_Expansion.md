@@ -5,7 +5,7 @@
 **Category:** CMS/Content  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-003 (Content Types Engine), TASK-003-06 (Content UI Wiring), TASK-009 (Widget Registry), TASK-043 (Entry Metadata)  
-**Status:** ⏳ **To Do** (2026-02-01)
+**Status:** 🚧 **In Progress** (2026-02-03)
 
 ---
 
@@ -30,7 +30,7 @@ This epic expands the backend model and admin UX to support:
 
 | ID | Title | Focus |
 |----|------|-------|
-| TASK-048-01 | Field Types & Schema Meta | Expand field types + schema metadata |
+| TASK-048-01 | Field Types & Schema Meta | ✅ Done (2026-02-03) |
 | TASK-048-02 | Relation Field UX & Data Model | Dropdown targets + relation picker |
 | TASK-048-03 | Media Field UX & Storage Integration | Media picker + validation |
 | TASK-048-04 | Taxonomy System & Terms | Categories/tags per type |

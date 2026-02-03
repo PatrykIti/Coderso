@@ -7,6 +7,7 @@ export type ContentSchemaProperty = {
   enum?: string[];
   default?: string | number | boolean;
   xFieldType?: FieldType | string;
+  xFieldConfig?: Record<string, unknown>;
   xRelationTarget?: string;
 };
 
@@ -39,6 +40,32 @@ const normalizeDefaultValue = (field: ContentField) => {
   return field.defaultValue;
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const readRelationTarget = (value: unknown) => {
+  if (!isRecord(value)) return undefined;
+  const relation = value.relation;
+  if (!isRecord(relation)) return undefined;
+  const target = relation.target;
+  if (typeof target !== "string") return undefined;
+  const trimmed = target.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const readSelectOptions = (value: unknown) => {
+  if (!isRecord(value)) return undefined;
+  const select = value.select;
+  if (!isRecord(select)) return undefined;
+  const options = select.options;
+  if (!Array.isArray(options)) return undefined;
+  const normalized = options
+    .filter((entry): entry is string => typeof entry === "string")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return normalized.length ? normalized : undefined;
+};
+
 export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
   const required = fields
     .filter((field) => field.required)
@@ -55,9 +82,15 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
       if (field.help) definition.description = field.help;
       if (field.type === "select" && field.options?.length) {
         definition.enum = field.options;
+        definition.xFieldConfig = {
+          select: { options: field.options },
+        };
       }
       if (field.type === "relation" && field.relation?.target) {
         definition.xRelationTarget = field.relation.target;
+        definition.xFieldConfig = {
+          relation: { target: field.relation.target },
+        };
       }
 
       const defaultValue = normalizeDefaultValue(field);
@@ -89,6 +122,11 @@ const resolveFieldType = (definition: ContentSchemaProperty): FieldType => {
     const candidate = String(definition.xFieldType) as FieldType;
     if (candidate in fieldTypeMap) return candidate;
   }
+  const relationTarget =
+    definition.xRelationTarget ?? readRelationTarget(definition.xFieldConfig);
+  if (relationTarget) return "relation";
+  const selectOptions = readSelectOptions(definition.xFieldConfig);
+  if (selectOptions?.length) return "select";
   if (definition.enum && definition.enum.length > 0) return "select";
   if (definition.type === "number") return "number";
   if (definition.type === "boolean") return "boolean";
@@ -104,11 +142,17 @@ export function fieldsFromSchema(schema: ContentSchema): ContentField[] {
     label: definition.title ?? name,
     help: definition.description,
     required: required.has(name),
-    options: definition.enum,
+    options: definition.enum ?? readSelectOptions(definition.xFieldConfig),
     defaultValue: parseDefaultValue(definition.default),
     relation:
-      definition.xFieldType === "relation" && definition.xRelationTarget
-        ? { target: definition.xRelationTarget }
+      (definition.xFieldType === "relation" || definition.xRelationTarget) &&
+      (definition.xRelationTarget ??
+        readRelationTarget(definition.xFieldConfig))
+        ? {
+            target:
+              definition.xRelationTarget ??
+              (readRelationTarget(definition.xFieldConfig) as string),
+          }
         : undefined,
   }));
 }

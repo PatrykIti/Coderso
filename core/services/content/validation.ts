@@ -11,6 +11,11 @@ ajv.addKeyword({
   schemaType: "string",
   valid: true,
 });
+ajv.addKeyword({
+  keyword: "xFieldConfig",
+  schemaType: "object",
+  valid: true,
+});
 const validatorCache = new Map<string, ValidateFunction>();
 
 export type ContentSchema = Record<string, unknown>;

@@ -136,6 +136,7 @@ Project Change Log.
 | 138 | 2026-02-03 | Public SSR cache | CMS/Site |
 | 139 | 2026-02-03 | Site settings UI | Admin/UI |
 | 140 | 2026-02-03 | Site settings relocation | Admin/UI |
+| 142 | 2026-02-03 | Field schema meta | CMS/Content |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

@@ -52,6 +52,20 @@ Typy dostepne w UI v1:
 
 Pozostale typy (multiselect, date/datetime, seo) planowane v1.1+ lub przez pluginy.
 
+### Schema meta (v1)
+
+UI zapisuje dodatkowe meta‑pola w definicji schematu, aby po zapisie/odczycie
+nie tracic typu pola:
+
+- `xFieldType` — typ pola z UI (np. `relation`, `media`, `select`).
+- `xFieldConfig` — konfiguracja zależna od typu, np.:
+  - `relation.target` (slug typu docelowego),
+  - `select.options` (lista opcji),
+  - przyszłe: reguły mediów, richtext, walidatory.
+- `xRelationTarget` jest wspierane dla kompatybilności wstecznej.
+
+Te pola sa ignorowane przez walidator danych wpisu.
+
 ## Admin UI rules (v1)
 
 - `name` pola musi byc unikalny i w kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
