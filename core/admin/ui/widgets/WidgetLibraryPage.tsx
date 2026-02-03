@@ -41,7 +41,12 @@ import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
-import { createBlock } from "@/ui/pages/builder/blockUtils";
+import {
+  appendChildBlock,
+  createBlock,
+  findBlockById,
+  insertBlockAfterId,
+} from "@/ui/pages/builder/blockUtils";
 import type { Block } from "@/ui/pages/builder/types";
 
 import { WidgetCard } from "./WidgetCard";
@@ -255,9 +260,14 @@ export function WidgetLibraryPage() {
   const templateEditHref = (id: string) =>
     resolveAdminHref(adminBasePath, `/admin/widgets/templates/${id}`);
 
+  const widgetDefinitions = useMemo(() => listRegisteredWidgets(), []);
+  const widgetDefinitionMap = useMemo(
+    () => new Map(widgetDefinitions.map((definition) => [definition.type, definition])),
+    [widgetDefinitions]
+  );
+
   const coreWidgets = useMemo<WidgetWithPreview[]>(() => {
-    const definitions = listRegisteredWidgets();
-    return definitions.map((definition) => {
+    return widgetDefinitions.map((definition) => {
       const meta = categoryMeta[definition.category];
       return {
         id: definition.type,
@@ -269,7 +279,7 @@ export function WidgetLibraryPage() {
         description: definition.description,
       };
     });
-  }, []);
+  }, [widgetDefinitions]);
 
   const widgets = useMemo<WidgetWithPreview[]>(() => {
     const templateItems = templates.map((template) => {
@@ -480,12 +490,21 @@ export function WidgetLibraryPage() {
     if (!payload.targetId) return;
     setInsertError(null);
 
-    const insertAfter = (blocks: Block[], afterId?: string | null) => {
+    const canNestInto = (blocks: Block[], targetId?: string | null) => {
+      if (!targetId) return false;
+      const target = findBlockById(blocks, targetId);
+      if (!target) return false;
+      const definition = widgetDefinitionMap.get(target.type);
+      return Boolean(definition?.canHaveChildren);
+    };
+
+    const insertBlock = (blocks: Block[], targetId?: string | null) => {
       const next = createBlock(insertWidget.id);
-      if (!afterId) return [...blocks, next];
-      const index = blocks.findIndex((block) => block.id === afterId);
-      if (index === -1) return [...blocks, next];
-      return [...blocks.slice(0, index + 1), next, ...blocks.slice(index + 1)];
+      if (!targetId) return [...blocks, next];
+      if (canNestInto(blocks, targetId)) {
+        return appendChildBlock(blocks, targetId, next);
+      }
+      return insertBlockAfterId(blocks, targetId, next);
     };
 
     try {
@@ -495,7 +514,7 @@ export function WidgetLibraryPage() {
         const blocks = Array.isArray(currentData.blocks)
           ? (currentData.blocks as Block[])
           : [];
-        const nextBlocks = insertAfter(blocks);
+        const nextBlocks = insertBlock(blocks);
         await updatePage(payload.targetId, {
           data: { ...currentData, blocks: nextBlocks },
         });
@@ -507,7 +526,7 @@ export function WidgetLibraryPage() {
         const blocks = Array.isArray(template.blocks)
           ? (template.blocks as Block[])
           : [];
-        const nextBlocks = insertAfter(blocks, payload.blockId);
+        const nextBlocks = insertBlock(blocks, payload.blockId);
         await updateWidgetTemplate(payload.targetId, { blocks: nextBlocks });
         return;
       }
@@ -517,7 +536,7 @@ export function WidgetLibraryPage() {
       const blocks = Array.isArray(currentData.blocks)
         ? (currentData.blocks as Block[])
         : [];
-      const nextBlocks = insertAfter(blocks, payload.blockId);
+      const nextBlocks = insertBlock(blocks, payload.blockId);
       await updatePage(payload.targetId, {
         data: { ...currentData, blocks: nextBlocks },
       });

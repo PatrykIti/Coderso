@@ -37,15 +37,26 @@ export function normalizeWidgetBlock(block: WidgetBlock): WidgetBlock {
     throw new Error("widget_schema_invalid");
   }
 
+  const children = Array.isArray(block.children) ? block.children : undefined;
+
   return {
     ...block,
     variant,
     data: merged,
+    children,
   };
 }
 
-export function normalizeWidgetBlocks(blocks: WidgetBlock[]) {
-  return blocks.map((block) => normalizeWidgetBlock(block));
+export function normalizeWidgetBlocks(blocks: WidgetBlock[]): WidgetBlock[] {
+  return blocks.map((block) => {
+    const normalized = normalizeWidgetBlock(block);
+    return {
+      ...normalized,
+      children: Array.isArray(block.children)
+        ? normalizeWidgetBlocks(block.children)
+        : normalized.children,
+    };
+  });
 }
 
 export function clearWidgetValidators() {

@@ -27,9 +27,13 @@ import { PageSettingsDrawer } from "./PageSettingsDrawer";
 import {
   applyWizardSelection,
   createBlock,
+  deleteBlockById,
   duplicateBlock,
-  reorderBlocks,
+  findBlockById,
+  getFirstBlockId,
+  reorderBlocksAtPath,
   shouldWarnOnNavigate,
+  updateBlockById,
 } from "./builder/blockUtils";
 import type { Block } from "./builder/types";
 import { getWidgetRegistry } from "./builder/widgetRegistry";
@@ -60,17 +64,23 @@ const normalizeBlocks = (data?: Record<string, unknown> | null) => {
   if (!Array.isArray(blocks)) return defaultBlocks;
 
   try {
-    return blocks.map((block) => {
+    const normalizeTree = (block: Block): Block => {
       const normalized = normalizeWidgetBlock(block as Block);
       const base = createBlock(normalized.type);
+      const children = Array.isArray(normalized.children)
+        ? normalized.children.map((child) => normalizeTree(child as Block))
+        : undefined;
       return {
         ...base,
         ...normalized,
+        children,
         layout: normalized.layout ?? base.layout,
         visibility: normalized.visibility ?? base.visibility,
         editor: normalized.editor ?? base.editor,
       };
-    });
+    };
+
+    return blocks.map((block) => normalizeTree(block as Block));
   } catch {
     return defaultBlocks;
   }
@@ -102,7 +112,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedBlock = blocks.find((block) => block.id === selectedId) ?? null;
+  const selectedBlock = findBlockById(blocks, selectedId);
   const selectedWidget = useMemo(() => {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
@@ -169,9 +179,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setSelectedId(nextBlock.id);
   };
 
-  const handleMove = (from: number, to: number) => {
-    if (to < 0 || to >= blocks.length) return;
-    updateBlocks(reorderBlocks(blocks, from, to));
+  const handleMove = (path: number[], from: number, to: number) => {
+    if (to < 0) return;
+    updateBlocks(reorderBlocksAtPath(blocks, path, from, to));
   };
 
   const handleDuplicate = (id: string) => {
@@ -179,15 +189,16 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   };
 
   const handleDelete = (id: string) => {
-    const next = blocks.filter((block) => block.id !== id);
-    updateBlocks(next);
-    if (selectedId === id) {
-      setSelectedId(next[0]?.id ?? null);
+    const result = deleteBlockById(blocks, id);
+    if (!result.deleted) return;
+    updateBlocks(result.blocks);
+    if (selectedId && !findBlockById(result.blocks, selectedId)) {
+      setSelectedId(getFirstBlockId(result.blocks));
     }
   };
 
   const handleChangeBlock = (next: Block) => {
-    updateBlocks(blocks.map((block) => (block.id === next.id ? next : block)));
+    updateBlocks(updateBlockById(blocks, next.id, () => next));
   };
 
   const handleSaveDraft = async () => {

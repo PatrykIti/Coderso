@@ -1,10 +1,18 @@
-export type WidgetBlockOption = { id: string; label: string };
+export type WidgetBlockOption = {
+  id: string;
+  label: string;
+  type: string;
+  depth: number;
+  supportsChildren: boolean;
+};
 
-type BlockLike = { id?: unknown; type?: unknown };
+type BlockLike = { id?: unknown; type?: unknown; children?: unknown };
 
 export const mapWidgetBlockOptions = (
   blocks: unknown[],
-  resolveLabel: (type: string) => string
+  resolveLabel: (type: string) => string,
+  resolveChildrenSupport: (type: string) => boolean,
+  depth = 0
 ): WidgetBlockOption[] => {
   if (!Array.isArray(blocks)) return [];
   const options: WidgetBlockOption[] = [];
@@ -15,7 +23,24 @@ export const mapWidgetBlockOptions = (
     const id = record.id.trim();
     const type = record.type.trim();
     if (!id || !type) continue;
-    options.push({ id, label: resolveLabel(type) });
+    const prefix = depth > 0 ? `${"-- ".repeat(depth)}` : "";
+    options.push({
+      id,
+      type,
+      depth,
+      supportsChildren: resolveChildrenSupport(type),
+      label: `${prefix}${resolveLabel(type)}`,
+    });
+    if (Array.isArray(record.children) && record.children.length > 0) {
+      options.push(
+        ...mapWidgetBlockOptions(
+          record.children,
+          resolveLabel,
+          resolveChildrenSupport,
+          depth + 1
+        )
+      );
+    }
   }
   return options;
 };

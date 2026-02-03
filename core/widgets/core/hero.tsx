@@ -151,6 +151,7 @@ export function createHeroWidget(editors: {
     title: "Hero",
     description: "Top-of-page hero section with CTA.",
     category: "layout",
+    canHaveChildren: true,
     variants: [
       { id: "centered", label: "Centered" },
       { id: "split", label: "Split" },

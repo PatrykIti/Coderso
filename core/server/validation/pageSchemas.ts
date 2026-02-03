@@ -55,6 +55,7 @@ const blockEditorSchema = {
 };
 
 const blockSchema = {
+  $id: "pageBlock",
   type: "object",
   required: ["id", "type", "data", "layout", "visibility", "editor"],
   additionalProperties: false,
@@ -66,6 +67,10 @@ const blockSchema = {
     layout: blockLayoutSchema,
     visibility: blockVisibilitySchema,
     editor: blockEditorSchema,
+    children: {
+      type: "array",
+      items: { $ref: "pageBlock" },
+    },
   },
 };
 

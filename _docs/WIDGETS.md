@@ -106,10 +106,12 @@ type WidgetBlock = {
   editor?: {
     mode?: "wizard" | "visual" | "advanced";
   };
+  children?: WidgetBlock[];
 };
 ```
 
 Uwaga: pole `editor` jest usuwane przy publikacji (`pageService.toPublishedData`).
+`children` sluzy do zagniezdzania blokow wewnatrz kontenerow, jest opcjonalne.
 
 ---
 
@@ -123,6 +125,7 @@ type WidgetDefinition<T = Record<string, unknown>> = {
   title: string;
   description?: string;
   category: "layout" | "content" | "forms" | "navigation" | "media";
+  canHaveChildren?: boolean;
   variants: { id: string; label: string; description?: string }[];
   schema: Record<string, unknown>; // JSON schema (draft-07)
   defaults: T;
@@ -177,6 +180,7 @@ Flow:
 - Brak widgetu → `MissingWidget`.
 - Stosuje `layout` + `visibility`.
 - Renderuje komponent `def.render`.
+- Jesli blok ma `children`, renderer wyswietla je wewnatrz kontenera sekcji.
 
 ---
 

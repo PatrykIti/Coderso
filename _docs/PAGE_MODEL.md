@@ -39,13 +39,15 @@ Model musi byc stabilny i wersjonowany.
   "editor": {
     "mode": "visual",
     "wizardCompleted": true
-  }
+  },
+  "children": []
 }
 ```
 
 Notes:
 - `editor` jest tylko dla `current_data` (nie kopiujemy do published).
 - `variant` jest opcjonalny, ale rekomendowany dla widgetow.
+- `children` pozwala zagniezdzac bloki wewnatrz kontenerow.
 
 ---
 

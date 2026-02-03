@@ -68,3 +68,33 @@ test("renderer applies layout classes", () => {
   expect(html).toContain("max-w-3xl");
   expect(html).toContain("pt-12");
 });
+
+test("renderer renders nested blocks", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "hero-parent",
+    type: "hero",
+    variant: "centered",
+    data: { ...heroDefaults, headline: "Parent hero" },
+    children: [
+      {
+        id: "hero-child",
+        type: "hero",
+        variant: "centered",
+        data: { ...heroDefaults, headline: "Child hero" },
+      },
+    ],
+  };
+
+  const html = renderToString(<WidgetRenderer block={block} />);
+  expect(html).toContain("Parent hero");
+  expect(html).toContain("Child hero");
+});

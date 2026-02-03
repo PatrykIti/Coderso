@@ -25,6 +25,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   title: string;
   description?: string;
   category: WidgetCategory;
+  canHaveChildren?: boolean;
   variants: WidgetVariant[];
   schema: Record<string, unknown>;
   defaults: T;
@@ -77,4 +78,5 @@ export type WidgetBlock = {
   layout?: WidgetLayout;
   visibility?: WidgetVisibility;
   editor?: WidgetEditorState;
+  children?: WidgetBlock[];
 };

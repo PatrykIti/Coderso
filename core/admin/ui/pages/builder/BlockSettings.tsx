@@ -22,6 +22,8 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
   }
 
   const editorState = block.editor ?? { mode: "wizard", wizardCompleted: false };
+  const childCount = Array.isArray(block.children) ? block.children.length : 0;
+  const supportsChildren = Boolean(widget.canHaveChildren);
 
   if (!editorState.wizardCompleted) {
     return (
@@ -35,16 +37,23 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
   }
 
   return (
-    <Tabs
-      value={editorState.mode}
-      onValueChange={(mode) =>
-        onChange({
-          ...block,
-          editor: { ...editorState, mode: mode as EditorMode },
-        })
-      }
-      className="gap-4"
-    >
+    <>
+      {supportsChildren ? (
+        <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+          Nested blocks: {childCount}. Use the Insert dialog to add widgets inside
+          this block.
+        </div>
+      ) : null}
+      <Tabs
+        value={editorState.mode}
+        onValueChange={(mode) =>
+          onChange({
+            ...block,
+            editor: { ...editorState, mode: mode as EditorMode },
+          })
+        }
+        className="gap-4"
+      >
       <TabsList variant="line">
         <TabsTrigger value="wizard">Wizard</TabsTrigger>
         <TabsTrigger value="visual">Visual</TabsTrigger>
@@ -64,6 +73,7 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
       <TabsContent value="advanced">
         <AdvancedPanel block={block} widget={widget} onChange={onChange} />
       </TabsContent>
-    </Tabs>
+      </Tabs>
+    </>
   );
 }

@@ -31,6 +31,12 @@ export function registerWidget(def: WidgetDefinition<any>) {
   if (!def.defaults || typeof def.defaults !== "object" || Array.isArray(def.defaults)) {
     throw new Error("widget_defaults_invalid");
   }
+  if (
+    def.canHaveChildren !== undefined &&
+    typeof def.canHaveChildren !== "boolean"
+  ) {
+    throw new Error("widget_children_flag_invalid");
+  }
   if (!def.editor?.wizard || !def.editor?.visual || !def.editor?.advanced) {
     throw new Error("widget_editor_invalid");
   }

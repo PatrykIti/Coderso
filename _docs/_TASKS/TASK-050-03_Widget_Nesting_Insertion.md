@@ -5,7 +5,7 @@
 **Category:** Admin/UI + CMS/Widgets  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-049-06, TASK-049-05  
-**Status:** To Do
+**Status:** ✅ Done (2026-02-03)
 
 ---
 

@@ -52,8 +52,14 @@ export function WidgetInsertDialog({
 }: WidgetInsertDialogProps) {
   const pageOptions = useMemo(() => pages ?? [], [pages]);
   const templateOptions = useMemo(() => templates ?? [], [templates]);
-  const widgetTitleMap = useMemo(
-    () => new Map(listRegisteredWidgets().map((item) => [item.type, item.title])),
+  const widgetMetaMap = useMemo(
+    () =>
+      new Map(
+        listRegisteredWidgets().map((item) => [
+          item.type,
+          { label: item.title, canHaveChildren: item.canHaveChildren ?? false },
+        ])
+      ),
     []
   );
   const [pageId, setPageId] = useState<string>(() => pageOptions[0]?.id ?? "");
@@ -61,10 +67,13 @@ export function WidgetInsertDialog({
   const [targetType, setTargetType] = useState<"page" | "template">("page");
   const [targetId, setTargetId] = useState<string>("");
   const [blockId, setBlockId] = useState<string>("");
-  const [blocks, setBlocks] = useState<Array<{ id: string; label: string }>>([]);
+  const [blocks, setBlocks] = useState<
+    Array<{ id: string; label: string; supportsChildren: boolean }>
+  >([]);
   const [blocksError, setBlocksError] = useState<string | null>(null);
   const [blocksLoading, setBlocksLoading] = useState(false);
   const resolvedPageId = pageId || pageOptions[0]?.id || "";
+  const selectedBlock = blocks.find((block) => block.id === blockId) ?? null;
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       setPageId(pageOptions[0]?.id ?? "");
@@ -105,7 +114,8 @@ export function WidgetInsertDialog({
           const template = await getWidgetTemplate(targetId);
           const items = Array.isArray(template.blocks) ? template.blocks : [];
           const mapped = mapWidgetBlockOptions(items, (type) =>
-            widgetTitleMap.get(type) ?? type
+            widgetMetaMap.get(type)?.label ?? type,
+            (type) => widgetMetaMap.get(type)?.canHaveChildren ?? false
           );
           if (!active) return;
           setBlocks(mapped);
@@ -115,7 +125,8 @@ export function WidgetInsertDialog({
           const data = (page.currentData ?? {}) as Record<string, unknown>;
           const items = Array.isArray(data.blocks) ? (data.blocks as unknown[]) : [];
           const mapped = mapWidgetBlockOptions(items, (type) =>
-            widgetTitleMap.get(type) ?? type
+            widgetMetaMap.get(type)?.label ?? type,
+            (type) => widgetMetaMap.get(type)?.canHaveChildren ?? false
           );
           if (!active) return;
           setBlocks(mapped);
@@ -136,7 +147,7 @@ export function WidgetInsertDialog({
     return () => {
       active = false;
     };
-  }, [placement, targetId, targetType, widgetTitleMap]);
+  }, [placement, targetId, targetType, widgetMetaMap]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -354,6 +365,13 @@ export function WidgetInsertDialog({
                 </Select>
                 {blocksError ? (
                   <p className="text-xs text-destructive">{blocksError}</p>
+                ) : null}
+                {selectedBlock ? (
+                  <div className="rounded-lg border bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
+                    {selectedBlock.supportsChildren
+                      ? "This widget will be nested inside the selected block."
+                      : "This block does not support nesting, so the widget will be inserted after it."}
+                  </div>
                 ) : null}
               </div>
             </div>

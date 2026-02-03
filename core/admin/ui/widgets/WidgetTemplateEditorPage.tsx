@@ -35,8 +35,12 @@ import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import {
   createBlock,
+  deleteBlockById,
   duplicateBlock,
-  reorderBlocks,
+  findBlockById,
+  getFirstBlockId,
+  reorderBlocksAtPath,
+  updateBlockById,
 } from "@/ui/pages/builder/blockUtils";
 import type { Block } from "@/ui/pages/builder/types";
 import { getWidgetRegistry } from "@/ui/pages/builder/widgetRegistry";
@@ -111,7 +115,7 @@ export function WidgetTemplateEditorPage() {
 
   const displayError = error ?? categoriesError;
 
-  const selectedBlock = blocks.find((block) => block.id === selectedId) ?? null;
+  const selectedBlock = findBlockById(blocks, selectedId);
   const selectedWidget = useMemo(() => {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
@@ -498,14 +502,20 @@ export function WidgetTemplateEditorPage() {
                   blocks={blocks}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
-                  onMove={(from, to) =>
-                    setBlocks((prev) => reorderBlocks(prev, from, to))
+                  onMove={(path, from, to) =>
+                    setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
                   }
                   onDuplicate={(id) =>
                     setBlocks((prev) => duplicateBlock(prev, id))
                   }
                   onDelete={(id) =>
-                    setBlocks((prev) => prev.filter((block) => block.id !== id))
+                    setBlocks((prev) => {
+                      const result = deleteBlockById(prev, id);
+                      if (selectedId && !findBlockById(result.blocks, selectedId)) {
+                        setSelectedId(getFirstBlockId(result.blocks));
+                      }
+                      return result.blocks;
+                    })
                   }
                 />
               </div>
@@ -522,9 +532,7 @@ export function WidgetTemplateEditorPage() {
                   block={selectedBlock}
                   widget={selectedWidget}
                   onChange={(next) =>
-                    setBlocks((prev) =>
-                      prev.map((block) => (block.id === next.id ? next : block))
-                    )
+                    setBlocks((prev) => updateBlockById(prev, next.id, () => next))
                   }
                 />
               </div>

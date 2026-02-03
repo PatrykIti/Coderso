@@ -88,6 +88,7 @@ export function WidgetRenderer({ block }: { block: WidgetBlock }) {
   if (normalized.visibility?.enabled === false) return null;
 
   const layout = normalized.layout ?? defaultLayout;
+  const children = Array.isArray(normalized.children) ? normalized.children : [];
   const backgroundStyle: CSSProperties = {
     backgroundColor: layout.background?.color ?? "transparent",
     backgroundImage: layout.background?.image
@@ -111,6 +112,13 @@ export function WidgetRenderer({ block }: { block: WidgetBlock }) {
     <section style={backgroundStyle}>
       <div className={wrapperClass}>
         <WidgetComponent data={normalized.data} variant={normalized.variant ?? def.variants[0].id} />
+        {children.length ? (
+          <div className="mt-6 flex flex-col gap-6">
+            {children.map((child) => (
+              <WidgetRenderer key={child.id} block={child} />
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
