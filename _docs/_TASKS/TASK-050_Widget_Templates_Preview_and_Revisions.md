@@ -5,14 +5,15 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-049-03, TASK-049-06  
-**Status:** ✅ Done (2026-02-03)
+**Status:** In Progress (Phase 2)
 
 ---
 
 ## Overview
 
-Add preview and revision history to the Widget Template editor so editors can
-validate layouts before saving and recover from mistakes quickly.
+Phase 1 delivered preview + revisions. Phase 2 expands the widget system with
+slot-based nesting and richer, document-driven widget configuration for
+Hero, Navigation, and Footer (wizard/visual/advanced).
 
 ---
 
@@ -21,6 +22,14 @@ validate layouts before saving and recover from mistakes quickly.
 - **TASK-050-01:** Widget Template Preview
 - **TASK-050-02:** Widget Template Revision History
 - **TASK-050-03:** Widget Nesting (Insert Into Existing Block)
+- **TASK-050-04:** Slot System Core (block model + insert UI + rendering)
+- **TASK-050-05:** Hero Widget Expansion + Slots
+- **TASK-050-06:** Navigation Widget Expansion + Slots
+- **TASK-050-07:** Footer Widget Expansion + Slots
+- **TASK-050-08:** Timeline Widget Expansion
+- **TASK-050-09:** Compare Timeline Widget Expansion
+- **TASK-050-10:** Newsletter Widget Expansion
+- **TASK-050-11:** Contact Widget Expansion
 
 ---
 
@@ -33,10 +42,15 @@ validate layouts before saving and recover from mistakes quickly.
 
 ## Documentation Updates Required
 
-- `_docs/WIDGETS.md` (template authoring + preview/revisions)
-- `_docs/PREVIEW_SPEC.md` (template preview flow)
-- `_docs/DATA_MODEL.md` (revisions table + fields)
-- `_docs/PAGE_MODEL.md` (nested blocks model update)
+- `_docs/WIDGETS.md` (slot model + widget definition updates)
+- `_docs/PAGE_MODEL.md` (slot-based blocks schema)
+- `_docs/_WIDGETS/HERO.md` (expanded wizard/visual/advanced + slots)
+- `_docs/_WIDGETS/NAVIGATION.md` (expanded wizard/visual/advanced + slots)
+- `_docs/_WIDGETS/FOOTER.md` (expanded wizard/visual/advanced + slots)
+- `_docs/_WIDGETS/TIMELINE.md` (expanded wizard/visual/advanced)
+- `_docs/_WIDGETS/COMPARE_TIMELINE.md` (expanded wizard/visual/advanced)
+- `_docs/_WIDGETS/NEWSLETTER.md` (expanded wizard/visual/advanced)
+- `_docs/_WIDGETS/CONTACT.md` (expanded wizard/visual/advanced)
 - `_docs/README.md` (index if new docs are added)
 
 ---

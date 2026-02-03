@@ -67,7 +67,15 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-049-04 | Widget Favorites (User Settings) | Medium | Small | widgets.favorites key |
 | TASK-049-05 | Widget Library UI Wiring | High | Large | API wiring + insert |
 | TASK-049-06 | Widget Template Editor UI | Medium | Medium | builder reuse |
-| TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..03 |
+| TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..11 |
+| TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
+| TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
+| TASK-050-06 | Navigation Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
+| TASK-050-07 | Footer Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
+| TASK-050-08 | Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
+| TASK-050-09 | Compare Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
+| TASK-050-10 | Newsletter Widget Expansion | Medium | Medium | Wizard/visual/advanced |
+| TASK-050-11 | Contact Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
