@@ -76,6 +76,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050-09 | Compare Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-10 | Newsletter Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-11 | Contact Widget Expansion | Medium | Medium | Wizard/visual/advanced |
+| TASK-051 | Page Wrapper & Layout Settings | High | Large | Page-level wrapper + defaults |
+| TASK-051-01 | Page Layout Model + Validation | High | Medium | settings.layout schema |
+| TASK-051-02 | Page Wrapper Rendering + Inheritance | High | Medium | renderer + inherit |
+| TASK-051-03 | Admin UI — Page Layout Settings | High | Medium | settings drawer |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
