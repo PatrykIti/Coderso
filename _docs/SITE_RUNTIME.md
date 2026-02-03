@@ -53,6 +53,21 @@ Przykład `site.contentRoutes`:
 ]
 ```
 
+## Content Entry Templates
+
+Publiczne listy i szczegóły wpisów korzystają z **template resolvera**:
+- `type: content`
+- kolejność: theme → plugin → core
+
+Nazewnictwo template’ów:
+- `content-<typeSlug>-list.tsx`
+- `content-<typeSlug>-detail.tsx`
+- `content-list.tsx`
+- `content-detail.tsx`
+- `content.tsx` (fallback)
+
+Core fallbacki są w `core/templates/`.
+
 ## Public CSS Build
 
 Publiczny frontend używa **osobnego CSS** (nie admin build).

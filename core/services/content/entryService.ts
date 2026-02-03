@@ -130,7 +130,7 @@ export async function listEntries(typeId: string) {
     slug: row.slug,
     status: row.status as EntryStatus,
     tags: (row.tags ?? []) as string[],
-    data: row.data,
+    data: row.data as EntryData,
     publishedAt: row.publishedAt,
     scheduledAt: row.scheduledAt,
     createdAt: row.createdAt,

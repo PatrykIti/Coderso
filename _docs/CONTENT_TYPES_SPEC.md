@@ -406,6 +406,13 @@ Resolution order:
 2. Plugin view (jesli dostepny)
 3. Core default
 
+Nazewnictwo template’ów (type: `content`):
+- `content-<typeSlug>-list.tsx`
+- `content-<typeSlug>-detail.tsx`
+- `content-list.tsx`
+- `content-detail.tsx`
+- `content.tsx` (fallback)
+
 ## API
 
 Admin API w `CMS_API.md`:

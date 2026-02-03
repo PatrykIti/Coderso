@@ -20,6 +20,8 @@ import {
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
 import { getResolvedTokens } from "../services/theme/tokenService";
+import { getActiveThemeProfile } from "../services/themes/themeProfileService";
+import type { ContentSchema } from "../services/content/validation";
 import { normalizePath } from "./router";
 
 export type PublicPageData = {
@@ -89,6 +91,11 @@ const resolvePublicStyles = async () => {
   };
 };
 
+const resolvePublicThemeName = async () => {
+  const profile = await getActiveThemeProfile();
+  return profile?.themeName ?? "default";
+};
+
 const toBlocks = (data?: Record<string, unknown> | null): WidgetBlock[] => {
   if (!data || typeof data !== "object") return [];
   const blocks = (data as { blocks?: unknown }).blocks;
@@ -146,15 +153,23 @@ const renderEntryList = async (
       id: entry.id,
       title: entry.title,
       href: buildDetailHref(detailPath, entry.slug, entry.id),
+      entry,
     }));
 
   const { inlineCss, cssHref } = await resolvePublicStyles();
-  const html = renderPublicEntryListHtml({
+  const html = await renderPublicEntryListHtml({
     title: contentType.name,
+    contentType: {
+      id: contentType.id,
+      name: contentType.name,
+      slug: contentType.slug,
+      schema: contentType.schema as ContentSchema,
+    },
     items,
     cssHref,
     inlineCss,
     isPreview: options?.preview ?? false,
+    themeName: await resolvePublicThemeName(),
   });
   return new Response(html, { headers: { "Content-Type": "text/html" } });
 };
@@ -173,17 +188,23 @@ const renderEntryDetail = async (
     return new Response("Not Found", { status: 404 });
   }
 
-  const entryDetail = options?.preview ? await getEntry(entry.id) : entry;
+  const entryDetail = await getEntry(entry.id);
   if (!entryDetail) return new Response("Not Found", { status: 404 });
 
   const { inlineCss, cssHref } = await resolvePublicStyles();
-  const html = renderPublicEntryDetailHtml({
+  const html = await renderPublicEntryDetailHtml({
     title: entryDetail.title ?? contentType.name,
-    entryTitle: entryDetail.title ?? contentType.name,
-    entryData: (entryDetail as { data?: Record<string, unknown> }).data ?? {},
+    contentType: {
+      id: contentType.id,
+      name: contentType.name,
+      slug: contentType.slug,
+      schema: contentType.schema as ContentSchema,
+    },
+    entry: entryDetail,
     cssHref,
     inlineCss,
     isPreview: options?.preview ?? false,
+    themeName: await resolvePublicThemeName(),
     metaDescription:
       "seo" in entryDetail && entryDetail.seo
         ? entryDetail.seo.description ?? null

@@ -1,14 +1,51 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import path from "node:path";
 
 import {
   renderPublicEntryDetailHtml,
   renderPublicEntryListHtml,
 } from "../../../core/site/renderPublicEntry";
+import { resetThemeRegistry } from "../../../core/themes/registry";
 
-test("renderPublicEntryListHtml renders entries and preview banner", () => {
-  const html = renderPublicEntryListHtml({
+const baseEntry = {
+  id: "entry-1",
+  typeId: "type-1",
+  title: "Hello",
+  slug: "hello",
+  status: "published",
+  data: { summary: "World" },
+  tags: [],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  author: null,
+  seo: null,
+};
+
+const baseContentType = {
+  id: "type-1",
+  name: "Blog",
+  slug: "blog",
+};
+
+afterEach(() => {
+  delete process.env.THEMES_DIR;
+  resetThemeRegistry();
+});
+
+test("renderPublicEntryListHtml renders entries and preview banner", async () => {
+  const html = await renderPublicEntryListHtml({
     title: "Blog",
-    items: [{ id: "1", title: "Hello", href: "/blog/hello" }],
+    contentType: baseContentType,
+    items: [
+      {
+        id: "1",
+        title: "Hello",
+        href: "/blog/hello",
+        entry: baseEntry,
+      },
+    ],
     cssHref: "/site/assets/site.css",
     inlineCss: ":root{--color-bg:#ffffff;}",
     isPreview: true,
@@ -18,18 +55,60 @@ test("renderPublicEntryListHtml renders entries and preview banner", () => {
   expect(html).toContain("Preview mode");
   expect(html).toContain("/blog/hello");
   expect(html).toContain("/site/assets/site.css");
+  expect(html).toContain("data-template=\"content-list\"");
 });
 
-test("renderPublicEntryDetailHtml renders entry data", () => {
-  const html = renderPublicEntryDetailHtml({
+test("renderPublicEntryDetailHtml renders entry data", async () => {
+  const html = await renderPublicEntryDetailHtml({
     title: "Hello",
-    entryTitle: "Hello",
-    entryData: { summary: "World" },
+    contentType: baseContentType,
+    entry: baseEntry,
     cssHref: "/site/assets/site.css",
     inlineCss: ":root{--color-bg:#ffffff;}",
   });
 
   expect(html).toContain("<title>Hello</title>");
   expect(html).toContain("Hello");
-  expect(html).toContain("&quot;summary&quot;: &quot;World&quot;");
+  expect(html).toContain("data-template=\"content-detail\"");
+  expect(html).toContain("summary");
+  expect(html).toContain("World");
+});
+
+test("renderPublicEntryListHtml prefers theme templates when available", async () => {
+  const templatesDir = path.resolve(
+    process.cwd(),
+    "themes",
+    "admin-default",
+    "templates"
+  );
+  const templatesDirExists = existsSync(templatesDir);
+  const templatePath = path.join(templatesDir, "content-blog-list.tsx");
+  await mkdir(templatesDir, { recursive: true });
+  await writeFile(
+    templatePath,
+    `export default function PreviewTemplate() { return <main data-template=\"theme-list\">Theme list</main>; }`
+  );
+
+  try {
+    const html = await renderPublicEntryListHtml({
+      title: "Blog",
+      contentType: baseContentType,
+      items: [
+        {
+          id: "1",
+          title: "Hello",
+          href: "/blog/hello",
+          entry: baseEntry,
+        },
+      ],
+      themeName: "admin-default",
+    });
+
+    expect(html).toContain("data-template=\"theme-list\"");
+  } finally {
+    await rm(templatePath, { force: true });
+    if (!templatesDirExists) {
+      await rm(templatesDir, { recursive: true, force: true });
+    }
+  }
 });

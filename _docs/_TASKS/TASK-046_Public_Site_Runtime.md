@@ -35,7 +35,7 @@ Rozszerz publiczny handler:
 - `preview` dla entries (token + target type)
 - spójne 404/410 stany
 
-### TASK-046-03: Entry Rendering Templates
+### TASK-046-03: Entry Rendering Templates (✅ Done — 2026-02-03)
 System template dla content types (list + detail):
 - resolve template przez `core/themes/resolver.ts`
 - fallback na domyślne template’y, gdy theme nie dostarcza
