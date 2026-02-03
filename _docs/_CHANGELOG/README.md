@@ -127,6 +127,7 @@ Project Change Log.
 | 129 | 2026-02-02 | Widget templates core + UI wiring | Admin/UI |
 | 130 | 2026-02-02 | Widget details configuration preview | Admin/UI |
 | 131 | 2026-02-02 | Widget template preview | Admin/UI |
+| 132 | 2026-02-02 | Widget template revisions and library fixes | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |
 | 096 | 2026-01-31 | API keys service | Core/Security |

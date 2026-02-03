@@ -29,6 +29,8 @@ type WidgetCreateDialogProps = {
   }) => Promise<void> | void;
 };
 
+const NO_CATEGORIES_VALUE = "no-categories";
+
 export function WidgetCreateDialog({
   open,
   onOpenChange,
@@ -140,7 +142,7 @@ export function WidgetCreateDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {categories.length === 0 ? (
-                    <SelectItem value="" disabled>
+                    <SelectItem value={NO_CATEGORIES_VALUE} disabled>
                       Add a category first
                     </SelectItem>
                   ) : (

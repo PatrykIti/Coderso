@@ -9,6 +9,10 @@ import {
   type WidgetTemplateCreateInput,
   type WidgetTemplateUpdateInput,
 } from "../../services/widgets/widgetTemplateService";
+import {
+  listWidgetTemplateRevisions,
+  restoreWidgetTemplateRevision,
+} from "../../services/widgets/widgetTemplateRevisionService";
 import { renderWidgetTemplatePreview } from "../../services/widgets/widgetTemplatePreviewService";
 import { logAudit } from "../../services/audit/auditService";
 import {
@@ -49,6 +53,12 @@ const mapWidgetTemplateError = (error: unknown) => {
         "widget_template_status_invalid",
         "Template status is invalid",
         400
+      );
+    case "widget_template_revision_not_found":
+      return new ApiError(
+        "widget_template_revision_not_found",
+        "Template revision not found",
+        404
       );
     default:
       return null;
@@ -108,6 +118,38 @@ export function registerWidgetTemplateRoutes(
     }
   );
 
+  router.get(
+    "/widget-templates/:id/revisions",
+    requirePermission("widgets:read"),
+    async (ctx) => {
+      return withWidgetTemplateErrors(async () => {
+        const items = await listWidgetTemplateRevisions(ctx.params.id);
+        return { items };
+      });
+    }
+  );
+
+  router.post(
+    "/widget-templates/:id/revisions/:revisionId/restore",
+    requirePermission("widgets:write"),
+    async (ctx) => {
+      return withWidgetTemplateErrors(async () => {
+        const revision = await restoreWidgetTemplateRevision(
+          ctx.params.revisionId,
+          ctx.user?.id ?? null
+        );
+        await logAudit({
+          actorId: ctx.user?.id ?? null,
+          action: "widgets.template.restore",
+          targetType: "widget_template",
+          targetId: revision.templateId,
+          metadata: { revisionId: revision.id },
+        });
+        return { ok: true };
+      });
+    }
+  );
+
   router.post(
     "/widget-templates",
     requirePermission("widgets:write"),
@@ -115,7 +157,8 @@ export function registerWidgetTemplateRoutes(
       return withWidgetTemplateErrors(async () => {
         validate(widgetTemplateCreateSchema, ctx.body);
         const created = await createWidgetTemplate(
-          ctx.body as WidgetTemplateCreateInput
+          ctx.body as WidgetTemplateCreateInput,
+          ctx.user?.id ?? null
         );
         await logAudit({
           actorId: ctx.user?.id ?? null,
@@ -137,7 +180,8 @@ export function registerWidgetTemplateRoutes(
         validate(widgetTemplateUpdateSchema, ctx.body);
         const updated = await updateWidgetTemplate(
           ctx.params.id,
-          ctx.body as WidgetTemplateUpdateInput
+          ctx.body as WidgetTemplateUpdateInput,
+          ctx.user?.id ?? null
         );
         if (!updated) throw new Error("widget_template_not_found");
         await logAudit({

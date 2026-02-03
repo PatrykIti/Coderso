@@ -16,6 +16,7 @@ import { getWidgetTemplate } from "@/services/widgetTemplatesClient";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 
 import type { WidgetItem } from "./types";
+import { mapWidgetBlockOptions } from "./widgetInsertUtils";
 
 export type WidgetInsertDialogProps = {
   open: boolean;
@@ -103,19 +104,9 @@ export function WidgetInsertDialog({
         if (targetType === "template") {
           const template = await getWidgetTemplate(targetId);
           const items = Array.isArray(template.blocks) ? template.blocks : [];
-          const mapped = items
-            .map((block) => {
-              if (!block || typeof block !== "object") return null;
-              const record = block as { id?: unknown; type?: unknown };
-              if (typeof record.id !== "string" || typeof record.type !== "string") {
-                return null;
-              }
-              return {
-                id: record.id,
-                label: widgetTitleMap.get(record.type) ?? record.type,
-              };
-            })
-            .filter(Boolean) as Array<{ id: string; label: string }>;
+          const mapped = mapWidgetBlockOptions(items, (type) =>
+            widgetTitleMap.get(type) ?? type
+          );
           if (!active) return;
           setBlocks(mapped);
           setBlockId(mapped[0]?.id ?? "");
@@ -123,19 +114,9 @@ export function WidgetInsertDialog({
           const page = await getPage(targetId);
           const data = (page.currentData ?? {}) as Record<string, unknown>;
           const items = Array.isArray(data.blocks) ? (data.blocks as unknown[]) : [];
-          const mapped = items
-            .map((block) => {
-              if (!block || typeof block !== "object") return null;
-              const record = block as { id?: unknown; type?: unknown };
-              if (typeof record.id !== "string" || typeof record.type !== "string") {
-                return null;
-              }
-              return {
-                id: record.id,
-                label: widgetTitleMap.get(record.type) ?? record.type,
-              };
-            })
-            .filter(Boolean) as Array<{ id: string; label: string }>;
+          const mapped = mapWidgetBlockOptions(items, (type) =>
+            widgetTitleMap.get(type) ?? type
+          );
           if (!active) return;
           setBlocks(mapped);
           setBlockId(mapped[0]?.id ?? "");

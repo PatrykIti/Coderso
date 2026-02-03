@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/select";
 import type { PageSummary } from "@/services/pagesClient";
 
+const NO_PAGES_VALUE = "no-pages";
+
 export type MenuItemFormValue = {
   id: string;
   label: string;
@@ -101,7 +103,7 @@ export function MenuItemForm({
             </SelectTrigger>
             <SelectContent>
               {pages.length === 0 ? (
-                <SelectItem value="" disabled>
+                <SelectItem value={NO_PAGES_VALUE} disabled>
                   No pages available
                 </SelectItem>
               ) : null}

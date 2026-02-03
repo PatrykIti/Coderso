@@ -254,6 +254,29 @@ export const widgetTemplates = pgTable(
   })
 );
 
+export const widgetTemplateRevisions = pgTable(
+  "widget_template_revisions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    templateId: uuid("template_id")
+      .notNull()
+      .references(() => widgetTemplates.id, { onDelete: "cascade" }),
+    version: integer("version").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+    category: text("category").notNull(),
+    status: text("status").notNull(),
+    blocks: jsonb("blocks").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdBy: uuid("created_by").references(() => users.id),
+  },
+  (t) => ({
+    templateIdIdx: index("widget_template_revisions_template_id_idx").on(
+      t.templateId
+    ),
+  })
+);
+
 export const pageRevisions = pgTable(
   "page_revisions",
   {

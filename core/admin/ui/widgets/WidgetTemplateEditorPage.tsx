@@ -14,6 +14,11 @@ import {
   type WidgetTemplatePreviewResponse,
 } from "@/services/widgetTemplatePreviewClient";
 import {
+  listWidgetTemplateRevisions,
+  restoreWidgetTemplateRevision,
+  type WidgetTemplateRevision,
+} from "@/services/widgetTemplateRevisionsClient";
+import {
   createWidgetTemplate,
   getWidgetTemplate,
   updateWidgetTemplate,
@@ -43,6 +48,7 @@ import {
 import type { WidgetCategoryId } from "./types";
 import { WidgetCard } from "./WidgetCard";
 import { WidgetTemplatePreviewDialog } from "./WidgetTemplatePreviewDialog";
+import { WidgetTemplateRevisionDrawer } from "./WidgetTemplateRevisionDrawer";
 
 const widgetCategoryLabels: Record<WidgetCategoryId, string> = {
   layout: "Layout",
@@ -51,6 +57,8 @@ const widgetCategoryLabels: Record<WidgetCategoryId, string> = {
   navigation: "Navigation",
   media: "Media",
 };
+
+const NO_CATEGORIES_VALUE = "no-categories";
 
 const resolveTemplateId = (pathname: string) => {
   const adminBasePath = resolveAdminBasePath(pathname);
@@ -93,6 +101,13 @@ export function WidgetTemplateEditorPage() {
     useState<WidgetTemplatePreviewResponse | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
+  const [revisions, setRevisions] = useState<WidgetTemplateRevision[]>([]);
+  const [revisionsError, setRevisionsError] = useState<string | null>(null);
+  const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [restoringRevisionId, setRestoringRevisionId] = useState<string | null>(
+    null
+  );
 
   const displayError = error ?? categoriesError;
 
@@ -244,6 +259,43 @@ export function WidgetTemplateEditorPage() {
     }
   };
 
+  const handleOpenRevisions = async () => {
+    setRevisionsOpen(true);
+    if (!templateId || isNew) {
+      setRevisions([]);
+      setRevisionsError(null);
+      setRevisionsLoading(false);
+      return;
+    }
+    setRevisionsLoading(true);
+    setRevisionsError(null);
+    try {
+      const result = await listWidgetTemplateRevisions(templateId);
+      setRevisions(result.items);
+    } catch {
+      setRevisionsError("Failed to load revisions.");
+      setRevisions([]);
+    } finally {
+      setRevisionsLoading(false);
+    }
+  };
+
+  const handleRestoreRevision = async (revisionId: string) => {
+    if (!templateId) return;
+    setRestoringRevisionId(revisionId);
+    setRevisionsError(null);
+    try {
+      await restoreWidgetTemplateRevision(templateId, revisionId);
+      await loadTemplate();
+      const result = await listWidgetTemplateRevisions(templateId);
+      setRevisions(result.items);
+    } catch {
+      setRevisionsError("Failed to restore revision.");
+    } finally {
+      setRestoringRevisionId(null);
+    }
+  };
+
   return (
     <>
       <AdminShell
@@ -284,60 +336,57 @@ export function WidgetTemplateEditorPage() {
         contentClassName="p-0 overflow-hidden"
       >
         <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col">
-        <div className="border-b bg-card px-6 py-4">
-          <div className="flex flex-wrap items-start gap-4">
-            <div className="flex min-w-[220px] flex-1 flex-col gap-2">
-              <Input
-                className="text-lg font-semibold"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Template name"
-              />
-              <Textarea
-                className="min-h-[0px] resize-none text-xs"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Add description..."
-              />
-            </div>
-            <div className="min-w-[200px] space-y-2">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Category
-              </p>
-              <Select
-                value={category}
-                onValueChange={setCategory}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templateCategories.length === 0 ? (
-                    <SelectItem value="" disabled>
-                      Add a category first
-                    </SelectItem>
-                  ) : (
-                    templateCategories.map((item) => (
-                      <SelectItem key={item.id} value={item.name}>
-                        {item.name}
+          <div className="border-b bg-card px-6 py-4">
+            <div className="flex flex-wrap items-start gap-4">
+              <div className="flex min-w-[220px] flex-1 flex-col gap-2">
+                <Input
+                  className="text-lg font-semibold"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Template name"
+                />
+                <Textarea
+                  className="min-h-[0px] resize-none text-xs"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Add description..."
+                />
+              </div>
+              <div className="min-w-[200px] space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Category
+                </p>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {templateCategories.length === 0 ? (
+                      <SelectItem value={NO_CATEGORIES_VALUE} disabled>
+                        Add a category first
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                    ) : (
+                      templateCategories.map((item) => (
+                        <SelectItem key={item.id} value={item.name}>
+                          {item.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            {displayError ? (
+              <div className="mt-4">
+                <Alert variant="destructive">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{displayError}</AlertDescription>
+                </Alert>
+              </div>
+            ) : null}
           </div>
-          {displayError ? (
-            <div className="mt-4">
-              <Alert variant="destructive">
-                <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{displayError}</AlertDescription>
-              </Alert>
-            </div>
-          ) : null}
-        </div>
-        <div className="flex flex-1 min-h-0">
-          <aside className="hidden w-72 min-h-0 flex-col border-r bg-card lg:flex">
+          <div className="flex flex-1 min-h-0">
+            <aside className="hidden w-72 min-h-0 flex-col border-r bg-card lg:flex">
             <div className="border-b p-4">
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -399,9 +448,9 @@ export function WidgetTemplateEditorPage() {
                 </div>
               </div>
             </ScrollArea>
-          </aside>
+            </aside>
 
-          <main
+            <main
             className={
               "flex-1 overflow-auto p-10 bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)] bg-[size:24px_24px]"
             }
@@ -461,9 +510,9 @@ export function WidgetTemplateEditorPage() {
                 />
               </div>
             )}
-          </main>
+            </main>
 
-          <aside className="hidden w-80 min-h-0 flex-col border-l bg-card lg:flex">
+            <aside className="hidden w-80 min-h-0 flex-col border-l bg-card lg:flex">
             <div className="border-b px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Details
             </div>
@@ -481,13 +530,18 @@ export function WidgetTemplateEditorPage() {
               </div>
             </ScrollArea>
             <div className="border-t bg-muted/20 p-4">
-              <Button variant="secondary" className="w-full gap-2">
+              <Button
+                variant="secondary"
+                className="w-full gap-2"
+                onClick={() => void handleOpenRevisions()}
+                disabled={isNew}
+              >
                 <History className="h-4 w-4" />
                 Revision History
               </Button>
             </div>
-          </aside>
-        </div>
+            </aside>
+          </div>
         </div>
       </AdminShell>
       <WidgetTemplatePreviewDialog
@@ -498,6 +552,15 @@ export function WidgetTemplateEditorPage() {
         preview={previewData}
         isLoading={previewLoading}
         error={previewError}
+      />
+      <WidgetTemplateRevisionDrawer
+        open={revisionsOpen}
+        onOpenChange={setRevisionsOpen}
+        revisions={revisions}
+        isLoading={revisionsLoading}
+        error={revisionsError}
+        restoringId={restoringRevisionId}
+        onRestore={handleRestoreRevision}
       />
     </>
   );

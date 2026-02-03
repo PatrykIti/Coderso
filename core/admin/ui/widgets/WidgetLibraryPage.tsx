@@ -49,6 +49,7 @@ import { WidgetTemplateCategoryDrawer } from "./WidgetTemplateCategoryDrawer";
 import { WidgetCreateDialog } from "./WidgetCreateDialog";
 import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
 import { WidgetInsertDialog } from "./WidgetInsertDialog";
+import { matchesTemplateCategory, normalizeCategoryValue } from "./widgetLibraryUtils";
 import type { WidgetCategoryId, WidgetItem, WidgetSource } from "./types";
 
 type LibraryScope = "all-items" | "favorites" | "templates" | "widgets";
@@ -272,13 +273,14 @@ export function WidgetLibraryPage() {
 
   const widgets = useMemo<WidgetWithPreview[]>(() => {
     const templateItems = templates.map((template) => {
+      const categoryValue = template.category?.trim() ?? "";
       const meta =
-        categoryMeta[template.category.toLowerCase() as WidgetCategoryId];
+        categoryMeta[categoryValue.toLowerCase() as WidgetCategoryId];
       return {
         id: template.id,
         name: template.name,
-        category: template.category,
-        categoryLabel: template.category,
+        category: categoryValue,
+        categoryLabel: categoryValue,
         preview: meta?.preview ?? "hero",
         badge: "Template",
         source: "template" as const,
@@ -394,7 +396,9 @@ export function WidgetLibraryPage() {
   const filteredWidgets = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const normalizedTemplateCategory =
-      templateCategory === "all" ? "all" : templateCategory.toLowerCase();
+      templateCategory === "all"
+        ? "all"
+        : normalizeCategoryValue(templateCategory);
     return widgets.filter((widget) => {
       const matchesQuery =
         normalized.length === 0 ||
@@ -407,10 +411,8 @@ export function WidgetLibraryPage() {
         if (activeScope === "templates") {
           if (widget.source !== "template") return false;
           if (normalizedTemplateCategory === "all") return true;
-          return (
-            typeof widget.category === "string" &&
-            widget.category.toLowerCase() === normalizedTemplateCategory
-          );
+          if (typeof widget.category !== "string") return false;
+          return matchesTemplateCategory(widget.category, normalizedTemplateCategory);
         }
         if (activeScope === "widgets") {
           if (widget.source !== "core") return false;
@@ -426,11 +428,14 @@ export function WidgetLibraryPage() {
   const templateCategoryOptions = useMemo(
     () => [
       { id: "all", value: "all", label: "All categories" },
-      ...templateCategories.map((category) => ({
-        id: category.id,
-        value: category.name,
-        label: category.name,
-      })),
+      ...templateCategories.map((category) => {
+        const name = category.name.trim();
+        return {
+          id: category.id,
+          value: name,
+          label: name,
+        };
+      }),
     ],
     [templateCategories]
   );
@@ -735,7 +740,7 @@ export function WidgetLibraryPage() {
             </div>
           </aside>
 
-          <section className="flex min-h-0 flex-1 flex-col gap-4">
+          <section className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="secondary">

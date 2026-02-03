@@ -12,6 +12,10 @@ Minimalne logowanie zdarzen administracyjnych.
 - plugins.update
 - plugins.disable
 - settings.update
+- widgets.template.create
+- widgets.template.update
+- widgets.template.delete
+- widgets.template.restore
 
 ## Data model
 

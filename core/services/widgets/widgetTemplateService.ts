@@ -4,6 +4,7 @@ import { db } from "../../db/client";
 import { widgetTemplates } from "../../db/schema";
 import type { WidgetBlock } from "../../widgets/types";
 import { listWidgetTemplateCategories } from "./widgetTemplateCategoryService";
+import { createWidgetTemplateRevisionTx } from "./widgetTemplateRevisionService";
 
 export type WidgetTemplateStatus = "draft" | "published";
 
@@ -69,7 +70,10 @@ export async function getWidgetTemplate(id: string) {
   return { ...row, blocks: row.blocks as WidgetBlock[] };
 }
 
-export async function createWidgetTemplate(input: WidgetTemplateCreateInput) {
+export async function createWidgetTemplate(
+  input: WidgetTemplateCreateInput,
+  userId?: string | null
+) {
   if (!input.name?.trim()) {
     throw new Error("widget_template_invalid");
   }
@@ -77,26 +81,44 @@ export async function createWidgetTemplate(input: WidgetTemplateCreateInput) {
   const resolvedCategory = await resolveCategory(input.category);
   if (input.status) assertStatus(input.status);
 
-  const now = new Date();
-  const [row] = await db
-    .insert(widgetTemplates)
-    .values({
-      name: input.name.trim(),
-      description: input.description?.trim() ?? null,
-      category: resolvedCategory,
-      status: input.status ?? "draft",
-      blocks: normalizeBlocks(input.blocks),
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+  return db.transaction(async (tx) => {
+    const now = new Date();
+    const [row] = await tx
+      .insert(widgetTemplates)
+      .values({
+        name: input.name.trim(),
+        description: input.description?.trim() ?? null,
+        category: resolvedCategory,
+        status: input.status ?? "draft",
+        blocks: normalizeBlocks(input.blocks),
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
 
-  return { ...row, blocks: row.blocks as WidgetBlock[] };
+    if (!row) throw new Error("widget_template_invalid");
+
+    await createWidgetTemplateRevisionTx(
+      tx,
+      row.id,
+      {
+        name: row.name,
+        description: row.description ?? null,
+        category: row.category,
+        status: row.status as WidgetTemplateStatus,
+        blocks: normalizeBlocks(row.blocks as WidgetBlock[]),
+      },
+      userId
+    );
+
+    return { ...row, blocks: row.blocks as WidgetBlock[] };
+  });
 }
 
 export async function updateWidgetTemplate(
   id: string,
-  input: WidgetTemplateUpdateInput
+  input: WidgetTemplateUpdateInput,
+  userId?: string | null
 ) {
   const update: Partial<typeof widgetTemplates.$inferInsert> = {
     updatedAt: new Date(),
@@ -126,14 +148,30 @@ export async function updateWidgetTemplate(
     update.blocks = normalizeBlocks(input.blocks);
   }
 
-  const [row] = await db
-    .update(widgetTemplates)
-    .set(update)
-    .where(eq(widgetTemplates.id, id))
-    .returning();
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(widgetTemplates)
+      .set(update)
+      .where(eq(widgetTemplates.id, id))
+      .returning();
 
-  if (!row) return null;
-  return { ...row, blocks: row.blocks as WidgetBlock[] };
+    if (!row) return null;
+
+    await createWidgetTemplateRevisionTx(
+      tx,
+      row.id,
+      {
+        name: row.name,
+        description: row.description ?? null,
+        category: row.category,
+        status: row.status as WidgetTemplateStatus,
+        blocks: normalizeBlocks(row.blocks as WidgetBlock[]),
+      },
+      userId
+    );
+
+    return { ...row, blocks: row.blocks as WidgetBlock[] };
+  });
 }
 
 export async function deleteWidgetTemplate(id: string) {

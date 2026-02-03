@@ -206,6 +206,22 @@ Flow:
 
 ---
 
+## Template Revisions (Admin)
+
+- Kazdy zapis template tworzy rewizje (metadata + bloki).
+- Restore przywraca wybrana rewizje i zapisuje nowy snapshot po przywroceniu.
+- Rewizje pokazuja autora, status i liczbe blokow.
+
+---
+
+## Template Categories (Admin)
+
+- Kategorie template sa zarzadzane przez ustawienia `widgets.templateCategories`.
+- Template zapisuje nazwe kategorii (match case-insensitive na UI).
+- Biblioteka templates filtruje po nazwie kategorii.
+
+---
+
 ## Authoring Guide (plugin widgets)
 
 - Definiuj wlasne `schema` i `defaults`.

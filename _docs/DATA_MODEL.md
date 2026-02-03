@@ -144,6 +144,30 @@ Zasady:
 - `menu_items` musi miec dokladnie jedno z `href` lub `page_id`.
 - `parent_id` referencjonuje element w tym samym menu.
 
+## Widgets & Templates
+
+`widget_templates`
+- id (uuid, pk)
+- name
+- description (nullable)
+- category (string)
+- status (draft|published)
+- blocks (jsonb)
+- created_at
+- updated_at
+
+`widget_template_revisions`
+- id (uuid, pk)
+- template_id (fk widget_templates)
+- version (int)
+- name
+- description (nullable)
+- category (string)
+- status (draft|published)
+- blocks (jsonb)
+- created_at
+- created_by (fk users, nullable)
+
 ## Themes
 
 Theme'y sa dostarczane z `/themes` (foldery na dysku). W bazie trzymamy tylko
