@@ -30,6 +30,14 @@ Preview URL dla stron oraz wpisów:
 - jeśli brak, korzysta z `PUBLIC_BASE_URL` (ENV)
 - jeśli brak, generuje ścieżkę względną `/preview?...`
 
+## Public CSS Build
+
+Publiczny frontend używa **osobnego CSS** (nie admin build).
+
+- Build: `bun --cwd core build:site` → `core/dist/site`
+- Runtime odczytuje `dist/site/manifest.json` i linkuje CSS jako `/site/assets/...`
+- Tokeny z aktywnego **theme profile** są wstrzykiwane jako CSS variables w `<style>` (server‑side).
+
 ## UI
 
 Base URLs konfiguruje się w panelu admina:

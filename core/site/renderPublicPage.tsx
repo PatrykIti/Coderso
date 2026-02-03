@@ -8,6 +8,7 @@ export type PublicPageRenderOptions = {
   title: string;
   blocks: WidgetBlock[];
   cssHref?: string | null;
+  inlineCss?: string | null;
   isPreview?: boolean;
   metaDescription?: string | null;
 };
@@ -30,7 +31,7 @@ const renderBlocks = (blocks: WidgetBlock[]) => {
 };
 
 export function renderPublicPageHtml(options: PublicPageRenderOptions) {
-  const { title, blocks, cssHref, isPreview, metaDescription } = options;
+  const { title, blocks, cssHref, inlineCss, isPreview, metaDescription } = options;
 
   const body = renderToString(
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
@@ -57,6 +58,10 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     headTags.push(
       <meta key="description" name="description" content={metaDescription} />
     );
+  }
+
+  if (inlineCss) {
+    headTags.push(<style key="inline-css">{inlineCss}</style>);
   }
 
   if (cssHref) {

@@ -5,7 +5,7 @@
 **Category:** Site/Appearance  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-044 (Public Pages Rendering), TASK-007 (Design Tokens), TASK-008-01 (Theme Registry)  
-**Status:** 🟡 In Progress (2026-02-03)
+**Status:** ✅ Done (2026-02-03)
 
 ---
 
@@ -37,7 +37,7 @@ Zrealizowane przez `theme_profiles` i `theme_routes` (bez dodatkowych `site_them
 ### TASK-045-02: Site Theme Service + Resolver (✅ Done — 2026-01-29)
 CRUD profili + aktywny profil + resolver tokenów dla frontu.
 
-### TASK-045-03: Public CSS Build Pipeline (🟡 To Do)
+### TASK-045-03: Public CSS Build Pipeline (✅ Done — 2026-02-03)
 Oddzielny build publicznego CSS (Tailwind + tokens) + manifest + pliki w `dist/site`.
 
 **Deliverables:**
@@ -58,12 +58,12 @@ Endpointy `/themes`, `/theme-profiles`, `/theme-profiles/:id/activate`, `/theme-
 - (DONE) Unit tests dla service/resolver.
 - (DONE) Integration tests dla route wiring.
 - (DONE) UI smoke tests (render, actions present).
-- (TODO) Public CSS pipeline smoke test (manifest exists + CSS injected into public HTML).
+- (DONE) Public CSS pipeline smoke test (manifest exists + CSS injected into public HTML).
 
 ---
 
 ## Documentation Updates Required
 - (DONE) `_docs/THEMES_SPEC.md`, `_docs/DATA_MODEL.md`, `_docs/CMS_API.md`, `_docs/DESIGN_TOKENS.md`, `_docs/ARCHITECTURE.md`
-- (TODO) `_docs/SITE_RUNTIME.md` (public CSS/manifest section)
-- (TODO) `_docs/_CHANGELOG/<new>.md`
-- (TODO) `_docs/README.md` (lista docs)
+- (DONE) `_docs/SITE_RUNTIME.md` (public CSS/manifest section)
+- (DONE) `_docs/_CHANGELOG/134-2026-02-03-public-site-css-pipeline.md`
+- (DONE) `_docs/_CHANGELOG/README.md`

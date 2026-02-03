@@ -7,6 +7,7 @@ test("toCssVariables outputs root tokens", () => {
   const css = toCssVariables(DEFAULT_TOKENS);
   expect(css).toContain("--color-primary");
   expect(css).toContain(DEFAULT_TOKENS.colors.primary);
+  expect(css).toContain("--background");
   expect(css).toContain("--font-sans");
 });
 

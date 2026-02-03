@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@source "../**/*.{ts,tsx}";
+@source "../../widgets/**/*.{ts,tsx}";
+
+@theme {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --color-muted: var(--color-surface);
+  --color-muted-foreground: color-mix(in oklab, var(--color-text) 70%, transparent);
+  --color-popover: var(--color-surface);
+  --color-popover-foreground: var(--color-text);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-text);
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
+  --radius: var(--radius-md);
+}
+
+@layer base {
+  body {
+    background: var(--color-bg, #ffffff);
+    color: var(--color-text, #0f172a);
+    font-family: var(--font-sans, system-ui);
+  }
+}

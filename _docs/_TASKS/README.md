@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 34 tasks
-- **In Progress:** 1
-- **Done:** 204 tasks
+- **To Do:** 33 tasks
+- **In Progress:** 0
+- **Done:** 206 tasks
 
 ---
 
@@ -41,7 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-045-03 | Public CSS Build Pipeline | High | Medium | dist/site css build |
 | TASK-046 | Public Site Runtime | High | Large | Index for TASK-046-01..05 |
 | TASK-046-01 | Site Settings Model | High | Medium | baseUrl + homepage |
 | TASK-046-02 | Public Routes & Preview | High | Medium | content routes |
@@ -90,7 +89,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-045 | Public Site Themes | High | Large | Only TASK-045-03 remaining |
+| _empty_ | _n/a_ | _n/a_ | _n/a_ | _n/a_ |
 
 ---
 
@@ -102,8 +101,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050-02 | Widget Template Revision History | Medium | Medium | Revisions table + restore |
 | TASK-050-03 | Widget Nesting (Insert Into Existing Block) | Medium | Large | Nested blocks support |
 | TASK-044 | Public Pages Rendering and Preview | High | Medium | Public site + preview |
+| TASK-045 | Public Site Themes | High | Large | Public themes system + CSS pipeline |
 | TASK-045-01 | Site Theme DB Schema | High | Medium | theme_profiles + theme_routes |
 | TASK-045-02 | Site Theme Service + Resolver | High | Medium | Active theme + css vars |
+| TASK-045-03 | Public CSS Build Pipeline | High | Medium | dist/site css build |
 | TASK-045-04 | Admin UI — Site Themes | High | Large | Theme editor + preview |
 | TASK-045-05 | Site Themes API Routes | High | Medium | /themes + profiles |
 | TASK-047 | Admin/Public Base URLs (Routing Policy) | High | Medium | split admin/public hosts |
