@@ -29,6 +29,7 @@ type RelationSelectProps = {
   targetName?: string;
   value: unknown;
   onChange: (value: unknown) => void;
+  multiple?: boolean;
 };
 
 function RelationSelect({
@@ -36,10 +37,12 @@ function RelationSelect({
   targetName,
   value,
   onChange,
+  multiple = false,
 }: RelationSelectProps) {
   const [entries, setEntries] = useState<EntrySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -64,38 +67,81 @@ function RelationSelect({
     };
   }, [targetSlug]);
 
-  const selectedValue = value ? String(value) : "";
+  const selectedValues = Array.isArray(value)
+    ? value.map(String)
+    : value
+      ? [String(value)]
+      : [];
   const helperLabel = targetName ? targetName : "related content";
+  const filteredEntries = entries.filter((entry) => {
+    if (!query) return true;
+    const normalized = query.toLowerCase();
+    return (
+      entry.title.toLowerCase().includes(normalized) ||
+      entry.slug.toLowerCase().includes(normalized)
+    );
+  });
+  const handleToggle = (entryId: string) => {
+    if (multiple) {
+      const next = selectedValues.includes(entryId)
+        ? selectedValues.filter((id) => id !== entryId)
+        : [...selectedValues, entryId];
+      onChange(next);
+      return;
+    }
+    onChange(entryId);
+  };
 
   return (
     <div className="space-y-2">
-      <Select
-        value={selectedValue}
-        onValueChange={(next) => onChange(next)}
+      <Input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder={`Search ${helperLabel}...`}
         disabled={isLoading}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder={`Select ${helperLabel}`} />
-        </SelectTrigger>
-        <SelectContent>
-          {entries.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-muted-foreground">
-              No items found yet.
-            </div>
-          ) : (
-            entries.map((entry) => (
-              <SelectItem key={entry.id} value={entry.id}>
-                {entry.title}
-              </SelectItem>
-            ))
-          )}
-        </SelectContent>
-      </Select>
+      />
+      <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-2">
+        {entries.length === 0 ? (
+          <div className="px-2 py-2 text-xs text-muted-foreground">
+            No items found yet.
+          </div>
+        ) : filteredEntries.length === 0 ? (
+          <div className="px-2 py-2 text-xs text-muted-foreground">
+            No matches for <span className="font-medium">{query}</span>.
+          </div>
+        ) : (
+          filteredEntries.map((entry) => {
+            const isSelected = selectedValues.includes(entry.id);
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => handleToggle(entry.id)}
+                className={`flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm transition ${
+                  isSelected
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-transparent bg-muted/30 text-foreground hover:bg-muted/50"
+                }`}
+              >
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium">{entry.title}</p>
+                  <p className="text-xs text-muted-foreground">/{entry.slug}</p>
+                </div>
+                {multiple ? (
+                  <Checkbox checked={isSelected} aria-label="Select relation" />
+                ) : null}
+              </button>
+            );
+          })
+        )}
+      </div>
       {error ? (
         <p className="text-xs text-destructive">{error}</p>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Pick a {helperLabel} item to link here.
+          {multiple
+            ? `Pick one or more ${helperLabel} items to link here.`
+            : `Pick a ${helperLabel} item to link here.`}
         </p>
       )}
     </div>
@@ -203,6 +249,7 @@ export function FieldRenderer({
             targetName={relationLabel}
             value={value}
             onChange={onChange}
+            multiple={field.relation?.multiple}
           />
         );
       }

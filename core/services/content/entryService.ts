@@ -1,4 +1,4 @@
-import { and, desc, eq, max, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, max, ne } from "drizzle-orm";
 import { db } from "../../db/client";
 import { contentEntries, contentRevisions, contentTypes, users } from "../../db/schema";
 import { createPreviewToken } from "../pages/previewService";
@@ -60,6 +60,136 @@ export type UpdateEntryMetadataInput = {
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type DbClient = typeof db | DbTransaction;
+
+type RelationFieldConfig = {
+  name: string;
+  targetSlug: string;
+  multiple: boolean;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const readRelationConfig = (value: unknown) => {
+  if (!isRecord(value)) return { target: undefined, multiple: false };
+  const relation = value.relation;
+  if (!isRecord(relation)) return { target: undefined, multiple: false };
+  const target =
+    typeof relation.target === "string" ? relation.target.trim() : undefined;
+  const multiple = relation.multiple === true;
+  return { target: target || undefined, multiple };
+};
+
+const extractRelationFields = (schema: ContentSchema) => {
+  if (!schema || typeof schema !== "object") return [];
+  const typed = schema as Record<string, unknown>;
+  const properties = typed.properties;
+  if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
+    return [];
+  }
+
+  return Object.entries(properties)
+    .map(([name, definition]) => {
+      if (!isRecord(definition)) return null;
+      const xFieldType = definition.xFieldType;
+      const xRelationTarget =
+        typeof definition.xRelationTarget === "string"
+          ? definition.xRelationTarget.trim()
+          : undefined;
+      const { target, multiple } = readRelationConfig(definition.xFieldConfig);
+      const resolvedTarget = xRelationTarget ?? target;
+      const isRelation =
+        xFieldType === "relation" || Boolean(resolvedTarget);
+      if (!isRelation || !resolvedTarget) return null;
+      const isArray = definition.type === "array";
+      return {
+        name,
+        targetSlug: resolvedTarget,
+        multiple: isArray || multiple,
+      };
+    })
+    .filter((entry): entry is RelationFieldConfig => Boolean(entry));
+};
+
+async function validateRelationEntries(
+  schema: ContentSchema,
+  data: EntryData,
+  client: DbClient
+) {
+  const relationFields = extractRelationFields(schema);
+  if (relationFields.length === 0) return;
+
+  const idsByTarget = new Map<string, Set<string>>();
+  const targetsBySlug = new Map<string, string>();
+  const uniqueTargets = Array.from(
+    new Set(relationFields.map((field) => field.targetSlug))
+  );
+  const targetRows = await client
+    .select({ id: contentTypes.id, slug: contentTypes.slug })
+    .from(contentTypes)
+    .where(inArray(contentTypes.slug, uniqueTargets));
+  for (const row of targetRows) {
+    targetsBySlug.set(row.slug, row.id);
+  }
+
+  if (targetsBySlug.size !== uniqueTargets.length) {
+    throw new Error("relation_target_not_found");
+  }
+
+  for (const field of relationFields) {
+
+    const rawValue = data[field.name];
+    if (rawValue === undefined || rawValue === null || rawValue === "") {
+      continue;
+    }
+
+    const addId = (id: string) => {
+      const bucket = idsByTarget.get(field.targetSlug) ?? new Set<string>();
+      bucket.add(id);
+      idsByTarget.set(field.targetSlug, bucket);
+    };
+
+    if (field.multiple) {
+      if (!Array.isArray(rawValue)) {
+        throw new Error("relation_value_invalid");
+      }
+      for (const entryId of rawValue) {
+        if (typeof entryId !== "string" || entryId.trim() === "") {
+          throw new Error("relation_value_invalid");
+        }
+        addId(entryId);
+      }
+    } else {
+      if (Array.isArray(rawValue)) {
+        throw new Error("relation_value_invalid");
+      }
+      if (typeof rawValue !== "string" || rawValue.trim() === "") {
+        throw new Error("relation_value_invalid");
+      }
+      addId(rawValue);
+    }
+  }
+
+  for (const [targetSlug, ids] of idsByTarget.entries()) {
+    const targetId = targetsBySlug.get(targetSlug);
+    if (!targetId) continue;
+    const idList = Array.from(ids);
+    if (idList.length === 0) continue;
+
+    const rows = await client
+      .select({ id: contentEntries.id })
+      .from(contentEntries)
+      .where(
+        and(eq(contentEntries.typeId, targetId), inArray(contentEntries.id, idList))
+      );
+
+    const found = new Set(rows.map((row) => row.id));
+    const missing = idList.filter((id) => !found.has(id));
+    if (missing.length > 0) {
+      throw new Error("relation_entry_missing");
+    }
+  }
+}
 
 async function getContentSchema(typeId: string) {
   const [row] = await db
@@ -225,6 +355,11 @@ export async function createEntry(typeId: string, input: CreateEntryInput) {
 
   await ensureEntrySlugAvailable(typeId, input.slug);
   validateEntryData(typeId, contentType.schema as ContentSchema, input.data);
+  await validateRelationEntries(
+    contentType.schema as ContentSchema,
+    input.data,
+    db
+  );
 
   const [row] = await db
     .insert(contentEntries)
@@ -253,6 +388,11 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
 
   const nextData = input.data ?? (entry.data as EntryData);
   validateEntryData(entry.typeId, contentType.schema as ContentSchema, nextData);
+  await validateRelationEntries(
+    contentType.schema as ContentSchema,
+    nextData,
+    db
+  );
 
   const [row] = await db
     .update(contentEntries)
@@ -292,6 +432,11 @@ export async function publishEntry(entryId: string, userId: string) {
       entry.typeId,
       contentType.schema as ContentSchema,
       entry.data
+    );
+    await validateRelationEntries(
+      contentType.schema as ContentSchema,
+      entry.data as EntryData,
+      tx
     );
 
     await createEntryRevisionTx(tx, entry.id, entry.data as EntryData, userId);

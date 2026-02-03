@@ -168,6 +168,97 @@ testIfDb("updateEntryMetadata stores tags, schedule, and SEO", async () => {
   entryId = undefined;
 });
 
+testIfDb("validates relation entry IDs", async () => {
+  const projectSlug = `projects-${randomUUID()}`;
+  const teamSlug = `teams-${randomUUID()}`;
+
+  const projectType = await createContentType({
+    name: "Projects",
+    slug: projectSlug,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title"],
+      properties: {
+        title: { type: "string" },
+      },
+    },
+  });
+
+  const teamType = await createContentType({
+    name: "Teams",
+    slug: teamSlug,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title"],
+      properties: {
+        title: { type: "string" },
+        leadProject: {
+          type: "string",
+          xFieldType: "relation",
+          xRelationTarget: projectSlug,
+          xFieldConfig: { relation: { target: projectSlug } },
+        },
+        relatedProjects: {
+          type: "array",
+          items: { type: "string" },
+          xFieldType: "relation",
+          xRelationTarget: projectSlug,
+          xFieldConfig: { relation: { target: projectSlug, multiple: true } },
+        },
+      },
+    },
+  });
+
+  let projectEntryId: string | undefined;
+  let teamEntryId: string | undefined;
+
+  try {
+    const projectEntry = await createEntry(projectType.id, {
+      title: "Project Alpha",
+      slug: `project-${randomUUID()}`,
+      data: { title: "Project Alpha" },
+    });
+    projectEntryId = projectEntry?.id;
+
+    const teamEntry = await createEntry(teamType.id, {
+      title: "Team One",
+      slug: `team-${randomUUID()}`,
+      data: {
+        title: "Team One",
+        leadProject: projectEntryId,
+        relatedProjects: [projectEntryId],
+      },
+    });
+    teamEntryId = teamEntry?.id;
+
+    await expect(
+      createEntry(teamType.id, {
+        title: "Team Broken",
+        slug: `team-${randomUUID()}`,
+        data: {
+          title: "Team Broken",
+          leadProject: "missing-id",
+        },
+      })
+    ).rejects.toThrow("relation_entry_missing");
+  } finally {
+    if (teamEntryId) {
+      await db
+        .delete(contentEntries)
+        .where(eq(contentEntries.id, teamEntryId));
+    }
+    if (projectEntryId) {
+      await db
+        .delete(contentEntries)
+        .where(eq(contentEntries.id, projectEntryId));
+    }
+    await db.delete(contentTypes).where(eq(contentTypes.id, teamType.id));
+    await db.delete(contentTypes).where(eq(contentTypes.id, projectType.id));
+  }
+});
+
 testIfDb("updateEntryMetadata requires scheduledAt for scheduled status", async () => {
   const type = await createContentType({
     name: "FAQ",

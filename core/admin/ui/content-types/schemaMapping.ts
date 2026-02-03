@@ -1,11 +1,12 @@
 import type { ContentField, FieldType } from "./SchemaBuilder";
 
 export type ContentSchemaProperty = {
-  type?: "string" | "number" | "boolean";
+  type?: "string" | "number" | "boolean" | "array";
+  items?: { type?: "string" };
   title?: string;
   description?: string;
   enum?: string[];
-  default?: string | number | boolean;
+  default?: string | number | boolean | string[];
   xFieldType?: FieldType | string;
   xFieldConfig?: Record<string, unknown>;
   xRelationTarget?: string;
@@ -53,6 +54,15 @@ const readRelationTarget = (value: unknown) => {
   return trimmed ? trimmed : undefined;
 };
 
+const readRelationMultiple = (value: unknown) => {
+  if (!isRecord(value)) return undefined;
+  const relation = value.relation;
+  if (!isRecord(relation)) return undefined;
+  const multiple = relation.multiple;
+  if (typeof multiple !== "boolean") return undefined;
+  return multiple;
+};
+
 const readSelectOptions = (value: unknown) => {
   if (!isRecord(value)) return undefined;
   const select = value.select;
@@ -74,9 +84,14 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
   const properties = fields.reduce<Record<string, ContentSchemaProperty>>(
     (acc, field) => {
       const definition: ContentSchemaProperty = {
-        type: fieldTypeMap[field.type],
         xFieldType: field.type,
       };
+      if (field.type === "relation" && field.relation?.multiple) {
+        definition.type = "array";
+        definition.items = { type: "string" };
+      } else {
+        definition.type = fieldTypeMap[field.type];
+      }
 
       if (field.label) definition.title = field.label;
       if (field.help) definition.description = field.help;
@@ -89,7 +104,10 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
       if (field.type === "relation" && field.relation?.target) {
         definition.xRelationTarget = field.relation.target;
         definition.xFieldConfig = {
-          relation: { target: field.relation.target },
+          relation: {
+            target: field.relation.target,
+            ...(field.relation.multiple ? { multiple: true } : {}),
+          },
         };
       }
 
@@ -152,6 +170,9 @@ export function fieldsFromSchema(schema: ContentSchema): ContentField[] {
             target:
               definition.xRelationTarget ??
               (readRelationTarget(definition.xFieldConfig) as string),
+            multiple:
+              definition.type === "array" ||
+              readRelationMultiple(definition.xFieldConfig) === true,
           }
         : undefined,
   }));

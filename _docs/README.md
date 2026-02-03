@@ -4,6 +4,7 @@
 - `CMS_SPEC.md` - CMS scope and overview
 - `CMS_API.md` - admin API endpoints
 - `CONTENT_TYPES_SPEC.md` - collections and content types
+- `CONTENT_RELATIONS.md` - relation fields and entry linking
 - `DATA_MODEL.md` - database schema overview
 - `DESIGN_TOKENS.md` - design tokens and theming
 - `MEDIA_SPEC.md` - media storage and uploads

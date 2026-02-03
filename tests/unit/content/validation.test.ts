@@ -28,9 +28,11 @@ test("assertContentSchema accepts schema meta keywords", () => {
         xFieldConfig: { hint: "example" },
       },
       related: {
-        type: "string",
+        type: "array",
+        items: { type: "string" },
         xFieldType: "relation",
         xRelationTarget: "posts",
+        xFieldConfig: { relation: { target: "posts", multiple: true } },
       },
     },
   };

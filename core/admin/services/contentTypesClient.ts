@@ -1,11 +1,12 @@
 import { apiRequest } from "./apiClient";
 
 export type ContentSchemaProperty = {
-  type?: "string" | "number" | "boolean";
+  type?: "string" | "number" | "boolean" | "array";
+  items?: { type?: "string" };
   title?: string;
   description?: string;
   enum?: string[];
-  default?: string | number | boolean;
+  default?: string | number | boolean | string[];
   xFieldType?: string;
   xFieldConfig?: Record<string, unknown>;
   xRelationTarget?: string;

@@ -169,6 +169,26 @@ export function FieldEditor({
           <p className="text-xs text-muted-foreground">
             Pick which content type this field should link to (e.g. Team → Projects).
           </p>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Allow multiple</p>
+              <p className="text-xs text-muted-foreground">
+                Enable linking to multiple entries in this relation field.
+              </p>
+            </div>
+            <Switch
+              checked={field.relation?.multiple ?? false}
+              onCheckedChange={(checked) =>
+                onChange({
+                  ...field,
+                  relation: {
+                    target: field.relation?.target ?? "",
+                    ...(checked ? { multiple: true } : {}),
+                  },
+                })
+              }
+            />
+          </div>
           {relationError ? (
             <div className="flex items-center gap-2 text-xs text-destructive">
               <AlertTriangle className="h-3 w-3" />

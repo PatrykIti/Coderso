@@ -153,7 +153,7 @@ export type ContentField = {
   help?: string;
   required?: boolean;
   options?: string[];
-  relation?: { target: string };
+  relation?: { target: string; multiple?: boolean };
   defaultValue?: string;
 };
 

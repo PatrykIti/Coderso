@@ -25,4 +25,5 @@ test("FieldEditor renders relation target selector", () => {
 
   expect(html).toContain("Related content type");
   expect(html).toContain("Projects");
+  expect(html).toContain("Allow multiple");
 });

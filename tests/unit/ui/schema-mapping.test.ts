@@ -20,7 +20,7 @@ test("schema mapping preserves relation metadata", () => {
       type: "relation",
       label: "Related post",
       required: false,
-      relation: { target: "posts" },
+      relation: { target: "posts", multiple: true },
     },
     {
       id: "field-body",
@@ -43,10 +43,22 @@ test("schema mapping preserves relation metadata", () => {
   const relationSchema = schema.properties["related-post"];
   expect(relationSchema?.xFieldType).toBe("relation");
   expect(relationSchema?.xRelationTarget).toBe("posts");
+  expect(relationSchema?.type).toBe("array");
+  expect(relationSchema?.items).toEqual({ type: "string" });
   expect(
-    (relationSchema?.xFieldConfig as { relation?: { target?: string } })?.relation
-      ?.target
+    (
+      relationSchema?.xFieldConfig as {
+        relation?: { target?: string; multiple?: boolean };
+      }
+    )?.relation?.target
   ).toBe("posts");
+  expect(
+    (
+      relationSchema?.xFieldConfig as {
+        relation?: { target?: string; multiple?: boolean };
+      }
+    )?.relation?.multiple
+  ).toBe(true);
 
   const schemaWithoutRelationKeyword = {
     ...schema,
@@ -63,6 +75,7 @@ test("schema mapping preserves relation metadata", () => {
   const relationField = parsed.find((field) => field.name === "related-post");
   expect(relationField?.type).toBe("relation");
   expect(relationField?.relation?.target).toBe("posts");
+  expect(relationField?.relation?.multiple).toBe(true);
 
   const richtextField = parsed.find((field) => field.name === "body");
   expect(richtextField?.type).toBe("richtext");

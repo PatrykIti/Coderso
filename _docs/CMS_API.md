@@ -639,7 +639,9 @@ Create entry payload (summary):
   "data": {
     "title": "Launch announcement",
     "summary": "Short intro",
-    "featured": true
+    "featured": true,
+    "leadProject": "entry-id-123",
+    "relatedProjects": ["entry-id-123", "entry-id-456"]
   }
 }
 ```

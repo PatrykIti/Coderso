@@ -60,6 +60,7 @@ nie tracic typu pola:
 - `xFieldType` — typ pola z UI (np. `relation`, `media`, `select`).
 - `xFieldConfig` — konfiguracja zależna od typu, np.:
   - `relation.target` (slug typu docelowego),
+  - `relation.multiple` (multi‑relation → `type: "array"`),
   - `select.options` (lista opcji),
   - przyszłe: reguły mediów, richtext, walidatory.
 - `xRelationTarget` jest wspierane dla kompatybilności wstecznej.
@@ -71,6 +72,7 @@ Te pola sa ignorowane przez walidator danych wpisu.
 - `name` pola musi byc unikalny i w kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`).
 - Required field musi miec `defaultValue` (UI blokuje brak defaultu).
 - Relation field wymaga `target` (slug typu docelowego).
+- Relation field może byc single lub multi (multi zapisuje tablice entry IDs).
 - UI generuje formularz entry dynamicznie z pola `schema`.
 - Draft/publish/preview + autosave draft w edytorze wpisu.
 
