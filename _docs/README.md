@@ -3,6 +3,7 @@
 - `ARCHITECTURE.md` - architecture and system rules
 - `CMS_SPEC.md` - CMS scope and overview
 - `CMS_API.md` - admin API endpoints
+- `CONTENT_FIELDS.md` - content field types and configuration
 - `CONTENT_TYPES_SPEC.md` - collections and content types
 - `CONTENT_RELATIONS.md` - relation fields and entry linking
 - `DATA_MODEL.md` - database schema overview

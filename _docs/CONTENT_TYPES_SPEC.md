@@ -61,6 +61,8 @@ nie tracic typu pola:
 - `xFieldConfig` — konfiguracja zależna od typu, np.:
   - `relation.target` (slug typu docelowego),
   - `relation.multiple` (multi‑relation → `type: "array"`),
+  - `media.accept` (MIME whitelist),
+  - `media.maxItems` (limit dla multi‑media),
   - `select.options` (lista opcji),
   - przyszłe: reguły mediów, richtext, walidatory.
 - `xRelationTarget` jest wspierane dla kompatybilności wstecznej.

@@ -128,6 +128,78 @@ export function FieldEditor({
           />
         </div>
       ) : null}
+      {field.type === "media" ? (
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-muted-foreground">
+              Accepted file types
+            </label>
+            <Input
+              value={field.media?.accept?.join(", ") ?? ""}
+              onChange={(event) =>
+                onChange({
+                  ...field,
+                  media: {
+                    ...field.media,
+                    accept: event.target.value
+                      .split(",")
+                      .map((item) => item.trim())
+                      .filter(Boolean),
+                  },
+                })
+              }
+              placeholder="image/*, application/pdf"
+            />
+            <p className="text-xs text-muted-foreground">
+              Comma-separated MIME patterns (leave empty for all types).
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Allow multiple</p>
+              <p className="text-xs text-muted-foreground">
+                Enable picking more than one asset.
+              </p>
+            </div>
+            <Switch
+              checked={field.media?.multiple ?? false}
+              onCheckedChange={(checked) =>
+                onChange({
+                  ...field,
+                  media: {
+                    ...field.media,
+                    multiple: checked,
+                    ...(checked ? {} : { maxItems: undefined }),
+                  },
+                })
+              }
+            />
+          </div>
+          {field.media?.multiple ? (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Max items
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={field.media?.maxItems ?? ""}
+                onChange={(event) => {
+                  const next = Number(event.target.value);
+                  onChange({
+                    ...field,
+                    media: {
+                      ...field.media,
+                      maxItems: Number.isFinite(next) && next > 0 ? next : undefined,
+                    },
+                  });
+                }}
+                placeholder="Leave empty for no limit"
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {field.type === "relation" ? (
         <div className="space-y-2">
           <label className="text-xs font-semibold uppercase text-muted-foreground">

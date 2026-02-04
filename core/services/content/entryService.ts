@@ -1,6 +1,12 @@
 import { and, desc, eq, inArray, max, ne } from "drizzle-orm";
 import { db } from "../../db/client";
-import { contentEntries, contentRevisions, contentTypes, users } from "../../db/schema";
+import {
+  contentEntries,
+  contentRevisions,
+  contentTypes,
+  media,
+  users,
+} from "../../db/schema";
 import { createPreviewToken } from "../pages/previewService";
 import { invalidateContentEntryCache } from "../../site/cache/siteCache";
 import { getContentType } from "./typeService";
@@ -67,6 +73,13 @@ type RelationFieldConfig = {
   multiple: boolean;
 };
 
+type MediaFieldConfig = {
+  name: string;
+  multiple: boolean;
+  accept: string[] | undefined;
+  maxItems: number | undefined;
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -78,6 +91,28 @@ const readRelationConfig = (value: unknown) => {
     typeof relation.target === "string" ? relation.target.trim() : undefined;
   const multiple = relation.multiple === true;
   return { target: target || undefined, multiple };
+};
+
+const readMediaConfig = (value: unknown) => {
+  if (!isRecord(value)) return {};
+  const mediaValue = isRecord(value.media) ? value.media : value;
+  if (!isRecord(mediaValue)) return {};
+  const multiple = mediaValue.multiple === true;
+  const accept = Array.isArray(mediaValue.accept)
+    ? mediaValue.accept
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    : undefined;
+  const maxItems =
+    typeof mediaValue.maxItems === "number" && Number.isFinite(mediaValue.maxItems)
+      ? mediaValue.maxItems
+      : undefined;
+  return {
+    multiple,
+    accept: accept?.length ? accept : undefined,
+    maxItems,
+  };
 };
 
 const extractRelationFields = (schema: ContentSchema) => {
@@ -110,6 +145,130 @@ const extractRelationFields = (schema: ContentSchema) => {
     })
     .filter((entry): entry is RelationFieldConfig => Boolean(entry));
 };
+
+const extractMediaFields = (schema: ContentSchema) => {
+  if (!schema || typeof schema !== "object") return [];
+  const typed = schema as Record<string, unknown>;
+  const properties = typed.properties;
+  if (!properties || typeof properties !== "object" || Array.isArray(properties)) {
+    return [];
+  }
+
+  return Object.entries(properties)
+    .map(([name, definition]) => {
+      if (!isRecord(definition)) return null;
+      const xFieldType = definition.xFieldType;
+      const mediaConfig = readMediaConfig(definition.xFieldConfig);
+      const isMedia =
+        xFieldType === "media" ||
+        mediaConfig.multiple === true ||
+        Boolean(mediaConfig.accept);
+      if (!isMedia) return null;
+      const multiple = definition.type === "array" || mediaConfig.multiple === true;
+      return {
+        name,
+        multiple,
+        accept: mediaConfig.accept,
+        maxItems:
+          typeof mediaConfig.maxItems === "number"
+            ? mediaConfig.maxItems
+            : typeof definition.maxItems === "number"
+              ? definition.maxItems
+              : undefined,
+      };
+    })
+    .filter((entry): entry is MediaFieldConfig => Boolean(entry));
+};
+
+const matchesMimeAccept = (mimeType: string, accept?: string[]) => {
+  if (!accept || accept.length === 0) return true;
+  const normalized = accept.map((entry) => entry.toLowerCase());
+  const candidate = mimeType.toLowerCase();
+  return normalized.some((pattern) => {
+    if (pattern === "*/*") return true;
+    if (pattern.endsWith("/*")) {
+      const prefix = pattern.slice(0, pattern.indexOf("/"));
+      return candidate.startsWith(`${prefix}/`);
+    }
+    return candidate === pattern;
+  });
+};
+
+async function validateMediaAssets(
+  schema: ContentSchema,
+  data: EntryData,
+  client: DbClient
+) {
+  const mediaFields = extractMediaFields(schema);
+  if (mediaFields.length === 0) return;
+
+  const selectedIds = new Set<string>();
+  const allowedById = new Map<string, string[][]>();
+
+  for (const field of mediaFields) {
+    const rawValue = data[field.name];
+    if (rawValue === undefined || rawValue === null || rawValue === "") {
+      continue;
+    }
+
+    if (field.multiple) {
+      if (!Array.isArray(rawValue)) {
+        throw new Error("media_value_invalid");
+      }
+      if (field.maxItems && rawValue.length > field.maxItems) {
+        throw new Error("media_value_invalid");
+      }
+      for (const id of rawValue) {
+        if (typeof id !== "string" || id.trim() === "") {
+          throw new Error("media_value_invalid");
+        }
+        selectedIds.add(id);
+        if (field.accept) {
+          const bucket = allowedById.get(id) ?? [];
+          bucket.push(field.accept);
+          allowedById.set(id, bucket);
+        }
+      }
+    } else {
+      if (Array.isArray(rawValue)) {
+        throw new Error("media_value_invalid");
+      }
+      if (typeof rawValue !== "string" || rawValue.trim() === "") {
+        throw new Error("media_value_invalid");
+      }
+      selectedIds.add(rawValue);
+      if (field.accept) {
+        const bucket = allowedById.get(rawValue) ?? [];
+        bucket.push(field.accept);
+        allowedById.set(rawValue, bucket);
+      }
+    }
+  }
+
+  const ids = Array.from(selectedIds);
+  if (ids.length === 0) return;
+
+  const rows = await client
+    .select({ id: media.id, mimeType: media.mimeType })
+    .from(media)
+    .where(inArray(media.id, ids));
+
+  const found = new Map(rows.map((row) => [row.id, row.mimeType]));
+  const missing = ids.filter((id) => !found.has(id));
+  if (missing.length > 0) {
+    throw new Error("media_asset_missing");
+  }
+
+  for (const [id, acceptLists] of allowedById.entries()) {
+    const mimeType = found.get(id);
+    if (!mimeType) continue;
+    for (const accept of acceptLists) {
+      if (!matchesMimeAccept(mimeType, accept)) {
+        throw new Error("media_type_not_allowed");
+      }
+    }
+  }
+}
 
 async function validateRelationEntries(
   schema: ContentSchema,
@@ -360,6 +519,11 @@ export async function createEntry(typeId: string, input: CreateEntryInput) {
     input.data,
     db
   );
+  await validateMediaAssets(
+    contentType.schema as ContentSchema,
+    input.data,
+    db
+  );
 
   const [row] = await db
     .insert(contentEntries)
@@ -389,6 +553,11 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
   const nextData = input.data ?? (entry.data as EntryData);
   validateEntryData(entry.typeId, contentType.schema as ContentSchema, nextData);
   await validateRelationEntries(
+    contentType.schema as ContentSchema,
+    nextData,
+    db
+  );
+  await validateMediaAssets(
     contentType.schema as ContentSchema,
     nextData,
     db
@@ -434,6 +603,11 @@ export async function publishEntry(entryId: string, userId: string) {
       entry.data
     );
     await validateRelationEntries(
+      contentType.schema as ContentSchema,
+      entry.data as EntryData,
+      tx
+    );
+    await validateMediaAssets(
       contentType.schema as ContentSchema,
       entry.data as EntryData,
       tx

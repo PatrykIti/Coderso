@@ -37,6 +37,18 @@ test("schema mapping preserves relation metadata", () => {
       required: false,
       options: ["news", "press"],
     },
+    {
+      id: "field-gallery",
+      name: "gallery",
+      type: "media",
+      label: "Gallery",
+      required: false,
+      media: {
+        multiple: true,
+        accept: ["image/*"],
+        maxItems: 6,
+      },
+    },
   ] as const;
 
   const schema = buildSchemaFromFields(fields);
@@ -58,6 +70,18 @@ test("schema mapping preserves relation metadata", () => {
         relation?: { target?: string; multiple?: boolean };
       }
     )?.relation?.multiple
+  ).toBe(true);
+
+  const mediaSchema = schema.properties["gallery"];
+  expect(mediaSchema?.type).toBe("array");
+  expect(mediaSchema?.items).toEqual({ type: "string" });
+  expect(mediaSchema?.maxItems).toBe(6);
+  expect(
+    (
+      mediaSchema?.xFieldConfig as {
+        media?: { multiple?: boolean; accept?: string[]; maxItems?: number };
+      }
+    )?.media?.multiple
   ).toBe(true);
 
   const schemaWithoutRelationKeyword = {
@@ -83,4 +107,10 @@ test("schema mapping preserves relation metadata", () => {
   const selectField = parsed.find((field) => field.name === "category");
   expect(selectField?.type).toBe("select");
   expect(selectField?.options).toEqual(["news", "press"]);
+
+  const mediaField = parsed.find((field) => field.name === "gallery");
+  expect(mediaField?.type).toBe("media");
+  expect(mediaField?.media?.multiple).toBe(true);
+  expect(mediaField?.media?.accept).toEqual(["image/*"]);
+  expect(mediaField?.media?.maxItems).toBe(6);
 });

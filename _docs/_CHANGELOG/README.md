@@ -138,6 +138,7 @@ Project Change Log.
 | 140 | 2026-02-03 | Site settings relocation | Admin/UI |
 | 142 | 2026-02-03 | Field schema meta | CMS/Content |
 | 143 | 2026-02-03 | Relation field UX | CMS/Content |
+| 144 | 2026-02-04 | Media field picker | CMS/Media |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

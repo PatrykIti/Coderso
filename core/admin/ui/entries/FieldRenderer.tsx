@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,6 +12,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import { listEntries, type EntrySummary } from "@/services/entriesClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import type { ContentField } from "../content-types/SchemaBuilder";
 
@@ -221,24 +220,13 @@ export function FieldRenderer({
       );
     case "media":
       return (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <Button variant="outline" size="sm">
-              Select media
-            </Button>
-            <Badge variant="outline" className="text-xs">
-              {value ? "1 asset selected" : "No asset selected"}
-            </Badge>
-          </div>
-          <div className="flex h-44 items-center justify-center rounded-xl border border-dashed bg-muted/30">
-            <div className="text-center">
-              <p className="text-xs font-medium">Drop a file or browse</p>
-              <p className="text-[11px] text-muted-foreground">
-                Recommended size 1600x900
-              </p>
-            </div>
-          </div>
-        </div>
+        <MediaPicker
+          value={value}
+          onChange={onChange}
+          multiple={field.media?.multiple}
+          accept={field.media?.accept}
+          maxItems={field.media?.maxItems}
+        />
       );
     case "relation":
       if (relationTarget) {

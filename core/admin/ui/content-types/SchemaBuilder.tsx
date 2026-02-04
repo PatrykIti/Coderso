@@ -154,6 +154,7 @@ export type ContentField = {
   required?: boolean;
   options?: string[];
   relation?: { target: string; multiple?: boolean };
+  media?: { multiple?: boolean; accept?: string[]; maxItems?: number };
   defaultValue?: string;
 };
 

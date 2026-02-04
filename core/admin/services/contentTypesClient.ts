@@ -7,6 +7,7 @@ export type ContentSchemaProperty = {
   description?: string;
   enum?: string[];
   default?: string | number | boolean | string[];
+  maxItems?: number;
   xFieldType?: string;
   xFieldConfig?: Record<string, unknown>;
   xRelationTarget?: string;

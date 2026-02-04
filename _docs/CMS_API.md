@@ -641,7 +641,9 @@ Create entry payload (summary):
     "summary": "Short intro",
     "featured": true,
     "leadProject": "entry-id-123",
-    "relatedProjects": ["entry-id-123", "entry-id-456"]
+    "relatedProjects": ["entry-id-123", "entry-id-456"],
+    "heroImage": "media-id-123",
+    "gallery": ["media-id-1", "media-id-2"]
   }
 }
 ```

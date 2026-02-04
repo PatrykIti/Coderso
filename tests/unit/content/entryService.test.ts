@@ -6,6 +6,7 @@ import {
   contentEntries,
   contentRevisions,
   contentTypes,
+  media,
   previewTokens,
   users,
 } from "../../../core/db/schema";
@@ -256,6 +257,101 @@ testIfDb("validates relation entry IDs", async () => {
     }
     await db.delete(contentTypes).where(eq(contentTypes.id, teamType.id));
     await db.delete(contentTypes).where(eq(contentTypes.id, projectType.id));
+  }
+});
+
+testIfDb("validates media asset IDs and types", async () => {
+  const type = await createContentType({
+    name: "Gallery",
+    slug: `gallery-${randomUUID()}`,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["title"],
+      properties: {
+        title: { type: "string" },
+        heroImage: {
+          type: "string",
+          xFieldType: "media",
+          xFieldConfig: { media: { accept: ["image/*"] } },
+        },
+        gallery: {
+          type: "array",
+          items: { type: "string" },
+          maxItems: 2,
+          xFieldType: "media",
+          xFieldConfig: { media: { multiple: true, accept: ["image/*"], maxItems: 2 } },
+        },
+      },
+    },
+  });
+
+  let imageId: string | undefined;
+  let docId: string | undefined;
+  let entryId: string | undefined;
+
+  try {
+    const [image] = await db
+      .insert(media)
+      .values({
+        key: `test/${randomUUID()}.png`,
+        url: `https://cdn.example.com/${randomUUID()}.png`,
+        type: "image",
+        mimeType: "image/png",
+        size: 1024,
+      })
+      .returning();
+    imageId = image?.id;
+
+    const [doc] = await db
+      .insert(media)
+      .values({
+        key: `test/${randomUUID()}.pdf`,
+        url: `https://cdn.example.com/${randomUUID()}.pdf`,
+        type: "document",
+        mimeType: "application/pdf",
+        size: 2048,
+      })
+      .returning();
+    docId = doc?.id;
+
+    const entry = await createEntry(type.id, {
+      title: "Gallery entry",
+      slug: `entry-${randomUUID()}`,
+      data: {
+        title: "Gallery entry",
+        heroImage: imageId,
+        gallery: [imageId],
+      },
+    });
+    entryId = entry?.id;
+
+    await expect(
+      createEntry(type.id, {
+        title: "Missing media",
+        slug: `entry-${randomUUID()}`,
+        data: { title: "Missing media", heroImage: randomUUID() },
+      })
+    ).rejects.toThrow("media_asset_missing");
+
+    await expect(
+      createEntry(type.id, {
+        title: "Wrong type",
+        slug: `entry-${randomUUID()}`,
+        data: { title: "Wrong type", heroImage: docId },
+      })
+    ).rejects.toThrow("media_type_not_allowed");
+  } finally {
+    if (entryId) {
+      await db.delete(contentEntries).where(eq(contentEntries.id, entryId));
+    }
+    if (imageId) {
+      await db.delete(media).where(eq(media.id, imageId));
+    }
+    if (docId) {
+      await db.delete(media).where(eq(media.id, docId));
+    }
+    await db.delete(contentTypes).where(eq(contentTypes.id, type.id));
   }
 });
 

@@ -7,6 +7,7 @@ export type ContentSchemaProperty = {
   description?: string;
   enum?: string[];
   default?: string | number | boolean | string[];
+  maxItems?: number;
   xFieldType?: FieldType | string;
   xFieldConfig?: Record<string, unknown>;
   xRelationTarget?: string;
@@ -76,6 +77,28 @@ const readSelectOptions = (value: unknown) => {
   return normalized.length ? normalized : undefined;
 };
 
+const readMediaConfig = (value: unknown) => {
+  if (!isRecord(value)) return undefined;
+  const media = isRecord(value.media) ? value.media : value;
+  if (!isRecord(media)) return undefined;
+  const multiple = media.multiple === true;
+  const accept = Array.isArray(media.accept)
+    ? media.accept
+        .filter((entry): entry is string => typeof entry === "string")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    : undefined;
+  const maxItems =
+    typeof media.maxItems === "number" && Number.isFinite(media.maxItems)
+      ? media.maxItems
+      : undefined;
+  return {
+    multiple,
+    accept: accept?.length ? accept : undefined,
+    maxItems,
+  };
+};
+
 export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
   const required = fields
     .filter((field) => field.required)
@@ -86,7 +109,10 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
       const definition: ContentSchemaProperty = {
         xFieldType: field.type,
       };
-      if (field.type === "relation" && field.relation?.multiple) {
+      if (
+        (field.type === "relation" && field.relation?.multiple) ||
+        (field.type === "media" && field.media?.multiple)
+      ) {
         definition.type = "array";
         definition.items = { type: "string" };
       } else {
@@ -109,6 +135,25 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
             ...(field.relation.multiple ? { multiple: true } : {}),
           },
         };
+      }
+      if (field.type === "media") {
+        const config = field.media;
+        const mediaConfig = {
+          ...(config?.multiple ? { multiple: true } : {}),
+          ...(config?.accept?.length ? { accept: config.accept } : {}),
+          ...(typeof config?.maxItems === "number"
+            ? { maxItems: config.maxItems }
+            : {}),
+        };
+        if (Object.keys(mediaConfig).length > 0) {
+          definition.xFieldConfig = {
+            ...(definition.xFieldConfig ?? {}),
+            media: mediaConfig,
+          };
+        }
+        if (config?.multiple && typeof config.maxItems === "number") {
+          definition.maxItems = config.maxItems;
+        }
       }
 
       const defaultValue = normalizeDefaultValue(field);
@@ -143,6 +188,8 @@ const resolveFieldType = (definition: ContentSchemaProperty): FieldType => {
   const relationTarget =
     definition.xRelationTarget ?? readRelationTarget(definition.xFieldConfig);
   if (relationTarget) return "relation";
+  const mediaConfig = readMediaConfig(definition.xFieldConfig);
+  if (mediaConfig?.accept?.length || mediaConfig?.multiple) return "media";
   const selectOptions = readSelectOptions(definition.xFieldConfig);
   if (selectOptions?.length) return "select";
   if (definition.enum && definition.enum.length > 0) return "select";
@@ -175,6 +222,19 @@ export function fieldsFromSchema(schema: ContentSchema): ContentField[] {
               readRelationMultiple(definition.xFieldConfig) === true,
           }
         : undefined,
+    media: (() => {
+      const mediaConfig = readMediaConfig(definition.xFieldConfig);
+      if (!(definition.xFieldType === "media" || mediaConfig)) return undefined;
+      return {
+        multiple: definition.type === "array" || mediaConfig?.multiple === true,
+        ...(mediaConfig?.accept?.length ? { accept: mediaConfig.accept } : {}),
+        ...(typeof mediaConfig?.maxItems === "number"
+          ? { maxItems: mediaConfig.maxItems }
+          : definition.maxItems !== undefined
+            ? { maxItems: definition.maxItems }
+            : {}),
+      };
+    })(),
   }));
 }
 

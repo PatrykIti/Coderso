@@ -10,7 +10,6 @@ import {
   listMedia,
   updateMedia,
   uploadMedia,
-  type MediaRecord,
 } from "@/services/mediaClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
@@ -26,40 +25,9 @@ import {
   UploadDropzone,
   type UploadDropzoneHandle,
 } from "@/ui/media/UploadDropzone";
-import type { MediaItem, MediaKind, MediaMetaUpdate } from "@/ui/media/types";
+import type { MediaItem, MediaMetaUpdate } from "@/ui/media/types";
+import { toMediaItem } from "@/ui/media/utils";
 
-function resolveKindFromMime(mimeType: string): MediaKind {
-  if (mimeType.startsWith("image/")) return "image";
-  if (mimeType.startsWith("audio/")) return "audio";
-  return "document";
-}
-
-function resolveName(record: MediaRecord) {
-  const fromKey = record.key?.split("/").pop();
-  if (fromKey) return fromKey;
-  const fromUrl = record.url?.split("/").pop();
-  if (fromUrl) return fromUrl;
-  if (record.originalName) return record.originalName;
-  return "asset";
-}
-
-function toMediaItem(record: MediaRecord): MediaItem {
-  return {
-    id: record.id,
-    name: resolveName(record),
-    originalName: record.originalName ?? undefined,
-    type: resolveKindFromMime(record.mimeType),
-    sizeBytes: record.size,
-    url: record.url,
-    mimeType: record.mimeType,
-    createdAt: record.createdAt,
-    width: record.width ?? undefined,
-    height: record.height ?? undefined,
-    title: record.title ?? undefined,
-    alt: record.alt ?? undefined,
-    caption: record.caption ?? undefined,
-  };
-}
 
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);

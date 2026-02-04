@@ -50,6 +50,22 @@ Uwaga:
 - Dozwolone MIME types (whitelist: `MEDIA_ALLOWED_MIME`).
 - Metadane: alt, title, caption.
 
+## Content fields (entry data)
+
+Media fields w Content Types przechowuja **ID assetu**:
+
+Single:
+```json
+{ "hero-image": "media-id-123" }
+```
+
+Multi:
+```json
+{ "gallery": ["media-id-1", "media-id-2"] }
+```
+
+`media.accept` i `media.maxItems` sa konfigurowane w schema meta (`xFieldConfig`).
+
 ## Admin UI behavior (v1)
 
 - Upload dropzone + manual browse.
