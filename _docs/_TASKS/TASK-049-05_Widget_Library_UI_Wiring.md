@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-049-03, TASK-049-04, TASK-006-29  
-**Status:** To Do
+**Status:** Done (2026-02-04)
 
 ---
 

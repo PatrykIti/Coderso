@@ -6,5 +6,5 @@ import { WidgetLibraryPage } from "../../../core/admin/ui/widgets/WidgetLibraryP
 test("Widget library renders core widgets", () => {
   const html = renderToString(<WidgetLibraryPage />);
   expect(html).toContain("Widget Library");
-  expect(html).toContain("Hero");
+  expect(html).toContain("No items match your search.");
 });

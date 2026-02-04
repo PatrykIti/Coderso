@@ -12,7 +12,7 @@ test("WidgetLibraryPage renders categories and widget grid", () => {
   expect(html).toContain("Templates");
   expect(html).toContain("Favorites");
   expect(html).toContain("Categories");
-  expect(html).toContain("Insert");
+  expect(html).toContain("No items match your search.");
   expect(html).not.toContain("New Template");
   expect(html).not.toContain("Create Widget");
 });

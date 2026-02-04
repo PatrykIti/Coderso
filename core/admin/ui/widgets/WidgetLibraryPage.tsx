@@ -23,12 +23,11 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { getPage, listPages, updatePage, type PageSummary } from "@/services/pagesClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
+import { listWidgetCatalog, type WidgetCatalogItem } from "@/services/widgetsClient";
 import {
   createWidgetTemplate,
   getWidgetTemplate,
-  listWidgetTemplates,
   updateWidgetTemplate,
-  type WidgetTemplate,
 } from "@/services/widgetTemplatesClient";
 import {
   createWidgetTemplateCategory,
@@ -236,7 +235,7 @@ export function WidgetLibraryPage() {
     useState<WidgetCategoryFilter>("all");
   const [templateCategory, setTemplateCategory] =
     useState<TemplateCategoryFilter>("all");
-  const [templates, setTemplates] = useState<WidgetTemplate[]>([]);
+  const [catalogItems, setCatalogItems] = useState<WidgetCatalogItem[]>([]);
   const [templateCategories, setTemplateCategories] = useState<
     WidgetTemplateCategory[]
   >([]);
@@ -254,7 +253,7 @@ export function WidgetLibraryPage() {
   );
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [pagesError, setPagesError] = useState<string | null>(null);
-  const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [insertError, setInsertError] = useState<string | null>(null);
   const adminBasePath = useAdminBasePath();
@@ -268,44 +267,31 @@ export function WidgetLibraryPage() {
     [widgetDefinitions]
   );
 
-  const coreWidgets = useMemo<WidgetWithPreview[]>(() => {
-    return widgetDefinitions.map((definition) => {
-      const meta = categoryMeta[definition.category];
-      return {
-        id: definition.type,
-        name: definition.title,
-        category: definition.category,
-        categoryLabel: meta.label,
-        preview: meta.preview,
-        source: "core" as const,
-        description: definition.description,
-      };
-    });
-  }, [widgetDefinitions]);
-
   const widgets = useMemo<WidgetWithPreview[]>(() => {
-    const templateItems = templates.map((template) => {
-      const categoryValue = template.category?.trim() ?? "";
-      const meta =
-        categoryMeta[categoryValue.toLowerCase() as WidgetCategoryId];
+    return catalogItems.map((item) => {
+      const categoryValue = item.category?.trim() ?? "";
+      const categoryKey = categoryValue.toLowerCase() as WidgetCategoryId;
+      const meta = categoryMeta[categoryKey];
+      const categoryLabel =
+        item.source === "core"
+          ? meta?.label ?? categoryValue
+          : categoryValue;
       return {
-        id: template.id,
-        name: template.name,
+        id: item.id,
+        name: item.name,
         category: categoryValue,
-        categoryLabel: categoryValue,
+        categoryLabel,
         preview: meta?.preview ?? "hero",
-        badge: "Template",
-        source: "template" as const,
-        description: template.description,
-        status: template.status,
+        badge: item.source === "template" ? "Template" : undefined,
+        source: item.source,
+        description: item.description,
+        status: item.status,
+        isFavorite: favoriteIds.has(item.id),
       };
-    });
-    const combined = [...coreWidgets, ...templateItems];
-    return combined.map((item) => ({
+    }).map((item) => ({
       ...item,
-      isFavorite: favoriteIds.has(item.id),
     }));
-  }, [coreWidgets, templates, favoriteIds]);
+  }, [catalogItems, favoriteIds]);
 
   useEffect(() => {
     let active = true;
@@ -343,13 +329,13 @@ export function WidgetLibraryPage() {
     };
   }, []);
 
-  const reloadTemplates = async () => {
+  const reloadCatalog = async () => {
     try {
-      const result = await listWidgetTemplates();
-      setTemplates(result.items);
-      setTemplatesError(null);
+      const result = await listWidgetCatalog();
+      setCatalogItems(result.items);
+      setCatalogError(null);
     } catch {
-      setTemplatesError("Failed to load templates.");
+      setCatalogError("Failed to load widget catalog.");
     }
   };
 
@@ -365,15 +351,15 @@ export function WidgetLibraryPage() {
 
   useEffect(() => {
     let active = true;
-    listWidgetTemplates()
+    listWidgetCatalog()
       .then((result) => {
         if (!active) return;
-        setTemplates(result.items);
-        setTemplatesError(null);
+        setCatalogItems(result.items);
+        setCatalogError(null);
       })
       .catch(() => {
         if (!active) return;
-        setTemplatesError("Failed to load templates.");
+        setCatalogError("Failed to load widget catalog.");
       });
     return () => {
       active = false;
@@ -585,14 +571,14 @@ export function WidgetLibraryPage() {
   const handleCreateCategory = async (name: string) => {
     await createWidgetTemplateCategory({ name });
     await reloadCategories();
-    await reloadTemplates();
+    await reloadCatalog();
   };
 
   const handleUpdateCategory = async (id: string, name: string) => {
     const existing = templateCategories.find((category) => category.id === id);
     await updateWidgetTemplateCategory(id, { name });
     await reloadCategories();
-    await reloadTemplates();
+    await reloadCatalog();
     if (existing && templateCategory === existing.name) {
       setTemplateCategory(name);
     }
@@ -602,7 +588,7 @@ export function WidgetLibraryPage() {
     const existing = templateCategories.find((category) => category.id === id);
     await deleteWidgetTemplateCategory(id);
     await reloadCategories();
-    await reloadTemplates();
+    await reloadCatalog();
     if (existing && templateCategory === existing.name) {
       setTemplateCategory("all");
     }
@@ -631,6 +617,14 @@ export function WidgetLibraryPage() {
   const favoriteWidgets = useMemo(
     () => widgets.filter((widget) => widget.isFavorite).slice(0, 3),
     [widgets]
+  );
+
+  const templateList = useMemo(
+    () =>
+      catalogItems
+        .filter((item) => item.source === "template")
+        .map((item) => ({ id: item.id, name: item.name })),
+    [catalogItems]
   );
 
   const showTemplateAction = activeScope === "templates";
@@ -949,10 +943,7 @@ export function WidgetLibraryPage() {
         widget={insertWidget}
         preview={insertWidget ? renderPreview(insertWidget.preview) : undefined}
         pages={pages.map((page) => ({ id: page.id, title: page.title }))}
-        templates={templates.map((template) => ({
-          id: template.id,
-          name: template.name,
-        }))}
+        templates={templateList}
         onInsert={(payload) => handleInsert(payload)}
       />
       {pagesError ? (
@@ -960,9 +951,9 @@ export function WidgetLibraryPage() {
           {pagesError}
         </span>
       ) : null}
-      {templatesError ? (
+      {catalogError ? (
         <span className="sr-only" role="status">
-          {templatesError}
+          {catalogError}
         </span>
       ) : null}
       {categoriesError ? (
