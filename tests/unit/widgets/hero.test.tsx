@@ -20,6 +20,14 @@ test("hero renders defaults", () => {
   expect(html).toContain(heroDefaults.headline);
 });
 
+test("hero spacing falls back to defaults when spacing is empty", () => {
+  const html = renderToString(
+    <HeroBlock data={{ ...heroDefaults, spacing: {} }} variant="centered" />
+  );
+  expect(html).toContain("padding-top:3rem");
+  expect(html).toContain("padding-bottom:3rem");
+});
+
 test("hero validator rejects invalid variant", () => {
   clearWidgets();
   registerWidget(

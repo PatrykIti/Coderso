@@ -143,24 +143,14 @@ export const heroDefaults: HeroData = {
   responsive: { hideMediaOnMobile: false },
 };
 
-const spacingTopClassMap = {
-  none: "pt-0",
-  xs: "pt-2",
-  sm: "pt-4",
-  md: "pt-6",
-  lg: "pt-8",
-  xl: "pt-12",
-  "2xl": "pt-16",
-} as const;
-
-const spacingBottomClassMap = {
-  none: "pb-0",
-  xs: "pb-2",
-  sm: "pb-4",
-  md: "pb-6",
-  lg: "pb-8",
-  xl: "pb-12",
-  "2xl": "pb-16",
+const spacingValueMap = {
+  none: "0rem",
+  xs: "0.5rem",
+  sm: "1rem",
+  md: "1.5rem",
+  lg: "2rem",
+  xl: "3rem",
+  "2xl": "4rem",
 } as const;
 
 const maxWidthClassMap = {
@@ -190,8 +180,8 @@ const joinClasses = (...classes: Array<string | false | undefined>) =>
 
 const resolveSpacingKey = (
   value: string | undefined,
-  fallback: keyof typeof spacingTopClassMap
-) => (value && value in spacingTopClassMap ? (value as keyof typeof spacingTopClassMap) : fallback);
+  fallback: keyof typeof spacingValueMap
+) => (value && value in spacingValueMap ? (value as keyof typeof spacingValueMap) : fallback);
 
 export function HeroBlock({
   data,
@@ -203,12 +193,24 @@ export function HeroBlock({
   slots?: Record<string, WidgetBlock[]>;
 }) {
   const layout = data.layout ?? {};
-  const spacing = data.spacing ?? data.style ?? {};
+  const spacingDefaults = heroDefaults.spacing ?? {
+    paddingTop: "xl",
+    paddingBottom: "xl",
+  };
+  const spacing = {
+    paddingTop: spacingDefaults.paddingTop,
+    paddingBottom: spacingDefaults.paddingBottom,
+    ...(data.style ?? {}),
+    ...(data.spacing ?? {}),
+  };
   const align = layout.align ?? "center";
   const maxWidth = layout.maxWidth ?? "xl";
   const contentWidth = layout.contentWidth ?? "lg";
-  const paddingTop = resolveSpacingKey(spacing.paddingTop, "xl");
-  const paddingBottom = resolveSpacingKey(spacing.paddingBottom, "xl");
+  const paddingTop = resolveSpacingKey(spacing.paddingTop, spacingDefaults.paddingTop);
+  const paddingBottom = resolveSpacingKey(
+    spacing.paddingBottom,
+    spacingDefaults.paddingBottom
+  );
   const background = data.background ?? {};
 
   const backgroundStyle: CSSProperties = {
@@ -218,6 +220,8 @@ export function HeroBlock({
       : background.gradient,
     backgroundSize: background.image ? "cover" : undefined,
     backgroundPosition: background.image ? "center" : undefined,
+    paddingTop: spacingValueMap[paddingTop],
+    paddingBottom: spacingValueMap[paddingBottom],
   };
 
   const isSplit = variant !== "centered";
@@ -237,9 +241,7 @@ export function HeroBlock({
   return (
     <div
       className={joinClasses(
-        "w-full rounded-3xl border border-border/40 px-6",
-        spacingTopClassMap[paddingTop],
-        spacingBottomClassMap[paddingBottom]
+        "w-full rounded-3xl border border-border/40 px-6"
       )}
       style={backgroundStyle}
     >
