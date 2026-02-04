@@ -15,6 +15,19 @@ test("schema mapping preserves relation metadata", () => {
       required: true,
     },
     {
+      id: "field-meta",
+      name: "seo-title",
+      type: "text",
+      label: "SEO title",
+      required: false,
+      layout: {
+        tab: "SEO",
+        section: "Metadata",
+        width: "half",
+        display: "compact",
+      },
+    },
+    {
       id: "field-related",
       name: "related-post",
       type: "relation",
@@ -52,6 +65,19 @@ test("schema mapping preserves relation metadata", () => {
   ] as const;
 
   const schema = buildSchemaFromFields(fields);
+  const seoSchema = schema.properties["seo-title"];
+  expect(
+    (
+      seoSchema?.xFieldConfig as {
+        layout?: { tab?: string; section?: string; width?: string; display?: string };
+      }
+    )?.layout
+  ).toEqual({
+    tab: "SEO",
+    section: "Metadata",
+    width: "half",
+    display: "compact",
+  });
   const relationSchema = schema.properties["related-post"];
   expect(relationSchema?.xFieldType).toBe("relation");
   expect(relationSchema?.xRelationTarget).toBe("posts");
@@ -113,4 +139,12 @@ test("schema mapping preserves relation metadata", () => {
   expect(mediaField?.media?.multiple).toBe(true);
   expect(mediaField?.media?.accept).toEqual(["image/*"]);
   expect(mediaField?.media?.maxItems).toBe(6);
+
+  const seoField = parsed.find((field) => field.name === "seo-title");
+  expect(seoField?.layout).toEqual({
+    tab: "SEO",
+    section: "Metadata",
+    width: "half",
+    display: "compact",
+  });
 });

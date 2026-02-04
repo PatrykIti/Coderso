@@ -156,6 +156,12 @@ export type ContentField = {
   relation?: { target: string; multiple?: boolean };
   media?: { multiple?: boolean; accept?: string[]; maxItems?: number };
   defaultValue?: string;
+  layout?: {
+    tab?: string;
+    section?: string;
+    width?: "full" | "half";
+    display?: "default" | "compact";
+  };
 };
 
 export function validateFieldName(

@@ -99,6 +99,32 @@ const readMediaConfig = (value: unknown) => {
   };
 };
 
+const readLayoutConfig = (
+  value: unknown
+): ContentField["layout"] | undefined => {
+  if (!isRecord(value)) return undefined;
+  const layout = isRecord(value.layout) ? value.layout : undefined;
+  if (!layout) return undefined;
+  const tab = typeof layout.tab === "string" ? layout.tab.trim() : undefined;
+  const section =
+    typeof layout.section === "string" ? layout.section.trim() : undefined;
+  const width =
+    layout.width === "full" || layout.width === "half"
+      ? layout.width
+      : undefined;
+  const display =
+    layout.display === "default" || layout.display === "compact"
+      ? layout.display
+      : undefined;
+  if (!tab && !section && !width && !display) return undefined;
+  return {
+    ...(tab ? { tab } : {}),
+    ...(section ? { section } : {}),
+    ...(width ? { width } : {}),
+    ...(display ? { display } : {}),
+  };
+};
+
 export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
   const required = fields
     .filter((field) => field.required)
@@ -109,6 +135,7 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
       const definition: ContentSchemaProperty = {
         xFieldType: field.type,
       };
+      const fieldConfig: Record<string, unknown> = {};
       if (
         (field.type === "relation" && field.relation?.multiple) ||
         (field.type === "media" && field.media?.multiple)
@@ -123,17 +150,13 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
       if (field.help) definition.description = field.help;
       if (field.type === "select" && field.options?.length) {
         definition.enum = field.options;
-        definition.xFieldConfig = {
-          select: { options: field.options },
-        };
+        fieldConfig.select = { options: field.options };
       }
       if (field.type === "relation" && field.relation?.target) {
         definition.xRelationTarget = field.relation.target;
-        definition.xFieldConfig = {
-          relation: {
-            target: field.relation.target,
-            ...(field.relation.multiple ? { multiple: true } : {}),
-          },
+        fieldConfig.relation = {
+          target: field.relation.target,
+          ...(field.relation.multiple ? { multiple: true } : {}),
         };
       }
       if (field.type === "media") {
@@ -146,18 +169,29 @@ export function buildSchemaFromFields(fields: ContentField[]): ContentSchema {
             : {}),
         };
         if (Object.keys(mediaConfig).length > 0) {
-          definition.xFieldConfig = {
-            ...(definition.xFieldConfig ?? {}),
-            media: mediaConfig,
-          };
+          fieldConfig.media = mediaConfig;
         }
         if (config?.multiple && typeof config.maxItems === "number") {
           definition.maxItems = config.maxItems;
         }
       }
+      if (field.layout) {
+        const layoutConfig = {
+          ...(field.layout.tab ? { tab: field.layout.tab } : {}),
+          ...(field.layout.section ? { section: field.layout.section } : {}),
+          ...(field.layout.width ? { width: field.layout.width } : {}),
+          ...(field.layout.display ? { display: field.layout.display } : {}),
+        };
+        if (Object.keys(layoutConfig).length > 0) {
+          fieldConfig.layout = layoutConfig;
+        }
+      }
 
       const defaultValue = normalizeDefaultValue(field);
       if (defaultValue !== undefined) definition.default = defaultValue;
+      if (Object.keys(fieldConfig).length > 0) {
+        definition.xFieldConfig = fieldConfig;
+      }
 
       acc[field.name] = definition;
       return acc;
@@ -209,6 +243,7 @@ export function fieldsFromSchema(schema: ContentSchema): ContentField[] {
     required: required.has(name),
     options: definition.enum ?? readSelectOptions(definition.xFieldConfig),
     defaultValue: parseDefaultValue(definition.default),
+    layout: readLayoutConfig(definition.xFieldConfig),
     relation:
       (definition.xFieldType === "relation" || definition.xRelationTarget) &&
       (definition.xRelationTarget ??

@@ -64,6 +64,7 @@ nie tracic typu pola:
   - `media.accept` (MIME whitelist),
   - `media.maxItems` (limit dla multi‑media),
   - `select.options` (lista opcji),
+  - `layout.tab/section/width/display` (uklad pola w edytorze wpisu),
   - przyszłe: reguły mediów, richtext, walidatory.
 - `xRelationTarget` jest wspierane dla kompatybilności wstecznej.
 
@@ -76,6 +77,7 @@ Te pola sa ignorowane przez walidator danych wpisu.
 - Relation field wymaga `target` (slug typu docelowego).
 - Relation field może byc single lub multi (multi zapisuje tablice entry IDs).
 - UI generuje formularz entry dynamicznie z pola `schema`.
+- Layout pola (tab/sekcja/szerokosc) jest zapisywany w `xFieldConfig.layout`.
 - Draft/publish/preview + autosave draft w edytorze wpisu.
 
 ## Taxonomie (Categories/Tags)

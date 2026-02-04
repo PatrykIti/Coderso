@@ -395,12 +395,6 @@ export function EntryEditor() {
       setIsSavingMetadata(false);
     }
   };
-
-  const contentFields = fields.filter(
-    (field) => field.type !== "media" && field.type !== "relation"
-  );
-  const mediaFields = fields.filter((field) => field.type === "media");
-  const relationFields = fields.filter((field) => field.type === "relation");
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
   const taxonomyState = taxonomyOverview
     ? {
@@ -429,6 +423,55 @@ export function EntryEditor() {
     "Relation fields link entries together (e.g. Team → Projects).",
     "Use categories and tags to organize and filter content.",
   ];
+  const tabGroups = useMemo(() => {
+    const resolveTabLabel = (field: ContentField) => {
+      const explicitTab = field.layout?.tab?.trim();
+      if (explicitTab) return explicitTab;
+      if (field.type === "media") return "Media";
+      if (field.type === "relation") return "Relations";
+      return "Content";
+    };
+
+    const tabs = new Map<
+      string,
+      { label: string; sections: Map<string, { label: string | null; fields: ContentField[] }> }
+    >();
+    const tabOrder: string[] = [];
+
+    fields.forEach((field) => {
+      const tabLabel = resolveTabLabel(field);
+      if (!tabs.has(tabLabel)) {
+        tabs.set(tabLabel, { label: tabLabel, sections: new Map() });
+        tabOrder.push(tabLabel);
+      }
+      const sectionLabel = field.layout?.section?.trim() ?? "";
+      const tab = tabs.get(tabLabel);
+      if (!tab) return;
+      if (!tab.sections.has(sectionLabel)) {
+        tab.sections.set(sectionLabel, {
+          label: sectionLabel ? sectionLabel : null,
+          fields: [],
+        });
+      }
+      tab.sections.get(sectionLabel)?.fields.push(field);
+    });
+
+    return tabOrder.map((label, index) => {
+      const tab = tabs.get(label);
+      return {
+        id: slugify(label) || `tab-${index + 1}`,
+        label,
+        sections: tab ? Array.from(tab.sections.values()) : [],
+      };
+    });
+  }, [fields]);
+  const [activeTab, setActiveTab] = useState("content");
+
+  useEffect(() => {
+    if (tabGroups.length === 0) return;
+    const hasActive = tabGroups.some((tab) => tab.id === activeTab);
+    if (!hasActive) setActiveTab(tabGroups[0].id);
+  }, [activeTab, tabGroups]);
 
   return (
     <AdminShell
@@ -546,76 +589,73 @@ export function EntryEditor() {
               <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
                 Loading entry fields...
               </div>
+            ) : tabGroups.length === 0 ? (
+              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                This content type has no fields yet.
+              </div>
             ) : (
-              <Tabs defaultValue="content" className="space-y-6">
+              <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="space-y-6"
+              >
                 <TabsList variant="line">
-                  <TabsTrigger value="content">Content</TabsTrigger>
-                  <TabsTrigger value="media">Media</TabsTrigger>
-                  <TabsTrigger value="relations">Relations</TabsTrigger>
+                  {tabGroups.map((tab) => (
+                    <TabsTrigger key={tab.id} value={tab.id}>
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
-                <TabsContent value="content" className="space-y-6">
-                  {contentFields.map((field) => (
-                    <Card key={field.id}>
-                      <CardHeader className="space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <CardTitle className="text-base">{field.label}</CardTitle>
-                          {field.required ? <Badge variant="outline">Required</Badge> : null}
+                {tabGroups.map((tab) => (
+                  <TabsContent key={tab.id} value={tab.id} className="space-y-8">
+                    {tab.sections.map((section, index) => (
+                      <div key={`${tab.id}-${section.label ?? "default"}-${index}`} className="space-y-4">
+                        {section.label ? (
+                          <div className="flex items-center gap-3">
+                            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              {section.label}
+                            </h4>
+                            <div className="h-px flex-1 bg-border" />
+                          </div>
+                        ) : null}
+                        <div className="grid gap-4 md:grid-cols-12">
+                          {section.fields.map((field) => {
+                            const width = field.layout?.width ?? "full";
+                            const colSpan =
+                              width === "half" ? "md:col-span-6" : "md:col-span-12";
+                            const isCompact = field.layout?.display === "compact";
+                            return (
+                              <div key={field.id} className={colSpan}>
+                                <Card className={isCompact ? "border-dashed" : undefined}>
+                                  <CardHeader className={isCompact ? "space-y-1 pb-3" : "space-y-2"}>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <CardTitle className="text-base">{field.label}</CardTitle>
+                                      {field.required ? (
+                                        <Badge variant="outline">Required</Badge>
+                                      ) : null}
+                                    </div>
+                                    {field.help ? (
+                                      <CardDescription>{field.help}</CardDescription>
+                                    ) : null}
+                                  </CardHeader>
+                                  <CardContent className={isCompact ? "pt-0" : undefined}>
+                                    <FieldRenderer
+                                      field={field}
+                                      value={values[field.name]}
+                                      onChange={(value) => handleFieldChange(field.name, value)}
+                                      relationTargets={relationTargets}
+                                      display={field.layout?.display}
+                                    />
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            );
+                          })}
                         </div>
-                        {field.help ? <CardDescription>{field.help}</CardDescription> : null}
-                      </CardHeader>
-                      <CardContent>
-                        <FieldRenderer
-                          field={field}
-                          value={values[field.name]}
-                          onChange={(value) => handleFieldChange(field.name, value)}
-                          relationTargets={relationTargets}
-                        />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </TabsContent>
-                <TabsContent value="media" className="space-y-6">
-                  {mediaFields.map((field) => (
-                    <Card key={field.id}>
-                      <CardHeader className="space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <CardTitle className="text-base">{field.label}</CardTitle>
-                          {field.required ? <Badge variant="outline">Required</Badge> : null}
-                        </div>
-                        {field.help ? <CardDescription>{field.help}</CardDescription> : null}
-                      </CardHeader>
-                      <CardContent>
-                        <FieldRenderer
-                          field={field}
-                          value={values[field.name]}
-                          onChange={(value) => handleFieldChange(field.name, value)}
-                          relationTargets={relationTargets}
-                        />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </TabsContent>
-                <TabsContent value="relations" className="space-y-6">
-                  {relationFields.map((field) => (
-                    <Card key={field.id}>
-                      <CardHeader className="space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                          <CardTitle className="text-base">{field.label}</CardTitle>
-                          {field.required ? <Badge variant="outline">Required</Badge> : null}
-                        </div>
-                        {field.help ? <CardDescription>{field.help}</CardDescription> : null}
-                      </CardHeader>
-                      <CardContent>
-                        <FieldRenderer
-                          field={field}
-                          value={values[field.name]}
-                          onChange={(value) => handleFieldChange(field.name, value)}
-                          relationTargets={relationTargets}
-                        />
-                      </CardContent>
-                    </Card>
-                  ))}
-                </TabsContent>
+                      </div>
+                    ))}
+                  </TabsContent>
+                ))}
               </Tabs>
             )}
             </div>

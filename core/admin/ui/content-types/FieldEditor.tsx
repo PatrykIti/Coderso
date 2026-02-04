@@ -81,6 +81,18 @@ export function FieldEditor({
       : field.relation?.target
         ? [{ slug: field.relation.target, name: field.relation.target }]
         : [];
+  const updateLayout = (patch: Partial<NonNullable<ContentField["layout"]>>) => {
+    const nextLayout = {
+      ...field.layout,
+      ...patch,
+    };
+    const hasLayout =
+      nextLayout.tab || nextLayout.section || nextLayout.width || nextLayout.display;
+    onChange({
+      ...field,
+      layout: hasLayout ? nextLayout : undefined,
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -310,6 +322,82 @@ export function FieldEditor({
           ) : null}
         </div>
       ) : null}
+      <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+        <div className="space-y-1">
+          <p className="text-sm font-semibold">Layout & grouping</p>
+          <p className="text-xs text-muted-foreground">
+            Control where this field appears in the entry editor.
+          </p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-muted-foreground">
+              Tab
+            </label>
+            <Input
+              value={field.layout?.tab ?? ""}
+              onChange={(event) => {
+                const nextTab = event.target.value;
+                updateLayout({ tab: nextTab.trim() ? nextTab : undefined });
+              }}
+              placeholder="Content, SEO, Sidebar"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-muted-foreground">
+              Section
+            </label>
+            <Input
+              value={field.layout?.section ?? ""}
+              onChange={(event) => {
+                const nextSection = event.target.value;
+                updateLayout({
+                  section: nextSection.trim() ? nextSection : undefined,
+                });
+              }}
+              placeholder="Hero, Metadata"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-muted-foreground">
+              Width
+            </label>
+            <Select
+              value={field.layout?.width ?? "full"}
+              onValueChange={(value) => {
+                updateLayout({ width: value as "full" | "half" });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose width" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="full">Full width</SelectItem>
+                <SelectItem value="half">Half width</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-muted-foreground">
+              Display density
+            </label>
+            <Select
+              value={field.layout?.display ?? "default"}
+              onValueChange={(value) => {
+                updateLayout({ display: value as "default" | "compact" });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose density" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="compact">Compact</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
       <div className="space-y-2">
         <label className="text-xs font-semibold uppercase text-muted-foreground">
           Help text

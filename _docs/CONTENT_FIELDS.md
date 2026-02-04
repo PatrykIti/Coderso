@@ -14,6 +14,34 @@ Opisuje pola Content Types oraz ich konfiguracje w Admin UI.
 Pole `help` w definicji pola wyswietla sie jako podpowiedz w edytorze wpisu.
 Uzywaj go dla pol mniej oczywistych (np. format, ograniczenia, kontekst).
 
+## Layout & grouping (tabs/sections)
+
+UI pozwala ustawic **tab**, **sekcje**, **szerokosc** i **gestosc wyswietlania**
+dla kazdego pola, aby edytor wpisu byl czytelny i WordPress‑like.
+
+Przyklad meta w schema:
+
+```json
+{
+  "type": "string",
+  "xFieldType": "text",
+  "xFieldConfig": {
+    "layout": {
+      "tab": "SEO",
+      "section": "Metadata",
+      "width": "half",
+      "display": "compact"
+    }
+  }
+}
+```
+
+Zasady:
+- `tab` tworzy nowa zakladke lub dolacza do istniejacej.
+- `section` grupuje pola wewnatrz zakladki.
+- `width`: `full` lub `half` (uklad 2‑kolumnowy na desktopie).
+- `display`: `default` lub `compact` (gestosc formularza).
+
 ## Media field
 
 Entry data:

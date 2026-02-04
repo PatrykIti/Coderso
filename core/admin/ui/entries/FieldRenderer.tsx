@@ -21,6 +21,7 @@ type FieldRendererProps = {
   value: unknown;
   onChange: (value: unknown) => void;
   relationTargets?: Array<{ slug: string; name: string }>;
+  display?: "default" | "compact";
 };
 
 type RelationSelectProps = {
@@ -30,6 +31,7 @@ type RelationSelectProps = {
   onChange: (value: unknown) => void;
   multiple?: boolean;
   helpText?: string;
+  compact?: boolean;
 };
 
 function RelationSelect({
@@ -39,6 +41,7 @@ function RelationSelect({
   onChange,
   multiple = false,
   helpText,
+  compact = false,
 }: RelationSelectProps) {
   const [entries, setEntries] = useState<EntrySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,16 +99,23 @@ function RelationSelect({
   const fallbackHelp = multiple
     ? `Pick one or more ${helperLabel} items to link here.`
     : `Pick a ${helperLabel} item to link here.`;
+  const spacingClass = compact ? "space-y-1" : "space-y-2";
+  const inputClass = compact ? "h-9 text-sm" : undefined;
+  const listClass = compact ? "max-h-44" : "max-h-56";
+  const helperClass = compact ? "text-[11px]" : "text-xs";
 
   return (
-    <div className="space-y-2">
+    <div className={spacingClass}>
       <Input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder={`Search ${helperLabel}...`}
         disabled={isLoading}
+        className={inputClass}
       />
-      <div className="max-h-56 space-y-2 overflow-y-auto rounded-lg border p-2">
+      <div
+        className={`${listClass} space-y-2 overflow-y-auto rounded-lg border p-2`}
+      >
         {entries.length === 0 ? (
           <div className="px-2 py-2 text-xs text-muted-foreground">
             No items found yet.
@@ -141,9 +151,9 @@ function RelationSelect({
         )}
       </div>
       {error ? (
-        <p className="text-xs text-destructive">{error}</p>
+        <p className={`${helperClass} text-destructive`}>{error}</p>
       ) : (
-        <p className="text-xs text-muted-foreground">
+        <p className={`${helperClass} text-muted-foreground`}>
           {helpText ?? fallbackHelp}
         </p>
       )}
@@ -156,7 +166,16 @@ export function FieldRenderer({
   value,
   onChange,
   relationTargets = [],
+  display = "default",
 }: FieldRendererProps) {
+  const isCompact = display === "compact";
+  const spacingClass = isCompact ? "space-y-1" : "space-y-2";
+  const inputClass = isCompact ? "h-9 text-sm" : undefined;
+  const helperClass = isCompact ? "text-[11px]" : "text-xs";
+  const textAreaRows = isCompact ? 6 : 10;
+  const textAreaClass = isCompact
+    ? "min-h-[140px] resize-none bg-muted/30 text-sm"
+    : "min-h-[240px] resize-none bg-muted/30";
   const relationTarget = field.relation?.target ?? "";
   const relationLabel = useMemo(() => {
     if (!relationTarget) return undefined;
@@ -178,35 +197,36 @@ export function FieldRenderer({
   switch (field.type) {
     case "text":
       return (
-        <div className="space-y-2">
+        <div className={spacingClass}>
           <Input
             value={String(value ?? "")}
             onChange={(event) => onChange(event.target.value)}
             placeholder={`Enter ${field.label.toLowerCase()}...`}
+            className={inputClass}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={`${helperClass} text-muted-foreground`}>
             {customHelp || defaultHelp.text}
           </p>
         </div>
       );
     case "richtext":
       return (
-        <div className="space-y-2">
+        <div className={spacingClass}>
           <Textarea
             value={String(value ?? "")}
             onChange={(event) => onChange(event.target.value)}
-            rows={10}
-            className="min-h-[240px] resize-none bg-muted/30"
+            rows={textAreaRows}
+            className={textAreaClass}
             placeholder="Start writing..."
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={`${helperClass} text-muted-foreground`}>
             {customHelp || defaultHelp.richtext}
           </p>
         </div>
       );
     case "number":
       return (
-        <div className="space-y-2">
+        <div className={spacingClass}>
           <Input
             type="number"
             value={value !== null && value !== undefined ? String(value) : ""}
@@ -214,15 +234,16 @@ export function FieldRenderer({
               const next = event.target.value;
               onChange(next === "" ? null : Number(next));
             }}
+            className={inputClass}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={`${helperClass} text-muted-foreground`}>
             {customHelp || defaultHelp.number}
           </p>
         </div>
       );
     case "boolean":
       return (
-        <div className="space-y-2">
+        <div className={spacingClass}>
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={Boolean(value)}
@@ -230,14 +251,14 @@ export function FieldRenderer({
             />
             {field.label}
           </label>
-          <p className="text-xs text-muted-foreground">
+          <p className={`${helperClass} text-muted-foreground`}>
             {customHelp || defaultHelp.boolean}
           </p>
         </div>
       );
     case "select":
       return (
-        <div className="space-y-2">
+        <div className={spacingClass}>
           <Select
             value={value ? String(value) : undefined}
             onValueChange={(next) => onChange(next)}
@@ -253,7 +274,7 @@ export function FieldRenderer({
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
+          <p className={`${helperClass} text-muted-foreground`}>
             {customHelp || defaultHelp.select}
           </p>
         </div>
@@ -271,7 +292,7 @@ export function FieldRenderer({
         })();
 
       return (
-        <div className="space-y-2">
+        <div className={spacingClass}>
           <MediaPicker
             value={value}
             onChange={onChange}
@@ -279,7 +300,7 @@ export function FieldRenderer({
             accept={field.media?.accept}
             maxItems={field.media?.maxItems}
           />
-          <p className="text-xs text-muted-foreground">{mediaHint}</p>
+          <p className={`${helperClass} text-muted-foreground`}>{mediaHint}</p>
         </div>
       );
       }
@@ -294,17 +315,19 @@ export function FieldRenderer({
             onChange={onChange}
             multiple={field.relation?.multiple}
             helpText={customHelp || defaultHelp.relation}
+            compact={isCompact}
           />
         );
       }
       return (
-        <div className="space-y-2">
+        <div className={spacingClass}>
           <Input
             value={String(value ?? "")}
             onChange={(event) => onChange(event.target.value)}
             placeholder="Add a relation target in the content type first"
+            className={inputClass}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className={`${helperClass} text-muted-foreground`}>
             Choose a related content type in the Content Type editor to enable picker.
           </p>
         </div>

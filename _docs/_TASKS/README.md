@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 25 tasks
+- **To Do:** 24 tasks
 - **In Progress:** 0
-- **Done:** 214 tasks
+- **Done:** 215 tasks
 
 ---
 
@@ -46,7 +46,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-048-02 | Relation Field UX & Data Model | Medium | Medium | Relation dropdown + picker |
 | TASK-048-03 | Media Field UX & Storage Integration | Medium | Medium | Media picker |
 | TASK-048-04 | Taxonomy System & Terms | Medium | Large | Categories + tags |
-| TASK-048-07 | Field Layout & Grouping UX | Medium | Medium | Sections + display |
 | TASK-048-08 | Entry Workflow & Validation UX | Medium | Medium | Checklist + required |
 | TASK-048-09 | Entry List UX & Bulk Actions | Medium | Medium | Filters + bulk |
 | TASK-049 | Widget Library — Core + Templates + Favorites | High | Large | Index for TASK-049-01..06 |
@@ -91,6 +90,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-048-06 | Content Modeling Docs & Examples | Medium | Medium | Cookbook + docs |
 | TASK-048-05 | Content Editor Help & Tooltips | Low | Small | UI guidance |
+| TASK-048-07 | Field Layout & Grouping UX | Medium | Medium | Sections + display |
 | TASK-050-01 | Widget Template Preview | Medium | Medium | Preview modal + API |
 | TASK-050-02 | Widget Template Revision History | Medium | Medium | Revisions table + restore |
 | TASK-050-03 | Widget Nesting (Insert Into Existing Block) | Medium | Large | Nested blocks support |
