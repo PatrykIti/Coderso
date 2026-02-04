@@ -78,6 +78,13 @@ Te pola sa ignorowane przez walidator danych wpisu.
 - UI generuje formularz entry dynamicznie z pola `schema`.
 - Draft/publish/preview + autosave draft w edytorze wpisu.
 
+## Taxonomie (Categories/Tags)
+
+- Kategorie i tagi sa konfigurowane per Content Type (toggla `Enable Categories`, `Enable Tags`).
+- Kategorie to single‑select (jedna na wpis), tagi to multi‑select.
+- Termy (category/tag) sa edytowane z poziomu edytora wpisu.
+- Tagi sa zapisywane rowniez w `content_entries.tags` dla wyszukiwania.
+
 ## Example schema (summary)
 
 ```json

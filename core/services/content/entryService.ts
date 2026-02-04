@@ -15,6 +15,12 @@ import {
   upsertSeoDocument,
 } from "../seo/seoService";
 import {
+  getEntryTaxonomies,
+  replaceEntryTaxonomies,
+  resolveEntryTagsFromTaxonomy,
+  type EntryTaxonomyAssignments,
+} from "./taxonomyService";
+import {
   type ContentSchema,
   validateEntryData,
 } from "./validation";
@@ -36,6 +42,7 @@ export type EntryDetail = {
   status: EntryStatus;
   data: EntryData;
   tags: string[];
+  taxonomy?: EntryTaxonomyAssignments;
   scheduledAt?: Date | null;
   publishedAt?: Date | null;
   createdAt: Date;
@@ -61,6 +68,10 @@ export type UpdateEntryMetadataInput = {
   status?: EntryStatus;
   scheduledAt?: Date | null;
   tags?: string[];
+  taxonomy?: {
+    categoryId?: string | null;
+    tagIds?: string[];
+  };
   seo?: EntrySeo;
 };
 
@@ -461,6 +472,7 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
   if (!row) return null;
 
   const seo = await getSeoDocumentByTarget("entry", row.id);
+  const taxonomy = await getEntryTaxonomies(row.id);
 
   return {
     id: row.id,
@@ -489,6 +501,7 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
           robots: seo.robots ?? null,
         }
       : null,
+    taxonomy,
   };
 }
 
@@ -679,6 +692,7 @@ export async function updateEntryMetadata(
 
   const nextStatus = input.status ?? entry.status;
   const normalizedTags = normalizeTags(input.tags);
+  let resolvedTags: string[] | null = null;
 
   if (input.scheduledAt && Number.isNaN(input.scheduledAt.getTime())) {
     throw new Error("scheduled_at_invalid");
@@ -706,9 +720,16 @@ export async function updateEntryMetadata(
       .where(eq(contentEntries.id, entry.id));
   }
 
+  if (input.taxonomy !== undefined) {
+    await replaceEntryTaxonomies(entry.id, entry.typeId, input.taxonomy);
+    resolvedTags = await resolveEntryTagsFromTaxonomy(entry.id, entry.typeId);
+  } else if (normalizedTags !== null) {
+    resolvedTags = normalizedTags;
+  }
+
   const metadataUpdate: Partial<typeof contentEntries.$inferInsert> = {};
-  if (normalizedTags) {
-    metadataUpdate.tags = normalizedTags;
+  if (resolvedTags !== null) {
+    metadataUpdate.tags = resolvedTags;
   }
   if (input.scheduledAt !== undefined) {
     metadataUpdate.scheduledAt = input.scheduledAt;

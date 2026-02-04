@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Sheet,
@@ -10,12 +11,14 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
 import {
   getContentType,
   listContentTypes,
   updateContentType,
 } from "@/services/contentTypesClient";
+import { listTaxonomies, updateTaxonomyConfig } from "@/services/taxonomyClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
@@ -76,12 +79,17 @@ export function ContentTypeEditor() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [previewHidden, setPreviewHidden] = useState(false);
   const [previewSheetOpen, setPreviewSheetOpen] = useState(false);
+  const [taxonomyConfig, setTaxonomyConfig] = useState({
+    categories: false,
+    tags: false,
+  });
+  const [isTaxonomySaving, setIsTaxonomySaving] = useState(false);
 
   useEffect(() => {
     if (!typeId) return;
     let active = true;
     getContentType(typeId)
-      .then((result) => {
+      .then(async (result) => {
         if (!active) return;
         setName(result.name);
         setSlug(result.slug);
@@ -90,6 +98,18 @@ export function ContentTypeEditor() {
         setHasUnsavedChanges(false);
         setSelectedFieldId(mappedFields[0]?.id ?? null);
         setError(null);
+
+        try {
+          const { items } = await listTaxonomies(typeId);
+          if (!active) return;
+          setTaxonomyConfig({
+            categories: items.some((item) => item.kind === "category"),
+            tags: items.some((item) => item.kind === "tag"),
+          });
+        } catch {
+          if (!active) return;
+          setTaxonomyConfig({ categories: false, tags: false });
+        }
       })
       .catch((err) => {
         if (!active) return;
@@ -178,6 +198,32 @@ export function ContentTypeEditor() {
   const handleFieldChange = (next: ContentField[]) => {
     setFields(next);
     setHasUnsavedChanges(true);
+  };
+
+  const handleTaxonomyToggle = async (
+    key: "categories" | "tags",
+    enabled: boolean
+  ) => {
+    if (!typeId) return;
+    const previous = taxonomyConfig;
+    setTaxonomyConfig((prev) => ({ ...prev, [key]: enabled }));
+    setIsTaxonomySaving(true);
+    try {
+      const { items } = await updateTaxonomyConfig(typeId, { [key]: enabled });
+      setTaxonomyConfig({
+        categories: items.some((item) => item.kind === "category"),
+        tags: items.some((item) => item.kind === "tag"),
+      });
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to update taxonomy settings.");
+      }
+      setTaxonomyConfig(previous);
+    } finally {
+      setIsTaxonomySaving(false);
+    }
   };
 
   const selectedField = fields.find((field) => field.id === selectedFieldId) ?? null;
@@ -324,6 +370,46 @@ export function ContentTypeEditor() {
               />
             </div>
           </div>
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-base">Taxonomies</CardTitle>
+              <CardDescription>
+                Enable categories and tags for entries of this content type.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Categories</p>
+                  <p className="text-xs text-muted-foreground">
+                    Single category selector per entry.
+                  </p>
+                </div>
+                <Switch
+                  checked={taxonomyConfig.categories}
+                  onCheckedChange={(checked) =>
+                    void handleTaxonomyToggle("categories", checked === true)
+                  }
+                  disabled={isLoading || isTaxonomySaving}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Tags</p>
+                  <p className="text-xs text-muted-foreground">
+                    Multi-tag selector with quick add.
+                  </p>
+                </div>
+                <Switch
+                  checked={taxonomyConfig.tags}
+                  onCheckedChange={(checked) =>
+                    void handleTaxonomyToggle("tags", checked === true)
+                  }
+                  disabled={isLoading || isTaxonomySaving}
+                />
+              </div>
+            </CardContent>
+          </Card>
           {isLoading ? (
             <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
               Loading schema builder...

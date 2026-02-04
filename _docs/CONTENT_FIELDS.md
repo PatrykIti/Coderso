@@ -55,6 +55,26 @@ Schema meta:
 }
 ```
 
+## Taxonomies (Categories/Tags)
+
+Taxonomie nie sa polami w schema, tylko meta‑danymi wpisu.
+
+Entry metadata payload (example):
+
+```json
+{
+  "taxonomy": {
+    "categoryId": "term-id-123",
+    "tagIds": ["term-id-555", "term-id-777"]
+  }
+}
+```
+
+Zasady:
+- Kategorie to single‑select, tagi to multi‑select.
+- Kategorie/tagi sa wlaczane per Content Type.
+- Tagi sa zapisywane takze w `content_entries.tags` dla wyszukiwania.
+
 ## Validation (summary)
 
 - `relation` i `media` sprawdzaja istnienie wskazanych ID w DB.

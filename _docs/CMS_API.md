@@ -649,6 +649,7 @@ Create entry payload (summary):
 ```
 
 Entry response fields include:
+- `taxonomy` (object: `category`, `tags` with term IDs/names)
 - `tags` (string[])
 - `scheduledAt` (timestamp | null)
 - `seo` (object with `title`, `description`, `canonicalUrl`, `robots`)
@@ -668,12 +669,53 @@ Metadata update payload (example):
 {
   "status": "scheduled",
   "scheduledAt": "2026-02-01T10:00:00Z",
-  "tags": ["launch", "news"],
+  "taxonomy": {
+    "categoryId": "term-id-123",
+    "tagIds": ["term-id-555", "term-id-777"]
+  },
   "seo": {
     "title": "Launch announcement",
     "description": "Short summary for search results",
     "canonicalUrl": "https://example.com/blog/launch",
     "robots": "index,follow"
+  }
+}
+```
+
+---
+
+## Taxonomies (Categories/Tags)
+
+Permissions: `content:read` / `content:write`
+
+- `GET /content-types/:id/taxonomies`
+- `PATCH /content-types/:id/taxonomies`
+- `GET /content-types/:id/terms`
+- `GET /taxonomies/:id/terms`
+- `POST /taxonomies/:id/terms`
+- `PATCH /terms/:id`
+- `DELETE /terms/:id`
+
+Taxonomy config payload (example):
+
+```json
+{
+  "categories": true,
+  "tags": true
+}
+```
+
+Taxonomy overview response (example):
+
+```json
+{
+  "taxonomies": {
+    "category": { "id": "tax-id-1", "name": "Categories", "slug": "categories", "kind": "category" },
+    "tag": { "id": "tax-id-2", "name": "Tags", "slug": "tags", "kind": "tag" }
+  },
+  "terms": {
+    "categories": [{ "id": "term-1", "taxonomyId": "tax-id-1", "name": "News", "slug": "news" }],
+    "tags": [{ "id": "term-2", "taxonomyId": "tax-id-2", "name": "Launch", "slug": "launch" }]
   }
 }
 ```

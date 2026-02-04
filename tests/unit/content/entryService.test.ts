@@ -19,6 +19,7 @@ import {
   unpublishEntry,
   updateEntryMetadata,
 } from "../../../core/services/content/entryService";
+import { createTerm, setTaxonomyConfig } from "../../../core/services/content/taxonomyService";
 import { createContentType } from "../../../core/services/content/typeService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
@@ -135,13 +136,20 @@ testIfDb("enforces slug uniqueness per type", async () => {
   contentTypeId = undefined;
 });
 
-testIfDb("updateEntryMetadata stores tags, schedule, and SEO", async () => {
+testIfDb("updateEntryMetadata stores taxonomy tags, schedule, and SEO", async () => {
   const type = await createContentType({
     name: "Blog",
     slug: `blog-${randomUUID()}`,
     schema,
   });
   contentTypeId = type.id;
+
+  const taxonomies = await setTaxonomyConfig(type.id, {
+    categories: true,
+    tags: true,
+  });
+  const tagTaxonomy = taxonomies.find((item) => item.kind === "tag");
+  const tag = await createTerm(tagTaxonomy!.id, { name: "Release" });
 
   const entry = await createEntry(type.id, {
     title: "Entry",
@@ -154,14 +162,15 @@ testIfDb("updateEntryMetadata stores tags, schedule, and SEO", async () => {
   await updateEntryMetadata(entry.id, {
     status: "scheduled",
     scheduledAt,
-    tags: ["alpha", "beta", "alpha"],
+    taxonomy: { tagIds: [tag!.id] },
     seo: { description: "SEO summary" },
   });
 
   const updated = await getEntry(entry.id);
   expect(updated?.status).toBe("scheduled");
   expect(updated?.scheduledAt?.toISOString()).toBe(scheduledAt.toISOString());
-  expect(updated?.tags).toEqual(["alpha", "beta"]);
+  expect(updated?.tags).toEqual(["Release"]);
+  expect(updated?.taxonomy?.tags?.map((term) => term.name)).toEqual(["Release"]);
   expect(updated?.seo?.description).toBe("SEO summary");
 
   await cleanup();

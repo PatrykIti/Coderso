@@ -61,6 +61,18 @@ export const contentEntryMetadataSchema = {
       maxItems: 20,
       items: { type: "string", minLength: 1, maxLength: 24 },
     },
+    taxonomy: {
+      type: "object",
+      properties: {
+        categoryId: { type: ["string", "null"] },
+        tagIds: {
+          type: "array",
+          maxItems: 20,
+          items: { type: "string", minLength: 1 },
+        },
+      },
+      additionalProperties: false,
+    },
     seo: {
       type: "object",
       properties: {

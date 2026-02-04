@@ -92,10 +92,11 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
     .innerJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
     .where(
       or(
-        sql`to_tsvector('simple', coalesce(${contentEntries.title}, '') || ' ' || coalesce(${contentEntries.data} ->> 'title', '') || ' ' || ${contentEntries.slug}) @@ to_tsquery('simple', ${tsQuery})`,
+        sql`to_tsvector('simple', coalesce(${contentEntries.title}, '') || ' ' || coalesce(${contentEntries.data} ->> 'title', '') || ' ' || ${contentEntries.slug} || ' ' || coalesce(${contentEntries.tags}::text, '')) @@ to_tsquery('simple', ${tsQuery})`,
         ilike(contentEntries.title, likeQuery),
         ilike(sql`${contentEntries.data} ->> 'title'`, likeQuery),
-        ilike(contentEntries.slug, likeQuery)
+        ilike(contentEntries.slug, likeQuery),
+        ilike(sql`${contentEntries.tags}::text`, likeQuery)
       )
     )
     .limit(perType);

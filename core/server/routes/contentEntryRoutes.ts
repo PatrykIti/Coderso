@@ -17,6 +17,7 @@ import {
   contentEntryUpdateSchema,
 } from "../validation/contentSchemas";
 import { resolvePublicBaseUrl } from "../utils/baseUrl";
+import { ApiError } from "../errorHandler";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -37,6 +38,46 @@ export type Router = {
 export type ContentEntryRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+};
+
+const mapEntryMetadataError = (error: unknown) => {
+  if (!(error instanceof Error)) return null;
+  switch (error.message) {
+    case "scheduled_at_invalid":
+      return new ApiError(
+        "scheduled_at_invalid",
+        "Schedule date must be a valid ISO timestamp.",
+        400
+      );
+    case "scheduled_at_required":
+      return new ApiError(
+        "scheduled_at_required",
+        "Schedule date is required for scheduled entries.",
+        400
+      );
+    case "taxonomy_category_disabled":
+      return new ApiError(
+        "taxonomy_category_disabled",
+        "Categories are disabled for this content type.",
+        400
+      );
+    case "taxonomy_tag_disabled":
+      return new ApiError(
+        "taxonomy_tag_disabled",
+        "Tags are disabled for this content type.",
+        400
+      );
+    case "taxonomy_term_invalid":
+      return new ApiError(
+        "taxonomy_term_invalid",
+        "Term does not belong to taxonomy.",
+        400
+      );
+    case "taxonomy_term_missing":
+      return new ApiError("taxonomy_term_missing", "Term not found.", 404);
+    default:
+      return null;
+  }
 };
 
 export function registerContentEntryRoutes(
@@ -117,6 +158,10 @@ export function registerContentEntryRoutes(
         status?: "draft" | "published" | "scheduled" | "archived";
         scheduledAt?: string | null;
         tags?: string[];
+        taxonomy?: {
+          categoryId?: string | null;
+          tagIds?: string[];
+        };
         seo?: {
           title?: string;
           description?: string;
@@ -132,16 +177,24 @@ export function registerContentEntryRoutes(
           ? null
           : new Date(body.scheduledAt);
 
-      const metadata = await updateEntryMetadata(
-        entry.id,
-        {
-          status: body.status,
-          scheduledAt,
-          tags: body.tags,
-          seo: body.seo,
-        },
-        ctx.user?.id
-      );
+      let metadata: Awaited<ReturnType<typeof updateEntryMetadata>>;
+      try {
+        metadata = await updateEntryMetadata(
+          entry.id,
+          {
+            status: body.status,
+            scheduledAt,
+            tags: body.tags,
+            taxonomy: body.taxonomy,
+            seo: body.seo,
+          },
+          ctx.user?.id
+        );
+      } catch (error) {
+        const mapped = mapEntryMetadataError(error);
+        if (mapped) throw mapped;
+        throw error;
+      }
       if (!metadata) throw new Error("entry_not_found");
       return metadata;
     }

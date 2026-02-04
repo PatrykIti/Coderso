@@ -522,6 +522,71 @@ export const contentRevisions = pgTable(
   })
 );
 
+export const contentTaxonomies = pgTable(
+  "content_taxonomies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    typeId: uuid("type_id")
+      .notNull()
+      .references(() => contentTypes.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    kind: text("kind").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    typeIdx: index("content_taxonomies_type_id_idx").on(t.typeId),
+    typeKindIdx: uniqueIndex("content_taxonomies_type_kind_idx").on(
+      t.typeId,
+      t.kind
+    ),
+    typeSlugIdx: uniqueIndex("content_taxonomies_type_slug_idx").on(
+      t.typeId,
+      t.slug
+    ),
+  })
+);
+
+export const contentTerms = pgTable(
+  "content_terms",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    taxonomyId: uuid("taxonomy_id")
+      .notNull()
+      .references(() => contentTaxonomies.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    taxonomyIdx: index("content_terms_taxonomy_id_idx").on(t.taxonomyId),
+    taxonomySlugIdx: uniqueIndex("content_terms_taxonomy_slug_idx").on(
+      t.taxonomyId,
+      t.slug
+    ),
+  })
+);
+
+export const contentTermAssignments = pgTable(
+  "content_term_assignments",
+  {
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => contentEntries.id, { onDelete: "cascade" }),
+    termId: uuid("term_id")
+      .notNull()
+      .references(() => contentTerms.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.entryId, t.termId] }),
+    entryIdx: index("content_term_assignments_entry_id_idx").on(t.entryId),
+    termIdx: index("content_term_assignments_term_id_idx").on(t.termId),
+  })
+);
+
 export const seoDocuments = pgTable(
   "seo_documents",
   {

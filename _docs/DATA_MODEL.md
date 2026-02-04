@@ -91,6 +91,28 @@ Note (v2+):
 - created_at
 - created_by (fk users)
 
+`content_taxonomies`
+- id (uuid, pk)
+- type_id (fk content_types)
+- name
+- slug
+- kind (category|tag)
+- created_at
+- updated_at
+
+`content_terms`
+- id (uuid, pk)
+- taxonomy_id (fk content_taxonomies)
+- name
+- slug
+- created_at
+- updated_at
+
+`content_term_assignments`
+- entry_id (fk content_entries)
+- term_id (fk content_terms)
+- created_at
+
 Note (v2+):
 - `content_revisions` z duzymi JSONB moze szybko rosnac. Warto dodac pruning
   starych rewizji i/lub kompresje danych.

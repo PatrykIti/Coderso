@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 
 import { EntryMetadataPanel } from "../../../core/admin/ui/entries/EntryMetadataPanel";
 
-test("EntryMetadataPanel renders author and tags", () => {
+test("EntryMetadataPanel renders author and taxonomy selections", () => {
   const html = renderToString(
     <EntryMetadataPanel
       status="draft"
@@ -14,8 +14,16 @@ test("EntryMetadataPanel renders author and tags", () => {
       slug="hello"
       seoDescription="Meta description"
       onSeoDescriptionChange={() => undefined}
-      tags={["alpha", "beta"]}
-      onTagsChange={() => undefined}
+      taxonomy={{
+        categoryEnabled: true,
+        tagEnabled: true,
+        selectedCategoryId: "cat-1",
+        selectedTagIds: ["tag-1"],
+        categories: [{ id: "cat-1", name: "News", slug: "news" }],
+        tags: [{ id: "tag-1", name: "Launch", slug: "launch" }],
+      }}
+      onCategoryChange={() => undefined}
+      onTagIdsChange={() => undefined}
       author={{ name: "Alex Doe", email: "alex@example.com" }}
       onSave={() => undefined}
       isSaving={false}
@@ -23,7 +31,7 @@ test("EntryMetadataPanel renders author and tags", () => {
   );
 
   expect(html).toContain("Alex Doe");
-  expect(html).toContain("alpha");
-  expect(html).toContain("beta");
+  expect(html).toContain("News");
+  expect(html).toContain("Launch");
   expect(html).toContain("Save metadata");
 });

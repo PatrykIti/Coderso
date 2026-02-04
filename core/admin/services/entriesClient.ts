@@ -24,7 +24,20 @@ export type EntrySummary = {
   seo?: EntrySeo | null;
 };
 
-export type EntryDetail = EntrySummary;
+export type EntryTaxonomyTerm = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type EntryTaxonomy = {
+  category?: EntryTaxonomyTerm | null;
+  tags?: EntryTaxonomyTerm[];
+};
+
+export type EntryDetail = EntrySummary & {
+  taxonomy?: EntryTaxonomy | null;
+};
 
 export type EntrySeo = {
   title?: string | null;
@@ -43,6 +56,10 @@ export type EntryMetadataPayload = {
   status?: EntryStatus;
   scheduledAt?: string | null;
   tags?: string[];
+  taxonomy?: {
+    categoryId?: string | null;
+    tagIds?: string[];
+  };
   seo?: EntrySeo;
 };
 

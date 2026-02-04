@@ -31,6 +31,12 @@ import {
   updateEntry,
   type EntryDetail,
 } from "@/services/entriesClient";
+import {
+  createTaxonomyTerm,
+  getTaxonomyOverview,
+  type ContentTerm,
+  type TaxonomyOverview,
+} from "@/services/taxonomyClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
 import { EntryEditorHeader } from "./EntryEditorHeader";
@@ -100,7 +106,6 @@ export function EntryEditor() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -112,6 +117,11 @@ export function EntryEditor() {
   const [relationTargets, setRelationTargets] = useState<
     Array<{ slug: string; name: string }>
   >([]);
+  const [taxonomyOverview, setTaxonomyOverview] = useState<TaxonomyOverview | null>(
+    null
+  );
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const schemaFieldNames = useMemo(
     () => new Set(fields.map((field) => field.name)),
@@ -121,8 +131,11 @@ export function EntryEditor() {
   useEffect(() => {
     if (!type || !id) return;
     let active = true;
+    setTaxonomyOverview(null);
+    setSelectedCategoryId(null);
+    setSelectedTagIds([]);
     Promise.all([getEntry(type, id), getContentTypeBySlug(type)])
-      .then(([entryResult, contentType]) => {
+      .then(async ([entryResult, contentType]) => {
         if (!active) return;
         if (!contentType) {
           setError("Content type not found.");
@@ -138,9 +151,19 @@ export function EntryEditor() {
         setStatus(entryResult.status);
         setHasUnsavedChanges(false);
         setScheduledAt(entryResult.scheduledAt ?? "");
-        setTags(entryResult.tags ?? []);
         setSeoDescription(entryResult.seo?.description ?? "");
         setError(null);
+
+        let overview: TaxonomyOverview | null = null;
+        try {
+          overview = await getTaxonomyOverview(contentType.id);
+        } catch {
+          overview = null;
+        }
+        if (!active) return;
+        setTaxonomyOverview(overview);
+        setSelectedCategoryId(entryResult.taxonomy?.category?.id ?? null);
+        setSelectedTagIds(entryResult.taxonomy?.tags?.map((tag) => tag.id) ?? []);
       })
       .catch((err) => {
         if (!active) return;
@@ -232,7 +255,6 @@ export function EntryEditor() {
       setEntry(updated);
       setStatus(updated.status);
       setScheduledAt(updated.scheduledAt ?? scheduledAt);
-      setTags(updated.tags ?? tags);
       setSeoDescription(updated.seo?.description ?? seoDescription);
       setHasUnsavedChanges(false);
     } catch (err) {
@@ -259,7 +281,6 @@ export function EntryEditor() {
         setEntry(updated);
         setStatus(updated.status);
         setScheduledAt(updated.scheduledAt ?? "");
-        setTags(updated.tags ?? []);
         setSeoDescription(updated.seo?.description ?? "");
         setHasUnsavedChanges(false);
       }
@@ -281,6 +302,42 @@ export function EntryEditor() {
 
   const handleGenerateSlug = () => {
     handleSlugChange(slugify(title));
+  };
+
+  const handleCreateTerm = async (
+    kind: "category" | "tag",
+    name: string
+  ): Promise<ContentTerm | null> => {
+    const taxonomy =
+      kind === "category"
+        ? taxonomyOverview?.taxonomies.category
+        : taxonomyOverview?.taxonomies.tag;
+    if (!taxonomy) return null;
+    try {
+      const created = await createTaxonomyTerm(taxonomy.id, { name });
+      setTaxonomyOverview((prev) => {
+        if (!prev) return prev;
+        const termsKey = kind === "category" ? "categories" : "tags";
+        const nextTerms = [...prev.terms[termsKey], created].sort((a, b) =>
+          a.name.localeCompare(b.name)
+        );
+        return {
+          ...prev,
+          terms: {
+            ...prev.terms,
+            [termsKey]: nextTerms,
+          },
+        };
+      });
+      return created;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to create term.");
+      }
+      return null;
+    }
   };
 
   const handleSaveMetadata = async () => {
@@ -306,17 +363,28 @@ export function EntryEditor() {
     }
 
     try {
+      const categoryEnabled = Boolean(taxonomyOverview?.taxonomies.category);
+      const tagEnabled = Boolean(taxonomyOverview?.taxonomies.tag);
+      const taxonomyPayload =
+        categoryEnabled || tagEnabled
+          ? {
+              categoryId: categoryEnabled ? selectedCategoryId : null,
+              tagIds: tagEnabled ? selectedTagIds : [],
+            }
+          : undefined;
+
       const updated = await updateEntryMetadata(type, id, {
         status,
         scheduledAt: status === "scheduled" ? scheduledAtIso : null,
-        tags,
+        taxonomy: taxonomyPayload,
         seo: { description: seoDescription },
       });
       setEntry(updated);
       setStatus(updated.status);
       setScheduledAt(updated.scheduledAt ?? "");
-      setTags(updated.tags ?? []);
       setSeoDescription(updated.seo?.description ?? "");
+      setSelectedCategoryId(updated.taxonomy?.category?.id ?? null);
+      setSelectedTagIds(updated.taxonomy?.tags?.map((tag) => tag.id) ?? []);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -334,6 +402,16 @@ export function EntryEditor() {
   const mediaFields = fields.filter((field) => field.type === "media");
   const relationFields = fields.filter((field) => field.type === "relation");
   const titleRef = useRef<HTMLTextAreaElement | null>(null);
+  const taxonomyState = taxonomyOverview
+    ? {
+        categoryEnabled: Boolean(taxonomyOverview.taxonomies.category),
+        tagEnabled: Boolean(taxonomyOverview.taxonomies.tag),
+        selectedCategoryId,
+        selectedTagIds,
+        categories: taxonomyOverview.terms.categories ?? [],
+        tags: taxonomyOverview.terms.tags ?? [],
+      }
+    : null;
 
   useEffect(() => {
     const el = titleRef.current;
@@ -549,8 +627,11 @@ export function EntryEditor() {
                 slug={slug}
                 seoDescription={seoDescription}
                 onSeoDescriptionChange={setSeoDescription}
-                tags={tags}
-                onTagsChange={setTags}
+                taxonomy={taxonomyState}
+                onCategoryChange={setSelectedCategoryId}
+                onTagIdsChange={setSelectedTagIds}
+                onCreateCategory={(name) => handleCreateTerm("category", name)}
+                onCreateTag={(name) => handleCreateTerm("tag", name)}
                 author={entry?.author ?? null}
                 onSave={handleSaveMetadata}
                 isSaving={isSavingMetadata}
@@ -585,8 +666,11 @@ export function EntryEditor() {
                 slug={slug}
                 seoDescription={seoDescription}
                 onSeoDescriptionChange={setSeoDescription}
-                tags={tags}
-                onTagsChange={setTags}
+                taxonomy={taxonomyState}
+                onCategoryChange={setSelectedCategoryId}
+                onTagIdsChange={setSelectedTagIds}
+                onCreateCategory={(name) => handleCreateTerm("category", name)}
+                onCreateTag={(name) => handleCreateTerm("tag", name)}
                 author={entry?.author ?? null}
                 onSave={handleSaveMetadata}
                 isSaving={isSavingMetadata}
