@@ -12,6 +12,7 @@ test("FieldRenderer renders relation search input", () => {
         type: "relation",
         label: "Related Projects",
         required: false,
+        help: "Custom relation help",
         relation: { target: "projects", multiple: true },
       }}
       value={[]}
@@ -22,4 +23,5 @@ test("FieldRenderer renders relation search input", () => {
 
   expect(html).toContain("Search Projects");
   expect(html).toContain("No items found yet.");
+  expect(html).toContain("Custom relation help");
 });

@@ -29,6 +29,7 @@ type RelationSelectProps = {
   value: unknown;
   onChange: (value: unknown) => void;
   multiple?: boolean;
+  helpText?: string;
 };
 
 function RelationSelect({
@@ -37,6 +38,7 @@ function RelationSelect({
   value,
   onChange,
   multiple = false,
+  helpText,
 }: RelationSelectProps) {
   const [entries, setEntries] = useState<EntrySummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,6 +93,10 @@ function RelationSelect({
     onChange(entryId);
   };
 
+  const fallbackHelp = multiple
+    ? `Pick one or more ${helperLabel} items to link here.`
+    : `Pick a ${helperLabel} item to link here.`;
+
   return (
     <div className="space-y-2">
       <Input
@@ -138,9 +144,7 @@ function RelationSelect({
         <p className="text-xs text-destructive">{error}</p>
       ) : (
         <p className="text-xs text-muted-foreground">
-          {multiple
-            ? `Pick one or more ${helperLabel} items to link here.`
-            : `Pick a ${helperLabel} item to link here.`}
+          {helpText ?? fallbackHelp}
         </p>
       )}
     </div>
@@ -160,74 +164,125 @@ export function FieldRenderer({
     return match?.name ?? relationTarget;
   }, [relationTarget, relationTargets]);
 
+  const customHelp = field.help?.trim();
+  const defaultHelp = {
+    text: "Short text value for titles or labels.",
+    richtext: "Long-form content with formatting.",
+    number: "Numeric value (use for ordering or stats).",
+    boolean: "Toggle on/off.",
+    select: "Choose one option from the list.",
+    media: "Pick media from the library.",
+    relation: "Link this entry to related content.",
+  } as const;
+
   switch (field.type) {
     case "text":
       return (
-        <Input
-          value={String(value ?? "")}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={`Enter ${field.label.toLowerCase()}...`}
-        />
+        <div className="space-y-2">
+          <Input
+            value={String(value ?? "")}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={`Enter ${field.label.toLowerCase()}...`}
+          />
+          <p className="text-xs text-muted-foreground">
+            {customHelp || defaultHelp.text}
+          </p>
+        </div>
       );
     case "richtext":
       return (
-        <Textarea
-          value={String(value ?? "")}
-          onChange={(event) => onChange(event.target.value)}
-          rows={10}
-          className="min-h-[240px] resize-none bg-muted/30"
-          placeholder="Start writing..."
-        />
+        <div className="space-y-2">
+          <Textarea
+            value={String(value ?? "")}
+            onChange={(event) => onChange(event.target.value)}
+            rows={10}
+            className="min-h-[240px] resize-none bg-muted/30"
+            placeholder="Start writing..."
+          />
+          <p className="text-xs text-muted-foreground">
+            {customHelp || defaultHelp.richtext}
+          </p>
+        </div>
       );
     case "number":
       return (
-        <Input
-          type="number"
-          value={value !== null && value !== undefined ? String(value) : ""}
-          onChange={(event) => {
-            const next = event.target.value;
-            onChange(next === "" ? null : Number(next));
-          }}
-        />
+        <div className="space-y-2">
+          <Input
+            type="number"
+            value={value !== null && value !== undefined ? String(value) : ""}
+            onChange={(event) => {
+              const next = event.target.value;
+              onChange(next === "" ? null : Number(next));
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            {customHelp || defaultHelp.number}
+          </p>
+        </div>
       );
     case "boolean":
       return (
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={Boolean(value)}
-            onCheckedChange={(checked) => onChange(checked === true)}
-          />
-          {field.label}
-        </label>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={Boolean(value)}
+              onCheckedChange={(checked) => onChange(checked === true)}
+            />
+            {field.label}
+          </label>
+          <p className="text-xs text-muted-foreground">
+            {customHelp || defaultHelp.boolean}
+          </p>
+        </div>
       );
     case "select":
       return (
-        <Select
-          value={value ? String(value) : undefined}
-          onValueChange={(next) => onChange(next)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            {(field.options ?? []).map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="space-y-2">
+          <Select
+            value={value ? String(value) : undefined}
+            onValueChange={(next) => onChange(next)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select option" />
+            </SelectTrigger>
+            <SelectContent>
+              {(field.options ?? []).map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            {customHelp || defaultHelp.select}
+          </p>
+        </div>
       );
     case "media":
+      {
+        const mediaHint = (() => {
+          if (customHelp) return customHelp;
+          if (field.media?.multiple) {
+            return field.media.maxItems
+              ? `Select up to ${field.media.maxItems} assets from the library.`
+              : "Select one or more assets from the library.";
+          }
+          return defaultHelp.media;
+        })();
+
       return (
-        <MediaPicker
-          value={value}
-          onChange={onChange}
-          multiple={field.media?.multiple}
-          accept={field.media?.accept}
-          maxItems={field.media?.maxItems}
-        />
+        <div className="space-y-2">
+          <MediaPicker
+            value={value}
+            onChange={onChange}
+            multiple={field.media?.multiple}
+            accept={field.media?.accept}
+            maxItems={field.media?.maxItems}
+          />
+          <p className="text-xs text-muted-foreground">{mediaHint}</p>
+        </div>
       );
+      }
     case "relation":
       if (relationTarget) {
         return (
@@ -238,6 +293,7 @@ export function FieldRenderer({
             value={value}
             onChange={onChange}
             multiple={field.relation?.multiple}
+            helpText={customHelp || defaultHelp.relation}
           />
         );
       }

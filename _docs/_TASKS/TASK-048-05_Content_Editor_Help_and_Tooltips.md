@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-048-02, TASK-048-03  
-**Status:** ⏳ **To Do** (2026-02-01)
+**Status:** ✅ **Done** (2026-02-04)
 
 ---
 

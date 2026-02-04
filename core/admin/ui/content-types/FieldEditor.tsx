@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { InfoTip } from "@/ui/shared/InfoTip";
 
 import type { ContentField, FieldType } from "./SchemaBuilder";
 
@@ -23,6 +24,37 @@ const fieldTypes: { value: FieldType; label: string }[] = [
   { value: "media", label: "Media" },
   { value: "relation", label: "Relation" },
 ];
+
+const fieldTypeHelp: Record<FieldType, { helper: string; tooltip: string }> = {
+  text: {
+    helper: "Short, single-line text for titles or labels.",
+    tooltip: "Use for brief strings like titles, headlines, or UI labels.",
+  },
+  richtext: {
+    helper: "Long-form content with formatting.",
+    tooltip: "Rich text is best for body copy and formatted content blocks.",
+  },
+  number: {
+    helper: "Numeric value (use for ordering or stats).",
+    tooltip: "Numbers can be sorted, aggregated, or used in calculations.",
+  },
+  boolean: {
+    helper: "True/false toggle.",
+    tooltip: "Use a boolean for on/off flags (e.g. featured, published).",
+  },
+  select: {
+    helper: "Single choice from a predefined list.",
+    tooltip: "Select fields let editors choose one option from your list.",
+  },
+  media: {
+    helper: "Pick media assets from the library.",
+    tooltip: "Media fields link entries to images/files from the Media Library.",
+  },
+  relation: {
+    helper: "Link to entries from another content type.",
+    tooltip: "Relations connect entries together (e.g. Testimonials → Projects).",
+  },
+};
 
 type FieldEditorProps = {
   field: ContentField;
@@ -88,9 +120,15 @@ export function FieldEditor({
         />
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Field type
-        </label>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold uppercase text-muted-foreground">
+            Field type
+          </label>
+          <InfoTip
+            content={fieldTypeHelp[field.type].tooltip}
+            label="Field type help"
+          />
+        </div>
         <Select
           value={field.type}
           onValueChange={(value) =>
@@ -108,6 +146,9 @@ export function FieldEditor({
             ))}
           </SelectContent>
         </Select>
+        <p className="text-xs text-muted-foreground">
+          {fieldTypeHelp[field.type].helper}
+        </p>
       </div>
       {field.type === "select" ? (
         <div className="space-y-2">

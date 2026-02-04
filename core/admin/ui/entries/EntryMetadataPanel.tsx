@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { InfoTip } from "@/ui/shared/InfoTip";
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 
@@ -70,6 +71,7 @@ type EntryMetadataPanelProps = {
   onTagIdsChange?: (tagIds: string[]) => void;
   onCreateCategory?: (name: string) => Promise<TaxonomyTermOption | null> | void;
   onCreateTag?: (name: string) => Promise<TaxonomyTermOption | null> | void;
+  helpItems?: string[];
   author?: { name: string | null; email: string } | null;
   onSave?: () => void;
   isSaving?: boolean;
@@ -89,6 +91,7 @@ export function EntryMetadataPanel({
   onTagIdsChange,
   onCreateCategory,
   onCreateTag,
+  helpItems,
   author,
   onSave,
   isSaving,
@@ -244,6 +247,29 @@ export function EntryMetadataPanel({
               </CardContent>
             </Card>
           </section>
+          <Separator />
+          {helpItems && helpItems.length > 0 ? (
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  What is this?
+                </p>
+                <InfoTip
+                  content="Quick reminders about how content fields behave in this entry."
+                  label="What is this help"
+                />
+              </div>
+              <Card>
+                <CardContent className="space-y-2 p-4">
+                  <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                    {helpItems.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </section>
+          ) : null}
           <Separator />
           <section className="space-y-3">
             <div className="flex items-center justify-between">

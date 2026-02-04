@@ -34,7 +34,7 @@ This epic expands the backend model and admin UX to support:
 | TASK-048-02 | Relation Field UX & Data Model | ✅ Done (2026-02-03) |
 | TASK-048-03 | Media Field UX & Storage Integration | ✅ Done (2026-02-04) |
 | TASK-048-04 | Taxonomy System & Terms | ✅ Done (2026-02-04) |
-| TASK-048-05 | Content Editor Help & Tooltips | Hints, examples, guidance |
+| TASK-048-05 | Content Editor Help & Tooltips | ✅ Done (2026-02-04) |
 | TASK-048-06 | Content Modeling Docs & Examples | Mabudo‑style cookbook |
 | TASK-048-07 | Field Layout & Grouping UX | Sections/tabs, widths, display options |
 | TASK-048-08 | Entry Workflow & Validation UX | Required markers, publish checklist, draft clarity |

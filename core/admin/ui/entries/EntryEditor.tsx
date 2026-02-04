@@ -423,6 +423,12 @@ export function EntryEditor() {
   const { singular: typeSingular, plural: typePlural } = getContentTypeLabels(
     contentTypeName ?? type ?? ""
   );
+  const helpItems = [
+    "Fields are defined by the content type schema.",
+    "Media fields pull assets from the Media Library.",
+    "Relation fields link entries together (e.g. Team → Projects).",
+    "Use categories and tags to organize and filter content.",
+  ];
 
   return (
     <AdminShell
@@ -632,6 +638,7 @@ export function EntryEditor() {
                 onTagIdsChange={setSelectedTagIds}
                 onCreateCategory={(name) => handleCreateTerm("category", name)}
                 onCreateTag={(name) => handleCreateTerm("tag", name)}
+                helpItems={helpItems}
                 author={entry?.author ?? null}
                 onSave={handleSaveMetadata}
                 isSaving={isSavingMetadata}
@@ -671,6 +678,7 @@ export function EntryEditor() {
                 onTagIdsChange={setSelectedTagIds}
                 onCreateCategory={(name) => handleCreateTerm("category", name)}
                 onCreateTag={(name) => handleCreateTerm("tag", name)}
+                helpItems={helpItems}
                 author={entry?.author ?? null}
                 onSave={handleSaveMetadata}
                 isSaving={isSavingMetadata}
