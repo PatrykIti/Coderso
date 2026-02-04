@@ -141,6 +141,7 @@ Project Change Log.
 | 144 | 2026-02-04 | Media field picker | CMS/Media |
 | 145 | 2026-02-04 | Taxonomy system | CMS/Content |
 | 146 | 2026-02-04 | Content editor help and tooltips | Admin/UI |
+| 147 | 2026-02-04 | Content modeling docs | Docs |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

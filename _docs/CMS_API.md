@@ -629,6 +629,8 @@ Create content type payload (summary):
 }
 ```
 
+Praktyczne schematy i relacje: `CONTENT_MODELING_COOKBOOK.md`.
+
 Create entry payload (summary):
 
 ```json

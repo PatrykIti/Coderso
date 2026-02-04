@@ -85,6 +85,10 @@ Te pola sa ignorowane przez walidator danych wpisu.
 - Termy (category/tag) sa edytowane z poziomu edytora wpisu.
 - Tagi sa zapisywane rowniez w `content_entries.tags` dla wyszukiwania.
 
+## Praktyczne wzorce
+
+Gotowe schematy i powiazania znajdziesz w `CONTENT_MODELING_COOKBOOK.md`.
+
 ## Example schema (summary)
 
 ```json

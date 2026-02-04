@@ -113,6 +113,9 @@ Note (v2+):
 - term_id (fk content_terms)
 - created_at
 
+Note:
+- Nazwy tagow sa rowniez zapisywane w `content_entries.tags` dla wyszukiwania.
+
 Note (v2+):
 - `content_revisions` z duzymi JSONB moze szybko rosnac. Warto dodac pruning
   starych rewizji i/lub kompresje danych.

@@ -9,6 +9,11 @@ Opisuje pola Content Types oraz ich konfiguracje w Admin UI.
 - media (powiazanie z Media Library)
 - relation (powiazanie z innym Content Type)
 
+## Helper text (help)
+
+Pole `help` w definicji pola wyswietla sie jako podpowiedz w edytorze wpisu.
+Uzywaj go dla pol mniej oczywistych (np. format, ograniczenia, kontekst).
+
 ## Media field
 
 Entry data:

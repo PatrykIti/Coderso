@@ -23,6 +23,8 @@ Poza zakresem v1:
 
 - `DATA_MODEL.md`
 - `CONTENT_TYPES_SPEC.md`
+- `CONTENT_MODELING_COOKBOOK.md`
+- `CONTENT_EDITOR_UX.md`
 - `DESIGN_TOKENS.md`
 - `MEDIA_SPEC.md`
 - `PAGE_MODEL.md`
