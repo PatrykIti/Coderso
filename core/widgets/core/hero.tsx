@@ -1,5 +1,6 @@
-import type { ComponentType } from "react";
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { ComponentType, CSSProperties } from "react";
+import { WidgetRenderer } from "../renderers/widgetRenderer";
+import type { WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type HeroCta = {
   label: string;
@@ -23,11 +24,21 @@ export type HeroData = {
   media?: HeroMedia;
   layout?: {
     align?: "left" | "center" | "right";
-    maxWidth?: "sm" | "md" | "lg" | "xl";
+    maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl";
+    contentWidth?: "sm" | "md" | "lg" | "xl";
+  };
+  spacing?: {
+    paddingTop?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+    paddingBottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   };
   style?: {
     paddingTop?: string;
     paddingBottom?: string;
+  };
+  background?: {
+    color?: string;
+    gradient?: string;
+    image?: string;
   };
   responsive?: {
     hideMediaOnMobile?: boolean;
@@ -76,7 +87,20 @@ export const heroSchema = {
       additionalProperties: false,
       properties: {
         align: { enum: ["left", "center", "right"] },
-        maxWidth: { enum: ["sm", "md", "lg", "xl"] },
+        maxWidth: { enum: ["sm", "md", "lg", "xl", "2xl"] },
+        contentWidth: { enum: ["sm", "md", "lg", "xl"] },
+      },
+    },
+    spacing: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        paddingTop: {
+          enum: ["none", "xs", "sm", "md", "lg", "xl", "2xl"],
+        },
+        paddingBottom: {
+          enum: ["none", "xs", "sm", "md", "lg", "xl", "2xl"],
+        },
       },
     },
     style: {
@@ -85,6 +109,15 @@ export const heroSchema = {
       properties: {
         paddingTop: { type: "string" },
         paddingBottom: { type: "string" },
+      },
+    },
+    background: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        color: { type: "string" },
+        gradient: { type: "string" },
+        image: { type: "string" },
       },
     },
     responsive: {
@@ -104,40 +137,200 @@ export const heroDefaults: HeroData = {
   primaryCta: { label: "Get started", href: "#" },
   secondaryCta: { label: "Learn more", href: "#" },
   media: { type: "none" },
-  layout: { align: "center", maxWidth: "xl" },
-  style: { paddingTop: "xl", paddingBottom: "xl" },
+  layout: { align: "center", maxWidth: "xl", contentWidth: "lg" },
+  spacing: { paddingTop: "xl", paddingBottom: "xl" },
+  background: { color: "transparent" },
   responsive: { hideMediaOnMobile: false },
 };
 
-export function HeroBlock({ data }: { data: HeroData; variant: string }) {
+const spacingTopClassMap = {
+  none: "pt-0",
+  xs: "pt-2",
+  sm: "pt-4",
+  md: "pt-6",
+  lg: "pt-8",
+  xl: "pt-12",
+  "2xl": "pt-16",
+} as const;
+
+const spacingBottomClassMap = {
+  none: "pb-0",
+  xs: "pb-2",
+  sm: "pb-4",
+  md: "pb-6",
+  lg: "pb-8",
+  xl: "pb-12",
+  "2xl": "pb-16",
+} as const;
+
+const maxWidthClassMap = {
+  sm: "max-w-3xl",
+  md: "max-w-4xl",
+  lg: "max-w-5xl",
+  xl: "max-w-6xl",
+  "2xl": "max-w-7xl",
+} as const;
+
+const contentWidthClassMap = {
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+} as const;
+
+const ratioClassMap: Record<string, string> = {
+  "16:9": "aspect-video",
+  "4:3": "aspect-[4/3]",
+  "1:1": "aspect-square",
+  "3:4": "aspect-[3/4]",
+};
+
+const joinClasses = (...classes: Array<string | false | undefined>) =>
+  classes.filter(Boolean).join(" ");
+
+const resolveSpacingKey = (
+  value: string | undefined,
+  fallback: keyof typeof spacingTopClassMap
+) => (value && value in spacingTopClassMap ? (value as keyof typeof spacingTopClassMap) : fallback);
+
+export function HeroBlock({
+  data,
+  variant,
+  slots,
+}: {
+  data: HeroData;
+  variant: string;
+  slots?: Record<string, WidgetBlock[]>;
+}) {
+  const layout = data.layout ?? {};
+  const spacing = data.spacing ?? data.style ?? {};
+  const align = layout.align ?? "center";
+  const maxWidth = layout.maxWidth ?? "xl";
+  const contentWidth = layout.contentWidth ?? "lg";
+  const paddingTop = resolveSpacingKey(spacing.paddingTop, "xl");
+  const paddingBottom = resolveSpacingKey(spacing.paddingBottom, "xl");
+  const background = data.background ?? {};
+
+  const backgroundStyle: CSSProperties = {
+    backgroundColor: background.color ?? "transparent",
+    backgroundImage: background.image
+      ? `${background.gradient ? `${background.gradient}, ` : ""}url(${background.image})`
+      : background.gradient,
+    backgroundSize: background.image ? "cover" : undefined,
+    backgroundPosition: background.image ? "center" : undefined,
+  };
+
+  const isSplit = variant !== "centered";
+  const isMediaLeft = variant === "media-left";
+  const media = data.media;
+  const showMedia = media?.type && media.type !== "none" && media.src;
+  const hideMediaOnMobile = data.responsive?.hideMediaOnMobile;
+  const contentSlots = slots?.content ?? [];
+
+  const alignClass =
+    align === "center"
+      ? "text-center items-center"
+      : align === "right"
+        ? "text-right items-end"
+        : "text-left items-start";
+
   return (
-    <section className="mx-auto flex w-full max-w-5xl flex-col gap-4 px-4 py-12 text-center">
-      <h1 className="text-3xl font-semibold text-[var(--color-text)]">
-        {data.headline}
-      </h1>
-      {data.subhead ? (
-        <p className="text-lg text-[var(--color-text)]/70">{data.subhead}</p>
-      ) : null}
-      {data.body ? <p className="text-base text-[var(--color-text)]/70">{data.body}</p> : null}
-      <div className="flex flex-wrap items-center justify-center gap-3">
-        {data.primaryCta ? (
-          <a
-            className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
-            href={data.primaryCta.href}
-          >
-            {data.primaryCta.label}
-          </a>
-        ) : null}
-        {data.secondaryCta ? (
-          <a
-            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm font-semibold"
-            href={data.secondaryCta.href}
-          >
-            {data.secondaryCta.label}
-          </a>
-        ) : null}
+    <div
+      className={joinClasses(
+        "w-full rounded-3xl border border-border/40 px-6",
+        spacingTopClassMap[paddingTop],
+        spacingBottomClassMap[paddingBottom]
+      )}
+      style={backgroundStyle}
+    >
+      <div className={joinClasses("mx-auto w-full", maxWidthClassMap[maxWidth])}>
+        <div
+          className={joinClasses(
+            isSplit ? "grid items-center gap-8 md:grid-cols-2" : "flex flex-col gap-4",
+            alignClass
+          )}
+        >
+          <div className={joinClasses("space-y-4", contentWidthClassMap[contentWidth])}>
+            <h1 className="text-3xl font-semibold text-[var(--color-text)]">
+              {data.headline}
+            </h1>
+            {data.subhead ? (
+              <p className="text-lg text-[var(--color-text)]/70">{data.subhead}</p>
+            ) : null}
+            {data.body ? (
+              <p className="text-base text-[var(--color-text)]/70">{data.body}</p>
+            ) : null}
+            <div
+              className={joinClasses(
+                "flex flex-wrap items-center gap-3",
+                align === "center" && "justify-center",
+                align === "right" && "justify-end"
+              )}
+            >
+              {data.primaryCta ? (
+                <a
+                  className="rounded-md bg-[var(--color-primary)] px-4 py-2 text-sm font-semibold text-[var(--color-bg)]"
+                  href={data.primaryCta.href}
+                >
+                  {data.primaryCta.label}
+                </a>
+              ) : null}
+              {data.secondaryCta ? (
+                <a
+                  className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm font-semibold"
+                  href={data.secondaryCta.href}
+                >
+                  {data.secondaryCta.label}
+                </a>
+              ) : null}
+            </div>
+            {contentSlots.length ? (
+              <div className="mt-6 flex w-full flex-col gap-4">
+                {contentSlots.map((slotBlock) => (
+                  <WidgetRenderer key={slotBlock.id} block={slotBlock} />
+                ))}
+              </div>
+            ) : null}
+          </div>
+          {isSplit && showMedia ? (
+            <div
+              className={joinClasses(
+                "w-full",
+                isMediaLeft ? "md:order-first" : "md:order-last",
+                hideMediaOnMobile && "hidden md:block"
+              )}
+            >
+              <div
+                className={joinClasses(
+                  "relative overflow-hidden rounded-2xl border border-border/40 bg-muted/20",
+                  ratioClassMap[media?.ratio ?? "16:9"] ?? "aspect-video"
+                )}
+              >
+                {media?.type === "image" ? (
+                  <img
+                    src={media.src}
+                    alt={media.alt ?? ""}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <video
+                    controls
+                    src={media?.src}
+                    className="h-full w-full object-cover"
+                  />
+                )}
+                {media?.overlay ? (
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: media.overlay }}
+                  />
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -151,7 +344,7 @@ export function createHeroWidget(editors: {
     title: "Hero",
     description: "Top-of-page hero section with CTA.",
     category: "layout",
-    canHaveChildren: true,
+    slots: [{ id: "content", label: "Hero Content" }],
     variants: [
       { id: "centered", label: "Centered" },
       { id: "split", label: "Split" },

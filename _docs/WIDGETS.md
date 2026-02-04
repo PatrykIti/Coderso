@@ -190,6 +190,7 @@ Flow:
   (lub `slots.default`) wewnatrz kontenera sekcji.
 - Jesli widget ma `slots`, to on odpowiada za renderowanie tych blokow
   w odpowiednich miejscach UI.
+- Przykład: `hero` renderuje `slots.content` pod sekcją CTA.
 
 ---
 

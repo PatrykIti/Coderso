@@ -14,6 +14,11 @@ Pierwszy ekran strony z glownym przekazem, CTA i opcjonalnym media.
 - split (tekst po lewej, media po prawej)
 - media-left (media po lewej, tekst po prawej)
 
+## Slots
+
+- `content` — dodatkowe bloki (np. badge, mini‑formularz, dodatkowa linia CTA),
+  renderowane pod przyciskami CTA.
+
 ## Wizard flow (v1)
 
 - Pytanie 1: Cel sekcji (lead, sprzedaz, informacja)
@@ -49,7 +54,8 @@ Wizard mapuje odpowiedzi na `variant` i ustawia defaulty.
   "primaryCta": { "label": "string", "href": "string" },
   "secondaryCta": { "label": "string", "href": "string" },
   "media": { "type": "image", "src": "string", "alt": "string" },
-  "layout": { "align": "center", "maxWidth": "xl" },
-  "style": { "paddingTop": "xl", "paddingBottom": "xl" }
+  "layout": { "align": "center", "maxWidth": "xl", "contentWidth": "lg" },
+  "spacing": { "paddingTop": "xl", "paddingBottom": "xl" },
+  "background": { "color": "transparent", "gradient": "", "image": "" }
 }
 ```

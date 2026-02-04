@@ -52,6 +52,7 @@ Notes:
 - `variant` jest opcjonalny, ale rekomendowany dla widgetow.
 - `slots` to preferowany model zagniezdzania (nazwane miejsca w contanerze).
 - `children` jest legacy — jesli wystepuje bez `slots`, mapujemy do `slots.default`.
+- Przyklad: `hero` uzywa slotu `content` na dodatkowe bloki pod CTA.
 
 ---
 

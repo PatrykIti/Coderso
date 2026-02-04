@@ -78,12 +78,23 @@ test("renderer renders nested blocks", () => {
       advanced: StubEditor,
     })
   );
+  registerWidget({
+    type: "container",
+    title: "Container",
+    description: "Container widget",
+    category: "layout",
+    variants: [{ id: "default", label: "Default" }],
+    schema: { type: "object", additionalProperties: true },
+    defaults: {},
+    editor: { wizard: StubEditor, visual: StubEditor, advanced: StubEditor },
+    render: () => <div>Container</div>,
+  });
 
   const block: WidgetBlock = {
-    id: "hero-parent",
-    type: "hero",
-    variant: "centered",
-    data: { ...heroDefaults, headline: "Parent hero" },
+    id: "container-parent",
+    type: "container",
+    variant: "default",
+    data: {},
     children: [
       {
         id: "hero-child",
@@ -95,7 +106,7 @@ test("renderer renders nested blocks", () => {
   };
 
   const html = renderToString(<WidgetRenderer block={block} />);
-  expect(html).toContain("Parent hero");
+  expect(html).toContain("Container");
   expect(html).toContain("Child hero");
 });
 
