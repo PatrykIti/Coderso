@@ -42,6 +42,7 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { EntryEditorHeader } from "./EntryEditorHeader";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { getContentTypeLabels } from "./contentTypeLabels";
+import { buildEntryChecklist } from "./entryChecklist";
 import { FieldRenderer } from "./FieldRenderer";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import {
@@ -270,6 +271,10 @@ export function EntryEditor() {
 
   const handlePublish = async () => {
     if (!type || !id) return;
+    if (checklist.blockingIssues.length > 0) {
+      setError(checklist.blockingIssues.join(" "));
+      return;
+    }
     setIsPublishing(true);
     setError(null);
     try {
@@ -423,6 +428,22 @@ export function EntryEditor() {
     "Relation fields link entries together (e.g. Team → Projects).",
     "Use categories and tags to organize and filter content.",
   ];
+  const checklist = useMemo(
+    () =>
+      buildEntryChecklist({
+        title,
+        slug,
+        status,
+        scheduledAt,
+        fields,
+        values,
+      }),
+    [fields, scheduledAt, slug, status, title, values]
+  );
+  const missingRequiredNames = useMemo(
+    () => new Set(checklist.missingRequiredFields.map((field) => field.name)),
+    [checklist.missingRequiredFields]
+  );
   const tabGroups = useMemo(() => {
     const resolveTabLabel = (field: ContentField) => {
       const explicitTab = field.layout?.tab?.trim();
@@ -624,18 +645,36 @@ export function EntryEditor() {
                             const colSpan =
                               width === "half" ? "md:col-span-6" : "md:col-span-12";
                             const isCompact = field.layout?.display === "compact";
+                            const isMissing = missingRequiredNames.has(field.name);
+                            const requiredBadgeClass = isMissing
+                              ? "border-destructive/40 bg-destructive/10 text-destructive"
+                              : undefined;
                             return (
                               <div key={field.id} className={colSpan}>
-                                <Card className={isCompact ? "border-dashed" : undefined}>
+                                <Card
+                                  className={[
+                                    isCompact ? "border-dashed" : "",
+                                    isMissing ? "border-destructive/40 bg-destructive/5" : "",
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" ")}
+                                >
                                   <CardHeader className={isCompact ? "space-y-1 pb-3" : "space-y-2"}>
                                     <div className="flex items-center justify-between gap-3">
                                       <CardTitle className="text-base">{field.label}</CardTitle>
                                       {field.required ? (
-                                        <Badge variant="outline">Required</Badge>
+                                        <Badge variant="outline" className={requiredBadgeClass}>
+                                          Required
+                                        </Badge>
                                       ) : null}
                                     </div>
                                     {field.help ? (
                                       <CardDescription>{field.help}</CardDescription>
+                                    ) : null}
+                                    {isMissing ? (
+                                      <p className="text-xs font-semibold text-destructive">
+                                        Required field missing.
+                                      </p>
                                     ) : null}
                                   </CardHeader>
                                   <CardContent className={isCompact ? "pt-0" : undefined}>
@@ -673,6 +712,7 @@ export function EntryEditor() {
                 slug={slug}
                 seoDescription={seoDescription}
                 onSeoDescriptionChange={setSeoDescription}
+                checklist={checklist}
                 taxonomy={taxonomyState}
                 onCategoryChange={setSelectedCategoryId}
                 onTagIdsChange={setSelectedTagIds}
@@ -713,6 +753,7 @@ export function EntryEditor() {
                 slug={slug}
                 seoDescription={seoDescription}
                 onSeoDescriptionChange={setSeoDescription}
+                checklist={checklist}
                 taxonomy={taxonomyState}
                 onCategoryChange={setSelectedCategoryId}
                 onTagIdsChange={setSelectedTagIds}

@@ -1,4 +1,4 @@
-import { Calendar, Save, X } from "lucide-react";
+import { AlertTriangle, Calendar, CheckCircle2, Info, Save, X } from "lucide-react";
 import { useState, type KeyboardEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { InfoTip } from "@/ui/shared/InfoTip";
+
+import type { EntryChecklist } from "./entryChecklist";
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 
@@ -66,6 +68,7 @@ type EntryMetadataPanelProps = {
   slug: string;
   seoDescription: string;
   onSeoDescriptionChange: (value: string) => void;
+  checklist?: EntryChecklist | null;
   taxonomy?: EntryTaxonomyState | null;
   onCategoryChange?: (categoryId: string | null) => void;
   onTagIdsChange?: (tagIds: string[]) => void;
@@ -86,6 +89,7 @@ export function EntryMetadataPanel({
   slug,
   seoDescription,
   onSeoDescriptionChange,
+  checklist,
   taxonomy,
   onCategoryChange,
   onTagIdsChange,
@@ -105,6 +109,21 @@ export function EntryMetadataPanel({
     : "Content title | Nextless CMS";
   const previewUrl = `https://nextless.cms/blog/${slug || "entry-slug"}`;
   const canSchedule = status === "scheduled";
+  const checklistItems = checklist?.items ?? [];
+  const checklistReadyCount = checklistItems.filter(
+    (item) => item.status === "complete"
+  ).length;
+  const checklistHasWarnings = checklistItems.some(
+    (item) => item.status === "warning"
+  );
+  const checklistBadgeLabel = checklistItems.length
+    ? checklistHasWarnings
+      ? "Needs attention"
+      : `${checklistReadyCount}/${checklistItems.length} ready`
+    : "Ready";
+  const checklistBadgeClass = checklistHasWarnings
+    ? "border-amber-500/30 bg-amber-500/10 text-amber-700"
+    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-600";
 
   const categoryOptions = taxonomy?.categories ?? [];
   const tagOptions = taxonomy?.tags ?? [];
@@ -247,6 +266,50 @@ export function EntryMetadataPanel({
               </CardContent>
             </Card>
           </section>
+          <Separator />
+          {checklistItems.length > 0 ? (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Publish checklist
+                </p>
+                <Badge variant="outline" className={checklistBadgeClass}>
+                  {checklistBadgeLabel}
+                </Badge>
+              </div>
+              <Card>
+                <CardContent className="space-y-3 p-4">
+                  {checklistItems.map((item) => {
+                    const Icon =
+                      item.status === "complete"
+                        ? CheckCircle2
+                        : item.status === "warning"
+                          ? AlertTriangle
+                          : Info;
+                    const iconClass =
+                      item.status === "complete"
+                        ? "text-emerald-600"
+                        : item.status === "warning"
+                          ? "text-amber-600"
+                          : "text-muted-foreground";
+                    return (
+                      <div key={item.id} className="flex gap-2">
+                        <Icon className={`mt-0.5 h-4 w-4 ${iconClass}`} />
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">{item.label}</p>
+                          {item.detail ? (
+                            <p className="text-[11px] text-muted-foreground">
+                              {item.detail}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </section>
+          ) : null}
           <Separator />
           {helpItems && helpItems.length > 0 ? (
             <section className="space-y-3">

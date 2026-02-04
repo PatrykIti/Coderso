@@ -24,6 +24,16 @@ Kazde pole w edytorze wpisu ma tekst pomocniczy pod kontrolka.
 - Jezeli pole ma `help` w definicji schematu, to pokazujemy to jako podpowiedz.
 - W przeciwnym razie wyswietlamy domyslna wskazowke typu pola.
 
+## Publish checklist i brakujace pola
+
+W panelu metadanych (po prawej) pokazujemy **Publish checklist**:
+- tytul i slug musza byc wypelnione,
+- wszystkie wymagane pola musza byc uzupelnione,
+- przy statusie **Scheduled** wymagamy poprawnej daty.
+
+Brakujace wymagane pola sa wyroznione w edytorze wpisu (kolor/obramowanie).
+Przycisk Publish blokuje publikacje, dopoki checklist ma krytyczne braki.
+
 ## Sidebar “What is this?”
 
 W panelu szczegolow po prawej stronie (Entry Metadata) znajduje sie blok z krotkimi wskazowkami:
