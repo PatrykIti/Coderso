@@ -239,7 +239,7 @@ testIfDb("validates relation entry IDs", async () => {
         slug: `team-${randomUUID()}`,
         data: {
           title: "Team Broken",
-          leadProject: "missing-id",
+          leadProject: randomUUID(),
         },
       })
     ).rejects.toThrow("relation_entry_missing");
