@@ -27,8 +27,12 @@ const defaultEditor: WidgetEditorState = {
 const resolveDefinition = (input: WidgetDefinition | string) =>
   typeof input === "string" ? getRegisteredWidget(input) : input;
 
-export type BlockPath = number[];
-type BlockWithoutEditor = Omit<Block, "editor"> & { children?: BlockWithoutEditor[] };
+export type BlockPathSegment = { index: number; slotId?: string };
+export type BlockPath = BlockPathSegment[];
+type BlockWithoutEditor = Omit<Block, "editor"> & {
+  children?: BlockWithoutEditor[];
+  slots?: Record<string, BlockWithoutEditor[]>;
+};
 
 type BlockLocation = {
   block: Block;
@@ -37,42 +41,94 @@ type BlockLocation = {
   index: number;
 };
 
-const getChildren = (block: Block) =>
-  Array.isArray(block.children) ? block.children : [];
+const normalizeSlotId = (slotId?: string | null) => {
+  const normalized = slotId?.trim();
+  return normalized && normalized.length > 0 ? normalized : "default";
+};
+
+const getSlotMap = (block: Block): Record<string, Block[]> => {
+  if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+    const result: Record<string, Block[]> = {};
+    for (const [key, value] of Object.entries(block.slots)) {
+      const id = key.trim();
+      if (!id) continue;
+      result[id] = Array.isArray(value) ? (value as Block[]) : [];
+    }
+    return result;
+  }
+  if (Array.isArray(block.children)) {
+    return { default: block.children };
+  }
+  return {};
+};
+
+const getSlotBlocks = (block: Block, slotId?: string | null) => {
+  const slots = getSlotMap(block);
+  const key = normalizeSlotId(slotId);
+  return slots[key] ?? [];
+};
+
+const setSlotBlocks = (block: Block, slotId: string, nextBlocks: Block[]) => {
+  const slots = { ...getSlotMap(block), [slotId]: nextBlocks };
+  return {
+    ...block,
+    slots,
+    children: undefined,
+  };
+};
 
 const findBlockLocation = (
   blocks: Block[],
   id: string,
-  path: BlockPath = []
+  listPath: BlockPath = []
 ): BlockLocation | null => {
   for (let index = 0; index < blocks.length; index += 1) {
     const block = blocks[index];
-    const currentPath = [...path, index];
+    const currentPath = [...listPath, { index }];
     if (block.id === id) {
-      return { block, path: currentPath, parentListPath: path, index };
+      return { block, path: currentPath, parentListPath: listPath, index };
     }
-    const children = getChildren(block);
-    if (children.length === 0) continue;
-    const found = findBlockLocation(children, id, currentPath);
-    if (found) return found;
+    const slots = getSlotMap(block);
+    for (const [slotId, slotBlocks] of Object.entries(slots)) {
+      if (slotBlocks.length === 0) continue;
+      const found = findBlockLocation(slotBlocks, id, [
+        ...listPath,
+        { index, slotId },
+      ]);
+      if (found) return found;
+    }
   }
   return null;
 };
 
 const cloneBlockTree = (block: Block): Block => {
   const editorState = block.editor ?? { mode: "visual", wizardCompleted: true };
-  const children = getChildren(block);
+  const children = Array.isArray(block.children) ? block.children : [];
+  const slots = block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+    ? Object.fromEntries(
+        Object.entries(block.slots).map(([key, value]) => [
+          key,
+          Array.isArray(value) ? (value as Block[]).map(cloneBlockTree) : [],
+        ])
+      )
+    : undefined;
   return {
     ...block,
     id: crypto.randomUUID(),
     editor: { ...editorState, mode: "visual" },
     ...(children.length ? { children: children.map(cloneBlockTree) } : {}),
+    ...(slots ? { slots } : {}),
   };
 };
 
 export function createBlock(definition: WidgetDefinition | string): Block {
   const resolved = resolveDefinition(definition);
   const type = typeof definition === "string" ? definition : definition.type;
+  const slotDefinitions = resolved?.slots ?? [];
+  const slotMap =
+    slotDefinitions.length > 0
+      ? Object.fromEntries(slotDefinitions.map((slot) => [slot.id, [] as Block[]]))
+      : undefined;
   return {
     id: crypto.randomUUID(),
     type,
@@ -81,7 +137,8 @@ export function createBlock(definition: WidgetDefinition | string): Block {
     layout: { ...defaultLayout },
     visibility: { ...defaultVisibility },
     editor: { ...defaultEditor },
-    ...(resolved?.canHaveChildren ? { children: [] } : {}),
+    ...(slotMap ? { slots: slotMap } : {}),
+    ...(!slotMap && resolved?.canHaveChildren ? { children: [] } : {}),
   };
 }
 
@@ -102,16 +159,16 @@ export function updateBlockListAtPath(
   updater: (items: Block[]) => Block[]
 ) {
   if (path.length === 0) return updater(blocks);
-  const [index, ...rest] = path;
-  const target = blocks[index];
+  const [segment, ...rest] = path;
+  const target = blocks[segment.index];
   if (!target) return blocks;
-  const children = getChildren(target);
-  const nextChildren = updateBlockListAtPath(children, rest, updater);
-  if (nextChildren === children) return blocks;
+  const slotId = normalizeSlotId(segment.slotId);
+  const slotBlocks = getSlotBlocks(target, slotId);
+  const nextSlotBlocks = updateBlockListAtPath(slotBlocks, rest, updater);
+  if (nextSlotBlocks === slotBlocks) return blocks;
   const next = [...blocks];
-  next[index] = {
-    ...target,
-    children: nextChildren,
+  next[segment.index] = {
+    ...setSlotBlocks(target, slotId, nextSlotBlocks),
   };
   return next;
 }
@@ -158,10 +215,21 @@ export function insertBlockAfterId(blocks: Block[], afterId: string | null, next
   });
 }
 
+export function appendSlotBlock(
+  blocks: Block[],
+  parentId: string,
+  slotId: string | null,
+  child: Block
+) {
+  const resolvedSlotId = normalizeSlotId(slotId);
+  return updateBlockById(blocks, parentId, (block) => {
+    const slotBlocks = getSlotBlocks(block, resolvedSlotId);
+    return setSlotBlocks(block, resolvedSlotId, [...slotBlocks, child]);
+  });
+}
+
 export function appendChildBlock(blocks: Block[], parentId: string, child: Block) {
-  const location = findBlockLocation(blocks, parentId);
-  if (!location) return blocks;
-  return updateBlockListAtPath(blocks, location.path, (items) => [...items, child]);
+  return appendSlotBlock(blocks, parentId, "default", child);
 }
 
 export function duplicateBlock(blocks: Block[], id: string) {
@@ -191,8 +259,10 @@ export function flattenBlocks(blocks: Block[]) {
   const walk = (items: Block[]) => {
     for (const block of items) {
       result.push(block);
-      const children = getChildren(block);
-      if (children.length) walk(children);
+      const slots = getSlotMap(block);
+      for (const slotBlocks of Object.values(slots)) {
+        if (slotBlocks.length) walk(slotBlocks);
+      }
     }
   };
   walk(blocks);
@@ -204,10 +274,23 @@ export function getFirstBlockId(blocks: Block[]) {
 }
 
 export function stripEditor(blocks: Block[]): BlockWithoutEditor[] {
-  return blocks.map(({ editor: _editor, children, ...rest }) => ({
-    ...rest,
-    ...(children ? { children: stripEditor(children) } : {}),
-  }));
+  return blocks.map(({ editor: _editor, children, slots, ...rest }) => {
+    const nextSlots =
+      slots && typeof slots === "object" && !Array.isArray(slots)
+        ? Object.fromEntries(
+            Object.entries(slots).map(([key, value]) => [
+              key,
+              Array.isArray(value) ? stripEditor(value as Block[]) : [],
+            ])
+          )
+        : undefined;
+    const nextChildren = Array.isArray(children) ? stripEditor(children) : undefined;
+    return {
+      ...rest,
+      ...(nextChildren ? { children: nextChildren } : {}),
+      ...(nextSlots ? { slots: nextSlots } : {}),
+    };
+  });
 }
 
 export function applyWizardSelection(block: Block, variant?: string): Block {

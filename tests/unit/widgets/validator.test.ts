@@ -69,3 +69,23 @@ test("normalizeWidgetBlock rejects schema mismatch", () => {
   };
   expect(() => normalizeWidgetBlock(block)).toThrow("widget_schema_invalid");
 });
+
+test("normalizeWidgetBlock maps legacy children into default slot", () => {
+  registerWidget(definition);
+  const block: WidgetBlock = {
+    id: "1",
+    type: "hero",
+    data: { headline: "Parent" },
+    children: [
+      {
+        id: "child-1",
+        type: "hero",
+        data: { headline: "Child" },
+      },
+    ],
+  };
+
+  const normalized = normalizeWidgetBlock(block);
+  expect(normalized.slots?.default).toHaveLength(1);
+  expect(normalized.children).toBeUndefined();
+});

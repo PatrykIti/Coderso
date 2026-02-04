@@ -22,7 +22,18 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
   }
 
   const editorState = block.editor ?? { mode: "wizard", wizardCompleted: false };
-  const childCount = Array.isArray(block.children) ? block.children.length : 0;
+  const slotMap =
+    block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+      ? (block.slots as Record<string, Block[]>)
+      : Array.isArray(block.children)
+        ? { default: block.children }
+        : {};
+  const slotDefinitions = widget.slots ?? [];
+  const supportsSlots = slotDefinitions.length > 0;
+  const nestedCount = Object.values(slotMap).reduce(
+    (sum, items) => sum + (Array.isArray(items) ? items.length : 0),
+    0
+  );
   const supportsChildren = Boolean(widget.canHaveChildren);
 
   if (!editorState.wizardCompleted) {
@@ -38,9 +49,29 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
 
   return (
     <>
-      {supportsChildren ? (
+      {supportsSlots ? (
         <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-          Nested blocks: {childCount}. Use the Insert dialog to add widgets inside
+          Slots:
+          <div className="mt-2 space-y-1">
+            {slotDefinitions.map((slot) => {
+              const count = Array.isArray(slotMap[slot.id])
+                ? slotMap[slot.id].length
+                : 0;
+              return (
+                <div key={slot.id} className="flex items-center justify-between">
+                  <span>{slot.label}</span>
+                  <span>{count}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-2">
+            Use the Insert dialog to add widgets into a slot.
+          </div>
+        </div>
+      ) : supportsChildren ? (
+        <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+          Nested blocks: {nestedCount}. Use the Insert dialog to add widgets inside
           this block.
         </div>
       ) : null}

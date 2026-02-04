@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 
 import { BlockList } from "../../../core/admin/ui/pages/builder/BlockList";
 import {
-  appendChildBlock,
+  appendSlotBlock,
   createBlock,
   duplicateBlock,
   findBlockById,
@@ -36,11 +36,15 @@ test("duplicateBlock inserts clone", () => {
   expect(duplicated[1].type).toBe("hero");
 });
 
-test("appendChildBlock nests blocks", () => {
-  const parent: Block = { ...createBlock("hero"), id: "parent", children: [] };
+test("appendSlotBlock nests blocks in default slot", () => {
+  const parent: Block = {
+    ...createBlock("hero"),
+    id: "parent",
+    slots: { default: [] },
+  };
   const child: Block = { ...createBlock("timeline"), id: "child" };
-  const nested = appendChildBlock([parent], "parent", child);
-  expect(nested[0].children).toHaveLength(1);
+  const nested = appendSlotBlock([parent], "parent", "default", child);
+  expect(nested[0].slots?.default).toHaveLength(1);
   expect(findBlockById(nested, "child")?.id).toBe("child");
 });
 
@@ -49,11 +53,12 @@ test("insertBlockAfterId inserts after nested block", () => {
   const parent: Block = {
     ...createBlock("hero"),
     id: "parent",
-    children: [childA],
+    slots: { default: [childA] },
   };
   const childB: Block = { ...createBlock("newsletter"), id: "child-b" };
   const nested = insertBlockAfterId([parent], "child-a", childB);
-  expect(nested[0].children?.[1]?.id).toBe("child-b");
+  const slotItems = nested[0].slots?.default ?? [];
+  expect(slotItems[1]?.id).toBe("child-b");
 });
 
 test("reorderBlocksAtPath reorders nested children", () => {
@@ -62,10 +67,11 @@ test("reorderBlocksAtPath reorders nested children", () => {
   const parent: Block = {
     ...createBlock("hero"),
     id: "parent",
-    children: [childA, childB],
+    slots: { default: [childA, childB] },
   };
-  const reordered = reorderBlocksAtPath([parent], [0], 0, 1);
-  expect(reordered[0].children?.[0]?.id).toBe("child-b");
+  const reordered = reorderBlocksAtPath([parent], [{ index: 0, slotId: "default" }], 0, 1);
+  const slotItems = reordered[0].slots?.default ?? [];
+  expect(slotItems[0]?.id).toBe("child-b");
 });
 
 test("BlockList renders widget labels", () => {

@@ -98,3 +98,34 @@ test("renderer renders nested blocks", () => {
   expect(html).toContain("Parent hero");
   expect(html).toContain("Child hero");
 });
+
+test("renderer passes slots to widget render", () => {
+  clearWidgets();
+  registerWidget({
+    type: "slot-layout",
+    title: "Slot Layout",
+    description: "Slot Layout",
+    category: "layout",
+    slots: [{ id: "main", label: "Main" }],
+    variants: [{ id: "default", label: "Default" }],
+    schema: { type: "object", additionalProperties: true },
+    defaults: {},
+    editor: { wizard: StubEditor, visual: StubEditor, advanced: StubEditor },
+    render: ({ slots }) => (
+      <div>Slots:{slots?.main?.length ?? 0}</div>
+    ),
+  });
+
+  const block: WidgetBlock = {
+    id: "slot-1",
+    type: "slot-layout",
+    data: {},
+    slots: {
+      main: [{ id: "child-1", type: "hero", data: heroDefaults }],
+    },
+  };
+
+  const html = renderToString(<WidgetRenderer block={block} />);
+  const normalizedHtml = html.replace(/<!--.*?-->/g, "");
+  expect(normalizedHtml).toContain("Slots:1");
+});

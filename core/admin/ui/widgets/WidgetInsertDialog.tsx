@@ -13,10 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { getPage } from "@/services/pagesClient";
 import { getWidgetTemplate } from "@/services/widgetTemplatesClient";
+import type { Block } from "@/ui/pages/builder/types";
+import { findBlockById } from "@/ui/pages/builder/blockUtils";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 
 import type { WidgetItem } from "./types";
-import { mapWidgetBlockOptions } from "./widgetInsertUtils";
+import { buildSlotOptions, mapWidgetBlockOptions } from "./widgetInsertUtils";
 
 export type WidgetInsertDialogProps = {
   open: boolean;
@@ -30,6 +32,7 @@ export type WidgetInsertDialogProps = {
     targetType?: "page" | "template";
     targetId?: string | null;
     blockId?: string | null;
+    slotId?: string | null;
   }) => void;
 };
 
@@ -57,7 +60,11 @@ export function WidgetInsertDialog({
       new Map(
         listRegisteredWidgets().map((item) => [
           item.type,
-          { label: item.title, canHaveChildren: item.canHaveChildren ?? false },
+          {
+            label: item.title,
+            canHaveChildren: item.canHaveChildren ?? false,
+            slots: item.slots ?? [],
+          },
         ])
       ),
     []
@@ -67,13 +74,28 @@ export function WidgetInsertDialog({
   const [targetType, setTargetType] = useState<"page" | "template">("page");
   const [targetId, setTargetId] = useState<string>("");
   const [blockId, setBlockId] = useState<string>("");
+  const [slotId, setSlotId] = useState<string>("");
   const [blocks, setBlocks] = useState<
-    Array<{ id: string; label: string; supportsChildren: boolean }>
+    Array<{ id: string; label: string; type: string; depth: number }>
   >([]);
+  const [blockTree, setBlockTree] = useState<Block[]>([]);
   const [blocksError, setBlocksError] = useState<string | null>(null);
   const [blocksLoading, setBlocksLoading] = useState(false);
   const resolvedPageId = pageId || pageOptions[0]?.id || "";
   const selectedBlock = blocks.find((block) => block.id === blockId) ?? null;
+  const selectedBlockData = useMemo(
+    () => findBlockById(blockTree, blockId),
+    [blockTree, blockId]
+  );
+  const selectedBlockMeta = selectedBlockData
+    ? widgetMetaMap.get(selectedBlockData.type)
+    : null;
+  const slotOptions = useMemo(() => {
+    if (!selectedBlockData || !selectedBlockMeta?.slots?.length) return [];
+    return buildSlotOptions(selectedBlockMeta.slots, selectedBlockData, widget?.id);
+  }, [selectedBlockData, selectedBlockMeta, widget?.id]);
+  const selectedSlot = slotOptions.find((slot) => slot.id === slotId) ?? null;
+  const supportsLegacyChildren = selectedBlockMeta?.canHaveChildren ?? false;
   const handleOpenChange = (nextOpen: boolean) => {
     if (nextOpen) {
       setPageId(pageOptions[0]?.id ?? "");
@@ -81,7 +103,9 @@ export function WidgetInsertDialog({
       setTargetType("page");
       setTargetId("");
       setBlockId("");
+      setSlotId("");
       setBlocks([]);
+      setBlockTree([]);
       setBlocksError(null);
     }
     onOpenChange(nextOpen);
@@ -90,7 +114,12 @@ export function WidgetInsertDialog({
   const canSubmit =
     placement === "new"
       ? Boolean(resolvedPageId)
-      : Boolean(targetId && blockId);
+      : Boolean(
+          targetId &&
+            blockId &&
+            (slotOptions.length === 0 ||
+              (selectedSlot && !selectedSlot.disabled))
+        );
 
   useEffect(() => {
     if (placement !== "inside") return;
@@ -103,6 +132,8 @@ export function WidgetInsertDialog({
     if (placement !== "inside" || !targetId) {
       setBlocks([]);
       setBlockId("");
+      setSlotId("");
+      setBlockTree([]);
       return;
     }
     let active = true;
@@ -114,22 +145,22 @@ export function WidgetInsertDialog({
           const template = await getWidgetTemplate(targetId);
           const items = Array.isArray(template.blocks) ? template.blocks : [];
           const mapped = mapWidgetBlockOptions(items, (type) =>
-            widgetMetaMap.get(type)?.label ?? type,
-            (type) => widgetMetaMap.get(type)?.canHaveChildren ?? false
+            widgetMetaMap.get(type)?.label ?? type
           );
           if (!active) return;
           setBlocks(mapped);
+          setBlockTree(items as Block[]);
           setBlockId(mapped[0]?.id ?? "");
         } else {
           const page = await getPage(targetId);
           const data = (page.currentData ?? {}) as Record<string, unknown>;
           const items = Array.isArray(data.blocks) ? (data.blocks as unknown[]) : [];
           const mapped = mapWidgetBlockOptions(items, (type) =>
-            widgetMetaMap.get(type)?.label ?? type,
-            (type) => widgetMetaMap.get(type)?.canHaveChildren ?? false
+            widgetMetaMap.get(type)?.label ?? type
           );
           if (!active) return;
           setBlocks(mapped);
+          setBlockTree(items as Block[]);
           setBlockId(mapped[0]?.id ?? "");
         }
       } catch {
@@ -137,6 +168,7 @@ export function WidgetInsertDialog({
         setBlocksError("Failed to load blocks.");
         setBlocks([]);
         setBlockId("");
+        setBlockTree([]);
       } finally {
         if (active) {
           setBlocksLoading(false);
@@ -148,6 +180,16 @@ export function WidgetInsertDialog({
       active = false;
     };
   }, [placement, targetId, targetType, widgetMetaMap]);
+
+  useEffect(() => {
+    if (slotOptions.length === 0) {
+      setSlotId("");
+      return;
+    }
+    if (selectedSlot && !selectedSlot.disabled) return;
+    const firstAvailable = slotOptions.find((slot) => !slot.disabled);
+    setSlotId(firstAvailable?.id ?? slotOptions[0]?.id ?? "");
+  }, [slotOptions, selectedSlot]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -366,11 +408,48 @@ export function WidgetInsertDialog({
                 {blocksError ? (
                   <p className="text-xs text-destructive">{blocksError}</p>
                 ) : null}
+                {slotOptions.length > 0 ? (
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Target slot
+                    </label>
+                    <Select value={slotId} onValueChange={(value) => setSlotId(value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a slot" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {slotOptions.map((slot) => {
+                          const countLabel =
+                            typeof slot.maxItems === "number"
+                              ? ` (${slot.count}/${slot.maxItems})`
+                              : ` (${slot.count})`;
+                          return (
+                            <SelectItem
+                              key={slot.id}
+                              value={slot.id}
+                              disabled={slot.disabled}
+                            >
+                              {slot.label}
+                              {countLabel}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    {selectedSlot?.reason ? (
+                      <p className="text-xs text-destructive">
+                        {selectedSlot.reason}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {selectedBlock ? (
                   <div className="rounded-lg border bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
-                    {selectedBlock.supportsChildren
-                      ? "This widget will be nested inside the selected block."
-                      : "This block does not support nesting, so the widget will be inserted after it."}
+                    {slotOptions.length > 0
+                      ? "This widget will be inserted into the selected slot."
+                      : supportsLegacyChildren
+                        ? "This widget will be nested inside the selected block."
+                        : "This block does not support nesting, so the widget will be inserted after it."}
                   </div>
                 ) : null}
               </div>
@@ -396,6 +475,7 @@ export function WidgetInsertDialog({
                       targetType,
                       targetId,
                       blockId,
+                      slotId: slotOptions.length > 0 ? slotId : undefined,
                     };
               onInsert?.(payload);
               handleOpenChange(false);

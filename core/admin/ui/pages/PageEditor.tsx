@@ -34,6 +34,7 @@ import {
   reorderBlocksAtPath,
   shouldWarnOnNavigate,
   updateBlockById,
+  type BlockPath,
 } from "./builder/blockUtils";
 import type { Block } from "./builder/types";
 import { getWidgetRegistry } from "./builder/widgetRegistry";
@@ -67,12 +68,24 @@ const normalizeBlocks = (data?: Record<string, unknown> | null) => {
     const normalizeTree = (block: Block): Block => {
       const normalized = normalizeWidgetBlock(block as Block);
       const base = createBlock(normalized.type);
-      const children = Array.isArray(normalized.children)
-        ? normalized.children.map((child) => normalizeTree(child as Block))
-        : undefined;
+      const slots =
+        normalized.slots &&
+        Object.fromEntries(
+          Object.entries(normalized.slots).map(([key, value]) => [
+            key,
+            Array.isArray(value)
+              ? value.map((child) => normalizeTree(child as Block))
+              : [],
+          ])
+        );
+      const children =
+        normalized.slots || !Array.isArray(normalized.children)
+          ? undefined
+          : normalized.children.map((child) => normalizeTree(child as Block));
       return {
         ...base,
         ...normalized,
+        slots,
         children,
         layout: normalized.layout ?? base.layout,
         visibility: normalized.visibility ?? base.visibility,
@@ -179,7 +192,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setSelectedId(nextBlock.id);
   };
 
-  const handleMove = (path: number[], from: number, to: number) => {
+  const handleMove = (path: BlockPath, from: number, to: number) => {
     if (to < 0) return;
     updateBlocks(reorderBlocksAtPath(blocks, path, from, to));
   };

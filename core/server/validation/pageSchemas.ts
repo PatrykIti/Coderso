@@ -67,6 +67,13 @@ const blockSchema = {
     layout: blockLayoutSchema,
     visibility: blockVisibilitySchema,
     editor: blockEditorSchema,
+    slots: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        items: { $ref: "pageBlock" },
+      },
+    },
     children: {
       type: "array",
       items: { $ref: "pageBlock" },

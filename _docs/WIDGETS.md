@@ -106,12 +106,13 @@ type WidgetBlock = {
   editor?: {
     mode?: "wizard" | "visual" | "advanced";
   };
-  children?: WidgetBlock[];
+  slots?: Record<string, WidgetBlock[]>;
+  children?: WidgetBlock[]; // legacy
 };
 ```
 
 Uwaga: pole `editor` jest usuwane przy publikacji (`pageService.toPublishedData`).
-`children` sluzy do zagniezdzania blokow wewnatrz kontenerow, jest opcjonalne.
+`children` jest legacy — mapujemy je do `slots.default`, jesli `slots` nie wystepuje.
 
 ---
 
@@ -126,6 +127,7 @@ type WidgetDefinition<T = Record<string, unknown>> = {
   description?: string;
   category: "layout" | "content" | "forms" | "navigation" | "media";
   canHaveChildren?: boolean;
+  slots?: { id: string; label: string; maxItems?: number; allowedTypes?: string[] }[];
   variants: { id: string; label: string; description?: string }[];
   schema: Record<string, unknown>; // JSON schema (draft-07)
   defaults: T;
@@ -134,7 +136,11 @@ type WidgetDefinition<T = Record<string, unknown>> = {
     visual: React.ComponentType<WidgetEditorProps<T>>;
     advanced: React.ComponentType<WidgetEditorProps<T>>;
   };
-  render: React.ComponentType<{ data: T; variant: string }>;
+  render: React.ComponentType<{
+    data: T;
+    variant: string;
+    slots?: Record<string, WidgetBlock[]>;
+  }>;
 };
 ```
 
@@ -180,7 +186,10 @@ Flow:
 - Brak widgetu → `MissingWidget`.
 - Stosuje `layout` + `visibility`.
 - Renderuje komponent `def.render`.
-- Jesli blok ma `children`, renderer wyswietla je wewnatrz kontenera sekcji.
+- Jesli widget **nie** definiuje `slots`, renderer wyswietla legacy `children`
+  (lub `slots.default`) wewnatrz kontenera sekcji.
+- Jesli widget ma `slots`, to on odpowiada za renderowanie tych blokow
+  w odpowiednich miejscach UI.
 
 ---
 

@@ -19,6 +19,25 @@ function ensureObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function normalizeSlotMap(block: WidgetBlock) {
+  const slots = block.slots;
+  if (slots && typeof slots === "object" && !Array.isArray(slots)) {
+    const normalized: Record<string, WidgetBlock[]> = {};
+    for (const [key, value] of Object.entries(slots)) {
+      const slotId = key.trim();
+      if (!slotId) continue;
+      normalized[slotId] = Array.isArray(value) ? (value as WidgetBlock[]) : [];
+    }
+    return normalized;
+  }
+
+  if (Array.isArray(block.children)) {
+    return { default: block.children };
+  }
+
+  return undefined;
+}
+
 export function normalizeWidgetBlock(block: WidgetBlock): WidgetBlock {
   const def = getWidget(block.type);
   if (!def) throw new Error("widget_unknown_type");
@@ -37,25 +56,34 @@ export function normalizeWidgetBlock(block: WidgetBlock): WidgetBlock {
     throw new Error("widget_schema_invalid");
   }
 
-  const children = Array.isArray(block.children) ? block.children : undefined;
+  const slots = normalizeSlotMap(block);
+  const children = slots ? undefined : Array.isArray(block.children) ? block.children : undefined;
 
   return {
     ...block,
     variant,
     data: merged,
     children,
+    slots,
   };
 }
 
 export function normalizeWidgetBlocks(blocks: WidgetBlock[]): WidgetBlock[] {
   return blocks.map((block) => {
     const normalized = normalizeWidgetBlock(block);
-    return {
-      ...normalized,
-      children: Array.isArray(block.children)
-        ? normalizeWidgetBlocks(block.children)
-        : normalized.children,
-    };
+    const slots =
+      normalized.slots &&
+      Object.fromEntries(
+        Object.entries(normalized.slots).map(([key, items]) => [
+          key,
+          normalizeWidgetBlocks(items),
+        ])
+      );
+    const children =
+      normalized.slots || !Array.isArray(block.children)
+        ? normalized.children
+        : normalizeWidgetBlocks(block.children);
+    return { ...normalized, slots, children };
   });
 }
 

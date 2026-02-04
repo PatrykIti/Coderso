@@ -67,6 +67,13 @@ const blockSchema = {
     layout: blockLayoutSchema,
     visibility: blockVisibilitySchema,
     editor: blockEditorSchema,
+    slots: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        items: { $ref: "widgetTemplateBlock" },
+      },
+    },
     children: {
       type: "array",
       items: { $ref: "widgetTemplateBlock" },

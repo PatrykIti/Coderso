@@ -88,7 +88,11 @@ export function WidgetRenderer({ block }: { block: WidgetBlock }) {
   if (normalized.visibility?.enabled === false) return null;
 
   const layout = normalized.layout ?? defaultLayout;
-  const children = Array.isArray(normalized.children) ? normalized.children : [];
+  const slots = normalized.slots;
+  const legacyChildren = Array.isArray(normalized.children)
+    ? normalized.children
+    : slots?.default ?? [];
+  const hasSlotDefinitions = Array.isArray(def.slots) && def.slots.length > 0;
   const backgroundStyle: CSSProperties = {
     backgroundColor: layout.background?.color ?? "transparent",
     backgroundImage: layout.background?.image
@@ -111,10 +115,14 @@ export function WidgetRenderer({ block }: { block: WidgetBlock }) {
   return (
     <section style={backgroundStyle}>
       <div className={wrapperClass}>
-        <WidgetComponent data={normalized.data} variant={normalized.variant ?? def.variants[0].id} />
-        {children.length ? (
+        <WidgetComponent
+          data={normalized.data}
+          variant={normalized.variant ?? def.variants[0].id}
+          slots={slots}
+        />
+        {!hasSlotDefinitions && legacyChildren.length ? (
           <div className="mt-6 flex flex-col gap-6">
-            {children.map((child) => (
+            {legacyChildren.map((child) => (
               <WidgetRenderer key={child.id} block={child} />
             ))}
           </div>

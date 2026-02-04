@@ -40,6 +40,9 @@ Model musi byc stabilny i wersjonowany.
     "mode": "visual",
     "wizardCompleted": true
   },
+  "slots": {
+    "default": []
+  },
   "children": []
 }
 ```
@@ -47,7 +50,8 @@ Model musi byc stabilny i wersjonowany.
 Notes:
 - `editor` jest tylko dla `current_data` (nie kopiujemy do published).
 - `variant` jest opcjonalny, ale rekomendowany dla widgetow.
-- `children` pozwala zagniezdzac bloki wewnatrz kontenerow.
+- `slots` to preferowany model zagniezdzania (nazwane miejsca w contanerze).
+- `children` jest legacy — jesli wystepuje bez `slots`, mapujemy do `slots.default`.
 
 ---
 

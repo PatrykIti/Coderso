@@ -7,16 +7,17 @@ import { cn } from "@/lib/utils";
 import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 import type { Block } from "./types";
 import { getWidgetRegistry } from "./widgetRegistry";
+import type { BlockPath } from "./blockUtils";
 import { BlockToolbar } from "./BlockToolbar";
 
 export type BlockListProps = {
   blocks: Block[];
   selectedId?: string | null;
   onSelect: (id: string) => void;
-  onMove: (path: number[], from: number, to: number) => void;
+  onMove: (path: BlockPath, from: number, to: number) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
-  path?: number[];
+  path?: BlockPath;
   depth?: number;
 };
 
@@ -34,8 +35,30 @@ export function BlockList({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const listPath = path ?? [];
-  const listToken = listPath.length ? listPath.join(".") : "root";
+  const listToken = listPath.length
+    ? listPath
+        .map((segment) =>
+          segment.slotId ? `${segment.index}:${segment.slotId}` : `${segment.index}`
+        )
+        .join("|")
+    : "root";
   const level = depth ?? 0;
+
+  const getSlotMap = (block: Block) => {
+    if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+      const result: Record<string, Block[]> = {};
+      for (const [key, value] of Object.entries(block.slots)) {
+        const id = key.trim();
+        if (!id) continue;
+        result[id] = Array.isArray(value) ? (value as Block[]) : [];
+      }
+      return result;
+    }
+    if (Array.isArray(block.children)) {
+      return { default: block.children };
+    }
+    return {};
+  };
 
   const handleDrop = (from: number, to: number) => {
     if (from === to) return;
@@ -52,7 +75,18 @@ export function BlockList({
       {blocks.map((block, index) => {
         const widget = widgetRegistry.find((item) => item.type === block.type);
         const label = widget?.title ?? block.type;
-        const childCount = Array.isArray(block.children) ? block.children.length : 0;
+        const slotMap = getSlotMap(block);
+        const slotDefinitions =
+          widget?.slots && widget.slots.length > 0
+            ? widget.slots
+            : Object.keys(slotMap).map((slotId) => ({
+                id: slotId,
+                label: slotId === "default" ? "Default slot" : slotId,
+              }));
+        const nestedCount = Object.values(slotMap).reduce(
+          (sum, items) => sum + items.length,
+          0
+        );
         return (
           <div
             key={block.id}
@@ -135,9 +169,9 @@ export function BlockList({
                         {block.variant}
                       </Badge>
                     ) : null}
-                    {childCount > 0 ? (
+                    {nestedCount > 0 ? (
                       <Badge variant="secondary" className="text-[10px] uppercase">
-                        Nested {childCount}
+                        Nested {nestedCount}
                       </Badge>
                     ) : null}
                   </div>
@@ -158,18 +192,37 @@ export function BlockList({
             <div className="mt-4 rounded-lg border bg-muted/10 p-4">
               <WidgetRenderer block={block} />
             </div>
-            {childCount ? (
-              <div className="mt-4">
-                <BlockList
-                  blocks={block.children ?? []}
-                  selectedId={selectedId}
-                  onSelect={onSelect}
-                  onMove={onMove}
-                  onDuplicate={onDuplicate}
-                  onDelete={onDelete}
-                  path={[...listPath, index]}
-                  depth={level + 1}
-                />
+            {slotDefinitions.length > 0 ? (
+              <div className="mt-4 space-y-4">
+                {slotDefinitions.map((slot) => {
+                  const slotBlocks = slotMap[slot.id] ?? [];
+                  return (
+                    <div key={`${block.id}-slot-${slot.id}`} className="space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <span>{slot.label}</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          {slotBlocks.length}
+                        </Badge>
+                      </div>
+                      {slotBlocks.length ? (
+                        <BlockList
+                          blocks={slotBlocks}
+                          selectedId={selectedId}
+                          onSelect={onSelect}
+                          onMove={onMove}
+                          onDuplicate={onDuplicate}
+                          onDelete={onDelete}
+                          path={[...listPath, { index, slotId: slot.id }]}
+                          depth={level + 1}
+                        />
+                      ) : (
+                        <div className="rounded-lg border border-dashed bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
+                          Empty slot.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : null}
           </div>

@@ -42,7 +42,7 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import {
-  appendChildBlock,
+  appendSlotBlock,
   createBlock,
   findBlockById,
   insertBlockAfterId,
@@ -507,25 +507,67 @@ export function WidgetLibraryPage() {
     targetType?: "page" | "template";
     targetId?: string | null;
     blockId?: string | null;
+    slotId?: string | null;
   }) => {
     if (!insertWidget || insertWidget.source !== "core") return;
     const targetType = payload.targetType ?? "page";
     if (!payload.targetId) return;
     setInsertError(null);
 
-    const canNestInto = (blocks: Block[], targetId?: string | null) => {
-      if (!targetId) return false;
-      const target = findBlockById(blocks, targetId);
-      if (!target) return false;
-      const definition = widgetDefinitionMap.get(target.type);
-      return Boolean(definition?.canHaveChildren);
+    const getSlotBlocks = (block: Block, slot: string) => {
+      const slots = block.slots;
+      if (slots && typeof slots === "object" && !Array.isArray(slots)) {
+        const value = slots[slot];
+        return Array.isArray(value) ? (value as Block[]) : [];
+      }
+      if (slot === "default" && Array.isArray(block.children)) {
+        return block.children as Block[];
+      }
+      return [];
     };
 
-    const insertBlock = (blocks: Block[], targetId?: string | null) => {
+    const resolveNestSlot = (
+      blocks: Block[],
+      targetId?: string | null,
+      slotId?: string | null
+    ) => {
+      if (!targetId) return null;
+      const target = findBlockById(blocks, targetId);
+      if (!target) return null;
+      const definition = widgetDefinitionMap.get(target.type);
+      if (!definition) return null;
+      const slotDefinitions = definition.slots ?? [];
+      if (slotDefinitions.length > 0) {
+        const resolvedSlotId = slotId?.trim();
+        if (!resolvedSlotId) return null;
+        const slot = slotDefinitions.find((item) => item.id === resolvedSlotId);
+        if (!slot) return null;
+        if (
+          Array.isArray(slot.allowedTypes) &&
+          slot.allowedTypes.length > 0 &&
+          !slot.allowedTypes.includes(insertWidget.id)
+        ) {
+          return null;
+        }
+        const count = getSlotBlocks(target, resolvedSlotId).length;
+        if (typeof slot.maxItems === "number" && count >= slot.maxItems) {
+          return null;
+        }
+        return resolvedSlotId;
+      }
+      return definition.canHaveChildren ? "default" : null;
+    };
+
+    const insertBlock = (
+      blocks: Block[],
+      targetId?: string | null,
+      slotId?: string | null
+    ) => {
       const next = createBlock(insertWidget.id);
       if (!targetId) return [...blocks, next];
-      if (canNestInto(blocks, targetId)) {
-        return appendChildBlock(blocks, targetId, next);
+      const nestSlot = resolveNestSlot(blocks, targetId, slotId);
+      if (nestSlot) {
+        return appendSlotBlock(blocks, targetId, nestSlot, next);
       }
       return insertBlockAfterId(blocks, targetId, next);
     };
@@ -549,7 +591,7 @@ export function WidgetLibraryPage() {
         const blocks = Array.isArray(template.blocks)
           ? (template.blocks as Block[])
           : [];
-        const nextBlocks = insertBlock(blocks, payload.blockId);
+        const nextBlocks = insertBlock(blocks, payload.blockId, payload.slotId);
         await updateWidgetTemplate(payload.targetId, { blocks: nextBlocks });
         return;
       }
@@ -559,7 +601,7 @@ export function WidgetLibraryPage() {
       const blocks = Array.isArray(currentData.blocks)
         ? (currentData.blocks as Block[])
         : [];
-      const nextBlocks = insertBlock(blocks, payload.blockId);
+      const nextBlocks = insertBlock(blocks, payload.blockId, payload.slotId);
       await updatePage(payload.targetId, {
         data: { ...currentData, blocks: nextBlocks },
       });

@@ -148,6 +148,7 @@ Project Change Log.
 | 151 | 2026-02-04 | Widgets catalog API | CMS/Widgets |
 | 152 | 2026-02-04 | Widget favorites user settings | CMS/Settings |
 | 153 | 2026-02-04 | Widget library catalog wiring | Admin/UI |
+| 154 | 2026-02-04 | Widget slots core | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

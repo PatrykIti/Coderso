@@ -37,6 +37,46 @@ export function registerWidget(def: WidgetDefinition<any>) {
   ) {
     throw new Error("widget_children_flag_invalid");
   }
+  if (def.slots !== undefined) {
+    if (!Array.isArray(def.slots)) {
+      throw new Error("widget_slots_invalid");
+    }
+    const slotIds = new Set<string>();
+    for (const slot of def.slots) {
+      if (!slot || typeof slot !== "object") {
+        throw new Error("widget_slots_invalid");
+      }
+      if (!slot.id || typeof slot.id !== "string") {
+        throw new Error("widget_slot_id_invalid");
+      }
+      if (!slot.label || typeof slot.label !== "string") {
+        throw new Error("widget_slot_label_invalid");
+      }
+      const trimmedId = slot.id.trim();
+      if (!trimmedId) {
+        throw new Error("widget_slot_id_invalid");
+      }
+      if (slotIds.has(trimmedId)) {
+        throw new Error("widget_slot_duplicate");
+      }
+      slotIds.add(trimmedId);
+      if (
+        slot.maxItems !== undefined &&
+        (!Number.isFinite(slot.maxItems) || slot.maxItems <= 0)
+      ) {
+        throw new Error("widget_slot_max_invalid");
+      }
+      if (
+        slot.allowedTypes !== undefined &&
+        (!Array.isArray(slot.allowedTypes) ||
+          slot.allowedTypes.some(
+            (value) => typeof value !== "string" || !value.trim()
+          ))
+      ) {
+        throw new Error("widget_slot_allowed_invalid");
+      }
+    }
+  }
   if (!def.editor?.wizard || !def.editor?.visual || !def.editor?.advanced) {
     throw new Error("widget_editor_invalid");
   }

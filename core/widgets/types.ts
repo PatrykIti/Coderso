@@ -13,6 +13,13 @@ export type WidgetVariant = {
   description?: string;
 };
 
+export type WidgetSlotDefinition = {
+  id: string;
+  label: string;
+  maxItems?: number;
+  allowedTypes?: string[];
+};
+
 export type WidgetEditorProps<T> = {
   value: T;
   onChange: (next: T) => void;
@@ -26,6 +33,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   description?: string;
   category: WidgetCategory;
   canHaveChildren?: boolean;
+  slots?: WidgetSlotDefinition[];
   variants: WidgetVariant[];
   schema: Record<string, unknown>;
   defaults: T;
@@ -34,7 +42,11 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     visual: ComponentType<WidgetEditorProps<T>>;
     advanced: ComponentType<WidgetEditorProps<T>>;
   };
-  render: ComponentType<{ data: T; variant: string }>;
+  render: ComponentType<{
+    data: T;
+    variant: string;
+    slots?: Record<string, WidgetBlock[]>;
+  }>;
 };
 
 export const containerTokens = ["default", "narrow", "full"] as const;
@@ -79,4 +91,5 @@ export type WidgetBlock = {
   visibility?: WidgetVisibility;
   editor?: WidgetEditorState;
   children?: WidgetBlock[];
+  slots?: Record<string, WidgetBlock[]>;
 };
