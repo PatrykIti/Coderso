@@ -224,10 +224,10 @@ export function HeroBlock({
     paddingBottom: spacingValueMap[paddingBottom],
   };
 
-  const isSplit = variant !== "centered";
+  const media = data.media ?? { type: "none" };
+  const showMedia = media.type !== "none";
+  const isSplit = variant !== "centered" && showMedia;
   const isMediaLeft = variant === "media-left";
-  const media = data.media;
-  const showMedia = media?.type && media.type !== "none" && media.src;
   const hideMediaOnMobile = data.responsive?.hideMediaOnMobile;
   const contentSlots = slots?.content ?? [];
 
@@ -308,18 +308,22 @@ export function HeroBlock({
                   ratioClassMap[media?.ratio ?? "16:9"] ?? "aspect-video"
                 )}
               >
-                {media?.type === "image" ? (
+                {media?.type === "image" && media.src ? (
                   <img
                     src={media.src}
                     alt={media.alt ?? ""}
                     className="h-full w-full object-cover"
                   />
-                ) : (
+                ) : media?.type === "video" && media.src ? (
                   <video
                     controls
                     src={media?.src}
                     className="h-full w-full object-cover"
                   />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-xs font-medium text-muted-foreground">
+                    Add media URL
+                  </div>
                 )}
                 {media?.overlay ? (
                   <div

@@ -509,7 +509,7 @@ export function WidgetTemplateEditorPage() {
                 </div>
               </div>
             ) : (
-              <div className="mx-auto w-full max-w-4xl">
+              <div className="mx-auto w-full max-w-6xl">
                 <BlockList
                   blocks={blocks}
                   selectedId={selectedId}

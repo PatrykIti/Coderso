@@ -107,3 +107,14 @@ test("hero renders slot content blocks", () => {
   expect(html).toContain("Parent");
   expect(html).toContain("Child");
 });
+
+test("hero shows media placeholder when type selected without url", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{ ...heroDefaults, media: { type: "image" } }}
+      variant="split"
+    />
+  );
+
+  expect(html).toContain("Add media URL");
+});
