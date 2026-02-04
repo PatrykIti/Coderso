@@ -68,6 +68,12 @@ test("hero validator accepts extended schema", () => {
         background: { color: "#fff", gradient: "linear-gradient(#fff,#eee)" },
         spacing: { paddingTop: "lg", paddingBottom: "xl" },
         layout: { align: "left", maxWidth: "2xl", contentWidth: "md" },
+        media: {
+          type: "image",
+          source: "library",
+          assetId: "asset-1",
+          src: "https://example.com/hero.jpg",
+        },
       },
     })
   ).not.toThrow();

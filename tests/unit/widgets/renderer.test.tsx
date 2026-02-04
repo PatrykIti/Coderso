@@ -67,6 +67,7 @@ test("renderer applies layout classes", () => {
   const html = renderToString(<WidgetRenderer block={block} />);
   expect(html).toContain("max-w-3xl");
   expect(html).toContain("pt-12");
+  expect(html).toContain("mt-4");
 });
 
 test("renderer renders nested blocks", () => {

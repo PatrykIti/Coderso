@@ -37,7 +37,7 @@ Wizard mapuje odpowiedzi na `variant` i ustawia defaulty.
 
 - content: headline, subhead, body
 - cta: primary, secondary
-- media: typ, src, alt, ratio, overlay
+- media: typ, zrodlo (library/external), assetId, src, alt, ratio, overlay
 - layout: maxWidth, align, contentWidth
 - spacing: paddingTop, paddingBottom
 - background: color, gradient, image
@@ -53,7 +53,13 @@ Wizard mapuje odpowiedzi na `variant` i ustawia defaulty.
   "body": "string",
   "primaryCta": { "label": "string", "href": "string" },
   "secondaryCta": { "label": "string", "href": "string" },
-  "media": { "type": "image", "src": "string", "alt": "string" },
+  "media": {
+    "type": "image",
+    "source": "library",
+    "assetId": "string",
+    "src": "string",
+    "alt": "string"
+  },
   "layout": { "align": "center", "maxWidth": "xl", "contentWidth": "lg" },
   "spacing": { "paddingTop": "xl", "paddingBottom": "xl" },
   "background": { "color": "transparent", "gradient": "", "image": "" }

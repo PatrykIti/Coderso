@@ -11,6 +11,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { isApiClientError } from "@/services/apiClient";
+import { listMedia } from "@/services/mediaClient";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import type { HeroData } from "../../../../widgets/core/hero";
 import type { WidgetEditorProps } from "../../../../widgets/types";
@@ -87,6 +90,7 @@ type HeroMaxWidth = NonNullable<HeroData["layout"]>["maxWidth"];
 type HeroContentWidth = NonNullable<HeroData["layout"]>["contentWidth"];
 type HeroSpacing = NonNullable<HeroData["spacing"]>["paddingTop"];
 type HeroMediaType = NonNullable<HeroData["media"]>["type"];
+type HeroMediaSource = NonNullable<HeroData["media"]>["source"];
 type CtaMode = (typeof ctaOptions)[number]["id"];
 
 const isValidHref = (value: string | undefined) =>
@@ -94,6 +98,118 @@ const isValidHref = (value: string | undefined) =>
 
 const isValidMediaUrl = (value: string | undefined) =>
   !value || value.startsWith("http") || value.startsWith("/");
+
+const mediaSourceOptions = [
+  { id: "library", label: "Media library" },
+  { id: "external", label: "External URL" },
+] as const;
+
+function HeroMediaSourceFields({
+  media,
+  mediaType,
+  onChange,
+}: {
+  media: NonNullable<HeroData["media"]>;
+  mediaType: HeroMediaType;
+  onChange: (patch: Partial<NonNullable<HeroData["media"]>>) => void;
+}) {
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const source: HeroMediaSource = media.source ?? "external";
+  const accept =
+    mediaType === "image"
+      ? ["image/*"]
+      : mediaType === "video"
+        ? ["video/*"]
+        : undefined;
+
+  const handleSourceChange = (next: HeroMediaSource) => {
+    setLookupError(null);
+    if (next === "library") {
+      onChange({ source: next, assetId: undefined, src: undefined });
+    } else {
+      onChange({ source: next, assetId: undefined });
+    }
+  };
+
+  const handleAssetChange = async (value: unknown) => {
+    const assetId = typeof value === "string" ? value : null;
+    if (!assetId) {
+      onChange({ assetId: undefined, src: undefined });
+      return;
+    }
+    onChange({ assetId, source: "library" });
+    setLookupError(null);
+    try {
+      const items = await listMedia();
+      const match = items.find((item) => item.id === assetId);
+      if (match) {
+        onChange({
+          src: match.url,
+          alt:
+            media.alt && media.alt.trim().length > 0
+              ? media.alt
+              : match.alt ?? match.title ?? match.originalName ?? "",
+        });
+      }
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setLookupError(err.message);
+      } else {
+        setLookupError("Failed to resolve media URL.");
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Media source</p>
+        <Select
+          value={source}
+          onValueChange={(next) => handleSourceChange(next as HeroMediaSource)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select source" />
+          </SelectTrigger>
+          <SelectContent>
+            {mediaSourceOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {source === "library" ? (
+        <div className="space-y-2">
+          <MediaPicker
+            value={media.assetId ?? null}
+            onChange={(value) => void handleAssetChange(value)}
+            multiple={false}
+            accept={accept}
+          />
+          {lookupError ? (
+            <p className="text-xs text-destructive">{lookupError}</p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Media URL</p>
+          <Input
+            value={media.src ?? ""}
+            onChange={(event) => onChange({ src: event.target.value })}
+            placeholder="https://"
+          />
+          {!isValidMediaUrl(media.src) ? (
+            <p className="text-xs text-destructive">
+              Use a relative path or full URL.
+            </p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function HeroVariantSelect({
   value,
@@ -131,8 +247,11 @@ export function HeroWizardEditor({
   const update = (patch: Partial<HeroData>) => onChange({ ...value, ...patch });
   const primary = value.primaryCta ?? { label: "", href: "" };
   const secondary = value.secondaryCta ?? { label: "", href: "" };
-  const mediaType: HeroMediaType = value.media?.type ?? "none";
+  const media = value.media ?? { type: "none", source: "external" };
+  const mediaType: HeroMediaType = media.type ?? "none";
   const ctaMode: CtaMode = value.secondaryCta ? "dual" : "single";
+  const updateMedia = (patch: Partial<HeroData["media"]>) =>
+    update({ media: { ...media, ...patch } });
 
   return (
     <div className="space-y-4">
@@ -254,7 +373,7 @@ export function HeroWizardEditor({
         <Select
           value={mediaType}
           onValueChange={(next) =>
-            update({ media: { ...value.media, type: next as HeroMediaType } })
+            updateMedia({ type: next as HeroMediaType })
           }
         >
           <SelectTrigger>
@@ -270,22 +389,11 @@ export function HeroWizardEditor({
         </Select>
       </div>
       {mediaType !== "none" ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Media URL</p>
-          <Input
-            value={value.media?.src ?? ""}
-            onChange={(event) =>
-              update({
-                media: {
-                  ...value.media,
-                  type: mediaType,
-                  src: event.target.value,
-                },
-              })
-            }
-            placeholder="https://"
-          />
-        </div>
+        <HeroMediaSourceFields
+          media={media}
+          mediaType={mediaType}
+          onChange={updateMedia}
+        />
       ) : null}
     </div>
   );
@@ -299,8 +407,11 @@ export function HeroVisualEditor({
 }: WidgetEditorProps<HeroData>) {
   const update = (patch: Partial<HeroData>) => onChange({ ...value, ...patch });
   const secondary = value.secondaryCta ?? { label: "", href: "" };
-  const mediaType: HeroMediaType = value.media?.type ?? "none";
+  const media = value.media ?? { type: "none", source: "external" };
+  const mediaType: HeroMediaType = media.type ?? "none";
   const showMediaFields = variant !== "centered";
+  const updateMedia = (patch: Partial<HeroData["media"]>) =>
+    update({ media: { ...media, ...patch } });
 
   return (
     <div className="space-y-4">
@@ -364,9 +475,7 @@ export function HeroVisualEditor({
             <Select
               value={mediaType}
               onValueChange={(next) =>
-                update({
-                  media: { ...value.media, type: next as HeroMediaType },
-                })
+                updateMedia({ type: next as HeroMediaType })
               }
             >
               <SelectTrigger>
@@ -382,22 +491,11 @@ export function HeroVisualEditor({
             </Select>
           </div>
           {mediaType !== "none" ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Media URL</p>
-              <Input
-                value={value.media?.src ?? ""}
-                onChange={(event) =>
-                  update({
-                    media: {
-                      ...value.media,
-                      type: mediaType,
-                      src: event.target.value,
-                    },
-                  })
-                }
-                placeholder="https://"
-              />
-            </div>
+            <HeroMediaSourceFields
+              media={media}
+              mediaType={mediaType}
+              onChange={updateMedia}
+            />
           ) : null}
         </>
       ) : null}
@@ -442,8 +540,6 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
 
   const primaryHref = value.primaryCta?.href;
   const secondaryHref = value.secondaryCta?.href;
-  const mediaUrl = value.media?.src;
-
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -658,19 +754,11 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
       </div>
       {value.media?.type !== "none" ? (
         <>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Media URL</p>
-            <Input
-              value={mediaUrl ?? ""}
-              onChange={(event) => updateMedia({ src: event.target.value })}
-              placeholder="https://"
-            />
-            {!isValidMediaUrl(mediaUrl) ? (
-              <p className="text-xs text-destructive">
-                Use a relative path or full URL.
-              </p>
-            ) : null}
-          </div>
+          <HeroMediaSourceFields
+            media={value.media ?? { type: "none", source: "external" }}
+            mediaType={value.media?.type ?? "none"}
+            onChange={updateMedia}
+          />
           <div className="space-y-2">
             <p className="text-sm font-medium">Media alt text</p>
             <Input

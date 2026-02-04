@@ -11,4 +11,5 @@ Tasks: TASK-050-05
 - CMS/Widgets: Hero schema now covers layout, spacing, background, and responsive fields.
 - Admin/UI: Hero wizard/visual/advanced editors expanded to match v1 spec.
 - CMS/Widgets: Hero renders `slots.content` under CTA and supports media variants.
+- Admin/UI: Hero media now supports library selection with fallback URL input.
 - Tests: added hero schema + slot rendering coverage.

@@ -102,18 +102,19 @@ export function WidgetRenderer({ block }: { block: WidgetBlock }) {
     backgroundPosition: layout.background?.image ? "center" : undefined,
   };
 
-  const wrapperClass = joinClasses(
-    containerClassMap[layout.container],
+  const sectionClass = joinClasses(
     paddingTopClassMap[layout.padding.top],
     paddingBottomClassMap[layout.padding.bottom],
     marginTopClassMap[layout.margin.top],
     marginBottomClassMap[layout.margin.bottom]
   );
 
+  const wrapperClass = joinClasses(containerClassMap[layout.container]);
+
   const WidgetComponent = def.render;
 
   return (
-    <section style={backgroundStyle}>
+    <section className={sectionClass} style={backgroundStyle}>
       <div className={wrapperClass}>
         <WidgetComponent
           data={normalized.data}

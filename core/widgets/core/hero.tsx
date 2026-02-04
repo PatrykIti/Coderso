@@ -9,6 +9,8 @@ export type HeroCta = {
 
 export type HeroMedia = {
   type: "none" | "image" | "video";
+  source?: "library" | "external";
+  assetId?: string;
   src?: string;
   alt?: string;
   ratio?: string;
@@ -77,6 +79,8 @@ export const heroSchema = {
       properties: {
         type: { enum: ["none", "image", "video"] },
         src: { type: "string" },
+        source: { enum: ["library", "external"] },
+        assetId: { type: "string" },
         alt: { type: "string" },
         ratio: { type: "string" },
         overlay: { type: "string" },
@@ -136,7 +140,7 @@ export const heroDefaults: HeroData = {
   body: "",
   primaryCta: { label: "Get started", href: "#" },
   secondaryCta: { label: "Learn more", href: "#" },
-  media: { type: "none" },
+  media: { type: "none", source: "external" },
   layout: { align: "center", maxWidth: "xl", contentWidth: "lg" },
   spacing: { paddingTop: "xl", paddingBottom: "xl" },
   background: { color: "transparent" },
@@ -197,6 +201,8 @@ export function HeroBlock({
     paddingTop: "xl",
     paddingBottom: "xl",
   };
+  const defaultPaddingTop = spacingDefaults.paddingTop ?? "xl";
+  const defaultPaddingBottom = spacingDefaults.paddingBottom ?? "xl";
   const spacing = {
     paddingTop: spacingDefaults.paddingTop,
     paddingBottom: spacingDefaults.paddingBottom,
@@ -206,11 +212,8 @@ export function HeroBlock({
   const align = layout.align ?? "center";
   const maxWidth = layout.maxWidth ?? "xl";
   const contentWidth = layout.contentWidth ?? "lg";
-  const paddingTop = resolveSpacingKey(spacing.paddingTop, spacingDefaults.paddingTop);
-  const paddingBottom = resolveSpacingKey(
-    spacing.paddingBottom,
-    spacingDefaults.paddingBottom
-  );
+  const paddingTop = resolveSpacingKey(spacing.paddingTop, defaultPaddingTop);
+  const paddingBottom = resolveSpacingKey(spacing.paddingBottom, defaultPaddingBottom);
   const background = data.background ?? {};
 
   const backgroundStyle: CSSProperties = {
