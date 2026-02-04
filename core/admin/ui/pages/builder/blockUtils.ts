@@ -232,6 +232,34 @@ export function appendChildBlock(blocks: Block[], parentId: string, child: Block
   return appendSlotBlock(blocks, parentId, "default", child);
 }
 
+const blockContainsId = (block: Block, id: string): boolean => {
+  if (block.id === id) return true;
+  const slots = getSlotMap(block);
+  for (const slotBlocks of Object.values(slots)) {
+    for (const child of slotBlocks) {
+      if (blockContainsId(child, id)) return true;
+    }
+  }
+  return false;
+};
+
+export function moveBlockIntoSlot(
+  blocks: Block[],
+  blockId: string,
+  parentId: string,
+  slotId: string | null
+) {
+  if (blockId === parentId) return blocks;
+  const target = findBlockById(blocks, parentId);
+  const moving = findBlockById(blocks, blockId);
+  if (!target || !moving) return blocks;
+  if (blockContainsId(moving, parentId)) return blocks;
+
+  const removal = deleteBlockById(blocks, blockId);
+  if (!removal.deleted) return blocks;
+  return appendSlotBlock(removal.blocks, parentId, slotId, moving);
+}
+
 export function duplicateBlock(blocks: Block[], id: string) {
   const location = findBlockLocation(blocks, id);
   if (!location) return blocks;

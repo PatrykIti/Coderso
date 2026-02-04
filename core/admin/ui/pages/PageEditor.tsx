@@ -26,11 +26,13 @@ import { WidgetPicker } from "./builder/WidgetPicker";
 import { PageSettingsDrawer } from "./PageSettingsDrawer";
 import {
   applyWizardSelection,
+  appendSlotBlock,
   createBlock,
   deleteBlockById,
   duplicateBlock,
   findBlockById,
   getFirstBlockId,
+  moveBlockIntoSlot,
   reorderBlocksAtPath,
   shouldWarnOnNavigate,
   updateBlockById,
@@ -190,6 +192,16 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     const nextBlock = createBlock(type);
     updateBlocks([...blocks, nextBlock]);
     setSelectedId(nextBlock.id);
+  };
+
+  const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
+    const nextBlock = createBlock(type);
+    updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
+    setSelectedId(nextBlock.id);
+  };
+
+  const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
+    updateBlocks(moveBlockIntoSlot(blocks, blockId, parentId, slotId));
   };
 
   const handleMove = (path: BlockPath, from: number, to: number) => {
@@ -410,6 +422,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             onMove={handleMove}
             onDuplicate={handleDuplicate}
             onDelete={handleDelete}
+            onInsert={handleInsertIntoSlot}
+            onMoveToSlot={handleMoveIntoSlot}
           />
         )}
       </div>

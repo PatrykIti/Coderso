@@ -8,6 +8,7 @@ import {
   duplicateBlock,
   findBlockById,
   insertBlockAfterId,
+  moveBlockIntoSlot,
   reorderBlocks,
   reorderBlocksAtPath,
 } from "../../../core/admin/ui/pages/builder/blockUtils";
@@ -88,4 +89,16 @@ test("BlockList renders widget labels", () => {
 
   expect(html).toContain("Hero");
   expect(html).toContain("Newsletter");
+});
+
+test("moveBlockIntoSlot moves block under target slot", () => {
+  const parent: Block = {
+    ...createBlock("hero"),
+    id: "parent",
+    slots: { main: [] },
+  };
+  const child: Block = { ...createBlock("newsletter"), id: "child" };
+  const moved = moveBlockIntoSlot([parent, child], "child", "parent", "main");
+  expect(moved).toHaveLength(1);
+  expect(moved[0].slots?.main?.[0]?.id).toBe("child");
 });

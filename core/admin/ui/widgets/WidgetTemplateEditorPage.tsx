@@ -34,11 +34,13 @@ import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import {
+  appendSlotBlock,
   createBlock,
   deleteBlockById,
   duplicateBlock,
   findBlockById,
   getFirstBlockId,
+  moveBlockIntoSlot,
   reorderBlocksAtPath,
   updateBlockById,
 } from "@/ui/pages/builder/blockUtils";
@@ -138,6 +140,16 @@ export function WidgetTemplateEditorPage() {
     const next = createBlock(type);
     setBlocks((prev) => [...prev, next]);
     setSelectedId(next.id);
+  };
+
+  const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
+    const next = createBlock(type);
+    setBlocks((prev) => appendSlotBlock(prev, parentId, slotId, next));
+    setSelectedId(next.id);
+  };
+
+  const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
+    setBlocks((prev) => moveBlockIntoSlot(prev, blockId, parentId, slotId));
   };
 
   const loadTemplate = useCallback(async () => {
@@ -517,6 +529,8 @@ export function WidgetTemplateEditorPage() {
                       return result.blocks;
                     })
                   }
+                  onInsert={handleInsertIntoSlot}
+                  onMoveToSlot={handleMoveIntoSlot}
                 />
               </div>
             )}

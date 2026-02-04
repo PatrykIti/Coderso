@@ -17,6 +17,8 @@ export type BlockListProps = {
   onMove: (path: BlockPath, from: number, to: number) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onInsert?: (parentId: string, slotId: string, widgetType: string) => void;
+  onMoveToSlot?: (blockId: string, parentId: string, slotId: string) => void;
   path?: BlockPath;
   depth?: number;
 };
@@ -28,6 +30,8 @@ export function BlockList({
   onMove,
   onDuplicate,
   onDelete,
+  onInsert,
+  onMoveToSlot,
   path,
   depth,
 }: BlockListProps) {
@@ -65,6 +69,17 @@ export function BlockList({
     onMove(listPath, from, to);
   };
 
+  const handleDragStart = (
+    event: React.DragEvent<HTMLElement>,
+    index: number,
+    blockId: string
+  ) => {
+    event.dataTransfer.setData("text/plain", `${listToken}:${String(index)}`);
+    event.dataTransfer.setData("block-id", blockId);
+    event.dataTransfer.effectAllowed = "move";
+    setDragIndex(index);
+  };
+
   const resetDragState = () => {
     setDragIndex(null);
     setHoverIndex(null);
@@ -96,6 +111,7 @@ export function BlockList({
               selectedId === block.id && "border-primary/50 ring-2 ring-primary/10",
               hoverIndex === index && dragIndex !== null && "border-primary/40"
             )}
+            draggable
             onClick={(event) => {
               event.stopPropagation();
               onSelect(block.id);
@@ -133,6 +149,8 @@ export function BlockList({
             onDragLeave={() => {
               if (hoverIndex === index) setHoverIndex(null);
             }}
+            onDragStart={(event) => handleDragStart(event, index, block.id)}
+            onDragEnd={() => resetDragState()}
           >
             <div className="flex items-start justify-between gap-3">
               <button
@@ -150,12 +168,8 @@ export function BlockList({
                   draggable
                   aria-label={`Reorder ${label}`}
                   onDragStart={(event) => {
-                    event.dataTransfer.setData(
-                      "text/plain",
-                      `${listToken}:${String(index)}`
-                    );
-                    event.dataTransfer.effectAllowed = "move";
-                    setDragIndex(index);
+                    event.stopPropagation();
+                    handleDragStart(event, index, block.id);
                   }}
                   onDragEnd={() => resetDragState()}
                 >
@@ -197,7 +211,32 @@ export function BlockList({
                 {slotDefinitions.map((slot) => {
                   const slotBlocks = slotMap[slot.id] ?? [];
                   return (
-                    <div key={`${block.id}-slot-${slot.id}`} className="space-y-2">
+                    <div
+                      key={`${block.id}-slot-${slot.id}`}
+                      className="space-y-2"
+                      onDragOver={(event) => {
+                        const hasWidget = Boolean(
+                          event.dataTransfer.getData("widget-type")
+                        );
+                        const hasBlock = Boolean(event.dataTransfer.getData("block-id"));
+                        if (!hasWidget && !hasBlock) return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const widgetType = event.dataTransfer.getData("widget-type");
+                        if (widgetType && onInsert) {
+                          onInsert(block.id, slot.id, widgetType);
+                          return;
+                        }
+                        const blockId = event.dataTransfer.getData("block-id");
+                        if (blockId && onMoveToSlot) {
+                          onMoveToSlot(blockId, block.id, slot.id);
+                        }
+                      }}
+                    >
                       <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                         <span>{slot.label}</span>
                         <Badge variant="outline" className="text-[10px]">
@@ -212,6 +251,8 @@ export function BlockList({
                           onMove={onMove}
                           onDuplicate={onDuplicate}
                           onDelete={onDelete}
+                          onInsert={onInsert}
+                          onMoveToSlot={onMoveToSlot}
                           path={[...listPath, { index, slotId: slot.id }]}
                           depth={level + 1}
                         />
