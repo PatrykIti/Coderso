@@ -46,6 +46,11 @@ const statusLabels = {
 type EntryTableProps = {
   entries: EntrySummary[];
   emptyMessage?: string;
+  selectedIds?: string[];
+  isAllSelected?: boolean;
+  isIndeterminate?: boolean;
+  onToggleAll?: () => void;
+  onToggleEntry?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 };
@@ -99,6 +104,11 @@ function EntryRowActions({
 export function EntryTable({
   entries,
   emptyMessage,
+  selectedIds = [],
+  isAllSelected = false,
+  isIndeterminate = false,
+  onToggleAll,
+  onToggleEntry,
   onEdit,
   onDelete,
 }: EntryTableProps) {
@@ -108,7 +118,11 @@ export function EntryTable({
         <TableHeader className="bg-muted/40">
           <TableRow>
             <TableHead className="w-10 pl-4">
-              <Checkbox aria-label="Select all entries" />
+              <Checkbox
+                aria-label="Select all entries"
+                checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                onCheckedChange={() => onToggleAll?.()}
+              />
             </TableHead>
             <TableHead className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Title
@@ -135,10 +149,19 @@ export function EntryTable({
               </TableCell>
             </TableRow>
           ) : (
-            entries.map((entry) => (
-              <TableRow key={entry.id} className="group">
+            entries.map((entry) => {
+              const isSelected = selectedIds.includes(entry.id);
+              return (
+              <TableRow
+                key={entry.id}
+                className={isSelected ? "group bg-muted/30" : "group"}
+              >
                 <TableCell className="pl-4">
-                  <Checkbox aria-label={`Select ${entry.title}`} />
+                  <Checkbox
+                    aria-label={`Select ${entry.title}`}
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleEntry?.(entry.id)}
+                  />
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
@@ -186,7 +209,8 @@ export function EntryTable({
                   </div>
                 </TableCell>
               </TableRow>
-            ))
+            );
+            })
           )}
         </TableBody>
       </Table>

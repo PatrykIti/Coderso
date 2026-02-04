@@ -9,12 +9,20 @@ import {
   listContentTypes,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
-import { deleteEntry, listEntries } from "@/services/entriesClient";
+import {
+  deleteEntry,
+  listEntries,
+  updateEntryMetadata,
+} from "@/services/entriesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 import { ContentTypeCreateDrawer } from "../content-types/ContentTypeCreateDrawer";
 import { EntryCreateDrawer } from "./EntryCreateDrawer";
+import {
+  EntryBulkActionsBar,
+  type BulkActionValue,
+} from "./EntryBulkActionsBar";
 import { getContentTypeLabels } from "./contentTypeLabels";
 import { EntryFilters } from "./EntryFilters";
 import { EntryGrid } from "./EntryGrid";
@@ -55,6 +63,9 @@ export function EntryList() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [authorFilter, setAuthorFilter] = useState("any");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<BulkActionValue | "">("");
+  const [isBulkWorking, setIsBulkWorking] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -140,6 +151,27 @@ export function EntryList() {
     () => filterEntries(entries, searchQuery, statusFilter, authorFilter),
     [entries, searchQuery, statusFilter, authorFilter]
   );
+  const visibleIds = useMemo(
+    () => filteredEntries.map((entry) => entry.id),
+    [filteredEntries]
+  );
+  const selectedCount = selectedIds.length;
+  const isAllSelected =
+    visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+  const isIndeterminate = selectedCount > 0 && !isAllSelected;
+
+  const refreshEntries = async () => {
+    if (!activeSlug) return;
+    const updated = await listEntries(activeSlug);
+    setEntries(updated);
+    setTypes((prev) =>
+      prev.map((type) =>
+        type.slug === activeSlug
+          ? { ...type, entryCount: updated.length }
+          : type
+      )
+    );
+  };
 
   const handleEditEntry = (id: string) => {
     if (typeof window !== "undefined" && activeSlug) {
@@ -161,15 +193,7 @@ export function EntryList() {
     setError(null);
     try {
       await deleteEntry(activeSlug, id);
-      const updated = await listEntries(activeSlug);
-      setEntries(updated);
-      setTypes((prev) =>
-        prev.map((type) =>
-          type.slug === activeSlug
-            ? { ...type, entryCount: updated.length }
-            : type
-        )
-      );
+      await refreshEntries();
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -229,6 +253,77 @@ export function EntryList() {
     setStatusFilter("all");
     setAuthorFilter("any");
   };
+
+  const handleToggleEntry = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((entryId) => entryId !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleAll = () => {
+    setSelectedIds((_prev) => (isAllSelected ? [] : visibleIds));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+    setBulkAction("");
+  };
+
+  const handleBulkApply = async () => {
+    if (!activeSlug || !bulkAction || selectedIds.length === 0) return;
+    if (bulkAction === "delete" && typeof window !== "undefined") {
+      const confirmed = window.confirm(
+        `Delete ${selectedIds.length} entr${selectedIds.length === 1 ? "y" : "ies"}? This cannot be undone.`
+      );
+      if (!confirmed) return;
+    }
+    setIsBulkWorking(true);
+    setError(null);
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map((id) => {
+          if (bulkAction === "delete") {
+            return deleteEntry(activeSlug, id);
+          }
+          const status =
+            bulkAction === "publish"
+              ? "published"
+              : bulkAction === "draft"
+                ? "draft"
+                : "archived";
+          return updateEntryMetadata(activeSlug, id, { status });
+        })
+      );
+      const failed = results.filter((result) => result.status === "rejected");
+      if (failed.length > 0) {
+        setError(
+          `Failed to update ${failed.length} entr${failed.length === 1 ? "y" : "ies"}.`
+        );
+      }
+      await refreshEntries();
+      handleClearSelection();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Bulk action failed.");
+      }
+    } finally {
+      setIsBulkWorking(false);
+    }
+  };
+
+  useEffect(() => {
+    setSelectedIds((prev) =>
+      prev.filter((entryId) => entries.some((entry) => entry.id === entryId))
+    );
+  }, [entries]);
+
+  useEffect(() => {
+    if (view === "grid") {
+      handleClearSelection();
+    }
+  }, [view]);
 
   const typeLabelSource = activeType?.name ?? activeSlug ?? "";
   const { singular: typeSingular, plural: typePlural } =
@@ -341,6 +436,16 @@ export function EntryList() {
               onAuthorChange={setAuthorFilter}
               onClear={handleClearFilters}
             />
+            {view === "list" && selectedCount > 0 ? (
+              <EntryBulkActionsBar
+                selectedCount={selectedCount}
+                action={bulkAction}
+                onActionChange={setBulkAction}
+                onApply={handleBulkApply}
+                onClear={handleClearSelection}
+                isApplying={isBulkWorking}
+              />
+            ) : null}
             {isLoading ? (
               <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
                 Loading entries...
@@ -360,6 +465,11 @@ export function EntryList() {
                 entries={filteredEntries}
                 onEdit={handleEditEntry}
                 onDelete={handleDeleteEntry}
+                selectedIds={selectedIds}
+                isAllSelected={isAllSelected}
+                isIndeterminate={isIndeterminate}
+                onToggleAll={handleToggleAll}
+                onToggleEntry={handleToggleEntry}
                 emptyMessage={
                   entries.length > 0
                     ? "No entries match your current filters."

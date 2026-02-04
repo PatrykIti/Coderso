@@ -5,6 +5,7 @@
 - `CMS_API.md` - admin API endpoints
 - `CONTENT_FIELDS.md` - content field types, layout, and configuration
 - `CONTENT_EDITOR_UX.md` - content editor helper texts and tooltips
+- `CONTENT_LIST_UX.md` - content list filters and bulk actions
 - `CONTENT_MODELING_COOKBOOK.md` - practical content modeling recipes
 - `CONTENT_TYPES_SPEC.md` - collections and content types
 - `CONTENT_RELATIONS.md` - relation fields and entry linking

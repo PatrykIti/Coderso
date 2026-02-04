@@ -38,7 +38,7 @@ This epic expands the backend model and admin UX to support:
 | TASK-048-06 | Content Modeling Docs & Examples | ✅ Done (2026-02-04) |
 | TASK-048-07 | Field Layout & Grouping UX | ✅ Done (2026-02-04) |
 | TASK-048-08 | Entry Workflow & Validation UX | ✅ Done (2026-02-04) |
-| TASK-048-09 | Entry List UX & Bulk Actions | Filters, quick edit, bulk publish/unpublish |
+| TASK-048-09 | Entry List UX & Bulk Actions | ✅ Done (2026-02-04) |
 
 ---
 
