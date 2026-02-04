@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { getPage, listPages, updatePage, type PageSummary } from "@/services/pagesClient";
+import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import {
   createWidgetTemplate,
   getWidgetTemplate,
@@ -240,6 +241,7 @@ export function WidgetLibraryPage() {
     WidgetTemplateCategory[]
   >([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoritesError, setFavoritesError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
@@ -315,6 +317,26 @@ export function WidgetLibraryPage() {
       .catch(() => {
         if (!active) return;
         setPagesError("Failed to load pages.");
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    getUserSettings()
+      .then((settings) => {
+        if (!active) return;
+        const favorites = Array.isArray(settings["widgets.favorites"])
+          ? settings["widgets.favorites"]
+          : [];
+        setFavoriteIds(new Set(favorites));
+        setFavoritesError(null);
+      })
+      .catch(() => {
+        if (!active) return;
+        setFavoritesError("Failed to load favorites.");
       });
     return () => {
       active = false;
@@ -450,13 +472,28 @@ export function WidgetLibraryPage() {
     [templateCategories]
   );
 
-  const handleFavoriteToggle = (id: string) => {
-    setFavoriteIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const handleFavoriteToggle = async (id: string) => {
+    setFavoritesError(null);
+    const previous = new Set(favoriteIds);
+    const next = new Set(previous);
+
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      if (next.size >= 50) {
+        setFavoritesError("Favorites limit reached.");
+        return;
+      }
+      next.add(id);
+    }
+
+    setFavoriteIds(next);
+    try {
+      await setUserSetting("widgets.favorites", Array.from(next));
+    } catch {
+      setFavoriteIds(previous);
+      setFavoritesError("Failed to save favorites.");
+    }
   };
 
   const handleSelectScope = (scope: LibraryScope) => {
@@ -752,6 +789,11 @@ export function WidgetLibraryPage() {
                           </button>
                         ))
                       )}
+                      {favoritesError ? (
+                        <p className="text-xs text-destructive">
+                          {favoritesError}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>

@@ -3,13 +3,19 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { userSettings } from "../../db/schema";
 
-const DEFAULT_USER_SETTINGS = {
-  "pages.openAfterCreate": true,
-  "media.openAfterUpload": false,
+export type UserSettingValueMap = {
+  "pages.openAfterCreate": boolean;
+  "media.openAfterUpload": boolean;
+  "widgets.favorites": string[];
 };
 
-export type UserSettingKey = keyof typeof DEFAULT_USER_SETTINGS;
-export type UserSettingValueMap = typeof DEFAULT_USER_SETTINGS;
+export type UserSettingKey = keyof UserSettingValueMap;
+
+const DEFAULT_USER_SETTINGS: UserSettingValueMap = {
+  "pages.openAfterCreate": true,
+  "media.openAfterUpload": false,
+  "widgets.favorites": [],
+};
 
 const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_USER_SETTINGS));
 
@@ -35,6 +41,26 @@ function validateUserSettingValue(
     }
     return value;
   }
+  if (key === "widgets.favorites") {
+    if (!Array.isArray(value)) {
+      throw new Error("user_settings_value_invalid");
+    }
+    const normalized = value.map((entry) => {
+      if (typeof entry !== "string") {
+        throw new Error("user_settings_value_invalid");
+      }
+      const trimmed = entry.trim();
+      if (!trimmed) {
+        throw new Error("user_settings_value_invalid");
+      }
+      return trimmed;
+    });
+    const unique = Array.from(new Set(normalized));
+    if (unique.length > 50) {
+      throw new Error("user_settings_value_invalid");
+    }
+    return unique;
+  }
 
   throw new Error("user_settings_value_invalid");
 }
@@ -49,8 +75,17 @@ export async function listUserSettings(userId: string) {
   const merged = { ...DEFAULT_USER_SETTINGS } as UserSettingValueMap;
   for (const row of rows) {
     const key = row.key as UserSettingKey;
-    if (key in merged) {
-      merged[key] = row.value as UserSettingValueMap[UserSettingKey];
+    if (!(key in merged)) continue;
+    switch (key) {
+      case "pages.openAfterCreate":
+      case "media.openAfterUpload":
+        merged[key] = row.value as boolean;
+        break;
+      case "widgets.favorites":
+        merged[key] = Array.isArray(row.value)
+          ? (row.value as string[])
+          : [];
+        break;
     }
   }
 

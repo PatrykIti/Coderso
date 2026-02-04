@@ -3,6 +3,7 @@ import { apiRequest } from "./apiClient";
 export type UserSettings = {
   "pages.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
+  "widgets.favorites": string[];
 };
 
 export type UserSettingResponse = {

@@ -45,17 +45,23 @@ testIfDb("set/get/list user settings", async () => {
   expect(defaultValue).toBe(true);
   const defaultMedia = await getUserSetting(userId, "media.openAfterUpload");
   expect(defaultMedia).toBe(false);
+  const defaultFavorites = await getUserSetting(userId, "widgets.favorites");
+  expect(defaultFavorites).toEqual([]);
 
   await setUserSetting(userId, "pages.openAfterCreate", false);
   await setUserSetting(userId, "media.openAfterUpload", true);
+  await setUserSetting(userId, "widgets.favorites", ["hero", "footer"]);
   const updated = await getUserSetting(userId, "pages.openAfterCreate");
   expect(updated).toBe(false);
   const updatedMedia = await getUserSetting(userId, "media.openAfterUpload");
   expect(updatedMedia).toBe(true);
+  const updatedFavorites = await getUserSetting(userId, "widgets.favorites");
+  expect(updatedFavorites).toEqual(["hero", "footer"]);
 
   const list = await listUserSettings(userId);
   expect(list["pages.openAfterCreate"]).toBe(false);
   expect(list["media.openAfterUpload"]).toBe(true);
+  expect(list["widgets.favorites"]).toEqual(["hero", "footer"]);
 });
 
 testIfDb("rejects unknown key", async () => {
@@ -71,4 +77,31 @@ testIfDb("rejects unknown key", async () => {
   await expect(
     setUserSetting(userId, "unknown.key", true)
   ).rejects.toThrow("user_settings_key_invalid");
+});
+
+testIfDb("rejects invalid widget favorites", async () => {
+  const userId = randomUUID();
+  cleanupUserIds.push(userId);
+
+  await db.insert(users).values({
+    id: userId,
+    email: `user-${userId}@example.com`,
+    passwordHash: "hash",
+  });
+
+  await expect(
+    setUserSetting(userId, "widgets.favorites", "hero")
+  ).rejects.toThrow("user_settings_value_invalid");
+
+  await expect(
+    setUserSetting(userId, "widgets.favorites", ["", "hero"])
+  ).rejects.toThrow("user_settings_value_invalid");
+
+  await expect(
+    setUserSetting(
+      userId,
+      "widgets.favorites",
+      Array.from({ length: 51 }, (_, index) => `widget-${index}`)
+    )
+  ).rejects.toThrow("user_settings_value_invalid");
 });

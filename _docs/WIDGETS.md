@@ -211,6 +211,12 @@ Katalog zawiera podstawowe metadata:
 - Drawer szczegolow widgetu pokazuje ten sam zestaw paneli (Wizard/Visual/Advanced),
   ktory jest uzywany po wstawieniu widgetu.
 - Zmiany wykonane w podgladzie NIE zapisuja sie automatycznie — zapis nastepuje
+
+### Favorites
+
+- Ulubione widgety sa zapisywane per uzytkownik w `user_settings` pod kluczem
+  `widgets.favorites`.
+- Limit: max 50 pozycji.
   dopiero po wstawieniu widgetu do strony lub template.
 
 ---
