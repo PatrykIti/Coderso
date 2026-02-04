@@ -494,6 +494,34 @@ Create/Update payload (summary):
 
 ---
 
+## Widgets
+
+Permissions: `widgets:read`, `widgets:write`
+
+- `GET /widgets` (catalog: core + templates)
+- `GET /widgets/templates` (alias: `GET /widget-templates`)
+- `GET /widgets/templates/:id` (alias: `GET /widget-templates/:id`)
+- `POST /widgets/templates` (alias: `POST /widget-templates`)
+- `PATCH /widgets/templates/:id` (alias: `PATCH /widget-templates/:id`)
+- `DELETE /widgets/templates/:id` (alias: `DELETE /widget-templates/:id`)
+- `POST /widgets/templates/:id/preview` (alias: `POST /widget-templates/:id/preview`)
+- `GET /widgets/templates/:id/revisions` (alias: `GET /widget-templates/:id/revisions`)
+- `POST /widgets/templates/:id/revisions/:revisionId/restore`
+
+Template create/update payload (summary):
+
+```json
+{
+  "name": "Homepage Hero A",
+  "description": "Reusable hero stack",
+  "category": "layout",
+  "status": "draft",
+  "blocks": []
+}
+```
+
+---
+
 ## Public site rendering
 
 Publiczne renderowanie stron działa bez `/admin`.

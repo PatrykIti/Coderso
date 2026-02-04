@@ -33,6 +33,11 @@ test("registerWidgetTemplateRoutes wires endpoints", () => {
       "POST /widget-templates",
       "PATCH /widget-templates/:id",
       "DELETE /widget-templates/:id",
+      "GET /widgets/templates",
+      "GET /widgets/templates/:id",
+      "POST /widgets/templates",
+      "PATCH /widgets/templates/:id",
+      "DELETE /widgets/templates/:id",
     ])
   );
 });

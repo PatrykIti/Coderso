@@ -145,6 +145,7 @@ Project Change Log.
 | 148 | 2026-02-04 | Field layout and grouping UX | Admin/UI |
 | 149 | 2026-02-04 | Entry workflow validation UX | Admin/UI |
 | 150 | 2026-02-04 | Entry list bulk actions | Admin/UI |
+| 151 | 2026-02-04 | Widgets catalog API | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

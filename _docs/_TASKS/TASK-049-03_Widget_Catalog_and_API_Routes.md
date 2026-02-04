@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets (API)  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-049-02  
-**Status:** To Do
+**Status:** Done (2026-02-04)
 
 ---
 

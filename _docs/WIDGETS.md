@@ -193,6 +193,19 @@ Flow:
 
 ---
 
+## Widget Catalog API
+
+Admin UI pobiera katalog widgetow z API:
+
+- `GET /widgets` zwraca liste core widgetow + templatek (source: `core` / `template`).
+- Templateki sa zarzadzane przez `GET/POST/PATCH/DELETE /widgets/templates`
+  (alias: `/widget-templates`).
+
+Katalog zawiera podstawowe metadata:
+`id`, `name`, `description`, `category`, `variants`, `status`.
+
+---
+
 ## Widget Library (Preview konfiguracji)
 
 - Drawer szczegolow widgetu pokazuje ten sam zestaw paneli (Wizard/Visual/Advanced),

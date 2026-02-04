@@ -26,6 +26,7 @@ import { registerWebhooksRoutes } from "./webhooksRoutes";
 import { registerEmailSettingsRoutes } from "./emailSettingsRoutes";
 import { registerIntegrationsRoutes } from "./integrationsRoutes";
 import { registerUserSettingsRoutes } from "./userSettingsRoutes";
+import { registerWidgetRoutes } from "./widgetRoutes";
 import { registerWidgetTemplateRoutes } from "./widgetTemplateRoutes";
 import { registerWidgetTemplateCategoryRoutes } from "./widgetTemplateCategoryRoutes";
 import { registerTaxonomyRoutes } from "./taxonomyRoutes";
@@ -64,6 +65,7 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerEmailSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerIntegrationsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerUserSettingsRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
+  registerWidgetRoutes(router, { requirePermission: deps.requirePermission });
   registerWidgetTemplateRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerWidgetTemplateCategoryRoutes(router, {
     requirePermission: deps.requirePermission,
