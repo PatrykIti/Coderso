@@ -228,25 +228,29 @@ export function HeroBlock({
   };
 
   const media = data.media ?? { type: "none" };
-  const showMedia = media.type !== "none";
-  const isSplit = variant !== "centered" && showMedia;
+  const isSplit = variant !== "centered";
   const isMediaLeft = variant === "media-left";
   const hideMediaOnMobile = data.responsive?.hideMediaOnMobile;
   const contentSlots = slots?.content ?? [];
 
-  const alignClass =
-    align === "center"
-      ? "text-center items-center"
-      : align === "right"
-        ? "text-right items-end"
-        : "text-left items-start";
+  const textAlignClass =
+    align === "center" ? "text-center" : align === "right" ? "text-right" : "text-left";
+  const contentPlacementClass =
+    align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : "mr-auto";
 
   const layoutClass = isSplit
-    ? joinClasses(
-        "flex flex-col gap-8 md:items-center",
-        isMediaLeft ? "md:flex-row-reverse" : "md:flex-row"
-      )
+    ? "grid gap-8 md:grid-cols-2 md:items-center"
     : "flex flex-col gap-4";
+  const contentColumnClass = isSplit
+    ? isMediaLeft
+      ? "md:col-start-2"
+      : "md:col-start-1"
+    : undefined;
+  const mediaColumnClass = isSplit
+    ? isMediaLeft
+      ? "md:col-start-1"
+      : "md:col-start-2"
+    : undefined;
 
   return (
     <div
@@ -256,12 +260,14 @@ export function HeroBlock({
       style={backgroundStyle}
     >
       <div className={joinClasses("mx-auto w-full", maxWidthClassMap[maxWidth])}>
-        <div className={joinClasses(layoutClass, alignClass)}>
+        <div className={layoutClass}>
           <div
             className={joinClasses(
               "space-y-4",
-              contentWidthClassMap[contentWidth],
-              isSplit && "md:flex-1"
+              textAlignClass,
+              isSplit ? "w-full" : contentWidthClassMap[contentWidth],
+              !isSplit && contentPlacementClass,
+              contentColumnClass
             )}
           >
             <h1 className="text-3xl font-semibold text-[var(--color-text)]">
@@ -275,7 +281,7 @@ export function HeroBlock({
             ) : null}
             <div
               className={joinClasses(
-                "flex flex-wrap items-center gap-3",
+                "flex w-full flex-wrap items-center gap-3",
                 align === "center" && "justify-center",
                 align === "right" && "justify-end"
               )}
@@ -305,11 +311,11 @@ export function HeroBlock({
               </div>
             ) : null}
           </div>
-          {isSplit && showMedia ? (
+          {isSplit ? (
             <div
               className={joinClasses(
                 "w-full",
-                isSplit && "md:flex-1",
+                mediaColumnClass,
                 hideMediaOnMobile && "hidden md:block"
               )}
             >
@@ -333,7 +339,7 @@ export function HeroBlock({
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs font-medium text-muted-foreground">
-                    Add media URL
+                    {media?.type === "none" ? "Select media type" : "Add media URL"}
                   </div>
                 )}
                 {media?.overlay ? (
