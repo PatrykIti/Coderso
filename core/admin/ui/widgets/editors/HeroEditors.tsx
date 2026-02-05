@@ -26,7 +26,7 @@ const variantOptions = [
   },
   {
     id: "split",
-    label: "Split",
+    label: "Media Right",
     description: "Text left, media right.",
   },
   {

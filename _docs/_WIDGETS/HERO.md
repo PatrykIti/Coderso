@@ -11,7 +11,7 @@ Pierwszy ekran strony z glownym przekazem, CTA i opcjonalnym media.
 ## Variants (v1)
 
 - centered (tytul + opis + CTA, wszystko na srodku)
-- split (tekst po lewej, media po prawej)
+- split / media-right (tekst po lewej, media po prawej)
 - media-left (media po lewej, tekst po prawej)
 
 ## Slots

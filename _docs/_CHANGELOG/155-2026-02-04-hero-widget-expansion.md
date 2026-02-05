@@ -12,4 +12,5 @@ Tasks: TASK-050-05
 - Admin/UI: Hero wizard/visual/advanced editors expanded to match v1 spec.
 - CMS/Widgets: Hero renders `slots.content` under CTA and supports media variants.
 - Admin/UI: Hero media now supports library selection with fallback URL input.
+- Admin/UI: Split variant label clarified as Media Right.
 - Tests: added hero schema + slot rendering coverage.

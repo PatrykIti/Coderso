@@ -89,6 +89,8 @@ test("BlockList renders widget labels", () => {
 
   expect(html).toContain("Hero");
   expect(html).toContain("Newsletter");
+  expect(html).toContain("bg-muted/5");
+  expect(html).toContain("border-t");
 });
 
 test("moveBlockIntoSlot moves block under target slot", () => {

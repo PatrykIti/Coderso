@@ -124,3 +124,14 @@ test("hero shows media placeholder when type selected without url", () => {
 
   expect(html).toContain("Add media URL");
 });
+
+test("hero media-left uses reversed layout", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{ ...heroDefaults, media: { type: "image", src: "/hero.jpg" } }}
+      variant="media-left"
+    />
+  );
+
+  expect(html).toContain("md:flex-row-reverse");
+});

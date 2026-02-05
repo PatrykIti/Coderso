@@ -241,6 +241,13 @@ export function HeroBlock({
         ? "text-right items-end"
         : "text-left items-start";
 
+  const layoutClass = isSplit
+    ? joinClasses(
+        "flex flex-col gap-8 md:items-center",
+        isMediaLeft ? "md:flex-row-reverse" : "md:flex-row"
+      )
+    : "flex flex-col gap-4";
+
   return (
     <div
       className={joinClasses(
@@ -249,13 +256,14 @@ export function HeroBlock({
       style={backgroundStyle}
     >
       <div className={joinClasses("mx-auto w-full", maxWidthClassMap[maxWidth])}>
-        <div
-          className={joinClasses(
-            isSplit ? "grid items-center gap-8 md:grid-cols-2" : "flex flex-col gap-4",
-            alignClass
-          )}
-        >
-          <div className={joinClasses("space-y-4", contentWidthClassMap[contentWidth])}>
+        <div className={joinClasses(layoutClass, alignClass)}>
+          <div
+            className={joinClasses(
+              "space-y-4",
+              contentWidthClassMap[contentWidth],
+              isSplit && "md:flex-1"
+            )}
+          >
             <h1 className="text-3xl font-semibold text-[var(--color-text)]">
               {data.headline}
             </h1>
@@ -301,7 +309,7 @@ export function HeroBlock({
             <div
               className={joinClasses(
                 "w-full",
-                isMediaLeft ? "md:order-first" : "md:order-last",
+                isSplit && "md:flex-1",
                 hideMediaOnMobile && "hidden md:block"
               )}
             >
@@ -356,7 +364,7 @@ export function createHeroWidget(editors: {
     slots: [{ id: "content", label: "Hero Content" }],
     variants: [
       { id: "centered", label: "Centered" },
-      { id: "split", label: "Split" },
+      { id: "split", label: "Media Right" },
       { id: "media-left", label: "Media Left" },
     ],
     schema: heroSchema,

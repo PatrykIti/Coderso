@@ -152,62 +152,64 @@ export function BlockList({
             onDragStart={(event) => handleDragStart(event, index, block.id)}
             onDragEnd={() => resetDragState()}
           >
-            <div className="flex items-start justify-between gap-3">
-              <button
-                type="button"
-                className="flex flex-1 items-start gap-3 text-left"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect(block.id);
-                }}
-              >
-                <span
-                  className="rounded-md border bg-muted/40 p-2 text-muted-foreground"
-                  role="button"
-                  tabIndex={0}
-                  draggable
-                  aria-label={`Reorder ${label}`}
-                  onDragStart={(event) => {
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <button
+                  type="button"
+                  className="flex flex-1 items-start gap-3 text-left"
+                  onClick={(event) => {
                     event.stopPropagation();
-                    handleDragStart(event, index, block.id);
+                    onSelect(block.id);
                   }}
-                  onDragEnd={() => resetDragState()}
                 >
-                  <GripVertical className="h-4 w-4" />
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-foreground">{label}</p>
-                    {block.variant ? (
-                      <Badge variant="outline" className="text-[10px] uppercase">
-                        {block.variant}
-                      </Badge>
-                    ) : null}
-                    {nestedCount > 0 ? (
-                      <Badge variant="secondary" className="text-[10px] uppercase">
-                        Nested {nestedCount}
-                      </Badge>
-                    ) : null}
+                  <span
+                    className="rounded-md border bg-muted/40 p-2 text-muted-foreground"
+                    role="button"
+                    tabIndex={0}
+                    draggable
+                    aria-label={`Reorder ${label}`}
+                    onDragStart={(event) => {
+                      event.stopPropagation();
+                      handleDragStart(event, index, block.id);
+                    }}
+                    onDragEnd={() => resetDragState()}
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-foreground">{label}</p>
+                      {block.variant ? (
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          {block.variant}
+                        </Badge>
+                      ) : null}
+                      {nestedCount > 0 ? (
+                        <Badge variant="secondary" className="text-[10px] uppercase">
+                          Nested {nestedCount}
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {widget?.description ?? "Unknown widget type"}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {widget?.description ?? "Unknown widget type"}
-                  </p>
-                </div>
-              </button>
-              <BlockToolbar
-                onMoveUp={() => onMove(listPath, index, index - 1)}
-                onMoveDown={() => onMove(listPath, index, index + 1)}
-                onDuplicate={() => onDuplicate(block.id)}
-                onDelete={() => onDelete(block.id)}
-                disableMoveUp={index === 0}
-                disableMoveDown={index === blocks.length - 1}
-              />
+                </button>
+                <BlockToolbar
+                  onMoveUp={() => onMove(listPath, index, index - 1)}
+                  onMoveDown={() => onMove(listPath, index, index + 1)}
+                  onDuplicate={() => onDuplicate(block.id)}
+                  onDelete={() => onDelete(block.id)}
+                  disableMoveUp={index === 0}
+                  disableMoveDown={index === blocks.length - 1}
+                />
+              </div>
             </div>
-            <div className="mt-4 rounded-lg border bg-muted/10 p-4">
+            <div className="border-t bg-muted/5">
               <WidgetRenderer block={block} />
             </div>
             {slotDefinitions.length > 0 ? (
-              <div className="mt-4 space-y-4">
+              <div className="border-t p-4 space-y-4">
                 {slotDefinitions.map((slot) => {
                   const slotBlocks = slotMap[slot.id] ?? [];
                   return (
