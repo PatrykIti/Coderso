@@ -6,6 +6,8 @@ import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { WidgetRenderer } from "../../widgets/renderers/widgetRenderer";
 import type { WidgetBlock } from "../../widgets/types";
 import { getWidgetTemplate } from "./widgetTemplateService";
+import { getResolvedTokens } from "../theme/tokenService";
+import { toCssVariables } from "../../ui/theme/tokenCss";
 
 export type WidgetTemplatePreviewDevice = "desktop" | "tablet" | "mobile";
 
@@ -71,11 +73,13 @@ export async function renderWidgetTemplatePreview(
   );
 
   const cssHref = resolveManifestCss();
+  const tokenCss = toCssVariables(await getResolvedTokens());
   const headTags = [
     '<meta charset="utf-8" />',
     '<meta name="viewport" content="width=device-width, initial-scale=1" />',
     `<title>${template.name ?? "Template preview"}</title>`,
     cssHref ? `<link rel="stylesheet" href="${cssHref}" />` : null,
+    `<style>${tokenCss}</style>`,
   ].filter(Boolean);
 
   const html = `<!doctype html><html lang="en"><head>${headTags.join(

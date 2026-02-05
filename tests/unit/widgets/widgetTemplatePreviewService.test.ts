@@ -54,4 +54,5 @@ testIfDb("renderWidgetTemplatePreview returns html for blocks", async () => {
 
   expect(preview.blocksCount).toBe(1);
   expect(preview.html).toContain("Build faster with Nextless");
+  expect(preview.html).toContain("--color-bg");
 });

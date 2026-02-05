@@ -352,7 +352,7 @@ export function WidgetTemplateEditorPage() {
         contentClassName="p-0 overflow-hidden"
       >
         <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col">
-          <div className="border-b bg-card px-6 py-4">
+          <div data-slot="card" className="border-b border-border bg-card px-6 py-4">
             <div className="flex flex-wrap items-start gap-4">
               <div className="flex min-w-[220px] flex-1 flex-col gap-2">
                 <Input
@@ -402,68 +402,71 @@ export function WidgetTemplateEditorPage() {
             ) : null}
           </div>
           <div className="flex flex-1 min-h-0">
-            <aside className="hidden w-72 min-h-0 flex-col border-r bg-card lg:flex">
-            <div className="border-b p-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-9 text-xs"
-                  placeholder="Search widgets..."
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                />
-              </div>
-            </div>
-            <ScrollArea className="flex-1 min-h-0">
-              <div className="p-4">
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Category
-                  </p>
-                  <Select
-                    value={activeCategory}
-                    onValueChange={(value) =>
-                      setActiveCategory(value as WidgetCategoryId | "all")
-                    }
-                  >
-                    <SelectTrigger className="text-xs">
-                      <SelectValue placeholder="All widgets" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All widgets</SelectItem>
-                      {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map(
-                        (cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {widgetCategoryLabels[cat]}
-                          </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
+            <aside
+              data-slot="card"
+              className="hidden w-72 min-h-0 flex-col border-r border-border bg-card lg:flex"
+            >
+              <div className="border-b border-border p-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9 text-xs"
+                    placeholder="Search widgets..."
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
                 </div>
-                <div className="mt-6">
-                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Draggable items
-                  </p>
+              </div>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-4">
                   <div className="space-y-2">
-                    {filteredWidgets.map((widget) => (
-                      <WidgetCard
-                        key={widget.type}
-                        name={widget.title}
-                        categoryLabel={widgetCategoryLabels[widget.category]}
-                        variant="compact"
-                        draggable
-                        onDragStart={(event) => {
-                          event.dataTransfer.setData("widget-type", widget.type);
-                          event.dataTransfer.effectAllowed = "copy";
-                        }}
-                        onSelect={() => handleAddBlock(widget.type)}
-                      />
-                    ))}
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Category
+                    </p>
+                    <Select
+                      value={activeCategory}
+                      onValueChange={(value) =>
+                        setActiveCategory(value as WidgetCategoryId | "all")
+                      }
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="All widgets" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All widgets</SelectItem>
+                        {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map(
+                          (cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {widgetCategoryLabels[cat]}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="mt-6">
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Draggable items
+                    </p>
+                    <div className="space-y-2">
+                      {filteredWidgets.map((widget) => (
+                        <WidgetCard
+                          key={widget.type}
+                          name={widget.title}
+                          categoryLabel={widgetCategoryLabels[widget.category]}
+                          variant="compact"
+                          draggable
+                          onDragStart={(event) => {
+                            event.dataTransfer.setData("widget-type", widget.type);
+                            event.dataTransfer.effectAllowed = "copy";
+                          }}
+                          onSelect={() => handleAddBlock(widget.type)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </ScrollArea>
+              </ScrollArea>
             </aside>
 
             <main
@@ -536,32 +539,35 @@ export function WidgetTemplateEditorPage() {
             )}
             </main>
 
-            <aside className="hidden w-80 min-h-0 flex-col border-l bg-card lg:flex">
-            <div className="border-b px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Details
-            </div>
-            <ScrollArea className="flex-1 min-h-0">
-              <div className="p-6">
-                <BlockSettings
-                  block={selectedBlock}
-                  widget={selectedWidget}
-                  onChange={(next) =>
-                    setBlocks((prev) => updateBlockById(prev, next.id, () => next))
-                  }
-                />
+            <aside
+              data-slot="card"
+              className="hidden w-80 min-h-0 flex-col border-l border-border bg-card lg:flex"
+            >
+              <div className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Details
               </div>
-            </ScrollArea>
-            <div className="border-t bg-muted/20 p-4">
-              <Button
-                variant="secondary"
-                className="w-full gap-2"
-                onClick={() => void handleOpenRevisions()}
-                disabled={isNew}
-              >
-                <History className="h-4 w-4" />
-                Revision History
-              </Button>
-            </div>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-6">
+                  <BlockSettings
+                    block={selectedBlock}
+                    widget={selectedWidget}
+                    onChange={(next) =>
+                      setBlocks((prev) => updateBlockById(prev, next.id, () => next))
+                    }
+                  />
+                </div>
+              </ScrollArea>
+              <div className="border-t border-border bg-muted/20 p-4">
+                <Button
+                  variant="secondary"
+                  className="w-full gap-2"
+                  onClick={() => void handleOpenRevisions()}
+                  disabled={isNew}
+                >
+                  <History className="h-4 w-4" />
+                  Revision History
+                </Button>
+              </div>
             </aside>
           </div>
         </div>
