@@ -239,18 +239,11 @@ export function HeroBlock({
     align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : "mr-auto";
 
   const layoutClass = isSplit
-    ? "grid gap-8 md:grid-cols-2 md:items-center"
+    ? joinClasses(
+        "flex flex-col gap-8 md:items-center",
+        isMediaLeft ? "md:flex-row-reverse" : "md:flex-row"
+      )
     : "flex flex-col gap-4";
-  const contentColumnClass = isSplit
-    ? isMediaLeft
-      ? "md:col-start-2"
-      : "md:col-start-1"
-    : undefined;
-  const mediaColumnClass = isSplit
-    ? isMediaLeft
-      ? "md:col-start-1"
-      : "md:col-start-2"
-    : undefined;
 
   return (
     <div
@@ -265,9 +258,8 @@ export function HeroBlock({
             className={joinClasses(
               "space-y-4",
               textAlignClass,
-              isSplit ? "w-full" : contentWidthClassMap[contentWidth],
+              isSplit ? "w-full md:flex-1" : contentWidthClassMap[contentWidth],
               !isSplit && contentPlacementClass,
-              contentColumnClass
             )}
           >
             <h1 className="text-3xl font-semibold text-[var(--color-text)]">
@@ -315,7 +307,7 @@ export function HeroBlock({
             <div
               className={joinClasses(
                 "w-full",
-                mediaColumnClass,
+                "md:flex-1",
                 hideMediaOnMobile && "hidden md:block"
               )}
             >

@@ -133,7 +133,7 @@ test("hero split shows placeholder when media type is none", () => {
   expect(html).toContain("Select media type");
 });
 
-test("hero media-left places content in right column", () => {
+test("hero media-left uses reversed layout", () => {
   const html = renderToString(
     <HeroBlock
       data={{ ...heroDefaults, media: { type: "image", src: "/hero.jpg" } }}
@@ -141,10 +141,5 @@ test("hero media-left places content in right column", () => {
     />
   );
 
-  expect(html).toContain("md:grid-cols-2");
-  const colStartRight = html.indexOf("md:col-start-2");
-  const colStartLeft = html.indexOf("md:col-start-1");
-  expect(colStartRight).toBeGreaterThan(-1);
-  expect(colStartLeft).toBeGreaterThan(-1);
-  expect(colStartRight).toBeLessThan(colStartLeft);
+  expect(html).toContain("md:flex-row-reverse");
 });
