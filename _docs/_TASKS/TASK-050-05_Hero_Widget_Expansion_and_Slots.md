@@ -98,3 +98,12 @@ Update `HeroBlock` to:
 - `_docs/_WIDGETS/HERO.md` (final field list + slot usage)
 - `_docs/WIDGETS.md` (slot support overview)
 - `_docs/PAGE_MODEL.md` (slot example snippet)
+
+---
+
+## Follow-up Sub-Tasks (Post-Done)
+
+- `TASK-050-05-01_Hero_Widget_Bugfixes_and_UX_Hardening.md`
+  - Stabilize Wizard media flow and clarify slot/CTA UX copy.
+- `TASK-050-05-02_Hero_Widget_Visual_Rebuild_and_Advanced_Cleanup.md`
+  - Rebuild Hero Visual IA, add working presets modal, and clean Advanced mode scope.

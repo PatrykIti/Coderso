@@ -24,6 +24,8 @@ Hero, Navigation, and Footer (wizard/visual/advanced).
 - **TASK-050-03:** Widget Nesting (Insert Into Existing Block)
 - **TASK-050-04:** Slot System Core (block model + insert UI + rendering)
 - **TASK-050-05:** Hero Widget Expansion + Slots
+- **TASK-050-05-01:** Hero Widget Bugfixes and UX Hardening
+- **TASK-050-05-02:** Hero Widget Visual Rebuild and Advanced Cleanup
 - **TASK-050-06:** Navigation Widget Expansion + Slots
 - **TASK-050-07:** Footer Widget Expansion + Slots
 - **TASK-050-08:** Timeline Widget Expansion
