@@ -58,9 +58,18 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
                 ? slotMap[slot.id].length
                 : 0;
               return (
-                <div key={slot.id} className="flex items-center justify-between">
-                  <span>{slot.label}</span>
-                  <span>{count}</span>
+                <div key={slot.id} className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5">
+                  <div className="flex items-center justify-between">
+                    <span>{slot.label} slot</span>
+                    <span>
+                      {count} {count === 1 ? "item" : "items"}
+                    </span>
+                  </div>
+                  {count === 0 ? (
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      Slot is available and currently empty.
+                    </div>
+                  ) : null}
                 </div>
               );
             })}

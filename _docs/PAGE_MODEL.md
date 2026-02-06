@@ -75,7 +75,15 @@ Dozwolone wartosci:
     "headline": "Budujemy szybciej",
     "subhead": "Oszczedzaj czas",
     "primaryCta": { "label": "Umow konsultacje", "href": "/kontakt" },
-    "media": { "type": "image", "src": "/img/hero.jpg", "alt": "Dom" }
+    "media": { "type": "image", "src": "/img/hero.jpg", "alt": "Dom" },
+    "style": {
+      "headlineSize": "4xl",
+      "textColor": "#0f172a",
+      "borderColor": "#d1d5db",
+      "borderWidth": "1",
+      "primaryButtonBg": "#2563eb",
+      "primaryButtonText": "#ffffff"
+    }
   },
   "layout": {
     "container": "default",

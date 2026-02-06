@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 24 tasks
+- **To Do:** 22 tasks
 - **In Progress:** 0
-- **Done:** 217 tasks
+- **Done:** 219 tasks
 
 ---
 
@@ -56,8 +56,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..11 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
-| TASK-050-05-01 | Hero Widget Bugfixes and UX Hardening | High | Medium | Wizard media stability + centered media clarity + slot copy |
-| TASK-050-05-02 | Hero Widget Visual Rebuild and Advanced Cleanup | High | Large | Visual-first IA + presets modal + advanced scope cleanup |
 | TASK-050-06 | Navigation Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
 | TASK-050-07 | Footer Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
 | TASK-050-08 | Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
@@ -88,6 +86,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-05-02 | Hero Widget Visual Rebuild and Advanced Cleanup | High | Large | Visual-first IA + presets modal + advanced scope cleanup |
+| TASK-050-05-01 | Hero Widget Bugfixes and UX Hardening | High | Medium | Wizard media stability + centered media clarity + slot copy |
 | TASK-048-06 | Content Modeling Docs & Examples | Medium | Medium | Cookbook + docs |
 | TASK-048-05 | Content Editor Help & Tooltips | Low | Small | UI guidance |
 | TASK-048-07 | Field Layout & Grouping UX | Medium | Medium | Sections + display |

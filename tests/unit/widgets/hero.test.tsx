@@ -30,13 +30,14 @@ test("hero spacing falls back to defaults when spacing is empty", () => {
 
 test("hero validator rejects invalid variant", () => {
   clearWidgets();
-  registerWidget(
-    createHeroWidget({
-      wizard: StubEditor,
-      visual: StubEditor,
-      advanced: StubEditor,
-    })
-  );
+  const widget = createHeroWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  registerWidget(widget);
+
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
 
   expect(() =>
     normalizeWidgetBlock({
@@ -142,4 +143,48 @@ test("hero media-left uses reversed layout", () => {
   );
 
   expect(html).toContain("md:flex-row-reverse");
+});
+
+test("hero centered uses selected image as background", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{ ...heroDefaults, media: { type: "image", src: "/hero.jpg" } }}
+      variant="centered"
+    />
+  );
+
+  expect(html).toContain("background-image:url(/hero.jpg)");
+});
+
+test("hero applies style tokens to runtime output", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{
+        ...heroDefaults,
+        media: { type: "image", src: "/hero.jpg" },
+        style: {
+          headlineSize: "5xl",
+          textColor: "#112233",
+          borderColor: "#445566",
+          borderWidth: "2",
+          borderRadius: "xl",
+          mediaRadius: "lg",
+          mediaBorderWidth: "3",
+          primaryButtonBg: "#224466",
+          primaryButtonText: "#ffffff",
+          secondaryButtonBorder: "#123456",
+        },
+      }}
+      variant="split"
+    />
+  );
+
+  expect(html).toContain("text-5xl");
+  expect(html).toContain("rounded-xl");
+  expect(html).toContain("rounded-lg");
+  expect(html).toContain("color:#112233");
+  expect(html).toContain("border-width:2px");
+  expect(html).toContain("border-width:3px");
+  expect(html).toContain("border-color:#445566");
+  expect(html).toContain("background:#224466");
 });

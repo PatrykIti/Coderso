@@ -46,10 +46,19 @@ Kazdy widget musi wspierac 3 tryby konfiguracji:
 
 2) Visual (warianty + podglad)
 - Uzytkownik wybiera wariant na podstawie podgladu.
-- Pokazujemy tylko pola zwiazane z wybranym wariantem.
+- To jest glowny tryb codziennej edycji:
+  - content i CTA
+  - media
+  - typography
+  - colors/borders/background
+- Widget moze przejac kontrole nad selektorem wariantu (bez generycznego duplikatu)
+  przez `editorCapabilities.visualOwnsVariantSelection = true`.
 
 3) Advanced
-- Pelna kontrola: spacing, marginesy, alignment, layout, responsywnosc.
+- Tryb ekspercki/techniczny:
+  - spacing, marginesy, alignment, layout, responsywnosc
+  - surowe pola techniczne
+  - bez duplikowania podstawowych pol content/style z Visual.
 - Tryb zaawansowany dostepny zawsze po wstepnej konfiguracji.
 
 Zasady:
@@ -135,6 +144,9 @@ type WidgetDefinition<T = Record<string, unknown>> = {
     wizard: React.ComponentType<WidgetEditorProps<T>>;
     visual: React.ComponentType<WidgetEditorProps<T>>;
     advanced: React.ComponentType<WidgetEditorProps<T>>;
+  };
+  editorCapabilities?: {
+    visualOwnsVariantSelection?: boolean;
   };
   render: React.ComponentType<{
     data: T;
@@ -227,6 +239,8 @@ Katalog zawiera podstawowe metadata:
 - Ulubione widgety sa zapisywane per uzytkownik w `user_settings` pod kluczem
   `widgets.favorites`.
 - Limit: max 50 pozycji.
+- Hero variant presets sa zapisywane per uzytkownik w `user_settings` pod kluczem
+  `widgets.hero.presets` (limit: 24).
   dopiero po wstawieniu widgetu do strony lub template.
 
 ---

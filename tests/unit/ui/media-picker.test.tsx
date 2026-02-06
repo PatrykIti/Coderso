@@ -10,3 +10,11 @@ test("MediaPicker renders browse button", () => {
 
   expect(html).toContain("Browse media");
 });
+
+test("MediaPicker shows loading state for selected media until assets are resolved", () => {
+  const html = renderToString(
+    <MediaPicker value="asset-1" onChange={() => undefined} />
+  );
+
+  expect(html).toContain("Loading selected media...");
+});

@@ -27,6 +27,10 @@ export type WidgetEditorProps<T> = {
   onVariantChange?: (next: string) => void;
 };
 
+export type WidgetEditorCapabilities = {
+  visualOwnsVariantSelection?: boolean;
+};
+
 export type WidgetDefinition<T = Record<string, unknown>> = {
   type: string;
   title: string;
@@ -42,6 +46,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     visual: ComponentType<WidgetEditorProps<T>>;
     advanced: ComponentType<WidgetEditorProps<T>>;
   };
+  editorCapabilities?: WidgetEditorCapabilities;
   render: ComponentType<{
     data: T;
     variant: string;

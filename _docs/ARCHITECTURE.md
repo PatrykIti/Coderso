@@ -471,9 +471,10 @@ zbudowac pelnoprawna, zaawansowana strone (np. typu mabudo.pl):
 
 Wymagany model konfiguracji (dla wszystkich widgetow, pluginow i addonow):
 - Wizard: kreator pytan, wybor wariantu i szybka konfiguracja.
-- Visual: wybieranie wariantu na podstawie podgladu blokow,
-  z polami tylko dla danego wariantu.
-- Advanced: pelna konfiguracja, spacing, marginesy, opcje layoutu.
+- Visual: glowny tryb edycji content/style, warianty + sekcje wizualne;
+  widget moze przejac wariant selector (`visualOwnsVariantSelection`).
+- Advanced: tryb techniczny (spacing/layout/responsive + pola eksperckie),
+  bez duplikowania podstawowych pol z Visual.
 - Zawsze mozna przejsc do Advanced po wstepnej konfiguracji.
 
 Szczegoly: `WIDGETS.md`.

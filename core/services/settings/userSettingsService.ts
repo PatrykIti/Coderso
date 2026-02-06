@@ -3,10 +3,22 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { userSettings } from "../../db/schema";
 
+const heroVariants = new Set(["centered", "split", "media-left"]);
+const heroPresetLimit = 24;
+const heroPresetNameLimit = 80;
+
+type HeroPresetSettingValue = {
+  name: string;
+  variant: "centered" | "split" | "media-left";
+  data: Record<string, unknown>;
+  updatedAt: string;
+};
+
 export type UserSettingValueMap = {
   "pages.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
   "widgets.favorites": string[];
+  "widgets.hero.presets": HeroPresetSettingValue[];
 };
 
 export type UserSettingKey = keyof UserSettingValueMap;
@@ -15,6 +27,7 @@ const DEFAULT_USER_SETTINGS: UserSettingValueMap = {
   "pages.openAfterCreate": true,
   "media.openAfterUpload": false,
   "widgets.favorites": [],
+  "widgets.hero.presets": [],
 };
 
 const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_USER_SETTINGS));
@@ -61,6 +74,52 @@ function validateUserSettingValue(
     }
     return unique;
   }
+  if (key === "widgets.hero.presets") {
+    if (!Array.isArray(value)) {
+      throw new Error("user_settings_value_invalid");
+    }
+    if (value.length > heroPresetLimit) {
+      throw new Error("user_settings_value_invalid");
+    }
+    const byName = new Map<string, HeroPresetSettingValue>();
+    for (const entry of value) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        throw new Error("user_settings_value_invalid");
+      }
+      const candidate = entry as Partial<HeroPresetSettingValue>;
+      if (typeof candidate.name !== "string") {
+        throw new Error("user_settings_value_invalid");
+      }
+      const name = candidate.name.trim();
+      if (!name || name.length > heroPresetNameLimit) {
+        throw new Error("user_settings_value_invalid");
+      }
+      if (
+        typeof candidate.variant !== "string" ||
+        !heroVariants.has(candidate.variant)
+      ) {
+        throw new Error("user_settings_value_invalid");
+      }
+      if (
+        !candidate.data ||
+        typeof candidate.data !== "object" ||
+        Array.isArray(candidate.data)
+      ) {
+        throw new Error("user_settings_value_invalid");
+      }
+      const updatedAt =
+        typeof candidate.updatedAt === "string" && candidate.updatedAt.trim()
+          ? candidate.updatedAt
+          : new Date(0).toISOString();
+      byName.set(name.toLowerCase(), {
+        name,
+        variant: candidate.variant as HeroPresetSettingValue["variant"],
+        data: candidate.data,
+        updatedAt,
+      });
+    }
+    return Array.from(byName.values()).slice(0, heroPresetLimit);
+  }
 
   throw new Error("user_settings_value_invalid");
 }
@@ -85,6 +144,9 @@ export async function listUserSettings(userId: string) {
         merged[key] = Array.isArray(row.value)
           ? (row.value as string[])
           : [];
+        break;
+      case "widgets.hero.presets":
+        merged[key] = validateUserSettingValue(key, row.value);
         break;
     }
   }

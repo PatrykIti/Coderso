@@ -70,6 +70,9 @@ export function MediaPicker({
     () => items.filter((item) => selectedIds.includes(item.id)),
     [items, selectedIds]
   );
+  const hasSelection = selectedIds.length > 0;
+  const isResolvingSelection =
+    hasSelection && selectedItems.length === 0 && (isLoading || !hasLoaded);
 
   const canAddMore =
     !multiple || !maxItems || selectedIds.length < maxItems;
@@ -202,9 +205,17 @@ export function MediaPicker({
         </Dialog>
       </div>
 
-      {selectedItems.length === 0 ? (
+      {!hasSelection ? (
         <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center text-xs text-muted-foreground">
           No media selected yet.
+        </div>
+      ) : isResolvingSelection ? (
+        <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center text-xs text-muted-foreground">
+          Loading selected media...
+        </div>
+      ) : selectedItems.length === 0 ? (
+        <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-6 text-center text-xs text-muted-foreground">
+          Selected media is unavailable.
         </div>
       ) : (
         <div className="space-y-3">

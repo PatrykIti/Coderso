@@ -1,9 +1,17 @@
 import { apiRequest } from "./apiClient";
 
+export type HeroPresetSetting = {
+  name: string;
+  variant: "centered" | "split" | "media-left";
+  data: Record<string, unknown>;
+  updatedAt: string;
+};
+
 export type UserSettings = {
   "pages.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
   "widgets.favorites": string[];
+  "widgets.hero.presets": HeroPresetSetting[];
 };
 
 export type UserSettingResponse = {
@@ -15,18 +23,18 @@ export async function getUserSettings() {
   return apiRequest<UserSettings>("/user-settings", { method: "GET" });
 }
 
-export async function getUserSetting(key: keyof UserSettings) {
-  return apiRequest<UserSettingResponse>(
+export async function getUserSetting<K extends keyof UserSettings>(key: K) {
+  return apiRequest<{ key: K; value: UserSettings[K] }>(
     `/user-settings/${encodeURIComponent(key)}`,
     { method: "GET" }
   );
 }
 
-export async function setUserSetting(
-  key: keyof UserSettings,
-  value: UserSettings[keyof UserSettings]
+export async function setUserSetting<K extends keyof UserSettings>(
+  key: K,
+  value: UserSettings[K]
 ) {
-  return apiRequest<UserSettingResponse>(
+  return apiRequest<{ key: K; value: UserSettings[K] }>(
     `/user-settings/${encodeURIComponent(key)}`,
     {
       method: "PATCH",

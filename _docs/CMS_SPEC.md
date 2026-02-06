@@ -188,7 +188,10 @@ Widoki:
 - Settings
 - Plugins store
 
-UI ma byc spojne z modelem Wizard/Visual/Advanced dla widgetow.
+UI ma byc spojne z modelem Wizard/Visual/Advanced dla widgetow:
+- Wizard: minimal onboarding i bezpieczne defaulty.
+- Visual: glowny tryb content + style editing.
+- Advanced: techniczne ustawienia layout/responsive bez duplikacji pol Visual.
 Admin UI bazuje na shadcn/ui + Tailwind v4.
 
 ---
