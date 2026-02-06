@@ -33,7 +33,13 @@ import { MediaPicker } from "@/ui/media/MediaPicker";
 import type { HeroData } from "../../../../widgets/core/hero";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 
-const variantOptions = [
+type HeroVariantId = "centered" | "split" | "media-left";
+
+const variantOptions: Array<{
+  id: HeroVariantId;
+  label: string;
+  description: string;
+}> = [
   {
     id: "centered",
     label: "Centered",
@@ -107,7 +113,6 @@ type HeroSpacing = NonNullable<HeroData["spacing"]>["paddingTop"];
 type HeroMediaType = NonNullable<HeroData["media"]>["type"];
 type HeroMediaSource = NonNullable<HeroData["media"]>["source"];
 type CtaMode = (typeof ctaOptions)[number]["id"];
-type HeroVariantId = (typeof variantOptions)[number]["id"];
 type HeroStyle = NonNullable<HeroData["style"]>;
 type HeroHeadlineSize = NonNullable<HeroStyle["headlineSize"]>;
 type HeroSubheadSize = NonNullable<HeroStyle["subheadSize"]>;

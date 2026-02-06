@@ -38,21 +38,21 @@ function assertUserSettingKey(key: string): asserts key is UserSettingKey {
   }
 }
 
-function validateUserSettingValue(
-  key: UserSettingKey,
+function validateUserSettingValue<K extends UserSettingKey>(
+  key: K,
   value: unknown
-): UserSettingValueMap[UserSettingKey] {
+): UserSettingValueMap[K] {
   if (key === "pages.openAfterCreate") {
     if (typeof value !== "boolean") {
       throw new Error("user_settings_value_invalid");
     }
-    return value;
+    return value as UserSettingValueMap[K];
   }
   if (key === "media.openAfterUpload") {
     if (typeof value !== "boolean") {
       throw new Error("user_settings_value_invalid");
     }
-    return value;
+    return value as UserSettingValueMap[K];
   }
   if (key === "widgets.favorites") {
     if (!Array.isArray(value)) {
@@ -72,7 +72,7 @@ function validateUserSettingValue(
     if (unique.length > 50) {
       throw new Error("user_settings_value_invalid");
     }
-    return unique;
+    return unique as UserSettingValueMap[K];
   }
   if (key === "widgets.hero.presets") {
     if (!Array.isArray(value)) {
@@ -118,7 +118,10 @@ function validateUserSettingValue(
         updatedAt,
       });
     }
-    return Array.from(byName.values()).slice(0, heroPresetLimit);
+    return Array.from(byName.values()).slice(
+      0,
+      heroPresetLimit
+    ) as UserSettingValueMap[K];
   }
 
   throw new Error("user_settings_value_invalid");
@@ -146,7 +149,10 @@ export async function listUserSettings(userId: string) {
           : [];
         break;
       case "widgets.hero.presets":
-        merged[key] = validateUserSettingValue(key, row.value);
+        merged["widgets.hero.presets"] = validateUserSettingValue(
+          "widgets.hero.presets",
+          row.value
+        );
         break;
     }
   }
