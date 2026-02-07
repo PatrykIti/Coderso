@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronRight, History, Search, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
+import { listMedia } from "@/services/mediaClient";
 import {
   previewWidgetTemplate,
   type WidgetTemplatePreviewResponse,
@@ -40,6 +41,7 @@ import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 import {
   appendSlotBlock,
   createBlock,
@@ -58,7 +60,12 @@ import {
   resolveAdminHref,
   stripAdminBasePath,
 } from "@/utils/adminPaths";
-import { pageLayoutTokens, type PageMaxWidthToken } from "../../../services/pages/layoutSettings";
+import {
+  pageLayoutTokens,
+  type PageBackgroundMediaSource,
+  type PageBackgroundMediaType,
+  type PageMaxWidthToken,
+} from "../../../services/pages/layoutSettings";
 import {
   normalizeWidgetTemplateSettings,
   type WidgetTemplateSettings,
@@ -79,6 +86,18 @@ const widgetCategoryLabels: Record<WidgetCategoryId, string> = {
 
 const NO_CATEGORIES_VALUE = "no-categories";
 const MAX_WIDTH_DEFAULT_VALUE = "max-width-default";
+const PAGE_BACKGROUND_NONE_VALUE = "none";
+
+const backgroundMediaTypeLabelMap: Record<PageBackgroundMediaType, string> = {
+  none: "No background media",
+  image: "Image",
+  video: "Video",
+};
+
+const backgroundMediaSourceLabelMap: Record<PageBackgroundMediaSource, string> = {
+  library: "Media library",
+  external: "External URL",
+};
 
 const spacingTokenToListSpaceClassMap: Record<SpacingToken, string> = {
   none: "space-y-0",
@@ -174,6 +193,10 @@ export function WidgetTemplateEditorPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [backgroundLookupError, setBackgroundLookupError] = useState<string | null>(
+    null
+  );
+  const backgroundLookupRequestIdRef = useRef(0);
   const [revisionsOpen, setRevisionsOpen] = useState(false);
   const [revisions, setRevisions] = useState<WidgetTemplateRevision[]>([]);
   const [revisionsError, setRevisionsError] = useState<string | null>(null);
@@ -196,13 +219,30 @@ export function WidgetTemplateEditorPage() {
       ? pageMaxWidthClassMap[templateLayout.wrapper.maxWidth]
       : undefined
   );
+  const wrapperBackgroundMedia = templateLayout.wrapper.background.media;
+  const wrapperBackgroundImage =
+    wrapperBackgroundMedia.type === "image"
+      ? wrapperBackgroundMedia.src ??
+        templateLayout.wrapper.background.image ??
+        null
+      : null;
+  const wrapperBackgroundVideo =
+    wrapperBackgroundMedia.type === "video"
+      ? wrapperBackgroundMedia.src
+      : null;
+  const backgroundMediaAccept =
+    wrapperBackgroundMedia.type === "image"
+      ? ["image/*"]
+      : wrapperBackgroundMedia.type === "video"
+        ? ["video/*"]
+        : undefined;
   const wrapperBackgroundStyle = {
     backgroundColor: templateLayout.wrapper.background.color,
-    backgroundImage: templateLayout.wrapper.background.image
-      ? `url(${templateLayout.wrapper.background.image})`
+    backgroundImage: wrapperBackgroundImage
+      ? `url(${wrapperBackgroundImage})`
       : undefined,
-    backgroundSize: templateLayout.wrapper.background.image ? "cover" : undefined,
-    backgroundPosition: templateLayout.wrapper.background.image ? "center" : undefined,
+    backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
+    backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
   };
   const selectedWidget = useMemo(() => {
     if (!selectedBlock) return undefined;
@@ -221,6 +261,151 @@ export function WidgetTemplateEditorPage() {
       return matchesQuery && matchesCategory;
     });
   }, [widgets, query, activeCategory]);
+
+  const setTemplateWrapperBackground = useCallback(
+    (
+      updater: (
+        background: WidgetTemplateSettings["layout"]["wrapper"]["background"]
+      ) => WidgetTemplateSettings["layout"]["wrapper"]["background"]
+    ) => {
+      setTemplateSettings((prev) => ({
+        ...prev,
+        layout: {
+          ...prev.layout,
+          wrapper: {
+            ...prev.layout.wrapper,
+            background: updater(prev.layout.wrapper.background),
+          },
+        },
+      }));
+    },
+    []
+  );
+
+  const handleBackgroundMediaTypeChange = useCallback(
+    (next: string) => {
+      const nextType = next as PageBackgroundMediaType;
+      backgroundLookupRequestIdRef.current += 1;
+      setBackgroundLookupError(null);
+      setTemplateWrapperBackground((background) => {
+        if (nextType === PAGE_BACKGROUND_NONE_VALUE) {
+          return {
+            ...background,
+            image: null,
+            media: {
+              type: nextType,
+              source: "external",
+              src: null,
+            },
+          };
+        }
+        return {
+          ...background,
+          image: null,
+          media: {
+            type: nextType,
+            source: background.media.source,
+            src: null,
+          },
+        };
+      });
+    },
+    [setTemplateWrapperBackground]
+  );
+
+  const handleBackgroundMediaSourceChange = useCallback(
+    (next: string) => {
+      const nextSource = next as PageBackgroundMediaSource;
+      backgroundLookupRequestIdRef.current += 1;
+      setBackgroundLookupError(null);
+      setTemplateWrapperBackground((background) => ({
+        ...background,
+        image: background.media.type === "image" ? null : background.image,
+        media: {
+          type: background.media.type,
+          source: nextSource,
+          src: null,
+        },
+      }));
+    },
+    [setTemplateWrapperBackground]
+  );
+
+  const handleBackgroundMediaUrlChange = useCallback(
+    (nextValue: string) => {
+      const normalized = nextValue.trim().length > 0 ? nextValue : null;
+      setBackgroundLookupError(null);
+      setTemplateWrapperBackground((background) => ({
+        ...background,
+        image: background.media.type === "image" ? normalized : null,
+        media: {
+          type: background.media.type,
+          source: "external",
+          src: normalized,
+        },
+      }));
+    },
+    [setTemplateWrapperBackground]
+  );
+
+  const handleBackgroundMediaAssetChange = useCallback(
+    async (value: unknown) => {
+      const assetId = typeof value === "string" ? value : null;
+      backgroundLookupRequestIdRef.current += 1;
+      const requestId = backgroundLookupRequestIdRef.current;
+      setBackgroundLookupError(null);
+      if (!assetId) {
+        setTemplateWrapperBackground((background) => ({
+          ...background,
+          image: background.media.type === "image" ? null : background.image,
+          media: {
+            type: background.media.type,
+            source: "library",
+            src: null,
+          },
+        }));
+        return;
+      }
+
+      setTemplateWrapperBackground((background) => ({
+        ...background,
+        media: {
+          type: background.media.type,
+          source: "library",
+          assetId,
+          src: background.media.src,
+        },
+      }));
+
+      try {
+        const items = await listMedia();
+        if (requestId !== backgroundLookupRequestIdRef.current) return;
+        const match = items.find((item) => item.id === assetId);
+        if (!match) {
+          setBackgroundLookupError("Selected media could not be resolved.");
+          return;
+        }
+        setTemplateWrapperBackground((background) => ({
+          ...background,
+          image: background.media.type === "image" ? match.url : null,
+          media: {
+            type: background.media.type,
+            source: "library",
+            assetId,
+            src: match.url,
+          },
+        }));
+      } catch (err) {
+        if (requestId !== backgroundLookupRequestIdRef.current) return;
+        if (isApiClientError(err)) {
+          setBackgroundLookupError(err.message);
+        } else {
+          setBackgroundLookupError("Failed to resolve selected media.");
+        }
+      }
+    },
+    [setTemplateWrapperBackground]
+  );
 
   const handleAddBlock = (type: string) => {
     const next = createBlock(type);
@@ -606,12 +791,28 @@ export function WidgetTemplateEditorPage() {
             ) : (
               <div
                 className={joinClasses(
-                  "w-full rounded-xl border border-border/40",
+                  "relative w-full overflow-hidden rounded-xl border border-border/40",
                   wrapperPaddingClass
                 )}
                 style={wrapperBackgroundStyle}
               >
-                <div className={wrapperContainerClass}>
+                {wrapperBackgroundVideo ? (
+                  <video
+                    className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                    src={wrapperBackgroundVideo}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    aria-hidden="true"
+                  />
+                ) : null}
+                <div
+                  className={joinClasses(
+                    wrapperContainerClass,
+                    wrapperBackgroundVideo ? "relative z-[1]" : undefined
+                  )}
+                >
                   <BlockList
                     blocks={blocks}
                     className={
@@ -694,9 +895,11 @@ export function WidgetTemplateEditorPage() {
                   type="button"
                   size="sm"
                   variant="ghost"
-                  onClick={() =>
-                    setTemplateSettings(normalizeWidgetTemplateSettings(undefined))
-                  }
+                  onClick={() => {
+                    backgroundLookupRequestIdRef.current += 1;
+                    setBackgroundLookupError(null);
+                    setTemplateSettings(normalizeWidgetTemplateSettings(undefined));
+                  }}
                 >
                   Reset defaults
                 </Button>
@@ -921,32 +1124,87 @@ export function WidgetTemplateEditorPage() {
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Background image URL
-                </label>
-                <Input
-                  value={templateLayout.wrapper.background.image ?? ""}
-                  onChange={(event) =>
-                    setTemplateSettings((prev) => ({
-                      ...prev,
-                      layout: {
-                        ...prev.layout,
-                        wrapper: {
-                          ...prev.layout.wrapper,
-                          background: {
-                            ...prev.layout.wrapper.background,
-                            image: event.target.value.trim()
-                              ? event.target.value
-                              : null,
-                          },
-                        },
-                      },
-                    }))
-                  }
-                  placeholder="https://cdn.example.com/footer-bg.jpg"
-                />
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Background media type
+                  </label>
+                  <Select
+                    value={wrapperBackgroundMedia.type}
+                    onValueChange={handleBackgroundMediaTypeChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select media type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pageLayoutTokens.backgroundMediaTypes.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {backgroundMediaTypeLabelMap[token]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {wrapperBackgroundMedia.type !== PAGE_BACKGROUND_NONE_VALUE ? (
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Background media source
+                    </label>
+                    <Select
+                      value={wrapperBackgroundMedia.source}
+                      onValueChange={handleBackgroundMediaSourceChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {pageLayoutTokens.backgroundMediaSources.map((token) => (
+                          <SelectItem key={token} value={token}>
+                            {backgroundMediaSourceLabelMap[token]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
               </div>
+              {wrapperBackgroundMedia.type !== PAGE_BACKGROUND_NONE_VALUE ? (
+                <div className="space-y-2">
+                  {wrapperBackgroundMedia.source === "library" ? (
+                    <>
+                      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Background media library
+                      </label>
+                      <MediaPicker
+                        value={wrapperBackgroundMedia.assetId ?? null}
+                        onChange={(value) => void handleBackgroundMediaAssetChange(value)}
+                        multiple={false}
+                        accept={backgroundMediaAccept}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Background media URL
+                      </label>
+                      <Input
+                        value={wrapperBackgroundMedia.src ?? ""}
+                        onChange={(event) =>
+                          handleBackgroundMediaUrlChange(event.target.value)
+                        }
+                        placeholder={
+                          wrapperBackgroundMedia.type === "video"
+                            ? "https://cdn.example.com/background.mp4"
+                            : "https://cdn.example.com/background.jpg"
+                        }
+                      />
+                    </>
+                  )}
+                  {backgroundLookupError ? (
+                    <p className="text-xs text-destructive">{backgroundLookupError}</p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </ScrollArea>
         </DialogContent>

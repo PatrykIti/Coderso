@@ -12,6 +12,10 @@ test("normalizePageLayoutSettings applies deterministic defaults", () => {
   expect(settings.wrapper.container).toBe("full");
   expect(settings.wrapper.padding.top).toBe("none");
   expect(settings.wrapper.background.color).toBe("transparent");
+  expect(settings.wrapper.background.image).toBeNull();
+  expect(settings.wrapper.background.media.type).toBe("none");
+  expect(settings.wrapper.background.media.source).toBe("external");
+  expect(settings.wrapper.background.media.src).toBeNull();
   expect(settings.sections.gap).toBe("none");
   expect(settings.sections.defaults.container).toBe("default");
   expect(settings.applyDefaultsToNewBlocks).toBe(false);
@@ -59,4 +63,45 @@ test("getPageLayoutSettingsFromData normalizes invalid tokens", () => {
   expect(settings.sections.gap).toBe("none");
   expect(settings.sections.defaults.container).toBe("default");
   expect(settings.sections.defaults.padding.top).toBe("xl");
+});
+
+test("normalizePageLayoutSettings maps legacy background image to media image", () => {
+  const settings = normalizePageLayoutSettings({
+    wrapper: {
+      background: {
+        color: "#ffffff",
+        image: "https://cdn.example.com/background.jpg",
+      },
+    },
+  });
+
+  expect(settings.wrapper.background.media.type).toBe("image");
+  expect(settings.wrapper.background.media.src).toBe(
+    "https://cdn.example.com/background.jpg"
+  );
+  expect(settings.wrapper.background.image).toBe(
+    "https://cdn.example.com/background.jpg"
+  );
+});
+
+test("normalizePageLayoutSettings keeps image null for video background", () => {
+  const settings = normalizePageLayoutSettings({
+    wrapper: {
+      background: {
+        color: "#ffffff",
+        image: "https://cdn.example.com/legacy-image.jpg",
+        media: {
+          type: "video",
+          source: "external",
+          src: "https://cdn.example.com/background.mp4",
+        },
+      },
+    },
+  });
+
+  expect(settings.wrapper.background.media.type).toBe("video");
+  expect(settings.wrapper.background.media.src).toBe(
+    "https://cdn.example.com/background.mp4"
+  );
+  expect(settings.wrapper.background.image).toBeNull();
 });

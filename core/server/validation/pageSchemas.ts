@@ -156,6 +156,16 @@ const pageLayoutSchema = {
           properties: {
             color: { type: "string" },
             image: { type: ["string", "null"] },
+            media: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                type: { type: "string", enum: ["none", "image", "video"] },
+                source: { type: "string", enum: ["library", "external"] },
+                assetId: { type: "string" },
+                src: { type: ["string", "null"] },
+              },
+            },
           },
         },
       },

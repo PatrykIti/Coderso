@@ -115,13 +115,22 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
       ? pageMaxWidthClassMap[layoutSettings.wrapper.maxWidth]
       : undefined
   );
+  const wrapperBackgroundMedia = layoutSettings.wrapper.background.media;
+  const wrapperBackgroundImage =
+    wrapperBackgroundMedia.type === "image"
+      ? wrapperBackgroundMedia.src ?? layoutSettings.wrapper.background.image ?? null
+      : null;
+  const wrapperBackgroundVideo =
+    wrapperBackgroundMedia.type === "video"
+      ? wrapperBackgroundMedia.src
+      : null;
   const wrapperBackgroundStyle: CSSProperties = {
     backgroundColor: layoutSettings.wrapper.background.color,
-    backgroundImage: layoutSettings.wrapper.background.image
-      ? `url(${layoutSettings.wrapper.background.image})`
+    backgroundImage: wrapperBackgroundImage
+      ? `url(${wrapperBackgroundImage})`
       : undefined,
-    backgroundSize: layoutSettings.wrapper.background.image ? "cover" : undefined,
-    backgroundPosition: layoutSettings.wrapper.background.image ? "center" : undefined,
+    backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
+    backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
   };
 
   const body = renderToString(
@@ -131,8 +140,27 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
           Preview mode
         </div>
       ) : null}
-      <div className={wrapperPaddingClass} style={wrapperBackgroundStyle}>
-        <div className={wrapperContainerClass}>
+      <div
+        className={joinClasses("relative overflow-hidden", wrapperPaddingClass)}
+        style={wrapperBackgroundStyle}
+      >
+        {wrapperBackgroundVideo ? (
+          <video
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            src={wrapperBackgroundVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+            aria-hidden="true"
+          />
+        ) : null}
+        <div
+          className={joinClasses(
+            wrapperContainerClass,
+            wrapperBackgroundVideo ? "relative z-[1]" : undefined
+          )}
+        >
           {renderBlocks(blocks, layoutSettings.sections.gap, pageDefaults)}
         </div>
       </div>

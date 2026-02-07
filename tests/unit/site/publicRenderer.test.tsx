@@ -74,7 +74,15 @@ test("renderPublicPageHtml applies wrapper settings and inherited block defaults
         container: "default",
         maxWidth: "5xl",
         padding: { top: "md", bottom: "lg" },
-        background: { color: "#fafafa", image: null },
+        background: {
+          color: "#fafafa",
+          image: null,
+          media: {
+            type: "none",
+            source: "external",
+            src: null,
+          },
+        },
       },
       sections: {
         gap: "xl",
@@ -95,4 +103,39 @@ test("renderPublicPageHtml applies wrapper settings and inherited block defaults
   expect(html).toContain("background-color:#fafafa");
   expect(html).toContain("max-w-3xl");
   expect(html).toContain("pt-4");
+});
+
+test("renderPublicPageHtml renders wrapper background video when configured", () => {
+  const html = renderPublicPageHtml({
+    title: "Home",
+    blocks: [],
+    layoutSettings: {
+      wrapper: {
+        container: "full",
+        padding: { top: "none", bottom: "none" },
+        background: {
+          color: "transparent",
+          image: null,
+          media: {
+            type: "video",
+            source: "external",
+            src: "https://cdn.example.com/background.mp4",
+          },
+        },
+      },
+      sections: {
+        gap: "none",
+        defaults: {
+          container: "default",
+          padding: { top: "xl", bottom: "xl" },
+          margin: { top: "none", bottom: "none" },
+        },
+      },
+      applyDefaultsToNewBlocks: false,
+    },
+  });
+
+  expect(html).toContain("<video");
+  expect(html).toContain("https://cdn.example.com/background.mp4");
+  expect(html).toContain("absolute inset-0 h-full w-full object-cover");
 });
