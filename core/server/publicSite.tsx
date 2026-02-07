@@ -34,6 +34,7 @@ import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import type { ContentSchema } from "../services/content/validation";
 import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
+import { resolveDevAssetUrl } from "./utils/styleUrl";
 
 export type PublicPageData = {
   title: string;
@@ -96,10 +97,47 @@ const serveSiteAsset = async (pathname: string) => {
 
 const resolvePublicStyles = async () => {
   const tokens = await getResolvedTokens();
-  return {
-    inlineCss: toCssVariables(tokens),
-    cssHref: resolveSiteCss() ?? resolveAdminCss(),
-  };
+  const inlineCss = toCssVariables(tokens);
+
+  const siteCssHref = resolveSiteCss();
+  if (siteCssHref) return { inlineCss, cssHref: siteCssHref, devModuleScripts: [] };
+
+  const siteDevClient = resolveDevAssetUrl(
+    process.env.VITE_SITE_DEV_SERVER_URL,
+    "/site/@vite/client"
+  );
+  const siteDevEntry = resolveDevAssetUrl(
+    process.env.VITE_SITE_DEV_SERVER_URL,
+    "/site/main.ts"
+  );
+  if (siteDevClient && siteDevEntry) {
+    return {
+      inlineCss,
+      cssHref: null,
+      devModuleScripts: [siteDevClient, siteDevEntry],
+    };
+  }
+
+  const adminCssHref = resolveAdminCss();
+  if (adminCssHref) return { inlineCss, cssHref: adminCssHref, devModuleScripts: [] };
+
+  const adminDevClient = resolveDevAssetUrl(
+    process.env.VITE_DEV_SERVER_URL,
+    "/admin/@vite/client"
+  );
+  const adminDevEntry = resolveDevAssetUrl(
+    process.env.VITE_DEV_SERVER_URL,
+    "/admin/main.tsx"
+  );
+  if (adminDevClient && adminDevEntry) {
+    return {
+      inlineCss,
+      cssHref: null,
+      devModuleScripts: [adminDevClient, adminDevEntry],
+    };
+  }
+
+  return { inlineCss, cssHref: null, devModuleScripts: [] };
 };
 
 const resolvePublicThemeName = async () => {
@@ -123,7 +161,7 @@ const renderPublicPageHtmlInternal = async (
 ) => {
   ensureRuntimeWidgetsRegistered();
 
-  const { inlineCss, cssHref } = await resolvePublicStyles();
+  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   const sourceData = options?.preview ? page.currentData : page.publishedData;
   const blocks = toBlocks(sourceData);
   return renderPublicPageHtml({
@@ -133,6 +171,7 @@ const renderPublicPageHtmlInternal = async (
     inlineCss,
     isPreview: options?.preview ?? false,
     layoutSettings: getPageLayoutSettingsFromData(sourceData),
+    devModuleScripts,
   });
 };
 
@@ -153,7 +192,7 @@ const resolvePreviewTargetType = (value: string | null): PreviewTargetType | nul
 
 const renderWidgetTemplatePreviewHtml = async (templateId: string) => {
   ensureRuntimeWidgetsRegistered();
-  const { inlineCss, cssHref } = await resolvePublicStyles();
+  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   const template = await getWidgetTemplatePreviewModel(templateId);
   return renderPublicPageHtml({
     title: template.name,
@@ -161,6 +200,7 @@ const renderWidgetTemplatePreviewHtml = async (templateId: string) => {
     cssHref,
     inlineCss,
     isPreview: true,
+    devModuleScripts,
   });
 };
 
@@ -195,7 +235,7 @@ const renderEntryListHtml = async (
       entry,
     }));
 
-  const { inlineCss, cssHref } = await resolvePublicStyles();
+  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   return renderPublicEntryListHtml({
     title: contentType.name,
     contentType: {
@@ -207,6 +247,7 @@ const renderEntryListHtml = async (
     items,
     cssHref,
     inlineCss,
+    devModuleScripts,
     isPreview: options?.preview ?? false,
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
   });
@@ -229,7 +270,7 @@ const renderEntryDetailHtml = async (
   const entryDetail = await getEntry(entry.id);
   if (!entryDetail) return null;
 
-  const { inlineCss, cssHref } = await resolvePublicStyles();
+  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   return renderPublicEntryDetailHtml({
     title: entryDetail.title ?? contentType.name,
     contentType: {
@@ -241,6 +282,7 @@ const renderEntryDetailHtml = async (
     entry: entryDetail,
     cssHref,
     inlineCss,
+    devModuleScripts,
     isPreview: options?.preview ?? false,
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
     metaDescription:

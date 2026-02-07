@@ -77,6 +77,13 @@ Publiczny frontend używa **osobnego CSS** (nie admin build).
 - Runtime odczytuje `dist/site/manifest.json` i linkuje CSS jako `/site/assets/...`
 - Tokeny z aktywnego **theme profile** są wstrzykiwane jako CSS variables w `<style>` (server‑side).
 
+Dev fallback:
+- W trybie dev preview może użyć `VITE_SITE_DEV_SERVER_URL` przez moduły Vite:
+  `/site/@vite/client` + `/site/main.ts`.
+- Fallback awaryjny: `VITE_DEV_SERVER_URL` przez `/admin/@vite/client` + `/admin/main.tsx`.
+- To ustawienia techniczne tylko dla local dev asset loading (nie zastępują
+  `site.publicBaseUrl`).
+
 ## SSR Cache
 
 Public runtime cache’uje HTML per **path + aktywny theme profile**:

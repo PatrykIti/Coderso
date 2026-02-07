@@ -19,6 +19,7 @@ export type PublicPageRenderOptions = {
   blocks: WidgetBlock[];
   cssHref?: string | null;
   inlineCss?: string | null;
+  devModuleScripts?: string[] | null;
   isPreview?: boolean;
   metaDescription?: string | null;
   layoutSettings?: PageLayoutSettings;
@@ -97,6 +98,7 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     blocks,
     cssHref,
     inlineCss,
+    devModuleScripts,
     isPreview,
     metaDescription,
     layoutSettings: rawLayoutSettings,
@@ -161,6 +163,15 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     headTags.push(
       <link key="css" rel="stylesheet" href={cssHref} />
     );
+  }
+
+  if (Array.isArray(devModuleScripts)) {
+    for (const [index, src] of devModuleScripts.entries()) {
+      if (!src) continue;
+      headTags.push(
+        <script key={`dev-module-${index}`} type="module" src={src}></script>
+      );
+    }
   }
 
   const head = renderToString(<>{headTags}</>);

@@ -65,6 +65,7 @@ export type PublicEntryListOptions = {
   themeName?: string | null;
   cssHref?: string | null;
   inlineCss?: string | null;
+  devModuleScripts?: string[] | null;
   isPreview?: boolean;
   metaDescription?: string | null;
 };
@@ -76,6 +77,7 @@ export type PublicEntryDetailOptions = {
   themeName?: string | null;
   cssHref?: string | null;
   inlineCss?: string | null;
+  devModuleScripts?: string[] | null;
   isPreview?: boolean;
   metaDescription?: string | null;
 };
@@ -130,7 +132,8 @@ const renderDocument = (
   body: ReactNode,
   cssHref?: string | null,
   inlineCss?: string | null,
-  metaDescription?: string | null
+  metaDescription?: string | null,
+  devModuleScripts?: string[] | null
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -154,6 +157,15 @@ const renderDocument = (
 
   if (cssHref) {
     headTags.push(<link key="css" rel="stylesheet" href={cssHref} />);
+  }
+
+  if (Array.isArray(devModuleScripts)) {
+    for (const [index, src] of devModuleScripts.entries()) {
+      if (!src) continue;
+      headTags.push(
+        <script key={`dev-module-${index}`} type="module" src={src}></script>
+      );
+    }
   }
 
   const head = renderToString(<>{headTags}</>);
@@ -210,6 +222,7 @@ export async function renderPublicEntryListHtml(
     items,
     cssHref,
     inlineCss,
+    devModuleScripts,
     isPreview,
     metaDescription,
     themeName,
@@ -243,7 +256,14 @@ export async function renderPublicEntryListHtml(
     </div>
   );
 
-  return renderDocument(title, body, cssHref, inlineCss, metaDescription);
+  return renderDocument(
+    title,
+    body,
+    cssHref,
+    inlineCss,
+    metaDescription,
+    devModuleScripts
+  );
 }
 
 export async function renderPublicEntryDetailHtml(
@@ -255,6 +275,7 @@ export async function renderPublicEntryDetailHtml(
     entry,
     cssHref,
     inlineCss,
+    devModuleScripts,
     isPreview,
     metaDescription,
     themeName,
@@ -288,5 +309,12 @@ export async function renderPublicEntryDetailHtml(
     </div>
   );
 
-  return renderDocument(title, body, cssHref, inlineCss, metaDescription);
+  return renderDocument(
+    title,
+    body,
+    cssHref,
+    inlineCss,
+    metaDescription,
+    devModuleScripts
+  );
 }

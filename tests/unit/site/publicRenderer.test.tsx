@@ -27,6 +27,22 @@ test("renderPublicPageHtml renders title and preview banner", () => {
   expect(html).toContain("--color-bg:#ffffff");
 });
 
+test("renderPublicPageHtml includes dev module scripts when provided", () => {
+  const html = renderPublicPageHtml({
+    title: "Dev preview",
+    blocks: [],
+    inlineCss: ":root{--color-bg:#fff;}",
+    devModuleScripts: [
+      "http://localhost:5174/site/@vite/client",
+      "http://localhost:5174/site/main.ts",
+    ],
+  });
+
+  expect(html).toContain("http://localhost:5174/site/@vite/client");
+  expect(html).toContain("http://localhost:5174/site/main.ts");
+  expect(html).toContain("type=\"module\"");
+});
+
 test("renderPublicPageHtml applies wrapper settings and inherited block defaults", () => {
   clearWidgets();
   registerWidget(

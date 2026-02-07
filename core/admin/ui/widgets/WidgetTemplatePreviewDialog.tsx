@@ -112,7 +112,7 @@ export function WidgetTemplatePreviewDialog({
             <div className="mx-auto w-fit rounded-2xl border bg-background shadow-sm">
               <iframe
                 title="Template preview"
-                sandbox="allow-same-origin"
+                sandbox="allow-same-origin allow-scripts"
                 src={preview.previewUrl}
                 className="block rounded-2xl"
                 style={{ width: viewport.width, height: viewport.height }}
