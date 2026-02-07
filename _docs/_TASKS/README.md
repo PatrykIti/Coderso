@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 24 tasks
 - **In Progress:** 1 tasks
 - **Done:** 228 tasks
 
@@ -65,6 +65,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
 | TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
 | TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | Medium | Medium | LAST: first-run wizard + baseUrl |
+| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Index for TASK-101-01..07 |
+| TASK-101-01 | Assistant Settings and Data Model | High | Medium | Global/user settings + validation |
+| TASK-101-02 | Documentation Index and Retrieval Engine | High | Large | Parser + chunking + BM25/FTS |
+| TASK-101-03 | Assistant API (Doc Navigator Runtime) | High | Medium | status/reindex/chat docs-only |
+| TASK-101-04 | LLM Provider Abstraction and OpenRouter Adapter | Medium | Medium | llm-rag provider layer + fallback |
+| TASK-101-05 | Admin UI Assistant Chat and Modes | High | Large | Chat panel + mode switch + sources |
+| TASK-101-06 | Assistant Avatar Rendering and Preferences | Medium | Medium | Optional GLB avatar + fallback |
+| TASK-101-07 | Assistant Security, Quotas, Observability and Hardening | High | Medium | Rate limits, audit, redaction |
 
 ---
 
