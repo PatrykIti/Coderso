@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-04  
-**Status:** To Do
+**Status:** In Progress (2026-02-07)
 
 ---
 
@@ -14,6 +14,11 @@
 Expand the Navigation widget to match the documented v1 spec and add slots for
 right-side actions (CTA/login/lang switcher). Support richer logo options,
 menu items, and behaviors.
+
+Execution is split into two detailed subtasks:
+
+- `TASK-050-06-01` Navigation Widget Bugfixes and UX Hardening
+- `TASK-050-06-02` Navigation Widget Visual Rebuild and Advanced Cleanup
 
 ---
 
@@ -83,6 +88,17 @@ Update `NavigationBlock` to:
 | `core/admin/ui/widgets/editors/NavigationEditors.tsx` | expand visual + advanced | behaviors + layout |
 | `tests/unit/widgets/navigation.test.tsx` | add/extend tests | schema + defaults |
 | `tests/unit/widgets/renderer.test.tsx` | verify slot render | right slot content |
+
+---
+
+## Sub-Tasks
+
+- **TASK-050-06-01:** Navigation Widget Bugfixes and UX Hardening  
+  Scope: stabilization of Wizard/Visual behavior, renderer behavior parity,
+  slot `right` MVP, and regression tests.
+- **TASK-050-06-02:** Navigation Widget Visual Rebuild and Advanced Cleanup  
+  Scope: section-based Visual IA, Advanced cleanup, final data-shape alignment,
+  and full UX parity with Hero editing quality.
 
 ---
 

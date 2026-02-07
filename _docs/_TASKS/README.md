@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
+- **To Do:** 20 tasks
 - **In Progress:** 2
 - **Done:** 221 tasks
 
@@ -57,6 +57,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
 | TASK-050-06 | Navigation Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
+| TASK-050-06-01 | Navigation Widget Bugfixes and UX Hardening | High | Medium | Stabilization + slot MVP + UX fixes |
+| TASK-050-06-02 | Navigation Widget Visual Rebuild and Advanced Cleanup | High | Large | Visual IA + advanced cleanup |
 | TASK-050-07 | Footer Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
 | TASK-050-08 | Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-09 | Compare Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
