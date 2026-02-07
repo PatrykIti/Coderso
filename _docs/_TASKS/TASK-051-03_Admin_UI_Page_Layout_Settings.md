@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-051-01  
-**Status:** To Do
+**Status:** In Progress (2026-02-07)
 
 ---
 
@@ -14,6 +14,20 @@
 Expose page-level wrapper controls in the Page Settings panel (WordPress-like):
 page width, background, section spacing, and default widget layout.
 Keep admin editing UX and runtime preview UX clearly separated but consistent.
+
+---
+
+## Current Progress
+
+Completed:
+- Widget template editor now supports template-level layout/appearance settings.
+- Widget template runtime preview uses template wrapper settings in runtime render path.
+- Widget template API/service/revisions now persist strict `settings.layout`.
+
+Pending:
+- Page Settings drawer controls for `page.data.settings.layout`.
+- Shared `RuntimePreviewDialog` parity across pages/content/widget-templates.
+- Final UX parity tests for page editor + entry editor preview controls.
 
 ---
 

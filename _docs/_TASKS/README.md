@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 22 tasks
-- **In Progress:** 0
-- **Done:** 219 tasks
+- **To Do:** 18 tasks
+- **In Progress:** 2
+- **Done:** 221 tasks
 
 ---
 
@@ -62,10 +62,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050-09 | Compare Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-10 | Newsletter Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-11 | Contact Widget Expansion | Medium | Medium | Wizard/visual/advanced |
-| TASK-051 | Page Wrapper & Layout Settings | High | Large | Page-level wrapper + defaults |
-| TASK-051-01 | Page Layout Model + Validation | High | Medium | settings.layout schema |
-| TASK-051-02 | Page Wrapper Rendering + Inheritance | High | Medium | renderer + inherit |
-| TASK-051-03 | Admin UI — Page Layout Settings | High | Medium | settings drawer |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
@@ -78,7 +74,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| _empty_ | _n/a_ | _n/a_ | _n/a_ | _n/a_ |
+| TASK-051 | Page Wrapper & Layout Settings | High | Large | 051-01/02 done, 051-03 in progress |
+| TASK-051-03 | Admin UI — Page Layout Settings | High | Medium | Page drawer + shared runtime preview UX pending |
 
 ---
 
@@ -86,6 +83,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-051-02 | Page Wrapper Rendering + Inheritance | High | Medium | Runtime wrapper + inherit + preview parity |
+| TASK-051-01 | Page Layout Model + Validation | High | Medium | Normalized settings.layout + strict schema |
 | TASK-050-05-02 | Hero Widget Visual Rebuild and Advanced Cleanup | High | Large | Visual-first IA + presets modal + advanced scope cleanup |
 | TASK-050-05-01 | Hero Widget Bugfixes and UX Hardening | High | Medium | Wizard media stability + centered media clarity + slot copy |
 | TASK-048-06 | Content Modeling Docs & Examples | Medium | Medium | Cookbook + docs |

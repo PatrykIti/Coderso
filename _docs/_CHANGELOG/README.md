@@ -152,6 +152,8 @@ Project Change Log.
 | 155 | 2026-02-04 | Hero widget expansion | CMS/Widgets |
 | 156 | 2026-02-06 | Hero widget bugfixes and UX hardening | CMS/Widgets |
 | 157 | 2026-02-06 | Hero widget visual rebuild and advanced cleanup | CMS/Widgets |
+| 158 | 2026-02-07 | Page layout model and runtime wrapper parity | CMS/Pages |
+| 159 | 2026-02-07 | Widget template layout settings and runtime preview styling | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

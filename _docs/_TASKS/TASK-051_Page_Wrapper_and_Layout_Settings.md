@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Site/Appearance  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-002 (Pages data), TASK-010 (Page Builder UI), TASK-044 (Public pages + preview), TASK-045 (Site Themes), TASK-050-01 (Widget template preview)  
-**Status:** 🟡 To Do
+**Status:** 🟠 In Progress (2026-02-07)
 
 ---
 
@@ -57,11 +57,14 @@ chooses “apply defaults to blocks”.
 ## Sub-Tasks
 
 - **TASK-051-01:** Page Layout Model + Validation  
-  Owns normalized page layout data and strict validation used by both preview and runtime.
+  Owns normalized page layout data and strict validation used by both preview and runtime.  
+  Status: Done (2026-02-07)
 - **TASK-051-02:** Page Wrapper Rendering + Inheritance  
-  Owns runtime/public parity and unified preview rendering contract.
+  Owns runtime/public parity and unified preview rendering contract.  
+  Status: Done (2026-02-07)
 - **TASK-051-03:** Admin UI — Page Layout Settings  
-  Owns editor UX split (canvas vs runtime preview) and consistent preview controls in admin.
+  Owns editor UX split (canvas vs runtime preview) and consistent preview controls in admin.  
+  Status: In Progress (2026-02-07)
 
 ---
 
