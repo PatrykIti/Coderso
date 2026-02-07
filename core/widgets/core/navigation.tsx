@@ -1,6 +1,6 @@
 import type { ComponentType, CSSProperties } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type { DeviceTarget, WidgetDefinition, WidgetEditorProps } from "../types";
 import type { WidgetBlock } from "../types";
 
 export type NavigationItem = {
@@ -236,10 +236,12 @@ export function NavigationBlock({
   data,
   variant,
   slots,
+  previewDevice,
 }: {
   data: NavigationData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
+  previewDevice?: DeviceTarget;
 }) {
   const showCta = variantSupportsCta(variant);
   const splitLayout = variant === "split";
@@ -372,7 +374,11 @@ export function NavigationBlock({
               </button>
             ) : null}
             {rightSlotBlocks.map((slotBlock) => (
-              <WidgetRenderer key={slotBlock.id} block={slotBlock} />
+              <WidgetRenderer
+                key={slotBlock.id}
+                block={slotBlock}
+                previewDevice={previewDevice}
+              />
             ))}
             {showCta && data.cta ? (
               <a

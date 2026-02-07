@@ -293,3 +293,57 @@ test("renderer renders navigation right slot content", () => {
   expect(html).toContain("Sign in");
   expect(html).toContain(navigationDefaults.cta?.label ?? "Get started");
 });
+
+test("renderer applies preview device visibility to slot widgets", () => {
+  clearWidgets();
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubNavigationEditor,
+      visual: StubNavigationEditor,
+      advanced: StubNavigationEditor,
+    })
+  );
+  registerWidget({
+    type: "login-chip",
+    title: "Login Chip",
+    description: "Simple auth action",
+    category: "content",
+    variants: [{ id: "default", label: "Default" }],
+    schema: { type: "object", additionalProperties: true },
+    defaults: { label: "Log in" },
+    editor: {
+      wizard: StubUnknownEditor,
+      visual: StubUnknownEditor,
+      advanced: StubUnknownEditor,
+    },
+    render: ({ data }) => <span>{String((data as { label?: string }).label ?? "Log in")}</span>,
+  });
+
+  const html = renderToString(
+    <WidgetRenderer
+      previewDevice="desktop"
+      block={{
+        id: "nav-with-mobile-slot",
+        type: "navigation",
+        variant: "split",
+        data: {
+          ...navigationDefaults,
+          cta: undefined,
+        },
+        slots: {
+          right: [
+            {
+              id: "slot-mobile-only",
+              type: "login-chip",
+              variant: "default",
+              data: { label: "Mobile only action" },
+              visibility: { enabled: true, devices: ["mobile"] },
+            },
+          ],
+        },
+      }}
+    />
+  );
+
+  expect(html).not.toContain("Mobile only action");
+});

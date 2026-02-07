@@ -51,6 +51,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     data: T;
     variant: string;
     slots?: Record<string, WidgetBlock[]>;
+    previewDevice?: DeviceTarget;
   }>;
 };
 

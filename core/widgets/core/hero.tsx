@@ -1,6 +1,11 @@
 import type { ComponentType, CSSProperties } from "react";
 import { WidgetRenderer } from "../renderers/widgetRenderer";
-import type { WidgetBlock, WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  DeviceTarget,
+  WidgetBlock,
+  WidgetDefinition,
+  WidgetEditorProps,
+} from "../types";
 
 export type HeroCta = {
   label: string;
@@ -288,10 +293,12 @@ export function HeroBlock({
   data,
   variant,
   slots,
+  previewDevice,
 }: {
   data: HeroData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
+  previewDevice?: DeviceTarget;
 }) {
   const layout = data.layout ?? {};
   const media = data.media ?? { type: "none" };
@@ -511,7 +518,11 @@ export function HeroBlock({
             {contentSlots.length ? (
               <div className="mt-6 flex w-full flex-col gap-4">
                 {contentSlots.map((slotBlock) => (
-                  <WidgetRenderer key={slotBlock.id} block={slotBlock} />
+                  <WidgetRenderer
+                    key={slotBlock.id}
+                    block={slotBlock}
+                    previewDevice={previewDevice}
+                  />
                 ))}
               </div>
             ) : null}

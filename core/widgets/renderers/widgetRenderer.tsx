@@ -197,6 +197,7 @@ export function WidgetRenderer({
           data={normalized.data}
           variant={normalized.variant ?? def.variants[0].id}
           slots={slots}
+          previewDevice={previewDevice}
         />
         {!hasSlotDefinitions && legacyChildren.length ? (
           <div className="mt-6 flex flex-col gap-6">
