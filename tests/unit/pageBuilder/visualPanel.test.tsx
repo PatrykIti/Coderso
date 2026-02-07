@@ -110,5 +110,6 @@ test("VisualPanel uses navigation editor variant controls", () => {
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
-  expect(html).toContain("Navigation style");
+  expect(html).toContain("Variant and Structure");
+  expect(html).toContain("Navigation Links");
 });

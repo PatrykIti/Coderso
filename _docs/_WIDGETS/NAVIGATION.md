@@ -18,30 +18,47 @@ CTA jest renderowane dla wariantow:
 - `with-cta`
 - `split`
 
-## Wizard flow (v1)
+## Mode responsibilities (final)
 
-- Pytanie 1: Styl menu (simple / with-cta / split)
-- Pytanie 2: Logo (obrazek / tekst)
-- Pytanie 3: Linki (lista)
-- Pytanie 4: CTA (opcjonalnie)
+### Wizard
 
-## Visual mode
+- minimal onboarding:
+  - variant
+  - links source (`manual` / `menu`)
+  - logo type + basic logo value
+  - CTA on/off
+- safe defaults for non-technical users.
 
-- Widget przejmuje selektor wariantu (`visualOwnsVariantSelection = true`),
-  wiec nie pokazujemy generycznej listy wariantow z panelu Visual.
-- Visual sluzy do szybkiej korekty wygladu runtime:
-  - wariant
-  - alignment
-  - sticky / transparent
-- Edycja tresci (logo, linki, CTA) pozostaje w Wizard.
+### Visual
 
-## Advanced options (v1)
+- primary editing mode (widget owns variant selection via `visualOwnsVariantSelection`).
+- section-based IA:
+  1. Variant and Structure
+  2. Brand and Logo
+  3. Navigation Links
+  4. CTA and Right Actions
+  5. Mobile Behavior
+  6. Colors, Borders, Typography
+  7. Surface and Runtime Behavior
+- full practical content + style editing.
 
-- logo: type, src, text
-- items: label, href (pelna lista)
-- items.children: obslugiwane w modelu i rendererze (submenu level 1)
-- behavior: sticky, transparent, collapseOnScroll
-- layout: alignment, spacing
+### Advanced
+
+- technical-only controls:
+  - layout tokens (`alignment`, `maxWidth`, `paddingY`, `itemGap`)
+  - runtime behavior toggles (`sticky`, `collapseOnScroll`)
+- no duplicate content/style editing from Visual.
+
+## Supported fields (summary)
+
+- `logo`: `type`, `value`, `href`, `alt`, `source`, `assetId`
+- `items`: `label`, `href`, optional `children[]`
+- `cta`: `label`, `href`
+- `linksSource`: `manual | menu`
+- `menuKey`: string
+- `behavior`: `sticky`, `transparent`, `collapseOnScroll`, `mobileMode`, `hideCtaOnMobile`
+- `layout`: `alignment`, `maxWidth`, `paddingY`, `itemGap`
+- `style`: surface/text/link/logo/CTA colors, border width/color, typography tokens
 
 ## Slots
 
@@ -56,13 +73,26 @@ CTA jest renderowane dla wariantow:
 - `behavior.collapseOnScroll`:
   - zapisywany i przekazywany jako atrybut `data-collapse-on-scroll="true"`,
     bez wymuszania JS-owego collapsu w v1.
+- `behavior.mobileMode`:
+  - `expanded`: linki widoczne na mobile
+  - `drawer` / `minimal`: linki ukryte na mobile + kompaktowy trigger
+- `behavior.hideCtaOnMobile = true` -> CTA ukryte na mobile.
 
 ## Data model (summary)
 
 ```json
 {
   "variant": "simple",
-  "logo": { "type": "text", "value": "string", "href": "/", "alt": "string" },
+  "logo": {
+    "type": "text",
+    "value": "string",
+    "href": "/",
+    "alt": "string",
+    "source": "external",
+    "assetId": "optional-media-id"
+  },
+  "linksSource": "manual",
+  "menuKey": "main",
   "items": [
     {
       "label": "string",
@@ -71,8 +101,33 @@ CTA jest renderowane dla wariantow:
     }
   ],
   "cta": { "label": "string", "href": "string" },
-  "behavior": { "sticky": true, "transparent": false, "collapseOnScroll": false },
-  "layout": { "alignment": "left" },
+  "behavior": {
+    "sticky": true,
+    "transparent": false,
+    "collapseOnScroll": false,
+    "mobileMode": "expanded",
+    "hideCtaOnMobile": false
+  },
+  "layout": {
+    "alignment": "left",
+    "maxWidth": "6xl",
+    "paddingY": "4",
+    "itemGap": "4"
+  },
+  "style": {
+    "surfaceColor": "#ffffff",
+    "borderColor": "#e2e8f0",
+    "borderWidth": "1",
+    "textColor": "#0f172a",
+    "linkColor": "#334155",
+    "logoColor": "#0f172a",
+    "ctaBackgroundColor": "#1d4ed8",
+    "ctaTextColor": "#ffffff",
+    "ctaBorderColor": "transparent",
+    "fontSize": "sm",
+    "fontWeight": "medium",
+    "textTransform": "none"
+  },
   "slots": {
     "right": []
   }
