@@ -3,11 +3,18 @@ import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
+import {
+  createNavigationWidget,
+  navigationDefaults,
+  type NavigationData,
+} from "../../../core/widgets/core/navigation";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
+const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
+const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
   clearWidgets();
@@ -181,4 +188,54 @@ test("renderer passes slots to widget render", () => {
   const html = renderToString(<WidgetRenderer block={block} />);
   const normalizedHtml = html.replace(/<!--.*?-->/g, "");
   expect(normalizedHtml).toContain("Slots:1");
+});
+
+test("renderer renders navigation right slot content", () => {
+  clearWidgets();
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubNavigationEditor,
+      visual: StubNavigationEditor,
+      advanced: StubNavigationEditor,
+    })
+  );
+  registerWidget({
+    type: "login-chip",
+    title: "Login Chip",
+    description: "Simple auth action",
+    category: "content",
+    variants: [{ id: "default", label: "Default" }],
+    schema: { type: "object", additionalProperties: true },
+    defaults: { label: "Log in" },
+    editor: {
+      wizard: StubUnknownEditor,
+      visual: StubUnknownEditor,
+      advanced: StubUnknownEditor,
+    },
+    render: ({ data }) => <span>{String((data as { label?: string }).label ?? "Log in")}</span>,
+  });
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "nav-1",
+        type: "navigation",
+        variant: "split",
+        data: navigationDefaults,
+        slots: {
+          right: [
+            {
+              id: "right-1",
+              type: "login-chip",
+              variant: "default",
+              data: { label: "Sign in" },
+            },
+          ],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("Sign in");
+  expect(html).toContain(navigationDefaults.cta?.label ?? "Get started");
 });

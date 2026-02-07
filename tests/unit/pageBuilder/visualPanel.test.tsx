@@ -3,7 +3,16 @@ import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import { VisualPanel } from "../../../core/admin/ui/pages/builder/VisualPanel";
+import {
+  NavigationAdvancedEditor,
+  NavigationVisualEditor,
+  NavigationWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/NavigationEditors";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
+import {
+  createNavigationWidget,
+  navigationDefaults,
+} from "../../../core/widgets/core/navigation";
 import type {
   WidgetDefinition,
   WidgetEditorProps,
@@ -73,4 +82,33 @@ test("VisualPanel hides generic variant controls when widget owns visual variant
 
   expect(html).not.toContain("Choose a visual style for this widget.");
   expect(html).toContain("Hero visual editor body");
+});
+
+test("VisualPanel uses navigation editor variant controls", () => {
+  const widget = createNavigationWidget({
+    wizard: NavigationWizardEditor,
+    visual: NavigationVisualEditor,
+    advanced: NavigationAdvancedEditor,
+  });
+  const block: Block = {
+    id: "nav-1",
+    type: "navigation",
+    variant: "simple",
+    data: navigationDefaults,
+    editor: {
+      mode: "visual",
+      wizardCompleted: true,
+    },
+  };
+
+  const html = renderToString(
+    <VisualPanel
+      widget={widget}
+      block={block}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).not.toContain("Choose a visual style for this widget.");
+  expect(html).toContain("Navigation style");
 });

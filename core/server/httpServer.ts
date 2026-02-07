@@ -147,8 +147,25 @@ export type HttpServerOptions = {
   port?: number;
 };
 
-const isAdminAsset = (pathname: string, adminPath: string) =>
-  pathname.startsWith(`${adminPath}/assets/`) || pathname === `${adminPath}/favicon.ico`;
+const ensureTrailingSlash = (value: string) => (value.endsWith("/") ? value : `${value}/`);
+
+export const injectAdminBaseHref = (html: string, adminPath: string) => {
+  if (/<base\s+href=/i.test(html)) return html;
+  const baseHref = ensureTrailingSlash(adminPath);
+  return html.replace(/<head([^>]*)>/i, `<head$1>\n    <base href="${baseHref}" />`);
+};
+
+export const normalizeAdminAssetPath = (pathname: string, adminPath: string) => {
+  const assetPrefix = `${adminPath}/assets/`;
+  if (pathname.startsWith(assetPrefix) || pathname === `${adminPath}/favicon.ico`) {
+    return pathname;
+  }
+  if (!pathname.startsWith(adminPath)) return null;
+  const relative = pathname.slice(adminPath.length);
+  const nestedAssetIndex = relative.indexOf("/assets/");
+  if (nestedAssetIndex === -1) return null;
+  return `${adminPath}${relative.slice(nestedAssetIndex)}`;
+};
 
 const resolveAdminFile = (pathname: string, adminPath: string) => {
   const distDir = path.resolve(process.cwd(), "dist/client");
@@ -179,8 +196,9 @@ const handleAdmin = async (req: Request, adminPath: string, devUrl?: string) => 
 
   const security = await getSecuritySettings();
 
-  if (isAdminAsset(url.pathname, adminPath)) {
-    const filePath = resolveAdminFile(url.pathname, adminPath);
+  const normalizedAssetPath = normalizeAdminAssetPath(url.pathname, adminPath);
+  if (normalizedAssetPath) {
+    const filePath = resolveAdminFile(normalizedAssetPath, adminPath);
     if (!filePath) return new Response("Forbidden", { status: 403 });
     const file = Bun.file(filePath);
     if (!(await file.exists())) return new Response("Not Found", { status: 404 });
@@ -193,9 +211,10 @@ const handleAdmin = async (req: Request, adminPath: string, devUrl?: string) => 
   if (!indexPath) return new Response("Not Found", { status: 404 });
   const indexFile = Bun.file(indexPath);
   if (!(await indexFile.exists())) return new Response("Not Found", { status: 404 });
+  const indexHtml = injectAdminBaseHref(await indexFile.text(), adminPath);
   const headers = new Headers({ "Content-Type": "text/html" });
   applySecurityHeaders(headers, security.headers);
-  return new Response(indexFile, { headers });
+  return new Response(indexHtml, { headers });
 };
 
 const handleApi = async (req: Request, apiPrefix: string) => {

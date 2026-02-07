@@ -204,6 +204,7 @@ Flow:
 - Jesli widget ma `slots`, to on odpowiada za renderowanie tych blokow
   w odpowiednich miejscach UI.
 - Przykład: `hero` renderuje `slots.content` pod sekcją CTA.
+- Przykład: `navigation` renderuje `slots.right` w prawym obszarze akcji paska.
 
 ## Inheritance and page defaults
 
