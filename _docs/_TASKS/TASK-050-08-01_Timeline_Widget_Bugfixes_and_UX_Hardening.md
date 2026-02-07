@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-08, TASK-050-04  
-**Status:** In Progress (2026-02-07)
+**Status:** Done (2026-02-07)
 
 ---
 
@@ -135,7 +135,6 @@ information architecture and Advanced cleanup are finalized in `TASK-050-08-02`.
 ## Documentation Updates Required (after completion)
 
 ### Task and board
-- Update status in this file to `Done (YYYY-MM-DD)`.
 - Update `_docs/_TASKS/README.md`:
   - move `TASK-050-08-01` from **In Progress** to **Done**,
   - update Statistics counters.

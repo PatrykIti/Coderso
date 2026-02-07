@@ -4,6 +4,11 @@ import { renderToString } from "react-dom/server";
 
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
+  createTimelineWidget,
+  timelineDefaults,
+  type TimelineData,
+} from "../../../core/widgets/core/timeline";
+import {
   createNavigationWidget,
   navigationDefaults,
   type NavigationData,
@@ -18,6 +23,7 @@ import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
+const StubTimelineEditor: ComponentType<WidgetEditorProps<TimelineData>> = () => null;
 const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
@@ -408,4 +414,37 @@ test("renderer renders footer column and bottom slot content", () => {
 
   expect(html).toContain("Column slot item");
   expect(html).toContain("Bottom slot item");
+});
+
+test("renderer outputs timeline variant and orientation markers", () => {
+  clearWidgets();
+  registerWidget(
+    createTimelineWidget({
+      wizard: StubTimelineEditor,
+      visual: StubTimelineEditor,
+      advanced: StubTimelineEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "timeline-1",
+        type: "timeline",
+        variant: "cards",
+        data: {
+          ...timelineDefaults,
+          layout: {
+            ...timelineDefaults.layout,
+            orientation: "vertical",
+            labelPosition: "bottom",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-timeline-variant="cards"');
+  expect(html).toContain('data-timeline-orientation="vertical"');
+  expect(html).toContain('data-timeline-label-position="bottom"');
 });

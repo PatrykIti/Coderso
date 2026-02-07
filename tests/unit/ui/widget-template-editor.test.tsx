@@ -12,6 +12,11 @@ import {
   NavigationVisualEditor,
   NavigationWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/NavigationEditors";
+import {
+  TimelineAdvancedEditor,
+  TimelineVisualEditor,
+  TimelineWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/TimelineEditors";
 import { WidgetTemplateEditorPage } from "../../../core/admin/ui/widgets/WidgetTemplateEditorPage";
 import {
   createFooterWidget,
@@ -21,6 +26,10 @@ import {
   createNavigationWidget,
   navigationDefaults,
 } from "../../../core/widgets/core/navigation";
+import {
+  createTimelineWidget,
+  timelineDefaults,
+} from "../../../core/widgets/core/timeline";
 
 test("WidgetTemplateEditorPage renders canvas placeholder", () => {
   const html = renderToString(<WidgetTemplateEditorPage />);
@@ -96,4 +105,33 @@ test("widget template block settings render footer visual sections", () => {
   expect(html).toContain("Variant and structure");
   expect(html).toContain("Legal strip");
   expect(html).toContain("Social links");
+});
+
+test("widget template block settings render timeline visual sections", () => {
+  const widget = createTimelineWidget({
+    wizard: TimelineWizardEditor,
+    visual: TimelineVisualEditor,
+    advanced: TimelineAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "timeline-1",
+        type: "timeline",
+        variant: "milestones",
+        data: timelineDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Steps");
+  expect(html).toContain("Layout and Guides");
+  expect(html).toContain("Line and Colors");
 });

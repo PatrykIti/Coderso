@@ -19,7 +19,7 @@ line/marker styling, and guide readability.
 
 Execution is split into two detailed subtasks:
 
-- `TASK-050-08-01` Timeline Widget Bugfixes and UX Hardening (**In Progress, 2026-02-07**)
+- `TASK-050-08-01` Timeline Widget Bugfixes and UX Hardening (**Done, 2026-02-07**)
 - `TASK-050-08-02` Timeline Widget Visual Rebuild and Advanced Cleanup (**To Do**)
 
 ---

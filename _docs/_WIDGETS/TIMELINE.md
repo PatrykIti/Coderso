@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Elastyczna os procesu bez dat. Uzywana do pokazania etapow lub krokow.
+Process timeline without dates, used for milestones and step-by-step flows.
 
 ## Widget ID
 
@@ -10,43 +10,77 @@ Elastyczna os procesu bez dat. Uzywana do pokazania etapow lub krokow.
 
 ## Variants (v1)
 
-- milestones (domyslny; linia + markery + etykiety nad osia)
-- cards (kroki jako karty przy osi)
-- compact (kropki + krotkie etykiety)
+- `milestones`: markers with labels around the axis
+- `cards`: steps rendered as cards
+- `compact`: minimal marker+label process strip
 
-## Wizard flow (v1)
+## Editor Modes (current after TASK-050-08-01)
 
-- Pytanie 1: Ile etapow? (3-8)
-- Pytanie 2: Wariant (milestones / cards / compact)
-- Pytanie 3: Uklad (horizontal / vertical)
-- Pytanie 4: Etykiety (nad / pod osia)
-- Pytanie 5: Linie pomocnicze (tak/nie)
+### Wizard
+- Step count (`3-8`)
+- Variant selection
+- Orientation (`horizontal` / `vertical`)
+- Label position (`top` / `bottom`)
+- Guides enabled/disabled
+- Quick step title editing
 
-Wizard generuje liste etapow z placeholderami.
+### Visual
+- Practical day-to-day editing for:
+  - step content (`title`, `description`, `icon`, `accent`)
+  - layout and guides
+  - axis/marker style
+  - colors and section background
 
-## Visual mode
+### Advanced
+- Full model editing is still available in 08-01:
+  - steps editor (add/remove/edit)
+  - layout tokens
+  - guide and line controls
+  - color tokens and background
+- Scope cleanup to technical-only Advanced is planned in `TASK-050-08-02`.
 
-- Podglad osi z krokami i etykietami.
-- Po wyborze wariantu wyswietlane sa tylko pasujace opcje.
+## Runtime Behavior Notes
 
-## Advanced options (v1)
+- Steps are normalized to `3-8` with stable IDs (`step-1`, `step-2`, ...).
+- Duplicate/missing step IDs are normalized to unique IDs.
+- Renderer supports all variants with orientation and label-position markers.
+- Invalid runtime variant input falls back to `milestones`.
 
-- steps: title, description, icon, accent
-- layout: orientation, align, spacing, labelPosition
-- guides: enabled, style
-- line: style, thickness, markerSize
-- background: color
-
-## Data model (summary)
+## Data Model (summary)
 
 ```json
 {
   "variant": "milestones",
   "steps": [
-    { "title": "string", "description": "string", "icon": "string" }
+    {
+      "id": "step-1",
+      "title": "Discovery",
+      "description": "Define goals and context.",
+      "icon": "🔍",
+      "accent": "#1d4ed8"
+    }
   ],
-  "layout": { "orientation": "horizontal", "align": "center", "labelPosition": "top" },
-  "guides": { "enabled": true, "style": "dashed" },
-  "style": { "lineStyle": "solid", "markerSize": "md" }
+  "layout": {
+    "orientation": "horizontal",
+    "align": "center",
+    "spacing": "md",
+    "labelPosition": "top"
+  },
+  "guides": {
+    "enabled": true,
+    "style": "dashed"
+  },
+  "style": {
+    "lineStyle": "solid",
+    "thickness": "2",
+    "markerSize": "md",
+    "lineColor": "#e2e8f0",
+    "markerColor": "#1d4ed8",
+    "titleColor": "#0f172a",
+    "descriptionColor": "#334155"
+  },
+  "background": {
+    "color": "transparent"
+  }
 }
 ```
