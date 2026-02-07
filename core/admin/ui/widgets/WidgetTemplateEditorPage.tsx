@@ -4,6 +4,13 @@ import { ChevronRight, History, Search, Settings2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -166,6 +173,7 @@ export function WidgetTemplateEditorPage() {
     useState<WidgetTemplatePreviewResponse | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [revisionsOpen, setRevisionsOpen] = useState(false);
   const [revisions, setRevisions] = useState<WidgetTemplateRevision[]>([]);
   const [revisionsError, setRevisionsError] = useState<string | null>(null);
@@ -422,6 +430,9 @@ export function WidgetTemplateEditorPage() {
             >
               Preview
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => setDetailsOpen(true)}>
+              Template Details
+            </Button>
             <Button variant="ghost" size="sm" onClick={handleDiscard}>
               Discard
             </Button>
@@ -473,10 +484,211 @@ export function WidgetTemplateEditorPage() {
                 </Select>
               </div>
             </div>
-            <div className="mt-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+            {displayError ? (
+              <div className="mt-4">
+                <Alert variant="destructive">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{displayError}</AlertDescription>
+                </Alert>
+              </div>
+            ) : null}
+          </div>
+          <div className="flex flex-1 min-h-0">
+            <aside
+              data-slot="card"
+              className="hidden w-72 min-h-0 flex-col border-r border-border bg-card lg:flex"
+            >
+              <div className="border-b border-border p-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9 text-xs"
+                    placeholder="Search widgets..."
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
+                </div>
+              </div>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-4">
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Category
+                    </p>
+                    <Select
+                      value={activeCategory}
+                      onValueChange={(value) =>
+                        setActiveCategory(value as WidgetCategoryId | "all")
+                      }
+                    >
+                      <SelectTrigger className="text-xs">
+                        <SelectValue placeholder="All widgets" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All widgets</SelectItem>
+                        {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map(
+                          (cat) => (
+                            <SelectItem key={cat} value={cat}>
+                              {widgetCategoryLabels[cat]}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="mt-6">
+                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Draggable items
+                    </p>
+                    <div className="space-y-2">
+                      {filteredWidgets.map((widget) => (
+                        <WidgetCard
+                          key={widget.type}
+                          name={widget.title}
+                          categoryLabel={widgetCategoryLabels[widget.category]}
+                          variant="compact"
+                          draggable
+                          onDragStart={(event) => {
+                            event.dataTransfer.setData("widget-type", widget.type);
+                            event.dataTransfer.effectAllowed = "copy";
+                          }}
+                          onSelect={() => handleAddBlock(widget.type)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </ScrollArea>
+            </aside>
+
+            <main
+            className={
+              "flex-1 overflow-auto p-10 bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)] bg-[size:24px_24px]"
+            }
+            onDragOver={(event) => {
+              event.preventDefault();
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              const type = event.dataTransfer.getData("widget-type");
+              if (type) handleAddBlock(type);
+            }}
+          >
+            {isLoading ? (
+              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                  <Settings2 className="h-10 w-10" />
+                </div>
+                <h2 className="text-2xl font-semibold text-foreground">
+                  Loading template
+                </h2>
+              </div>
+            ) : blocks.length === 0 ? (
+              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                  <Settings2 className="h-10 w-10" />
+                </div>
+                <h2 className="text-2xl font-semibold text-foreground">
+                  Build your template
+                </h2>
+                <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+                  Drag widgets from the library to build a reusable template layout.
+                </p>
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <span className="rounded-full border border-border/60 px-3 py-1">
+                    Section 1
+                  </span>
+                  <span className="rounded-full border border-primary/30 px-3 py-1 text-primary">
+                    Drop target
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div
+                className={joinClasses(
+                  "w-full rounded-xl border border-border/40",
+                  wrapperPaddingClass
+                )}
+                style={wrapperBackgroundStyle}
+              >
+                <div className={wrapperContainerClass}>
+                  <BlockList
+                    blocks={blocks}
+                    className={
+                      spacingTokenToListSpaceClassMap[templateLayout.sections.gap]
+                    }
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                    onMove={(path, from, to) =>
+                      setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
+                    }
+                    onDuplicate={(id) =>
+                      setBlocks((prev) => duplicateBlock(prev, id))
+                    }
+                    onDelete={(id) =>
+                      setBlocks((prev) => {
+                        const result = deleteBlockById(prev, id);
+                        if (selectedId && !findBlockById(result.blocks, selectedId)) {
+                          setSelectedId(getFirstBlockId(result.blocks));
+                        }
+                        return result.blocks;
+                      })
+                    }
+                    onInsert={handleInsertIntoSlot}
+                    onMoveToSlot={handleMoveIntoSlot}
+                  />
+                </div>
+              </div>
+            )}
+            </main>
+
+            <aside
+              data-slot="card"
+              className="hidden w-80 min-h-0 flex-col border-l border-border bg-card lg:flex"
+            >
+              <div className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Details
+              </div>
+              <ScrollArea className="flex-1 min-h-0">
+                <div className="p-6">
+                  <BlockSettings
+                    block={selectedBlock}
+                    widget={selectedWidget}
+                    onChange={(next) =>
+                      setBlocks((prev) => updateBlockById(prev, next.id, () => next))
+                    }
+                  />
+                </div>
+              </ScrollArea>
+              <div className="border-t border-border bg-muted/20 p-4">
+                <Button
+                  variant="secondary"
+                  className="w-full gap-2"
+                  onClick={() => void handleOpenRevisions()}
+                  disabled={isNew}
+                >
+                  <History className="h-4 w-4" />
+                  Revision History
+                </Button>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </AdminShell>
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-3xl">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle>Template layout and appearance</DialogTitle>
+            <DialogDescription>
+              Configure wrapper background, spacing, and container behavior for runtime
+              preview and published output.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[70vh]">
+            <div className="space-y-4 px-6 py-5">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Template layout and appearance
+                  Layout controls
                 </p>
                 <Button
                   type="button"
@@ -489,10 +701,7 @@ export function WidgetTemplateEditorPage() {
                   Reset defaults
                 </Button>
               </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Applies to runtime preview and front-end rendering of this template.
-              </p>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2">
                   <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Container
@@ -712,7 +921,7 @@ export function WidgetTemplateEditorPage() {
                   </div>
                 </div>
               </div>
-              <div className="mt-3 space-y-2">
+              <div className="space-y-2">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Background image URL
                 </label>
@@ -739,197 +948,9 @@ export function WidgetTemplateEditorPage() {
                 />
               </div>
             </div>
-            {displayError ? (
-              <div className="mt-4">
-                <Alert variant="destructive">
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{displayError}</AlertDescription>
-                </Alert>
-              </div>
-            ) : null}
-          </div>
-          <div className="flex flex-1 min-h-0">
-            <aside
-              data-slot="card"
-              className="hidden w-72 min-h-0 flex-col border-r border-border bg-card lg:flex"
-            >
-              <div className="border-b border-border p-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    className="pl-9 text-xs"
-                    placeholder="Search widgets..."
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
-                </div>
-              </div>
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="p-4">
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Category
-                    </p>
-                    <Select
-                      value={activeCategory}
-                      onValueChange={(value) =>
-                        setActiveCategory(value as WidgetCategoryId | "all")
-                      }
-                    >
-                      <SelectTrigger className="text-xs">
-                        <SelectValue placeholder="All widgets" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All widgets</SelectItem>
-                        {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map(
-                          (cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {widgetCategoryLabels[cat]}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="mt-6">
-                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Draggable items
-                    </p>
-                    <div className="space-y-2">
-                      {filteredWidgets.map((widget) => (
-                        <WidgetCard
-                          key={widget.type}
-                          name={widget.title}
-                          categoryLabel={widgetCategoryLabels[widget.category]}
-                          variant="compact"
-                          draggable
-                          onDragStart={(event) => {
-                            event.dataTransfer.setData("widget-type", widget.type);
-                            event.dataTransfer.effectAllowed = "copy";
-                          }}
-                          onSelect={() => handleAddBlock(widget.type)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </ScrollArea>
-            </aside>
-
-            <main
-            className={
-              "flex-1 overflow-auto p-10 bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)] bg-[size:24px_24px]"
-            }
-            onDragOver={(event) => {
-              event.preventDefault();
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              const type = event.dataTransfer.getData("widget-type");
-              if (type) handleAddBlock(type);
-            }}
-          >
-            {isLoading ? (
-              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                  <Settings2 className="h-10 w-10" />
-                </div>
-                <h2 className="text-2xl font-semibold text-foreground">
-                  Loading template
-                </h2>
-              </div>
-            ) : blocks.length === 0 ? (
-              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                  <Settings2 className="h-10 w-10" />
-                </div>
-                <h2 className="text-2xl font-semibold text-foreground">
-                  Build your template
-                </h2>
-                <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                  Drag widgets from the library to build a reusable template layout.
-                </p>
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <span className="rounded-full border border-border/60 px-3 py-1">
-                    Section 1
-                  </span>
-                  <span className="rounded-full border border-primary/30 px-3 py-1 text-primary">
-                    Drop target
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div
-                className={joinClasses(
-                  "w-full rounded-xl border border-border/40",
-                  wrapperPaddingClass
-                )}
-                style={wrapperBackgroundStyle}
-              >
-                <div className={wrapperContainerClass}>
-                  <BlockList
-                    blocks={blocks}
-                    className={
-                      spacingTokenToListSpaceClassMap[templateLayout.sections.gap]
-                    }
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                    onMove={(path, from, to) =>
-                      setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
-                    }
-                    onDuplicate={(id) =>
-                      setBlocks((prev) => duplicateBlock(prev, id))
-                    }
-                    onDelete={(id) =>
-                      setBlocks((prev) => {
-                        const result = deleteBlockById(prev, id);
-                        if (selectedId && !findBlockById(result.blocks, selectedId)) {
-                          setSelectedId(getFirstBlockId(result.blocks));
-                        }
-                        return result.blocks;
-                      })
-                    }
-                    onInsert={handleInsertIntoSlot}
-                    onMoveToSlot={handleMoveIntoSlot}
-                  />
-                </div>
-              </div>
-            )}
-            </main>
-
-            <aside
-              data-slot="card"
-              className="hidden w-80 min-h-0 flex-col border-l border-border bg-card lg:flex"
-            >
-              <div className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Details
-              </div>
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="p-6">
-                  <BlockSettings
-                    block={selectedBlock}
-                    widget={selectedWidget}
-                    onChange={(next) =>
-                      setBlocks((prev) => updateBlockById(prev, next.id, () => next))
-                    }
-                  />
-                </div>
-              </ScrollArea>
-              <div className="border-t border-border bg-muted/20 p-4">
-                <Button
-                  variant="secondary"
-                  className="w-full gap-2"
-                  onClick={() => void handleOpenRevisions()}
-                  disabled={isNew}
-                >
-                  <History className="h-4 w-4" />
-                  Revision History
-                </Button>
-              </div>
-            </aside>
-          </div>
-        </div>
-      </AdminShell>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
       <WidgetTemplatePreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
