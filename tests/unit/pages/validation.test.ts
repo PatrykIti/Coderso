@@ -31,7 +31,27 @@ const validCreatePayload = {
   data: {
     blocks: [validBlock],
     seo: { title: "Homepage" },
-    settings: { template: "landing", showInNav: true },
+    settings: {
+      template: "landing",
+      showInNav: true,
+      layout: {
+        wrapper: {
+          container: "default",
+          maxWidth: "6xl",
+          padding: { top: "md", bottom: "lg" },
+          background: { color: "#ffffff", image: null },
+        },
+        sections: {
+          gap: "lg",
+          defaults: {
+            container: "narrow",
+            padding: { top: "xl", bottom: "xl" },
+            margin: { top: "none", bottom: "sm" },
+          },
+        },
+        applyDefaultsToNewBlocks: true,
+      },
+    },
   },
 };
 
@@ -65,4 +85,43 @@ test("pageUpdateSchema rejects invalid blocks", () => {
       data: { blocks: [{ id: "b1", type: "hero" }] },
     })
   ).toBe(false);
+});
+
+test("pageUpdateSchema accepts inheritable block layout tokens", () => {
+  expect(
+    validateUpdate({
+      data: {
+        blocks: [
+          {
+            ...validBlock,
+            layout: {
+              ...validBlock.layout,
+              container: "inherit",
+              padding: { top: "inherit", bottom: "inherit" },
+            },
+          },
+        ],
+      },
+    })
+  ).toBe(true);
+});
+
+test("pageCreateSchema rejects invalid page layout tokens", () => {
+  const payload = {
+    ...validCreatePayload,
+    data: {
+      ...validCreatePayload.data,
+      settings: {
+        ...validCreatePayload.data.settings,
+        layout: {
+          ...validCreatePayload.data.settings.layout,
+          sections: {
+            ...validCreatePayload.data.settings.layout.sections,
+            gap: "huge",
+          },
+        },
+      },
+    },
+  };
+  expect(validateCreate(payload)).toBe(false);
 });

@@ -1,16 +1,40 @@
+const containerTokens = ["default", "narrow", "full"] as const;
+const spacingTokens = ["none", "xs", "sm", "md", "lg", "xl", "2xl"] as const;
+const pageMaxWidthTokens = ["4xl", "5xl", "6xl", "7xl"] as const;
+
+const containerTokenSchema = {
+  type: "string",
+  enum: [...containerTokens],
+};
+
+const inheritableContainerTokenSchema = {
+  type: "string",
+  enum: [...containerTokens, "inherit"],
+};
+
+const spacingTokenSchema = {
+  type: "string",
+  enum: [...spacingTokens],
+};
+
+const inheritableSpacingTokenSchema = {
+  type: "string",
+  enum: [...spacingTokens, "inherit"],
+};
+
 const blockLayoutSchema = {
   type: "object",
   required: ["container", "padding", "margin", "background"],
   additionalProperties: false,
   properties: {
-    container: { type: "string" },
+    container: inheritableContainerTokenSchema,
     padding: {
       type: "object",
       required: ["top", "bottom"],
       additionalProperties: false,
       properties: {
-        top: { type: "string" },
-        bottom: { type: "string" },
+        top: inheritableSpacingTokenSchema,
+        bottom: inheritableSpacingTokenSchema,
       },
     },
     margin: {
@@ -18,8 +42,8 @@ const blockLayoutSchema = {
       required: ["top", "bottom"],
       additionalProperties: false,
       properties: {
-        top: { type: "string" },
-        bottom: { type: "string" },
+        top: inheritableSpacingTokenSchema,
+        bottom: inheritableSpacingTokenSchema,
       },
     },
     background: {
@@ -81,6 +105,74 @@ const blockSchema = {
   },
 };
 
+const pageLayoutDefaultsSchema = {
+  type: "object",
+  required: ["container", "padding", "margin"],
+  additionalProperties: false,
+  properties: {
+    container: containerTokenSchema,
+    padding: {
+      type: "object",
+      required: ["top", "bottom"],
+      additionalProperties: false,
+      properties: {
+        top: spacingTokenSchema,
+        bottom: spacingTokenSchema,
+      },
+    },
+    margin: {
+      type: "object",
+      required: ["top", "bottom"],
+      additionalProperties: false,
+      properties: {
+        top: spacingTokenSchema,
+        bottom: spacingTokenSchema,
+      },
+    },
+  },
+};
+
+const pageLayoutSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    wrapper: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        container: containerTokenSchema,
+        maxWidth: { type: "string", enum: [...pageMaxWidthTokens] },
+        padding: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            top: spacingTokenSchema,
+            bottom: spacingTokenSchema,
+          },
+        },
+        background: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            color: { type: "string" },
+            image: { type: ["string", "null"] },
+          },
+        },
+      },
+    },
+    sections: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        gap: spacingTokenSchema,
+        defaults: pageLayoutDefaultsSchema,
+      },
+    },
+    typographyPreset: { type: "string" },
+    applyDefaultsToNewBlocks: { type: "boolean" },
+  },
+};
+
 const pageDataSchema = {
   type: "object",
   required: ["blocks"],
@@ -102,6 +194,7 @@ const pageDataSchema = {
       properties: {
         template: { type: "string" },
         showInNav: { type: "boolean" },
+        layout: pageLayoutSchema,
       },
     },
   },

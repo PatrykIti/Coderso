@@ -130,6 +130,7 @@ export const widgetTemplatePreviewSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
+    ttlMinutes: { type: "number", minimum: 1, maximum: 120 },
     device: { type: "string", enum: ["desktop", "tablet", "mobile"] },
     viewport: {
       type: "object",

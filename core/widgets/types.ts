@@ -67,13 +67,15 @@ export const spacingTokens = [
 
 export type ContainerToken = (typeof containerTokens)[number];
 export type SpacingToken = (typeof spacingTokens)[number];
+export type InheritableContainerToken = ContainerToken | "inherit";
+export type InheritableSpacingToken = SpacingToken | "inherit";
 export type DeviceTarget = "desktop" | "tablet" | "mobile";
 export type EditorMode = "wizard" | "visual" | "advanced";
 
 export type WidgetLayout = {
-  container: ContainerToken;
-  padding: { top: SpacingToken; bottom: SpacingToken };
-  margin: { top: SpacingToken; bottom: SpacingToken };
+  container: InheritableContainerToken;
+  padding: { top: InheritableSpacingToken; bottom: InheritableSpacingToken };
+  margin: { top: InheritableSpacingToken; bottom: InheritableSpacingToken };
   background: { color: string; image?: string | null };
 };
 

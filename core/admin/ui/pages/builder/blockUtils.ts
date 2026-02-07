@@ -24,6 +24,12 @@ const defaultEditor: WidgetEditorState = {
   wizardCompleted: false,
 };
 
+const isContainerToken = (value: unknown): value is (typeof containerTokens)[number] =>
+  typeof value === "string" && containerTokens.includes(value as (typeof containerTokens)[number]);
+
+const isSpacingToken = (value: unknown): value is (typeof spacingTokens)[number] =>
+  typeof value === "string" && spacingTokens.includes(value as (typeof spacingTokens)[number]);
+
 const resolveDefinition = (input: WidgetDefinition | string) =>
   typeof input === "string" ? getRegisteredWidget(input) : input;
 
@@ -339,22 +345,14 @@ export function sanitizeLayout(layout?: LayoutValue | null): LayoutValue {
   };
   return {
     ...resolved,
-    container: containerTokens.includes(resolved.container)
-      ? resolved.container
-      : "default",
+    container: isContainerToken(resolved.container) ? resolved.container : "default",
     padding: {
-      top: spacingTokens.includes(resolved.padding.top)
-        ? resolved.padding.top
-        : "md",
-      bottom: spacingTokens.includes(resolved.padding.bottom)
-        ? resolved.padding.bottom
-        : "md",
+      top: isSpacingToken(resolved.padding.top) ? resolved.padding.top : "md",
+      bottom: isSpacingToken(resolved.padding.bottom) ? resolved.padding.bottom : "md",
     },
     margin: {
-      top: spacingTokens.includes(resolved.margin.top) ? resolved.margin.top : "none",
-      bottom: spacingTokens.includes(resolved.margin.bottom)
-        ? resolved.margin.bottom
-        : "none",
+      top: isSpacingToken(resolved.margin.top) ? resolved.margin.top : "none",
+      bottom: isSpacingToken(resolved.margin.bottom) ? resolved.margin.bottom : "none",
     },
   };
 }

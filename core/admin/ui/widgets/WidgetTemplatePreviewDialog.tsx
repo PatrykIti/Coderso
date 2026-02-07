@@ -113,7 +113,7 @@ export function WidgetTemplatePreviewDialog({
               <iframe
                 title="Template preview"
                 sandbox="allow-same-origin"
-                srcDoc={preview.html}
+                src={preview.previewUrl}
                 className="block rounded-2xl"
                 style={{ width: viewport.width, height: viewport.height }}
               />

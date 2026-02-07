@@ -18,17 +18,22 @@ import {
 import { matchContentRoute } from "../site/contentRouteMatcher";
 import { toCssVariables } from "../ui/theme/tokenCss";
 import { getPageBySlug, getPage } from "../services/pages/pageService";
-import { validatePreviewToken } from "../services/pages/previewService";
+import {
+  type PreviewTargetType,
+  validatePreviewToken,
+} from "../services/pages/previewService";
 import {
   getEntry,
   getEntryBySlug,
   listEntries,
 } from "../services/content/entryService";
+import { getWidgetTemplatePreviewModel } from "../services/widgets/widgetTemplatePreviewService";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
 import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import type { ContentSchema } from "../services/content/validation";
+import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
 
 export type PublicPageData = {
   title: string;
@@ -119,15 +124,15 @@ const renderPublicPageHtmlInternal = async (
   ensureRuntimeWidgetsRegistered();
 
   const { inlineCss, cssHref } = await resolvePublicStyles();
-  const blocks = toBlocks(
-    options?.preview ? page.currentData : page.publishedData
-  );
+  const sourceData = options?.preview ? page.currentData : page.publishedData;
+  const blocks = toBlocks(sourceData);
   return renderPublicPageHtml({
     title: page.title ?? "Page",
     blocks,
     cssHref,
     inlineCss,
     isPreview: options?.preview ?? false,
+    layoutSettings: getPageLayoutSettingsFromData(sourceData),
   });
 };
 
@@ -138,6 +143,26 @@ export async function renderPublicPage(
   const html = await renderPublicPageHtmlInternal(page, options);
   return buildHtmlResponse(html);
 }
+
+const resolvePreviewTargetType = (value: string | null): PreviewTargetType | null => {
+  if (value === "page") return "page";
+  if (value === "content") return "content";
+  if (value === "widget-template") return "widget-template";
+  return null;
+};
+
+const renderWidgetTemplatePreviewHtml = async (templateId: string) => {
+  ensureRuntimeWidgetsRegistered();
+  const { inlineCss, cssHref } = await resolvePublicStyles();
+  const template = await getWidgetTemplatePreviewModel(templateId);
+  return renderPublicPageHtml({
+    title: template.name,
+    blocks: template.blocks,
+    cssHref,
+    inlineCss,
+    isPreview: true,
+  });
+};
 
 const buildDetailHref = (pattern: string, slug: string, id?: string) => {
   if (pattern.includes(":slug")) {
@@ -232,16 +257,13 @@ export async function handlePublicRequest(req: Request) {
   }
   if (url.pathname === "/preview") {
     const token = url.searchParams.get("token");
-    const type = url.searchParams.get("type");
-    if (!token || !type) return new Response("Not Found", { status: 404 });
+    const targetType = resolvePreviewTargetType(url.searchParams.get("type"));
+    if (!token || !targetType) return new Response("Not Found", { status: 404 });
 
     const previewEnabled = await getSetting("site.previewEnabled");
     if (!previewEnabled) return new Response("Not Found", { status: 404 });
 
-    const preview = await validatePreviewToken(
-      token,
-      type === "page" ? "page" : "content"
-    );
+    const preview = await validatePreviewToken(token, targetType);
     if (!preview) return new Response("Preview expired", { status: 410 });
 
     if (preview.targetType === "page") {
@@ -263,6 +285,18 @@ export async function handlePublicRequest(req: Request) {
       });
       if (!html) return new Response("Not Found", { status: 404 });
       return buildHtmlResponse(html);
+    }
+
+    if (preview.targetType === "widget-template") {
+      try {
+        const html = await renderWidgetTemplatePreviewHtml(preview.targetId);
+        return buildHtmlResponse(html);
+      } catch (error) {
+        if (error instanceof Error && error.message === "widget_template_not_found") {
+          return new Response("Not Found", { status: 404 });
+        }
+        throw error;
+      }
     }
   }
 

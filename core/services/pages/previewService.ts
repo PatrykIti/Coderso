@@ -3,7 +3,7 @@ import { eq, lt } from "drizzle-orm";
 import { db } from "../../db/client";
 import { previewTokens } from "../../db/schema";
 
-export type PreviewTargetType = "page" | "content";
+export type PreviewTargetType = "page" | "content" | "widget-template";
 
 export type CreatePreviewInput = {
   targetType: PreviewTargetType;

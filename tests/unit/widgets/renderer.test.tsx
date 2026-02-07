@@ -70,6 +70,47 @@ test("renderer applies layout classes", () => {
   expect(html).toContain("mt-4");
 });
 
+test("renderer resolves inherit layout tokens from page defaults", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "hero-inherit",
+    type: "hero",
+    variant: "centered",
+    data: heroDefaults,
+    layout: {
+      container: "inherit",
+      padding: { top: "inherit", bottom: "inherit" },
+      margin: { top: "inherit", bottom: "inherit" },
+      background: { color: "transparent" },
+    },
+  };
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={block}
+      pageDefaults={{
+        container: "narrow",
+        padding: { top: "sm", bottom: "lg" },
+        margin: { top: "xs", bottom: "sm" },
+      }}
+    />
+  );
+
+  expect(html).toContain("max-w-3xl");
+  expect(html).toContain("pt-4");
+  expect(html).toContain("pb-8");
+  expect(html).toContain("mt-2");
+  expect(html).toContain("mb-4");
+});
+
 test("renderer renders nested blocks", () => {
   clearWidgets();
   registerWidget(

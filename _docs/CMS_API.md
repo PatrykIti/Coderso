@@ -529,6 +529,7 @@ Publiczne renderowanie stron działa bez `/admin`.
 - `GET /` oraz `GET /:slug` → published pages
 - `GET /preview?type=page&token=...` → podgląd draftu strony (token)
 - `GET /preview?type=content&token=...` → podgląd draftu wpisu (token)
+- `GET /preview?type=widget-template&token=...` → podgląd runtime template widgetów (token)
 - `GET <content list route>` → lista wpisów dla danego content type
 - `GET <content detail route>` → pojedynczy wpis (slug)
 

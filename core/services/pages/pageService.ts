@@ -4,6 +4,7 @@ import { pages, users } from "../../db/schema";
 import { createRevisionTx, type RevisionData } from "./revisionService";
 import { invalidateSiteCachePath, normalizeSitePath } from "../../site/cache/siteCache";
 import { getSetting } from "../settings/settingsService";
+import { normalizePageDataLayout } from "./layoutSettings";
 
 export type PageStatus = "draft" | "published" | "scheduled" | "archived";
 export type PageData = Record<string, unknown>;
@@ -61,6 +62,11 @@ function applyTemplate(data: PageData, template?: string): PageData {
   };
 }
 
+function preparePageData(data: PageData, template?: string): PageData {
+  const withTemplate = applyTemplate(data, template);
+  return normalizePageDataLayout(withTemplate) as PageData;
+}
+
 export async function createPage(input: CreatePageInput) {
   const [page] = await db
     .insert(pages)
@@ -69,7 +75,7 @@ export async function createPage(input: CreatePageInput) {
       slug: input.slug,
       status: "draft",
       authorId: input.authorId,
-      currentData: applyTemplate(input.data, input.template),
+      currentData: preparePageData(input.data, input.template),
     })
     .returning();
   return page;
@@ -128,7 +134,7 @@ export async function updatePage(id: string, input: UpdatePageInput) {
     updates.slug = input.slug;
   }
   if (typeof input.data !== "undefined") {
-    updates.currentData = input.data;
+    updates.currentData = preparePageData(input.data);
   }
 
   const [page] = await db
@@ -144,7 +150,7 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
     const [page] = await tx.select().from(pages).where(eq(pages.id, id));
     if (!page) throw new Error("page_not_found");
 
-    const nextData = (data ?? page.currentData) as PageData;
+    const nextData = preparePageData((data ?? page.currentData) as PageData);
 
     await createRevisionTx(tx, id, nextData as RevisionData, userId);
 

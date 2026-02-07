@@ -15,7 +15,7 @@ import {
   restoreRevision,
 } from "../../services/pages/revisionService";
 import { logAudit } from "../../services/audit/auditService";
-import { resolvePublicBaseUrl } from "../utils/baseUrl";
+import { resolvePreviewUrl } from "../utils/previewUrls";
 import {
   pageCreateSchema,
   pagePreviewSchema,
@@ -136,12 +136,11 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
       });
 
       const slugPath = page.slug.startsWith("/") ? page.slug : `/${page.slug}`;
-      const previewPath = `/preview?type=page&path=${encodeURIComponent(slugPath)}&token=${token}`;
-      const baseUrl = await resolvePublicBaseUrl();
-      const fallbackBase = "/";
-      const previewUrl = baseUrl
-        ? new URL(previewPath, baseUrl).toString()
-        : `${fallbackBase}${previewPath}`;
+      const previewUrl = await resolvePreviewUrl({
+        targetType: "page",
+        token,
+        path: slugPath,
+      });
       return { token, previewUrl, expiresAt };
     }
   );

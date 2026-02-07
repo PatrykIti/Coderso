@@ -6,7 +6,6 @@ import type {
   ContainerToken,
   SpacingToken,
   WidgetBlock,
-  WidgetLayout,
 } from "../types";
 
 const containerClassMap: Record<ContainerToken, string> = {
@@ -55,15 +54,48 @@ const marginBottomClassMap: Record<SpacingToken, string> = {
   "2xl": "mb-16",
 };
 
-const defaultLayout: WidgetLayout = {
+const defaultLayout: {
+  container: ContainerToken;
+  padding: { top: SpacingToken; bottom: SpacingToken };
+  margin: { top: SpacingToken; bottom: SpacingToken };
+  background: { color: string; image?: string | null };
+} = {
   container: "default",
   padding: { top: "md", bottom: "md" },
   margin: { top: "none", bottom: "none" },
   background: { color: "transparent", image: null },
 };
 
+export type WidgetRendererPageDefaults = {
+  container: ContainerToken;
+  padding: { top: SpacingToken; bottom: SpacingToken };
+  margin: { top: SpacingToken; bottom: SpacingToken };
+};
+
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
+
+const resolveContainerToken = (
+  value: unknown,
+  fallback: ContainerToken,
+  defaults?: WidgetRendererPageDefaults
+): ContainerToken => {
+  if (value === "inherit") return defaults?.container ?? fallback;
+  return typeof value === "string" && value in containerClassMap
+    ? (value as ContainerToken)
+    : fallback;
+};
+
+const resolveSpacingToken = (
+  value: unknown,
+  fallback: SpacingToken,
+  inherited: SpacingToken
+): SpacingToken => {
+  if (value === "inherit") return inherited;
+  return typeof value === "string" && value in paddingTopClassMap
+    ? (value as SpacingToken)
+    : fallback;
+};
 
 export function MissingWidget({ type, message }: { type: string; message?: string }) {
   return (
@@ -73,7 +105,13 @@ export function MissingWidget({ type, message }: { type: string; message?: strin
   );
 }
 
-export function WidgetRenderer({ block }: { block: WidgetBlock }) {
+export function WidgetRenderer({
+  block,
+  pageDefaults,
+}: {
+  block: WidgetBlock;
+  pageDefaults?: WidgetRendererPageDefaults;
+}) {
   const def = getWidget(block.type);
   if (!def) {
     return <MissingWidget type={block.type} />;
@@ -102,14 +140,40 @@ export function WidgetRenderer({ block }: { block: WidgetBlock }) {
     backgroundPosition: layout.background?.image ? "center" : undefined,
   };
 
-  const sectionClass = joinClasses(
-    paddingTopClassMap[layout.padding.top],
-    paddingBottomClassMap[layout.padding.bottom],
-    marginTopClassMap[layout.margin.top],
-    marginBottomClassMap[layout.margin.bottom]
+  const container = resolveContainerToken(
+    layout.container,
+    defaultLayout.container,
+    pageDefaults
+  );
+  const paddingTop = resolveSpacingToken(
+    layout.padding.top,
+    defaultLayout.padding.top,
+    pageDefaults?.padding.top ?? defaultLayout.padding.top
+  );
+  const paddingBottom = resolveSpacingToken(
+    layout.padding.bottom,
+    defaultLayout.padding.bottom,
+    pageDefaults?.padding.bottom ?? defaultLayout.padding.bottom
+  );
+  const marginTop = resolveSpacingToken(
+    layout.margin.top,
+    defaultLayout.margin.top,
+    pageDefaults?.margin.top ?? defaultLayout.margin.top
+  );
+  const marginBottom = resolveSpacingToken(
+    layout.margin.bottom,
+    defaultLayout.margin.bottom,
+    pageDefaults?.margin.bottom ?? defaultLayout.margin.bottom
   );
 
-  const wrapperClass = joinClasses(containerClassMap[layout.container]);
+  const sectionClass = joinClasses(
+    paddingTopClassMap[paddingTop],
+    paddingBottomClassMap[paddingBottom],
+    marginTopClassMap[marginTop],
+    marginBottomClassMap[marginBottom]
+  );
+
+  const wrapperClass = joinClasses(containerClassMap[container]);
 
   const WidgetComponent = def.render;
 
@@ -124,7 +188,11 @@ export function WidgetRenderer({ block }: { block: WidgetBlock }) {
         {!hasSlotDefinitions && legacyChildren.length ? (
           <div className="mt-6 flex flex-col gap-6">
             {legacyChildren.map((child) => (
-              <WidgetRenderer key={child.id} block={child} />
+              <WidgetRenderer
+                key={child.id}
+                block={child}
+                pageDefaults={pageDefaults}
+              />
             ))}
           </div>
         ) : null}

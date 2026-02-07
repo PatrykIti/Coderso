@@ -18,7 +18,12 @@ test("previewWidgetTemplate posts payload", async () => {
     if (String(input).endsWith("/auth/csrf")) {
       return jsonResponse({ token: "csrf-token" });
     }
-    return jsonResponse({ html: "<html></html>", blocksCount: 1 });
+    return jsonResponse({
+      token: "preview-token",
+      previewUrl: "/preview?type=widget-template&token=preview-token",
+      expiresAt: new Date(Date.now() + 30_000).toISOString(),
+      blocksCount: 1,
+    });
   };
 
   try {

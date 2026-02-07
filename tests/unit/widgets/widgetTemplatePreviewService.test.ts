@@ -8,7 +8,7 @@ import type { WidgetBlock } from "../../../core/widgets/types";
 import {
   createWidgetTemplate,
 } from "../../../core/services/widgets/widgetTemplateService";
-import { renderWidgetTemplatePreview } from "../../../core/services/widgets/widgetTemplatePreviewService";
+import { getWidgetTemplatePreviewModel } from "../../../core/services/widgets/widgetTemplatePreviewService";
 import {
   canConnect,
   hasWidgetTemplateRevisionsTable,
@@ -31,7 +31,7 @@ afterAll(async () => {
   await cleanup(createdTemplateId);
 });
 
-testIfDb("renderWidgetTemplatePreview returns html for blocks", async () => {
+testIfDb("getWidgetTemplatePreviewModel returns blocks for preview", async () => {
   const blocks: WidgetBlock[] = [
     {
       id: randomUUID(),
@@ -50,9 +50,10 @@ testIfDb("renderWidgetTemplatePreview returns html for blocks", async () => {
 
   createdTemplateId = template.id;
 
-  const preview = await renderWidgetTemplatePreview(template.id);
+  const preview = await getWidgetTemplatePreviewModel(template.id);
 
   expect(preview.blocksCount).toBe(1);
-  expect(preview.html).toContain("Build faster with Nextless");
-  expect(preview.html).toContain("--color-bg");
+  expect(preview.name).toBe(template.name);
+  expect(preview.blocks.length).toBe(1);
+  expect(preview.blocks[0]?.type).toBe("hero");
 });

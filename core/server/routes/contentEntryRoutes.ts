@@ -16,7 +16,7 @@ import {
   contentEntryPreviewSchema,
   contentEntryUpdateSchema,
 } from "../validation/contentSchemas";
-import { resolvePublicBaseUrl } from "../utils/baseUrl";
+import { resolvePreviewUrl } from "../utils/previewUrls";
 import { ApiError } from "../errorHandler";
 
 export type RouteContext = {
@@ -228,12 +228,12 @@ export function registerContentEntryRoutes(
         entry.id,
         body.ttlMinutes
       );
-      const previewPath = `/preview?type=content&contentType=${type.slug}&slug=${entry.slug}&token=${token}`;
-      const baseUrl = await resolvePublicBaseUrl();
-      const fallbackBase = "/";
-      const previewUrl = baseUrl
-        ? new URL(previewPath, baseUrl).toString()
-        : `${fallbackBase}${previewPath}`;
+      const previewUrl = await resolvePreviewUrl({
+        targetType: "content",
+        token,
+        contentType: type.slug,
+        slug: entry.slug,
+      });
       return { token, previewUrl, expiresAt };
     }
   );

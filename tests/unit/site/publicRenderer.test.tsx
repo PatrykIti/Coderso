@@ -1,6 +1,16 @@
 import { expect, test } from "bun:test";
+import type { ComponentType } from "react";
 
 import { renderPublicPageHtml } from "../../../core/site/renderPublicPage";
+import {
+  createHeroWidget,
+  heroDefaults,
+  type HeroData,
+} from "../../../core/widgets/core/hero";
+import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
+import type { WidgetEditorProps } from "../../../core/widgets/types";
+
+const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 
 test("renderPublicPageHtml renders title and preview banner", () => {
   const html = renderPublicPageHtml({
@@ -15,4 +25,58 @@ test("renderPublicPageHtml renders title and preview banner", () => {
   expect(html).toContain("Preview mode");
   expect(html).toContain("/site/assets/site.css");
   expect(html).toContain("--color-bg:#ffffff");
+});
+
+test("renderPublicPageHtml applies wrapper settings and inherited block defaults", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Home",
+    blocks: [
+      {
+        id: "hero-1",
+        type: "hero",
+        variant: "centered",
+        data: heroDefaults,
+        layout: {
+          container: "inherit",
+          padding: { top: "inherit", bottom: "inherit" },
+          margin: { top: "none", bottom: "none" },
+          background: { color: "transparent", image: null },
+        },
+      },
+    ],
+    layoutSettings: {
+      wrapper: {
+        container: "default",
+        maxWidth: "5xl",
+        padding: { top: "md", bottom: "lg" },
+        background: { color: "#fafafa", image: null },
+      },
+      sections: {
+        gap: "xl",
+        defaults: {
+          container: "narrow",
+          padding: { top: "sm", bottom: "sm" },
+          margin: { top: "none", bottom: "none" },
+        },
+      },
+      applyDefaultsToNewBlocks: false,
+    },
+  });
+
+  expect(html).toContain("max-w-5xl");
+  expect(html).toContain("gap-12");
+  expect(html).toContain("pt-6");
+  expect(html).toContain("pb-8");
+  expect(html).toContain("background-color:#fafafa");
+  expect(html).toContain("max-w-3xl");
+  expect(html).toContain("pt-4");
 });

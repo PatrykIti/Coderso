@@ -3,12 +3,15 @@ import { apiRequest } from "./apiClient";
 export type WidgetTemplatePreviewDevice = "desktop" | "tablet" | "mobile";
 
 export type WidgetTemplatePreviewRequest = {
+  ttlMinutes?: number;
   device?: WidgetTemplatePreviewDevice;
   viewport?: { width: number; height: number };
 };
 
 export type WidgetTemplatePreviewResponse = {
-  html: string;
+  token: string;
+  previewUrl: string;
+  expiresAt: string;
   blocksCount: number;
 };
 

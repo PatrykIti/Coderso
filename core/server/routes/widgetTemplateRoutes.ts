@@ -13,8 +13,10 @@ import {
   listWidgetTemplateRevisions,
   restoreWidgetTemplateRevision,
 } from "../../services/widgets/widgetTemplateRevisionService";
-import { renderWidgetTemplatePreview } from "../../services/widgets/widgetTemplatePreviewService";
+import { getWidgetTemplatePreviewModel } from "../../services/widgets/widgetTemplatePreviewService";
 import { logAudit } from "../../services/audit/auditService";
+import { createPreviewToken } from "../../services/pages/previewService";
+import { resolvePreviewUrl } from "../utils/previewUrls";
 import {
   widgetTemplateCreateSchema,
   widgetTemplatePreviewSchema,
@@ -109,12 +111,26 @@ export function registerWidgetTemplateRoutes(
       requirePermission("widgets:read"),
       async (ctx) => {
         return withWidgetTemplateErrors(async () => {
-          const input = (ctx.body ?? {}) as Parameters<
-            typeof renderWidgetTemplatePreview
-          >[1];
+          const input = (ctx.body ?? {}) as { ttlMinutes?: number };
           validate(widgetTemplatePreviewSchema, input);
-          const preview = await renderWidgetTemplatePreview(ctx.params.id, input);
-          return preview;
+
+          const previewModel = await getWidgetTemplatePreviewModel(ctx.params.id);
+          const { token, expiresAt } = await createPreviewToken({
+            targetType: "widget-template",
+            targetId: previewModel.id,
+            ttlMinutes: input.ttlMinutes,
+          });
+          const previewUrl = await resolvePreviewUrl({
+            targetType: "widget-template",
+            token,
+          });
+
+          return {
+            token,
+            previewUrl,
+            expiresAt,
+            blocksCount: previewModel.blocksCount,
+          };
         });
       }
     );
