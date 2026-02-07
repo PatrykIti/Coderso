@@ -105,6 +105,16 @@ export function mapMenuNodesToNavigationItems(nodes: MenuItemNode[]): Navigation
   }));
 }
 
+export function buildMenuSelectionPatch(
+  menuId: string | undefined,
+  items?: NavigationItem[]
+): Partial<NavigationData> {
+  return {
+    menuKey: menuId,
+    ...(items ? { items } : {}),
+  };
+}
+
 function EditorSection({
   title,
   description,
@@ -190,12 +200,13 @@ function NavigationVariantSelect({
 
 function MenuSelectField({
   menuId,
-  onMenuChange,
-  onItemsResolved,
+  onSelectionChange,
 }: {
   menuId: string | undefined;
-  onMenuChange: (menuId: string | undefined) => void;
-  onItemsResolved: (items: NavigationItem[]) => void;
+  onSelectionChange: (payload: {
+    menuId: string | undefined;
+    items?: NavigationItem[];
+  }) => void;
 }) {
   const [menus, setMenus] = useState<MenuSummary[]>([]);
   const [isLoadingMenus, setIsLoadingMenus] = useState(false);
@@ -231,11 +242,11 @@ function MenuSelectField({
 
   const handleMenuChange = async (nextValue: string) => {
     if (nextValue === NO_MENU_VALUE) {
-      onMenuChange(undefined);
+      onSelectionChange({ menuId: undefined });
       return;
     }
 
-    onMenuChange(nextValue);
+    onSelectionChange({ menuId: nextValue });
     setMenuError(null);
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
@@ -243,7 +254,10 @@ function MenuSelectField({
     try {
       const payload = await getMenuWithItems(nextValue);
       if (requestId !== requestIdRef.current) return;
-      onItemsResolved(mapMenuNodesToNavigationItems(payload.items));
+      onSelectionChange({
+        menuId: nextValue,
+        items: mapMenuNodesToNavigationItems(payload.items),
+      });
     } catch (err) {
       if (requestId !== requestIdRef.current) return;
       if (isApiClientError(err)) {
@@ -259,13 +273,17 @@ function MenuSelectField({
   };
 
   const selectValue = menuId && menuId.trim().length > 0 ? menuId : NO_MENU_VALUE;
+  const selectedMenuLabel =
+    selectValue === NO_MENU_VALUE
+      ? "No menu selected"
+      : menus.find((menu) => menu.id === selectValue)?.name ?? "Selected menu";
 
   return (
     <div className="space-y-2">
       <p className="text-sm font-medium">Choose existing menu</p>
       <Select value={selectValue} onValueChange={(next) => void handleMenuChange(next)}>
         <SelectTrigger>
-          <SelectValue placeholder="Select menu" />
+          <SelectValue placeholder="Select menu">{selectedMenuLabel}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={NO_MENU_VALUE}>No menu selected</SelectItem>
@@ -457,8 +475,9 @@ export function NavigationWizardEditor({
       {linksSource === "menu" ? (
         <MenuSelectField
           menuId={value.menuKey}
-          onMenuChange={(nextMenuId) => update({ menuKey: nextMenuId })}
-          onItemsResolved={(nextItems) => update({ items: nextItems })}
+          onSelectionChange={({ menuId, items }) =>
+            update(buildMenuSelectionPatch(menuId, items))
+          }
         />
       ) : (
         <div className="space-y-2">
@@ -752,8 +771,9 @@ export function NavigationVisualEditor({
         {linksSource === "menu" ? (
           <MenuSelectField
             menuId={value.menuKey}
-            onMenuChange={(nextMenuId) => update({ menuKey: nextMenuId })}
-            onItemsResolved={(nextItems) => update({ items: nextItems })}
+            onSelectionChange={({ menuId, items }) =>
+              update(buildMenuSelectionPatch(menuId, items))
+            }
           />
         ) : null}
       </EditorSection>

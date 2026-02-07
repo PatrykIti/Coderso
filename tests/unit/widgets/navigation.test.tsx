@@ -9,6 +9,7 @@ import {
   type NavigationData,
 } from "../../../core/widgets/core/navigation";
 import {
+  buildMenuSelectionPatch,
   mapMenuNodesToNavigationItems,
   NavigationAdvancedEditor,
   NavigationVisualEditor,
@@ -240,4 +241,17 @@ test("navigation maps selected menu nodes to widget items", () => {
       children: [{ label: "CMS", href: "/products/cms" }],
     },
   ]);
+});
+
+test("navigation menu selection patch keeps menu id with synced items", () => {
+  const items = [
+    { label: "Home", href: "/" },
+    { label: "About", href: "/about" },
+  ];
+  const patch = buildMenuSelectionPatch("menu-main", items);
+
+  expect(patch).toEqual({
+    menuKey: "menu-main",
+    items,
+  });
 });
