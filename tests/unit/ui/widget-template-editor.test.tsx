@@ -3,11 +3,20 @@ import { renderToString } from "react-dom/server";
 
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import {
+  FooterAdvancedEditor,
+  FooterVisualEditor,
+  FooterWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/FooterEditors";
+import {
   NavigationAdvancedEditor,
   NavigationVisualEditor,
   NavigationWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/NavigationEditors";
 import { WidgetTemplateEditorPage } from "../../../core/admin/ui/widgets/WidgetTemplateEditorPage";
+import {
+  createFooterWidget,
+  footerDefaults,
+} from "../../../core/widgets/core/footer";
 import {
   createNavigationWidget,
   navigationDefaults,
@@ -58,4 +67,33 @@ test("widget template block settings render navigation visual sections", () => {
   expect(html).toContain("Variant and Structure");
   expect(html).toContain("Navigation Links");
   expect(html).toContain("CTA and Right Actions");
+});
+
+test("widget template block settings render footer visual sections", () => {
+  const widget = createFooterWidget({
+    wizard: FooterWizardEditor,
+    visual: FooterVisualEditor,
+    advanced: FooterAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "footer-1",
+        type: "footer",
+        variant: "columns-2",
+        data: footerDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and structure");
+  expect(html).toContain("Legal strip");
+  expect(html).toContain("Social links");
 });

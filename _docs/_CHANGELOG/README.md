@@ -157,6 +157,7 @@ Project Change Log.
 | 160 | 2026-02-07 | Admin page layout settings and runtime preview unification | Admin/UI |
 | 161 | 2026-02-07 | Navigation widget bugfixes and UX hardening | CMS/Widgets |
 | 162 | 2026-02-07 | Navigation widget visual rebuild and advanced cleanup | CMS/Widgets |
+| 163 | 2026-02-07 | Footer widget bugfixes and UX hardening | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

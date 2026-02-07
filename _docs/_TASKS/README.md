@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 17 tasks
-- **In Progress:** 2 tasks
-- **Done:** 224 tasks
+- **In Progress:** 1 tasks
+- **Done:** 225 tasks
 
 ---
 
@@ -74,7 +74,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-050-07 | Footer Widget Expansion + Slots | High | Medium | Execution split into 050-07-01/02 |
-| TASK-050-07-01 | Footer Widget Bugfixes and UX Hardening | High | Medium | Slot MVP + editor hardening + baseline tests |
 
 ---
 
@@ -82,6 +81,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-07-01 | Footer Widget Bugfixes and UX Hardening | High | Medium | Footer slots MVP + editor hardening + baseline tests |
 | TASK-050-06 | Navigation Widget Expansion + Slots | High | Medium | 050-06-01/02 complete |
 | TASK-050-06-02 | Navigation Widget Visual Rebuild and Advanced Cleanup | High | Large | Visual IA rebuild + advanced technical cleanup |
 | TASK-050-06-01 | Navigation Widget Bugfixes and UX Hardening | High | Medium | Wizard/visual hardening + behavior parity + right slot MVP |

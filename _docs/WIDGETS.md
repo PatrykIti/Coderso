@@ -207,6 +207,8 @@ Flow:
   w odpowiednich miejscach UI.
 - Przykład: `hero` renderuje `slots.content` pod sekcją CTA.
 - Przykład: `navigation` renderuje `slots.right` w prawym obszarze akcji paska.
+- Przykład: `footer` renderuje `slots.column-1/2/3` w kolumnach i `slots.bottom`
+  w dolnym pasku legal/actions.
 
 ## Inheritance and page defaults
 

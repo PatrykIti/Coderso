@@ -8,12 +8,18 @@ import {
   navigationDefaults,
   type NavigationData,
 } from "../../../core/widgets/core/navigation";
+import {
+  createFooterWidget,
+  footerDefaults,
+  type FooterData,
+} from "../../../core/widgets/core/footer";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
+const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -346,4 +352,60 @@ test("renderer applies preview device visibility to slot widgets", () => {
   );
 
   expect(html).not.toContain("Mobile only action");
+});
+
+test("renderer renders footer column and bottom slot content", () => {
+  clearWidgets();
+  registerWidget(
+    createFooterWidget({
+      wizard: StubFooterEditor,
+      visual: StubFooterEditor,
+      advanced: StubFooterEditor,
+    })
+  );
+  registerWidget({
+    type: "badge",
+    title: "Badge",
+    description: "Simple marker",
+    category: "content",
+    variants: [{ id: "default", label: "Default" }],
+    schema: { type: "object", additionalProperties: true },
+    defaults: { label: "Badge" },
+    editor: {
+      wizard: StubUnknownEditor,
+      visual: StubUnknownEditor,
+      advanced: StubUnknownEditor,
+    },
+    render: ({ data }) => <span>{String((data as { label?: string }).label ?? "Badge")}</span>,
+  });
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "footer-1",
+        type: "footer",
+        variant: "columns-2",
+        data: footerDefaults,
+        slots: {
+          "column-1": [
+            {
+              id: "footer-column-slot",
+              type: "badge",
+              data: { label: "Column slot item" },
+            },
+          ],
+          bottom: [
+            {
+              id: "footer-bottom-slot",
+              type: "badge",
+              data: { label: "Bottom slot item" },
+            },
+          ],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("Column slot item");
+  expect(html).toContain("Bottom slot item");
 });

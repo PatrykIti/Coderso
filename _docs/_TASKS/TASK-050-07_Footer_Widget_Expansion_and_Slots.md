@@ -16,8 +16,8 @@ footer columns and a bottom strip area.
 
 Execution is split into two detailed subtasks:
 
-- `TASK-050-07-01` Footer Widget Bugfixes and UX Hardening
-- `TASK-050-07-02` Footer Widget Visual Rebuild and Advanced Cleanup
+- `TASK-050-07-01` Footer Widget Bugfixes and UX Hardening (**Done, 2026-02-07**)
+- `TASK-050-07-02` Footer Widget Visual Rebuild and Advanced Cleanup (**To Do**)
 
 ---
 
