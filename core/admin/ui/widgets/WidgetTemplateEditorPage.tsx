@@ -613,7 +613,7 @@ export function WidgetTemplateEditorPage() {
               disabled={isNew}
               onClick={() => void handlePreviewOpen()}
             >
-              Preview
+              Runtime Preview
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setDetailsOpen(true)}>
               Template Details
@@ -818,6 +818,7 @@ export function WidgetTemplateEditorPage() {
                     className={
                       spacingTokenToListSpaceClassMap[templateLayout.sections.gap]
                     }
+                    pageDefaults={templateLayout.sections.defaults}
                     selectedId={selectedId}
                     onSelect={setSelectedId}
                     onMove={(path, from, to) =>

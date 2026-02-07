@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Site/Appearance  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-002 (Pages data), TASK-010 (Page Builder UI), TASK-044 (Public pages + preview), TASK-045 (Site Themes), TASK-050-01 (Widget template preview)  
-**Status:** 🟠 In Progress (2026-02-07)
+**Status:** ✅ Done (2026-02-07)
 
 ---
 
@@ -64,7 +64,7 @@ chooses “apply defaults to blocks”.
   Status: Done (2026-02-07)
 - **TASK-051-03:** Admin UI — Page Layout Settings  
   Owns editor UX split (canvas vs runtime preview) and consistent preview controls in admin.  
-  Status: In Progress (2026-02-07)
+  Status: Done (2026-02-07)
 
 ---
 

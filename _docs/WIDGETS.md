@@ -103,9 +103,9 @@ type WidgetBlock = {
   variant: string; // wariant widgetu
   data: Record<string, unknown>;
   layout?: {
-    container?: "default" | "narrow" | "full";
-    padding?: { top?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl"; bottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" };
-    margin?: { top?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl"; bottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" };
+    container?: "default" | "narrow" | "full" | "inherit";
+    padding?: { top?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "inherit"; bottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "inherit" };
+    margin?: { top?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "inherit"; bottom?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "inherit" };
     background?: { color?: string; image?: string | null };
   };
   visibility?: {
@@ -197,12 +197,21 @@ Flow:
 - `WidgetRenderer` wybiera definicje po `type`.
 - Brak widgetu → `MissingWidget`.
 - Stosuje `layout` + `visibility`.
+- Dla tokenow `inherit` renderer bierze wartosci z `page.settings.layout.sections.defaults`.
 - Renderuje komponent `def.render`.
 - Jesli widget **nie** definiuje `slots`, renderer wyswietla legacy `children`
   (lub `slots.default`) wewnatrz kontenera sekcji.
 - Jesli widget ma `slots`, to on odpowiada za renderowanie tych blokow
   w odpowiednich miejscach UI.
 - Przykład: `hero` renderuje `slots.content` pod sekcją CTA.
+
+## Inheritance and page defaults
+
+- `page.settings.layout.sections.defaults` definiuje fallback dla blokow z
+  `layout.container/padding/margin = "inherit"`.
+- `page.settings.layout.applyDefaultsToNewBlocks = true` powoduje, ze nowo
+  dodane bloki w edytorze strony dostaja domyslne layout tokens z page settings.
+- Runtime preview i published output korzystaja z tych samych zasad dziedziczenia.
 
 ---
 

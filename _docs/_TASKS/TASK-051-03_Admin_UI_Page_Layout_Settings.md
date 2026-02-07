@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-051-01  
-**Status:** In Progress (2026-02-07)
+**Status:** Done (2026-02-07)
 
 ---
 
@@ -23,11 +23,11 @@ Completed:
 - Widget template editor now supports template-level layout/appearance settings.
 - Widget template runtime preview uses template wrapper settings in runtime render path.
 - Widget template API/service/revisions now persist strict `settings.layout`.
-
-Pending:
-- Page Settings drawer controls for `page.data.settings.layout`.
-- Shared `RuntimePreviewDialog` parity across pages/content/widget-templates.
-- Final UX parity tests for page editor + entry editor preview controls.
+- Page Settings drawer now exposes `Template and navigation`, `Layout and appearance`, and `Default widget layout`.
+- Page editor applies page wrapper settings in canvas and supports `applyDefaultsToNewBlocks` for inserted widgets.
+- Shared `RuntimePreviewDialog` is used by page editor, entry editor, and widget template preview.
+- Runtime preview copy now clearly distinguishes canvas (admin theme) vs runtime (site theme).
+- UI tests updated for preview parity and page settings sections.
 
 ---
 
@@ -82,7 +82,7 @@ opens with a consistent frame and contract.
 | --- | --- | --- |
 | `core/admin/ui/pages/PageSettingsDrawer.tsx` | add layout controls | sections + fields |
 | `core/admin/ui/pages/PageEditor.tsx` | pass settings changes | save to page data |
-| `core/admin/ui/pages/builder/blockUtils.ts` | use defaults for new blocks | if enabled |
+| `core/admin/ui/pages/builder/blockUtils.ts` | use defaults for new blocks | implemented in `PageEditor` insertion flow |
 | `core/admin/ui/preview/RuntimePreviewDialog.tsx` | create/reuse shared runtime preview dialog | common UX for previewables |
 | `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx` | align with shared runtime preview UX | avoid custom-only behavior |
 | `core/admin/ui/entries/EntryEditor.tsx` | align with shared runtime preview UX | if not already unified |

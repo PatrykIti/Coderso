@@ -1,26 +1,59 @@
-import { Globe, Settings, X } from "lucide-react";
+import { Globe, Settings, Sparkles, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetClose,
   SheetContent,
   SheetTitle,
 } from "@/components/ui/sheet";
-
+import { Switch } from "@/components/ui/switch";
 import type { PageDetail } from "@/services/pagesClient";
+import {
+  normalizePageLayoutSettings,
+  pageLayoutTokens,
+  type PageLayoutSettings,
+  type PageMaxWidthToken,
+} from "../../../services/pages/layoutSettings";
+import {
+  containerTokens,
+  spacingTokens,
+  type ContainerToken,
+  type SpacingToken,
+} from "../../../widgets/types";
+
+type PageSettingsValue = {
+  template: string;
+  showInNav: boolean;
+  layout: PageLayoutSettings;
+};
 
 type PageSettingsDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   page: PageDetail | null;
-  onSave: (payload: { title: string; slug: string }) => Promise<void> | void;
+  settings: PageSettingsValue;
+  onSave: (payload: {
+    title: string;
+    slug: string;
+    settings: PageSettingsValue;
+  }) => Promise<void> | void;
   isSubmitting?: boolean;
   error?: string | null;
 };
+
+const MAX_WIDTH_DEFAULT_VALUE = "max-width-default";
 
 const slugify = (value: string) =>
   value
@@ -29,10 +62,14 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
 
+const isHexColor = (value: string) =>
+  /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+
 export function PageSettingsDrawer({
   open,
   onOpenChange,
   page,
+  settings,
   onSave,
   isSubmitting = false,
   error,
@@ -40,29 +77,41 @@ export function PageSettingsDrawer({
   const [title, setTitle] = useState(page?.title ?? "");
   const [slug, setSlug] = useState(page?.slug ?? "");
   const [slugTouched, setSlugTouched] = useState(false);
+  const [template, setTemplate] = useState(settings.template);
+  const [showInNav, setShowInNav] = useState(settings.showInNav);
+  const [layout, setLayout] = useState<PageLayoutSettings>(settings.layout);
 
-  const canSubmit = useMemo(() => {
-    return title.trim().length > 0 && slug.trim().length > 0;
-  }, [slug, title]);
+  const canSubmit = useMemo(
+    () => title.trim().length > 0 && slug.trim().length > 0,
+    [slug, title]
+  );
 
   const handleSubmit = () => {
     if (!canSubmit || isSubmitting) return;
     const normalizedSlug = slug.startsWith("/") ? slug : `/${slug}`;
-    onSave({ title: title.trim(), slug: normalizedSlug });
+    onSave({
+      title: title.trim(),
+      slug: normalizedSlug,
+      settings: {
+        template,
+        showInNav,
+        layout,
+      },
+    });
   };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-md"
+        className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-2xl"
         showCloseButton={false}
       >
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
             <SheetTitle>Page settings</SheetTitle>
             <p className="text-xs text-muted-foreground">
-              Update the page title and URL slug.
+              Configure metadata, layout, and defaults for this page.
             </p>
           </div>
           <SheetClose asChild>
@@ -71,14 +120,25 @@ export function PageSettingsDrawer({
             </Button>
           </SheetClose>
         </div>
-        <div className="flex-1 px-6 py-6">
-          <div className="space-y-5">
+
+        <ScrollArea className="flex-1 px-6 py-6">
+          <div className="space-y-6">
             {error ? (
               <Alert variant="destructive">
                 <AlertTitle>Unable to update page</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             ) : null}
+
+            <Alert>
+              <Sparkles className="h-4 w-4" />
+              <AlertTitle>Preview modes</AlertTitle>
+              <AlertDescription>
+                Canvas preview is editable and uses admin theme. Runtime preview is
+                read-only and uses site theme.
+              </AlertDescription>
+            </Alert>
+
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
                 Page title
@@ -90,14 +150,12 @@ export function PageSettingsDrawer({
                   const nextTitle = event.target.value;
                   setTitle(nextTitle);
                   if (!slugTouched) {
-                    const nextSlug = nextTitle.trim()
-                      ? `/${slugify(nextTitle)}`
-                      : "";
-                    setSlug(nextSlug);
+                    setSlug(nextTitle.trim() ? `/${slugify(nextTitle)}` : "");
                   }
                 }}
               />
             </div>
+
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
                 Slug
@@ -115,8 +173,438 @@ export function PageSettingsDrawer({
                 />
               </div>
             </div>
+
+            <div className="rounded-lg border p-4">
+              <p className="text-sm font-semibold">Template and navigation</p>
+              <p className="text-xs text-muted-foreground">
+                Control base page template and menu visibility.
+              </p>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Template
+                  </label>
+                  <Select value={template} onValueChange={setTemplate}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose template" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="landing">Landing page</SelectItem>
+                      <SelectItem value="about">About</SelectItem>
+                      <SelectItem value="contact">Contact</SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Show in navigation
+                  </label>
+                  <div className="flex h-10 items-center justify-between rounded-md border px-3">
+                    <span className="text-sm text-muted-foreground">
+                      Add page to menu index
+                    </span>
+                    <Switch
+                      checked={showInNav}
+                      onCheckedChange={(checked) => setShowInNav(checked === true)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Layout and appearance</p>
+                  <p className="text-xs text-muted-foreground">
+                    Wrapper width, spacing and background for the whole page.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setLayout(normalizePageLayoutSettings(undefined))}
+                >
+                  Reset to theme defaults
+                </Button>
+              </div>
+
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Page width
+                  </label>
+                  <Select
+                    value={layout.wrapper.container}
+                    onValueChange={(next) =>
+                      setLayout((prev) => ({
+                        ...prev,
+                        wrapper: {
+                          ...prev.wrapper,
+                          container: next as ContainerToken,
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose width" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {containerTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Max width
+                  </label>
+                  <Select
+                    value={layout.wrapper.maxWidth ?? MAX_WIDTH_DEFAULT_VALUE}
+                    onValueChange={(next) =>
+                      setLayout((prev) => ({
+                        ...prev,
+                        wrapper: {
+                          ...prev.wrapper,
+                          maxWidth:
+                            next === MAX_WIDTH_DEFAULT_VALUE
+                              ? undefined
+                              : (next as PageMaxWidthToken),
+                        },
+                      }))
+                    }
+                    disabled={layout.wrapper.container === "full"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose max width" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={MAX_WIDTH_DEFAULT_VALUE}>
+                        Theme default
+                      </SelectItem>
+                      {pageLayoutTokens.maxWidth.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Section spacing
+                  </label>
+                  <Select
+                    value={layout.sections.gap}
+                    onValueChange={(next) =>
+                      setLayout((prev) => ({
+                        ...prev,
+                        sections: {
+                          ...prev.sections,
+                          gap: next as SpacingToken,
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose section spacing" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spacingTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Background color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="color"
+                      className="h-10 w-14 p-1"
+                      value={isHexColor(layout.wrapper.background.color) ? layout.wrapper.background.color : "#ffffff"}
+                      onChange={(event) =>
+                        setLayout((prev) => ({
+                          ...prev,
+                          wrapper: {
+                            ...prev.wrapper,
+                            background: {
+                              ...prev.wrapper.background,
+                              color: event.target.value,
+                            },
+                          },
+                        }))
+                      }
+                    />
+                    <Input
+                      value={layout.wrapper.background.color}
+                      onChange={(event) =>
+                        setLayout((prev) => ({
+                          ...prev,
+                          wrapper: {
+                            ...prev.wrapper,
+                            background: {
+                              ...prev.wrapper.background,
+                              color: event.target.value,
+                            },
+                          },
+                        }))
+                      }
+                      placeholder="#ffffff or transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Background media URL
+                  </label>
+                  <Input
+                    value={layout.wrapper.background.media.src ?? ""}
+                    onChange={(event) => {
+                      const nextValue = event.target.value.trim() ? event.target.value : null;
+                      setLayout((prev) => ({
+                        ...prev,
+                        wrapper: {
+                          ...prev.wrapper,
+                          background: {
+                            ...prev.wrapper.background,
+                            image: nextValue,
+                            media: nextValue
+                              ? {
+                                  type: "image",
+                                  source: "external",
+                                  src: nextValue,
+                                }
+                              : {
+                                  type: "none",
+                                  source: "external",
+                                  src: null,
+                                },
+                          },
+                        },
+                      }));
+                    }}
+                    placeholder="https://cdn.example.com/background.jpg"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <p className="text-sm font-semibold">Default widget layout</p>
+              <p className="text-xs text-muted-foreground">
+                Used when widget blocks choose inherited values.
+              </p>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Default container
+                  </label>
+                  <Select
+                    value={layout.sections.defaults.container}
+                    onValueChange={(next) =>
+                      setLayout((prev) => ({
+                        ...prev,
+                        sections: {
+                          ...prev.sections,
+                          defaults: {
+                            ...prev.sections.defaults,
+                            container: next as ContainerToken,
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose container" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {containerTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Apply defaults to new blocks
+                  </label>
+                  <div className="flex h-10 items-center justify-between rounded-md border px-3">
+                    <span className="text-sm text-muted-foreground">
+                      Auto-apply defaults on insert
+                    </span>
+                    <Switch
+                      checked={layout.applyDefaultsToNewBlocks}
+                      onCheckedChange={(checked) =>
+                        setLayout((prev) => ({
+                          ...prev,
+                          applyDefaultsToNewBlocks: checked === true,
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Default padding top
+                  </label>
+                  <Select
+                    value={layout.sections.defaults.padding.top}
+                    onValueChange={(next) =>
+                      setLayout((prev) => ({
+                        ...prev,
+                        sections: {
+                          ...prev.sections,
+                          defaults: {
+                            ...prev.sections.defaults,
+                            padding: {
+                              ...prev.sections.defaults.padding,
+                              top: next as SpacingToken,
+                            },
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose top padding" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spacingTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Default padding bottom
+                  </label>
+                  <Select
+                    value={layout.sections.defaults.padding.bottom}
+                    onValueChange={(next) =>
+                      setLayout((prev) => ({
+                        ...prev,
+                        sections: {
+                          ...prev.sections,
+                          defaults: {
+                            ...prev.sections.defaults,
+                            padding: {
+                              ...prev.sections.defaults.padding,
+                              bottom: next as SpacingToken,
+                            },
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose bottom padding" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spacingTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Default margin top
+                  </label>
+                  <Select
+                    value={layout.sections.defaults.margin.top}
+                    onValueChange={(next) =>
+                      setLayout((prev) => ({
+                        ...prev,
+                        sections: {
+                          ...prev.sections,
+                          defaults: {
+                            ...prev.sections.defaults,
+                            margin: {
+                              ...prev.sections.defaults.margin,
+                              top: next as SpacingToken,
+                            },
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose top margin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spacingTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Default margin bottom
+                  </label>
+                  <Select
+                    value={layout.sections.defaults.margin.bottom}
+                    onValueChange={(next) =>
+                      setLayout((prev) => ({
+                        ...prev,
+                        sections: {
+                          ...prev.sections,
+                          defaults: {
+                            ...prev.sections.defaults,
+                            margin: {
+                              ...prev.sections.defaults.margin,
+                              bottom: next as SpacingToken,
+                            },
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose bottom margin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spacingTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </ScrollArea>
+
         <div className="border-t bg-muted/30 px-6 py-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -137,3 +625,5 @@ export function PageSettingsDrawer({
     </Sheet>
   );
 }
+
+export type { PageSettingsValue };

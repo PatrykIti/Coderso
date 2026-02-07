@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
+import type { WidgetRendererPageDefaults } from "../../../../widgets/renderers/widgetRenderer";
 import type { Block } from "./types";
 import { getWidgetRegistry } from "./widgetRegistry";
 import type { BlockPath } from "./blockUtils";
@@ -13,6 +14,7 @@ import { BlockToolbar } from "./BlockToolbar";
 export type BlockListProps = {
   blocks: Block[];
   className?: string;
+  pageDefaults?: WidgetRendererPageDefaults;
   selectedId?: string | null;
   onSelect: (id: string) => void;
   onMove: (path: BlockPath, from: number, to: number) => void;
@@ -27,6 +29,7 @@ export type BlockListProps = {
 export function BlockList({
   blocks,
   className,
+  pageDefaults,
   selectedId,
   onSelect,
   onMove,
@@ -208,7 +211,7 @@ export function BlockList({
               </div>
             </div>
             <div className="border-t bg-muted/5">
-              <WidgetRenderer block={block} />
+              <WidgetRenderer block={block} pageDefaults={pageDefaults} />
             </div>
             {slotDefinitions.length > 0 ? (
               <div className="border-t p-4 space-y-4">
@@ -250,6 +253,7 @@ export function BlockList({
                       {slotBlocks.length ? (
                         <BlockList
                           blocks={slotBlocks}
+                          pageDefaults={pageDefaults}
                           selectedId={selectedId}
                           onSelect={onSelect}
                           onMove={onMove}

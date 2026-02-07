@@ -38,6 +38,7 @@ import {
   type TaxonomyOverview,
 } from "@/services/taxonomyClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
 import { EntryEditorHeader } from "./EntryEditorHeader";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
@@ -109,6 +110,10 @@ export function EntryEditor() {
   const [seoDescription, setSeoDescription] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -217,18 +222,27 @@ export function EntryEditor() {
   };
 
   const handlePreview = async () => {
-    if (!type || !id) return;
+    setPreviewOpen(true);
+    if (!type || !id) {
+      setPreviewLoading(false);
+      setPreviewError(null);
+      setPreviewUrl(null);
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewError(null);
     try {
       const result = await previewEntry(type, id, 30);
-      if (typeof window !== "undefined") {
-        window.open(result.previewUrl, "_blank", "noopener");
-      }
+      setPreviewUrl(result.previewUrl);
     } catch (err) {
       if (isApiClientError(err)) {
-        setError(err.message);
+        setPreviewError(err.message);
       } else {
-        setError("Failed to generate preview.");
+        setPreviewError("Failed to generate preview.");
       }
+      setPreviewUrl(null);
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -521,7 +535,7 @@ export function EntryEditor() {
                   disabled={isLoading}
                 >
                   <Eye className="h-4 w-4" />
-                  Preview
+                  Runtime preview
                 </Button>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
@@ -777,6 +791,18 @@ export function EntryEditor() {
           </ScrollArea>
         </SheetContent>
       </Sheet>
+      <RuntimePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        title="Entry Preview"
+        subtitle="Runtime preview (read-only, site theme)."
+        canPreview={Boolean(type && id)}
+        previewUrl={previewUrl}
+        isLoading={previewLoading}
+        error={previewError}
+        cannotPreviewMessage="Save this entry first to generate a runtime preview."
+        iframeTitle="Entry runtime preview"
+      />
     </AdminShell>
   );
 }

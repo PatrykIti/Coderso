@@ -479,8 +479,30 @@ Create/Update payload (summary):
 {
   "title": "Home",
   "slug": "home",
-  "status": "draft",
-  "data": { "schemaVersion": 1, "blocks": [] }
+  "data": {
+    "schemaVersion": 1,
+    "blocks": [],
+    "settings": {
+      "template": "landing",
+      "showInNav": true,
+      "layout": {
+        "wrapper": {
+          "container": "full",
+          "padding": { "top": "none", "bottom": "none" },
+          "background": { "color": "transparent", "image": null }
+        },
+        "sections": {
+          "gap": "none",
+          "defaults": {
+            "container": "default",
+            "padding": { "top": "xl", "bottom": "xl" },
+            "margin": { "top": "none", "bottom": "none" }
+          }
+        },
+        "applyDefaultsToNewBlocks": false
+      }
+    }
+  }
 }
 ```
 
@@ -489,6 +511,16 @@ Create/Update payload (summary):
 ```json
 {
   "data": { "schemaVersion": 1, "blocks": [] }
+}
+```
+
+`POST /pages/:id/preview` response:
+
+```json
+{
+  "token": "preview-token",
+  "previewUrl": "/preview?type=page&token=preview-token",
+  "expiresAt": "2026-02-07T12:00:00.000Z"
 }
 ```
 
@@ -516,7 +548,35 @@ Template create/update payload (summary):
   "description": "Reusable hero stack",
   "category": "layout",
   "status": "draft",
-  "blocks": []
+  "blocks": [],
+  "settings": {
+    "layout": {
+      "wrapper": {
+        "container": "full",
+        "padding": { "top": "none", "bottom": "none" },
+        "background": { "color": "transparent", "image": null }
+      },
+      "sections": {
+        "gap": "none",
+        "defaults": {
+          "container": "default",
+          "padding": { "top": "xl", "bottom": "xl" },
+          "margin": { "top": "none", "bottom": "none" }
+        }
+      }
+    }
+  }
+}
+```
+
+`POST /widgets/templates/:id/preview` response:
+
+```json
+{
+  "token": "preview-token",
+  "previewUrl": "/preview?type=widget-template&token=preview-token",
+  "expiresAt": "2026-02-07T12:00:00.000Z",
+  "blocksCount": 3
 }
 ```
 
@@ -689,7 +749,8 @@ Preview response (example):
 
 ```json
 {
-  "previewToken": "token",
+  "token": "token",
+  "previewUrl": "/preview?type=content&token=token",
   "expiresAt": "2026-01-27T10:00:00Z"
 }
 ```

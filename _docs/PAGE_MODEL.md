@@ -18,6 +18,53 @@ Model musi byc stabilny i wersjonowany.
 }
 ```
 
+## Page-level settings.layout (v1)
+
+`page.data.settings.layout` controls wrapper-level layout for runtime preview and
+published rendering.
+
+```json
+{
+  "settings": {
+    "template": "landing",
+    "showInNav": true,
+    "layout": {
+      "wrapper": {
+        "container": "full",
+        "maxWidth": "5xl",
+        "padding": { "top": "none", "bottom": "none" },
+        "background": {
+          "color": "transparent",
+          "image": null,
+          "media": {
+            "type": "none",
+            "source": "external",
+            "src": null
+          }
+        }
+      },
+      "sections": {
+        "gap": "none",
+        "defaults": {
+          "container": "default",
+          "padding": { "top": "xl", "bottom": "xl" },
+          "margin": { "top": "none", "bottom": "none" }
+        }
+      },
+      "applyDefaultsToNewBlocks": false
+    }
+  }
+}
+```
+
+Notes:
+- `layout.wrapper.background.media` supports `none | image | video` with
+  `source: library | external`.
+- For backwards compatibility, legacy `background.image` is normalized into
+  `background.media` when possible.
+- `applyDefaultsToNewBlocks` affects editor insertion behavior (new blocks), not
+  published rendering.
+
 ## Block structure
 
 ```json

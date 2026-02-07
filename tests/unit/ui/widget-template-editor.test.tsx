@@ -8,6 +8,7 @@ test("WidgetTemplateEditorPage renders canvas placeholder", () => {
 
   expect(html).toContain("Build your template");
   expect(html).toContain("Save Template");
+  expect(html).toContain("Runtime Preview");
   expect(html).toContain("Template Details");
   expect(html).toMatch(
     /<div(?=[^>]*data-slot="card")(?=[^>]*class="[^"]*border-b border-border bg-card px-6 py-4)[^>]*>/

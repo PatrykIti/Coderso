@@ -19,11 +19,12 @@ import {
 } from "@/services/pagesClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { DeviceSwitcher } from "@/ui/pages/DeviceSwitcher";
+import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
 import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
 import { WidgetPicker } from "./builder/WidgetPicker";
-import { PageSettingsDrawer } from "./PageSettingsDrawer";
+import { PageSettingsDrawer, type PageSettingsValue } from "./PageSettingsDrawer";
 import {
   applyWizardSelection,
   appendSlotBlock,
@@ -41,6 +42,11 @@ import {
 import type { Block } from "./builder/types";
 import { getWidgetRegistry } from "./builder/widgetRegistry";
 import { normalizeWidgetBlock } from "../../../widgets/validator";
+import {
+  normalizePageLayoutSettings,
+  type PageMaxWidthToken,
+} from "../../../services/pages/layoutSettings";
+import { type ContainerToken, type SpacingToken } from "../../../widgets/types";
 
 const heroBlockDefaults = createBlock("hero");
 const defaultBlocks: Block[] = [
@@ -101,6 +107,86 @@ const normalizeBlocks = (data?: Record<string, unknown> | null) => {
   }
 };
 
+const spacingTokenToListSpaceClassMap: Record<SpacingToken, string> = {
+  none: "space-y-0",
+  xs: "space-y-2",
+  sm: "space-y-4",
+  md: "space-y-6",
+  lg: "space-y-8",
+  xl: "space-y-12",
+  "2xl": "space-y-16",
+};
+
+const spacingTokenToPaddingTopClassMap: Record<SpacingToken, string> = {
+  none: "pt-0",
+  xs: "pt-2",
+  sm: "pt-4",
+  md: "pt-6",
+  lg: "pt-8",
+  xl: "pt-12",
+  "2xl": "pt-16",
+};
+
+const spacingTokenToPaddingBottomClassMap: Record<SpacingToken, string> = {
+  none: "pb-0",
+  xs: "pb-2",
+  sm: "pb-4",
+  md: "pb-6",
+  lg: "pb-8",
+  xl: "pb-12",
+  "2xl": "pb-16",
+};
+
+const pageContainerClassMap: Record<ContainerToken, string> = {
+  default: "mx-auto w-full max-w-6xl",
+  narrow: "mx-auto w-full max-w-4xl",
+  full: "w-full",
+};
+
+const pageMaxWidthClassMap: Record<PageMaxWidthToken, string> = {
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+};
+
+const joinClasses = (...classes: Array<string | undefined | false>) =>
+  classes.filter(Boolean).join(" ");
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const resolvePageSettings = (
+  data: Record<string, unknown>
+): PageSettingsValue => {
+  const settings = isRecord(data.settings) ? data.settings : {};
+  return {
+    template:
+      typeof settings.template === "string" && settings.template.trim().length > 0
+        ? settings.template
+        : "landing",
+    showInNav:
+      typeof settings.showInNav === "boolean" ? settings.showInNav : true,
+    layout: normalizePageLayoutSettings(settings.layout),
+  };
+};
+
+const applyPageSettings = (
+  data: Record<string, unknown>,
+  settingsValue: PageSettingsValue
+): Record<string, unknown> => {
+  const current = isRecord(data.settings) ? data.settings : {};
+  return {
+    ...data,
+    settings: {
+      ...current,
+      template: settingsValue.template,
+      showInNav: settingsValue.showInNav,
+      layout: settingsValue.layout,
+    },
+  };
+};
+
 export type PageEditorProps = {
   pageId?: string;
   initialPage?: PageDetail | null;
@@ -123,6 +209,10 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [isUpdatingMeta, setIsUpdatingMeta] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,6 +222,35 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+  const pageSettings = useMemo(() => resolvePageSettings(pageData), [pageData]);
+  const pageLayout = pageSettings.layout;
+  const wrapperPaddingClass = joinClasses(
+    spacingTokenToPaddingTopClassMap[pageLayout.wrapper.padding.top],
+    spacingTokenToPaddingBottomClassMap[pageLayout.wrapper.padding.bottom]
+  );
+  const wrapperContainerClass = joinClasses(
+    pageContainerClassMap[pageLayout.wrapper.container],
+    pageLayout.wrapper.container !== "full" && pageLayout.wrapper.maxWidth
+      ? pageMaxWidthClassMap[pageLayout.wrapper.maxWidth]
+      : undefined
+  );
+  const wrapperBackgroundMedia = pageLayout.wrapper.background.media;
+  const wrapperBackgroundImage =
+    wrapperBackgroundMedia.type === "image"
+      ? wrapperBackgroundMedia.src ?? pageLayout.wrapper.background.image ?? null
+      : null;
+  const wrapperBackgroundVideo =
+    wrapperBackgroundMedia.type === "video"
+      ? wrapperBackgroundMedia.src
+      : null;
+  const wrapperBackgroundStyle = {
+    backgroundColor: pageLayout.wrapper.background.color,
+    backgroundImage: wrapperBackgroundImage
+      ? `url(${wrapperBackgroundImage})`
+      : undefined,
+    backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
+    backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
+  };
 
   useEffect(() => {
     if (pageId || typeof window === "undefined") return;
@@ -188,14 +307,46 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setHasUnsavedChanges(true);
   };
 
-  const handleAddBlock = (type: string) => {
+  const buildNewBlock = (type: string) => {
     const nextBlock = createBlock(type);
+    if (!pageLayout.applyDefaultsToNewBlocks) {
+      return nextBlock;
+    }
+    const baseLayout = nextBlock.layout ?? {
+      container: "default",
+      padding: { top: "xl", bottom: "xl" },
+      margin: { top: "none", bottom: "none" },
+      background: { color: "transparent", image: null },
+    };
+    return {
+      ...nextBlock,
+      layout: {
+        ...baseLayout,
+        background: {
+          color: baseLayout.background?.color ?? "transparent",
+          image: baseLayout.background?.image ?? null,
+        },
+        container: pageLayout.sections.defaults.container,
+        padding: {
+          top: pageLayout.sections.defaults.padding.top,
+          bottom: pageLayout.sections.defaults.padding.bottom,
+        },
+        margin: {
+          top: pageLayout.sections.defaults.margin.top,
+          bottom: pageLayout.sections.defaults.margin.bottom,
+        },
+      },
+    };
+  };
+
+  const handleAddBlock = (type: string) => {
+    const nextBlock = buildNewBlock(type);
     updateBlocks([...blocks, nextBlock]);
     setSelectedId(nextBlock.id);
   };
 
   const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
-    const nextBlock = createBlock(type);
+    const nextBlock = buildNewBlock(type);
     updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
     setSelectedId(nextBlock.id);
   };
@@ -268,31 +419,52 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   };
 
   const handlePreview = async () => {
-    if (!pageId) return;
-    setError(null);
+    setPreviewOpen(true);
+    if (!pageId) {
+      setPreviewUrl(null);
+      setPreviewError(null);
+      setPreviewLoading(false);
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewError(null);
     try {
       const { previewUrl } = await previewPage(pageId);
-      if (typeof window !== "undefined") {
-        window.open(previewUrl, "_blank", "noopener");
-      }
+      setPreviewUrl(previewUrl);
     } catch (err) {
       if (isApiClientError(err)) {
-        setError(err.message);
+        setPreviewError(err.message);
       } else {
-        setError("Failed to generate preview.");
+        setPreviewError("Failed to generate preview.");
       }
+      setPreviewUrl(null);
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
-  const handleSaveSettings = async (payload: { title: string; slug: string }) => {
+  const handleSaveSettings = async (payload: {
+    title: string;
+    slug: string;
+    settings: PageSettingsValue;
+  }) => {
     if (!pageId) return;
     setMetaError(null);
     setIsUpdatingMeta(true);
     try {
-      const updated = await updatePage(pageId, payload);
+      const persistedData = isRecord(page?.currentData)
+        ? (page.currentData as Record<string, unknown>)
+        : { blocks: defaultBlocks };
+      const nextPersistedData = applyPageSettings(persistedData, payload.settings);
+      const updated = await updatePage(pageId, {
+        title: payload.title,
+        slug: payload.slug,
+        data: nextPersistedData,
+      });
       if (updated) {
         setPage((prev) => (prev ? { ...prev, ...updated } : updated));
       }
+      setPageData((prev) => applyPageSettings(prev, payload.settings));
       setSettingsOpen(false);
     } catch (err) {
       if (isApiClientError(err)) {
@@ -339,7 +511,12 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <DeviceSwitcher />
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Canvas preview
+              </p>
+              <DeviceSwitcher />
+            </div>
             <Button
               variant="outline"
               size="sm"
@@ -348,7 +525,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               disabled={isLoading}
             >
               <Eye className="h-4 w-4" />
-              Preview
+              Runtime preview
             </Button>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -415,16 +592,44 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             Loading page...
           </div>
         ) : (
-          <BlockList
-            blocks={blocks}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onMove={handleMove}
-            onDuplicate={handleDuplicate}
-            onDelete={handleDelete}
-            onInsert={handleInsertIntoSlot}
-            onMoveToSlot={handleMoveIntoSlot}
-          />
+          <div
+            className={joinClasses(
+              "relative w-full overflow-hidden rounded-xl border border-border/50",
+              wrapperPaddingClass
+            )}
+            style={wrapperBackgroundStyle}
+          >
+            {wrapperBackgroundVideo ? (
+              <video
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                src={wrapperBackgroundVideo}
+                autoPlay
+                loop
+                muted
+                playsInline
+                aria-hidden="true"
+              />
+            ) : null}
+            <div
+              className={joinClasses(
+                wrapperContainerClass,
+                wrapperBackgroundVideo ? "relative z-[1]" : undefined
+              )}
+            >
+              <BlockList
+                blocks={blocks}
+                className={spacingTokenToListSpaceClassMap[pageLayout.sections.gap]}
+                pageDefaults={pageLayout.sections.defaults}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+                onMove={handleMove}
+                onDuplicate={handleDuplicate}
+                onDelete={handleDelete}
+                onInsert={handleInsertIntoSlot}
+                onMoveToSlot={handleMoveIntoSlot}
+              />
+            </div>
+          </div>
         )}
       </div>
       <PageSettingsDrawer
@@ -432,9 +637,22 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         page={page}
+        settings={pageSettings}
         onSave={handleSaveSettings}
         isSubmitting={isUpdatingMeta}
         error={metaError}
+      />
+      <RuntimePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        title="Page Preview"
+        subtitle="Runtime preview (read-only, site theme)."
+        canPreview={Boolean(pageId)}
+        previewUrl={previewUrl}
+        isLoading={previewLoading}
+        error={previewError}
+        cannotPreviewMessage="Save this page first to generate a runtime preview."
+        iframeTitle="Page runtime preview"
       />
       <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
         <SheetContent side="left" className="w-80 p-0">

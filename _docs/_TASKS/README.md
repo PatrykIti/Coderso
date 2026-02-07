@@ -74,8 +74,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-051 | Page Wrapper & Layout Settings | High | Large | 051-01/02 done, 051-03 in progress |
-| TASK-051-03 | Admin UI — Page Layout Settings | High | Medium | Page drawer + shared runtime preview UX pending |
 
 ---
 
@@ -83,6 +81,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-051 | Page Wrapper & Layout Settings | High | Large | 051-01/02/03 complete |
+| TASK-051-03 | Admin UI — Page Layout Settings | High | Medium | Page settings drawer + shared runtime preview UX |
 | TASK-051-02 | Page Wrapper Rendering + Inheritance | High | Medium | Runtime wrapper + inherit + preview parity |
 | TASK-051-01 | Page Layout Model + Validation | High | Medium | Normalized settings.layout + strict schema |
 | TASK-050-05-02 | Hero Widget Visual Rebuild and Advanced Cleanup | High | Large | Visual-first IA + presets modal + advanced scope cleanup |

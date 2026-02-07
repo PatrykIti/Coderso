@@ -9,4 +9,5 @@ test("EntryEditor renders main panels", () => {
   expect(html).toContain("Loading entry fields");
   expect(html).toContain("Search Engine Optimization");
   expect(html).toContain("Taxonomy");
+  expect(html).toContain("Runtime preview");
 });
