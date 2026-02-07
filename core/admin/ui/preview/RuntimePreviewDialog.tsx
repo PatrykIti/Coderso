@@ -18,6 +18,20 @@ const runtimePreviewDevices = [
 
 type RuntimePreviewDeviceId = (typeof runtimePreviewDevices)[number]["id"];
 
+const isAbsoluteUrl = (value: string) => /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value);
+
+const withPreviewDevice = (previewUrl: string, device: RuntimePreviewDeviceId) => {
+  try {
+    const resolved = new URL(previewUrl, "http://localhost");
+    resolved.searchParams.set("device", device);
+    return isAbsoluteUrl(previewUrl)
+      ? resolved.toString()
+      : `${resolved.pathname}${resolved.search}${resolved.hash}`;
+  } catch {
+    return previewUrl;
+  }
+};
+
 export type RuntimePreviewDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,10 +64,15 @@ export function RuntimePreviewDialog({
   iframeTitle = "Runtime preview",
 }: RuntimePreviewDialogProps) {
   const [device, setDevice] = useState<RuntimePreviewDeviceId>("desktop");
+  const [iframeReady, setIframeReady] = useState(false);
 
   const viewport = useMemo(
     () => runtimePreviewDevices.find((entry) => entry.id === device) ?? runtimePreviewDevices[0],
     [device]
+  );
+  const iframeSrc = useMemo(
+    () => (previewUrl ? withPreviewDevice(previewUrl, device) : null),
+    [device, previewUrl]
   );
 
   return (
@@ -77,7 +96,10 @@ export function RuntimePreviewDialog({
                     type="button"
                     variant={isActive ? "secondary" : "ghost"}
                     size="icon-sm"
-                    onClick={() => setDevice(entry.id)}
+                    onClick={() => {
+                      setIframeReady(false);
+                      setDevice(entry.id);
+                    }}
                     className={cn(isActive && "shadow-sm")}
                     aria-label={entry.label}
                   >
@@ -120,11 +142,17 @@ export function RuntimePreviewDialog({
           ) : (
             <div className="mx-auto w-fit rounded-2xl border bg-background shadow-sm">
               <iframe
+                key={iframeSrc ?? previewUrl}
                 title={iframeTitle}
                 sandbox="allow-same-origin allow-scripts"
-                src={previewUrl}
-                className="block rounded-2xl"
+                src={iframeSrc ?? previewUrl}
+                className={cn(
+                  "block rounded-2xl transition-opacity",
+                  iframeReady ? "opacity-100" : "opacity-0"
+                )}
                 style={{ width: viewport.width, height: viewport.height }}
+                data-preview-device={device}
+                onLoad={() => setIframeReady(true)}
               />
             </div>
           )}

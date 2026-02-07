@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { WidgetBlock } from "../widgets/types";
+import type { DeviceTarget, WidgetBlock } from "../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
 import { renderPublicPageHtml } from "../site/renderPublicPage";
 import {
@@ -158,7 +158,7 @@ const buildHtmlResponse = (html: string) =>
 
 const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
-  options?: { preview?: boolean }
+  options?: { preview?: boolean; previewDevice?: DeviceTarget }
 ) => {
   ensureRuntimeWidgetsRegistered();
 
@@ -171,6 +171,7 @@ const renderPublicPageHtmlInternal = async (
     cssHref,
     inlineCss,
     isPreview: options?.preview ?? false,
+    previewDevice: options?.previewDevice,
     layoutSettings: getPageLayoutSettingsFromData(sourceData),
     devModuleScripts,
   });
@@ -178,7 +179,7 @@ const renderPublicPageHtmlInternal = async (
 
 export async function renderPublicPage(
   page: PublicPageData,
-  options?: { preview?: boolean }
+  options?: { preview?: boolean; previewDevice?: DeviceTarget }
 ) {
   const html = await renderPublicPageHtmlInternal(page, options);
   return buildHtmlResponse(html);
@@ -191,7 +192,17 @@ const resolvePreviewTargetType = (value: string | null): PreviewTargetType | nul
   return null;
 };
 
-const renderWidgetTemplatePreviewHtml = async (templateId: string) => {
+const resolvePreviewDevice = (value: string | null): DeviceTarget | null => {
+  if (value === "desktop") return "desktop";
+  if (value === "tablet") return "tablet";
+  if (value === "mobile") return "mobile";
+  return null;
+};
+
+const renderWidgetTemplatePreviewHtml = async (
+  templateId: string,
+  previewDevice?: DeviceTarget
+) => {
   ensureRuntimeWidgetsRegistered();
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   const template = await getWidgetTemplatePreviewModel(templateId);
@@ -201,6 +212,7 @@ const renderWidgetTemplatePreviewHtml = async (templateId: string) => {
     cssHref,
     inlineCss,
     isPreview: true,
+    previewDevice,
     layoutSettings: getWidgetTemplateLayoutSettings(template.settings),
     devModuleScripts,
   });
@@ -302,6 +314,7 @@ export async function handlePublicRequest(req: Request) {
   if (url.pathname === "/preview") {
     const token = url.searchParams.get("token");
     const targetType = resolvePreviewTargetType(url.searchParams.get("type"));
+    const previewDevice = resolvePreviewDevice(url.searchParams.get("device")) ?? "desktop";
     if (!token || !targetType) return new Response("Not Found", { status: 404 });
 
     const previewEnabled = await getSetting("site.previewEnabled");
@@ -315,6 +328,7 @@ export async function handlePublicRequest(req: Request) {
       if (!page) return new Response("Not Found", { status: 404 });
       const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
         preview: true,
+        previewDevice,
       });
       return buildHtmlResponse(html);
     }
@@ -333,7 +347,10 @@ export async function handlePublicRequest(req: Request) {
 
     if (preview.targetType === "widget-template") {
       try {
-        const html = await renderWidgetTemplatePreviewHtml(preview.targetId);
+        const html = await renderWidgetTemplatePreviewHtml(
+          preview.targetId,
+          previewDevice
+        );
         return buildHtmlResponse(html);
       } catch (error) {
         if (error instanceof Error && error.message === "widget_template_not_found") {

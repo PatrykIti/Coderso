@@ -139,3 +139,38 @@ test("renderPublicPageHtml renders wrapper background video when configured", ()
   expect(html).toContain("https://cdn.example.com/background.mp4");
   expect(html).toContain("absolute inset-0 h-full w-full object-cover");
 });
+
+test("renderPublicPageHtml filters blocks by preview device visibility", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Home",
+    previewDevice: "tablet",
+    blocks: [
+      {
+        id: "hero-desktop",
+        type: "hero",
+        variant: "centered",
+        data: { ...heroDefaults, headline: "Desktop Hero" },
+        visibility: { enabled: true, devices: ["desktop"] },
+      },
+      {
+        id: "hero-tablet",
+        type: "hero",
+        variant: "centered",
+        data: { ...heroDefaults, headline: "Tablet Hero" },
+        visibility: { enabled: true, devices: ["tablet"] },
+      },
+    ],
+  });
+
+  expect(html).not.toContain("Desktop Hero");
+  expect(html).toContain("Tablet Hero");
+});

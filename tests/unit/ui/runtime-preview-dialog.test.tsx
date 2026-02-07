@@ -18,4 +18,6 @@ test("RuntimePreviewDialog allows scripts in iframe sandbox", () => {
 
   expect(html).toContain("sandbox=\"allow-same-origin allow-scripts\"");
   expect(html).toContain("Runtime preview");
+  expect(html).toContain("device=desktop");
+  expect(html).toContain("data-preview-device=\"desktop\"");
 });

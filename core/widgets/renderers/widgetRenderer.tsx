@@ -4,6 +4,7 @@ import { getWidget } from "../registry";
 import { normalizeWidgetBlock } from "../validator";
 import type {
   ContainerToken,
+  DeviceTarget,
   SpacingToken,
   WidgetBlock,
 } from "../types";
@@ -108,9 +109,11 @@ export function MissingWidget({ type, message }: { type: string; message?: strin
 export function WidgetRenderer({
   block,
   pageDefaults,
+  previewDevice,
 }: {
   block: WidgetBlock;
   pageDefaults?: WidgetRendererPageDefaults;
+  previewDevice?: DeviceTarget;
 }) {
   const def = getWidget(block.type);
   if (!def) {
@@ -124,6 +127,16 @@ export function WidgetRenderer({
     return <MissingWidget type={block.type} message="Invalid widget data" />;
   }
   if (normalized.visibility?.enabled === false) return null;
+  if (
+    previewDevice &&
+    Array.isArray(normalized.visibility?.devices) &&
+    (
+      normalized.visibility.devices.length === 0 ||
+      !normalized.visibility.devices.includes(previewDevice)
+    )
+  ) {
+    return null;
+  }
 
   const layout = normalized.layout ?? defaultLayout;
   const slots = normalized.slots;
@@ -192,6 +205,7 @@ export function WidgetRenderer({
                 key={child.id}
                 block={child}
                 pageDefaults={pageDefaults}
+                previewDevice={previewDevice}
               />
             ))}
           </div>

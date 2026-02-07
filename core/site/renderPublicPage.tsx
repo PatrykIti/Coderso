@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { WidgetRenderer } from "../widgets/renderers/widgetRenderer";
 import type {
   ContainerToken,
+  DeviceTarget,
   SpacingToken,
   WidgetBlock,
 } from "../widgets/types";
@@ -21,6 +22,7 @@ export type PublicPageRenderOptions = {
   inlineCss?: string | null;
   devModuleScripts?: string[] | null;
   isPreview?: boolean;
+  previewDevice?: DeviceTarget;
   metaDescription?: string | null;
   layoutSettings?: PageLayoutSettings;
 };
@@ -74,7 +76,8 @@ const joinClasses = (...classes: Array<string | undefined | false>) =>
 const renderBlocks = (
   blocks: WidgetBlock[],
   sectionGap: SpacingToken,
-  pageDefaults: WidgetRendererPageDefaults
+  pageDefaults: WidgetRendererPageDefaults,
+  previewDevice?: DeviceTarget
 ) => {
   if (!blocks.length) {
     return (
@@ -86,7 +89,12 @@ const renderBlocks = (
   return (
     <main className={joinClasses("flex flex-col", spacingTokenToGapClassMap[sectionGap])}>
       {blocks.map((block) => (
-        <WidgetRenderer key={block.id} block={block} pageDefaults={pageDefaults} />
+        <WidgetRenderer
+          key={block.id}
+          block={block}
+          pageDefaults={pageDefaults}
+          previewDevice={previewDevice}
+        />
       ))}
     </main>
   );
@@ -100,6 +108,7 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     inlineCss,
     devModuleScripts,
     isPreview,
+    previewDevice,
     metaDescription,
     layoutSettings: rawLayoutSettings,
   } = options;
@@ -161,7 +170,7 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
             wrapperBackgroundVideo ? "relative z-[1]" : undefined
           )}
         >
-          {renderBlocks(blocks, layoutSettings.sections.gap, pageDefaults)}
+          {renderBlocks(blocks, layoutSettings.sections.gap, pageDefaults, previewDevice)}
         </div>
       </div>
     </div>

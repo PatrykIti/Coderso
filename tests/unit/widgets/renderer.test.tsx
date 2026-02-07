@@ -48,6 +48,60 @@ test("renderer respects visibility disabled", () => {
   expect(html).toBe("");
 });
 
+test("renderer respects visibility devices in runtime preview", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "hero-visible-mobile-only",
+    type: "hero",
+    variant: "centered",
+    data: heroDefaults,
+    visibility: { enabled: true, devices: ["mobile"] },
+  };
+
+  const desktopHtml = renderToString(
+    <WidgetRenderer block={block} previewDevice="desktop" />
+  );
+  const mobileHtml = renderToString(
+    <WidgetRenderer block={block} previewDevice="mobile" />
+  );
+
+  expect(desktopHtml).toBe("");
+  expect(mobileHtml).toContain("Build faster with Nextless");
+});
+
+test("renderer hides widget when visibility devices are empty", () => {
+  clearWidgets();
+  registerWidget(
+    createHeroWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  const block: WidgetBlock = {
+    id: "hero-visible-no-devices",
+    type: "hero",
+    variant: "centered",
+    data: heroDefaults,
+    visibility: { enabled: true, devices: [] },
+  };
+
+  const html = renderToString(
+    <WidgetRenderer block={block} previewDevice="desktop" />
+  );
+
+  expect(html).toBe("");
+});
+
 test("renderer applies layout classes", () => {
   clearWidgets();
   registerWidget(
