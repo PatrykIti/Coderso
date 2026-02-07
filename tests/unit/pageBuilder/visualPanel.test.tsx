@@ -10,6 +10,10 @@ import {
 } from "../../../core/admin/ui/widgets/editors/NavigationEditors";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
 import {
+  createFooterWidget,
+  footerDefaults,
+} from "../../../core/widgets/core/footer";
+import {
   createNavigationWidget,
   navigationDefaults,
 } from "../../../core/widgets/core/navigation";
@@ -112,4 +116,32 @@ test("VisualPanel uses navigation editor variant controls", () => {
   expect(html).not.toContain("Choose a visual style for this widget.");
   expect(html).toContain("Variant and Structure");
   expect(html).toContain("Navigation Links");
+});
+
+test("VisualPanel uses footer editor variant controls", () => {
+  const widget = createFooterWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const block: Block = {
+    id: "footer-1",
+    type: "footer",
+    variant: "columns-2",
+    data: footerDefaults,
+    editor: {
+      mode: "visual",
+      wizardCompleted: true,
+    },
+  };
+
+  const html = renderToString(
+    <VisualPanel
+      widget={widget}
+      block={block}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).not.toContain("Choose a visual style for this widget.");
 });

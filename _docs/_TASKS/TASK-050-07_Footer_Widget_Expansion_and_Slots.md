@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-04  
-**Status:** In Progress (2026-02-07)
+**Status:** Done (2026-02-07)
 
 ---
 
@@ -17,7 +17,7 @@ footer columns and a bottom strip area.
 Execution is split into two detailed subtasks:
 
 - `TASK-050-07-01` Footer Widget Bugfixes and UX Hardening (**Done, 2026-02-07**)
-- `TASK-050-07-02` Footer Widget Visual Rebuild and Advanced Cleanup (**To Do**)
+- `TASK-050-07-02` Footer Widget Visual Rebuild and Advanced Cleanup (**Done, 2026-02-07**)
 
 ---
 

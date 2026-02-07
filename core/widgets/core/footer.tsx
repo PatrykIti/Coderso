@@ -32,6 +32,25 @@ export type FooterData = {
   columns: FooterColumn[];
   legal?: FooterLegal;
   social?: FooterSocial[];
+  layout?: {
+    align?: "left" | "center" | "right";
+    legalAlign?: "left" | "center" | "right";
+    maxWidth?: "5xl" | "6xl" | "7xl";
+    columnGap?: "4" | "6" | "8";
+    sectionPaddingY?: "8" | "10" | "12";
+  };
+  style?: {
+    surfaceColor?: string;
+    borderColor?: string;
+    borderTopWidth?: "0" | "1" | "2" | "3";
+    textColor?: string;
+    headingColor?: string;
+    linkColor?: string;
+    legalTextColor?: string;
+    socialColor?: string;
+    fontSize?: "xs" | "sm" | "base";
+    headingTransform?: "none" | "uppercase" | "capitalize";
+  };
 };
 
 export const footerColumnSlotIds = [
@@ -91,6 +110,33 @@ export const footerSchema = {
         },
       },
     },
+    layout: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        align: { enum: ["left", "center", "right"] },
+        legalAlign: { enum: ["left", "center", "right"] },
+        maxWidth: { enum: ["5xl", "6xl", "7xl"] },
+        columnGap: { enum: ["4", "6", "8"] },
+        sectionPaddingY: { enum: ["8", "10", "12"] },
+      },
+    },
+    style: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        surfaceColor: { type: "string" },
+        borderColor: { type: "string" },
+        borderTopWidth: { enum: ["0", "1", "2", "3"] },
+        textColor: { type: "string" },
+        headingColor: { type: "string" },
+        linkColor: { type: "string" },
+        legalTextColor: { type: "string" },
+        socialColor: { type: "string" },
+        fontSize: { enum: ["xs", "sm", "base"] },
+        headingTransform: { enum: ["none", "uppercase", "capitalize"] },
+      },
+    },
   },
 };
 
@@ -123,6 +169,18 @@ export const footerDefaults: FooterData = {
     { type: "twitter", href: "https://twitter.com" },
     { type: "linkedin", href: "https://linkedin.com" },
   ],
+  layout: {
+    align: "left",
+    legalAlign: "right",
+    maxWidth: "6xl",
+    columnGap: "6",
+    sectionPaddingY: "10",
+  },
+  style: {
+    borderTopWidth: "1",
+    fontSize: "sm",
+    headingTransform: "uppercase",
+  },
 };
 
 const footerColumnCountByVariant = {
@@ -130,6 +188,58 @@ const footerColumnCountByVariant = {
   "columns-3": 3,
   minimal: 1,
 } as const;
+
+const maxWidthClassMap = {
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+} as const;
+
+const gapClassMap = {
+  "4": "gap-4",
+  "6": "gap-6",
+  "8": "gap-8",
+} as const;
+
+const sectionPaddingYClassMap = {
+  "8": "py-8",
+  "10": "py-10",
+  "12": "py-12",
+} as const;
+
+const fontSizeClassMap = {
+  xs: "text-xs",
+  sm: "text-sm",
+  base: "text-base",
+} as const;
+
+const headingTransformClassMap = {
+  none: "normal-case",
+  uppercase: "uppercase",
+  capitalize: "capitalize",
+} as const;
+
+const alignClassMap = {
+  left: "text-left",
+  center: "text-center",
+  right: "text-right",
+} as const;
+
+const justifyClassMap = {
+  left: "justify-start",
+  center: "justify-center",
+  right: "justify-end",
+} as const;
+
+const borderWidthValueMap = {
+  "0": "0px",
+  "1": "1px",
+  "2": "2px",
+  "3": "3px",
+} as const;
+
+const joinClasses = (...classes: Array<string | undefined | false>) =>
+  classes.filter(Boolean).join(" ");
 
 const normalizeFooterLink = (link: FooterLink, index: number): FooterLink => {
   const label = link.label?.trim() || `Link ${index + 1}`;
@@ -182,6 +292,10 @@ export function FooterBlock({
 }) {
   const columns = resolveFooterColumnsForVariant(data.columns, variant);
   const visibleColumnCount = columns.length;
+  const layout = data.layout ?? {};
+  const style = data.style ?? {};
+  const align = layout.align ?? "left";
+  const legalAlign = layout.legalAlign ?? "right";
   const gridClass =
     visibleColumnCount === 3
       ? "md:grid-cols-3"
@@ -191,45 +305,98 @@ export function FooterBlock({
   const legal = data.legal ?? footerDefaults.legal;
   const social = Array.isArray(data.social) ? data.social : footerDefaults.social;
   const bottomSlotBlocks = slots?.bottom ?? [];
+  const outerStyle = {
+    backgroundColor: style.surfaceColor ?? "var(--color-bg)",
+    borderColor: style.borderColor ?? "var(--color-border)",
+    borderTopWidth: borderWidthValueMap[style.borderTopWidth ?? "1"] ?? "1px",
+    color: style.textColor ?? "var(--color-text)",
+  };
+  const headingStyle = {
+    color: style.headingColor ?? style.textColor ?? "var(--color-text)",
+  };
+  const linkStyle = {
+    color: style.linkColor ?? style.textColor ?? "var(--color-text)",
+  };
+  const legalStyle = {
+    color: style.legalTextColor ?? style.textColor ?? "var(--color-text)",
+  };
+  const socialStyle = {
+    color: style.socialColor ?? style.linkColor ?? style.textColor ?? "var(--color-text)",
+  };
 
   return (
-    <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg)] px-6 py-10 text-sm text-[var(--color-text)]/70">
-      <div className={`mx-auto grid w-full max-w-6xl gap-6 ${gridClass}`}>
+    <footer
+      className={joinClasses(
+        "border-t px-6",
+        sectionPaddingYClassMap[layout.sectionPaddingY ?? "10"] ?? "py-10",
+        fontSizeClassMap[style.fontSize ?? "sm"] ?? "text-sm"
+      )}
+      style={outerStyle}
+    >
+      <div
+        className={joinClasses(
+          "mx-auto grid w-full",
+          maxWidthClassMap[layout.maxWidth ?? "6xl"] ?? "max-w-6xl",
+          gapClassMap[layout.columnGap ?? "6"] ?? "gap-6",
+          gridClass
+        )}
+      >
         {columns.map((column, index) => {
           const slotId = footerColumnSlotIds[index];
           const slotBlocks = slotId ? slots?.[slotId] ?? [] : [];
           return (
-          <div key={`${column.title}-${index}`} className="space-y-2">
-            <p className="text-xs font-semibold uppercase text-[var(--color-text)]/80">
-              {column.title}
-            </p>
-            <ul className="space-y-1">
-              {column.links.map((link, linkIndex) => (
-                <li key={`${link.label}-${link.href}-${linkIndex}`}>
-                  <a href={link.href}>{link.label}</a>
-                </li>
-              ))}
-            </ul>
-            {slotBlocks.length > 0 ? (
-              <div className="pt-2">
-                <div className="flex flex-col gap-3">
-                  {slotBlocks.map((slotBlock) => (
-                    <WidgetRenderer
-                      key={slotBlock.id}
-                      block={slotBlock}
-                      previewDevice={previewDevice}
-                    />
-                  ))}
+            <div
+              key={`${column.title}-${index}`}
+              className={joinClasses("space-y-2", alignClassMap[align] ?? "text-left")}
+            >
+              <p
+                className={joinClasses(
+                  "text-xs font-semibold",
+                  headingTransformClassMap[style.headingTransform ?? "uppercase"] ??
+                    "uppercase"
+                )}
+                style={headingStyle}
+              >
+                {column.title}
+              </p>
+              <ul className="space-y-1">
+                {column.links.map((link, linkIndex) => (
+                  <li key={`${link.label}-${link.href}-${linkIndex}`}>
+                    <a href={link.href} style={linkStyle}>
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              {slotBlocks.length > 0 ? (
+                <div className="pt-2">
+                  <div className="flex flex-col gap-3">
+                    {slotBlocks.map((slotBlock) => (
+                      <WidgetRenderer
+                        key={slotBlock.id}
+                        block={slotBlock}
+                        previewDevice={previewDevice}
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
           );
         })}
       </div>
-      <div className="mx-auto mt-8 flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 border-t border-[var(--color-border)] pt-4 text-xs">
-        <span>{legal?.copyright}</span>
-        <div className="flex flex-wrap items-center gap-4">
+      <div
+        className={joinClasses(
+          "mx-auto mt-8 flex w-full flex-wrap items-center gap-4 border-t pt-4 text-xs",
+          maxWidthClassMap[layout.maxWidth ?? "6xl"] ?? "max-w-6xl",
+          justifyClassMap[legalAlign] ?? "justify-end"
+        )}
+        style={{
+          borderColor: style.borderColor ?? "var(--color-border)",
+        }}
+      >
+        <span style={legalStyle}>{legal?.copyright}</span>
+        <div className={joinClasses("flex flex-wrap items-center gap-4")}>
           {bottomSlotBlocks.map((slotBlock) => (
             <WidgetRenderer
               key={slotBlock.id}
@@ -237,12 +404,21 @@ export function FooterBlock({
               previewDevice={previewDevice}
             />
           ))}
-          {legal?.privacy ? <a href={legal.privacy}>Privacy</a> : null}
-          {legal?.terms ? <a href={legal.terms}>Terms</a> : null}
+          {legal?.privacy ? (
+            <a href={legal.privacy} style={linkStyle}>
+              Privacy
+            </a>
+          ) : null}
+          {legal?.terms ? (
+            <a href={legal.terms} style={linkStyle}>
+              Terms
+            </a>
+          ) : null}
           {social?.map((socialEntry, socialIndex) => (
             <a
               key={`${socialEntry.type}-${socialEntry.href}-${socialIndex}`}
               href={socialEntry.href}
+              style={socialStyle}
             >
               {socialEntry.type}
             </a>
@@ -277,6 +453,7 @@ export function createFooterWidget(editors: {
     schema: footerSchema,
     defaults: footerDefaults,
     editor: editors,
+    editorCapabilities: { visualOwnsVariantSelection: true },
     render: FooterBlock,
   };
 }

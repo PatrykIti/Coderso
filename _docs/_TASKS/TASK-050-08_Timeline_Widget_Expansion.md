@@ -5,15 +5,22 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-04  
-**Status:** To Do
+**Status:** In Progress (2026-02-07)
 
 ---
 
 ## Overview
 
-Expand the Timeline widget to fully match the v1 documentation. This is a
-**non-slot** widget focused on richer layout, step metadata, and visual
-controls.
+Expand the Timeline widget to fully match the v1 documentation and align its
+editing quality with Hero, Navigation, and Footer.
+
+Timeline is a **non-slot** widget focused on process steps, orientation,
+line/marker styling, and guide readability.
+
+Execution is split into two detailed subtasks:
+
+- `TASK-050-08-01` Timeline Widget Bugfixes and UX Hardening (**In Progress, 2026-02-07**)
+- `TASK-050-08-02` Timeline Widget Visual Rebuild and Advanced Cleanup (**To Do**)
 
 ---
 
@@ -21,11 +28,15 @@ controls.
 
 Align with `_docs/_WIDGETS/TIMELINE.md`:
 
-- Steps: `title`, `description`, `icon`, `accent`
+- Steps: `id`, `title`, `description`, `icon`, `accent`
 - Layout: `orientation`, `align`, `spacing`, `labelPosition`
 - Guides: `enabled`, `style`
 - Line/markers: `lineStyle`, `thickness`, `markerSize`
 - Background: `color`
+
+Notes:
+- Keep additive schema changes for compatibility.
+- Normalize legacy payloads at runtime/editor boundary.
 
 ---
 
@@ -43,20 +54,20 @@ Wizard should create placeholder steps with stable IDs.
 ### Visual
 - Preview per variant
 - Only show fields relevant to selected variant
+- In final state, Timeline owns variant controls in Visual (no duplicate generic picker)
 
 ### Advanced
-- Full steps editor (titles, descriptions, icons, accents)
-- Line + marker size controls
-- Layout spacing + alignment options
+- 08-01: full controls available while model stabilizes
+- 08-02: technical-only controls (no duplicate content/style from Visual)
 
 ---
 
 ## Rendering Requirements
 
 Update `TimelineBlock` to:
-- Render variants correctly (milestones/cards/compact)
+- Render variants correctly (`milestones`/`cards`/`compact`)
 - Respect orientation + label position
-- Apply guides + line styles
+- Apply guides + line styles + marker sizing/thickness
 
 ---
 
@@ -65,10 +76,24 @@ Update `TimelineBlock` to:
 | File | Action | Notes |
 | --- | --- | --- |
 | `core/widgets/core/timeline.tsx` | expand data model + schema + defaults | per docs |
-| `core/widgets/core/timeline.tsx` | update render variants | layout + guides |
+| `core/widgets/core/timeline.tsx` | update runtime render variants | layout + guides + style |
 | `core/admin/ui/widgets/editors/TimelineEditors.tsx` | expand wizard flow | per docs |
-| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | expand visual + advanced | full controls |
-| `tests/unit/widgets/timeline.test.tsx` | extend schema/default tests | add layout cases |
+| `core/admin/ui/widgets/editors/TimelineEditors.tsx` | rebuild visual + advanced scope | split across 08-01/08-02 |
+| `tests/unit/widgets/timeline.test.tsx` | extend tests | schema/defaults/render variants |
+| `tests/unit/widgets/renderer.test.tsx` | add runtime assertions | orientation + labels |
+| `tests/unit/pageBuilder/visualPanel.test.tsx` | cover variant ownership in Visual | for 08-02 |
+| `tests/unit/ui/widget-template-editor.test.tsx` | timeline editor integration | visual sections |
+
+---
+
+## Sub-Tasks
+
+- **TASK-050-08-01:** Timeline Widget Bugfixes and UX Hardening  
+  Scope: data model parity, renderer correctness, wizard hardening, baseline
+  tests.
+- **TASK-050-08-02:** Timeline Widget Visual Rebuild and Advanced Cleanup  
+  Scope: section-based Visual IA, variant ownership in Visual, and technical-only
+  Advanced scope.
 
 ---
 
@@ -76,7 +101,7 @@ Update `TimelineBlock` to:
 
 - Unit: schema validates step metadata + layout options.
 - Unit: renderer supports orientation + label positions.
-- UI: wizard/visual/advanced fields exist.
+- UI: wizard/visual/advanced field coverage.
 
 ---
 

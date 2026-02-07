@@ -53,7 +53,7 @@ Kazdy widget musi wspierac 3 tryby konfiguracji:
   - colors/borders/background
 - Widget moze przejac kontrole nad selektorem wariantu (bez generycznego duplikatu)
   przez `editorCapabilities.visualOwnsVariantSelection = true`.
-- Core widgets `hero` i `navigation` uzywaja tego podejscia i renderuja
+- Core widgets `hero`, `navigation` i `footer` uzywaja tego podejscia i renderuja
   sekcyjny Visual IA zamiast generycznej listy wariantow.
 
 3) Advanced

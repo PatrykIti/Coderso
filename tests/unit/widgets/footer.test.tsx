@@ -3,6 +3,11 @@ import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import {
+  FooterAdvancedEditor,
+  FooterVisualEditor,
+  FooterWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/FooterEditors";
+import {
   createFooterWidget,
   footerDefaults,
   FooterBlock,
@@ -76,6 +81,7 @@ test("footer widget exposes slot definitions", () => {
     { id: "column-3", label: "Column 3" },
     { id: "bottom", label: "Bottom Strip" },
   ]);
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
 });
 
 test("footer schema accepts legal and social fields", () => {
@@ -163,4 +169,53 @@ test("footer renders column and bottom slots", () => {
 
   expect(html).toContain("Column widget");
   expect(html).toContain("Bottom widget");
+});
+
+test("footer visual editor renders section-based IA", () => {
+  const html = renderToString(
+    <FooterVisualEditor
+      value={footerDefaults}
+      onChange={() => undefined}
+      variant="columns-2"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and structure");
+  expect(html).toContain("Columns and links");
+  expect(html).toContain("Legal strip");
+  expect(html).toContain("Social links and icon style");
+  expect(html).toContain("Colors and borders");
+  expect(html).toContain("Typography and spacing");
+  expect(html).toContain("Slots overview and insertion hints");
+});
+
+test("footer advanced editor keeps technical-only scope", () => {
+  const html = renderToString(
+    <FooterAdvancedEditor
+      value={footerDefaults}
+      onChange={() => undefined}
+      variant="columns-2"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Layout tokens");
+  expect(html).not.toContain("Columns and links");
+  expect(html).not.toContain("Legal strip");
+});
+
+test("footer wizard keeps quick setup scope", () => {
+  const html = renderToString(
+    <FooterWizardEditor
+      value={footerDefaults}
+      onChange={() => undefined}
+      variant="columns-2"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Columns quick setup");
+  expect(html).toContain("Legal basics");
+  expect(html).toContain("Social basics");
 });

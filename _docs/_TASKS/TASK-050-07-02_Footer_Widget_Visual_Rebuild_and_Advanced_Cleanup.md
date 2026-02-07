@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-050-07-01  
-**Status:** To Do
+**Status:** Done (2026-02-07)
 
 ---
 

@@ -25,7 +25,7 @@ Site footer with structured columns, legal strip, and social links.
 - `bottom` (`Bottom Strip`)  
   Renders in the lower legal/actions strip.
 
-## Editor Modes (current after TASK-050-07-01)
+## Editor Modes (current after TASK-050-07-02)
 
 ### Wizard
 - Layout variant selection.
@@ -34,14 +34,25 @@ Site footer with structured columns, legal strip, and social links.
 - Basic social links setup.
 
 ### Visual
-- Variant and structure summary (runtime column count + quick overview).
-- Legal strip editing.
-- Social links editing.
+- Primary editing mode (Footer owns variant selection in Visual).
+- Sections:
+  - Variant and structure
+  - Columns and links
+  - Legal strip
+  - Social links and icon style
+  - Colors and borders
+  - Typography and spacing
+  - Slots overview and insertion hints
 
 ### Advanced
-- Full structured column link editing (label + href, add/remove).
-- Full social list management.
-- Legal strip fields.
+- Technical-only scope.
+- Layout tokens:
+  - columns alignment
+  - legal row alignment
+  - max width
+  - column gap
+  - section vertical padding
+- Content/style editing is intentionally excluded from Advanced.
 
 ## Runtime behavior notes
 
@@ -51,6 +62,9 @@ Site footer with structured columns, legal strip, and social links.
   - `columns-3` -> 3 columns
 - Footer uses deterministic fallback columns when payload is incomplete.
 - Slot content is rendered in column regions and bottom strip with nested widget support.
+- Runtime style/layout fields are additive and backward-compatible:
+  - `layout.align`, `layout.legalAlign`, `layout.maxWidth`, `layout.columnGap`, `layout.sectionPaddingY`
+  - `style.surfaceColor`, `style.borderColor`, `style.borderTopWidth`, `style.textColor`, `style.headingColor`, `style.linkColor`, `style.legalTextColor`, `style.socialColor`, `style.fontSize`, `style.headingTransform`
 
 ## Data model (summary)
 
@@ -72,6 +86,25 @@ Site footer with structured columns, legal strip, and social links.
   },
   "social": [
     { "type": "linkedin", "href": "https://linkedin.com/company/nextless" }
-  ]
+  ],
+  "layout": {
+    "align": "left",
+    "legalAlign": "right",
+    "maxWidth": "6xl",
+    "columnGap": "6",
+    "sectionPaddingY": "10"
+  },
+  "style": {
+    "surfaceColor": "#ffffff",
+    "borderColor": "#e2e8f0",
+    "borderTopWidth": "1",
+    "textColor": "#0f172a",
+    "headingColor": "#0f172a",
+    "linkColor": "#334155",
+    "legalTextColor": "#334155",
+    "socialColor": "#0f172a",
+    "fontSize": "sm",
+    "headingTransform": "uppercase"
+  }
 }
 ```
