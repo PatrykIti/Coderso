@@ -61,6 +61,12 @@ export type HeroData = {
     color?: string;
     gradient?: string;
     image?: string;
+    media?: {
+      type?: "none" | "image" | "video";
+      source?: "library" | "external";
+      assetId?: string;
+      src?: string;
+    };
   };
   responsive?: {
     hideMediaOnMobile?: boolean;
@@ -162,6 +168,16 @@ export const heroSchema = {
         color: { type: "string" },
         gradient: { type: "string" },
         image: { type: "string" },
+        media: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            type: { enum: ["none", "image", "video"] },
+            source: { enum: ["library", "external"] },
+            assetId: { type: "string" },
+            src: { type: "string" },
+          },
+        },
       },
     },
     responsive: {
@@ -297,13 +313,24 @@ export function HeroBlock({
   const paddingTop = resolveSpacingKey(spacing.paddingTop, defaultPaddingTop);
   const paddingBottom = resolveSpacingKey(spacing.paddingBottom, defaultPaddingBottom);
   const background = data.background ?? {};
+  const backgroundMedia = {
+    type: background.media?.type ?? (background.image ? "image" : "none"),
+    source: background.media?.source ?? "external",
+    assetId: background.media?.assetId,
+    src: background.media?.src ?? background.image,
+  };
   const centeredImageBackground =
     variant === "centered" && media.type === "image" ? media.src : undefined;
-  const resolvedBackgroundImage = background.image ?? centeredImageBackground;
+  const resolvedBackgroundVideo =
+    backgroundMedia.type === "video" ? backgroundMedia.src : undefined;
+  const resolvedBackgroundImage =
+    backgroundMedia.type === "image"
+      ? backgroundMedia.src ?? centeredImageBackground
+      : background.image ?? centeredImageBackground;
   const resolvedBackgroundGradient = background.gradient ?? "";
   const centeredMediaOverlay =
     variant === "centered" && media.type === "image" ? media.overlay : undefined;
-  const layeredBackground = resolvedBackgroundImage
+  const layeredBackground = !resolvedBackgroundVideo && resolvedBackgroundImage
     ? [
         centeredMediaOverlay,
         resolvedBackgroundGradient,
@@ -311,7 +338,9 @@ export function HeroBlock({
       ]
         .filter(Boolean)
         .join(", ")
-    : resolvedBackgroundGradient || undefined;
+    : !resolvedBackgroundVideo
+      ? resolvedBackgroundGradient || undefined
+      : undefined;
 
   const backgroundStyle: CSSProperties = {
     backgroundColor: background.color ?? "transparent",
@@ -383,12 +412,34 @@ export function HeroBlock({
   return (
     <div
       className={joinClasses(
-        "w-full border px-6",
+        "relative w-full overflow-hidden border px-6",
         radiusClassMap[style.borderRadius ?? "3xl"] ?? "rounded-3xl"
       )}
       style={cardStyle}
     >
-      <div className={joinClasses("mx-auto w-full", maxWidthClassMap[maxWidth])}>
+      {resolvedBackgroundVideo ? (
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          src={resolvedBackgroundVideo}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : null}
+      {resolvedBackgroundVideo && resolvedBackgroundGradient ? (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: resolvedBackgroundGradient }}
+        />
+      ) : null}
+      {resolvedBackgroundVideo && centeredMediaOverlay ? (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ background: centeredMediaOverlay }}
+        />
+      ) : null}
+      <div className={joinClasses("relative z-[1] mx-auto w-full", maxWidthClassMap[maxWidth])}>
         <div className={layoutClass}>
           <div
             className={joinClasses(

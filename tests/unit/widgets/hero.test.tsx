@@ -66,7 +66,16 @@ test("hero validator accepts extended schema", () => {
       variant: "split",
       data: {
         ...heroDefaults,
-        background: { color: "#fff", gradient: "linear-gradient(#fff,#eee)" },
+        background: {
+          color: "#fff",
+          gradient: "linear-gradient(#fff,#eee)",
+          media: {
+            type: "image",
+            source: "library",
+            assetId: "bg-asset-1",
+            src: "https://example.com/bg.jpg",
+          },
+        },
         spacing: { paddingTop: "lg", paddingBottom: "xl" },
         layout: { align: "left", maxWidth: "2xl", contentWidth: "md" },
         media: {
@@ -187,4 +196,28 @@ test("hero applies style tokens to runtime output", () => {
   expect(html).toContain("border-width:3px");
   expect(html).toContain("border-color:#445566");
   expect(html).toContain("background:#224466");
+});
+
+test("hero renders background video when configured", () => {
+  const html = renderToString(
+    <HeroBlock
+      data={{
+        ...heroDefaults,
+        background: {
+          color: "#000000",
+          gradient: "linear-gradient(120deg, #000000, #111111)",
+          media: {
+            type: "video",
+            source: "external",
+            src: "https://example.com/bg.mp4",
+          },
+        },
+      }}
+      variant="centered"
+    />
+  );
+
+  expect(html).toContain("src=\"https://example.com/bg.mp4\"");
+  expect(html).toContain("autoPlay");
+  expect(html).toContain("object-cover");
 });

@@ -8,5 +8,5 @@ test("PageEditor renders builder UI", () => {
 
   expect(html).toContain("Save draft");
   expect(html).toContain("Publish");
-  expect(html).toContain("Variant and Presets");
+  expect(html).toContain("Hero Content");
 });

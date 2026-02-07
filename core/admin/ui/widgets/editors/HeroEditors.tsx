@@ -140,6 +140,11 @@ const borderWidthOptions = ["0", "1", "2", "3"] as const;
 const radiusOptions = ["lg", "xl", "2xl", "3xl"] as const;
 const heroPresetLimit = 24;
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+const linearGradientPattern =
+  /^linear-gradient\(\s*(-?\d+(?:\.\d+)?)deg\s*,\s*(#[0-9a-fA-F]{3,8})\s*,\s*(#[0-9a-fA-F]{3,8})\s*\)$/;
+const defaultGradientStart = "#0f172a";
+const defaultGradientEnd = "#475569";
+const defaultGradientAngle = 135;
 
 function HeroMediaSourceFields({
   media,
@@ -514,6 +519,19 @@ const sanitizeHeroPresetList = (value: unknown): HeroPresetSetting[] => {
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
 
+const resolveBackgroundMedia = (
+  background: HeroData["background"]
+): NonNullable<HeroData["media"]> => {
+  const media = background?.media;
+  const legacyImage = background?.image;
+  return {
+    type: media?.type ?? (legacyImage ? "image" : "none"),
+    source: media?.source ?? "external",
+    assetId: media?.assetId,
+    src: media?.src ?? legacyImage,
+  };
+};
+
 function EditorSection({
   title,
   description,
@@ -571,6 +589,78 @@ function ColorField({
   );
 }
 
+function GradientField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string | undefined;
+  onChange: (next: string) => void;
+}) {
+  const parsed = value?.match(linearGradientPattern);
+  const angle =
+    parsed && Number.isFinite(Number(parsed[1]))
+      ? Number(parsed[1])
+      : defaultGradientAngle;
+  const start =
+    parsed && hexColorPattern.test(parsed[2]) ? parsed[2] : defaultGradientStart;
+  const end =
+    parsed && hexColorPattern.test(parsed[3]) ? parsed[3] : defaultGradientEnd;
+
+  const emit = (nextAngle: number, nextStart: string, nextEnd: string) => {
+    onChange(`linear-gradient(${nextAngle}deg, ${nextStart}, ${nextEnd})`);
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">{label}</p>
+      <div
+        className="h-10 rounded-md border border-border/70"
+        style={{ backgroundImage: `linear-gradient(${angle}deg, ${start}, ${end})` }}
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">Start color</p>
+          <Input
+            type="color"
+            value={resolvePickerColor(start, defaultGradientStart)}
+            onChange={(event) => {
+              emit(angle, event.target.value, end);
+            }}
+            className="h-9 w-full p-1"
+          />
+        </div>
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground">End color</p>
+          <Input
+            type="color"
+            value={resolvePickerColor(end, defaultGradientEnd)}
+            onChange={(event) => {
+              emit(angle, start, event.target.value);
+            }}
+            className="h-9 w-full p-1"
+          />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Angle</span>
+          <span>{Math.round(angle)}deg</span>
+        </div>
+        <Input
+          type="range"
+          min={0}
+          max={360}
+          step={1}
+          value={angle}
+          onChange={(event) => emit(Number(event.target.value), start, end)}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function HeroVisualEditor({
   value,
   onChange,
@@ -586,8 +676,10 @@ export function HeroVisualEditor({
     source: value.media?.source ?? "external",
     ...value.media,
   };
+  const backgroundMedia = resolveBackgroundMedia(value.background);
   const style = value.style ?? {};
   const mediaType: HeroMediaType = media.type ?? "none";
+  const backgroundMediaType: HeroMediaType = backgroundMedia.type ?? "none";
   const [presets, setPresets] = useState<HeroPresetSetting[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(false);
   const [presetsError, setPresetsError] = useState<string | null>(null);
@@ -634,6 +726,25 @@ export function HeroVisualEditor({
         ...patch,
       },
     });
+  const updateBackgroundMedia = (patch: Partial<HeroData["media"]>) => {
+    const next = {
+      ...backgroundMedia,
+      ...patch,
+    };
+    const normalized =
+      next.type === "none"
+        ? { type: "none" as const, source: next.source ?? "external" }
+        : {
+            type: next.type,
+            source: next.source ?? "external",
+            assetId: next.assetId,
+            src: next.src,
+          };
+    updateBackground({
+      media: normalized,
+      image: normalized.type === "image" ? normalized.src : undefined,
+    });
+  };
 
   useEffect(() => {
     let active = true;
@@ -734,22 +845,27 @@ export function HeroVisualEditor({
         title="Variant and Presets"
         description="Choose hero orientation and save reusable configurations."
       >
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className="space-y-2">
           {variantOptions.map((option) => (
             <button
               key={option.id}
               type="button"
               onClick={() => onVariantChange?.(option.id)}
               className={cn(
-                "rounded-lg border p-3 text-left transition",
+                "w-full rounded-lg border p-3 text-left transition",
                 variant === option.id
                   ? "border-primary bg-primary/5"
                   : "border-border bg-background hover:border-primary/50"
               )}
             >
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm font-semibold">{option.label}</p>
-                <Badge variant={variant === option.id ? "default" : "outline"}>
+              <div className="flex w-full items-start justify-between gap-2">
+                <p className="min-w-0 text-sm font-semibold leading-tight">
+                  {option.label}
+                </p>
+                <Badge
+                  className="shrink-0"
+                  variant={variant === option.id ? "default" : "outline"}
+                >
                   {variant === option.id ? "Selected" : "Pick"}
                 </Badge>
               </div>
@@ -978,78 +1094,74 @@ export function HeroVisualEditor({
         </div>
       </EditorSection>
 
-      <EditorSection
-        title="Media"
-        description="Control media source, frame ratio, and overlay."
-      >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Media type</p>
-          <Select
-            value={mediaType}
-            onValueChange={(next) => updateMedia({ type: next as HeroMediaType })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select media" />
-            </SelectTrigger>
-            <SelectContent>
-              {mediaOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        {mediaType !== "none" ? (
-          <>
-            <HeroMediaSourceFields media={media} mediaType={mediaType} onChange={updateMedia} />
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Media alt text</p>
-              <Input
-                value={media.alt ?? ""}
-                onChange={(event) => updateMedia({ alt: event.target.value })}
-                placeholder="Describe the media"
+      {selectedVariant !== "centered" ? (
+        <EditorSection
+          title="Media"
+          description="Inline media visible only in split and media-left variants."
+        >
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Media type</p>
+            <Select
+              value={mediaType}
+              onValueChange={(next) => updateMedia({ type: next as HeroMediaType })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select media" />
+              </SelectTrigger>
+              <SelectContent>
+                {mediaOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {mediaType !== "none" ? (
+            <>
+              <HeroMediaSourceFields
+                media={media}
+                mediaType={mediaType}
+                onChange={updateMedia}
               />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Media ratio</p>
-              <Select
-                value={media.ratio ?? "16:9"}
-                onValueChange={(next) => updateMedia({ ratio: next })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select ratio" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ratioOptions.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Media overlay</p>
-              <Input
-                value={media.overlay ?? ""}
-                onChange={(event) => updateMedia({ overlay: event.target.value })}
-                placeholder="rgba(0,0,0,0.2)"
-              />
-            </div>
-          </>
-        ) : null}
-        {variant === "centered" && mediaType === "image" ? (
-          <p className="text-xs text-muted-foreground">
-            Centered layout uses the selected image as background.
-          </p>
-        ) : null}
-        {variant === "centered" && mediaType === "video" ? (
-          <p className="text-xs text-muted-foreground">
-            Centered layout does not render inline video. Use split or media-left.
-          </p>
-        ) : null}
-      </EditorSection>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Media alt text</p>
+                <Input
+                  value={media.alt ?? ""}
+                  onChange={(event) => updateMedia({ alt: event.target.value })}
+                  placeholder="Describe the media"
+                />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Media ratio</p>
+                <Select
+                  value={media.ratio ?? "16:9"}
+                  onValueChange={(next) => updateMedia({ ratio: next })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ratio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ratioOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Media overlay</p>
+                <Input
+                  value={media.overlay ?? ""}
+                  onChange={(event) => updateMedia({ overlay: event.target.value })}
+                  placeholder="rgba(0,0,0,0.2)"
+                />
+              </div>
+            </>
+          ) : null}
+        </EditorSection>
+      ) : null}
 
       <EditorSection
         title="Typography"
@@ -1289,7 +1401,7 @@ export function HeroVisualEditor({
 
       <EditorSection
         title="Background"
-        description="Style hero surface background."
+        description="Background can use image/video from library or external URL."
       >
         <ColorField
           label="Background color"
@@ -1298,21 +1410,42 @@ export function HeroVisualEditor({
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
+        <GradientField
+          label="Background gradient"
+          value={value.background?.gradient}
+          onChange={(next) => updateBackground({ gradient: next })}
+        />
         <div className="space-y-2">
-          <p className="text-sm font-medium">Background gradient</p>
-          <Input
-            value={value.background?.gradient ?? ""}
-            onChange={(event) => updateBackground({ gradient: event.target.value })}
-            placeholder="linear-gradient(...)"
-          />
+          <p className="text-sm font-medium">Background media type</p>
+          <Select
+            value={backgroundMediaType}
+            onValueChange={(next) =>
+              updateBackgroundMedia({ type: next as HeroMediaType })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select media type" />
+            </SelectTrigger>
+            <SelectContent>
+              {mediaOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Background image</p>
-          <Input
-            value={value.background?.image ?? ""}
-            onChange={(event) => updateBackground({ image: event.target.value })}
-            placeholder="https://"
+        {backgroundMediaType !== "none" ? (
+          <HeroMediaSourceFields
+            media={backgroundMedia}
+            mediaType={backgroundMediaType}
+            onChange={updateBackgroundMedia}
           />
+        ) : null}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Background media supports both Media Library and external URL.
+          </p>
         </div>
       </EditorSection>
 
@@ -1368,6 +1501,27 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
     update({ spacing: { ...value.spacing, ...patch } });
   const updateBackground = (patch: Partial<HeroData["background"]>) =>
     update({ background: { ...value.background, ...patch } });
+  const backgroundMedia = resolveBackgroundMedia(value.background);
+  const backgroundMediaType: HeroMediaType = backgroundMedia.type ?? "none";
+  const updateBackgroundMedia = (patch: Partial<HeroData["media"]>) => {
+    const next = {
+      ...backgroundMedia,
+      ...patch,
+    };
+    const normalized =
+      next.type === "none"
+        ? { type: "none" as const, source: next.source ?? "external" }
+        : {
+            type: next.type,
+            source: next.source ?? "external",
+            assetId: next.assetId,
+            src: next.src,
+          };
+    updateBackground({
+      media: normalized,
+      image: normalized.type === "image" ? normalized.src : undefined,
+    });
+  };
   return (
     <div className="space-y-4">
       <p className="text-xs text-muted-foreground">
@@ -1483,7 +1637,7 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
 
       <EditorSection
         title="Background"
-        description="Set the hero surface background values."
+        description="Set color/gradient and optional image or video source."
       >
         <ColorField
           label="Background color"
@@ -1492,24 +1646,38 @@ export function HeroAdvancedEditor({ value, onChange }: WidgetEditorProps<HeroDa
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
+        <GradientField
+          label="Background gradient"
+          value={value.background?.gradient}
+          onChange={(next) => updateBackground({ gradient: next })}
+        />
         <div className="space-y-2">
-          <p className="text-sm font-medium">Background gradient</p>
-          <Input
-            value={value.background?.gradient ?? ""}
-            onChange={(event) =>
-              updateBackground({ gradient: event.target.value })
+          <p className="text-sm font-medium">Background media type</p>
+          <Select
+            value={backgroundMediaType}
+            onValueChange={(next) =>
+              updateBackgroundMedia({ type: next as HeroMediaType })
             }
-            placeholder="linear-gradient(...)"
-          />
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select media type" />
+            </SelectTrigger>
+            <SelectContent>
+              {mediaOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Background image</p>
-          <Input
-            value={value.background?.image ?? ""}
-            onChange={(event) => updateBackground({ image: event.target.value })}
-            placeholder="https://"
+        {backgroundMediaType !== "none" ? (
+          <HeroMediaSourceFields
+            media={backgroundMedia}
+            mediaType={backgroundMediaType}
+            onChange={updateBackgroundMedia}
           />
-        </div>
+        ) : null}
       </EditorSection>
 
       <div className="flex items-center justify-between rounded-lg border p-3">
