@@ -13,6 +13,7 @@
 
 Expose page-level wrapper controls in the Page Settings panel (WordPress-like):
 page width, background, section spacing, and default widget layout.
+Keep admin editing UX and runtime preview UX clearly separated but consistent.
 
 ---
 
@@ -23,6 +24,11 @@ page width, background, section spacing, and default widget layout.
 - Provide preview text/hints for each setting.
 - Toggle: “Apply defaults to new blocks”.
 - Button: “Reset to theme defaults”.
+- Distinguish two preview modes in UI copy:
+  - Canvas preview (editable, admin theme)
+  - Runtime preview (read-only, site theme)
+- Reuse the same runtime preview controls pattern for all resources with preview
+  (pages, content entries, widget templates).
 
 ---
 
@@ -42,6 +48,20 @@ page width, background, section spacing, and default widget layout.
 
 ---
 
+## Preview UX Contract (Admin)
+
+1) Runtime Preview buttons across admin should use one shared behavior:
+- same device switcher options
+- same loading/error/empty states
+- same accessibility and keyboard behavior
+
+2) Resource-specific editors keep their own canvas UX, but runtime preview
+opens with a consistent frame and contract.
+
+3) UI should not imply that canvas preview equals final runtime output.
+
+---
+
 ## Implementation Checklist
 
 | File | Action | Notes |
@@ -49,8 +69,13 @@ page width, background, section spacing, and default widget layout.
 | `core/admin/ui/pages/PageSettingsDrawer.tsx` | add layout controls | sections + fields |
 | `core/admin/ui/pages/PageEditor.tsx` | pass settings changes | save to page data |
 | `core/admin/ui/pages/builder/blockUtils.ts` | use defaults for new blocks | if enabled |
+| `core/admin/ui/preview/RuntimePreviewDialog.tsx` | create/reuse shared runtime preview dialog | common UX for previewables |
+| `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx` | align with shared runtime preview UX | avoid custom-only behavior |
+| `core/admin/ui/entries/EntryEditor.tsx` | align with shared runtime preview UX | if not already unified |
+| `core/admin/services/widgetTemplatePreviewClient.ts` | align response typing with unified preview contract | previewUrl/expiresAt |
 | `tests/unit/ui/page-editor.test.tsx` | update snapshot expectations | layout labels |
 | `tests/integration/ui/pageBuilder.test.tsx` | ensure new section renders | |
+| `tests/unit/ui/widget-template-editor.test.tsx` | runtime preview UX parity assertions | |
 
 ---
 
@@ -59,3 +84,4 @@ page width, background, section spacing, and default widget layout.
 - `_docs/PAGE_MODEL.md` (settings.layout)
 - `_docs/CMS_API.md` (page payload fields)
 - `_docs/WIDGETS.md` (inheritance behavior)
+- `_docs/PREVIEW_SPEC.md` (admin preview behavior and mode split)
