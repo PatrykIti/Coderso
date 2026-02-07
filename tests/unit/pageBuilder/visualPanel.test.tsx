@@ -8,6 +8,11 @@ import {
   NavigationVisualEditor,
   NavigationWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/NavigationEditors";
+import {
+  TimelineAdvancedEditor,
+  TimelineVisualEditor,
+  TimelineWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/TimelineEditors";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
 import {
   createFooterWidget,
@@ -17,6 +22,10 @@ import {
   createNavigationWidget,
   navigationDefaults,
 } from "../../../core/widgets/core/navigation";
+import {
+  createTimelineWidget,
+  timelineDefaults,
+} from "../../../core/widgets/core/timeline";
 import type {
   WidgetDefinition,
   WidgetEditorProps,
@@ -144,4 +153,33 @@ test("VisualPanel uses footer editor variant controls", () => {
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
+});
+
+test("VisualPanel uses timeline editor variant controls", () => {
+  const widget = createTimelineWidget({
+    wizard: TimelineWizardEditor,
+    visual: TimelineVisualEditor,
+    advanced: TimelineAdvancedEditor,
+  });
+  const block: Block = {
+    id: "timeline-1",
+    type: "timeline",
+    variant: "milestones",
+    data: timelineDefaults,
+    editor: {
+      mode: "visual",
+      wizardCompleted: true,
+    },
+  };
+
+  const html = renderToString(
+    <VisualPanel
+      widget={widget}
+      block={block}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).not.toContain("Choose a visual style for this widget.");
+  expect(html).toContain("Variant and timeline structure");
 });

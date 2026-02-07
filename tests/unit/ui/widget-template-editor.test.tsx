@@ -131,7 +131,8 @@ test("widget template block settings render timeline visual sections", () => {
     />
   );
 
-  expect(html).toContain("Steps");
-  expect(html).toContain("Layout and Guides");
-  expect(html).toContain("Line and Colors");
+  expect(html).toContain("Variant and timeline structure");
+  expect(html).toContain("Steps content and order");
+  expect(html).toContain("Guides and axis line");
+  expect(html).toContain("Typography and spacing");
 });

@@ -14,30 +14,34 @@ Process timeline without dates, used for milestones and step-by-step flows.
 - `cards`: steps rendered as cards
 - `compact`: minimal marker+label process strip
 
-## Editor Modes (current after TASK-050-08-01)
+## Editor Modes (current after TASK-050-08-02)
 
 ### Wizard
-- Step count (`3-8`)
-- Variant selection
-- Orientation (`horizontal` / `vertical`)
-- Label position (`top` / `bottom`)
-- Guides enabled/disabled
-- Quick step title editing
+- minimal onboarding:
+  - step count (`3-8`)
+  - variant
+  - orientation
+  - guides baseline
+  - quick step title editing
 
 ### Visual
-- Practical day-to-day editing for:
-  - step content (`title`, `description`, `icon`, `accent`)
-  - layout and guides
-  - axis/marker style
-  - colors and section background
+Primary day-to-day editing mode with section-based IA:
+1. Variant and timeline structure
+2. Steps content and order
+3. Guides and axis line
+4. Markers and accents
+5. Colors and background
+6. Typography and spacing
+
+Timeline owns variant selection in Visual via:
+`editorCapabilities.visualOwnsVariantSelection = true`.
 
 ### Advanced
-- Full model editing is still available in 08-01:
-  - steps editor (add/remove/edit)
-  - layout tokens
-  - guide and line controls
-  - color tokens and background
-- Scope cleanup to technical-only Advanced is planned in `TASK-050-08-02`.
+Technical-only scope:
+- layout tokens (orientation, alignment, label position)
+- data normalization (safe IDs and step bounds)
+
+Advanced intentionally excludes day-to-day content/style editing.
 
 ## Runtime Behavior Notes
 
@@ -77,7 +81,9 @@ Process timeline without dates, used for milestones and step-by-step flows.
     "lineColor": "#e2e8f0",
     "markerColor": "#1d4ed8",
     "titleColor": "#0f172a",
-    "descriptionColor": "#334155"
+    "descriptionColor": "#334155",
+    "titleSize": "base",
+    "descriptionSize": "xs"
   },
   "background": {
     "color": "transparent"

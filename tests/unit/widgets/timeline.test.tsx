@@ -3,6 +3,11 @@ import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import {
+  TimelineAdvancedEditor,
+  TimelineVisualEditor,
+  TimelineWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/TimelineEditors";
+import {
   TimelineBlock,
   createTimelineWidget,
   normalizeTimelineStepCount,
@@ -84,6 +89,8 @@ test("timeline validator accepts extended model fields", () => {
         markerSize: "lg",
         lineColor: "#cbd5e1",
         markerColor: "#1d4ed8",
+        titleSize: "lg",
+        descriptionSize: "sm",
       },
       background: {
         color: "#f8fafc",
@@ -95,6 +102,7 @@ test("timeline validator accepts extended model fields", () => {
   const data = normalized.data as TimelineData;
   expect(data.layout?.spacing).toBe("lg");
   expect(data.style?.thickness).toBe("3");
+  expect(data.style?.titleSize).toBe("lg");
   expect(data.background?.color).toBe("#f8fafc");
 });
 
@@ -116,6 +124,50 @@ test("timeline validator rejects invalid variant", () => {
       data: timelineDefaults,
     })
   ).toThrow("widget_invalid_variant");
+});
+
+test("timeline widget uses visual-owned variant controls", () => {
+  const widget = createTimelineWidget({
+    wizard: TimelineWizardEditor,
+    visual: TimelineVisualEditor,
+    advanced: TimelineAdvancedEditor,
+  });
+
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
+});
+
+test("timeline visual editor renders section-based IA", () => {
+  const html = renderToString(
+    <TimelineVisualEditor
+      value={timelineDefaults}
+      onChange={() => undefined}
+      variant="milestones"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and timeline structure");
+  expect(html).toContain("Steps content and order");
+  expect(html).toContain("Guides and axis line");
+  expect(html).toContain("Markers and accents");
+  expect(html).toContain("Colors and background");
+  expect(html).toContain("Typography and spacing");
+});
+
+test("timeline advanced editor keeps technical-only scope", () => {
+  const html = renderToString(
+    <TimelineAdvancedEditor
+      value={timelineDefaults}
+      onChange={() => undefined}
+      variant="milestones"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Layout tokens");
+  expect(html).toContain("Data normalization");
+  expect(html).not.toContain("Steps content and order");
+  expect(html).not.toContain("Colors and background");
 });
 
 test("timeline renderer falls back to milestones for unknown variant", () => {

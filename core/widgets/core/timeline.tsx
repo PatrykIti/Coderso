@@ -10,6 +10,8 @@ export type TimelineGuideStyle = "solid" | "dashed";
 export type TimelineLineStyle = "solid" | "dashed";
 export type TimelineMarkerSize = "sm" | "md" | "lg";
 export type TimelineThickness = "1" | "2" | "3" | "4";
+export type TimelineTitleSize = "sm" | "base" | "lg" | "xl";
+export type TimelineDescriptionSize = "xs" | "sm" | "base" | "lg";
 
 export type TimelineStep = {
   id?: string;
@@ -39,6 +41,8 @@ export type TimelineData = {
     markerColor?: string;
     titleColor?: string;
     descriptionColor?: string;
+    titleSize?: TimelineTitleSize;
+    descriptionSize?: TimelineDescriptionSize;
   };
   background?: {
     color?: string;
@@ -62,6 +66,20 @@ const markerSizeClassMap = {
   sm: "h-2.5 w-2.5",
   md: "h-3.5 w-3.5",
   lg: "h-5 w-5",
+} as const;
+
+const titleSizeClassMap = {
+  sm: "text-sm",
+  base: "text-base",
+  lg: "text-lg",
+  xl: "text-xl",
+} as const;
+
+const descriptionSizeClassMap = {
+  xs: "text-xs",
+  sm: "text-sm",
+  base: "text-base",
+  lg: "text-lg",
 } as const;
 
 const textAlignClassMap = {
@@ -140,6 +158,8 @@ export const timelineSchema = {
         markerColor: { type: "string" },
         titleColor: { type: "string" },
         descriptionColor: { type: "string" },
+        titleSize: { enum: ["sm", "base", "lg", "xl"] },
+        descriptionSize: { enum: ["xs", "sm", "base", "lg"] },
       },
     },
     background: {
@@ -220,6 +240,8 @@ export const timelineDefaults: TimelineData = {
     lineStyle: "solid",
     thickness: "2",
     markerSize: "md",
+    titleSize: "base",
+    descriptionSize: "xs",
   },
   background: { color: "transparent" },
 };
@@ -250,7 +272,12 @@ export const resolveTimelineStyle = (
 ): Required<Pick<NonNullable<TimelineData["style"]>, "lineStyle" | "thickness" | "markerSize">> &
   Pick<
     NonNullable<TimelineData["style"]>,
-    "lineColor" | "markerColor" | "titleColor" | "descriptionColor"
+    | "lineColor"
+    | "markerColor"
+    | "titleColor"
+    | "descriptionColor"
+    | "titleSize"
+    | "descriptionSize"
   > => ({
   lineStyle: style?.lineStyle ?? "solid",
   thickness: style?.thickness ?? "2",
@@ -259,6 +286,8 @@ export const resolveTimelineStyle = (
   markerColor: style?.markerColor,
   titleColor: style?.titleColor,
   descriptionColor: style?.descriptionColor,
+  titleSize: style?.titleSize ?? "base",
+  descriptionSize: style?.descriptionSize ?? "xs",
 });
 
 const renderStepText = (
@@ -266,17 +295,28 @@ const renderStepText = (
   align: TimelineAlign,
   titleColor: string,
   descriptionColor: string,
+  titleSize: TimelineTitleSize,
+  descriptionSize: TimelineDescriptionSize,
   compact?: boolean
 ) => (
   <div className={joinClasses("space-y-1", textAlignClassMap[align] ?? "text-center")}>
     <div className="flex items-center gap-2">
       {step.icon ? <span className="text-sm leading-none">{step.icon}</span> : null}
-      <span className={joinClasses("font-semibold", compact ? "text-sm" : "text-base")} style={{ color: titleColor }}>
+      <span
+        className={joinClasses(
+          "font-semibold",
+          compact ? "text-sm" : titleSizeClassMap[titleSize] ?? "text-base"
+        )}
+        style={{ color: titleColor }}
+      >
         {step.title}
       </span>
     </div>
     {!compact && step.description ? (
-      <p className="text-xs" style={{ color: descriptionColor }}>
+      <p
+        className={descriptionSizeClassMap[descriptionSize] ?? "text-xs"}
+        style={{ color: descriptionColor }}
+      >
         {step.description}
       </p>
     ) : null}
@@ -314,7 +354,9 @@ function TimelineMilestonesLayout({
             step,
             layout.align,
             titleColor,
-            descriptionColor
+            descriptionColor,
+            style.titleSize ?? "base",
+            style.descriptionSize ?? "xs"
           );
           return (
             <li
@@ -364,7 +406,14 @@ function TimelineMilestonesLayout({
     >
       {steps.map((step, index) => {
         const markerAccent = step.accent ?? markerColor;
-        const textNode = renderStepText(step, layout.align, titleColor, descriptionColor);
+        const textNode = renderStepText(
+          step,
+          layout.align,
+          titleColor,
+          descriptionColor,
+          style.titleSize ?? "base",
+          style.descriptionSize ?? "xs"
+        );
         return (
           <li
             key={step.id ?? `${step.title}-${index}`}
@@ -448,7 +497,14 @@ function TimelineCardsLayout({
                 style={{ backgroundColor: markerAccent }}
               />
               <div className="min-w-0 flex-1">
-                {renderStepText(step, layout.align, titleColor, descriptionColor)}
+                {renderStepText(
+                  step,
+                  layout.align,
+                  titleColor,
+                  descriptionColor,
+                  style.titleSize ?? "base",
+                  style.descriptionSize ?? "xs"
+                )}
               </div>
             </div>
             {guides.enabled ? (
@@ -509,7 +565,15 @@ function TimelineCompactLayout({
             className={joinClasses("rounded-full", markerSize)}
             style={{ backgroundColor: step.accent ?? markerColor }}
           />
-          {renderStepText(step, layout.align, titleColor, descriptionColor, true)}
+          {renderStepText(
+            step,
+            layout.align,
+            titleColor,
+            descriptionColor,
+            style.titleSize ?? "base",
+            style.descriptionSize ?? "xs",
+            true
+          )}
           {guides.enabled && layout.orientation === "horizontal" && index < steps.length - 1 ? (
             <span
               className="mx-1 block"
@@ -601,6 +665,9 @@ export function createTimelineWidget(editors: {
     schema: timelineSchema,
     defaults: timelineDefaults,
     editor: editors,
+    editorCapabilities: {
+      visualOwnsVariantSelection: true,
+    },
     render: TimelineBlock,
   };
 }

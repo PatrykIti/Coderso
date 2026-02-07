@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 24 tasks
-- **In Progress:** 1 tasks
-- **Done:** 228 tasks
+- **To Do:** 23 tasks
+- **In Progress:** 0 tasks
+- **Done:** 230 tasks
 
 ---
 
@@ -56,7 +56,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..11 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
-| TASK-050-08-02 | Timeline Widget Visual Rebuild and Advanced Cleanup | Medium | Large | Section-based Visual IA + technical-only Advanced |
 | TASK-050-09 | Compare Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-10 | Newsletter Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-11 | Contact Widget Expansion | Medium | Medium | Wizard/visual/advanced |
@@ -80,7 +79,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-050-08 | Timeline Widget Expansion | Medium | Medium | 050-08-01 complete, 050-08-02 pending |
 
 ---
 
@@ -88,6 +86,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-08 | Timeline Widget Expansion | Medium | Medium | 050-08-01/02 complete |
+| TASK-050-08-02 | Timeline Widget Visual Rebuild and Advanced Cleanup | Medium | Large | Visual-first timeline IA + advanced technical cleanup |
 | TASK-050-08-01 | Timeline Widget Bugfixes and UX Hardening | Medium | Medium | Data model + renderer parity + wizard hardening |
 | TASK-050-07 | Footer Widget Expansion + Slots | High | Medium | 050-07-01/02 complete |
 | TASK-050-07-02 | Footer Widget Visual Rebuild and Advanced Cleanup | High | Large | Visual-first Footer IA + advanced technical scope |
