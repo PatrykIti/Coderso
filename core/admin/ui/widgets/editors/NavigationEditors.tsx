@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,12 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { listMedia } from "@/services/mediaClient";
+import {
+  getMenuWithItems,
+  listMenus,
+  type MenuItemNode,
+  type MenuSummary,
+} from "@/services/menusClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
@@ -49,7 +55,7 @@ const variantOptions = [
 
 const linkSourceOptions = [
   { id: "manual", label: "Manual links" },
-  { id: "menu", label: "Menu key (planned integration)" },
+  { id: "menu", label: "Existing menu" },
 ] as const;
 
 const logoSourceOptions = [
@@ -71,6 +77,7 @@ const fontSizeOptions = ["xs", "sm", "base", "lg"] as const;
 const fontWeightOptions = ["normal", "medium", "semibold", "bold"] as const;
 const textTransformOptions = ["none", "uppercase", "capitalize"] as const;
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+const NO_MENU_VALUE = "__none__";
 
 const variantSupportsCta = (variant: string) =>
   variant === "with-cta" || variant === "split";
@@ -83,6 +90,20 @@ const isValidImageUrl = (value: string | undefined) =>
 
 const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
+
+export function mapMenuNodesToNavigationItems(nodes: MenuItemNode[]): NavigationItem[] {
+  return nodes.map((node) => ({
+    label: node.label,
+    href: node.href ?? "#",
+    children:
+      node.children.length > 0
+        ? node.children.map((child) => ({
+            label: child.label,
+            href: child.href ?? "#",
+          }))
+        : undefined,
+  }));
+}
 
 function EditorSection({
   title,
@@ -163,6 +184,107 @@ function NavigationVariantSelect({
           ))}
         </SelectContent>
       </Select>
+    </div>
+  );
+}
+
+function MenuSelectField({
+  menuId,
+  onMenuChange,
+  onItemsResolved,
+}: {
+  menuId: string | undefined;
+  onMenuChange: (menuId: string | undefined) => void;
+  onItemsResolved: (items: NavigationItem[]) => void;
+}) {
+  const [menus, setMenus] = useState<MenuSummary[]>([]);
+  const [isLoadingMenus, setIsLoadingMenus] = useState(false);
+  const [isResolvingMenu, setIsResolvingMenu] = useState(false);
+  const [menuError, setMenuError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    setIsLoadingMenus(true);
+    setMenuError(null);
+    listMenus()
+      .then((items) => {
+        if (!active) return;
+        setMenus(items);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setMenuError(err.message);
+        } else {
+          setMenuError("Failed to load menus.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setIsLoadingMenus(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleMenuChange = async (nextValue: string) => {
+    if (nextValue === NO_MENU_VALUE) {
+      onMenuChange(undefined);
+      return;
+    }
+
+    onMenuChange(nextValue);
+    setMenuError(null);
+    requestIdRef.current += 1;
+    const requestId = requestIdRef.current;
+    setIsResolvingMenu(true);
+    try {
+      const payload = await getMenuWithItems(nextValue);
+      if (requestId !== requestIdRef.current) return;
+      onItemsResolved(mapMenuNodesToNavigationItems(payload.items));
+    } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+      if (isApiClientError(err)) {
+        setMenuError(err.message);
+      } else {
+        setMenuError("Failed to load selected menu items.");
+      }
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setIsResolvingMenu(false);
+      }
+    }
+  };
+
+  const selectValue = menuId && menuId.trim().length > 0 ? menuId : NO_MENU_VALUE;
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium">Choose existing menu</p>
+      <Select value={selectValue} onValueChange={(next) => void handleMenuChange(next)}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select menu" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_MENU_VALUE}>No menu selected</SelectItem>
+          {menus.map((menu) => (
+            <SelectItem key={menu.id} value={menu.id}>
+              {menu.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {isLoadingMenus ? (
+        <p className="text-xs text-muted-foreground">Loading menus...</p>
+      ) : null}
+      {isResolvingMenu ? (
+        <p className="text-xs text-muted-foreground">
+          Syncing links from selected menu...
+        </p>
+      ) : null}
+      {menuError ? <p className="text-xs text-destructive">{menuError}</p> : null}
     </div>
   );
 }
@@ -315,7 +437,7 @@ export function NavigationWizardEditor({
           onValueChange={(next) =>
             update({
               linksSource: next as NavigationData["linksSource"],
-              menuKey: next === "menu" ? value.menuKey ?? "main" : undefined,
+              menuKey: next === "menu" ? value.menuKey : undefined,
             })
           }
         >
@@ -333,17 +455,11 @@ export function NavigationWizardEditor({
       </div>
 
       {linksSource === "menu" ? (
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Menu key</p>
-          <Input
-            value={value.menuKey ?? ""}
-            onChange={(event) => update({ menuKey: event.target.value })}
-            placeholder="main"
-          />
-          <p className="text-xs text-muted-foreground">
-            Runtime menu resolver will use this key when menu integration is enabled.
-          </p>
-        </div>
+        <MenuSelectField
+          menuId={value.menuKey}
+          onMenuChange={(nextMenuId) => update({ menuKey: nextMenuId })}
+          onItemsResolved={(nextItems) => update({ items: nextItems })}
+        />
       ) : (
         <div className="space-y-2">
           <p className="text-sm font-medium">Quick links</p>
@@ -616,7 +732,7 @@ export function NavigationVisualEditor({
             onValueChange={(next) =>
               update({
                 linksSource: next as NavigationData["linksSource"],
-                menuKey: next === "menu" ? value.menuKey ?? "main" : undefined,
+                menuKey: next === "menu" ? value.menuKey : undefined,
               })
             }
           >
@@ -634,14 +750,11 @@ export function NavigationVisualEditor({
         </div>
 
         {linksSource === "menu" ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Menu key</p>
-            <Input
-              value={value.menuKey ?? ""}
-              onChange={(event) => update({ menuKey: event.target.value })}
-              placeholder="main"
-            />
-          </div>
+          <MenuSelectField
+            menuId={value.menuKey}
+            onMenuChange={(nextMenuId) => update({ menuKey: nextMenuId })}
+            onItemsResolved={(nextItems) => update({ items: nextItems })}
+          />
         ) : null}
       </EditorSection>
 
@@ -703,8 +816,7 @@ export function NavigationVisualEditor({
       >
         {linksSource === "menu" ? (
           <p className="text-xs text-muted-foreground">
-            This variant is configured to resolve links by menu key.
-            Manual links remain as fallback data.
+            Links are synced from selected menu and can be used as runtime fallback.
           </p>
         ) : (
           <>
@@ -1102,7 +1214,7 @@ export function NavigationAdvancedEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Alignment</p>
             <Select
-              value={value.layout?.alignment ?? "left"}
+              value={value.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "right"}
               onValueChange={(next) =>
                 updateLayout({ alignment: next as NavigationLayout["alignment"] })
               }

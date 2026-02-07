@@ -175,7 +175,7 @@ export const navigationDefaults: NavigationData = {
     mobileMode: "expanded",
     hideCtaOnMobile: false,
   },
-  layout: { alignment: "left", maxWidth: "6xl", paddingY: "4", itemGap: "4" },
+  layout: { alignment: "right", maxWidth: "6xl", paddingY: "4", itemGap: "4" },
   style: {},
 };
 
@@ -244,10 +244,11 @@ export function NavigationBlock({
   const showCta = variantSupportsCta(variant);
   const splitLayout = variant === "split";
   const linksSource = data.linksSource ?? "manual";
+  const resolvedAlignment = data.layout?.alignment ?? navigationDefaults.layout?.alignment ?? "left";
   const alignmentClass =
-    data.layout?.alignment === "center"
+    resolvedAlignment === "center"
       ? "justify-center"
-      : data.layout?.alignment === "right"
+      : resolvedAlignment === "right"
         ? "justify-end"
         : "justify-start";
   const layout = data.layout ?? {};

@@ -9,6 +9,7 @@ import {
   type NavigationData,
 } from "../../../core/widgets/core/navigation";
 import {
+  mapMenuNodesToNavigationItems,
   NavigationAdvancedEditor,
   NavigationVisualEditor,
   NavigationWizardEditor,
@@ -16,6 +17,7 @@ import {
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
+import type { MenuItemNode } from "../../../core/admin/services/menusClient";
 
 const StubEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 
@@ -27,6 +29,7 @@ test("navigation renders defaults", () => {
   expect(html).toContain("Nextless");
   expect(html).toContain("Home");
   expect(html).toContain("About");
+  expect(html).toContain("justify-end");
 });
 
 test("navigation reflects sticky and transparent behavior in runtime output", () => {
@@ -193,4 +196,48 @@ test("navigation advanced editor keeps technical-only controls", () => {
   expect(html).toContain("Runtime Behavior");
   expect(html).not.toContain("Navigation Links");
   expect(html).not.toContain("CTA and Right Actions");
+});
+
+test("navigation maps selected menu nodes to widget items", () => {
+  const nodes: MenuItemNode[] = [
+    {
+      id: "item-1",
+      label: "Home",
+      href: "/",
+      pageId: null,
+      parentId: null,
+      orderIndex: 0,
+      children: [],
+    },
+    {
+      id: "item-2",
+      label: "Products",
+      href: "/products",
+      pageId: null,
+      parentId: null,
+      orderIndex: 1,
+      children: [
+        {
+          id: "item-2-1",
+          label: "CMS",
+          href: "/products/cms",
+          pageId: null,
+          parentId: "item-2",
+          orderIndex: 0,
+          children: [],
+        },
+      ],
+    },
+  ];
+
+  const mapped = mapMenuNodesToNavigationItems(nodes);
+
+  expect(mapped).toEqual([
+    { label: "Home", href: "/", children: undefined },
+    {
+      label: "Products",
+      href: "/products",
+      children: [{ label: "CMS", href: "/products/cms" }],
+    },
+  ]);
 });
