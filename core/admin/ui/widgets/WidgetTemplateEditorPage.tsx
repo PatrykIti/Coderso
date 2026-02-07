@@ -51,6 +51,12 @@ import {
   resolveAdminHref,
   stripAdminBasePath,
 } from "@/utils/adminPaths";
+import { pageLayoutTokens, type PageMaxWidthToken } from "../../../services/pages/layoutSettings";
+import {
+  normalizeWidgetTemplateSettings,
+  type WidgetTemplateSettings,
+} from "../../../services/widgets/widgetTemplateSettings";
+import { containerTokens, spacingTokens, type ContainerToken, type SpacingToken } from "../../../widgets/types";
 import type { WidgetCategoryId } from "./types";
 import { WidgetCard } from "./WidgetCard";
 import { WidgetTemplatePreviewDialog } from "./WidgetTemplatePreviewDialog";
@@ -65,6 +71,56 @@ const widgetCategoryLabels: Record<WidgetCategoryId, string> = {
 };
 
 const NO_CATEGORIES_VALUE = "no-categories";
+const MAX_WIDTH_DEFAULT_VALUE = "max-width-default";
+
+const spacingTokenToListSpaceClassMap: Record<SpacingToken, string> = {
+  none: "space-y-0",
+  xs: "space-y-2",
+  sm: "space-y-4",
+  md: "space-y-6",
+  lg: "space-y-8",
+  xl: "space-y-12",
+  "2xl": "space-y-16",
+};
+
+const spacingTokenToPaddingTopClassMap: Record<SpacingToken, string> = {
+  none: "pt-0",
+  xs: "pt-2",
+  sm: "pt-4",
+  md: "pt-6",
+  lg: "pt-8",
+  xl: "pt-12",
+  "2xl": "pt-16",
+};
+
+const spacingTokenToPaddingBottomClassMap: Record<SpacingToken, string> = {
+  none: "pb-0",
+  xs: "pb-2",
+  sm: "pb-4",
+  md: "pb-6",
+  lg: "pb-8",
+  xl: "pb-12",
+  "2xl": "pb-16",
+};
+
+const pageContainerClassMap: Record<ContainerToken, string> = {
+  default: "mx-auto w-full max-w-6xl",
+  narrow: "mx-auto w-full max-w-4xl",
+  full: "w-full",
+};
+
+const pageMaxWidthClassMap: Record<PageMaxWidthToken, string> = {
+  "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
+};
+
+const joinClasses = (...classes: Array<string | undefined | false>) =>
+  classes.filter(Boolean).join(" ");
+
+const isHexColor = (value: string) =>
+  /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
 
 const resolveTemplateId = (pathname: string) => {
   const adminBasePath = resolveAdminBasePath(pathname);
@@ -91,6 +147,9 @@ export function WidgetTemplateEditorPage() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState<WidgetTemplateStatus>("draft");
+  const [templateSettings, setTemplateSettings] = useState<WidgetTemplateSettings>(
+    () => normalizeWidgetTemplateSettings(undefined)
+  );
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<
     WidgetCategoryId | "all"
@@ -118,6 +177,25 @@ export function WidgetTemplateEditorPage() {
   const displayError = error ?? categoriesError;
 
   const selectedBlock = findBlockById(blocks, selectedId);
+  const templateLayout = templateSettings.layout;
+  const wrapperPaddingClass = joinClasses(
+    spacingTokenToPaddingTopClassMap[templateLayout.wrapper.padding.top],
+    spacingTokenToPaddingBottomClassMap[templateLayout.wrapper.padding.bottom]
+  );
+  const wrapperContainerClass = joinClasses(
+    pageContainerClassMap[templateLayout.wrapper.container],
+    templateLayout.wrapper.container !== "full" && templateLayout.wrapper.maxWidth
+      ? pageMaxWidthClassMap[templateLayout.wrapper.maxWidth]
+      : undefined
+  );
+  const wrapperBackgroundStyle = {
+    backgroundColor: templateLayout.wrapper.background.color,
+    backgroundImage: templateLayout.wrapper.background.image
+      ? `url(${templateLayout.wrapper.background.image})`
+      : undefined,
+    backgroundSize: templateLayout.wrapper.background.image ? "cover" : undefined,
+    backgroundPosition: templateLayout.wrapper.background.image ? "center" : undefined,
+  };
   const selectedWidget = useMemo(() => {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
@@ -166,6 +244,7 @@ export function WidgetTemplateEditorPage() {
       setCategory(template.category);
       setStatus(template.status);
       setBlocks((template.blocks as Block[]) ?? []);
+      setTemplateSettings(normalizeWidgetTemplateSettings(template.settings));
     } catch (err) {
       const message = isApiClientError(err)
         ? err.message
@@ -220,6 +299,7 @@ export function WidgetTemplateEditorPage() {
           category: category.trim(),
           status,
           blocks,
+          settings: templateSettings,
         });
         window.location.assign(
           resolveAdminHref(adminBasePath, `/admin/widgets/templates/${created.id}`)
@@ -233,6 +313,7 @@ export function WidgetTemplateEditorPage() {
         category: category.trim(),
         status,
         blocks,
+        settings: templateSettings,
       });
     } catch (err) {
       const message = isApiClientError(err)
@@ -392,6 +473,272 @@ export function WidgetTemplateEditorPage() {
                 </Select>
               </div>
             </div>
+            <div className="mt-4 rounded-xl border border-border/70 bg-muted/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Template layout and appearance
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    setTemplateSettings(normalizeWidgetTemplateSettings(undefined))
+                  }
+                >
+                  Reset defaults
+                </Button>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Applies to runtime preview and front-end rendering of this template.
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Container
+                  </label>
+                  <Select
+                    value={templateLayout.wrapper.container}
+                    onValueChange={(next) =>
+                      setTemplateSettings((prev) => ({
+                        ...prev,
+                        layout: {
+                          ...prev.layout,
+                          wrapper: {
+                            ...prev.layout.wrapper,
+                            container: next as ContainerToken,
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Container" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {containerTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Max width
+                  </label>
+                  <Select
+                    value={templateLayout.wrapper.maxWidth ?? MAX_WIDTH_DEFAULT_VALUE}
+                    onValueChange={(next) =>
+                      setTemplateSettings((prev) => ({
+                        ...prev,
+                        layout: {
+                          ...prev.layout,
+                          wrapper: {
+                            ...prev.layout.wrapper,
+                            maxWidth:
+                              next === MAX_WIDTH_DEFAULT_VALUE
+                                ? undefined
+                                : (next as PageMaxWidthToken),
+                          },
+                        },
+                      }))
+                    }
+                    disabled={templateLayout.wrapper.container === "full"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Max width" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={MAX_WIDTH_DEFAULT_VALUE}>
+                        theme default
+                      </SelectItem>
+                      {pageLayoutTokens.maxWidth.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Section gap
+                  </label>
+                  <Select
+                    value={templateLayout.sections.gap}
+                    onValueChange={(next) =>
+                      setTemplateSettings((prev) => ({
+                        ...prev,
+                        layout: {
+                          ...prev.layout,
+                          sections: {
+                            ...prev.layout.sections,
+                            gap: next as SpacingToken,
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Section gap" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spacingTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Wrapper padding top
+                  </label>
+                  <Select
+                    value={templateLayout.wrapper.padding.top}
+                    onValueChange={(next) =>
+                      setTemplateSettings((prev) => ({
+                        ...prev,
+                        layout: {
+                          ...prev.layout,
+                          wrapper: {
+                            ...prev.layout.wrapper,
+                            padding: {
+                              ...prev.layout.wrapper.padding,
+                              top: next as SpacingToken,
+                            },
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Padding top" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spacingTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Wrapper padding bottom
+                  </label>
+                  <Select
+                    value={templateLayout.wrapper.padding.bottom}
+                    onValueChange={(next) =>
+                      setTemplateSettings((prev) => ({
+                        ...prev,
+                        layout: {
+                          ...prev.layout,
+                          wrapper: {
+                            ...prev.layout.wrapper,
+                            padding: {
+                              ...prev.layout.wrapper.padding,
+                              bottom: next as SpacingToken,
+                            },
+                          },
+                        },
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Padding bottom" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {spacingTokens.map((token) => (
+                        <SelectItem key={token} value={token}>
+                          {token}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Background color
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="color"
+                      className="h-10 w-14 p-1"
+                      value={
+                        isHexColor(templateLayout.wrapper.background.color)
+                          ? templateLayout.wrapper.background.color
+                          : "#ffffff"
+                      }
+                      onChange={(event) =>
+                        setTemplateSettings((prev) => ({
+                          ...prev,
+                          layout: {
+                            ...prev.layout,
+                            wrapper: {
+                              ...prev.layout.wrapper,
+                              background: {
+                                ...prev.layout.wrapper.background,
+                                color: event.target.value,
+                              },
+                            },
+                          },
+                        }))
+                      }
+                    />
+                    <Input
+                      value={templateLayout.wrapper.background.color}
+                      onChange={(event) =>
+                        setTemplateSettings((prev) => ({
+                          ...prev,
+                          layout: {
+                            ...prev.layout,
+                            wrapper: {
+                              ...prev.layout.wrapper,
+                              background: {
+                                ...prev.layout.wrapper.background,
+                                color: event.target.value,
+                              },
+                            },
+                          },
+                        }))
+                      }
+                      placeholder="#ffffff or transparent"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Background image URL
+                </label>
+                <Input
+                  value={templateLayout.wrapper.background.image ?? ""}
+                  onChange={(event) =>
+                    setTemplateSettings((prev) => ({
+                      ...prev,
+                      layout: {
+                        ...prev.layout,
+                        wrapper: {
+                          ...prev.layout.wrapper,
+                          background: {
+                            ...prev.layout.wrapper.background,
+                            image: event.target.value.trim()
+                              ? event.target.value
+                              : null,
+                          },
+                        },
+                      },
+                    }))
+                  }
+                  placeholder="https://cdn.example.com/footer-bg.jpg"
+                />
+              </div>
+            </div>
             {displayError ? (
               <div className="mt-4">
                 <Alert variant="destructive">
@@ -512,29 +859,40 @@ export function WidgetTemplateEditorPage() {
                 </div>
               </div>
             ) : (
-              <div className="w-full">
-                <BlockList
-                  blocks={blocks}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                  onMove={(path, from, to) =>
-                    setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
-                  }
-                  onDuplicate={(id) =>
-                    setBlocks((prev) => duplicateBlock(prev, id))
-                  }
-                  onDelete={(id) =>
-                    setBlocks((prev) => {
-                      const result = deleteBlockById(prev, id);
-                      if (selectedId && !findBlockById(result.blocks, selectedId)) {
-                        setSelectedId(getFirstBlockId(result.blocks));
-                      }
-                      return result.blocks;
-                    })
-                  }
-                  onInsert={handleInsertIntoSlot}
-                  onMoveToSlot={handleMoveIntoSlot}
-                />
+              <div
+                className={joinClasses(
+                  "w-full rounded-xl border border-border/40",
+                  wrapperPaddingClass
+                )}
+                style={wrapperBackgroundStyle}
+              >
+                <div className={wrapperContainerClass}>
+                  <BlockList
+                    blocks={blocks}
+                    className={
+                      spacingTokenToListSpaceClassMap[templateLayout.sections.gap]
+                    }
+                    selectedId={selectedId}
+                    onSelect={setSelectedId}
+                    onMove={(path, from, to) =>
+                      setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
+                    }
+                    onDuplicate={(id) =>
+                      setBlocks((prev) => duplicateBlock(prev, id))
+                    }
+                    onDelete={(id) =>
+                      setBlocks((prev) => {
+                        const result = deleteBlockById(prev, id);
+                        if (selectedId && !findBlockById(result.blocks, selectedId)) {
+                          setSelectedId(getFirstBlockId(result.blocks));
+                        }
+                        return result.blocks;
+                      })
+                    }
+                    onInsert={handleInsertIntoSlot}
+                    onMoveToSlot={handleMoveIntoSlot}
+                  />
+                </div>
               </div>
             )}
             </main>

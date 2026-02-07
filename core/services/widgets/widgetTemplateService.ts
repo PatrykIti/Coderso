@@ -5,11 +5,16 @@ import { widgetTemplates } from "../../db/schema";
 import type { WidgetBlock } from "../../widgets/types";
 import { listWidgetTemplateCategories } from "./widgetTemplateCategoryService";
 import { createWidgetTemplateRevisionTx } from "./widgetTemplateRevisionService";
+import {
+  normalizeWidgetTemplateSettings,
+  type WidgetTemplateSettings,
+} from "./widgetTemplateSettings";
 
 export type WidgetTemplateStatus = "draft" | "published";
 
 export type WidgetTemplateRecord = typeof widgetTemplates.$inferSelect & {
   blocks: WidgetBlock[];
+  settings: WidgetTemplateSettings;
 };
 
 export type WidgetTemplateCreateInput = {
@@ -18,6 +23,7 @@ export type WidgetTemplateCreateInput = {
   category: string;
   status?: WidgetTemplateStatus;
   blocks?: WidgetBlock[] | null;
+  settings?: WidgetTemplateSettings | null;
 };
 
 export type WidgetTemplateUpdateInput = {
@@ -26,6 +32,7 @@ export type WidgetTemplateUpdateInput = {
   category?: string;
   status?: WidgetTemplateStatus;
   blocks?: WidgetBlock[] | null;
+  settings?: WidgetTemplateSettings | null;
 };
 
 const allowedStatuses: WidgetTemplateStatus[] = ["draft", "published"];
@@ -51,13 +58,19 @@ function normalizeBlocks(blocks?: WidgetBlock[] | null): WidgetBlock[] {
   return Array.isArray(blocks) ? blocks : [];
 }
 
+const mapWidgetTemplateRow = (row: typeof widgetTemplates.$inferSelect) => ({
+  ...row,
+  blocks: normalizeBlocks(row.blocks as WidgetBlock[]),
+  settings: normalizeWidgetTemplateSettings(row.settings),
+});
+
 export async function listWidgetTemplates(): Promise<WidgetTemplateRecord[]> {
   const rows = await db
     .select()
     .from(widgetTemplates)
     .orderBy(desc(widgetTemplates.updatedAt));
 
-  return rows.map((row) => ({ ...row, blocks: row.blocks as WidgetBlock[] }));
+  return rows.map(mapWidgetTemplateRow);
 }
 
 export async function getWidgetTemplate(id: string) {
@@ -67,7 +80,7 @@ export async function getWidgetTemplate(id: string) {
     .where(eq(widgetTemplates.id, id));
 
   if (!row) return null;
-  return { ...row, blocks: row.blocks as WidgetBlock[] };
+  return mapWidgetTemplateRow(row);
 }
 
 export async function createWidgetTemplate(
@@ -91,6 +104,7 @@ export async function createWidgetTemplate(
         category: resolvedCategory,
         status: input.status ?? "draft",
         blocks: normalizeBlocks(input.blocks),
+        settings: normalizeWidgetTemplateSettings(input.settings),
         createdAt: now,
         updatedAt: now,
       })
@@ -107,11 +121,12 @@ export async function createWidgetTemplate(
         category: row.category,
         status: row.status as WidgetTemplateStatus,
         blocks: normalizeBlocks(row.blocks as WidgetBlock[]),
+        settings: normalizeWidgetTemplateSettings(row.settings),
       },
       userId
     );
 
-    return { ...row, blocks: row.blocks as WidgetBlock[] };
+    return mapWidgetTemplateRow(row);
   });
 }
 
@@ -148,6 +163,10 @@ export async function updateWidgetTemplate(
     update.blocks = normalizeBlocks(input.blocks);
   }
 
+  if (input.settings !== undefined) {
+    update.settings = normalizeWidgetTemplateSettings(input.settings);
+  }
+
   return db.transaction(async (tx) => {
     const [row] = await tx
       .update(widgetTemplates)
@@ -166,11 +185,12 @@ export async function updateWidgetTemplate(
         category: row.category,
         status: row.status as WidgetTemplateStatus,
         blocks: normalizeBlocks(row.blocks as WidgetBlock[]),
+        settings: normalizeWidgetTemplateSettings(row.settings),
       },
       userId
     );
 
-    return { ...row, blocks: row.blocks as WidgetBlock[] };
+    return mapWidgetTemplateRow(row);
   });
 }
 
@@ -181,5 +201,5 @@ export async function deleteWidgetTemplate(id: string) {
     .returning();
 
   if (!row) return null;
-  return { ...row, blocks: row.blocks as WidgetBlock[] };
+  return mapWidgetTemplateRow(row);
 }

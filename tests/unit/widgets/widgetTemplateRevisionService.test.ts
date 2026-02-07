@@ -41,6 +41,24 @@ testIfDb("widget template revisions create/update/restore", async () => {
     description: "Revision test",
     category: "Content",
     blocks: [],
+    settings: {
+      layout: {
+        wrapper: {
+          container: "full",
+          padding: { top: "none", bottom: "none" },
+          background: { color: "#ffffff", image: null },
+        },
+        sections: {
+          gap: "none",
+          defaults: {
+            container: "default",
+            padding: { top: "xl", bottom: "xl" },
+            margin: { top: "none", bottom: "none" },
+          },
+        },
+        applyDefaultsToNewBlocks: false,
+      },
+    },
   });
 
   createdTemplateId = template.id;
@@ -49,7 +67,28 @@ testIfDb("widget template revisions create/update/restore", async () => {
   expect(revisions).toHaveLength(1);
   expect(revisions[0]?.version).toBe(1);
 
-  await updateWidgetTemplate(template.id, { name: "Template Updated" });
+  await updateWidgetTemplate(template.id, {
+    name: "Template Updated",
+    settings: {
+      layout: {
+        wrapper: {
+          container: "default",
+          maxWidth: "5xl",
+          padding: { top: "md", bottom: "md" },
+          background: { color: "#e2e8f0", image: null },
+        },
+        sections: {
+          gap: "sm",
+          defaults: {
+            container: "narrow",
+            padding: { top: "sm", bottom: "sm" },
+            margin: { top: "none", bottom: "none" },
+          },
+        },
+        applyDefaultsToNewBlocks: false,
+      },
+    },
+  });
 
   revisions = await listWidgetTemplateRevisions(template.id);
   expect(revisions).toHaveLength(2);
@@ -63,6 +102,7 @@ testIfDb("widget template revisions create/update/restore", async () => {
 
   const restored = await getWidgetTemplate(template.id);
   expect(restored?.name).toBe(first.name);
+  expect(restored?.settings.layout.wrapper.background.color).toBe("#ffffff");
 
   revisions = await listWidgetTemplateRevisions(template.id);
   expect(revisions).toHaveLength(3);

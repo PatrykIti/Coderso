@@ -1,4 +1,5 @@
 import { apiRequest } from "./apiClient";
+import type { WidgetTemplateSettings } from "../../services/widgets/widgetTemplateSettings";
 
 export type WidgetTemplateRevision = {
   id: string;
@@ -9,6 +10,7 @@ export type WidgetTemplateRevision = {
   category: string;
   status: "draft" | "published";
   blocks: Array<Record<string, unknown>>;
+  settings: WidgetTemplateSettings;
   createdAt: string;
   createdBy: { id: string; name: string | null; email: string } | null;
 };

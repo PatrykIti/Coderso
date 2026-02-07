@@ -1,4 +1,5 @@
 import { apiRequest } from "./apiClient";
+import type { WidgetTemplateSettings } from "../../services/widgets/widgetTemplateSettings";
 
 export type WidgetTemplateStatus = "draft" | "published";
 export type WidgetTemplateCategory = string;
@@ -10,6 +11,7 @@ export type WidgetTemplate = {
   category: WidgetTemplateCategory;
   status: WidgetTemplateStatus;
   blocks: Array<Record<string, unknown>>;
+  settings: WidgetTemplateSettings;
   createdAt: string;
   updatedAt: string;
 };
@@ -20,6 +22,7 @@ export type WidgetTemplateCreate = {
   category: WidgetTemplateCategory;
   status?: WidgetTemplateStatus;
   blocks?: Array<Record<string, unknown>>;
+  settings?: WidgetTemplateSettings;
 };
 
 export type WidgetTemplateUpdate = {
@@ -28,6 +31,7 @@ export type WidgetTemplateUpdate = {
   category?: WidgetTemplateCategory;
   status?: WidgetTemplateStatus;
   blocks?: Array<Record<string, unknown>>;
+  settings?: WidgetTemplateSettings;
 };
 
 export async function listWidgetTemplates() {

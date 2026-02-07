@@ -225,6 +225,13 @@
       "when": 1770194513813,
       "tag": "0031_taxonomy_system",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1770451200000,
+      "tag": "0032_widget_template_settings",
+      "breakpoints": true
     }
   ]
 }

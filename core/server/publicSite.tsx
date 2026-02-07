@@ -34,6 +34,7 @@ import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import type { ContentSchema } from "../services/content/validation";
 import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
+import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
 import { resolveDevAssetUrl } from "./utils/styleUrl";
 
 export type PublicPageData = {
@@ -200,6 +201,7 @@ const renderWidgetTemplatePreviewHtml = async (templateId: string) => {
     cssHref,
     inlineCss,
     isPreview: true,
+    layoutSettings: getWidgetTemplateLayoutSettings(template.settings),
     devModuleScripts,
   });
 };

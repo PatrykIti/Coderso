@@ -46,6 +46,24 @@ testIfDb("getWidgetTemplatePreviewModel returns blocks for preview", async () =>
     description: "Preview test",
     category: "Content",
     blocks,
+    settings: {
+      layout: {
+        wrapper: {
+          container: "full",
+          padding: { top: "none", bottom: "none" },
+          background: { color: "#f1f5f9", image: null },
+        },
+        sections: {
+          gap: "none",
+          defaults: {
+            container: "default",
+            padding: { top: "xl", bottom: "xl" },
+            margin: { top: "none", bottom: "none" },
+          },
+        },
+        applyDefaultsToNewBlocks: false,
+      },
+    },
   });
 
   createdTemplateId = template.id;
@@ -56,4 +74,5 @@ testIfDb("getWidgetTemplatePreviewModel returns blocks for preview", async () =>
   expect(preview.name).toBe(template.name);
   expect(preview.blocks.length).toBe(1);
   expect(preview.blocks[0]?.type).toBe("hero");
+  expect(preview.settings.layout.wrapper.background.color).toBe("#f1f5f9");
 });

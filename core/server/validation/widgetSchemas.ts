@@ -1,3 +1,17 @@
+const containerTokens = ["default", "narrow", "full"] as const;
+const spacingTokens = ["none", "xs", "sm", "md", "lg", "xl", "2xl"] as const;
+const pageMaxWidthTokens = ["4xl", "5xl", "6xl", "7xl"] as const;
+
+const containerTokenSchema = {
+  type: "string",
+  enum: [...containerTokens],
+};
+
+const spacingTokenSchema = {
+  type: "string",
+  enum: [...spacingTokens],
+};
+
 const blockLayoutSchema = {
   type: "object",
   required: ["container", "padding", "margin", "background"],
@@ -31,6 +45,82 @@ const blockLayoutSchema = {
         image: { type: ["string", "null"] },
       },
     },
+  },
+};
+
+const templateLayoutDefaultsSchema = {
+  type: "object",
+  required: ["container", "padding", "margin"],
+  additionalProperties: false,
+  properties: {
+    container: containerTokenSchema,
+    padding: {
+      type: "object",
+      required: ["top", "bottom"],
+      additionalProperties: false,
+      properties: {
+        top: spacingTokenSchema,
+        bottom: spacingTokenSchema,
+      },
+    },
+    margin: {
+      type: "object",
+      required: ["top", "bottom"],
+      additionalProperties: false,
+      properties: {
+        top: spacingTokenSchema,
+        bottom: spacingTokenSchema,
+      },
+    },
+  },
+};
+
+const templateLayoutSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    wrapper: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        container: containerTokenSchema,
+        maxWidth: { type: "string", enum: [...pageMaxWidthTokens] },
+        padding: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            top: spacingTokenSchema,
+            bottom: spacingTokenSchema,
+          },
+        },
+        background: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            color: { type: "string" },
+            image: { type: ["string", "null"] },
+          },
+        },
+      },
+    },
+    sections: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        gap: spacingTokenSchema,
+        defaults: templateLayoutDefaultsSchema,
+      },
+    },
+    typographyPreset: { type: "string" },
+    applyDefaultsToNewBlocks: { type: "boolean" },
+  },
+};
+
+const templateSettingsSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    layout: templateLayoutSchema,
   },
 };
 
@@ -91,6 +181,7 @@ const templateSchema = {
     category: { type: "string", minLength: 1 },
     status: { type: "string", enum: ["draft", "published"] },
     blocks: { type: "array", items: blockSchema },
+    settings: templateSettingsSchema,
   },
 };
 
@@ -105,6 +196,7 @@ export const widgetTemplateUpdateSchema = {
     category: { type: "string", minLength: 1 },
     status: { type: "string", enum: ["draft", "published"] },
     blocks: { type: "array", items: blockSchema },
+    settings: templateSettingsSchema,
   },
 };
 

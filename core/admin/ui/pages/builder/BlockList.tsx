@@ -12,6 +12,7 @@ import { BlockToolbar } from "./BlockToolbar";
 
 export type BlockListProps = {
   blocks: Block[];
+  className?: string;
   selectedId?: string | null;
   onSelect: (id: string) => void;
   onMove: (path: BlockPath, from: number, to: number) => void;
@@ -25,6 +26,7 @@ export type BlockListProps = {
 
 export function BlockList({
   blocks,
+  className,
   selectedId,
   onSelect,
   onMove,
@@ -86,7 +88,7 @@ export function BlockList({
   };
 
   return (
-    <div className={cn("space-y-3", level > 0 && "ml-6")}>
+    <div className={cn("space-y-3", className, level > 0 && "ml-6")}>
       {blocks.map((block, index) => {
         const widget = widgetRegistry.find((item) => item.type === block.type);
         const label = widget?.title ?? block.type;

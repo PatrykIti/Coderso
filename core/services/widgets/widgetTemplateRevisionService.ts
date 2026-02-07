@@ -4,6 +4,10 @@ import { db } from "../../db/client";
 import { users, widgetTemplateRevisions, widgetTemplates } from "../../db/schema";
 import type { WidgetBlock } from "../../widgets/types";
 import type { WidgetTemplateStatus } from "./widgetTemplateService";
+import {
+  normalizeWidgetTemplateSettings,
+  type WidgetTemplateSettings,
+} from "./widgetTemplateSettings";
 
 export type WidgetTemplateRevisionPayload = {
   name: string;
@@ -11,6 +15,7 @@ export type WidgetTemplateRevisionPayload = {
   category: string;
   status: WidgetTemplateStatus;
   blocks: WidgetBlock[];
+  settings: WidgetTemplateSettings;
 };
 
 export type WidgetTemplateRevision = {
@@ -22,6 +27,7 @@ export type WidgetTemplateRevision = {
   category: string;
   status: WidgetTemplateStatus;
   blocks: WidgetBlock[];
+  settings: WidgetTemplateSettings;
   createdAt: Date;
   createdBy: { id: string; name: string | null; email: string } | null;
 };
@@ -31,6 +37,8 @@ type DbClient = typeof db | DbTransaction;
 
 const normalizeBlocks = (blocks?: WidgetBlock[] | null) =>
   Array.isArray(blocks) ? blocks : [];
+const normalizeSettings = (settings?: unknown) =>
+  normalizeWidgetTemplateSettings(settings);
 
 export async function listWidgetTemplateRevisions(templateId: string) {
   const rows = await db
@@ -43,6 +51,7 @@ export async function listWidgetTemplateRevisions(templateId: string) {
       category: widgetTemplateRevisions.category,
       status: widgetTemplateRevisions.status,
       blocks: widgetTemplateRevisions.blocks,
+      settings: widgetTemplateRevisions.settings,
       createdAt: widgetTemplateRevisions.createdAt,
       createdBy: widgetTemplateRevisions.createdBy,
       authorName: users.name,
@@ -62,6 +71,7 @@ export async function listWidgetTemplateRevisions(templateId: string) {
     category: row.category,
     status: row.status as WidgetTemplateStatus,
     blocks: normalizeBlocks(row.blocks as WidgetBlock[]),
+    settings: normalizeSettings(row.settings),
     createdAt: row.createdAt,
     createdBy: row.createdBy
       ? {
@@ -96,6 +106,7 @@ export async function createWidgetTemplateRevisionTx(
       category: payload.category,
       status: payload.status,
       blocks: normalizeBlocks(payload.blocks),
+      settings: normalizeSettings(payload.settings),
       createdBy: userId ?? null,
     })
     .returning();
@@ -123,6 +134,7 @@ export async function restoreWidgetTemplateRevision(
         category: revision.category,
         status: revision.status,
         blocks: revision.blocks,
+        settings: normalizeSettings(revision.settings),
         updatedAt: new Date(),
       })
       .where(eq(widgetTemplates.id, revision.templateId))
@@ -139,6 +151,7 @@ export async function restoreWidgetTemplateRevision(
         category: template.category,
         status: template.status as WidgetTemplateStatus,
         blocks: normalizeBlocks(template.blocks as WidgetBlock[]),
+        settings: normalizeSettings(template.settings),
       },
       userId
     );

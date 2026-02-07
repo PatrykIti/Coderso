@@ -38,18 +38,58 @@ testIfDb("create/update/list/delete widget templates", async () => {
     description: "Reusable hero layout",
     category: "Content",
     blocks: [],
+    settings: {
+      layout: {
+        wrapper: {
+          container: "full",
+          padding: { top: "sm", bottom: "sm" },
+          background: { color: "#f8fafc", image: null },
+        },
+        sections: {
+          gap: "sm",
+          defaults: {
+            container: "default",
+            padding: { top: "xl", bottom: "xl" },
+            margin: { top: "none", bottom: "none" },
+          },
+        },
+        applyDefaultsToNewBlocks: false,
+      },
+    },
   });
 
   createdTemplateId = template.id;
   expect(template.name).toContain("Template-");
+  expect(template.settings.layout.wrapper.background.color).toBe("#f8fafc");
 
   const updated = await updateWidgetTemplate(template.id, {
     name: "Template Updated",
     status: "published",
+    settings: {
+      layout: {
+        wrapper: {
+          container: "default",
+          maxWidth: "5xl",
+          padding: { top: "md", bottom: "md" },
+          background: { color: "#111827", image: null },
+        },
+        sections: {
+          gap: "md",
+          defaults: {
+            container: "narrow",
+            padding: { top: "sm", bottom: "sm" },
+            margin: { top: "none", bottom: "none" },
+          },
+        },
+        applyDefaultsToNewBlocks: false,
+      },
+    },
   });
 
   expect(updated?.name).toBe("Template Updated");
   expect(updated?.status).toBe("published");
+  expect(updated?.settings.layout.wrapper.maxWidth).toBe("5xl");
+  expect(updated?.settings.layout.wrapper.background.color).toBe("#111827");
 
   const list = await listWidgetTemplates();
   expect(list.some((item) => item.id === template.id)).toBe(true);
