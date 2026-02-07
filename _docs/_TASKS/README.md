@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 17 tasks
-- **In Progress:** 0 tasks
+- **In Progress:** 2 tasks
 - **Done:** 224 tasks
 
 ---
@@ -56,7 +56,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..11 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
-| TASK-050-07 | Footer Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
+| TASK-050-07-02 | Footer Widget Visual Rebuild and Advanced Cleanup | High | Large | Visual IA rebuild + advanced scope cleanup |
 | TASK-050-08 | Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-09 | Compare Timeline Widget Expansion | Medium | Medium | Wizard/visual/advanced |
 | TASK-050-10 | Newsletter Widget Expansion | Medium | Medium | Wizard/visual/advanced |
@@ -73,6 +73,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-07 | Footer Widget Expansion + Slots | High | Medium | Execution split into 050-07-01/02 |
+| TASK-050-07-01 | Footer Widget Bugfixes and UX Hardening | High | Medium | Slot MVP + editor hardening + baseline tests |
 
 ---
 

@@ -28,6 +28,8 @@ Hero, Navigation, and Footer (wizard/visual/advanced).
 - **TASK-050-05-02:** Hero Widget Visual Rebuild and Advanced Cleanup
 - **TASK-050-06:** Navigation Widget Expansion + Slots
 - **TASK-050-07:** Footer Widget Expansion + Slots
+- **TASK-050-07-01:** Footer Widget Bugfixes and UX Hardening
+- **TASK-050-07-02:** Footer Widget Visual Rebuild and Advanced Cleanup
 - **TASK-050-08:** Timeline Widget Expansion
 - **TASK-050-09:** Compare Timeline Widget Expansion
 - **TASK-050-10:** Newsletter Widget Expansion

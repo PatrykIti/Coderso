@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-04  
-**Status:** To Do
+**Status:** In Progress (2026-02-07)
 
 ---
 
@@ -13,6 +13,11 @@
 
 Expand the Footer widget to match the documented v1 spec and add slots for
 footer columns and a bottom strip area.
+
+Execution is split into two detailed subtasks:
+
+- `TASK-050-07-01` Footer Widget Bugfixes and UX Hardening
+- `TASK-050-07-02` Footer Widget Visual Rebuild and Advanced Cleanup
 
 ---
 
@@ -82,6 +87,17 @@ Update `FooterBlock` to:
 | `core/admin/ui/widgets/editors/FooterEditors.tsx` | expand visual + advanced | links + social |
 | `tests/unit/widgets/footer.test.tsx` | add/extend tests | schema + defaults |
 | `tests/unit/widgets/renderer.test.tsx` | verify slot render | column slot |
+
+---
+
+## Sub-Tasks
+
+- **TASK-050-07-01:** Footer Widget Bugfixes and UX Hardening  
+  Scope: slot MVP, schema/default hardening, renderer parity, and immediate UX
+  fixes in wizard/visual/advanced.
+- **TASK-050-07-02:** Footer Widget Visual Rebuild and Advanced Cleanup  
+  Scope: section-based Visual IA, technical-only Advanced scope, final data
+  model alignment, and full UX parity with Hero/Navigation.
 
 ---
 
