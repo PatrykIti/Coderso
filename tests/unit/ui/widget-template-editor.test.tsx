@@ -8,6 +8,11 @@ import {
   CompareTimelineWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/CompareTimelineEditors";
 import {
+  ContactAdvancedEditor,
+  ContactVisualEditor,
+  ContactWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/ContactEditors";
+import {
   FooterAdvancedEditor,
   FooterVisualEditor,
   FooterWizardEditor,
@@ -32,6 +37,10 @@ import {
   compareTimelineDefaults,
   createCompareTimelineWidget,
 } from "../../../core/widgets/core/compareTimeline";
+import {
+  contactDefaults,
+  createContactWidget,
+} from "../../../core/widgets/core/contact";
 import {
   createFooterWidget,
   footerDefaults,
@@ -214,4 +223,34 @@ test("widget template block settings render newsletter visual sections", () => {
   expect(html).toContain("Consent and submit behavior");
   expect(html).toContain("Integration target");
   expect(html).toContain("Spacing and alignment");
+});
+
+test("widget template block settings render contact baseline sections", () => {
+  const widget = createContactWidget({
+    wizard: ContactWizardEditor,
+    visual: ContactVisualEditor,
+    advanced: ContactAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "contact-1",
+        type: "contact",
+        variant: "form-left",
+        data: contactDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Form controls");
+  expect(html).toContain("Contact details");
+  expect(html).toContain("Map settings");
+  expect(html).toContain("Style");
 });

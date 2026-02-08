@@ -20,7 +20,7 @@ fields, map embed, and layout clarity across Wizard/Visual/Advanced modes.
 
 Execution is split into two detailed subtasks:
 
-- `TASK-050-11-01` Contact Widget Bugfixes and UX Hardening (**To Do**)
+- `TASK-050-11-01` Contact Widget Bugfixes and UX Hardening (**Done, 2026-02-08**)
 - `TASK-050-11-02` Contact Widget Visual Rebuild and Advanced Cleanup (**To Do**)
 
 ---

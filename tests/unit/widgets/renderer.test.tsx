@@ -28,6 +28,11 @@ import {
   newsletterDefaults,
   type NewsletterData,
 } from "../../../core/widgets/core/newsletter";
+import {
+  contactDefaults,
+  createContactWidget,
+  type ContactData,
+} from "../../../core/widgets/core/contact";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -39,6 +44,7 @@ const StubTimelineEditor: ComponentType<WidgetEditorProps<TimelineData>> = () =>
 const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
 const StubNewsletterEditor: ComponentType<WidgetEditorProps<NewsletterData>> = () => null;
+const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -542,4 +548,43 @@ test("renderer outputs newsletter variant and integration markers", () => {
   expect(html).toContain('data-newsletter-consent-required="true"');
   expect(html).toContain('name="webhookId"');
   expect(html).not.toContain("Hidden in minimal variant");
+});
+
+test("renderer outputs contact variant and map markers", () => {
+  clearWidgets();
+  registerWidget(
+    createContactWidget({
+      wizard: StubContactEditor,
+      visual: StubContactEditor,
+      advanced: StubContactEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "contact-1",
+        type: "contact",
+        variant: "form-right",
+        data: {
+          ...contactDefaults,
+          map: {
+            enabled: true,
+            embedUrl: "https://maps.google.com/?q=Warsaw&output=embed",
+          },
+          style: {
+            spacing: "lg",
+            columns: "two",
+            background: "#f8fafc",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-contact-variant="form-right"');
+  expect(html).toContain('data-contact-spacing="lg"');
+  expect(html).toContain('data-contact-columns="two"');
+  expect(html).toContain('data-contact-map="true"');
+  expect(html).toContain("Contact map");
 });
