@@ -14,6 +14,11 @@ import {
   NavigationWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/NavigationEditors";
 import {
+  NewsletterAdvancedEditor,
+  NewsletterVisualEditor,
+  NewsletterWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/NewsletterEditors";
+import {
   TimelineAdvancedEditor,
   TimelineVisualEditor,
   TimelineWizardEditor,
@@ -31,6 +36,10 @@ import {
   createNavigationWidget,
   navigationDefaults,
 } from "../../../core/widgets/core/navigation";
+import {
+  createNewsletterWidget,
+  newsletterDefaults,
+} from "../../../core/widgets/core/newsletter";
 import {
   createTimelineWidget,
   timelineDefaults,
@@ -220,4 +229,33 @@ test("VisualPanel uses compare timeline editor variant controls", () => {
 
   expect(html).not.toContain("Choose a visual style for this widget.");
   expect(html).toContain("Variant and compare structure");
+});
+
+test("VisualPanel uses newsletter editor variant controls", () => {
+  const widget = createNewsletterWidget({
+    wizard: NewsletterWizardEditor,
+    visual: NewsletterVisualEditor,
+    advanced: NewsletterAdvancedEditor,
+  });
+  const block: Block = {
+    id: "newsletter-1",
+    type: "newsletter",
+    variant: "inline",
+    data: newsletterDefaults,
+    editor: {
+      mode: "visual",
+      wizardCompleted: true,
+    },
+  };
+
+  const html = renderToString(
+    <VisualPanel
+      widget={widget}
+      block={block}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).not.toContain("Choose a visual style for this widget.");
+  expect(html).toContain("Variant and form structure");
 });

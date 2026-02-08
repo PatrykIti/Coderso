@@ -53,13 +53,12 @@ test("newsletter normalization resolves integration mode and safe defaults", () 
 
 test("newsletter validator accepts expanded fields", () => {
   clearWidgets();
-  registerWidget(
-    createNewsletterWidget({
-      wizard: StubEditor,
-      visual: StubEditor,
-      advanced: StubEditor,
-    })
-  );
+  const widget = createNewsletterWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  registerWidget(widget);
 
   expect(() =>
     normalizeWidgetBlock({
@@ -92,6 +91,7 @@ test("newsletter validator accepts expanded fields", () => {
       },
     })
   ).not.toThrow();
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
 test("newsletter validator rejects invalid variant", () => {
@@ -131,7 +131,7 @@ test("newsletter wizard renders onboarding flow fields", () => {
   expect(html).toContain("Consent checkbox");
 });
 
-test("newsletter visual renders baseline content and style fields", () => {
+test("newsletter visual renders section-based IA", () => {
   const html = renderToString(
     <NewsletterVisualEditor
       value={newsletterDefaults}
@@ -141,14 +141,53 @@ test("newsletter visual renders baseline content and style fields", () => {
     />
   );
 
-  expect(html).toContain("Placeholder");
-  expect(html).toContain("Success message");
-  expect(html).toContain("Spacing");
-  expect(html).toContain("Alignment");
-  expect(html).toContain("Background color");
+  expect(html).toContain("Variant and form structure");
+  expect(html).toContain("Content and copy");
+  expect(html).toContain("Consent and submit behavior");
+  expect(html).toContain("Integration target");
+  expect(html).toContain("Colors and emphasis");
+  expect(html).toContain("Spacing and alignment");
 });
 
-test("newsletter advanced renders integration controls", () => {
+test("newsletter visual conditionally renders integration fields", () => {
+  const webhookHtml = renderToString(
+    <NewsletterVisualEditor
+      value={{
+        ...newsletterDefaults,
+        integration: {
+          mode: "webhook",
+          webhookId: "webhook_newsletter_signup",
+          actionUrl: "",
+        },
+      }}
+      onChange={() => undefined}
+      variant="inline"
+      onVariantChange={() => undefined}
+    />
+  );
+  const urlHtml = renderToString(
+    <NewsletterVisualEditor
+      value={{
+        ...newsletterDefaults,
+        integration: {
+          mode: "action-url",
+          actionUrl: "https://example.com/subscribe",
+          webhookId: "",
+        },
+      }}
+      onChange={() => undefined}
+      variant="inline"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(webhookHtml).toContain("Webhook ID");
+  expect(webhookHtml).not.toContain("Form action URL");
+  expect(urlHtml).toContain("Form action URL");
+  expect(urlHtml).not.toContain("Webhook ID");
+});
+
+test("newsletter advanced keeps technical-only scope", () => {
   const html = renderToString(
     <NewsletterAdvancedEditor
       value={newsletterDefaults}
@@ -158,8 +197,8 @@ test("newsletter advanced renders integration controls", () => {
     />
   );
 
-  expect(html).toContain("Integration mode");
-  expect(html).toContain("Form action URL");
-  expect(html).toContain("Webhook ID");
-  expect(html).toContain("Consent required");
+  expect(html).toContain("Layout tokens");
+  expect(html).toContain("Raw integration metadata");
+  expect(html).toContain("Normalization and fallback");
+  expect(html).not.toContain("Content and copy");
 });

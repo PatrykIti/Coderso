@@ -185,7 +185,7 @@ test("widget template block settings render compare timeline visual sections", (
   expect(html).toContain("Spacing and layout preview hints");
 });
 
-test("widget template block settings render newsletter baseline sections", () => {
+test("widget template block settings render newsletter visual sections", () => {
   const widget = createNewsletterWidget({
     wizard: NewsletterWizardEditor,
     visual: NewsletterVisualEditor,
@@ -209,8 +209,9 @@ test("widget template block settings render newsletter baseline sections", () =>
     />
   );
 
-  expect(html).toContain("Placeholder");
-  expect(html).toContain("Success message");
-  expect(html).toContain("Spacing");
-  expect(html).toContain("Alignment");
+  expect(html).toContain("Variant and form structure");
+  expect(html).toContain("Content and copy");
+  expect(html).toContain("Consent and submit behavior");
+  expect(html).toContain("Integration target");
+  expect(html).toContain("Spacing and alignment");
 });

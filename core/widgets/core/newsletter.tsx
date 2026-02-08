@@ -360,6 +360,9 @@ export function createNewsletterWidget(editors: {
     schema: newsletterSchema,
     defaults: newsletterDefaults,
     editor: editors,
+    editorCapabilities: {
+      visualOwnsVariantSelection: true,
+    },
     render: NewsletterBlock,
   };
 }

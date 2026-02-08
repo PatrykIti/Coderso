@@ -1,3 +1,7 @@
+import { type ReactNode } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -8,19 +12,37 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 import {
   normalizeNewsletterData,
   resolveNewsletterVariant,
   type NewsletterData,
+  type NewsletterVariantId,
 } from "../../../../widgets/core/newsletter";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 
-const variantOptions = [
-  { id: "inline", label: "Inline" },
-  { id: "stacked", label: "Stacked" },
-  { id: "minimal", label: "Minimal" },
-] as const;
+const variantOptions: Array<{
+  id: NewsletterVariantId;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "inline",
+    label: "Inline",
+    description: "Input and submit button share one row where possible.",
+  },
+  {
+    id: "stacked",
+    label: "Stacked",
+    description: "Input sits above button for a clear vertical flow.",
+  },
+  {
+    id: "minimal",
+    label: "Minimal",
+    description: "Compact signup layout with reduced supporting text.",
+  },
+];
 
 const spacingOptions = [
   { id: "sm", label: "Compact" },
@@ -52,6 +74,28 @@ type StyleData = NonNullable<NewsletterData["style"]>;
 
 function normalizeValue(value: NewsletterData): NewsletterData {
   return normalizeNewsletterData(value);
+}
+
+function EditorSection({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-3 rounded-lg border border-border/70 bg-background/50 p-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {title}
+        </p>
+        {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
 }
 
 function updateValue(
@@ -153,6 +197,40 @@ function ColorField({
   );
 }
 
+function VariantCards({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange?: (next: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {variantOptions.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange?.(option.id)}
+          className={cn(
+            "w-full rounded-lg border p-3 text-left transition",
+            value === option.id
+              ? "border-primary bg-primary/5"
+              : "border-border bg-background hover:border-primary/50"
+          )}
+        >
+          <div className="flex w-full items-start justify-between gap-2">
+            <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+            <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
+              {value === option.id ? "Selected" : "Pick"}
+            </Badge>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function NewsletterWizardEditor({
   value,
   onChange,
@@ -249,42 +327,98 @@ export function NewsletterWizardEditor({
 export function NewsletterVisualEditor({
   value,
   onChange,
+  variant,
+  onVariantChange,
 }: WidgetEditorProps<NewsletterData>) {
   const normalized = normalizeValue(value);
+  const resolvedVariant = resolveNewsletterVariant(variant);
+  const integrationMode = normalized.integration?.mode ?? "action-url";
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Placeholder</p>
-        <Input
-          value={normalized.placeholder ?? ""}
-          onChange={(event) =>
-            updateValue(value, onChange, (current) => ({
-              ...current,
-              placeholder: event.target.value,
-            }))
-          }
-          placeholder="you@example.com"
-        />
-      </div>
+      <EditorSection
+        title="Variant and form structure"
+        description="Choose the signup layout and keep structure clear in preview."
+      >
+        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+      </EditorSection>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Success message</p>
-        <Input
-          value={normalized.submit?.successMessage ?? ""}
-          onChange={(event) =>
-            updateSubmit(value, onChange, { successMessage: event.target.value })
-          }
-          placeholder="Thanks for joining!"
-        />
-      </div>
+      <EditorSection
+        title="Content and copy"
+        description="Edit visible text fields for heading, description, and input placeholder."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Title</p>
+          <Input
+            value={normalized.title ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                title: event.target.value,
+              }))
+            }
+            placeholder="Join our newsletter"
+          />
+        </div>
 
-      <div className="space-y-3 rounded-lg border p-3">
-        <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Description</p>
+          <Textarea
+            value={normalized.description ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                description: event.target.value,
+              }))
+            }
+            placeholder="Short supporting line"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Email placeholder</p>
+          <Input
+            value={normalized.placeholder ?? ""}
+            onChange={(event) =>
+              updateValue(value, onChange, (current) => ({
+                ...current,
+                placeholder: event.target.value,
+              }))
+            }
+            placeholder="you@example.com"
+          />
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        title="Consent and submit behavior"
+        description="Configure CTA copy, confirmation state, and consent requirement."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Button label</p>
+          <Input
+            value={normalized.submit?.label ?? ""}
+            onChange={(event) => updateSubmit(value, onChange, { label: event.target.value })}
+            placeholder="Subscribe"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Success message</p>
+          <Input
+            value={normalized.submit?.successMessage ?? ""}
+            onChange={(event) =>
+              updateSubmit(value, onChange, { successMessage: event.target.value })
+            }
+            placeholder="Thanks for joining!"
+          />
+        </div>
+
+        <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <p className="text-sm font-medium">Consent checkbox</p>
             <p className="text-xs text-muted-foreground">
-              Toggle marketing consent requirement.
+              Display a marketing consent option below the form.
             </p>
           </div>
           <Switch
@@ -317,24 +451,27 @@ export function NewsletterVisualEditor({
             </div>
           </>
         ) : null}
-      </div>
+      </EditorSection>
 
-      <div className="grid gap-3 rounded-lg border p-3 md:grid-cols-2">
+      <EditorSection
+        title="Integration target"
+        description="Decide if submissions go to external action URL or internal webhook flow."
+      >
         <div className="space-y-2">
-          <p className="text-sm font-medium">Spacing</p>
+          <p className="text-sm font-medium">Integration mode</p>
           <Select
-            value={normalized.style?.spacing ?? "md"}
+            value={integrationMode}
             onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                spacing: next as StyleData["spacing"],
+              updateIntegration(value, onChange, {
+                mode: next as IntegrationData["mode"],
               })
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Spacing" />
+              <SelectValue placeholder="Select integration mode" />
             </SelectTrigger>
             <SelectContent>
-              {spacingOptions.map((option) => (
+              {integrationModeOptions.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}
                 </SelectItem>
@@ -343,29 +480,39 @@ export function NewsletterVisualEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Alignment</p>
-          <Select
-            value={normalized.style?.alignment ?? "start"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                alignment: next as StyleData["alignment"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignmentOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {integrationMode === "action-url" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Form action URL</p>
+            <Input
+              value={normalized.integration?.actionUrl ?? ""}
+              onChange={(event) =>
+                updateIntegration(value, onChange, {
+                  actionUrl: event.target.value,
+                })
+              }
+              placeholder="https://example.com/subscribe"
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Webhook ID</p>
+            <Input
+              value={normalized.integration?.webhookId ?? ""}
+              onChange={(event) =>
+                updateIntegration(value, onChange, {
+                  webhookId: event.target.value,
+                })
+              }
+              placeholder="webhook_newsletter_signup"
+            />
+          </div>
+        )}
+      </EditorSection>
 
+      <EditorSection
+        title="Colors and emphasis"
+        description="Control panel surface color. Primary CTA color inherits current theme tokens."
+      >
         <ColorField
           label="Background color"
           value={normalized.style?.background}
@@ -373,7 +520,64 @@ export function NewsletterVisualEditor({
           placeholder="transparent"
           pickerFallback="#ffffff"
         />
-      </div>
+      </EditorSection>
+
+      <EditorSection
+        title="Spacing and alignment"
+        description="Fine-tune density and alignment for desktop/tablet/mobile runtime preview."
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Spacing</p>
+            <Select
+              value={normalized.style?.spacing ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  spacing: next as StyleData["spacing"],
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Spacing" />
+              </SelectTrigger>
+              <SelectContent>
+                {spacingOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Alignment</p>
+            <Select
+              value={normalized.style?.alignment ?? "start"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  alignment: next as StyleData["alignment"],
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Alignment" />
+              </SelectTrigger>
+              <SelectContent>
+                {alignmentOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Use runtime preview device tabs to validate spacing and input/button readability per viewport.
+        </p>
+      </EditorSection>
     </div>
   );
 }
@@ -381,90 +585,84 @@ export function NewsletterVisualEditor({
 export function NewsletterAdvancedEditor({
   value,
   onChange,
+  variant,
 }: WidgetEditorProps<NewsletterData>) {
   const normalized = normalizeValue(value);
-  const integrationMode = normalized.integration?.mode ?? "action-url";
 
   return (
     <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Integration mode</p>
-        <Select
-          value={integrationMode}
-          onValueChange={(next) =>
-            updateIntegration(value, onChange, {
-              mode: next as IntegrationData["mode"],
-            })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select integration mode" />
-          </SelectTrigger>
-          <SelectContent>
-            {integrationModeOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <EditorSection
+        title="Layout tokens"
+        description="Technical control for spacing/alignment tokens used by runtime renderer."
+      >
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Spacing token</p>
+            <Select
+              value={normalized.style?.spacing ?? "md"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  spacing: next as StyleData["spacing"],
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Spacing" />
+              </SelectTrigger>
+              <SelectContent>
+                {spacingOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Form action URL</p>
-        <Input
-          value={normalized.integration?.actionUrl ?? ""}
-          onChange={(event) =>
-            updateIntegration(value, onChange, {
-              actionUrl: event.target.value,
-            })
-          }
-          placeholder="https://example.com/subscribe"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Webhook ID</p>
-        <Input
-          value={normalized.integration?.webhookId ?? ""}
-          onChange={(event) =>
-            updateIntegration(value, onChange, {
-              webhookId: event.target.value,
-            })
-          }
-          placeholder="webhook_newsletter_signup"
-        />
-      </div>
-
-      <div className="flex items-center justify-between rounded-lg border p-3">
-        <div>
-          <p className="text-sm font-medium">Consent required</p>
-          <p className="text-xs text-muted-foreground">
-            Require checkbox acceptance before submit.
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Alignment token</p>
+            <Select
+              value={normalized.style?.alignment ?? "start"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, {
+                  alignment: next as StyleData["alignment"],
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Alignment" />
+              </SelectTrigger>
+              <SelectContent>
+                {alignmentOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <Switch
-          checked={normalized.consent?.required ?? false}
-          onCheckedChange={(checked) => updateConsent(value, onChange, { required: checked })}
-        />
-      </div>
+      </EditorSection>
 
-      <div className="grid gap-3 rounded-lg border p-3 md:grid-cols-2">
+      <EditorSection
+        title="Raw integration metadata"
+        description="Expert-only transport metadata for action URL and webhook fallback flows."
+      >
         <div className="space-y-2">
-          <p className="text-sm font-medium">Spacing</p>
+          <p className="text-sm font-medium">Integration mode</p>
           <Select
-            value={normalized.style?.spacing ?? "md"}
+            value={normalized.integration?.mode ?? "action-url"}
             onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                spacing: next as StyleData["spacing"],
+              updateIntegration(value, onChange, {
+                mode: next as IntegrationData["mode"],
               })
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Spacing" />
+              <SelectValue placeholder="Select integration mode" />
             </SelectTrigger>
             <SelectContent>
-              {spacingOptions.map((option) => (
+              {integrationModeOptions.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
                   {option.label}
                 </SelectItem>
@@ -473,37 +671,50 @@ export function NewsletterAdvancedEditor({
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Alignment</p>
-          <Select
-            value={normalized.style?.alignment ?? "start"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, {
-                alignment: next as StyleData["alignment"],
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              {alignmentOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Action URL (raw)</p>
+            <Input
+              value={normalized.integration?.actionUrl ?? ""}
+              onChange={(event) =>
+                updateIntegration(value, onChange, {
+                  actionUrl: event.target.value,
+                })
+              }
+              placeholder="https://example.com/subscribe"
+            />
+          </div>
 
-        <ColorField
-          label="Background color"
-          value={normalized.style?.background}
-          onChange={(next) => updateStyle(value, onChange, { background: next })}
-          placeholder="transparent"
-          pickerFallback="#ffffff"
-        />
-      </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Webhook ID (raw)</p>
+            <Input
+              value={normalized.integration?.webhookId ?? ""}
+              onChange={(event) =>
+                updateIntegration(value, onChange, {
+                  webhookId: event.target.value,
+                })
+              }
+              placeholder="webhook_newsletter_signup"
+            />
+          </div>
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        title="Normalization and fallback"
+        description="Enforce deterministic defaults and inspect resolved runtime metadata."
+      >
+        <p className="text-xs text-muted-foreground">
+          Resolved variant: {resolveNewsletterVariant(variant)}. Resolved integration mode:
+          {" "}
+          {normalized.integration?.mode ?? "action-url"}. Consent required:
+          {" "}
+          {normalized.consent?.required ? "true" : "false"}.
+        </p>
+        <Button type="button" variant="outline" onClick={() => onChange(normalized)}>
+          Normalize newsletter payload
+        </Button>
+      </EditorSection>
     </div>
   );
 }

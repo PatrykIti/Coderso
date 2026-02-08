@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Lead capture via a simple newsletter signup form.
+Lead capture via a newsletter signup form.
 
 ## Widget ID
 
@@ -10,41 +10,44 @@ Lead capture via a simple newsletter signup form.
 
 ## Variants (v1)
 
-- `inline`: input + button on one row when space allows
+- `inline`: input + button on one row when width allows
 - `stacked`: input above button
-- `minimal`: compact title + input + button, no description
+- `minimal`: compact heading + form, description hidden
 
-## Editor Modes (current after TASK-050-10-01)
+## Editor Modes (current after TASK-050-10-02)
 
-### Wizard
+### Wizard (minimal onboarding)
 - Newsletter style (`inline` / `stacked` / `minimal`)
 - Title + description
 - Button label
-- Consent checkbox baseline (enabled + label)
+- Consent baseline (enabled + label)
 
-### Visual (baseline parity in 10-01)
-- Placeholder
-- Success message
-- Consent controls (enabled, label, required)
-- Style baseline (spacing, alignment, background)
+### Visual (primary editing mode)
+Sections:
+1. Variant and form structure
+2. Content and copy
+3. Consent and submit behavior
+4. Integration target
+5. Colors and emphasis
+6. Spacing and alignment
 
-### Advanced (broad in 10-01)
-- Integration mode (`action-url` / `webhook`)
-- Action URL + webhook ID fields
-- Consent required toggle
-- Style fallback controls
+Notes:
+- Newsletter owns variant selection in Visual (`visualOwnsVariantSelection = true`).
+- Generic Visual variant selector is suppressed.
+- Integration fields are conditional by selected integration mode.
 
-Note:
-- Section-based Visual IA and technical-only Advanced boundaries are planned
-  for `TASK-050-10-02`.
+### Advanced (technical-only)
+- Layout tokens (spacing + alignment)
+- Raw integration metadata (mode + raw action/webhook fields)
+- Normalization and fallback diagnostics/actions
 
 ## Runtime Behavior Notes
 
-- Invalid or unknown variant falls back to `inline`.
+- Invalid/unknown variant falls back to `inline`.
 - `minimal` variant hides description text.
-- Consent checkbox renders only when `consent.enabled = true` and label is set.
+- Consent checkbox renders only when `consent.enabled = true` and label exists.
 - Integration mode is normalized:
-  - `webhook` when webhook ID is present and URL is empty,
+  - `webhook` when webhook ID exists and URL is empty,
   - otherwise `action-url`.
 - Renderer emits deterministic data markers:
   - `data-newsletter-variant`
