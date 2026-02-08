@@ -11,9 +11,17 @@
 
 ## Overview
 
-Expand the Contact widget to fully match the v1 documentation. This is a
-**non-slot** widget with configurable form fields, contact details, and
-optional map embed.
+Expand the Contact widget to fully match v1 documentation and align editing
+quality with Hero, Navigation, Footer, Timeline, Compare Timeline, and
+Newsletter.
+
+Contact is a **non-slot** widget focused on contact details, configurable form
+fields, map embed, and layout clarity across Wizard/Visual/Advanced modes.
+
+Execution is split into two detailed subtasks:
+
+- `TASK-050-11-01` Contact Widget Bugfixes and UX Hardening (**To Do**)
+- `TASK-050-11-02` Contact Widget Visual Rebuild and Advanced Cleanup (**To Do**)
 
 ---
 
@@ -26,6 +34,10 @@ Align with `_docs/_WIDGETS/CONTACT.md`:
 - Map: `enabled`, `embedUrl`
 - Style: `spacing`, `background`, `columns`
 
+Notes:
+- Keep additive schema changes for compatibility.
+- Normalize legacy payloads at runtime/editor boundaries.
+
 ---
 
 ## Wizard / Visual / Advanced Requirements
@@ -35,23 +47,26 @@ Align with `_docs/_WIDGETS/CONTACT.md`:
 2) Form fields selection (name, email, phone, message)
 3) Contact details (phone/email/address)
 
+Wizard should generate safe defaults with no technical friction.
+
 ### Visual
-- Variant preview with form + details
-- Quick field toggles
+- Variant cards + practical content/styling controls.
+- In final state, Contact owns variant controls in Visual
+  (no duplicate generic picker).
 
 ### Advanced
-- Full form field ordering + required toggle
-- Map embed configuration
-- Style and spacing controls
+- 11-01: broad controls while model stabilizes.
+- 11-02: technical-only controls (no duplicate content/style from Visual).
 
 ---
 
 ## Rendering Requirements
 
 Update `ContactBlock` to:
-- Render form + contact details based on variant
-- Respect required fields and layout
-- Render embedded map when enabled
+- render variants deterministically (`form-left` / `form-right` / `minimal`),
+- respect selected fields and required rules,
+- render embedded map only when enabled and valid,
+- apply style settings for spacing/background/columns.
 
 ---
 
@@ -60,17 +75,31 @@ Update `ContactBlock` to:
 | File | Action | Notes |
 | --- | --- | --- |
 | `core/widgets/core/contact.tsx` | expand data model + schema + defaults | per docs |
-| `core/widgets/core/contact.tsx` | update render variants | layout + map |
-| `core/admin/ui/widgets/editors/ContactEditors.tsx` | expand wizard flow | fields + details |
-| `core/admin/ui/widgets/editors/ContactEditors.tsx` | expand visual + advanced | required + map |
-| `tests/unit/widgets/contact.test.tsx` | add tests | schema + defaults |
+| `core/widgets/core/contact.tsx` | add normalization + deterministic rendering | variants + map + style |
+| `core/admin/ui/widgets/editors/ContactEditors.tsx` | wizard hardening | split in 11-01 |
+| `core/admin/ui/widgets/editors/ContactEditors.tsx` | section-based visual + advanced cleanup | split in 11-02 |
+| `tests/unit/widgets/contact.test.tsx` | add/expand widget tests | schema/defaults/render |
+| `tests/unit/widgets/renderer.test.tsx` | add runtime assertions | variant/layout parity |
+| `tests/unit/pageBuilder/visualPanel.test.tsx` | cover visual variant ownership | 11-02 |
+| `tests/unit/ui/widget-template-editor.test.tsx` | contact editor integration | visual sections |
+
+---
+
+## Sub-Tasks
+
+- **TASK-050-11-01:** Contact Widget Bugfixes and UX Hardening  
+  Scope: model/schema parity, normalization hardening, renderer correctness,
+  wizard reliability, and baseline tests.
+- **TASK-050-11-02:** Contact Widget Visual Rebuild and Advanced Cleanup  
+  Scope: section-based Visual IA, variant ownership in Visual, and
+  technical-only Advanced scope.
 
 ---
 
 ## Testing Requirements
 
-- Unit: schema validates form fields and map settings.
-- Unit: renderer respects variant layouts.
+- Unit: schema validates form fields, required rules, map settings, and style.
+- Unit: renderer respects variant layouts and conditional map visibility.
 - UI: wizard/visual/advanced field coverage.
 
 ---

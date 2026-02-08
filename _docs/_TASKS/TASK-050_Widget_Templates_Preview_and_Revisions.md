@@ -34,6 +34,8 @@ Hero, Navigation, and Footer (wizard/visual/advanced).
 - **TASK-050-09:** Compare Timeline Widget Expansion
 - **TASK-050-10:** Newsletter Widget Expansion
 - **TASK-050-11:** Contact Widget Expansion
+- **TASK-050-11-01:** Contact Widget Bugfixes and UX Hardening
+- **TASK-050-11-02:** Contact Widget Visual Rebuild and Advanced Cleanup
 
 ---
 
