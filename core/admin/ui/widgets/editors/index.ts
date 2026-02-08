@@ -39,3 +39,8 @@ export {
   TestimonialsVisualEditor,
   TestimonialsWizardEditor,
 } from "./TestimonialsEditors";
+export {
+  PricingPlansAdvancedEditor,
+  PricingPlansVisualEditor,
+  PricingPlansWizardEditor,
+} from "./PricingPlansEditors";

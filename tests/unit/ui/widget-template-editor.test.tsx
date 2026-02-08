@@ -38,6 +38,11 @@ import {
   NewsletterWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/NewsletterEditors";
 import {
+  PricingPlansAdvancedEditor,
+  PricingPlansVisualEditor,
+  PricingPlansWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/PricingPlansEditors";
+import {
   TimelineAdvancedEditor,
   TimelineVisualEditor,
   TimelineWizardEditor,
@@ -67,6 +72,10 @@ import {
   createNewsletterWidget,
   newsletterDefaults,
 } from "../../../core/widgets/core/newsletter";
+import {
+  createPricingPlansWidget,
+  pricingPlansDefaults,
+} from "../../../core/widgets/core/pricingPlans";
 import {
   createTestimonialsWidget,
   testimonialsDefaults,
@@ -300,6 +309,36 @@ test("widget template block settings render testimonials visual sections", () =>
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Header copy");
   expect(html).toContain("Testimonials content and ratings");
+  expect(html).toContain("Colors and emphasis");
+});
+
+test("widget template block settings render pricing plans visual sections", () => {
+  const widget = createPricingPlansWidget({
+    wizard: PricingPlansWizardEditor,
+    visual: PricingPlansVisualEditor,
+    advanced: PricingPlansAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "pricing-1",
+        type: "pricing-plans",
+        variant: "three-plans",
+        data: pricingPlansDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and plan structure");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Plans, features, and actions");
   expect(html).toContain("Colors and emphasis");
 });
 

@@ -22,6 +22,9 @@ import {
   NewsletterAdvancedEditor,
   NewsletterVisualEditor,
   NewsletterWizardEditor,
+  PricingPlansAdvancedEditor,
+  PricingPlansVisualEditor,
+  PricingPlansWizardEditor,
   TestimonialsAdvancedEditor,
   TestimonialsVisualEditor,
   TestimonialsWizardEditor,
@@ -46,6 +49,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: TestimonialsWizardEditor,
       visual: TestimonialsVisualEditor,
       advanced: TestimonialsAdvancedEditor,
+    },
+    pricingPlans: {
+      wizard: PricingPlansWizardEditor,
+      visual: PricingPlansVisualEditor,
+      advanced: PricingPlansAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

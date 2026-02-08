@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 32 tasks
+- **To Do:** 31 tasks
 - **In Progress:** 1 task
-- **Done:** 241 tasks
+- **Done:** 242 tasks
 
 ---
 
@@ -56,7 +56,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..14 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
-| TASK-050-12-03 | Pricing Plans Widget | High | Large | Plan cards + features + highlight |
 | TASK-050-12-04 | FAQ Accordion Widget | Medium | Medium | Q/A accordion + layout variants |
 | TASK-050-12-05 | CTA Banner Widget | Medium | Medium | Conversion strip with CTA actions |
 | TASK-050-13 | Trust and Content Widgets Pack | Medium | Large | Index for TASK-050-13-01..05 |
@@ -88,7 +87,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-050-12 | Conversion Widgets Pack | High | Large | 050-12-01 complete; next: 050-12-02 |
+| TASK-050-12 | Conversion Widgets Pack | High | Large | 050-12-01/02/03 complete; next: 050-12-04 |
 
 ---
 
@@ -96,6 +95,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-12-03 | Pricing Plans Widget | High | Large | Schema + renderer + Wizard/Visual/Advanced + tests complete |
 | TASK-050-12-02 | Testimonials Widget | High | Medium | Schema + renderer + Wizard/Visual/Advanced + tests complete |
 | TASK-050-12-01 | Feature Grid Widget | High | Medium | Schema + renderer + Wizard/Visual/Advanced + tests complete |
 | TASK-050-11 | Contact Widget Expansion | Medium | Medium | 050-11-01/02 complete |

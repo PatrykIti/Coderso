@@ -19,6 +19,7 @@ export function ensureRuntimeWidgetsRegistered() {
     hero: noopEditors,
     featureGrid: noopEditors,
     testimonials: noopEditors,
+    pricingPlans: noopEditors,
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,

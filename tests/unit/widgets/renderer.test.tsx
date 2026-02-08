@@ -43,6 +43,11 @@ import {
   testimonialsDefaults,
   type TestimonialsData,
 } from "../../../core/widgets/core/testimonials";
+import {
+  createPricingPlansWidget,
+  pricingPlansDefaults,
+  type PricingPlansData,
+} from "../../../core/widgets/core/pricingPlans";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -57,6 +62,7 @@ const StubNewsletterEditor: ComponentType<WidgetEditorProps<NewsletterData>> = (
 const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => null;
 const StubFeatureGridEditor: ComponentType<WidgetEditorProps<FeatureGridData>> = () => null;
 const StubTestimonialsEditor: ComponentType<WidgetEditorProps<TestimonialsData>> = () => null;
+const StubPricingPlansEditor: ComponentType<WidgetEditorProps<PricingPlansData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -700,6 +706,83 @@ test("renderer outputs testimonials variant and rating markers", () => {
   expect(html).toContain('data-testimonials-count="3"');
   expect(html).toContain('data-testimonial-rating="4"');
   expect(html).toContain("Great flexibility for content teams.");
+});
+
+test("renderer outputs pricing plans variant and highlight markers", () => {
+  clearWidgets();
+  registerWidget(
+    createPricingPlansWidget({
+      wizard: StubPricingPlansEditor,
+      visual: StubPricingPlansEditor,
+      advanced: StubPricingPlansEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "pricing-1",
+        type: "pricing-plans",
+        variant: "four-plans",
+        data: {
+          ...pricingPlansDefaults,
+          plans: [
+            {
+              id: "starter",
+              name: "Starter",
+              price: "$19",
+              period: "/month",
+              features: ["Email support", "Basic analytics"],
+              ctaLabel: "Start",
+              ctaHref: "#",
+              highlighted: false,
+            },
+            {
+              id: "growth",
+              name: "Growth",
+              price: "$49",
+              period: "/month",
+              features: ["Priority support", "Advanced analytics"],
+              ctaLabel: "Choose growth",
+              ctaHref: "#",
+              highlighted: true,
+            },
+            {
+              id: "scale",
+              name: "Scale",
+              price: "$99",
+              period: "/month",
+              features: ["SLA", "Audit logs"],
+              ctaLabel: "Contact",
+              ctaHref: "#",
+              highlighted: false,
+            },
+            {
+              id: "enterprise",
+              name: "Enterprise",
+              price: "Custom",
+              period: "",
+              features: ["Dedicated support"],
+              ctaLabel: "Talk to sales",
+              ctaHref: "#",
+              highlighted: false,
+            },
+          ],
+          style: {
+            ...pricingPlansDefaults.style,
+            spacing: "lg",
+            highlightRing: "#1d4ed8",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-pricing-variant="four-plans"');
+  expect(html).toContain('data-pricing-spacing="lg"');
+  expect(html).toContain('data-pricing-count="4"');
+  expect(html).toContain('data-pricing-highlighted="true"');
+  expect(html).toContain("Choose growth");
 });
 
 function normalizeFeatureGridItemsForRenderer(
