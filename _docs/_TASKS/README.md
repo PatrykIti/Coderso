@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 20 tasks
+- **To Do:** 35 tasks
 - **In Progress:** 0 tasks
 - **Done:** 239 tasks
 
@@ -53,9 +53,24 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-049-04 | Widget Favorites (User Settings) | Medium | Small | widgets.favorites key |
 | TASK-049-05 | Widget Library UI Wiring | High | Large | API wiring + insert |
 | TASK-049-06 | Widget Template Editor UI | Medium | Medium | builder reuse |
-| TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..11 |
+| TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..14 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
+| TASK-050-12 | Conversion Widgets Pack | High | Large | Index for TASK-050-12-01..05 |
+| TASK-050-12-01 | Feature Grid Widget | High | Medium | Cards with icons/images + CTA |
+| TASK-050-12-02 | Testimonials Widget | High | Medium | Quotes + author + rating |
+| TASK-050-12-03 | Pricing Plans Widget | High | Large | Plan cards + features + highlight |
+| TASK-050-12-04 | FAQ Accordion Widget | Medium | Medium | Q/A accordion + layout variants |
+| TASK-050-12-05 | CTA Banner Widget | Medium | Medium | Conversion strip with CTA actions |
+| TASK-050-13 | Trust and Content Widgets Pack | Medium | Large | Index for TASK-050-13-01..05 |
+| TASK-050-13-01 | Logo Cloud Widget | Medium | Medium | Partner/client logos with links |
+| TASK-050-13-02 | Gallery Mosaic Widget | Medium | Large | Image/video mosaic layouts |
+| TASK-050-13-03 | Stats KPI Widget | Medium | Medium | KPI values + labels |
+| TASK-050-13-04 | Team Widget | Medium | Medium | Team members + social links |
+| TASK-050-13-05 | Rich Text Section Widget | Medium | Medium | Long-form rich text block |
+| TASK-050-14 | Dynamic Content Widgets Pack | High | Large | Index for TASK-050-14-01..02 |
+| TASK-050-14-01 | Content List Widget | High | Large | Content-type sourced listing widget |
+| TASK-050-14-02 | Entry Teaser Widget | High | Medium | Featured/latest/manual entry teaser |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
