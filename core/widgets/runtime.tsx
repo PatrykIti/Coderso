@@ -23,6 +23,7 @@ export function ensureRuntimeWidgetsRegistered() {
     faqAccordion: noopEditors,
     ctaBanner: noopEditors,
     logoCloud: noopEditors,
+    galleryMosaic: noopEditors,
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,

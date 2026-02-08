@@ -33,8 +33,8 @@ Order inside section:
 
 ## Progress
 
-- Done: `TASK-050-13-01`
-- Next: `TASK-050-13-02`
+- Done: `TASK-050-13-01`, `TASK-050-13-02`
+- Next: `TASK-050-13-03`
 
 ---
 

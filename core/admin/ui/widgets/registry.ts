@@ -13,6 +13,9 @@ import {
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
+  GalleryMosaicAdvancedEditor,
+  GalleryMosaicVisualEditor,
+  GalleryMosaicWizardEditor,
   LogoCloudAdvancedEditor,
   LogoCloudVisualEditor,
   LogoCloudWizardEditor,
@@ -78,6 +81,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: LogoCloudWizardEditor,
       visual: LogoCloudVisualEditor,
       advanced: LogoCloudAdvancedEditor,
+    },
+    galleryMosaic: {
+      wizard: GalleryMosaicWizardEditor,
+      visual: GalleryMosaicVisualEditor,
+      advanced: GalleryMosaicAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

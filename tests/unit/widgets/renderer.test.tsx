@@ -63,6 +63,11 @@ import {
   logoCloudDefaults,
   type LogoCloudData,
 } from "../../../core/widgets/core/logoCloud";
+import {
+  createGalleryMosaicWidget,
+  galleryMosaicDefaults,
+  type GalleryMosaicData,
+} from "../../../core/widgets/core/galleryMosaic";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -82,6 +87,8 @@ const StubFaqAccordionEditor: ComponentType<WidgetEditorProps<FaqAccordionData>>
   null;
 const StubCtaBannerEditor: ComponentType<WidgetEditorProps<CtaBannerData>> = () => null;
 const StubLogoCloudEditor: ComponentType<WidgetEditorProps<LogoCloudData>> = () => null;
+const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData>> = () =>
+  null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -951,6 +958,63 @@ test("renderer outputs logo cloud variant and style markers", () => {
   expect(html).toContain('data-logo-cloud-alignment="start"');
   expect(html).toContain('data-logo-cloud-grayscale="true"');
   expect(html).toContain("North Labs");
+});
+
+test("renderer outputs gallery mosaic variant and caption markers", () => {
+  clearWidgets();
+  registerWidget(
+    createGalleryMosaicWidget({
+      wizard: StubGalleryMosaicEditor,
+      visual: StubGalleryMosaicEditor,
+      advanced: StubGalleryMosaicEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "gallery-mosaic-1",
+        type: "gallery-mosaic",
+        variant: "feature-left",
+        data: {
+          ...galleryMosaicDefaults,
+          items: [
+            {
+              id: "g-1",
+              image: "https://cdn.example.com/one.jpg",
+              caption: "Main frame",
+              href: "#",
+            },
+            {
+              id: "g-2",
+              video: "https://cdn.example.com/two.mp4",
+              caption: "Video frame",
+              href: "#",
+            },
+            {
+              id: "g-3",
+              image: "https://cdn.example.com/three.jpg",
+              caption: "Third frame",
+              href: "#",
+            },
+          ],
+          style: {
+            ...galleryMosaicDefaults.style,
+            ratio: "16:9",
+            gap: "lg",
+            captionPosition: "hover",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-gallery-mosaic-variant="feature-left"');
+  expect(html).toContain('data-gallery-mosaic-gap="lg"');
+  expect(html).toContain('data-gallery-mosaic-ratio="16:9"');
+  expect(html).toContain('data-gallery-mosaic-caption-position="hover"');
+  expect(html).toContain('data-gallery-media-type="video"');
+  expect(html).toContain("Main frame");
 });
 
 function normalizeFeatureGridItemsForRenderer(

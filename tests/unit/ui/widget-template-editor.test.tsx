@@ -53,6 +53,11 @@ import {
   LogoCloudWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/LogoCloudEditors";
 import {
+  GalleryMosaicAdvancedEditor,
+  GalleryMosaicVisualEditor,
+  GalleryMosaicWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/GalleryMosaicEditors";
+import {
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -99,6 +104,10 @@ import {
   createLogoCloudWidget,
   logoCloudDefaults,
 } from "../../../core/widgets/core/logoCloud";
+import {
+  createGalleryMosaicWidget,
+  galleryMosaicDefaults,
+} from "../../../core/widgets/core/galleryMosaic";
 import {
   createFaqAccordionWidget,
   faqAccordionDefaults,
@@ -457,6 +466,36 @@ test("widget template block settings render logo cloud visual sections", () => {
   expect(html).toContain("Header copy");
   expect(html).toContain("Logos list and links");
   expect(html).toContain("Display style");
+});
+
+test("widget template block settings render gallery mosaic visual sections", () => {
+  const widget = createGalleryMosaicWidget({
+    wizard: GalleryMosaicWizardEditor,
+    visual: GalleryMosaicVisualEditor,
+    advanced: GalleryMosaicAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "gallery-mosaic-1",
+        type: "gallery-mosaic",
+        variant: "mosaic",
+        data: galleryMosaicDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and media structure");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Media items and links");
+  expect(html).toContain("Overlay and caption controls");
 });
 
 test("widget template block settings render contact visual sections", () => {

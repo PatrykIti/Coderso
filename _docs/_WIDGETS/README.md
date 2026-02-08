@@ -8,5 +8,6 @@
 - `FAQ.md` - FAQ accordion
 - `CTA_BANNER.md` - CTA banner
 - `LOGO_CLOUD.md` - Logo cloud
+- `GALLERY_MOSAIC.md` - Gallery mosaic
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

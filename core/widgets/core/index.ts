@@ -7,6 +7,7 @@ import { createCtaBannerWidget, type CtaBannerData } from "./ctaBanner";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
 import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion";
+import { createGalleryMosaicWidget, type GalleryMosaicData } from "./galleryMosaic";
 import { createHeroWidget, type HeroData } from "./hero";
 import { createLogoCloudWidget, type LogoCloudData } from "./logoCloud";
 import { createNavigationWidget, type NavigationData } from "./navigation";
@@ -29,6 +30,7 @@ export type CoreWidgetEditors = {
   faqAccordion: EditorBundle<FaqAccordionData>;
   ctaBanner: EditorBundle<CtaBannerData>;
   logoCloud: EditorBundle<LogoCloudData>;
+  galleryMosaic: EditorBundle<GalleryMosaicData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -48,6 +50,7 @@ export function createCoreWidgetDefinitions(
     createFaqAccordionWidget(editors.faqAccordion),
     createCtaBannerWidget(editors.ctaBanner),
     createLogoCloudWidget(editors.logoCloud),
+    createGalleryMosaicWidget(editors.galleryMosaic),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

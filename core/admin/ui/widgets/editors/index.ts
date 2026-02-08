@@ -59,3 +59,8 @@ export {
   LogoCloudVisualEditor,
   LogoCloudWizardEditor,
 } from "./LogoCloudEditors";
+export {
+  GalleryMosaicAdvancedEditor,
+  GalleryMosaicVisualEditor,
+  GalleryMosaicWizardEditor,
+} from "./GalleryMosaicEditors";
