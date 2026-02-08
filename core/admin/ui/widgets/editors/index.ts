@@ -44,3 +44,8 @@ export {
   PricingPlansVisualEditor,
   PricingPlansWizardEditor,
 } from "./PricingPlansEditors";
+export {
+  FaqAccordionAdvancedEditor,
+  FaqAccordionVisualEditor,
+  FaqAccordionWizardEditor,
+} from "./FaqAccordionEditors";

@@ -5,6 +5,7 @@ import { createCompareTimelineWidget, type CompareTimelineData } from "./compare
 import { createContactWidget, type ContactData } from "./contact";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
+import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion";
 import { createHeroWidget, type HeroData } from "./hero";
 import { createNavigationWidget, type NavigationData } from "./navigation";
 import { createNewsletterWidget, type NewsletterData } from "./newsletter";
@@ -23,6 +24,7 @@ export type CoreWidgetEditors = {
   featureGrid: EditorBundle<FeatureGridData>;
   testimonials: EditorBundle<TestimonialsData>;
   pricingPlans: EditorBundle<PricingPlansData>;
+  faqAccordion: EditorBundle<FaqAccordionData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -39,6 +41,7 @@ export function createCoreWidgetDefinitions(
     createFeatureGridWidget(editors.featureGrid),
     createTestimonialsWidget(editors.testimonials),
     createPricingPlansWidget(editors.pricingPlans),
+    createFaqAccordionWidget(editors.faqAccordion),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

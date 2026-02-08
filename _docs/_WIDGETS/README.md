@@ -5,5 +5,6 @@
 - `COMPARE_TIMELINE.md` - Compare timeline (porownanie dwoch procesow)
 - `NEWSLETTER.md` - Newsletter signup
 - `CONTACT.md` - Kontakt
+- `FAQ.md` - FAQ accordion
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

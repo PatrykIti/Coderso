@@ -7,6 +7,9 @@ import {
   ContactAdvancedEditor,
   ContactVisualEditor,
   ContactWizardEditor,
+  FaqAccordionAdvancedEditor,
+  FaqAccordionVisualEditor,
+  FaqAccordionWizardEditor,
   FeatureGridAdvancedEditor,
   FeatureGridVisualEditor,
   FeatureGridWizardEditor,
@@ -54,6 +57,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: PricingPlansWizardEditor,
       visual: PricingPlansVisualEditor,
       advanced: PricingPlansAdvancedEditor,
+    },
+    faqAccordion: {
+      wizard: FaqAccordionWizardEditor,
+      visual: FaqAccordionVisualEditor,
+      advanced: FaqAccordionAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

@@ -48,6 +48,11 @@ import {
   pricingPlansDefaults,
   type PricingPlansData,
 } from "../../../core/widgets/core/pricingPlans";
+import {
+  createFaqAccordionWidget,
+  faqAccordionDefaults,
+  type FaqAccordionData,
+} from "../../../core/widgets/core/faqAccordion";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -63,6 +68,8 @@ const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => n
 const StubFeatureGridEditor: ComponentType<WidgetEditorProps<FeatureGridData>> = () => null;
 const StubTestimonialsEditor: ComponentType<WidgetEditorProps<TestimonialsData>> = () => null;
 const StubPricingPlansEditor: ComponentType<WidgetEditorProps<PricingPlansData>> = () => null;
+const StubFaqAccordionEditor: ComponentType<WidgetEditorProps<FaqAccordionData>> = () =>
+  null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -783,6 +790,57 @@ test("renderer outputs pricing plans variant and highlight markers", () => {
   expect(html).toContain('data-pricing-count="4"');
   expect(html).toContain('data-pricing-highlighted="true"');
   expect(html).toContain("Choose growth");
+});
+
+test("renderer outputs faq accordion variant and open-state markers", () => {
+  clearWidgets();
+  registerWidget(
+    createFaqAccordionWidget({
+      wizard: StubFaqAccordionEditor,
+      visual: StubFaqAccordionEditor,
+      advanced: StubFaqAccordionEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "faq-1",
+        type: "faq-accordion",
+        variant: "two-column",
+        data: {
+          ...faqAccordionDefaults,
+          items: [
+            {
+              id: "faq-1",
+              question: "What is included?",
+              answer: "Core widgets, templates, and admin editing flow.",
+            },
+            {
+              id: "faq-2",
+              question: "Can I customize colors?",
+              answer: "Yes, each FAQ panel supports surface and border tokens.",
+            },
+          ],
+          options: {
+            allowMultipleOpen: true,
+            defaultOpenIndex: 1,
+          },
+          style: {
+            ...faqAccordionDefaults.style,
+            spacing: "lg",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-faq-variant="two-column"');
+  expect(html).toContain('data-faq-spacing="lg"');
+  expect(html).toContain('data-faq-count="2"');
+  expect(html).toContain('data-faq-multiple-open="true"');
+  expect(html).toContain('data-faq-item-open="true"');
+  expect(html).toContain("Can I customize colors?");
 });
 
 function normalizeFeatureGridItemsForRenderer(

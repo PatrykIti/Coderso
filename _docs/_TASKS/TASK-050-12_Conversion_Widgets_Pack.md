@@ -32,6 +32,11 @@ Order inside section:
 - **TASK-050-12-04:** FAQ Accordion Widget
 - **TASK-050-12-05:** CTA Banner Widget
 
+## Progress
+
+- Done: `TASK-050-12-01`, `TASK-050-12-02`, `TASK-050-12-03`, `TASK-050-12-04`
+- Next: `TASK-050-12-05`
+
 ---
 
 ## Shared UX Rules

@@ -30,6 +30,7 @@ Wymagane:
 - Compare timeline (porownanie dwoch procesow na jednej osi)
 - Newsletter signup
 - Kontakt (formularz + dane kontaktowe)
+- FAQ Accordion (pytania i odpowiedzi)
 - Menu/Nawigacja
 - Stopka (linki, dane, social)
 
@@ -79,6 +80,7 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/COMPARE_TIMELINE.md`
 - `_docs/_WIDGETS/NEWSLETTER.md`
 - `_docs/_WIDGETS/CONTACT.md`
+- `_docs/_WIDGETS/FAQ.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
 

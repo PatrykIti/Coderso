@@ -43,6 +43,11 @@ import {
   PricingPlansWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/PricingPlansEditors";
 import {
+  FaqAccordionAdvancedEditor,
+  FaqAccordionVisualEditor,
+  FaqAccordionWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/FaqAccordionEditors";
+import {
   TimelineAdvancedEditor,
   TimelineVisualEditor,
   TimelineWizardEditor,
@@ -76,6 +81,10 @@ import {
   createPricingPlansWidget,
   pricingPlansDefaults,
 } from "../../../core/widgets/core/pricingPlans";
+import {
+  createFaqAccordionWidget,
+  faqAccordionDefaults,
+} from "../../../core/widgets/core/faqAccordion";
 import {
   createTestimonialsWidget,
   testimonialsDefaults,
@@ -340,6 +349,36 @@ test("widget template block settings render pricing plans visual sections", () =
   expect(html).toContain("Header copy");
   expect(html).toContain("Plans, features, and actions");
   expect(html).toContain("Colors and emphasis");
+});
+
+test("widget template block settings render faq accordion visual sections", () => {
+  const widget = createFaqAccordionWidget({
+    wizard: FaqAccordionWizardEditor,
+    visual: FaqAccordionVisualEditor,
+    advanced: FaqAccordionAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "faq-1",
+        type: "faq-accordion",
+        variant: "single-column",
+        data: faqAccordionDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Questions and answers");
+  expect(html).toContain("Colors and spacing");
 });
 
 test("widget template block settings render contact visual sections", () => {
