@@ -63,6 +63,11 @@ import {
   StatsKpiWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/StatsKpiEditors";
 import {
+  TeamAdvancedEditor,
+  TeamVisualEditor,
+  TeamWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/TeamEditors";
+import {
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -117,6 +122,10 @@ import {
   createStatsKpiWidget,
   statsKpiDefaults,
 } from "../../../core/widgets/core/statsKpi";
+import {
+  createTeamWidget,
+  teamDefaults,
+} from "../../../core/widgets/core/team";
 import {
   createFaqAccordionWidget,
   faqAccordionDefaults,
@@ -536,6 +545,37 @@ test("widget template block settings render stats kpi visual sections", () => {
   expect(html).toContain("Metrics content and order");
   expect(html).toContain("Typography and colors");
   expect(html).toContain("Layout display options");
+});
+
+test("widget template block settings render team visual sections", () => {
+  const widget = createTeamWidget({
+    wizard: TeamWizardEditor,
+    visual: TeamVisualEditor,
+    advanced: TeamAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "team-1",
+        type: "team",
+        variant: "cards",
+        data: teamDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and member structure");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Members content and order");
+  expect(html).toContain("Social links");
+  expect(html).toContain("Card and layout style");
 });
 
 test("widget template block settings render contact visual sections", () => {

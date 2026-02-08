@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-13-03  
-**Status:** To Do
+**Status:** Done (2026-02-08)
 
 ---
 
@@ -38,6 +38,8 @@ Implement Team widget for company/about sections.
 | `core/admin/ui/widgets/registry.ts` | register editors | wiring |
 | `core/widgets/core/index.ts` | register definition | catalog |
 | `tests/unit/widgets/team.test.tsx` | new tests | schema/defaults/render |
+| `tests/unit/widgets/renderer.test.tsx` | add runtime assertions | markers |
+| `tests/unit/ui/widget-template-editor.test.tsx` | add editor integration | visual sections |
 
 ---
 
@@ -46,10 +48,13 @@ Implement Team widget for company/about sections.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun test tests/unit/widgets/team.test.tsx`
+- `bun test tests/unit/widgets/renderer.test.tsx`
+- `bun test tests/unit/ui/widget-template-editor.test.tsx`
 
 ---
 
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/TEAM.md`
+- `_docs/WIDGETS.md`
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-team-widget.md`

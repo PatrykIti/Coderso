@@ -10,5 +10,6 @@
 - `LOGO_CLOUD.md` - Logo cloud
 - `GALLERY_MOSAIC.md` - Gallery mosaic
 - `STATS_KPI.md` - Stats KPI
+- `TEAM.md` - Team
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

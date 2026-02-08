@@ -35,6 +35,7 @@ Wymagane:
 - Logo Cloud (sekcja wiarygodnosci z logotypami)
 - Gallery Mosaic (wizualna sekcja mediow)
 - Stats KPI (sekcja metryk i proof points)
+- Team (profile zespolu z rolami i social links)
 - Menu/Nawigacja
 - Stopka (linki, dane, social)
 
@@ -89,6 +90,7 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/_WIDGETS/STATS_KPI.md`
+- `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
 

@@ -14,6 +14,7 @@ import { createNavigationWidget, type NavigationData } from "./navigation";
 import { createNewsletterWidget, type NewsletterData } from "./newsletter";
 import { createPricingPlansWidget, type PricingPlansData } from "./pricingPlans";
 import { createStatsKpiWidget, type StatsKpiData } from "./statsKpi";
+import { createTeamWidget, type TeamData } from "./team";
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
 import { createTimelineWidget, type TimelineData } from "./timeline";
 
@@ -33,6 +34,7 @@ export type CoreWidgetEditors = {
   logoCloud: EditorBundle<LogoCloudData>;
   galleryMosaic: EditorBundle<GalleryMosaicData>;
   statsKpi: EditorBundle<StatsKpiData>;
+  team: EditorBundle<TeamData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -54,6 +56,7 @@ export function createCoreWidgetDefinitions(
     createLogoCloudWidget(editors.logoCloud),
     createGalleryMosaicWidget(editors.galleryMosaic),
     createStatsKpiWidget(editors.statsKpi),
+    createTeamWidget(editors.team),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

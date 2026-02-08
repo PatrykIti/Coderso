@@ -69,3 +69,8 @@ export {
   StatsKpiVisualEditor,
   StatsKpiWizardEditor,
 } from "./StatsKpiEditors";
+export {
+  TeamAdvancedEditor,
+  TeamVisualEditor,
+  TeamWizardEditor,
+} from "./TeamEditors";

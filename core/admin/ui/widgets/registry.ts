@@ -22,6 +22,9 @@ import {
   StatsKpiAdvancedEditor,
   StatsKpiVisualEditor,
   StatsKpiWizardEditor,
+  TeamAdvancedEditor,
+  TeamVisualEditor,
+  TeamWizardEditor,
   FeatureGridAdvancedEditor,
   FeatureGridVisualEditor,
   FeatureGridWizardEditor,
@@ -94,6 +97,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: StatsKpiWizardEditor,
       visual: StatsKpiVisualEditor,
       advanced: StatsKpiAdvancedEditor,
+    },
+    team: {
+      wizard: TeamWizardEditor,
+      visual: TeamVisualEditor,
+      advanced: TeamAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

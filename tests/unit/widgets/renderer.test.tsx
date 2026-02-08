@@ -73,6 +73,11 @@ import {
   statsKpiDefaults,
   type StatsKpiData,
 } from "../../../core/widgets/core/statsKpi";
+import {
+  createTeamWidget,
+  teamDefaults,
+  type TeamData,
+} from "../../../core/widgets/core/team";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -95,6 +100,7 @@ const StubLogoCloudEditor: ComponentType<WidgetEditorProps<LogoCloudData>> = () 
 const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData>> = () =>
   null;
 const StubStatsKpiEditor: ComponentType<WidgetEditorProps<StatsKpiData>> = () => null;
+const StubTeamEditor: ComponentType<WidgetEditorProps<TeamData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -1086,6 +1092,78 @@ test("renderer outputs stats kpi variant and style markers", () => {
   expect(html).toContain('data-stats-kpi-divider="true"');
   expect(html).toContain("Performance overview");
   expect(html).toContain("Support SLA");
+});
+
+test("renderer outputs team variant and style markers", () => {
+  clearWidgets();
+  registerWidget(
+    createTeamWidget({
+      wizard: StubTeamEditor,
+      visual: StubTeamEditor,
+      advanced: StubTeamEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "team-1",
+        type: "team",
+        variant: "spotlight",
+        data: {
+          ...teamDefaults,
+          header: {
+            title: "Meet our leadership",
+            description: "Key people behind strategy and execution.",
+          },
+          members: [
+            {
+              id: "member-1",
+              name: "Anna Kowalska",
+              role: "Head of Product",
+              bio: "Owns product direction and roadmap outcomes.",
+              photo: "https://cdn.example.com/anna.jpg",
+              socialLinks: [
+                { id: "social-1", label: "LinkedIn", url: "#" },
+                { id: "social-2", label: "X", url: "#" },
+              ],
+            },
+            {
+              id: "member-2",
+              name: "Marek Nowak",
+              role: "Engineering Lead",
+              bio: "Leads architecture and platform reliability.",
+              photo: "https://cdn.example.com/marek.jpg",
+              socialLinks: [{ id: "social-1", label: "GitHub", url: "#" }],
+            },
+            {
+              id: "member-3",
+              name: "Ewa Zielinska",
+              role: "Content Operations",
+              bio: "Turns strategy into repeatable content operations.",
+              photo: "https://cdn.example.com/ewa.jpg",
+              socialLinks: [{ id: "social-1", label: "LinkedIn", url: "#" }],
+            },
+          ],
+          style: {
+            ...teamDefaults.style,
+            columns: "3",
+            gap: "lg",
+            radius: "xl",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-team-variant="spotlight"');
+  expect(html).toContain('data-team-count="3"');
+  expect(html).toContain('data-team-columns="3"');
+  expect(html).toContain('data-team-gap="lg"');
+  expect(html).toContain('data-team-radius="xl"');
+  expect(html).toContain('data-team-social-count="2"');
+  expect(html).toContain("Meet our leadership");
+  expect(html).toContain("Engineering Lead");
 });
 
 function normalizeFeatureGridItemsForRenderer(
