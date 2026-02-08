@@ -13,6 +13,11 @@ import {
   ContactWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/ContactEditors";
 import {
+  FeatureGridAdvancedEditor,
+  FeatureGridVisualEditor,
+  FeatureGridWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/FeatureGridEditors";
+import {
   FooterAdvancedEditor,
   FooterVisualEditor,
   FooterWizardEditor,
@@ -41,6 +46,10 @@ import {
   contactDefaults,
   createContactWidget,
 } from "../../../core/widgets/core/contact";
+import {
+  createFeatureGridWidget,
+  featureGridDefaults,
+} from "../../../core/widgets/core/featureGrid";
 import {
   createFooterWidget,
   footerDefaults,
@@ -223,6 +232,36 @@ test("widget template block settings render newsletter visual sections", () => {
   expect(html).toContain("Consent and submit behavior");
   expect(html).toContain("Integration target");
   expect(html).toContain("Spacing and alignment");
+});
+
+test("widget template block settings render feature grid visual sections", () => {
+  const widget = createFeatureGridWidget({
+    wizard: FeatureGridWizardEditor,
+    visual: FeatureGridVisualEditor,
+    advanced: FeatureGridAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "feature-grid-1",
+        type: "feature-grid",
+        variant: "cards-3",
+        data: featureGridDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Feature cards and actions");
+  expect(html).toContain("Colors and borders");
 });
 
 test("widget template block settings render contact visual sections", () => {

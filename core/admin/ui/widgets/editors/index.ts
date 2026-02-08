@@ -29,3 +29,8 @@ export {
   FooterVisualEditor,
   FooterWizardEditor,
 } from "./FooterEditors";
+export {
+  FeatureGridAdvancedEditor,
+  FeatureGridVisualEditor,
+  FeatureGridWizardEditor,
+} from "./FeatureGridEditors";

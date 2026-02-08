@@ -33,6 +33,11 @@ import {
   createContactWidget,
   type ContactData,
 } from "../../../core/widgets/core/contact";
+import {
+  createFeatureGridWidget,
+  featureGridDefaults,
+  type FeatureGridData,
+} from "../../../core/widgets/core/featureGrid";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -45,6 +50,7 @@ const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = (
 const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
 const StubNewsletterEditor: ComponentType<WidgetEditorProps<NewsletterData>> = () => null;
 const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => null;
+const StubFeatureGridEditor: ComponentType<WidgetEditorProps<FeatureGridData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -592,3 +598,54 @@ test("renderer outputs contact variant and map markers", () => {
   expect(html).toContain('data-contact-border-width="2"');
   expect(html).toContain("Contact map");
 });
+
+test("renderer outputs feature grid variant and layout markers", () => {
+  clearWidgets();
+  registerWidget(
+    createFeatureGridWidget({
+      wizard: StubFeatureGridEditor,
+      visual: StubFeatureGridEditor,
+      advanced: StubFeatureGridEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "feature-grid-1",
+        type: "feature-grid",
+        variant: "highlight-first",
+        data: {
+          ...featureGridDefaults,
+          style: {
+            ...featureGridDefaults.style,
+            columns: "3",
+            gap: "lg",
+            borderWidth: "2",
+          },
+          items: normalizeFeatureGridItemsForRenderer(featureGridDefaults.items),
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-feature-grid-variant="highlight-first"');
+  expect(html).toContain('data-feature-grid-columns="3"');
+  expect(html).toContain('data-feature-grid-gap="lg"');
+  expect(html).toContain('data-feature-grid-highlighted="true"');
+});
+
+function normalizeFeatureGridItemsForRenderer(
+  items: FeatureGridData["items"]
+): FeatureGridData["items"] {
+  const source = Array.isArray(items) ? items : [];
+  const ensured = [...source];
+  if (ensured.length < 4) {
+    ensured.push({
+      id: "item-4",
+      title: "Reliable delivery",
+      description: "Extra card to satisfy highlight-first baseline.",
+    });
+  }
+  return ensured;
+}

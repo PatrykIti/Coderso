@@ -3,6 +3,7 @@ import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { getWidget, registerWidget } from "../registry";
 import { createCompareTimelineWidget, type CompareTimelineData } from "./compareTimeline";
 import { createContactWidget, type ContactData } from "./contact";
+import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
 import { createHeroWidget, type HeroData } from "./hero";
 import { createNavigationWidget, type NavigationData } from "./navigation";
@@ -17,6 +18,7 @@ type EditorBundle<T> = {
 
 export type CoreWidgetEditors = {
   hero: EditorBundle<HeroData>;
+  featureGrid: EditorBundle<FeatureGridData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -30,6 +32,7 @@ export function createCoreWidgetDefinitions(
 ): Array<WidgetDefinition<any>> {
   return [
     createHeroWidget(editors.hero),
+    createFeatureGridWidget(editors.featureGrid),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

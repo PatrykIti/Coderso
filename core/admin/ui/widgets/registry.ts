@@ -7,6 +7,9 @@ import {
   ContactAdvancedEditor,
   ContactVisualEditor,
   ContactWizardEditor,
+  FeatureGridAdvancedEditor,
+  FeatureGridVisualEditor,
+  FeatureGridWizardEditor,
   FooterAdvancedEditor,
   FooterVisualEditor,
   FooterWizardEditor,
@@ -30,6 +33,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: HeroWizardEditor,
       visual: HeroVisualEditor,
       advanced: HeroAdvancedEditor,
+    },
+    featureGrid: {
+      wizard: FeatureGridWizardEditor,
+      visual: FeatureGridVisualEditor,
+      advanced: FeatureGridAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,
