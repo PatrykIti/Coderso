@@ -166,6 +166,7 @@ Project Change Log.
 | 169 | 2026-02-08 | Newsletter widget bugfixes and UX hardening | CMS/Widgets |
 | 170 | 2026-02-08 | Newsletter widget visual rebuild and advanced cleanup | CMS/Widgets |
 | 171 | 2026-02-08 | Contact widget bugfixes and UX hardening | CMS/Widgets |
+| 172 | 2026-02-08 | Contact widget visual rebuild and advanced cleanup | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

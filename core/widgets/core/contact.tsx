@@ -7,6 +7,7 @@ export type ContactFieldId = (typeof contactFieldOptions)[number];
 export type ContactVariantId = "form-left" | "form-right" | "minimal";
 export type ContactSpacing = "sm" | "md" | "lg" | "xl";
 export type ContactColumns = "one" | "two";
+export type ContactBorderWidth = "0" | "1" | "2" | "3";
 
 export type ContactData = {
   form?: {
@@ -28,6 +29,9 @@ export type ContactData = {
     spacing?: ContactSpacing;
     background?: string;
     columns?: ContactColumns;
+    surfaceColor?: string;
+    borderColor?: string;
+    borderWidth?: ContactBorderWidth;
   };
 };
 
@@ -83,6 +87,11 @@ const resolveContactSpacing = (value: string | undefined): ContactSpacing => {
 const resolveContactColumns = (value: string | undefined): ContactColumns => {
   if (value === "one") return "one";
   return "two";
+};
+
+const resolveContactBorderWidth = (value: string | undefined): ContactBorderWidth => {
+  if (value === "0" || value === "2" || value === "3") return value;
+  return "1";
 };
 
 const normalizeFieldList = (
@@ -171,6 +180,9 @@ export const contactSchema = {
         spacing: { enum: ["sm", "md", "lg", "xl"] },
         background: { type: "string" },
         columns: { enum: ["one", "two"] },
+        surfaceColor: { type: "string" },
+        borderColor: { type: "string" },
+        borderWidth: { enum: ["0", "1", "2", "3"] },
       },
     },
   },
@@ -193,6 +205,9 @@ export const contactDefaults: ContactData = {
     spacing: "md",
     background: "transparent",
     columns: "two",
+    surfaceColor: "var(--color-bg)",
+    borderColor: "var(--color-border)",
+    borderWidth: "1",
   },
 };
 
@@ -213,6 +228,9 @@ export function normalizeContactData(data: ContactData): ContactData {
     spacing: "md",
     background: "transparent",
     columns: "two",
+    surfaceColor: "var(--color-bg)",
+    borderColor: "var(--color-border)",
+    borderWidth: "1",
   };
 
   const fields = normalizeFieldList(data.form?.fields, formDefaults.fields ?? []);
@@ -250,6 +268,15 @@ export function normalizeContactData(data: ContactData): ContactData {
         styleDefaults.background ?? "transparent"
       ),
       columns: resolveContactColumns(data.style?.columns),
+      surfaceColor: resolveString(
+        data.style?.surfaceColor,
+        styleDefaults.surfaceColor ?? "var(--color-bg)"
+      ),
+      borderColor: resolveString(
+        data.style?.borderColor,
+        styleDefaults.borderColor ?? "var(--color-border)"
+      ),
+      borderWidth: resolveContactBorderWidth(data.style?.borderWidth),
     },
   };
 }
@@ -285,6 +312,13 @@ export function ContactBlock({
   const sectionStyle: CSSProperties = {
     backgroundColor: style.background ?? "transparent",
   };
+  const panelBorderWidth = style.borderWidth ?? "1";
+  const panelStyle: CSSProperties = {
+    backgroundColor: style.surfaceColor ?? "var(--color-bg)",
+    borderColor: style.borderColor ?? "var(--color-border)",
+    borderStyle: "solid",
+    borderWidth: `${panelBorderWidth}px`,
+  };
 
   return (
     <section
@@ -298,13 +332,15 @@ export function ContactBlock({
       data-contact-spacing={style.spacing}
       data-contact-columns={resolvedVariant === "minimal" ? "one" : style.columns}
       data-contact-map={String(showMap)}
+      data-contact-border-width={panelBorderWidth}
     >
       {showForm ? (
         <form
           className={joinClasses(
-            "space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4",
+            "space-y-3 rounded-xl p-4",
             formOrderClass
           )}
+          style={panelStyle}
         >
           {form.fields?.map((field) =>
             field === "message" ? (
@@ -345,9 +381,10 @@ export function ContactBlock({
 
       <div
         className={joinClasses(
-          "space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] p-4 text-sm text-[var(--color-text)]/75",
+          "space-y-3 rounded-xl p-4 text-sm text-[var(--color-text)]/75",
           detailsOrderClass
         )}
+        style={panelStyle}
       >
         {contact.phone ? <p>Phone: {contact.phone}</p> : null}
         {contact.email ? <p>Email: {contact.email}</p> : null}
@@ -400,6 +437,9 @@ export function createContactWidget(editors: {
     schema: contactSchema,
     defaults: contactDefaults,
     editor: editors,
+    editorCapabilities: {
+      visualOwnsVariantSelection: true,
+    },
     render: ContactBlock,
   };
 }

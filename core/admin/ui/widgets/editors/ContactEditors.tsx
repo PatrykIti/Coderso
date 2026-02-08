@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -11,16 +12,19 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 import {
   contactDefaults,
   contactFieldOptions,
   normalizeContactData,
   resolveContactVariant,
+  type ContactBorderWidth,
   type ContactColumns,
   type ContactData,
   type ContactFieldId,
   type ContactSpacing,
+  type ContactVariantId,
 } from "../../../../widgets/core/contact";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 
@@ -43,7 +47,18 @@ const columnOptions: Array<{ id: ContactColumns; label: string }> = [
   { id: "two", label: "Two columns" },
 ];
 
-const variantOptions = [
+const borderWidthOptions: Array<{ id: ContactBorderWidth; label: string }> = [
+  { id: "0", label: "0px" },
+  { id: "1", label: "1px" },
+  { id: "2", label: "2px" },
+  { id: "3", label: "3px" },
+];
+
+const variantOptions: Array<{
+  id: ContactVariantId;
+  label: string;
+  description: string;
+}> = [
   {
     id: "form-left",
     label: "Form left",
@@ -59,7 +74,7 @@ const variantOptions = [
     label: "Minimal",
     description: "Contact details only, optional map below.",
   },
-] as const;
+];
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
@@ -90,6 +105,40 @@ function EditorSection({
       </div>
       <div className="space-y-3">{children}</div>
     </section>
+  );
+}
+
+function VariantCards({
+  value,
+  onChange,
+}: {
+  value: ContactVariantId;
+  onChange?: (next: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      {variantOptions.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          onClick={() => onChange?.(option.id)}
+          className={cn(
+            "w-full rounded-lg border p-3 text-left transition",
+            value === option.id
+              ? "border-primary bg-primary/5"
+              : "border-border bg-background hover:border-primary/50"
+          )}
+        >
+          <div className="flex w-full items-start justify-between gap-2">
+            <p className="min-w-0 text-sm font-semibold leading-tight">{option.label}</p>
+            <Badge className="shrink-0" variant={value === option.id ? "default" : "outline"}>
+              {value === option.id ? "Selected" : "Pick"}
+            </Badge>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -360,6 +409,14 @@ function ColorField({
   );
 }
 
+function DiagnosticsSnapshot({ value }: { value: ContactData }) {
+  return (
+    <pre className="max-h-64 overflow-auto rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+      {JSON.stringify(value, null, 2)}
+    </pre>
+  );
+}
+
 export function ContactWizardEditor({
   value,
   onChange,
@@ -451,15 +508,28 @@ export function ContactWizardEditor({
   );
 }
 
-export function ContactVisualEditor({ value, onChange }: WidgetEditorProps<ContactData>) {
+export function ContactVisualEditor({
+  value,
+  onChange,
+  variant,
+  onVariantChange,
+}: WidgetEditorProps<ContactData>) {
   const normalized = normalizeContactData(value);
+  const resolvedVariant = resolveContactVariant(variant);
   const mapEnabled = normalized.map?.enabled ?? false;
 
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Form controls"
-        description="Choose fields, set required status, and keep order clear."
+        title="Variant and layout structure"
+        description="Choose the contact layout and keep orientation predictable in runtime preview."
+      >
+        <VariantCards value={resolvedVariant} onChange={onVariantChange} />
+      </EditorSection>
+
+      <EditorSection
+        title="Form fields and required rules"
+        description="Define visible fields, required state, and field ordering for deterministic forms."
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Form fields</p>
@@ -469,21 +539,23 @@ export function ContactVisualEditor({ value, onChange }: WidgetEditorProps<Conta
           <p className="text-sm font-medium">Required fields and order</p>
           <RequiredFieldList value={value} onChange={onChange} />
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Submit label</p>
-          <Input
-            value={normalized.form?.submitLabel ?? ""}
-            onChange={(event) =>
-              updateForm(value, onChange, { submitLabel: event.target.value })
-            }
-            placeholder="Send message"
-          />
-        </div>
+        {resolvedVariant !== "minimal" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Submit label</p>
+            <Input
+              value={normalized.form?.submitLabel ?? ""}
+              onChange={(event) =>
+                updateForm(value, onChange, { submitLabel: event.target.value })
+              }
+              placeholder="Send message"
+            />
+          </div>
+        ) : null}
       </EditorSection>
 
       <EditorSection
-        title="Contact details"
-        description="Edit all details shown in the contact information panel."
+        title="Contact details and business info"
+        description="Edit all details visible in the contact information panel."
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Phone</p>
@@ -528,14 +600,14 @@ export function ContactVisualEditor({ value, onChange }: WidgetEditorProps<Conta
       </EditorSection>
 
       <EditorSection
-        title="Map settings"
-        description="Enable map embed and provide external embed URL."
+        title="Map source and display behavior"
+        description="Control if map is visible and where embed source is loaded from."
       >
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <p className="text-sm font-medium">Show map</p>
             <p className="text-xs text-muted-foreground">
-              Display embedded map in contact panel.
+              Runtime renders map only for valid external embed URL.
             </p>
           </div>
           <Switch
@@ -558,8 +630,55 @@ export function ContactVisualEditor({ value, onChange }: WidgetEditorProps<Conta
       </EditorSection>
 
       <EditorSection
-        title="Style"
-        description="Control spacing, column density, and section background."
+        title="Colors, borders, and surface styling"
+        description="Configure section background and card surfaces shown in runtime output."
+      >
+        <ColorField
+          label="Section background"
+          value={normalized.style?.background}
+          onChange={(next) => updateStyle(value, onChange, { background: next })}
+          placeholder="transparent or #f8fafc"
+          pickerFallback="#ffffff"
+        />
+        <ColorField
+          label="Card surface color"
+          value={normalized.style?.surfaceColor}
+          onChange={(next) => updateStyle(value, onChange, { surfaceColor: next })}
+          placeholder="var(--color-bg) or #ffffff"
+          pickerFallback="#ffffff"
+        />
+        <ColorField
+          label="Card border color"
+          value={normalized.style?.borderColor}
+          onChange={(next) => updateStyle(value, onChange, { borderColor: next })}
+          placeholder="var(--color-border) or #e2e8f0"
+          pickerFallback="#e2e8f0"
+        />
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Card border width</p>
+          <Select
+            value={normalized.style?.borderWidth ?? "1"}
+            onValueChange={(next) =>
+              updateStyle(value, onChange, { borderWidth: next as ContactBorderWidth })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select border width" />
+            </SelectTrigger>
+            <SelectContent>
+              {borderWidthOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </EditorSection>
+
+      <EditorSection
+        title="Spacing and columns"
+        description="Tune spacing and grid density for form-based variants."
       >
         <div className="space-y-2">
           <p className="text-sm font-medium">Spacing</p>
@@ -581,33 +700,32 @@ export function ContactVisualEditor({ value, onChange }: WidgetEditorProps<Conta
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Columns (form variants)</p>
-          <Select
-            value={normalized.style?.columns ?? "two"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { columns: next as ContactColumns })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select columns" />
-            </SelectTrigger>
-            <SelectContent>
-              {columnOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <ColorField
-          label="Section background"
-          value={normalized.style?.background}
-          onChange={(next) => updateStyle(value, onChange, { background: next })}
-          placeholder="transparent or #f8fafc"
-          pickerFallback="#ffffff"
-        />
+        {resolvedVariant !== "minimal" ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Columns</p>
+            <Select
+              value={normalized.style?.columns ?? "two"}
+              onValueChange={(next) =>
+                updateStyle(value, onChange, { columns: next as ContactColumns })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select columns" />
+              </SelectTrigger>
+              <SelectContent>
+                {columnOptions.map((option) => (
+                  <SelectItem key={option.id} value={option.id}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Columns apply only to `form-left` and `form-right` variants.
+          </p>
+        )}
       </EditorSection>
     </div>
   );
@@ -619,21 +737,14 @@ export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<Con
   return (
     <div className="space-y-4">
       <EditorSection
-        title="Field order and requirements"
-        description="Technical field structure controls used for deterministic rendering."
-      >
-        <RequiredFieldList value={value} onChange={onChange} />
-      </EditorSection>
-
-      <EditorSection
-        title="Map source"
-        description="Technical map embed controls."
+        title="Map source and runtime metadata"
+        description="Technical embed source controls used during runtime rendering."
       >
         <div className="flex items-center justify-between rounded-lg border p-3">
           <div>
             <p className="text-sm font-medium">Map enabled</p>
             <p className="text-xs text-muted-foreground">
-              Runtime renders map only with a valid URL.
+              Runtime renders map only when URL is valid.
             </p>
           </div>
           <Switch
@@ -652,56 +763,26 @@ export function ContactAdvancedEditor({ value, onChange }: WidgetEditorProps<Con
       </EditorSection>
 
       <EditorSection
-        title="Layout tokens"
-        description="Technical spacing and density tokens for contact section."
+        title="Normalization and fallback controls"
+        description="Apply deterministic normalization to trim unsupported or inconsistent payload values."
       >
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Spacing token</p>
-          <Select
-            value={normalized.style?.spacing ?? "md"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { spacing: next as ContactSpacing })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select spacing token" />
-            </SelectTrigger>
-            <SelectContent>
-              {spacingOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Columns token</p>
-          <Select
-            value={normalized.style?.columns ?? "two"}
-            onValueChange={(next) =>
-              updateStyle(value, onChange, { columns: next as ContactColumns })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select columns token" />
-            </SelectTrigger>
-            <SelectContent>
-              {columnOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <ColorField
-          label="Background token"
-          value={normalized.style?.background}
-          onChange={(next) => updateStyle(value, onChange, { background: next })}
-          placeholder="transparent or #f8fafc"
-          pickerFallback="#ffffff"
-        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onChange(normalizeContactData(value))}
+        >
+          Apply normalization now
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          Normalization enforces allowed fields, required subset rules, and style token fallbacks.
+        </p>
+      </EditorSection>
+
+      <EditorSection
+        title="Runtime diagnostics snapshot"
+        description="Read-only normalized payload for debugging and QA checks."
+      >
+        <DiagnosticsSnapshot value={normalized} />
       </EditorSection>
     </div>
   );

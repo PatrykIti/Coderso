@@ -75,6 +75,7 @@ test("contact normalization keeps allowed fields and required subset", () => {
     style: {
       spacing: "weird" as never,
       columns: "strange" as never,
+      borderWidth: "9" as never,
     },
     map: {
       enabled: true,
@@ -87,6 +88,7 @@ test("contact normalization keeps allowed fields and required subset", () => {
   expect(normalized.form?.submitLabel).toBe(contactDefaults.form?.submitLabel);
   expect(normalized.style?.spacing).toBe("md");
   expect(normalized.style?.columns).toBe("two");
+  expect(normalized.style?.borderWidth).toBe("1");
 });
 
 test("contact validator accepts expanded model fields", () => {
@@ -124,10 +126,19 @@ test("contact validator accepts expanded model fields", () => {
           spacing: "lg",
           background: "#f8fafc",
           columns: "two",
+          surfaceColor: "#ffffff",
+          borderColor: "#cbd5e1",
+          borderWidth: "2",
         },
       },
     })
   ).not.toThrow();
+  const widget = createContactWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBeTrue();
 });
 
 test("contact validator rejects unsupported form field", () => {
@@ -172,7 +183,7 @@ test("contact wizard renders onboarding fields", () => {
   expect(html).toContain("Submit label");
 });
 
-test("contact visual renders broad controls", () => {
+test("contact visual renders section-based IA", () => {
   const html = renderToString(
     <ContactVisualEditor
       value={contactDefaults}
@@ -182,14 +193,15 @@ test("contact visual renders broad controls", () => {
     />
   );
 
-  expect(html).toContain("Form controls");
-  expect(html).toContain("Required fields and order");
-  expect(html).toContain("Map settings");
-  expect(html).toContain("Style");
-  expect(html).toContain("Columns (form variants)");
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Form fields and required rules");
+  expect(html).toContain("Contact details and business info");
+  expect(html).toContain("Map source and display behavior");
+  expect(html).toContain("Colors, borders, and surface styling");
+  expect(html).toContain("Spacing and columns");
 });
 
-test("contact advanced keeps technical focus in 11-01", () => {
+test("contact advanced keeps technical-only scope", () => {
   const html = renderToString(
     <ContactAdvancedEditor
       value={contactDefaults}
@@ -199,8 +211,8 @@ test("contact advanced keeps technical focus in 11-01", () => {
     />
   );
 
-  expect(html).toContain("Field order and requirements");
-  expect(html).toContain("Map source");
-  expect(html).toContain("Layout tokens");
-  expect(html).not.toContain("comma separated");
+  expect(html).toContain("Map source and runtime metadata");
+  expect(html).toContain("Normalization and fallback controls");
+  expect(html).toContain("Runtime diagnostics snapshot");
+  expect(html).not.toContain("Contact details and business info");
 });

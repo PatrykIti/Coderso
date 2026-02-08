@@ -33,6 +33,10 @@ import {
   footerDefaults,
 } from "../../../core/widgets/core/footer";
 import {
+  contactDefaults,
+  createContactWidget,
+} from "../../../core/widgets/core/contact";
+import {
   createNavigationWidget,
   navigationDefaults,
 } from "../../../core/widgets/core/navigation";
@@ -258,4 +262,32 @@ test("VisualPanel uses newsletter editor variant controls", () => {
 
   expect(html).not.toContain("Choose a visual style for this widget.");
   expect(html).toContain("Variant and form structure");
+});
+
+test("VisualPanel uses contact editor variant controls", () => {
+  const widget = createContactWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  const block: Block = {
+    id: "contact-1",
+    type: "contact",
+    variant: "form-left",
+    data: contactDefaults,
+    editor: {
+      mode: "visual",
+      wizardCompleted: true,
+    },
+  };
+
+  const html = renderToString(
+    <VisualPanel
+      widget={widget}
+      block={block}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).not.toContain("Choose a visual style for this widget.");
 });

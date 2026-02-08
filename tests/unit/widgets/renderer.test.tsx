@@ -576,6 +576,9 @@ test("renderer outputs contact variant and map markers", () => {
             spacing: "lg",
             columns: "two",
             background: "#f8fafc",
+            surfaceColor: "#ffffff",
+            borderColor: "#cbd5e1",
+            borderWidth: "2",
           },
         },
       }}
@@ -586,5 +589,6 @@ test("renderer outputs contact variant and map markers", () => {
   expect(html).toContain('data-contact-spacing="lg"');
   expect(html).toContain('data-contact-columns="two"');
   expect(html).toContain('data-contact-map="true"');
+  expect(html).toContain('data-contact-border-width="2"');
   expect(html).toContain("Contact map");
 });

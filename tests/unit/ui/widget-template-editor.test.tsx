@@ -225,7 +225,7 @@ test("widget template block settings render newsletter visual sections", () => {
   expect(html).toContain("Spacing and alignment");
 });
 
-test("widget template block settings render contact baseline sections", () => {
+test("widget template block settings render contact visual sections", () => {
   const widget = createContactWidget({
     wizard: ContactWizardEditor,
     visual: ContactVisualEditor,
@@ -249,8 +249,9 @@ test("widget template block settings render contact baseline sections", () => {
     />
   );
 
-  expect(html).toContain("Form controls");
-  expect(html).toContain("Contact details");
-  expect(html).toContain("Map settings");
-  expect(html).toContain("Style");
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Form fields and required rules");
+  expect(html).toContain("Contact details and business info");
+  expect(html).toContain("Map source and display behavior");
+  expect(html).toContain("Spacing and columns");
 });
