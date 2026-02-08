@@ -7,6 +7,9 @@ import {
   ContactAdvancedEditor,
   ContactVisualEditor,
   ContactWizardEditor,
+  CtaBannerAdvancedEditor,
+  CtaBannerVisualEditor,
+  CtaBannerWizardEditor,
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -62,6 +65,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: FaqAccordionWizardEditor,
       visual: FaqAccordionVisualEditor,
       advanced: FaqAccordionAdvancedEditor,
+    },
+    ctaBanner: {
+      wizard: CtaBannerWizardEditor,
+      visual: CtaBannerVisualEditor,
+      advanced: CtaBannerAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

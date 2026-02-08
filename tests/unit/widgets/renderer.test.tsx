@@ -53,6 +53,11 @@ import {
   faqAccordionDefaults,
   type FaqAccordionData,
 } from "../../../core/widgets/core/faqAccordion";
+import {
+  createCtaBannerWidget,
+  ctaBannerDefaults,
+  type CtaBannerData,
+} from "../../../core/widgets/core/ctaBanner";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -70,6 +75,7 @@ const StubTestimonialsEditor: ComponentType<WidgetEditorProps<TestimonialsData>>
 const StubPricingPlansEditor: ComponentType<WidgetEditorProps<PricingPlansData>> = () => null;
 const StubFaqAccordionEditor: ComponentType<WidgetEditorProps<FaqAccordionData>> = () =>
   null;
+const StubCtaBannerEditor: ComponentType<WidgetEditorProps<CtaBannerData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -841,6 +847,45 @@ test("renderer outputs faq accordion variant and open-state markers", () => {
   expect(html).toContain('data-faq-multiple-open="true"');
   expect(html).toContain('data-faq-item-open="true"');
   expect(html).toContain("Can I customize colors?");
+});
+
+test("renderer outputs cta banner variant and style markers", () => {
+  clearWidgets();
+  registerWidget(
+    createCtaBannerWidget({
+      wizard: StubCtaBannerEditor,
+      visual: StubCtaBannerEditor,
+      advanced: StubCtaBannerEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "cta-1",
+        type: "cta-banner",
+        variant: "split",
+        data: {
+          ...ctaBannerDefaults,
+          content: {
+            badge: "Limited",
+            title: "Start building now",
+            description: "Reusable blocks with deterministic runtime output.",
+          },
+          style: {
+            ...ctaBannerDefaults.style,
+            padding: "lg",
+            borderWidth: "2",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-cta-banner-variant="split"');
+  expect(html).toContain('data-cta-banner-padding="lg"');
+  expect(html).toContain('data-cta-banner-border-width="2"');
+  expect(html).toContain("Start building now");
 });
 
 function normalizeFeatureGridItemsForRenderer(

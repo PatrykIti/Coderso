@@ -43,6 +43,11 @@ import {
   PricingPlansWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/PricingPlansEditors";
 import {
+  CtaBannerAdvancedEditor,
+  CtaBannerVisualEditor,
+  CtaBannerWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/CtaBannerEditors";
+import {
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -81,6 +86,10 @@ import {
   createPricingPlansWidget,
   pricingPlansDefaults,
 } from "../../../core/widgets/core/pricingPlans";
+import {
+  createCtaBannerWidget,
+  ctaBannerDefaults,
+} from "../../../core/widgets/core/ctaBanner";
 import {
   createFaqAccordionWidget,
   faqAccordionDefaults,
@@ -379,6 +388,36 @@ test("widget template block settings render faq accordion visual sections", () =
   expect(html).toContain("Header copy");
   expect(html).toContain("Questions and answers");
   expect(html).toContain("Colors and spacing");
+});
+
+test("widget template block settings render cta banner visual sections", () => {
+  const widget = createCtaBannerWidget({
+    wizard: CtaBannerWizardEditor,
+    visual: CtaBannerVisualEditor,
+    advanced: CtaBannerAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "cta-1",
+        type: "cta-banner",
+        variant: "centered",
+        data: ctaBannerDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Content copy");
+  expect(html).toContain("Actions");
+  expect(html).toContain("Colors and button styles");
 });
 
 test("widget template block settings render contact visual sections", () => {

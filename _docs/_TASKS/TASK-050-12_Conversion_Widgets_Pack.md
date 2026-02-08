@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-050-11  
-**Status:** In Progress (2026-02-08)
+**Status:** Done (2026-02-08)
 
 ---
 
@@ -34,8 +34,7 @@ Order inside section:
 
 ## Progress
 
-- Done: `TASK-050-12-01`, `TASK-050-12-02`, `TASK-050-12-03`, `TASK-050-12-04`
-- Next: `TASK-050-12-05`
+- Done: `TASK-050-12-01`, `TASK-050-12-02`, `TASK-050-12-03`, `TASK-050-12-04`, `TASK-050-12-05`
 
 ---
 

@@ -3,6 +3,7 @@ import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { getWidget, registerWidget } from "../registry";
 import { createCompareTimelineWidget, type CompareTimelineData } from "./compareTimeline";
 import { createContactWidget, type ContactData } from "./contact";
+import { createCtaBannerWidget, type CtaBannerData } from "./ctaBanner";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
 import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion";
@@ -25,6 +26,7 @@ export type CoreWidgetEditors = {
   testimonials: EditorBundle<TestimonialsData>;
   pricingPlans: EditorBundle<PricingPlansData>;
   faqAccordion: EditorBundle<FaqAccordionData>;
+  ctaBanner: EditorBundle<CtaBannerData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -42,6 +44,7 @@ export function createCoreWidgetDefinitions(
     createTestimonialsWidget(editors.testimonials),
     createPricingPlansWidget(editors.pricingPlans),
     createFaqAccordionWidget(editors.faqAccordion),
+    createCtaBannerWidget(editors.ctaBanner),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

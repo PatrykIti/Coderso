@@ -49,3 +49,8 @@ export {
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
 } from "./FaqAccordionEditors";
+export {
+  CtaBannerAdvancedEditor,
+  CtaBannerVisualEditor,
+  CtaBannerWizardEditor,
+} from "./CtaBannerEditors";

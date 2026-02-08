@@ -6,5 +6,6 @@
 - `NEWSLETTER.md` - Newsletter signup
 - `CONTACT.md` - Kontakt
 - `FAQ.md` - FAQ accordion
+- `CTA_BANNER.md` - CTA banner
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka
