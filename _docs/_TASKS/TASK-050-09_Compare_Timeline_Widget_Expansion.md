@@ -11,9 +11,16 @@
 
 ## Overview
 
-Expand the Compare Timeline widget to fully match the v1 documentation. This is a
-**non-slot** widget focused on richer axis/track configuration and highlight
-segments.
+Expand the Compare Timeline widget to fully match v1 documentation and align
+its editor quality with Hero, Navigation, Footer, and Timeline.
+
+Compare Timeline is a **non-slot** widget focused on dual-track process
+comparison, marker mapping, and highlight segments.
+
+Execution is split into two detailed subtasks:
+
+- `TASK-050-09-01` Compare Timeline Widget Bugfixes and UX Hardening (**To Do**)
+- `TASK-050-09-02` Compare Timeline Widget Visual Rebuild and Advanced Cleanup (**To Do**)
 
 ---
 
@@ -23,9 +30,13 @@ Align with `_docs/_WIDGETS/COMPARE_TIMELINE.md`:
 
 - Axis: `steps[]` with `label` + optional `description`
 - Tracks: `label`, `markers`, optional `segments[{ from, to, label }]`
-- Highlight: `color`, label style
+- Highlight: color + label style options
 - Guides: `enabled`, `style`
-- Layout: spacing between tracks, label position
+- Layout: track spacing + label position
+
+Notes:
+- Keep additive schema changes for compatibility.
+- Normalize legacy payloads at runtime/editor boundaries.
 
 ---
 
@@ -33,29 +44,30 @@ Align with `_docs/_WIDGETS/COMPARE_TIMELINE.md`:
 
 ### Wizard
 1) Track labels (A/B)
-2) Axis steps (3–6)
-3) Markers for track A
-4) Markers for track B
-5) Highlight segments on/off
-6) Accent/highlight target track
+2) Axis step count (`3-6`)
+3) Marker selection for track A
+4) Marker selection for track B
+5) Highlight segments on/off + target emphasis
+
+Wizard should create safe defaults with deterministic marker/segment rules.
 
 ### Visual
-- Variant selection (dual-track / highlight)
-- Quick marker/segment preview
+- Variant cards (`dual-track` / `dual-track-highlight`)
+- Quick marker and segment editing with immediate preview parity
+- Section-based IA in final stage (09-02)
 
 ### Advanced
-- Full axis + track editor
-- Segment editor with validation (from <= to)
-- Guides + highlight style controls
+- 09-01: full controls available while model stabilizes
+- 09-02: technical-only controls (no duplicate content/style from Visual)
 
 ---
 
 ## Rendering Requirements
 
 Update `CompareTimelineBlock` to:
-- Render tracks with markers
-- Render segments for highlight variant
-- Respect spacing + label positioning
+- render both variants deterministically,
+- render highlight segments with normalized ranges,
+- respect spacing + label positioning and guide styles.
 
 ---
 
@@ -63,23 +75,38 @@ Update `CompareTimelineBlock` to:
 
 | File | Action | Notes |
 | --- | --- | --- |
-| `core/widgets/core/compareTimeline.tsx` | expand data model + schema + defaults | per docs |
-| `core/widgets/core/compareTimeline.tsx` | update render variants | highlight segments |
-| `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | expand wizard flow | track + steps |
-| `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | expand visual + advanced | markers + segments |
-| `tests/unit/widgets/compareTimeline.test.tsx` | extend schema/default tests | add highlight case |
+| `core/widgets/core/compareTimeline.tsx` | expand model + schema + defaults | per docs |
+| `core/widgets/core/compareTimeline.tsx` | add marker/segment normalization | deterministic safety |
+| `core/widgets/core/compareTimeline.tsx` | update runtime rendering | variants + layout |
+| `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | expand wizard flow | complete quick setup |
+| `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` | rebuild visual + advanced scope | split across 09-01/09-02 |
+| `tests/unit/widgets/compareTimeline.test.tsx` | extend tests | schema/defaults/render variants |
+| `tests/unit/widgets/renderer.test.tsx` | add runtime assertions | highlight + layout |
+| `tests/unit/pageBuilder/visualPanel.test.tsx` | cover variant ownership in Visual | for 09-02 |
+| `tests/unit/ui/widget-template-editor.test.tsx` | compare timeline editor integration | visual sections |
+
+---
+
+## Sub-Tasks
+
+- **TASK-050-09-01:** Compare Timeline Widget Bugfixes and UX Hardening  
+  Scope: model parity, normalization hardening, renderer correctness, baseline
+  editor coverage.
+- **TASK-050-09-02:** Compare Timeline Widget Visual Rebuild and Advanced Cleanup  
+  Scope: section-based Visual IA, variant ownership in Visual, and technical-only
+  Advanced scope.
 
 ---
 
 ## Testing Requirements
 
-- Unit: schema validates track markers + segments.
-- Unit: renderer draws highlight segments correctly.
-- UI: wizard/visual/advanced fields present.
+- Unit: schema validates markers, segments, and layout options.
+- Unit: renderer handles highlight segments correctly.
+- UI: wizard/visual/advanced field coverage.
 
 ---
 
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/COMPARE_TIMELINE.md` (final fields + examples)
-- `_docs/WIDGETS.md` (if summary fields change)
+- `_docs/WIDGETS.md` (if generic summary changes)
