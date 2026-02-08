@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Zbieranie leadow przez prosty formularz zapisu.
+Lead capture via a simple newsletter signup form.
 
 ## Widget ID
 
@@ -10,40 +10,75 @@ Zbieranie leadow przez prosty formularz zapisu.
 
 ## Variants (v1)
 
-- inline (input + button w jednej linii)
-- stacked (input nad buttonem)
-- minimal (tytul + input + button)
+- `inline`: input + button on one row when space allows
+- `stacked`: input above button
+- `minimal`: compact title + input + button, no description
 
-## Wizard flow (v1)
+## Editor Modes (current after TASK-050-10-01)
 
-- Pytanie 1: Styl (inline / stacked / minimal)
-- Pytanie 2: Tytul i opis
-- Pytanie 3: Tekst przycisku
-- Pytanie 4: Zgoda (checkbox tak/nie)
+### Wizard
+- Newsletter style (`inline` / `stacked` / `minimal`)
+- Title + description
+- Button label
+- Consent checkbox baseline (enabled + label)
 
-## Visual mode
+### Visual (baseline parity in 10-01)
+- Placeholder
+- Success message
+- Consent controls (enabled, label, required)
+- Style baseline (spacing, alignment, background)
 
-- Podglad wariantow z miniaturami.
-- Pokazuje tylko pola dla wybranego wariantu.
+### Advanced (broad in 10-01)
+- Integration mode (`action-url` / `webhook`)
+- Action URL + webhook ID fields
+- Consent required toggle
+- Style fallback controls
 
-## Advanced options (v1)
+Note:
+- Section-based Visual IA and technical-only Advanced boundaries are planned
+  for `TASK-050-10-02`.
 
-- content: title, description, placeholder
-- consent: label, required
-- submit: buttonLabel, successMessage
-- integration: actionUrl lub webhookId
-- style: spacing, alignment, background
+## Runtime Behavior Notes
 
-## Data model (summary)
+- Invalid or unknown variant falls back to `inline`.
+- `minimal` variant hides description text.
+- Consent checkbox renders only when `consent.enabled = true` and label is set.
+- Integration mode is normalized:
+  - `webhook` when webhook ID is present and URL is empty,
+  - otherwise `action-url`.
+- Renderer emits deterministic data markers:
+  - `data-newsletter-variant`
+  - `data-newsletter-alignment`
+  - `data-newsletter-spacing`
+  - `data-newsletter-integration-mode`
+  - `data-newsletter-consent-required`
+
+## Data Model (summary)
 
 ```json
 {
   "variant": "inline",
-  "title": "string",
-  "description": "string",
-  "placeholder": "string",
-  "consent": { "enabled": true, "label": "string" },
-  "submit": { "label": "string", "successMessage": "string" },
-  "integration": { "actionUrl": "string" }
+  "title": "Join our newsletter",
+  "description": "Get the latest updates straight to your inbox.",
+  "placeholder": "you@example.com",
+  "consent": {
+    "enabled": true,
+    "label": "I agree to receive updates.",
+    "required": false
+  },
+  "submit": {
+    "label": "Subscribe",
+    "successMessage": "Thanks for joining!"
+  },
+  "integration": {
+    "mode": "action-url",
+    "actionUrl": "",
+    "webhookId": ""
+  },
+  "style": {
+    "spacing": "md",
+    "alignment": "start",
+    "background": "transparent"
+  }
 }
 ```

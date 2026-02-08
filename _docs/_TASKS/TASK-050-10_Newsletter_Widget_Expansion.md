@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-04  
-**Status:** To Do
+**Status:** In Progress (2026-02-08)
 
 ---
 
@@ -19,7 +19,7 @@ submission behavior, and integration endpoint configuration.
 
 Execution is split into two detailed subtasks:
 
-- `TASK-050-10-01` Newsletter Widget Bugfixes and UX Hardening (**To Do**)
+- `TASK-050-10-01` Newsletter Widget Bugfixes and UX Hardening (**Done, 2026-02-08**)
 - `TASK-050-10-02` Newsletter Widget Visual Rebuild and Advanced Cleanup (**To Do**)
 
 ---

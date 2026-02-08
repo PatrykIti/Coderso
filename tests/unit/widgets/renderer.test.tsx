@@ -23,6 +23,11 @@ import {
   footerDefaults,
   type FooterData,
 } from "../../../core/widgets/core/footer";
+import {
+  createNewsletterWidget,
+  newsletterDefaults,
+  type NewsletterData,
+} from "../../../core/widgets/core/newsletter";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -33,6 +38,7 @@ const StubCompareTimelineEditor: ComponentType<WidgetEditorProps<CompareTimeline
 const StubTimelineEditor: ComponentType<WidgetEditorProps<TimelineData>> = () => null;
 const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
+const StubNewsletterEditor: ComponentType<WidgetEditorProps<NewsletterData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -490,4 +496,50 @@ test("renderer outputs compare timeline highlight segments", () => {
   expect(html).toContain('data-compare-variant="dual-track-highlight"');
   expect(html).toContain('data-compare-target-track="b"');
   expect(html).toContain("Fast lane");
+});
+
+test("renderer outputs newsletter variant and integration markers", () => {
+  clearWidgets();
+  registerWidget(
+    createNewsletterWidget({
+      wizard: StubNewsletterEditor,
+      visual: StubNewsletterEditor,
+      advanced: StubNewsletterEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "newsletter-1",
+        type: "newsletter",
+        variant: "minimal",
+        data: {
+          ...newsletterDefaults,
+          description: "Hidden in minimal variant",
+          consent: {
+            enabled: true,
+            label: "Accept policy",
+            required: true,
+          },
+          integration: {
+            mode: "webhook",
+            webhookId: "webhook_1",
+            actionUrl: "",
+          },
+          style: {
+            spacing: "lg",
+            alignment: "center",
+            background: "#ffffff",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-newsletter-variant="minimal"');
+  expect(html).toContain('data-newsletter-integration-mode="webhook"');
+  expect(html).toContain('data-newsletter-consent-required="true"');
+  expect(html).toContain('name="webhookId"');
+  expect(html).not.toContain("Hidden in minimal variant");
 });

@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-10, TASK-050-04  
-**Status:** To Do
+**Status:** Done (2026-02-08)
 
 ---
 
