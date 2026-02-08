@@ -71,13 +71,12 @@ test("compare timeline normalizes markers and segments safely", () => {
 
 test("compare timeline validator accepts extended fields", () => {
   clearWidgets();
-  registerWidget(
-    createCompareTimelineWidget({
-      wizard: StubEditor,
-      visual: StubEditor,
-      advanced: StubEditor,
-    })
-  );
+  const widget = createCompareTimelineWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  registerWidget(widget);
 
   expect(() =>
     normalizeWidgetBlock({
@@ -101,10 +100,15 @@ test("compare timeline validator accepts extended fields", () => {
           stepLabelColor: "#0f172a",
           mutedStepColor: "#334155",
           guideColor: "#e2e8f0",
+          trackLabelSize: "lg",
+          stepLabelSize: "sm",
+          segmentLabelSize: "base",
         },
       },
     })
   ).not.toThrow();
+
+  expect(widget.editorCapabilities?.visualOwnsVariantSelection).toBe(true);
 });
 
 test("compare timeline validator rejects invalid variant", () => {
@@ -127,7 +131,7 @@ test("compare timeline validator rejects invalid variant", () => {
   ).toThrow("widget_invalid_variant");
 });
 
-test("compare timeline wizard renders full quick setup fields", () => {
+test("compare timeline wizard renders minimal onboarding fields", () => {
   const html = renderToString(
     <CompareTimelineWizardEditor
       value={compareTimelineDefaults}
@@ -137,12 +141,12 @@ test("compare timeline wizard renders full quick setup fields", () => {
     />
   );
 
-  expect(html).toContain("Track A markers");
-  expect(html).toContain("Track B markers");
-  expect(html).toContain("Highlight segments");
+  expect(html).toContain("Quick setup");
+  expect(html).toContain("Track labels");
+  expect(html).toContain("Marker baseline");
 });
 
-test("compare timeline visual renders marker and highlight controls", () => {
+test("compare timeline visual renders section-based IA", () => {
   const html = renderToString(
     <CompareTimelineVisualEditor
       value={compareTimelineDefaults}
@@ -152,12 +156,48 @@ test("compare timeline visual renders marker and highlight controls", () => {
     />
   );
 
-  expect(html).toContain("Markers mapping");
-  expect(html).toContain("Highlight target and segments");
-  expect(html).toContain("Highlight label style");
+  expect(html).toContain("Variant and compare structure");
+  expect(html).toContain("Axis steps and track labels");
+  expect(html).toContain("Markers and segment mapping");
+  expect(html).toContain("Highlight and guide styles");
+  expect(html).toContain("Colors and typography");
+  expect(html).toContain("Spacing and layout preview hints");
 });
 
-test("compare timeline advanced renders full axis and track editors", () => {
+test("compare timeline visual hides segment editor for non-highlight variant", () => {
+  const html = renderToString(
+    <CompareTimelineVisualEditor
+      value={compareTimelineDefaults}
+      onChange={() => undefined}
+      variant="dual-track"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Segment mapping is available only");
+  expect(html).not.toContain("Highlight target track");
+});
+
+test("compare timeline renderer applies typography size tokens", () => {
+  const html = renderToString(
+    <CompareTimelineBlock
+      variant="dual-track-highlight"
+      data={{
+        ...compareTimelineDefaults,
+        style: {
+          ...compareTimelineDefaults.style,
+          trackLabelSize: "lg",
+          stepLabelSize: "base",
+          segmentLabelSize: "base",
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("font-semibold text-base");
+});
+
+test("compare timeline advanced keeps technical-only controls", () => {
   const html = renderToString(
     <CompareTimelineAdvancedEditor
       value={compareTimelineDefaults}
@@ -167,7 +207,8 @@ test("compare timeline advanced renders full axis and track editors", () => {
     />
   );
 
-  expect(html).toContain("Axis editor");
-  expect(html).toContain("Tracks and segments");
-  expect(html).toContain("Guides and layout");
+  expect(html).toContain("Layout tokens");
+  expect(html).toContain("Raw metadata fields");
+  expect(html).toContain("Data normalization");
+  expect(html).not.toContain("Colors and typography");
 });

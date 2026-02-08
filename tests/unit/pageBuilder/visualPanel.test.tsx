@@ -4,6 +4,11 @@ import { renderToString } from "react-dom/server";
 
 import { VisualPanel } from "../../../core/admin/ui/pages/builder/VisualPanel";
 import {
+  CompareTimelineAdvancedEditor,
+  CompareTimelineVisualEditor,
+  CompareTimelineWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/CompareTimelineEditors";
+import {
   NavigationAdvancedEditor,
   NavigationVisualEditor,
   NavigationWizardEditor,
@@ -14,6 +19,10 @@ import {
   TimelineWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/TimelineEditors";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
+import {
+  compareTimelineDefaults,
+  createCompareTimelineWidget,
+} from "../../../core/widgets/core/compareTimeline";
 import {
   createFooterWidget,
   footerDefaults,
@@ -182,4 +191,33 @@ test("VisualPanel uses timeline editor variant controls", () => {
 
   expect(html).not.toContain("Choose a visual style for this widget.");
   expect(html).toContain("Variant and timeline structure");
+});
+
+test("VisualPanel uses compare timeline editor variant controls", () => {
+  const widget = createCompareTimelineWidget({
+    wizard: CompareTimelineWizardEditor,
+    visual: CompareTimelineVisualEditor,
+    advanced: CompareTimelineAdvancedEditor,
+  });
+  const block: Block = {
+    id: "compare-1",
+    type: "compare-timeline",
+    variant: "dual-track-highlight",
+    data: compareTimelineDefaults,
+    editor: {
+      mode: "visual",
+      wizardCompleted: true,
+    },
+  };
+
+  const html = renderToString(
+    <VisualPanel
+      widget={widget}
+      block={block}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).not.toContain("Choose a visual style for this widget.");
+  expect(html).toContain("Variant and compare structure");
 });

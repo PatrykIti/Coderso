@@ -146,7 +146,7 @@ test("widget template block settings render timeline visual sections", () => {
   expect(html).toContain("Typography and spacing");
 });
 
-test("widget template block settings render compare timeline baseline sections", () => {
+test("widget template block settings render compare timeline visual sections", () => {
   const widget = createCompareTimelineWidget({
     wizard: CompareTimelineWizardEditor,
     visual: CompareTimelineVisualEditor,
@@ -170,6 +170,8 @@ test("widget template block settings render compare timeline baseline sections",
     />
   );
 
-  expect(html).toContain("Markers mapping");
-  expect(html).toContain("Highlight target and segments");
+  expect(html).toContain("Variant and compare structure");
+  expect(html).toContain("Axis steps and track labels");
+  expect(html).toContain("Markers and segment mapping");
+  expect(html).toContain("Spacing and layout preview hints");
 });

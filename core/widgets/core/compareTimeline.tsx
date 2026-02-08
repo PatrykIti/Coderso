@@ -7,6 +7,9 @@ export type CompareTimelineGuideStyle = "solid" | "dashed";
 export type CompareTimelineTrackSpacing = "sm" | "md" | "lg" | "xl";
 export type CompareTimelineLabelPosition = "top" | "bottom";
 export type CompareTimelineHighlightLabelStyle = "solid" | "outline" | "subtle";
+export type CompareTimelineTrackLabelSize = "sm" | "base" | "lg";
+export type CompareTimelineStepLabelSize = "xs" | "sm" | "base";
+export type CompareTimelineSegmentLabelSize = "xs" | "sm" | "base";
 
 export type CompareAxisStep = {
   id?: string;
@@ -46,6 +49,9 @@ export type CompareTimelineData = {
     stepLabelColor?: string;
     mutedStepColor?: string;
     guideColor?: string;
+    trackLabelSize?: CompareTimelineTrackLabelSize;
+    stepLabelSize?: CompareTimelineStepLabelSize;
+    segmentLabelSize?: CompareTimelineSegmentLabelSize;
   };
 };
 
@@ -60,6 +66,24 @@ const trackSpacingClassMap = {
   md: "space-y-4",
   lg: "space-y-6",
   xl: "space-y-8",
+} as const;
+
+const trackLabelSizeClassMap = {
+  sm: "text-xs",
+  base: "text-sm",
+  lg: "text-base",
+} as const;
+
+const stepLabelSizeClassMap = {
+  xs: "text-xs",
+  sm: "text-sm",
+  base: "text-base",
+} as const;
+
+const segmentLabelSizeClassMap = {
+  xs: "text-xs",
+  sm: "text-sm",
+  base: "text-base",
 } as const;
 
 const labelIdFallback = (index: number) => `step-${index + 1}`;
@@ -160,6 +184,9 @@ export const compareTimelineSchema = {
         stepLabelColor: { type: "string" },
         mutedStepColor: { type: "string" },
         guideColor: { type: "string" },
+        trackLabelSize: { enum: ["sm", "base", "lg"] },
+        stepLabelSize: { enum: ["xs", "sm", "base"] },
+        segmentLabelSize: { enum: ["xs", "sm", "base"] },
       },
     },
   },
@@ -194,6 +221,9 @@ export const compareTimelineDefaults: CompareTimelineData = {
     stepLabelColor: "var(--color-text)",
     mutedStepColor: "var(--color-text)",
     guideColor: "var(--color-border)",
+    trackLabelSize: "base",
+    stepLabelSize: "xs",
+    segmentLabelSize: "xs",
   },
 };
 
@@ -376,6 +406,12 @@ export function normalizeCompareTimelineData(
       mutedStepColor:
         data.style?.mutedStepColor ?? compareTimelineDefaults.style?.mutedStepColor,
       guideColor: data.style?.guideColor ?? compareTimelineDefaults.style?.guideColor,
+      trackLabelSize:
+        data.style?.trackLabelSize ?? compareTimelineDefaults.style?.trackLabelSize,
+      stepLabelSize:
+        data.style?.stepLabelSize ?? compareTimelineDefaults.style?.stepLabelSize,
+      segmentLabelSize:
+        data.style?.segmentLabelSize ?? compareTimelineDefaults.style?.segmentLabelSize,
     },
   };
 }
@@ -447,6 +483,11 @@ function CompareTrackRow({
   const mutedStepColor = style.mutedStepColor ?? "var(--color-text)";
   const trackLabelColor = style.trackLabelColor ?? "var(--color-text)";
   const guideColor = style.guideColor ?? "var(--color-border)";
+  const trackLabelSizeClass =
+    trackLabelSizeClassMap[style.trackLabelSize ?? "base"];
+  const stepLabelSizeClass = stepLabelSizeClassMap[style.stepLabelSize ?? "xs"];
+  const segmentLabelSizeClass =
+    segmentLabelSizeClassMap[style.segmentLabelSize ?? "xs"];
 
   const segmentLabelBaseClass = "rounded-full border px-2 py-1 text-xs";
   const segmentLabelStyle: CSSProperties =
@@ -477,7 +518,10 @@ function CompareTrackRow({
         borderColor: guideColor,
       }}
     >
-      <p className="text-sm font-semibold" style={{ color: trackLabelColor }}>
+      <p
+        className={joinClasses("font-semibold", trackLabelSizeClass)}
+        style={{ color: trackLabelColor }}
+      >
         {track.label}
       </p>
 
@@ -500,7 +544,9 @@ function CompareTrackRow({
                 color: markerActive ? "var(--color-bg)" : stepLabelColor,
               }}
             >
-              <p className="text-xs font-semibold">{step.label}</p>
+              <p className={joinClasses("font-semibold", stepLabelSizeClass)}>
+                {step.label}
+              </p>
               {step.description ? (
                 <p
                   className="mt-1 text-xs"
@@ -520,7 +566,7 @@ function CompareTrackRow({
             <span
               key={`${track.id}-${segment.from}-${segment.to}-${index}`}
               data-compare-segment={`${segment.from}-${segment.to}`}
-              className={segmentLabelBaseClass}
+              className={joinClasses(segmentLabelBaseClass, segmentLabelSizeClass)}
               style={segmentLabelStyle}
             >
               {segment.label ?? `Steps ${segment.from + 1}-${segment.to + 1}`}
@@ -559,6 +605,9 @@ export function CompareTimelineBlock({
     stepLabelColor: normalizedData.style?.stepLabelColor ?? "var(--color-text)",
     mutedStepColor: normalizedData.style?.mutedStepColor ?? "var(--color-text)",
     guideColor: normalizedData.style?.guideColor ?? "var(--color-border)",
+    trackLabelSize: normalizedData.style?.trackLabelSize ?? "base",
+    stepLabelSize: normalizedData.style?.stepLabelSize ?? "xs",
+    segmentLabelSize: normalizedData.style?.segmentLabelSize ?? "xs",
   };
   const targetTrackId =
     normalizedData.highlight?.targetTrackId ?? tracks[1]?.id ?? tracks[0]?.id;
@@ -633,6 +682,9 @@ export function createCompareTimelineWidget(editors: {
     schema: compareTimelineSchema,
     defaults: compareTimelineDefaults,
     editor: editors,
+    editorCapabilities: {
+      visualOwnsVariantSelection: true,
+    },
     render: CompareTimelineBlock,
   };
 }

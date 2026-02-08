@@ -14,29 +14,32 @@ Example: traditional flow vs optimized flow.
 - `dual-track`: two tracks rendered against shared axis steps
 - `dual-track-highlight`: same as dual-track + highlighted segments on target track
 
-## Editor Modes (current after TASK-050-09-01)
+## Editor Modes (current after TASK-050-09-02)
 
-### Wizard
-- Variant selection
-- Track labels
+### Wizard (minimal onboarding)
+- Highlight mode on/off
 - Axis step count (`3-6`)
-- Axis labels
-- Marker selection for track A and B
-- Highlight toggle + target track + quick segment editor
+- Track labels (A/B)
+- Marker baseline per track
 
-### Visual
-- Variant selection
-- Track labels
-- Marker mapping per track
-- Highlight target and segment quick editing
-- Guide/layout quick controls (guide style, label position, track spacing)
-- Highlight style controls (color + label style)
+### Visual (primary editing mode)
+Sections:
+1. Variant and compare structure
+2. Axis steps and track labels
+3. Markers and segment mapping
+4. Highlight and guide styles
+5. Colors and typography
+6. Spacing and layout preview hints
 
-### Advanced
-- Full axis editor (labels + optional descriptions, step count add/remove)
-- Full track editor (markers + segments with range controls)
-- Guides/layout controls
-- Full style token controls (highlight, marker, labels, guides)
+Notes:
+- Compare Timeline owns variant selection in Visual (`visualOwnsVariantSelection = true`).
+- Generic Visual variant selector is suppressed.
+- Segment controls appear only for `dual-track-highlight`.
+
+### Advanced (technical-only)
+- Layout tokens (spacing, axis label position, guides)
+- Raw metadata fields (track IDs, axis step IDs, optional step descriptions)
+- Normalization utility action (stable IDs, clamped markers/segments, safe step count)
 
 ## Runtime Behavior Notes
 
@@ -80,7 +83,10 @@ Example: traditional flow vs optimized flow.
     "trackLabelColor": "var(--color-text)",
     "stepLabelColor": "var(--color-text)",
     "mutedStepColor": "var(--color-text)",
-    "guideColor": "var(--color-border)"
+    "guideColor": "var(--color-border)",
+    "trackLabelSize": "base",
+    "stepLabelSize": "xs",
+    "segmentLabelSize": "xs"
   }
 }
 ```
