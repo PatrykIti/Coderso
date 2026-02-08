@@ -13,6 +13,10 @@ import { createLogoCloudWidget, type LogoCloudData } from "./logoCloud";
 import { createNavigationWidget, type NavigationData } from "./navigation";
 import { createNewsletterWidget, type NewsletterData } from "./newsletter";
 import { createPricingPlansWidget, type PricingPlansData } from "./pricingPlans";
+import {
+  createRichTextSectionWidget,
+  type RichTextSectionData,
+} from "./richTextSection";
 import { createStatsKpiWidget, type StatsKpiData } from "./statsKpi";
 import { createTeamWidget, type TeamData } from "./team";
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
@@ -35,6 +39,7 @@ export type CoreWidgetEditors = {
   galleryMosaic: EditorBundle<GalleryMosaicData>;
   statsKpi: EditorBundle<StatsKpiData>;
   team: EditorBundle<TeamData>;
+  richTextSection: EditorBundle<RichTextSectionData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -57,6 +62,7 @@ export function createCoreWidgetDefinitions(
     createGalleryMosaicWidget(editors.galleryMosaic),
     createStatsKpiWidget(editors.statsKpi),
     createTeamWidget(editors.team),
+    createRichTextSectionWidget(editors.richTextSection),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

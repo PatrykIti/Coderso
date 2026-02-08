@@ -36,6 +36,7 @@ Wymagane:
 - Gallery Mosaic (wizualna sekcja mediow)
 - Stats KPI (sekcja metryk i proof points)
 - Team (profile zespolu z rolami i social links)
+- Rich Text Section (dluzszy blok tresci z bezpiecznym HTML)
 - Menu/Nawigacja
 - Stopka (linki, dane, social)
 
@@ -91,6 +92,7 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
 - `_docs/_WIDGETS/STATS_KPI.md`
 - `_docs/_WIDGETS/TEAM.md`
+- `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
 

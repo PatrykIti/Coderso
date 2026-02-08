@@ -68,6 +68,11 @@ import {
   TeamWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/TeamEditors";
 import {
+  RichTextSectionAdvancedEditor,
+  RichTextSectionVisualEditor,
+  RichTextSectionWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/RichTextSectionEditors";
+import {
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -126,6 +131,10 @@ import {
   createTeamWidget,
   teamDefaults,
 } from "../../../core/widgets/core/team";
+import {
+  createRichTextSectionWidget,
+  richTextSectionDefaults,
+} from "../../../core/widgets/core/richTextSection";
 import {
   createFaqAccordionWidget,
   faqAccordionDefaults,
@@ -576,6 +585,38 @@ test("widget template block settings render team visual sections", () => {
   expect(html).toContain("Members content and order");
   expect(html).toContain("Social links");
   expect(html).toContain("Card and layout style");
+});
+
+test("widget template block settings render rich text section visual sections", () => {
+  const widget = createRichTextSectionWidget({
+    wizard: RichTextSectionWizardEditor,
+    visual: RichTextSectionVisualEditor,
+    advanced: RichTextSectionAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "rich-text-1",
+        type: "rich-text-section",
+        variant: "single-column",
+        data: richTextSectionDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Title block copy");
+  expect(html).toContain("Body content");
+  expect(html).toContain("Structured fallback blocks");
+  expect(html).toContain("Reader options");
+  expect(html).toContain("Typography and colors");
 });
 
 test("widget template block settings render contact visual sections", () => {

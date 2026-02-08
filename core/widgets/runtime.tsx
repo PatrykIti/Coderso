@@ -26,6 +26,7 @@ export function ensureRuntimeWidgetsRegistered() {
     galleryMosaic: noopEditors,
     statsKpi: noopEditors,
     team: noopEditors,
+    richTextSection: noopEditors,
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,

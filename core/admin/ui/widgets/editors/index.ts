@@ -74,3 +74,8 @@ export {
   TeamVisualEditor,
   TeamWizardEditor,
 } from "./TeamEditors";
+export {
+  RichTextSectionAdvancedEditor,
+  RichTextSectionVisualEditor,
+  RichTextSectionWizardEditor,
+} from "./RichTextSectionEditors";

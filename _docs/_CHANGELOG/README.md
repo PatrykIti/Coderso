@@ -176,6 +176,7 @@ Project Change Log.
 | 179 | 2026-02-08 | Gallery mosaic widget | CMS/Widgets |
 | 180 | 2026-02-08 | Stats KPI widget | CMS/Widgets |
 | 181 | 2026-02-08 | Team widget | CMS/Widgets |
+| 182 | 2026-02-08 | Rich text section widget | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

@@ -11,5 +11,6 @@
 - `GALLERY_MOSAIC.md` - Gallery mosaic
 - `STATS_KPI.md` - Stats KPI
 - `TEAM.md` - Team
+- `RICH_TEXT_SECTION.md` - Rich text section
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

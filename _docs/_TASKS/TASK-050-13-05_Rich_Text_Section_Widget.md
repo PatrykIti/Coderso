@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-13-04  
-**Status:** To Do
+**Status:** Done (2026-02-08)
 
 ---
 
@@ -39,6 +39,8 @@ Implement Rich Text Section widget for long-form content blocks inside templates
 | `core/admin/ui/widgets/registry.ts` | register editors | wiring |
 | `core/widgets/core/index.ts` | register definition | catalog |
 | `tests/unit/widgets/richTextSection.test.tsx` | new tests | schema/defaults/render/sanitization |
+| `tests/unit/widgets/renderer.test.tsx` | add runtime assertions | markers + sanitization |
+| `tests/unit/ui/widget-template-editor.test.tsx` | add editor integration | visual sections |
 
 ---
 
@@ -47,10 +49,13 @@ Implement Rich Text Section widget for long-form content blocks inside templates
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun test tests/unit/widgets/richTextSection.test.tsx`
+- `bun test tests/unit/widgets/renderer.test.tsx`
+- `bun test tests/unit/ui/widget-template-editor.test.tsx`
 
 ---
 
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
+- `_docs/WIDGETS.md`
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-rich-text-section-widget.md`

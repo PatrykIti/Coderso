@@ -78,6 +78,11 @@ import {
   teamDefaults,
   type TeamData,
 } from "../../../core/widgets/core/team";
+import {
+  createRichTextSectionWidget,
+  richTextSectionDefaults,
+  type RichTextSectionData,
+} from "../../../core/widgets/core/richTextSection";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -101,6 +106,8 @@ const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData
   null;
 const StubStatsKpiEditor: ComponentType<WidgetEditorProps<StatsKpiData>> = () => null;
 const StubTeamEditor: ComponentType<WidgetEditorProps<TeamData>> = () => null;
+const StubRichTextSectionEditor: ComponentType<WidgetEditorProps<RichTextSectionData>> = () =>
+  null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -1164,6 +1171,66 @@ test("renderer outputs team variant and style markers", () => {
   expect(html).toContain('data-team-social-count="2"');
   expect(html).toContain("Meet our leadership");
   expect(html).toContain("Engineering Lead");
+});
+
+test("renderer outputs rich text section markers and sanitized output", () => {
+  clearWidgets();
+  registerWidget(
+    createRichTextSectionWidget({
+      wizard: StubRichTextSectionEditor,
+      visual: StubRichTextSectionEditor,
+      advanced: StubRichTextSectionEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "rich-text-1",
+        type: "rich-text-section",
+        variant: "article",
+        data: {
+          ...richTextSectionDefaults,
+          titleBlock: {
+            eyebrow: "Guides",
+            title: "How the pipeline works",
+          },
+          body: {
+            html: '<h2>Overview</h2><p>Body copy.</p><script>alert(1)</script><a href="javascript:alert(2)">bad</a>',
+            blocks: [
+              { id: "block-1", heading: "Overview", content: "Body copy." },
+              { id: "block-2", heading: "Details", content: "Extra details." },
+            ],
+          },
+          options: {
+            ...richTextSectionDefaults.options,
+            toc: true,
+            dropcap: true,
+            outputMode: "blocks-fallback",
+            maxWidth: "xl",
+          },
+          style: {
+            ...richTextSectionDefaults.style,
+            fontScale: "lg",
+            lineHeight: "relaxed",
+            spacing: "lg",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-rich-text-variant="article"');
+  expect(html).toContain('data-rich-text-font-scale="lg"');
+  expect(html).toContain('data-rich-text-line-height="relaxed"');
+  expect(html).toContain('data-rich-text-spacing="lg"');
+  expect(html).toContain('data-rich-text-dropcap="true"');
+  expect(html).toContain('data-rich-text-toc="true"');
+  expect(html).toContain('data-rich-text-output-mode="blocks-fallback"');
+  expect(html).toContain('data-rich-text-toc-count="1"');
+  expect(html).toContain("How the pipeline works");
+  expect(html).toContain('href="#"');
+  expect(html).not.toContain("<script");
 });
 
 function normalizeFeatureGridItemsForRenderer(

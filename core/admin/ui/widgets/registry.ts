@@ -22,6 +22,9 @@ import {
   StatsKpiAdvancedEditor,
   StatsKpiVisualEditor,
   StatsKpiWizardEditor,
+  RichTextSectionAdvancedEditor,
+  RichTextSectionVisualEditor,
+  RichTextSectionWizardEditor,
   TeamAdvancedEditor,
   TeamVisualEditor,
   TeamWizardEditor,
@@ -102,6 +105,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: TeamWizardEditor,
       visual: TeamVisualEditor,
       advanced: TeamAdvancedEditor,
+    },
+    richTextSection: {
+      wizard: RichTextSectionWizardEditor,
+      visual: RichTextSectionVisualEditor,
+      advanced: RichTextSectionAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,
