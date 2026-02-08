@@ -24,6 +24,7 @@ export function ensureRuntimeWidgetsRegistered() {
     ctaBanner: noopEditors,
     logoCloud: noopEditors,
     galleryMosaic: noopEditors,
+    statsKpi: noopEditors,
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,

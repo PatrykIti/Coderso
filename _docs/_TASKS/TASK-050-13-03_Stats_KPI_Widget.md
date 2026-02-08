@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-13-02  
-**Status:** To Do
+**Status:** Done (2026-02-08)
 
 ---
 
@@ -38,6 +38,8 @@ Implement Stats KPI widget for metrics and trust numbers.
 | `core/admin/ui/widgets/registry.ts` | register editors | wiring |
 | `core/widgets/core/index.ts` | register definition | catalog |
 | `tests/unit/widgets/statsKpi.test.tsx` | new tests | schema/defaults/render |
+| `tests/unit/widgets/renderer.test.tsx` | add runtime assertions | markers |
+| `tests/unit/ui/widget-template-editor.test.tsx` | add editor integration | visual sections |
 
 ---
 
@@ -46,10 +48,13 @@ Implement Stats KPI widget for metrics and trust numbers.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun test tests/unit/widgets/statsKpi.test.tsx`
+- `bun test tests/unit/widgets/renderer.test.tsx`
+- `bun test tests/unit/ui/widget-template-editor.test.tsx`
 
 ---
 
 ## Documentation Updates Required
 
 - `_docs/_WIDGETS/STATS_KPI.md`
+- `_docs/WIDGETS.md`
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-stats-kpi-widget.md`

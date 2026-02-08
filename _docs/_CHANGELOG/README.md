@@ -174,6 +174,7 @@ Project Change Log.
 | 177 | 2026-02-08 | CTA banner widget | CMS/Widgets |
 | 178 | 2026-02-08 | Logo cloud widget | CMS/Widgets |
 | 179 | 2026-02-08 | Gallery mosaic widget | CMS/Widgets |
+| 180 | 2026-02-08 | Stats KPI widget | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

@@ -34,6 +34,7 @@ Wymagane:
 - CTA Banner (kompaktowy pasek konwersyjny)
 - Logo Cloud (sekcja wiarygodnosci z logotypami)
 - Gallery Mosaic (wizualna sekcja mediow)
+- Stats KPI (sekcja metryk i proof points)
 - Menu/Nawigacja
 - Stopka (linki, dane, social)
 
@@ -87,6 +88,7 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/CTA_BANNER.md`
 - `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_WIDGETS/GALLERY_MOSAIC.md`
+- `_docs/_WIDGETS/STATS_KPI.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
 

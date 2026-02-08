@@ -68,6 +68,11 @@ import {
   galleryMosaicDefaults,
   type GalleryMosaicData,
 } from "../../../core/widgets/core/galleryMosaic";
+import {
+  createStatsKpiWidget,
+  statsKpiDefaults,
+  type StatsKpiData,
+} from "../../../core/widgets/core/statsKpi";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -89,6 +94,7 @@ const StubCtaBannerEditor: ComponentType<WidgetEditorProps<CtaBannerData>> = () 
 const StubLogoCloudEditor: ComponentType<WidgetEditorProps<LogoCloudData>> = () => null;
 const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData>> = () =>
   null;
+const StubStatsKpiEditor: ComponentType<WidgetEditorProps<StatsKpiData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -1015,6 +1021,71 @@ test("renderer outputs gallery mosaic variant and caption markers", () => {
   expect(html).toContain('data-gallery-mosaic-caption-position="hover"');
   expect(html).toContain('data-gallery-media-type="video"');
   expect(html).toContain("Main frame");
+});
+
+test("renderer outputs stats kpi variant and style markers", () => {
+  clearWidgets();
+  registerWidget(
+    createStatsKpiWidget({
+      wizard: StubStatsKpiEditor,
+      visual: StubStatsKpiEditor,
+      advanced: StubStatsKpiEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "stats-kpi-1",
+        type: "stats-kpi",
+        variant: "split-highlight",
+        data: {
+          ...statsKpiDefaults,
+          header: {
+            title: "Performance overview",
+            description: "Critical KPIs for campaign delivery and retention.",
+          },
+          items: [
+            {
+              id: "kpi-1",
+              value: "250%",
+              label: "Growth",
+              description: "Revenue growth in the last quarter.",
+              icon: "📈",
+            },
+            {
+              id: "kpi-2",
+              value: "99.95%",
+              label: "Uptime",
+              description: "Average service availability.",
+              icon: "⚙️",
+            },
+            {
+              id: "kpi-3",
+              value: "18m",
+              label: "Support SLA",
+              description: "Median first-response time.",
+              icon: "⏱",
+            },
+          ],
+          style: {
+            ...statsKpiDefaults.style,
+            alignment: "start",
+            spacing: "lg",
+            divider: true,
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-stats-kpi-variant="split-highlight"');
+  expect(html).toContain('data-stats-kpi-count="3"');
+  expect(html).toContain('data-stats-kpi-alignment="start"');
+  expect(html).toContain('data-stats-kpi-spacing="lg"');
+  expect(html).toContain('data-stats-kpi-divider="true"');
+  expect(html).toContain("Performance overview");
+  expect(html).toContain("Support SLA");
 });
 
 function normalizeFeatureGridItemsForRenderer(

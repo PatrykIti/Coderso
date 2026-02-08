@@ -64,3 +64,8 @@ export {
   GalleryMosaicVisualEditor,
   GalleryMosaicWizardEditor,
 } from "./GalleryMosaicEditors";
+export {
+  StatsKpiAdvancedEditor,
+  StatsKpiVisualEditor,
+  StatsKpiWizardEditor,
+} from "./StatsKpiEditors";

@@ -19,6 +19,9 @@ import {
   LogoCloudAdvancedEditor,
   LogoCloudVisualEditor,
   LogoCloudWizardEditor,
+  StatsKpiAdvancedEditor,
+  StatsKpiVisualEditor,
+  StatsKpiWizardEditor,
   FeatureGridAdvancedEditor,
   FeatureGridVisualEditor,
   FeatureGridWizardEditor,
@@ -86,6 +89,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: GalleryMosaicWizardEditor,
       visual: GalleryMosaicVisualEditor,
       advanced: GalleryMosaicAdvancedEditor,
+    },
+    statsKpi: {
+      wizard: StatsKpiWizardEditor,
+      visual: StatsKpiVisualEditor,
+      advanced: StatsKpiAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

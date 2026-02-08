@@ -9,5 +9,6 @@
 - `CTA_BANNER.md` - CTA banner
 - `LOGO_CLOUD.md` - Logo cloud
 - `GALLERY_MOSAIC.md` - Gallery mosaic
+- `STATS_KPI.md` - Stats KPI
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

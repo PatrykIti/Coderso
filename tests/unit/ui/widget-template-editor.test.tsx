@@ -58,6 +58,11 @@ import {
   GalleryMosaicWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/GalleryMosaicEditors";
 import {
+  StatsKpiAdvancedEditor,
+  StatsKpiVisualEditor,
+  StatsKpiWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/StatsKpiEditors";
+import {
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -108,6 +113,10 @@ import {
   createGalleryMosaicWidget,
   galleryMosaicDefaults,
 } from "../../../core/widgets/core/galleryMosaic";
+import {
+  createStatsKpiWidget,
+  statsKpiDefaults,
+} from "../../../core/widgets/core/statsKpi";
 import {
   createFaqAccordionWidget,
   faqAccordionDefaults,
@@ -496,6 +505,37 @@ test("widget template block settings render gallery mosaic visual sections", () 
   expect(html).toContain("Header copy");
   expect(html).toContain("Media items and links");
   expect(html).toContain("Overlay and caption controls");
+});
+
+test("widget template block settings render stats kpi visual sections", () => {
+  const widget = createStatsKpiWidget({
+    wizard: StatsKpiWizardEditor,
+    visual: StatsKpiVisualEditor,
+    advanced: StatsKpiAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "stats-kpi-1",
+        type: "stats-kpi",
+        variant: "cards",
+        data: statsKpiDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and metric structure");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Metrics content and order");
+  expect(html).toContain("Typography and colors");
+  expect(html).toContain("Layout display options");
 });
 
 test("widget template block settings render contact visual sections", () => {
