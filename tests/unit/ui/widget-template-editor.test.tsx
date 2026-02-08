@@ -3,6 +3,11 @@ import { renderToString } from "react-dom/server";
 
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import {
+  CompareTimelineAdvancedEditor,
+  CompareTimelineVisualEditor,
+  CompareTimelineWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/CompareTimelineEditors";
+import {
   FooterAdvancedEditor,
   FooterVisualEditor,
   FooterWizardEditor,
@@ -18,6 +23,10 @@ import {
   TimelineWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/TimelineEditors";
 import { WidgetTemplateEditorPage } from "../../../core/admin/ui/widgets/WidgetTemplateEditorPage";
+import {
+  compareTimelineDefaults,
+  createCompareTimelineWidget,
+} from "../../../core/widgets/core/compareTimeline";
 import {
   createFooterWidget,
   footerDefaults,
@@ -135,4 +144,32 @@ test("widget template block settings render timeline visual sections", () => {
   expect(html).toContain("Steps content and order");
   expect(html).toContain("Guides and axis line");
   expect(html).toContain("Typography and spacing");
+});
+
+test("widget template block settings render compare timeline baseline sections", () => {
+  const widget = createCompareTimelineWidget({
+    wizard: CompareTimelineWizardEditor,
+    visual: CompareTimelineVisualEditor,
+    advanced: CompareTimelineAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "compare-1",
+        type: "compare-timeline",
+        variant: "dual-track-highlight",
+        data: compareTimelineDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Markers mapping");
+  expect(html).toContain("Highlight target and segments");
 });

@@ -4,6 +4,11 @@ import { renderToString } from "react-dom/server";
 
 import { createHeroWidget, heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
 import {
+  compareTimelineDefaults,
+  createCompareTimelineWidget,
+  type CompareTimelineData,
+} from "../../../core/widgets/core/compareTimeline";
+import {
   createTimelineWidget,
   timelineDefaults,
   type TimelineData,
@@ -23,6 +28,8 @@ import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
+const StubCompareTimelineEditor: ComponentType<WidgetEditorProps<CompareTimelineData>> = () =>
+  null;
 const StubTimelineEditor: ComponentType<WidgetEditorProps<TimelineData>> = () => null;
 const StubNavigationEditor: ComponentType<WidgetEditorProps<NavigationData>> = () => null;
 const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => null;
@@ -447,4 +454,40 @@ test("renderer outputs timeline variant and orientation markers", () => {
   expect(html).toContain('data-timeline-variant="cards"');
   expect(html).toContain('data-timeline-orientation="vertical"');
   expect(html).toContain('data-timeline-label-position="bottom"');
+});
+
+test("renderer outputs compare timeline highlight segments", () => {
+  clearWidgets();
+  registerWidget(
+    createCompareTimelineWidget({
+      wizard: StubCompareTimelineEditor,
+      visual: StubCompareTimelineEditor,
+      advanced: StubCompareTimelineEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "compare-1",
+        type: "compare-timeline",
+        variant: "dual-track-highlight",
+        data: {
+          ...compareTimelineDefaults,
+          highlight: { targetTrackId: "b" },
+          tracks: [
+            compareTimelineDefaults.tracks[0]!,
+            {
+              ...compareTimelineDefaults.tracks[1]!,
+              segments: [{ from: 0, to: 1, label: "Fast lane" }],
+            },
+          ],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-compare-variant="dual-track-highlight"');
+  expect(html).toContain('data-compare-target-track="b"');
+  expect(html).toContain("Fast lane");
 });

@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-050-04  
-**Status:** To Do
+**Status:** In Progress (2026-02-07)
 
 ---
 
@@ -19,7 +19,7 @@ comparison, marker mapping, and highlight segments.
 
 Execution is split into two detailed subtasks:
 
-- `TASK-050-09-01` Compare Timeline Widget Bugfixes and UX Hardening (**To Do**)
+- `TASK-050-09-01` Compare Timeline Widget Bugfixes and UX Hardening (**Done, 2026-02-07**)
 - `TASK-050-09-02` Compare Timeline Widget Visual Rebuild and Advanced Cleanup (**To Do**)
 
 ---

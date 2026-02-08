@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Porownanie dwoch procesow na wspolnej osi bez dat.
-Przyklad: tradycyjna budowa vs budowa z firma.
+Compare two processes on a shared axis without dates.
+Example: traditional flow vs optimized flow.
 
 ## Widget ID
 
@@ -11,55 +11,76 @@ Przyklad: tradycyjna budowa vs budowa z firma.
 
 ## Variants (v1)
 
-- dual-track (dwie linie, wspolna os i etykiety etapow)
-- dual-track-highlight (z wyroznionymi segmentami na wybranym torze)
+- `dual-track`: two tracks rendered against shared axis steps
+- `dual-track-highlight`: same as dual-track + highlighted segments on target track
 
-## Wizard flow (v1)
+## Editor Modes (current after TASK-050-09-01)
 
-- Pytanie 1: Nazwy torow (np. "Tradycyjna budowa" / "Z nami")
-- Pytanie 2: Etapy osi (3-6)
-- Pytanie 3: Markery na torze A (wybor etapow)
-- Pytanie 4: Markery na torze B (wybor etapow)
-- Pytanie 5: Czy wyroznic segmenty? (tak/nie)
-- Pytanie 6: Ktory tor jest priorytetem (kolor akcentu)
+### Wizard
+- Variant selection
+- Track labels
+- Axis step count (`3-6`)
+- Axis labels
+- Marker selection for track A and B
+- Highlight toggle + target track + quick segment editor
 
-## Visual mode
+### Visual
+- Variant selection
+- Track labels
+- Marker mapping per track
+- Highlight target and segment quick editing
+- Guide/layout quick controls (guide style, label position, track spacing)
+- Highlight style controls (color + label style)
 
-- Podglad dwoch osi z etykietami.
-- Wariant highlight pokazuje segmenty w kolorze akcentu.
+### Advanced
+- Full axis editor (labels + optional descriptions, step count add/remove)
+- Full track editor (markers + segments with range controls)
+- Guides/layout controls
+- Full style token controls (highlight, marker, labels, guides)
 
-## Advanced options (v1)
+## Runtime Behavior Notes
 
-- axis: lista etapow (etykieta, opis opcjonalny)
-- tracks: nazwy, markery, segmenty
-- highlight: kolor, styl labeli
-- guides: enabled, style
-- layout: spacing miedzy torami, labelPosition
+- Axis steps are normalized to range `3-6` with stable IDs.
+- Track set is normalized to deterministic IDs: `a`, `b`.
+- Marker indexes are clamped to valid axis range and deduplicated.
+- Segment ranges are normalized with `from <= to` and clamped indexes.
+- Invalid variant input falls back to `dual-track`.
 
-## Data model (summary)
+## Data Model (summary)
 
 ```json
 {
-  "variant": "dual-track",
+  "variant": "dual-track-highlight",
   "axis": {
-    "steps": [{ "label": "string" }]
+    "steps": [
+      { "id": "step-1", "label": "Plan", "description": "Optional" }
+    ]
   },
   "tracks": [
     {
       "id": "a",
-      "label": "string",
-      "markers": [0, 1, 2]
+      "label": "Traditional",
+      "markers": [0, 1, 2],
+      "segments": [{ "from": 0, "to": 1, "label": "Slow approvals" }]
     },
     {
       "id": "b",
-      "label": "string",
-      "markers": [0, 2, 3],
-      "segments": [{ "from": 1, "to": 2, "label": "string" }]
+      "label": "With us",
+      "markers": [0, 2],
+      "segments": [{ "from": 1, "to": 2, "label": "Accelerated" }]
     }
   ],
   "guides": { "enabled": true, "style": "dashed" },
+  "layout": { "trackSpacing": "md", "labelPosition": "top" },
+  "highlight": { "targetTrackId": "b" },
   "style": {
-    "highlightColor": "amber"
+    "highlightColor": "#f59e0b",
+    "highlightLabelStyle": "solid",
+    "markerColor": "var(--color-primary)",
+    "trackLabelColor": "var(--color-text)",
+    "stepLabelColor": "var(--color-text)",
+    "mutedStepColor": "var(--color-text)",
+    "guideColor": "var(--color-border)"
   }
 }
 ```
