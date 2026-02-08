@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-050-12  
-**Status:** To Do
+**Status:** In Progress (2026-02-08)
 
 ---
 
@@ -30,6 +30,11 @@ Order inside section:
 - **TASK-050-13-03:** Stats KPI Widget
 - **TASK-050-13-04:** Team Widget
 - **TASK-050-13-05:** Rich Text Section Widget
+
+## Progress
+
+- Done: `TASK-050-13-01`
+- Next: `TASK-050-13-02`
 
 ---
 

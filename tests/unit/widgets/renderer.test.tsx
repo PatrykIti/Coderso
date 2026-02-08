@@ -58,6 +58,11 @@ import {
   ctaBannerDefaults,
   type CtaBannerData,
 } from "../../../core/widgets/core/ctaBanner";
+import {
+  createLogoCloudWidget,
+  logoCloudDefaults,
+  type LogoCloudData,
+} from "../../../core/widgets/core/logoCloud";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -76,6 +81,7 @@ const StubPricingPlansEditor: ComponentType<WidgetEditorProps<PricingPlansData>>
 const StubFaqAccordionEditor: ComponentType<WidgetEditorProps<FaqAccordionData>> = () =>
   null;
 const StubCtaBannerEditor: ComponentType<WidgetEditorProps<CtaBannerData>> = () => null;
+const StubLogoCloudEditor: ComponentType<WidgetEditorProps<LogoCloudData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -886,6 +892,65 @@ test("renderer outputs cta banner variant and style markers", () => {
   expect(html).toContain('data-cta-banner-padding="lg"');
   expect(html).toContain('data-cta-banner-border-width="2"');
   expect(html).toContain("Start building now");
+});
+
+test("renderer outputs logo cloud variant and style markers", () => {
+  clearWidgets();
+  registerWidget(
+    createLogoCloudWidget({
+      wizard: StubLogoCloudEditor,
+      visual: StubLogoCloudEditor,
+      advanced: StubLogoCloudEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "logo-cloud-1",
+        type: "logo-cloud",
+        variant: "dense",
+        data: {
+          ...logoCloudDefaults,
+          logos: [
+            {
+              id: "logo-1",
+              name: "Acme",
+              image: "https://cdn.example.com/acme.svg",
+              href: "#",
+            },
+            {
+              id: "logo-2",
+              name: "North Labs",
+              image: "https://cdn.example.com/north.svg",
+              href: "#",
+            },
+            {
+              id: "logo-3",
+              name: "BlueRiver",
+              image: "https://cdn.example.com/blue.svg",
+              href: "#",
+            },
+          ],
+          style: {
+            ...logoCloudDefaults.style,
+            logoHeight: "lg",
+            gap: "lg",
+            alignment: "start",
+            grayscale: true,
+            hoverColor: false,
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-logo-cloud-variant="dense"');
+  expect(html).toContain('data-logo-cloud-gap="lg"');
+  expect(html).toContain('data-logo-cloud-count="3"');
+  expect(html).toContain('data-logo-cloud-alignment="start"');
+  expect(html).toContain('data-logo-cloud-grayscale="true"');
+  expect(html).toContain("North Labs");
 });
 
 function normalizeFeatureGridItemsForRenderer(

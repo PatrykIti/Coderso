@@ -54,3 +54,8 @@ export {
   CtaBannerVisualEditor,
   CtaBannerWizardEditor,
 } from "./CtaBannerEditors";
+export {
+  LogoCloudAdvancedEditor,
+  LogoCloudVisualEditor,
+  LogoCloudWizardEditor,
+} from "./LogoCloudEditors";

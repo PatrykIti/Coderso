@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 29 tasks
-- **In Progress:** 0 tasks
-- **Done:** 245 tasks
+- **To Do:** 27 tasks
+- **In Progress:** 1 task
+- **Done:** 246 tasks
 
 ---
 
@@ -56,8 +56,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..14 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
-| TASK-050-13 | Trust and Content Widgets Pack | Medium | Large | Index for TASK-050-13-01..05 |
-| TASK-050-13-01 | Logo Cloud Widget | Medium | Medium | Partner/client logos with links |
 | TASK-050-13-02 | Gallery Mosaic Widget | Medium | Large | Image/video mosaic layouts |
 | TASK-050-13-03 | Stats KPI Widget | Medium | Medium | KPI values + labels |
 | TASK-050-13-04 | Team Widget | Medium | Medium | Team members + social links |
@@ -85,6 +83,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-13 | Trust and Content Widgets Pack | Medium | Large | 050-13-01 complete; next: 050-13-02 |
 
 ---
 
@@ -92,6 +91,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-13-01 | Logo Cloud Widget | Medium | Medium | Schema + renderer + Wizard/Visual/Advanced + tests complete |
 | TASK-050-12 | Conversion Widgets Pack | High | Large | 050-12-01/02/03/04/05 complete |
 | TASK-050-12-05 | CTA Banner Widget | Medium | Medium | Schema + renderer + Wizard/Visual/Advanced + tests complete |
 | TASK-050-12-04 | FAQ Accordion Widget | Medium | Medium | Schema + renderer + Wizard/Visual/Advanced + tests complete |

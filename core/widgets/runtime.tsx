@@ -22,6 +22,7 @@ export function ensureRuntimeWidgetsRegistered() {
     pricingPlans: noopEditors,
     faqAccordion: noopEditors,
     ctaBanner: noopEditors,
+    logoCloud: noopEditors,
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,

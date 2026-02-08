@@ -13,6 +13,9 @@ import {
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
+  LogoCloudAdvancedEditor,
+  LogoCloudVisualEditor,
+  LogoCloudWizardEditor,
   FeatureGridAdvancedEditor,
   FeatureGridVisualEditor,
   FeatureGridWizardEditor,
@@ -70,6 +73,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: CtaBannerWizardEditor,
       visual: CtaBannerVisualEditor,
       advanced: CtaBannerAdvancedEditor,
+    },
+    logoCloud: {
+      wizard: LogoCloudWizardEditor,
+      visual: LogoCloudVisualEditor,
+      advanced: LogoCloudAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

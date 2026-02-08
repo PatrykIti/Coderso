@@ -32,6 +32,7 @@ Wymagane:
 - Kontakt (formularz + dane kontaktowe)
 - FAQ Accordion (pytania i odpowiedzi)
 - CTA Banner (kompaktowy pasek konwersyjny)
+- Logo Cloud (sekcja wiarygodnosci z logotypami)
 - Menu/Nawigacja
 - Stopka (linki, dane, social)
 
@@ -83,6 +84,7 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/CONTACT.md`
 - `_docs/_WIDGETS/FAQ.md`
 - `_docs/_WIDGETS/CTA_BANNER.md`
+- `_docs/_WIDGETS/LOGO_CLOUD.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
 

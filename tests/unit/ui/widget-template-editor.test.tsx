@@ -48,6 +48,11 @@ import {
   CtaBannerWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/CtaBannerEditors";
 import {
+  LogoCloudAdvancedEditor,
+  LogoCloudVisualEditor,
+  LogoCloudWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/LogoCloudEditors";
+import {
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -90,6 +95,10 @@ import {
   createCtaBannerWidget,
   ctaBannerDefaults,
 } from "../../../core/widgets/core/ctaBanner";
+import {
+  createLogoCloudWidget,
+  logoCloudDefaults,
+} from "../../../core/widgets/core/logoCloud";
 import {
   createFaqAccordionWidget,
   faqAccordionDefaults,
@@ -418,6 +427,36 @@ test("widget template block settings render cta banner visual sections", () => {
   expect(html).toContain("Content copy");
   expect(html).toContain("Actions");
   expect(html).toContain("Colors and button styles");
+});
+
+test("widget template block settings render logo cloud visual sections", () => {
+  const widget = createLogoCloudWidget({
+    wizard: LogoCloudWizardEditor,
+    visual: LogoCloudVisualEditor,
+    advanced: LogoCloudAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "logo-cloud-1",
+        type: "logo-cloud",
+        variant: "grid",
+        data: logoCloudDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Logos list and links");
+  expect(html).toContain("Display style");
 });
 
 test("widget template block settings render contact visual sections", () => {

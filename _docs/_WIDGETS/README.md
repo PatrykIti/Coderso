@@ -7,5 +7,6 @@
 - `CONTACT.md` - Kontakt
 - `FAQ.md` - FAQ accordion
 - `CTA_BANNER.md` - CTA banner
+- `LOGO_CLOUD.md` - Logo cloud
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka
