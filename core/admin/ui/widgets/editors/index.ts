@@ -34,3 +34,8 @@ export {
   FeatureGridVisualEditor,
   FeatureGridWizardEditor,
 } from "./FeatureGridEditors";
+export {
+  TestimonialsAdvancedEditor,
+  TestimonialsVisualEditor,
+  TestimonialsWizardEditor,
+} from "./TestimonialsEditors";

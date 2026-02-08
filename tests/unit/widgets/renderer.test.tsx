@@ -38,6 +38,11 @@ import {
   featureGridDefaults,
   type FeatureGridData,
 } from "../../../core/widgets/core/featureGrid";
+import {
+  createTestimonialsWidget,
+  testimonialsDefaults,
+  type TestimonialsData,
+} from "../../../core/widgets/core/testimonials";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -51,6 +56,7 @@ const StubFooterEditor: ComponentType<WidgetEditorProps<FooterData>> = () => nul
 const StubNewsletterEditor: ComponentType<WidgetEditorProps<NewsletterData>> = () => null;
 const StubContactEditor: ComponentType<WidgetEditorProps<ContactData>> = () => null;
 const StubFeatureGridEditor: ComponentType<WidgetEditorProps<FeatureGridData>> = () => null;
+const StubTestimonialsEditor: ComponentType<WidgetEditorProps<TestimonialsData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -633,6 +639,67 @@ test("renderer outputs feature grid variant and layout markers", () => {
   expect(html).toContain('data-feature-grid-columns="3"');
   expect(html).toContain('data-feature-grid-gap="lg"');
   expect(html).toContain('data-feature-grid-highlighted="true"');
+});
+
+test("renderer outputs testimonials variant and rating markers", () => {
+  clearWidgets();
+  registerWidget(
+    createTestimonialsWidget({
+      wizard: StubTestimonialsEditor,
+      visual: StubTestimonialsEditor,
+      advanced: StubTestimonialsEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "testimonials-1",
+        type: "testimonials",
+        variant: "slider-static",
+        data: {
+          ...testimonialsDefaults,
+          testimonials: [
+            {
+              id: "t-1",
+              quote: "Great flexibility for content teams.",
+              author: "Alex",
+              role: "Content Lead",
+              rating: 4,
+              sourceLabel: "Acme",
+            },
+            {
+              id: "t-2",
+              quote: "We reduced page launch time significantly.",
+              author: "Riley",
+              role: "Marketing Manager",
+              rating: 5,
+              sourceLabel: "North Labs",
+            },
+            {
+              id: "t-3",
+              quote: "Design consistency improved across campaigns.",
+              author: "Jordan",
+              role: "Designer",
+              rating: 5,
+              sourceLabel: "BlueRiver",
+            },
+          ],
+          style: {
+            ...testimonialsDefaults.style,
+            spacing: "lg",
+            accentColor: "#1d4ed8",
+          },
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-testimonials-variant="slider-static"');
+  expect(html).toContain('data-testimonials-spacing="lg"');
+  expect(html).toContain('data-testimonials-count="3"');
+  expect(html).toContain('data-testimonial-rating="4"');
+  expect(html).toContain("Great flexibility for content teams.");
 });
 
 function normalizeFeatureGridItemsForRenderer(

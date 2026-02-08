@@ -22,6 +22,9 @@ import {
   NewsletterAdvancedEditor,
   NewsletterVisualEditor,
   NewsletterWizardEditor,
+  TestimonialsAdvancedEditor,
+  TestimonialsVisualEditor,
+  TestimonialsWizardEditor,
   TimelineAdvancedEditor,
   TimelineVisualEditor,
   TimelineWizardEditor,
@@ -38,6 +41,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: FeatureGridWizardEditor,
       visual: FeatureGridVisualEditor,
       advanced: FeatureGridAdvancedEditor,
+    },
+    testimonials: {
+      wizard: TestimonialsWizardEditor,
+      visual: TestimonialsVisualEditor,
+      advanced: TestimonialsAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

@@ -23,6 +23,11 @@ import {
   FooterWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/FooterEditors";
 import {
+  TestimonialsAdvancedEditor,
+  TestimonialsVisualEditor,
+  TestimonialsWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/TestimonialsEditors";
+import {
   NavigationAdvancedEditor,
   NavigationVisualEditor,
   NavigationWizardEditor,
@@ -62,6 +67,10 @@ import {
   createNewsletterWidget,
   newsletterDefaults,
 } from "../../../core/widgets/core/newsletter";
+import {
+  createTestimonialsWidget,
+  testimonialsDefaults,
+} from "../../../core/widgets/core/testimonials";
 import {
   createTimelineWidget,
   timelineDefaults,
@@ -262,6 +271,36 @@ test("widget template block settings render feature grid visual sections", () =>
   expect(html).toContain("Header copy");
   expect(html).toContain("Feature cards and actions");
   expect(html).toContain("Colors and borders");
+});
+
+test("widget template block settings render testimonials visual sections", () => {
+  const widget = createTestimonialsWidget({
+    wizard: TestimonialsWizardEditor,
+    visual: TestimonialsVisualEditor,
+    advanced: TestimonialsAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "testimonials-1",
+        type: "testimonials",
+        variant: "grid",
+        data: testimonialsDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Header copy");
+  expect(html).toContain("Testimonials content and ratings");
+  expect(html).toContain("Colors and emphasis");
 });
 
 test("widget template block settings render contact visual sections", () => {

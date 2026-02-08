@@ -18,6 +18,7 @@ export function ensureRuntimeWidgetsRegistered() {
   registerCoreWidgets({
     hero: noopEditors,
     featureGrid: noopEditors,
+    testimonials: noopEditors,
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,

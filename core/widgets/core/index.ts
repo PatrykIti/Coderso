@@ -8,6 +8,7 @@ import { createFooterWidget, type FooterData } from "./footer";
 import { createHeroWidget, type HeroData } from "./hero";
 import { createNavigationWidget, type NavigationData } from "./navigation";
 import { createNewsletterWidget, type NewsletterData } from "./newsletter";
+import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
 import { createTimelineWidget, type TimelineData } from "./timeline";
 
 type EditorBundle<T> = {
@@ -19,6 +20,7 @@ type EditorBundle<T> = {
 export type CoreWidgetEditors = {
   hero: EditorBundle<HeroData>;
   featureGrid: EditorBundle<FeatureGridData>;
+  testimonials: EditorBundle<TestimonialsData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -33,6 +35,7 @@ export function createCoreWidgetDefinitions(
   return [
     createHeroWidget(editors.hero),
     createFeatureGridWidget(editors.featureGrid),
+    createTestimonialsWidget(editors.testimonials),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),
