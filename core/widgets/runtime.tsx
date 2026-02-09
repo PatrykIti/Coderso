@@ -28,6 +28,7 @@ export function ensureRuntimeWidgetsRegistered() {
     team: noopEditors,
     richTextSection: noopEditors,
     contentList: noopEditors,
+    entryTeaser: noopEditors,
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,

@@ -13,5 +13,6 @@
 - `TEAM.md` - Team
 - `RICH_TEXT_SECTION.md` - Rich text section
 - `CONTENT_LIST.md` - Dynamic content list
+- `ENTRY_TEASER.md` - Dynamic single-entry teaser
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

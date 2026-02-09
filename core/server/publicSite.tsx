@@ -28,6 +28,7 @@ import {
   listEntries,
 } from "../services/content/entryService";
 import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
+import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
 import { getWidgetTemplatePreviewModel } from "../services/widgets/widgetTemplatePreviewService";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
@@ -41,6 +42,10 @@ import {
   normalizeContentListData,
   type ContentListData,
 } from "../widgets/core/contentList";
+import {
+  normalizeEntryTeaserData,
+  type EntryTeaserData,
+} from "../widgets/core/entryTeaser";
 
 export type PublicPageData = {
   title: string;
@@ -174,6 +179,22 @@ const hydrateRuntimeBlock = async (
       ensureRecord(block.data) as ContentListData
     );
     const resolved = await resolveContentListRuntimeData(normalizedData, {
+      preview: options.preview,
+      contentRoutes: options.contentRoutes,
+    });
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        resolved,
+      },
+    };
+  }
+  if (block.type === "entry-teaser") {
+    const normalizedData = normalizeEntryTeaserData(
+      ensureRecord(block.data) as EntryTeaserData
+    );
+    const resolved = await resolveEntryTeaserRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
     });

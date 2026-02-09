@@ -38,6 +38,7 @@ Wymagane:
 - Team (profile zespolu z rolami i social links)
 - Rich Text Section (dluzszy blok tresci z bezpiecznym HTML)
 - Content List (dynamiczna lista wpisow z Content Types)
+- Entry Teaser (dynamiczny teaser pojedynczego wpisu)
 - Menu/Nawigacja
 - Stopka (linki, dane, social)
 
@@ -95,6 +96,7 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
 - `_docs/_WIDGETS/CONTENT_LIST.md`
+- `_docs/_WIDGETS/ENTRY_TEASER.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
 

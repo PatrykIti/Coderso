@@ -84,3 +84,8 @@ export {
   ContentListVisualEditor,
   ContentListWizardEditor,
 } from "./ContentListEditors";
+export {
+  EntryTeaserAdvancedEditor,
+  EntryTeaserVisualEditor,
+  EntryTeaserWizardEditor,
+} from "./EntryTeaserEditors";

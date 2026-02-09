@@ -5,6 +5,7 @@ import { createCompareTimelineWidget, type CompareTimelineData } from "./compare
 import { createContentListWidget, type ContentListData } from "./contentList";
 import { createContactWidget, type ContactData } from "./contact";
 import { createCtaBannerWidget, type CtaBannerData } from "./ctaBanner";
+import { createEntryTeaserWidget, type EntryTeaserData } from "./entryTeaser";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
 import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion";
@@ -42,6 +43,7 @@ export type CoreWidgetEditors = {
   team: EditorBundle<TeamData>;
   richTextSection: EditorBundle<RichTextSectionData>;
   contentList: EditorBundle<ContentListData>;
+  entryTeaser: EditorBundle<EntryTeaserData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -66,6 +68,7 @@ export function createCoreWidgetDefinitions(
     createTeamWidget(editors.team),
     createRichTextSectionWidget(editors.richTextSection),
     createContentListWidget(editors.contentList),
+    createEntryTeaserWidget(editors.entryTeaser),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

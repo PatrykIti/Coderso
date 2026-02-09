@@ -178,6 +178,7 @@ Project Change Log.
 | 181 | 2026-02-08 | Team widget | CMS/Widgets |
 | 182 | 2026-02-08 | Rich text section widget | CMS/Widgets |
 | 183 | 2026-02-08 | Content list widget | CMS/Widgets |
+| 184 | 2026-02-08 | Entry teaser widget | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

@@ -13,6 +13,9 @@ import {
   ContentListAdvancedEditor,
   ContentListVisualEditor,
   ContentListWizardEditor,
+  EntryTeaserAdvancedEditor,
+  EntryTeaserVisualEditor,
+  EntryTeaserWizardEditor,
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -118,6 +121,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: ContentListWizardEditor,
       visual: ContentListVisualEditor,
       advanced: ContentListAdvancedEditor,
+    },
+    entryTeaser: {
+      wizard: EntryTeaserWizardEditor,
+      visual: EntryTeaserVisualEditor,
+      advanced: EntryTeaserAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

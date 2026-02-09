@@ -11,11 +11,17 @@ import {
   createContentListWidget,
   type ContentListData,
 } from "../../../core/widgets/core/contentList";
+import {
+  createEntryTeaserWidget,
+  type EntryTeaserData,
+} from "../../../core/widgets/core/entryTeaser";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 const StubContentListEditor: ComponentType<WidgetEditorProps<ContentListData>> = () =>
+  null;
+const StubEntryTeaserEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> = () =>
   null;
 
 test("renderPublicPageHtml renders title and preview banner", () => {
@@ -251,4 +257,74 @@ test("renderPublicPageHtml renders content list resolved payload deterministical
   expect(html).toContain('data-content-list-variant="cards"');
   expect(html).toContain('data-content-list-items="1"');
   expect(html).toContain('data-content-list-state="ready"');
+});
+
+test("renderPublicPageHtml renders entry teaser resolved payload deterministically", () => {
+  clearWidgets();
+  registerWidget(
+    createEntryTeaserWidget({
+      wizard: StubEntryTeaserEditor,
+      visual: StubEntryTeaserEditor,
+      advanced: StubEntryTeaserEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Blog",
+    blocks: [
+      {
+        id: "entry-teaser-1",
+        type: "entry-teaser",
+        variant: "horizontal",
+        data: {
+          sourceMode: "manual",
+          source: {
+            contentTypeId: "blog-type-id",
+            entryId: "entry-1",
+          },
+          fields: {
+            showImage: false,
+            showExcerpt: true,
+            showMeta: true,
+            showTags: true,
+          },
+          cta: {
+            label: "Read post",
+            hrefMode: "auto",
+            href: "",
+          },
+          style: {
+            surface: "var(--color-bg)",
+            border: "var(--color-border)",
+            radius: "lg",
+            spacing: "md",
+          },
+          fallback: {
+            title: "No entry",
+            description: "Pick an entry",
+            fallbackToLatest: true,
+          },
+          resolved: {
+            item: {
+              id: "entry-1",
+              title: "Quarterly update",
+              href: "/blog/quarterly-update",
+              excerpt: "Highlights from this quarter.",
+              status: "published",
+              publishedAt: "2026-02-09T12:00:00.000Z",
+            },
+            sourceTypeId: "blog-type-id",
+            sourceTypeSlug: "blog",
+            resolvedAt: "2026-02-09T12:01:00.000Z",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain("Quarterly update");
+  expect(html).toContain("Read post");
+  expect(html).toContain('data-entry-teaser-variant="horizontal"');
+  expect(html).toContain('data-entry-teaser-source-mode="manual"');
+  expect(html).toContain('data-entry-teaser-state="ready"');
 });
