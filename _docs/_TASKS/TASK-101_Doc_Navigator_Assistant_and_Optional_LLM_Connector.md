@@ -70,6 +70,12 @@ core/admin/ui/assistant/
 - chat endpoint for `docs-only`
 - admin chat UI with citations
 
+### Phase A2: Internal docs knowledge base in DB
+- dedicated docs source root `_docs/_internal`
+- DB schema for docs/chunks/ingest runs
+- ingest pipeline with quality validation
+- DB-backed retriever with filesystem fallback
+
 ### Phase B: Optional LLM mode
 - provider abstraction
 - OpenRouter adapter
@@ -91,6 +97,7 @@ core/admin/ui/assistant/
 - `TASK-101-05_Admin_UI_Assistant_Chat_and_Modes.md`
 - `TASK-101-06_Assistant_Avatar_Rendering_and_Preferences.md`
 - `TASK-101-07_Assistant_Security_Quotas_Observability_and_Hardening.md`
+- `TASK-101-08_Internal_Docs_KB_Schema_Ingest_and_DB_Retrieval.md`
 
 ---
 

@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 4 tasks
+- **To Do:** 5 tasks
 - **In Progress:** 1 task
 - **Done:** 282 tasks
 
@@ -53,6 +53,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-05 | Admin UI Assistant Chat and Modes | High | Large | Chat panel + mode switch + sources |
 | TASK-101-06 | Assistant Avatar Rendering and Preferences | Medium | Medium | Optional GLB avatar + fallback |
 | TASK-101-07 | Assistant Security, Quotas, Observability and Hardening | High | Medium | Rate limits, audit, redaction |
+| TASK-101-08 | Internal Docs KB Schema, Ingest, and DB Retrieval | High | Large | DB tables + `_docs/_internal` ingest + DB retriever |
 
 ---
 
