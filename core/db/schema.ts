@@ -334,6 +334,83 @@ export const userSettings = pgTable(
   })
 );
 
+export const assistantDocs = pgTable(
+  "assistant_docs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sourcePath: text("source_path").notNull(),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    audience: text("audience").notNull(),
+    productArea: text("product_area").notNull(),
+    language: text("language").notNull().default("pl"),
+    keywordsJson: jsonb("keywords_json").notNull().default([]),
+    checksum: text("checksum").notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    sourcePathIdx: uniqueIndex("assistant_docs_source_path_idx").on(t.sourcePath),
+    slugIdx: index("assistant_docs_slug_idx").on(t.slug),
+    areaIdx: index("assistant_docs_product_area_idx").on(t.productArea),
+    languageIdx: index("assistant_docs_language_idx").on(t.language),
+  })
+);
+
+export const assistantDocChunks = pgTable(
+  "assistant_doc_chunks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    docId: uuid("doc_id")
+      .notNull()
+      .references(() => assistantDocs.id, { onDelete: "cascade" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    headingPath: jsonb("heading_path").notNull().default([]),
+    heading: text("heading").notNull(),
+    lineStart: integer("line_start").notNull(),
+    lineEnd: integer("line_end").notNull(),
+    content: text("content").notNull(),
+    normalizedText: text("normalized_text").notNull(),
+    tokenCount: integer("token_count").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    docIdx: index("assistant_doc_chunks_doc_id_idx").on(t.docId),
+    headingIdx: index("assistant_doc_chunks_heading_idx").on(t.heading),
+    lineIdx: index("assistant_doc_chunks_line_idx").on(t.lineStart, t.lineEnd),
+    chunkUniqueIdx: uniqueIndex("assistant_doc_chunks_doc_chunk_idx").on(
+      t.docId,
+      t.chunkIndex
+    ),
+  })
+);
+
+export const assistantDocIngestRuns = pgTable(
+  "assistant_doc_ingest_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    triggeredByUserId: uuid("triggered_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    sourceRoot: text("source_root").notNull(),
+    status: text("status").notNull().default("success"),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    finishedAt: timestamp("finished_at"),
+    filesScanned: integer("files_scanned").notNull().default(0),
+    docsUpserted: integer("docs_upserted").notNull().default(0),
+    chunksUpserted: integer("chunks_upserted").notNull().default(0),
+    errorsCount: integer("errors_count").notNull().default(0),
+    errorsJson: jsonb("errors_json").notNull().default([]),
+  },
+  (t) => ({
+    startedIdx: index("assistant_doc_ingest_runs_started_at_idx").on(t.startedAt),
+    statusIdx: index("assistant_doc_ingest_runs_status_idx").on(t.status),
+    actorIdx: index("assistant_doc_ingest_runs_actor_idx").on(t.triggeredByUserId),
+  })
+);
+
 export const backups = pgTable(
   "backups",
   {

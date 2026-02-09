@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 4 tasks
+- **To Do:** 3 tasks
 - **In Progress:** 1 task
-- **Done:** 283 tasks
+- **Done:** 284 tasks
 
 ---
 
@@ -52,7 +52,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-05 | Admin UI Assistant Chat and Modes | High | Large | Chat panel + mode switch + sources |
 | TASK-101-06 | Assistant Avatar Rendering and Preferences | Medium | Medium | Optional GLB avatar + fallback |
 | TASK-101-07 | Assistant Security, Quotas, Observability and Hardening | High | Medium | Rate limits, audit, redaction |
-| TASK-101-08 | Internal Docs KB Schema, Ingest, and DB Retrieval | High | Large | DB tables + `_docs/_internal` ingest + DB retriever |
 
 ---
 
@@ -60,7 +59,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Phase A started, TASK-101-01/02/03 complete |
+| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Phase A2 in progress, TASK-101-01/02/03/08 complete |
 
 ---
 
@@ -69,6 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | High | Large | 100-01/02/03/04/05 complete |
+| TASK-101-08 | Internal Docs KB Schema, Ingest, and DB Retrieval | High | Large | DB KB tables + `_docs/_internal` ingest + DB retriever + runtime fallback |
 | TASK-100-05 | First-Run Setup Wizard and Gating | High | Medium | Setup wizard + authenticated gate + setup.completed flow |
 | TASK-100-04 | Admin UI Runtime URL and Auth TTL Wiring | High | Medium | General/Security UI fields + runtime settings payload wiring |
 | TASK-100-03 | Auth TTL Runtime Sources | High | Medium | Session/reset TTL precedence + auth runtime settings source |

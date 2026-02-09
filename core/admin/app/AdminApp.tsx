@@ -197,6 +197,19 @@ const resolveSettingsPayload = (
     fallbackValue: SettingsValues["assistantLlmProvider"]
   ): SettingsValues["assistantLlmProvider"] =>
     value === "openrouter" || value === "none" ? value : fallbackValue;
+  const resolveDocsBackend = (
+    value: unknown,
+    fallbackValue: SettingsValues["assistantDocsBackend"]
+  ): SettingsValues["assistantDocsBackend"] =>
+    value === "filesystem" || value === "db" ? value : fallbackValue;
+  const resolveDocsSourceRoot = (
+    value: unknown,
+    fallbackValue: SettingsValues["assistantDocsSourceRoot"]
+  ) => {
+    if (typeof value !== "string") return fallbackValue;
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : fallbackValue;
+  };
   const resolveDocsPaths = (
     value: unknown,
     fallbackValue: string[]
@@ -248,6 +261,14 @@ const resolveSettingsPayload = (
       assistantDefaultMode: resolveMode(
         payload["assistant.defaultMode"],
         fallback.values.assistantDefaultMode
+      ),
+      assistantDocsBackend: resolveDocsBackend(
+        payload["assistant.docs.backend"],
+        fallback.values.assistantDocsBackend
+      ),
+      assistantDocsSourceRoot: resolveDocsSourceRoot(
+        payload["assistant.docs.sourceRoot"],
+        fallback.values.assistantDocsSourceRoot
       ),
       assistantDocsPaths: resolveDocsPaths(
         payload["assistant.docs.paths"],
@@ -301,6 +322,8 @@ const buildGeneralSettingsUpdate = (
   "site.publicBaseUrl": values.publicBaseUrl.trim() || null,
   "assistant.enabled": values.assistantEnabled,
   "assistant.defaultMode": values.assistantDefaultMode,
+  "assistant.docs.backend": values.assistantDocsBackend,
+  "assistant.docs.sourceRoot": values.assistantDocsSourceRoot.trim(),
   "assistant.docs.paths": values.assistantDocsPaths,
   "assistant.docs.reindexOnBoot": values.assistantDocsReindexOnBoot,
   "assistant.llm.enabled": values.assistantLlmEnabled,

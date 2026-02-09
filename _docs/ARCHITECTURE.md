@@ -45,21 +45,30 @@ Po pierwszym logowaniu admin otrzymuje prosty Setup Wizard, aby ustawic:
 Wizard zapisuje dane do settings (DB) i oznacza konfiguracje jako zakonczona
 przez `setup.completed=true`.
 
-## Assistant Doc Navigator (Phase A)
+## Assistant Doc Navigator (Phase A + A2)
 
-Aktualny fundament asystenta (bez LLM) sklada sie z trzech warstw:
-- `core/services/assistant/docsIndexService.ts`
-- `core/services/assistant/docsRetriever.ts`
-- `core/services/assistant/docsAnswerComposer.ts`
+Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
+- `core/services/assistant/docsIndexService.ts` (filesystem index + fallback)
+- `core/services/assistant/docsRetriever.ts` (filesystem BM25-like retrieval)
+- `core/services/assistant/docsIngestService.ts` (ingest `_docs/_internal` -> DB + ingest runs)
+- `core/services/assistant/docsDbRetriever.ts` (DB-backed ranking/search)
+- `core/services/assistant/docsAnswerComposer.ts` (deterministic answer templates)
+- `core/services/assistant/assistantService.ts` (orchestrator backend selection + fallback)
 
-Przeplyw:
-1. `docsIndexService` skanuje `assistant.docs.paths` (domyslnie `_docs`), parsuje markdown po naglowkach i dzieli tresc na chunki z metadanymi (`docPath`, `headingPath`, `lineStart`, `lineEnd`).
-2. `docsRetriever` wykonuje deterministyczne wyszukiwanie in-memory (BM25-like + boosty naglowka/sciezki + mapy synonimow).
-3. `docsAnswerComposer` sklada bezpieczna odpowiedz szablonowa (`location_answer`, `how_to_answer`, `missing_answer`) i zawsze zwraca liste zrodel.
+Przeplyw runtime:
+1. `assistantService` czyta `assistant.docs.backend` (`filesystem` lub `db`).
+2. Dla `db`: bierze status z tabel ingest, wykonuje retrieval na `assistant_doc_chunks`.
+3. Gdy DB nie jest gotowe lub niedostepne, asystent fallbackuje do filesystem index.
+4. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) i zawsze zwraca zrodla.
+
+Przeplyw reindex:
+1. `POST /assistant/reindex` dla backendu `db` uruchamia ingest z `assistant.docs.sourceRoot` (domyslnie `_docs/_internal`).
+2. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
+3. Dla backendu `filesystem` reindex przebudowuje cache in-memory na bazie `assistant.docs.paths`.
 
 Zasady runtime:
-- Cache indeksu trzymany jest w pamieci procesu.
-- Reindex moze byc odpalony przy starcie przez `assistant.docs.reindexOnBoot=true`.
+- Boot reindex (`assistant.docs.reindexOnBoot=true`) dziala dla obu backendow.
+- Cache filesystem index trzymany jest w pamieci procesu.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
 
 ## Terminologia

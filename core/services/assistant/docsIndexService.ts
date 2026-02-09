@@ -480,8 +480,21 @@ export const initializeDocsIndexOnBootIfEnabled = async (
   options: BuildDocsIndexOptions = {}
 ) => {
   try {
-    const reindexOnBoot = await getSetting("assistant.docs.reindexOnBoot");
+    const [reindexOnBoot, docsBackend, sourceRootValue] = await Promise.all([
+      getSetting("assistant.docs.reindexOnBoot"),
+      getSetting("assistant.docs.backend"),
+      getSetting("assistant.docs.sourceRoot"),
+    ]);
     if (reindexOnBoot === true) {
+      if (docsBackend === "db") {
+        const { ingestInternalDocsToDb } = await import("./docsIngestService");
+        const sourceRoot =
+          typeof sourceRootValue === "string" && sourceRootValue.trim().length > 0
+            ? sourceRootValue.trim()
+            : "_docs/_internal";
+        await ingestInternalDocsToDb({ sourceRoot });
+        return;
+      }
       await reindexDocsIndex(options);
     }
   } catch {

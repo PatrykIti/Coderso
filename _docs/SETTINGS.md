@@ -20,6 +20,8 @@ Alias kompatybilnosciowy:
 | --- | --- | --- | --- |
 | `assistant.enabled` | `boolean` | `false` | Globalny toggle asystenta w Admin UI |
 | `assistant.defaultMode` | `"docs-only" \| "llm-rag"` | `"docs-only"` | Domyslny tryb odpowiedzi |
+| `assistant.docs.backend` | `"filesystem" \| "db"` | `"filesystem"` | Backend retrieval (`db` = KB z ingest, `filesystem` = in-memory index) |
+| `assistant.docs.sourceRoot` | `string` | `"_docs/_internal"` | Root dla ingest do DB backendu |
 | `assistant.docs.paths` | `string[]` | `["_docs"]` | Sciezki dokumentacji indeksowane przez Doc Navigator |
 | `assistant.docs.reindexOnBoot` | `boolean` | `false` | Czy wykonywac reindex przy starcie |
 | `assistant.llm.enabled` | `boolean` | `false` | Wlacza sciezke LLM |
@@ -46,4 +48,5 @@ Alias kompatybilnosciowy:
   - `assistant.llm.enabled=true`
   - `assistant.llm.provider != "none"`
 - `assistant.enabled=true` wymaga niepustego `assistant.docs.paths`.
+- `assistant.docs.sourceRoot` musi byc niepustym stringiem.
 - Limity liczbowe (`tokens`, `timeout`, `quotas`) musza byc dodatnimi integerami.

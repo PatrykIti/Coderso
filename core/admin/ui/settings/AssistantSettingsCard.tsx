@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 export type AssistantSettingsValues = {
   assistantEnabled: boolean;
   assistantDefaultMode: "docs-only" | "llm-rag";
+  assistantDocsBackend: "filesystem" | "db";
+  assistantDocsSourceRoot: string;
   assistantDocsPaths: string[];
   assistantDocsReindexOnBoot: boolean;
   assistantLlmEnabled: boolean;
@@ -134,6 +136,42 @@ export function AssistantSettingsCard({
             </Select>
           </div>
 
+          <div className="space-y-2">
+            <label className={labelClassName}>Docs backend</label>
+            <Select
+              value={values.assistantDocsBackend}
+              onValueChange={(next) =>
+                onChange?.({
+                  assistantDocsBackend: next as AssistantSettingsValues["assistantDocsBackend"],
+                })
+              }
+              disabled={disabled}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Choose backend" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="filesystem">Filesystem (in-memory index)</SelectItem>
+                <SelectItem value="db">Database KB (ingest)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className={labelClassName}>Docs source root</label>
+            <Input
+              value={values.assistantDocsSourceRoot}
+              onChange={(event) =>
+                onChange?.({ assistantDocsSourceRoot: event.target.value })
+              }
+              placeholder="_docs/_internal"
+              disabled={disabled}
+            />
+            <p className="text-xs text-muted-foreground">
+              Used by DB ingest backend (`assistant.docs.backend=db`).
+            </p>
+          </div>
+
           <div className="space-y-2 md:col-span-2">
             <label className={labelClassName}>Docs paths</label>
             <Textarea
@@ -146,7 +184,8 @@ export function AssistantSettingsCard({
               disabled={disabled}
             />
             <p className="text-xs text-muted-foreground">
-              One path per line (or comma separated). Example: `_docs`
+              One path per line (or comma separated). Used by filesystem backend and
+              fallback. Example: `_docs`
             </p>
           </div>
 

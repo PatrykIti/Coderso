@@ -95,6 +95,8 @@ Rotacja klucza:
   - `assistant.llm.provider != none`
 - Gdy provider nie jest skonfigurowany, runtime wraca do bezpiecznego `docs-only`.
 - `assistant.docs.paths` musi byc niepuste gdy `assistant.enabled=true`.
+- `assistant.docs.sourceRoot` musi byc niepusty.
+- `assistant.docs.backend` (`filesystem`/`db`) steruje backendem retrieval.
 
 ### Assistant API runtime (TASK-101-03)
 
@@ -123,6 +125,10 @@ Rotacja klucza:
 - Reindex:
   - triggerowany recznie endpointem `POST /assistant/reindex`
   - opcjonalny boot reindex przez `assistant.docs.reindexOnBoot=true`
+  - dla backendu `db` reindex uruchamia ingest `_docs/_internal` do tabel:
+    - `assistant_docs`
+    - `assistant_doc_chunks`
+    - `assistant_doc_ingest_runs`
   - sukces reindex logowany jako audit event `assistant.docs.reindex`
 
 ## API Keys (v1)

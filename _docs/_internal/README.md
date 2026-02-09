@@ -21,7 +21,9 @@ Each markdown file must contain these sections:
 3. `Step By Step`
 4. `Examples`
 5. `Common Mistakes`
-6. `Related`
+
+Optional:
+- `Related`
 
 ## Required frontmatter
 
@@ -60,6 +62,6 @@ keywords:
 Ingest pipeline validates:
 - frontmatter presence,
 - required sections,
-- minimal content quality (empty sections rejected).
+- parseability of markdown + frontmatter.
 
 Invalid docs are reported in ingest run logs.

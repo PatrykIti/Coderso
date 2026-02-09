@@ -36,6 +36,8 @@ export const GENERAL_SETTINGS_DEFAULT_VALUES: GeneralSettingsValues = {
   publicBaseUrl: "",
   assistantEnabled: false,
   assistantDefaultMode: "docs-only",
+  assistantDocsBackend: "filesystem",
+  assistantDocsSourceRoot: "_docs/_internal",
   assistantDocsPaths: ["_docs"],
   assistantDocsReindexOnBoot: false,
   assistantLlmEnabled: false,
@@ -53,6 +55,9 @@ const resolveAssistantValidationError = (
 ): string | null => {
   if (input.assistantEnabled && input.assistantDocsPaths.length === 0) {
     return "Assistant docs paths cannot be empty when assistant is enabled.";
+  }
+  if (!input.assistantDocsSourceRoot.trim()) {
+    return "Assistant docs source root cannot be empty.";
   }
   if (
     input.assistantDefaultMode === "llm-rag" &&
@@ -96,6 +101,15 @@ export function GeneralSettingsPage({
     assistantDefaultMode:
       input.assistantDefaultMode ??
       GENERAL_SETTINGS_DEFAULT_VALUES.assistantDefaultMode,
+    assistantDocsBackend:
+      input.assistantDocsBackend === "db" || input.assistantDocsBackend === "filesystem"
+        ? input.assistantDocsBackend
+        : GENERAL_SETTINGS_DEFAULT_VALUES.assistantDocsBackend,
+    assistantDocsSourceRoot:
+      typeof input.assistantDocsSourceRoot === "string" &&
+      input.assistantDocsSourceRoot.trim().length > 0
+        ? input.assistantDocsSourceRoot
+        : GENERAL_SETTINGS_DEFAULT_VALUES.assistantDocsSourceRoot,
     assistantDocsPaths: Array.isArray(input.assistantDocsPaths)
       ? input.assistantDocsPaths.filter((entry) => typeof entry === "string")
       : GENERAL_SETTINGS_DEFAULT_VALUES.assistantDocsPaths,
@@ -245,6 +259,8 @@ export function GeneralSettingsPage({
               values={{
                 assistantEnabled: form.assistantEnabled,
                 assistantDefaultMode: form.assistantDefaultMode,
+                assistantDocsBackend: form.assistantDocsBackend,
+                assistantDocsSourceRoot: form.assistantDocsSourceRoot,
                 assistantDocsPaths: form.assistantDocsPaths,
                 assistantDocsReindexOnBoot: form.assistantDocsReindexOnBoot,
                 assistantLlmEnabled: form.assistantLlmEnabled,

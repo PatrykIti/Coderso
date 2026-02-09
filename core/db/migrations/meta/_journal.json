@@ -232,6 +232,13 @@
       "when": 1770451200000,
       "tag": "0032_widget_template_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1770671008879,
+      "tag": "0033_assistant_docs_kb",
+      "breakpoints": true
     }
   ]
 }

@@ -11,10 +11,13 @@ type WidgetTemplateCategorySetting = {
 
 export type AssistantMode = "docs-only" | "llm-rag";
 export type AssistantLlmProvider = "openrouter" | "none";
+export type AssistantDocsBackend = "filesystem" | "db";
 
 export type AssistantGlobalSettings = {
   "assistant.enabled": boolean;
   "assistant.defaultMode": AssistantMode;
+  "assistant.docs.backend": AssistantDocsBackend;
+  "assistant.docs.sourceRoot": string;
   "assistant.docs.paths": string[];
   "assistant.docs.reindexOnBoot": boolean;
   "assistant.llm.enabled": boolean;
@@ -65,6 +68,8 @@ const DEFAULT_SETTINGS = {
   "widgets.templateCategories": DEFAULT_WIDGET_TEMPLATE_CATEGORIES,
   "assistant.enabled": false,
   "assistant.defaultMode": "docs-only" as AssistantMode,
+  "assistant.docs.backend": "filesystem" as AssistantDocsBackend,
+  "assistant.docs.sourceRoot": "_docs/_internal",
   "assistant.docs.paths": DEFAULT_ASSISTANT_DOC_PATHS,
   "assistant.docs.reindexOnBoot": false,
   "assistant.llm.enabled": false,
@@ -107,6 +112,8 @@ export function resolveSettingKey(key: string): SettingKey {
 const ASSISTANT_SETTING_KEYS = [
   "assistant.enabled",
   "assistant.defaultMode",
+  "assistant.docs.backend",
+  "assistant.docs.sourceRoot",
   "assistant.docs.paths",
   "assistant.docs.reindexOnBoot",
   "assistant.llm.enabled",
@@ -123,6 +130,7 @@ type AssistantSettingKey = (typeof ASSISTANT_SETTING_KEYS)[number];
 const assistantSettingKeySet = new Set<string>(ASSISTANT_SETTING_KEYS);
 const assistantModes: AssistantMode[] = ["docs-only", "llm-rag"];
 const assistantProviders: AssistantLlmProvider[] = ["openrouter", "none"];
+const assistantDocsBackends: AssistantDocsBackend[] = ["filesystem", "db"];
 
 const isAssistantSettingKey = (key: SettingKey): key is AssistantSettingKey =>
   assistantSettingKeySet.has(key);
@@ -204,11 +212,34 @@ const normalizeAssistantDocsPaths = (value: unknown) => {
   return normalized;
 };
 
+const normalizeAssistantDocsBackend = (value: unknown): AssistantDocsBackend => {
+  if (
+    typeof value !== "string" ||
+    !assistantDocsBackends.includes(value as AssistantDocsBackend)
+  ) {
+    throw new Error("settings_value_invalid");
+  }
+  return value as AssistantDocsBackend;
+};
+
+const normalizeAssistantDocsSourceRoot = (value: unknown) => {
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const normalized = value.trim();
+  if (!normalized) {
+    throw new Error("settings_value_invalid");
+  }
+  return normalized;
+};
+
 const pickAssistantSettings = (
   values: SettingValueMap
 ): AssistantGlobalSettings => ({
   "assistant.enabled": values["assistant.enabled"],
   "assistant.defaultMode": values["assistant.defaultMode"],
+  "assistant.docs.backend": values["assistant.docs.backend"],
+  "assistant.docs.sourceRoot": values["assistant.docs.sourceRoot"],
   "assistant.docs.paths": values["assistant.docs.paths"],
   "assistant.docs.reindexOnBoot": values["assistant.docs.reindexOnBoot"],
   "assistant.llm.enabled": values["assistant.llm.enabled"],
@@ -225,6 +256,9 @@ export function assertAssistantSettingsConsistency(
   values: AssistantGlobalSettings
 ): void {
   if (values["assistant.enabled"] && values["assistant.docs.paths"].length === 0) {
+    throw new Error("settings_value_invalid");
+  }
+  if (!values["assistant.docs.sourceRoot"].trim()) {
     throw new Error("settings_value_invalid");
   }
   if (values["assistant.defaultMode"] === "llm-rag") {
@@ -465,6 +499,14 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
 
   if (key === "assistant.defaultMode") {
     return normalizeAssistantMode(value);
+  }
+
+  if (key === "assistant.docs.backend") {
+    return normalizeAssistantDocsBackend(value);
+  }
+
+  if (key === "assistant.docs.sourceRoot") {
+    return normalizeAssistantDocsSourceRoot(value);
   }
 
   if (key === "assistant.docs.paths") {

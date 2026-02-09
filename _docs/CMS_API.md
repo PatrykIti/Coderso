@@ -1259,6 +1259,8 @@ Payloady:
   "design.tokens": { "colors": { "primary": "#111111" } },
   "assistant.enabled": true,
   "assistant.defaultMode": "docs-only",
+  "assistant.docs.backend": "db",
+  "assistant.docs.sourceRoot": "_docs/_internal",
   "assistant.docs.paths": ["_docs"],
   "assistant.docs.reindexOnBoot": false,
   "assistant.llm.enabled": false,
@@ -1290,6 +1292,7 @@ Response:
 - Alias kompatybilnosciowy: `site.baseUrl` mapuje read/write na `site.publicBaseUrl`.
 - Walidacja: `assistant.defaultMode=llm-rag` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
 - Walidacja: `assistant.enabled=true` wymaga niepustego `assistant.docs.paths`.
+- Walidacja: `assistant.docs.sourceRoot` musi byc niepusty.
 
 ---
 
@@ -1330,20 +1333,22 @@ Endpoints:
 - `POST /assistant/chat`
 - `POST /assistant/reindex`
 
+`retrievalBackend` moze miec wartosc `filesystem` lub `db`.
+
 `GET /assistant/status` response
 
 ```json
 {
   "enabled": true,
   "defaultMode": "docs-only",
-  "retrievalBackend": "filesystem",
+  "retrievalBackend": "db",
   "llmAvailable": false,
   "indexReady": true,
   "indexBuilding": false,
   "indexError": null,
   "lastReindexAt": "2026-02-09T21:00:00.000Z",
-  "docCount": 2,
-  "chunkCount": 14
+  "docCount": 12,
+  "chunkCount": 77
 }
 ```
 
@@ -1366,14 +1371,14 @@ Endpoints:
 {
   "mode": "docs-only",
   "template": "location_answer",
-  "answer": "Most relevant locations in docs:\n1. _docs/widgets/hero.md -> Hero Widget > Visual",
+  "answer": "Most relevant locations in docs:\n1. _docs/_internal/widgets/hero-basics.md -> Hero widget basics > Step By Step",
   "confidence": 0.76,
   "sources": [
     {
-      "path": "_docs/widgets/hero.md",
-      "heading": "Hero Widget > Visual",
-      "lineStart": 10,
-      "lineEnd": 28,
+      "path": "_docs/_internal/widgets/hero-basics.md",
+      "heading": "Hero widget basics > Step By Step",
+      "lineStart": 20,
+      "lineEnd": 38,
       "snippet": "Use visual tab to change colors and spacing.",
       "score": 2.4211
     }
@@ -1395,11 +1400,11 @@ Endpoints:
 
 ```json
 {
-  "retrievalBackend": "filesystem",
+  "retrievalBackend": "db",
   "builtAt": "2026-02-09T21:05:00.000Z",
   "buildDurationMs": 84,
-  "docCount": 2,
-  "chunkCount": 14,
+  "docCount": 12,
+  "chunkCount": 77,
   "totalTokens": 578,
   "actorId": "user-id"
 }
@@ -1415,6 +1420,7 @@ Error codes:
 Uwagi:
 - Message sanitization usuwa control chars i blokuje prompt-injection markers.
 - Gdy żądany tryb to `llm-rag`, a LLM jest wyłączony, runtime zwraca `docs-only` z `fallbackUsed=true`.
+- Dla backendu `db` retrieval idzie najpierw po DB; fallback do filesystem aktywuje sie tylko gdy DB jest puste lub niedostepne.
 
 ---
 

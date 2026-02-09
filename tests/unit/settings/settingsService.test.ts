@@ -36,6 +36,8 @@ const cleanupKeys = [
   "design.tokens",
   "assistant.enabled",
   "assistant.defaultMode",
+  "assistant.docs.backend",
+  "assistant.docs.sourceRoot",
   "assistant.docs.paths",
   "assistant.docs.reindexOnBoot",
   "assistant.llm.enabled",
@@ -160,6 +162,8 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
   await setSettings({
     "assistant.enabled": true,
     "assistant.defaultMode": "llm-rag",
+    "assistant.docs.backend": "filesystem",
+    "assistant.docs.sourceRoot": "_docs/_internal",
     "assistant.docs.paths": ["_docs"],
     "assistant.docs.reindexOnBoot": false,
     "assistant.llm.enabled": true,
@@ -180,6 +184,11 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
   await expect(setSetting("assistant.docs.paths", [])).rejects.toThrow(
     "settings_value_invalid"
   );
+  await expect(setSetting("assistant.docs.sourceRoot", "   ")).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await setSetting("assistant.docs.backend", "db");
+  expect(await getSetting("assistant.docs.backend")).toBe("db");
   await expect(setSetting("assistant.llm.enabled", false)).rejects.toThrow(
     "settings_value_invalid"
   );
@@ -196,6 +205,8 @@ test("assertAssistantSettingsConsistency accepts docs-only mode without llm", ()
     assertAssistantSettingsConsistency({
       "assistant.enabled": true,
       "assistant.defaultMode": "docs-only",
+      "assistant.docs.backend": "filesystem",
+      "assistant.docs.sourceRoot": "_docs/_internal",
       "assistant.docs.paths": ["_docs"],
       "assistant.docs.reindexOnBoot": false,
       "assistant.llm.enabled": false,
@@ -215,6 +226,8 @@ test("assertAssistantSettingsConsistency rejects invalid llm-rag combinations", 
     assertAssistantSettingsConsistency({
       "assistant.enabled": true,
       "assistant.defaultMode": "llm-rag",
+      "assistant.docs.backend": "filesystem",
+      "assistant.docs.sourceRoot": "_docs/_internal",
       "assistant.docs.paths": ["_docs"],
       "assistant.docs.reindexOnBoot": false,
       "assistant.llm.enabled": false,

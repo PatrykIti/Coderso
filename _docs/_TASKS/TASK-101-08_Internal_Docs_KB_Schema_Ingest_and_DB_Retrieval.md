@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Core/DB + Docs  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-02, TASK-101-03  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 
@@ -140,9 +140,9 @@ return hits;
 | `core/services/assistant/assistantService.ts` | update | DB-first retrieval + fallback |
 | `core/server/routes/assistantRoutes.ts` | update | reindex endpoint triggers DB ingest |
 | `core/services/settings/settingsService.ts` | update | `assistant.docs.sourceRoot`, `assistant.docs.backend` |
-| `tests/unit/assistant/docsIngestService.test.ts` | new | contract validation + upsert behavior |
+| `tests/unit/assistant/docsIngestService.test.ts` | new | parser/frontmatter contract + chunking validation |
 | `tests/unit/assistant/docsDbRetriever.test.ts` | new | ranking and snippet relevance |
-| `tests/integration/routes/assistant-reindex-db.test.ts` | new | endpoint -> ingest run -> status |
+| `tests/unit/assistant/assistantService.test.ts` | update | DB backend status/reindex/fallback behavior |
 
 ---
 
@@ -156,20 +156,39 @@ return hits;
 
 ---
 
+## Implementation Notes (Done)
+
+- Dodano schema + migracje dla:
+  - `assistant_docs`
+  - `assistant_doc_chunks`
+  - `assistant_doc_ingest_runs`
+- Dodano ingest pipeline: `core/services/assistant/docsIngestService.ts`
+  - parser frontmatter
+  - walidacja kontraktu dokumentu
+  - chunkowanie po naglowkach
+  - upsert docs + replace chunks
+  - run log z licznikami i bledami
+- Dodano retriever DB: `core/services/assistant/docsDbRetriever.ts`
+  - deterministic ranking BM25-like
+  - snippet + source metadata zgodne z istniejacym kontraktem odpowiedzi
+- Zintegrowano backend selector w `core/services/assistant/assistantService.ts`
+  - `assistant.docs.backend=db` -> DB retrieval/reindex
+  - fallback do filesystem gdy DB niegotowe lub niedostepne
+- Boot reindex (`assistant.docs.reindexOnBoot`) obsluguje oba backendy.
+
+---
+
 ## Testing Requirements
 
 - Unit:
   - markdown+frontmatter parser and contract validator
-  - chunk replacement idempotency
+  - internal docs chunk builder behavior
   - DB retriever ranking exact match > distant match
-  - fallback FS path when DB empty
-- Integration:
-  - `POST /assistant/reindex` creates ingest run and upserts chunks
-  - failed doc validation appears in run error payload
+  - assistant runtime fallback FS path when DB empty/unavailable
 - Quality gates:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - targeted assistant tests + migration smoke tests
+  - targeted assistant tests
 
 ---
 

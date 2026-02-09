@@ -50,6 +50,8 @@ const createDeps = (
     const values: Record<string, unknown> = {
       "assistant.enabled": true,
       "assistant.defaultMode": "docs-only",
+      "assistant.docs.backend": "filesystem",
+      "assistant.docs.sourceRoot": "_docs/_internal",
       "assistant.llm.enabled": false,
       "assistant.llm.provider": "none",
     };
@@ -67,6 +69,29 @@ const createDeps = (
     chunkCount: 1,
   }),
   searchDocsIndex: () => [makeHit()],
+  searchAssistantDocsDb: async () => [makeHit()],
+  getAssistantDocsDbStatus: async () => ({
+    ready: false,
+    docCount: 0,
+    chunkCount: 0,
+    lastIngestAt: null,
+    lastIngestStatus: null,
+    indexError: null,
+  }),
+  ingestInternalDocsToDb: async () => ({
+    runId: "run-1",
+    sourceRoot: "_docs/_internal",
+    status: "success",
+    filesScanned: 1,
+    docsUpserted: 1,
+    chunksUpserted: 1,
+    totalTokens: 5,
+    errorsCount: 0,
+    errors: [],
+    startedAt: "2026-02-09T21:00:00.000Z",
+    finishedAt: "2026-02-09T21:00:01.000Z",
+    buildDurationMs: 1000,
+  }),
   composeDocsAnswer: () => ({
     mode: "docs-only",
     template: "how_to_answer",
@@ -109,6 +134,38 @@ test("getAssistantStatus returns runtime status contract", async () => {
   expect(status.llmAvailable).toBe(false);
 });
 
+test("getAssistantStatus returns DB status when DB backend is configured", async () => {
+  const status = await getAssistantStatus(
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "docs-only",
+          "assistant.docs.backend": "db",
+          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.llm.enabled": false,
+          "assistant.llm.provider": "none",
+        };
+        return values[key];
+      },
+      getAssistantDocsDbStatus: async () => ({
+        ready: true,
+        docCount: 12,
+        chunkCount: 44,
+        lastIngestAt: "2026-02-09T21:12:00.000Z",
+        lastIngestStatus: "success",
+        indexError: null,
+      }),
+    })
+  );
+
+  expect(status.retrievalBackend).toBe("db");
+  expect(status.indexReady).toBe(true);
+  expect(status.docCount).toBe(12);
+  expect(status.chunkCount).toBe(44);
+  expect(status.lastReindexAt).toBe("2026-02-09T21:12:00.000Z");
+});
+
 test("answerAssistantQuestion falls back to docs-only when llm is unavailable", async () => {
   const result = await answerAssistantQuestion(
     {
@@ -123,6 +180,78 @@ test("answerAssistantQuestion falls back to docs-only when llm is unavailable", 
   expect(result.effectiveMode).toBe("docs-only");
   expect(result.fallbackUsed).toBe(true);
   expect(result.retrievalBackend).toBe("filesystem");
+});
+
+test("answerAssistantQuestion uses DB backend when DB index is ready", async () => {
+  let fsSearchCalls = 0;
+  const result = await answerAssistantQuestion(
+    {
+      message: "Where are hero settings?",
+      mode: "docs-only",
+    },
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "docs-only",
+          "assistant.docs.backend": "db",
+          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.llm.enabled": false,
+          "assistant.llm.provider": "none",
+        };
+        return values[key];
+      },
+      getAssistantDocsDbStatus: async () => ({
+        ready: true,
+        docCount: 2,
+        chunkCount: 5,
+        lastIngestAt: "2026-02-09T21:12:00.000Z",
+        lastIngestStatus: "success",
+        indexError: null,
+      }),
+      searchAssistantDocsDb: async () => [makeHit()],
+      searchDocsIndex: () => {
+        fsSearchCalls += 1;
+        return [makeHit()];
+      },
+    })
+  );
+
+  expect(result.retrievalBackend).toBe("db");
+  expect(fsSearchCalls).toBe(0);
+});
+
+test("answerAssistantQuestion falls back to filesystem when DB backend is not ready", async () => {
+  const result = await answerAssistantQuestion(
+    {
+      message: "Where are hero settings?",
+      mode: "docs-only",
+    },
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "docs-only",
+          "assistant.docs.backend": "db",
+          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.llm.enabled": false,
+          "assistant.llm.provider": "none",
+        };
+        return values[key];
+      },
+      getAssistantDocsDbStatus: async () => ({
+        ready: false,
+        docCount: 0,
+        chunkCount: 0,
+        lastIngestAt: null,
+        lastIngestStatus: "failed",
+        indexError: "assistant_docs_ingest_failed",
+      }),
+    })
+  );
+
+  expect(result.retrievalBackend).toBe("filesystem");
+  expect(result.fallbackUsed).toBe(true);
 });
 
 test("answerAssistantQuestion throws when assistant is disabled", async () => {
@@ -164,4 +293,51 @@ test("reindexAssistantDocs returns stats and writes audit", async () => {
   expect(result.chunkCount).toBe(1);
   expect(result.actorId).toBe("user-1");
   expect(auditCalled).toBe(true);
+});
+
+test("reindexAssistantDocs runs ingest pipeline for DB backend", async () => {
+  const result = await reindexAssistantDocs(
+    { actorId: "user-2" },
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "docs-only",
+          "assistant.docs.backend": "db",
+          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.llm.enabled": false,
+          "assistant.llm.provider": "none",
+        };
+        return values[key];
+      },
+      ingestInternalDocsToDb: async () => ({
+        runId: "run-2",
+        sourceRoot: "_docs/_internal",
+        status: "success",
+        filesScanned: 1,
+        docsUpserted: 1,
+        chunksUpserted: 3,
+        totalTokens: 77,
+        errorsCount: 0,
+        errors: [],
+        startedAt: "2026-02-09T21:00:00.000Z",
+        finishedAt: "2026-02-09T21:00:04.000Z",
+        buildDurationMs: 4000,
+      }),
+      getAssistantDocsDbStatus: async () => ({
+        ready: true,
+        docCount: 4,
+        chunkCount: 20,
+        lastIngestAt: "2026-02-09T21:00:04.000Z",
+        lastIngestStatus: "success",
+        indexError: null,
+      }),
+    })
+  );
+
+  expect(result.retrievalBackend).toBe("db");
+  expect(result.docCount).toBe(4);
+  expect(result.chunkCount).toBe(20);
+  expect(result.totalTokens).toBe(77);
+  expect(result.actorId).toBe("user-2");
 });
