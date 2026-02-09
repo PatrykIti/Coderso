@@ -5,7 +5,7 @@
 **Category:** Admin/Dashboard  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-099-01, TASK-004-05, TASK-099  
-**Status:** To Do  
+**Status:** Done (2026-02-09)  
 
 ---
 
@@ -91,3 +91,19 @@ Suggested command:
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-dashboard-api.md`
+
+---
+
+## Implementation Notes (Done)
+
+- Added `core/server/routes/dashboardRoutes.ts` with:
+  - `GET /dashboard`,
+  - permission guard `content:read`,
+  - response from `getDashboardData()`.
+- Registered route in `core/server/routes/index.ts` via `registerDashboardRoutes(...)`.
+- Added integration route test: `tests/integration/routes/dashboard.test.ts`.
+
+Verification:
+- `bun test tests/integration/routes/dashboard.test.ts`
+- `bun --cwd core lint:types`
+- `bun --cwd core lint`

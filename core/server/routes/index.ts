@@ -12,6 +12,7 @@ import { registerThemeRoutes } from "./themeRoutes";
 import { registerAdminThemeRoutes } from "./adminThemeRoutes";
 import { registerSeoRoutes } from "./seoRoutes";
 import { registerAnalyticsRoutes } from "./analyticsRoutes";
+import { registerDashboardRoutes } from "./dashboardRoutes";
 import { registerBackupRoutes } from "./backupRoutes";
 import { registerImportExportRoutes } from "./importExportRoutes";
 import { registerRedirectRoutes } from "./redirectRoutes";
@@ -52,6 +53,7 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerAdminThemeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerSeoRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerAnalyticsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerDashboardRoutes(router, { requirePermission: deps.requirePermission });
   registerBackupRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerImportExportRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerRedirectRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });

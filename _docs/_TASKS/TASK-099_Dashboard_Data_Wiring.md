@@ -132,7 +132,7 @@ tests/unit/ui/
 ## Sub-Tasks (Detailed)
 
 - `TASK-099-01_Dashboard_Service.md` (**Done, 2026-02-09**)
-- `TASK-099-02_Dashboard_API.md`
+- `TASK-099-02_Dashboard_API.md` (**Done, 2026-02-09**)
 - `TASK-099-03_Dashboard_UI_Wiring.md`
 
 ---

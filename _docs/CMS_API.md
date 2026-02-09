@@ -955,6 +955,81 @@ Top content response:
 
 ---
 
+## Dashboard (v1)
+
+Permissions: `content:read`
+
+Note: Dashboard payload jest agregowany po stronie backendu z danych CMS
+(pages/content entries/media/users/security settings) i nie wymaga query params.
+
+- `GET /dashboard`
+
+Response:
+
+```json
+{
+  "generatedAt": "2026-02-09T10:00:00.000Z",
+  "totals": {
+    "pages": 12,
+    "entries": 24,
+    "media": 80,
+    "users": 3
+  },
+  "storage": {
+    "usedBytes": 245760,
+    "limitBytes": null,
+    "usedPercent": null
+  },
+  "security": {
+    "status": "warning",
+    "issues": 1,
+    "checks": [
+      {
+        "id": "csrf",
+        "label": "CSRF protection",
+        "status": "ok",
+        "detail": "Enabled (x-csrf-token)."
+      },
+      {
+        "id": "rateLimit",
+        "label": "Rate limiting",
+        "status": "ok",
+        "detail": "Enabled (120/20)."
+      },
+      {
+        "id": "headers",
+        "label": "Security headers",
+        "status": "ok",
+        "detail": "Enabled (DENY, nosniff on)."
+      },
+      {
+        "id": "sessionPolicy",
+        "label": "Session policy",
+        "status": "warning",
+        "detail": "TTL 90d or max 10 sessions/user is too permissive."
+      }
+    ]
+  },
+  "recentEdits": [
+    {
+      "id": "page-id",
+      "type": "page",
+      "title": "Homepage",
+      "path": "/",
+      "status": "published",
+      "updatedAt": "2026-02-09T09:00:00.000Z",
+      "author": {
+        "id": "user-id",
+        "name": "Admin",
+        "email": "admin@example.com"
+      }
+    }
+  ]
+}
+```
+
+---
+
 ## Backups (v1)
 
 Permissions: `backups:read`, `backups:write`
