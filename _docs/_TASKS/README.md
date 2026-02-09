@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 2 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 0 tasks
-- **Done:** 289 tasks
+- **Done:** 290 tasks
 
 ---
 
@@ -41,9 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..15 |
-| TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
-| TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
@@ -62,6 +59,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | 050-01..15 complete |
+| TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | 050-05-01/02 complete |
+| TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI + rendering complete |
 | TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | 101-01/02/03/04/05/06/07/08 complete |
 | TASK-101-07 | Assistant Security, Quotas, Observability and Hardening | High | Medium | Quota enforcement + assistant metrics + audit redaction hardening |
 | TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | High | Large | 100-01/02/03/04/05 complete |
