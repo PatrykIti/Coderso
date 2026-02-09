@@ -5,7 +5,7 @@
 **Category:** Site/Appearance  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-045-01  
-**Status:** 🟡 To Do
+**Status:** ✅ Done (2026-01-29)
 
 ---
 

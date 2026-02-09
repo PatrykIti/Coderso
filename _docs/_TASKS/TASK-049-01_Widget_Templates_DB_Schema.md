@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets (DB)  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-049  
-**Status:** To Do
+**Status:** Done (2026-02-02)
 
 ---
 

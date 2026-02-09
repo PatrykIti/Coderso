@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
+- **To Do:** 6 tasks
 - **In Progress:** 1 task
-- **Done:** 263 tasks
+- **Done:** 275 tasks
 
 ---
 
@@ -41,18 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-048 | Content Types & Content UX Expansion | Medium | Large | Index for TASK-048-01..09 |
-| TASK-048-01 | Field Types & Schema Meta | Medium | Medium | Preserve field types |
-| TASK-048-02 | Relation Field UX & Data Model | Medium | Medium | Relation dropdown + picker |
-| TASK-048-03 | Media Field UX & Storage Integration | Medium | Medium | Media picker |
-| TASK-048-04 | Taxonomy System & Terms | Medium | Large | Categories + tags |
-| TASK-049 | Widget Library — Core + Templates + Favorites | High | Large | Index for TASK-049-01..06 |
-| TASK-049-01 | Widget Templates DB Schema | High | Medium | widget_templates table |
-| TASK-049-02 | Widget Templates Service | High | Medium | CRUD + validation |
-| TASK-049-03 | Widget Catalog + API Routes | High | Medium | /widgets + templates CRUD |
-| TASK-049-04 | Widget Favorites (User Settings) | Medium | Small | widgets.favorites key |
-| TASK-049-05 | Widget Library UI Wiring | High | Large | API wiring + insert |
-| TASK-049-06 | Widget Template Editor UI | Medium | Medium | builder reuse |
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..15 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
@@ -82,7 +70,19 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-049 | Widget Library — Core + Templates + Favorites | High | Large | 049-01/02/03/04/05/06 complete |
+| TASK-049-06 | Widget Template Editor UI | Medium | Medium | Template editor route + builder reuse + DnD wiring |
+| TASK-049-05 | Widget Library UI Wiring | High | Large | Catalog API wiring + insert + details/favorites UX |
+| TASK-049-04 | Widget Favorites (User Settings) | Medium | Small | `widgets.favorites` persistence + validation |
+| TASK-049-03 | Widget Catalog + API Routes | High | Medium | `/widgets` + template CRUD aliases |
+| TASK-049-02 | Widget Templates Service | High | Medium | Service CRUD + structural block validation |
+| TASK-049-01 | Widget Templates DB Schema | High | Medium | `widget_templates` schema + migration |
 | TASK-101-01 | Assistant Settings and Data Model | High | Medium | Global/user assistant settings + validation + General Settings UI |
+| TASK-048 | Content Types & Content UX Expansion | Medium | Large | 048-01..09 complete |
+| TASK-048-04 | Taxonomy System & Terms | Medium | Large | Categories/tags model + terms + assignments |
+| TASK-048-03 | Media Field UX & Storage Integration | Medium | Medium | Media picker + schema/meta + entry validation |
+| TASK-048-02 | Relation Field UX & Data Model | Medium | Medium | Relation config (single/multi) + picker UX |
+| TASK-048-01 | Field Types & Schema Meta | Medium | Medium | `xFieldConfig` schema meta and strict validation |
 | TASK-050-15 | Layout Primitives Widgets Pack | High | Large | 050-15-01/02/03/04/05/06/07 complete |
 | TASK-050-15-07 | Divider Widget | Medium | Small | Visual separator primitive |
 | TASK-050-15-06 | Spacer Widget | Medium | Small | Responsive spacing primitive |
