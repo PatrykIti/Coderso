@@ -204,6 +204,17 @@ UI ma byc spojne z modelem Wizard/Visual/Advanced dla widgetow:
 - Wizard: minimal onboarding i bezpieczne defaulty.
 - Visual: glowny tryb content + style editing.
 - Advanced: techniczne ustawienia layout/responsive bez duplikacji pol Visual.
+
+## Dashboard runtime data
+
+- Dashboard admina korzysta z jednego modelu agregowanego zwracanego przez backend.
+- Kontrakt payload obejmuje:
+  - `totals` (pages, entries, media, users),
+  - `recentEdits` (merge page/entry/media, sort malejaco po czasie),
+  - `storage` (used bytes + optional limit/percent),
+  - `security` (status + checki: csrf/rateLimit/headers/sessionPolicy).
+- Zrodlem danych sa tabele CMS i runtime `security.settings`.
+- W ramach MVP brak metryk ruchu publicznego (np. visitors/page views z zewnetrznej analityki).
 Admin UI bazuje na shadcn/ui + Tailwind v4.
 
 ---

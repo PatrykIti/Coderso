@@ -5,7 +5,7 @@
 **Category:** Admin/Dashboard  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-099, TASK-002, TASK-003, TASK-005, TASK-014, TASK-020-10  
-**Status:** To Do  
+**Status:** Done (2026-02-09)  
 
 ---
 
@@ -174,3 +174,22 @@ Suggested command:
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-dashboard-service.md`
+
+---
+
+## Implementation Notes (Done)
+
+- Added dashboard DTO contract in `core/services/dashboard/dashboardTypes.ts`.
+- Added aggregator service in `core/services/dashboard/dashboardService.ts`:
+  - totals for pages/entries/media/users,
+  - merged `recentEdits` (page + entry + media),
+  - storage summary (`usedBytes`, optional percent),
+  - security summary with deterministic checks (`csrf`, `rateLimit`, `headers`, `sessionPolicy`).
+- Added tests in `tests/unit/dashboard/dashboardService.test.ts`:
+  - pure unit checks for storage percent and security scoring,
+  - DB-seeded aggregate test for recent edits, storage, and summary coherence.
+
+Verification:
+- `bun test tests/unit/dashboard/dashboardService.test.ts`
+- `bun --cwd core lint:types`
+- `bun --cwd core lint`

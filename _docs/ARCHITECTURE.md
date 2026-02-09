@@ -493,6 +493,26 @@ Plugin moze:
 
 ---
 
+## Dashboard aggregate service (TASK-099-01)
+
+Cel:
+- uniezaleznic ekran Dashboard od mockow i zasilic go jednym payloadem backendowym.
+
+Warstwa:
+- `core/services/dashboard/dashboardTypes.ts`:
+  - kontrakt DTO (`DashboardPayload`) dla API i UI.
+- `core/services/dashboard/dashboardService.ts`:
+  - agreguje `totals` (pages/entries/media/users),
+  - buduje `recentEdits` przez merge: pages + content_entries + media,
+  - oblicza summary storage (`usedBytes`, optional percent),
+  - buduje summary security na bazie `security.settings`.
+
+Uwagi:
+- `recentEdits` sortowane globalnie malejaco po czasie po merge.
+- MVP nie dodaje osobnego subsystemu telemetry ruchu (visitors/pageviews).
+
+---
+
 ## Bloki / komponenty tresci
 
 Edytor oparty o JSON schema.

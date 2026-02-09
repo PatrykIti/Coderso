@@ -5,7 +5,7 @@
 **Category:** Admin/Dashboard  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-006-01, TASK-028, TASK-005, TASK-014, TASK-020-10  
-**Status:** To Do
+**Status:** In Progress (2026-02-09)
 
 ---
 
@@ -131,7 +131,7 @@ tests/unit/ui/
 
 ## Sub-Tasks (Detailed)
 
-- `TASK-099-01_Dashboard_Service.md`
+- `TASK-099-01_Dashboard_Service.md` (**Done, 2026-02-09**)
 - `TASK-099-02_Dashboard_API.md`
 - `TASK-099-03_Dashboard_UI_Wiring.md`
 

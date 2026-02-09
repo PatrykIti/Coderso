@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 7 tasks
-- **In Progress:** 0 tasks
-- **Done:** 290 tasks
+- **To Do:** 5 tasks
+- **In Progress:** 1 tasks
+- **Done:** 291 tasks
 
 ---
 
@@ -41,8 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
-| TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
 | TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
 
@@ -52,6 +50,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | 099-01 complete; 099-02/03 pending |
 
 ---
 
@@ -59,6 +58,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-099-01 | Dashboard Service | Medium | Medium | Dashboard aggregate service + DTO + tests |
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | 050-01..15 complete |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | 050-05-01/02 complete |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI + rendering complete |
