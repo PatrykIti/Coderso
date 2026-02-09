@@ -5,7 +5,7 @@
 **Category:** Admin/Dashboard  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-099-02, TASK-006-01, TASK-099  
-**Status:** To Do  
+**Status:** Done (2026-02-09)  
 
 ---
 
@@ -115,3 +115,27 @@ Suggested commands:
 ## Changelog Entry (planned)
 
 - `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-dashboard-ui-wiring.md`
+
+---
+
+## Implementation Notes (Done)
+
+- Added dashboard API client:
+  - `core/admin/services/dashboardClient.ts` (`GET /dashboard`).
+- Rewired dashboard UI to runtime data:
+  - `core/admin/ui/dashboard/DashboardPage.tsx` now fetches dashboard payload,
+  - supports loading + error + retry states,
+  - maps KPI cards to runtime totals/storage.
+- Removed hardcoded table/security/health data:
+  - `core/admin/ui/dashboard/RecentEditsTable.tsx` now renders `recentEdits` from API,
+  - `core/admin/ui/dashboard/SecurityStatusCard.tsx` now renders security checks/status,
+  - `core/admin/ui/dashboard/SiteHealthCard.tsx` now maps storage/security summaries.
+- Added/updated tests:
+  - `tests/unit/admin/dashboardClient.test.ts` (request path + method),
+  - `tests/unit/ui/dashboard.test.tsx` (loading + sections render).
+
+Verification:
+- `bun test tests/unit/admin/dashboardClient.test.ts`
+- `bun test tests/unit/ui/dashboard.test.tsx`
+- `bun --cwd core lint:types`
+- `bun --cwd core lint`

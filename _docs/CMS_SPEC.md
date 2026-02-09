@@ -215,6 +215,7 @@ UI ma byc spojne z modelem Wizard/Visual/Advanced dla widgetow:
   - `security` (status + checki: csrf/rateLimit/headers/sessionPolicy).
 - Zrodlem danych sa tabele CMS i runtime `security.settings`.
 - W ramach MVP brak metryk ruchu publicznego (np. visitors/page views z zewnetrznej analityki).
+- Admin UI dashboard renderuje loading/error/retry states i mapuje sekcje KPI/Recent Edits/Security z jednego payloadu API.
 Admin UI bazuje na shadcn/ui + Tailwind v4.
 
 ---

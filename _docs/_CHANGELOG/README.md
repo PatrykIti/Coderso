@@ -196,6 +196,7 @@ Project Change Log.
 | 204 | 2026-02-09 | Assistant security, quotas, observability and hardening | Core/Security |
 | 205 | 2026-02-09 | Dashboard service | Core/Services |
 | 206 | 2026-02-09 | Dashboard API | Core/API |
+| 207 | 2026-02-09 | Dashboard UI wiring | Admin/UI |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

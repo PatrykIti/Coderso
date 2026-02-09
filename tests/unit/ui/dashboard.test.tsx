@@ -7,6 +7,8 @@ test("DashboardPage renders key sections", () => {
   const html = renderToString(<DashboardPage />);
 
   expect(html).toContain("Dashboard");
+  expect(html).toContain("Loading dashboard...");
   expect(html).toContain("Recent Edits");
   expect(html).toContain("Site Health");
+  expect(html).toContain("Security Status");
 });
