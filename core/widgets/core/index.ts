@@ -21,6 +21,8 @@ import {
   type RichTextSectionData,
 } from "./richTextSection";
 import { createSectionWidget, type SectionData } from "./section";
+import { createSplitLayoutWidget, type SplitLayoutData } from "./splitLayout";
+import { createSpacerWidget, type SpacerData } from "./spacer";
 import { createStackWidget, type StackData } from "./stack";
 import { createStatsKpiWidget, type StatsKpiData } from "./statsKpi";
 import { createTeamWidget, type TeamData } from "./team";
@@ -36,6 +38,8 @@ type EditorBundle<T> = {
 export type CoreWidgetEditors = {
   section: EditorBundle<SectionData>;
   gridColumns: EditorBundle<GridColumnsData>;
+  splitLayout: EditorBundle<SplitLayoutData>;
+  spacer: EditorBundle<SpacerData>;
   stack: EditorBundle<StackData>;
   hero: EditorBundle<HeroData>;
   featureGrid: EditorBundle<FeatureGridData>;
@@ -64,6 +68,8 @@ export function createCoreWidgetDefinitions(
   return [
     createSectionWidget(editors.section),
     createGridColumnsWidget(editors.gridColumns),
+    createSplitLayoutWidget(editors.splitLayout),
+    createSpacerWidget(editors.spacer),
     createStackWidget(editors.stack),
     createHeroWidget(editors.hero),
     createFeatureGridWidget(editors.featureGrid),

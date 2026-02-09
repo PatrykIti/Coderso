@@ -13,6 +13,16 @@ export {
   StackVisualEditor,
   StackWizardEditor,
 } from "./StackEditors";
+export {
+  SplitLayoutAdvancedEditor,
+  SplitLayoutVisualEditor,
+  SplitLayoutWizardEditor,
+} from "./SplitLayoutEditors";
+export {
+  SpacerAdvancedEditor,
+  SpacerVisualEditor,
+  SpacerWizardEditor,
+} from "./SpacerEditors";
 export { HeroAdvancedEditor, HeroVisualEditor, HeroWizardEditor } from "./HeroEditors";
 export {
   TimelineAdvancedEditor,

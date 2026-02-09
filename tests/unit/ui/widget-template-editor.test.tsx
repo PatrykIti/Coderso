@@ -97,6 +97,16 @@ import {
   StackVisualEditor,
   StackWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/StackEditors";
+import {
+  SplitLayoutAdvancedEditor,
+  SplitLayoutVisualEditor,
+  SplitLayoutWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/SplitLayoutEditors";
+import {
+  SpacerAdvancedEditor,
+  SpacerVisualEditor,
+  SpacerWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/SpacerEditors";
 import { WidgetTemplateEditorPage } from "../../../core/admin/ui/widgets/WidgetTemplateEditorPage";
 import {
   compareTimelineDefaults,
@@ -174,6 +184,14 @@ import {
   createStackWidget,
   stackDefaults,
 } from "../../../core/widgets/core/stack";
+import {
+  createSplitLayoutWidget,
+  splitLayoutDefaults,
+} from "../../../core/widgets/core/splitLayout";
+import {
+  createSpacerWidget,
+  spacerDefaults,
+} from "../../../core/widgets/core/spacer";
 
 test("WidgetTemplateEditorPage renders canvas placeholder", () => {
   const html = renderToString(<WidgetTemplateEditorPage />);
@@ -464,6 +482,68 @@ test("widget template block settings render stack visual sections", () => {
   expect(html).toContain("Variant and flow");
   expect(html).toContain("Responsive direction");
   expect(html).toContain("Spacing and distribution");
+});
+
+test("widget template block settings render split layout visual sections", () => {
+  const widget = createSplitLayoutWidget({
+    wizard: SplitLayoutWizardEditor,
+    visual: SplitLayoutVisualEditor,
+    advanced: SplitLayoutAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "split-layout-1",
+        type: "split-layout",
+        variant: "50-50",
+        data: splitLayoutDefaults,
+        slots: {
+          left: [],
+          right: [],
+        },
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and pane ratio");
+  expect(html).toContain("Mobile collapse behavior");
+  expect(html).toContain("Spacing and vertical alignment");
+});
+
+test("widget template block settings render spacer visual sections", () => {
+  const widget = createSpacerWidget({
+    wizard: SpacerWizardEditor,
+    visual: SpacerVisualEditor,
+    advanced: SpacerAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "spacer-1",
+        type: "spacer",
+        variant: "responsive",
+        data: spacerDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and responsive behavior");
+  expect(html).toContain("Responsive heights");
+  expect(html).toContain("Editor guide");
 });
 
 test("widget template block settings render testimonials visual sections", () => {

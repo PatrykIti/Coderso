@@ -43,7 +43,9 @@ an elastic number of slots instead of fixed slot sets.
 - Done: `TASK-050-15-02`
 - Done: `TASK-050-15-03`
 - Done: `TASK-050-15-04`
-- Next: `TASK-050-15-05`
+- Done: `TASK-050-15-05`
+- Done: `TASK-050-15-06`
+- Next: `TASK-050-15-07`
 
 ---
 

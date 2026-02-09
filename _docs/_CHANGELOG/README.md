@@ -183,6 +183,8 @@ Project Change Log.
 | 186 | 2026-02-09 | Section layout widget | CMS/Widgets |
 | 187 | 2026-02-09 | Grid columns layout widget | CMS/Widgets |
 | 188 | 2026-02-09 | Stack layout widget | CMS/Widgets |
+| 189 | 2026-02-09 | Split layout widget | CMS/Widgets |
+| 190 | 2026-02-09 | Spacer widget | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

@@ -18,6 +18,8 @@ export function ensureRuntimeWidgetsRegistered() {
   registerCoreWidgets({
     section: noopEditors,
     gridColumns: noopEditors,
+    splitLayout: noopEditors,
+    spacer: noopEditors,
     stack: noopEditors,
     hero: noopEditors,
     featureGrid: noopEditors,

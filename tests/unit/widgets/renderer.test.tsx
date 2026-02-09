@@ -98,6 +98,16 @@ import {
   stackDefaults,
   type StackData,
 } from "../../../core/widgets/core/stack";
+import {
+  createSplitLayoutWidget,
+  splitLayoutDefaults,
+  type SplitLayoutData,
+} from "../../../core/widgets/core/splitLayout";
+import {
+  createSpacerWidget,
+  spacerDefaults,
+  type SpacerData,
+} from "../../../core/widgets/core/spacer";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -127,6 +137,9 @@ const StubSectionEditor: ComponentType<WidgetEditorProps<SectionData>> = () => n
 const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () =>
   null;
 const StubStackEditor: ComponentType<WidgetEditorProps<StackData>> = () => null;
+const StubSplitLayoutEditor: ComponentType<WidgetEditorProps<SplitLayoutData>> = () =>
+  null;
+const StubSpacerEditor: ComponentType<WidgetEditorProps<SpacerData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -460,6 +473,86 @@ test("renderer outputs stack responsive markers", () => {
   expect(html).toContain('data-stack-direction-desktop="row"');
   expect(html).toContain('data-stack-gap-desktop="8"');
   expect(html).toContain('data-stack-wrap="true"');
+});
+
+test("renderer outputs split layout markers", () => {
+  clearWidgets();
+  registerWidget(
+    createSplitLayoutWidget({
+      wizard: StubSplitLayoutEditor,
+      visual: StubSplitLayoutEditor,
+      advanced: StubSplitLayoutEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "split-layout-1",
+        type: "split-layout",
+        variant: "40-60",
+        data: {
+          ...splitLayoutDefaults,
+          ratio: {
+            desktop: "40-60",
+            tablet: "60-40",
+          },
+          collapseMobile: "keep",
+          reverseOnMobile: true,
+          gap: "8",
+          verticalAlign: "center",
+        },
+        slots: {
+          left: [],
+          right: [],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-split-layout-variant="40-60"');
+  expect(html).toContain('data-split-ratio-desktop="40-60"');
+  expect(html).toContain('data-split-ratio-tablet="60-40"');
+  expect(html).toContain('data-split-collapse-mobile="keep"');
+  expect(html).toContain('data-split-reverse-mobile="true"');
+});
+
+test("renderer outputs spacer markers", () => {
+  clearWidgets();
+  registerWidget(
+    createSpacerWidget({
+      wizard: StubSpacerEditor,
+      visual: StubSpacerEditor,
+      advanced: StubSpacerEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "spacer-1",
+        type: "spacer",
+        variant: "responsive",
+        data: {
+          ...spacerDefaults,
+          height: {
+            desktop: "24",
+            tablet: "64px",
+            mobile: "12",
+          },
+          showGuideInEditor: true,
+        },
+      }}
+      previewDevice="desktop"
+    />
+  );
+
+  expect(html).toContain('data-spacer="true"');
+  expect(html).toContain('data-spacer-variant="responsive"');
+  expect(html).toContain('data-spacer-desktop="24"');
+  expect(html).toContain('data-spacer-tablet="64px"');
+  expect(html).toContain('data-spacer-mobile="12"');
+  expect(html.replace(/<!-- -->/g, "")).toContain("Spacer 6rem");
 });
 
 test("renderer renders navigation right slot content", () => {
