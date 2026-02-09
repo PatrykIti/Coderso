@@ -5,6 +5,7 @@ import { createCompareTimelineWidget, type CompareTimelineData } from "./compare
 import { createContentListWidget, type ContentListData } from "./contentList";
 import { createContactWidget, type ContactData } from "./contact";
 import { createCtaBannerWidget, type CtaBannerData } from "./ctaBanner";
+import { createDividerWidget, type DividerData } from "./divider";
 import { createEntryTeaserWidget, type EntryTeaserData } from "./entryTeaser";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
@@ -40,6 +41,7 @@ export type CoreWidgetEditors = {
   gridColumns: EditorBundle<GridColumnsData>;
   splitLayout: EditorBundle<SplitLayoutData>;
   spacer: EditorBundle<SpacerData>;
+  divider: EditorBundle<DividerData>;
   stack: EditorBundle<StackData>;
   hero: EditorBundle<HeroData>;
   featureGrid: EditorBundle<FeatureGridData>;
@@ -70,6 +72,7 @@ export function createCoreWidgetDefinitions(
     createGridColumnsWidget(editors.gridColumns),
     createSplitLayoutWidget(editors.splitLayout),
     createSpacerWidget(editors.spacer),
+    createDividerWidget(editors.divider),
     createStackWidget(editors.stack),
     createHeroWidget(editors.hero),
     createFeatureGridWidget(editors.featureGrid),

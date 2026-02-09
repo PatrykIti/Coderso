@@ -5,6 +5,7 @@
 - `STACK.md` - Flow layout primitive
 - `SPLIT_LAYOUT.md` - Two-pane layout primitive
 - `SPACER.md` - Vertical spacing primitive
+- `DIVIDER.md` - Visual separator primitive
 - `HERO.md` - Hero section
 - `TIMELINE.md` - Timeline (proces bez dat)
 - `COMPARE_TIMELINE.md` - Compare timeline (porownanie dwoch procesow)

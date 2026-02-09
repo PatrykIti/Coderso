@@ -7,6 +7,9 @@ import {
   GridColumnsAdvancedEditor,
   GridColumnsVisualEditor,
   GridColumnsWizardEditor,
+  DividerAdvancedEditor,
+  DividerVisualEditor,
+  DividerWizardEditor,
   SpacerAdvancedEditor,
   SpacerVisualEditor,
   SpacerWizardEditor,
@@ -96,6 +99,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: SpacerWizardEditor,
       visual: SpacerVisualEditor,
       advanced: SpacerAdvancedEditor,
+    },
+    divider: {
+      wizard: DividerWizardEditor,
+      visual: DividerVisualEditor,
+      advanced: DividerAdvancedEditor,
     },
     stack: {
       wizard: StackWizardEditor,

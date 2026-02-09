@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-050-14, TASK-050-04, TASK-051-03  
-**Status:** In Progress (2026-02-09)
+**Status:** Done (2026-02-09)
 
 ---
 
@@ -45,7 +45,7 @@ an elastic number of slots instead of fixed slot sets.
 - Done: `TASK-050-15-04`
 - Done: `TASK-050-15-05`
 - Done: `TASK-050-15-06`
-- Next: `TASK-050-15-07`
+- Done: `TASK-050-15-07`
 
 ---
 

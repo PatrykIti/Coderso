@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 21 tasks
-- **In Progress:** 1 task
-- **Done:** 260 tasks
+- **To Do:** 20 tasks
+- **In Progress:** 0 tasks
+- **Done:** 262 tasks
 
 ---
 
@@ -56,7 +56,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..15 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
-| TASK-050-15-07 | Divider Widget | Medium | Small | Visual separator primitive |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | Dashboard metrics API + UI |
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
@@ -77,7 +76,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-050-15 | Layout Primitives Widgets Pack | High | Large | 050-15-01/02/03/04/05/06 complete, 050-15-07 next |
+| - | - | - | - | - |
 
 ---
 
@@ -85,6 +84,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-15 | Layout Primitives Widgets Pack | High | Large | 050-15-01/02/03/04/05/06/07 complete |
+| TASK-050-15-07 | Divider Widget | Medium | Small | Visual separator primitive |
 | TASK-050-15-06 | Spacer Widget | Medium | Small | Responsive spacing primitive |
 | TASK-050-15-05 | Split Layout Widget | Medium | Medium | Two-pane layout with ratio controls |
 | TASK-050-15-04 | Stack Layout Widget | Medium | Medium | Vertical/horizontal flow container |

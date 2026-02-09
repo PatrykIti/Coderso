@@ -108,6 +108,11 @@ import {
   spacerDefaults,
   type SpacerData,
 } from "../../../core/widgets/core/spacer";
+import {
+  createDividerWidget,
+  dividerDefaults,
+  type DividerData,
+} from "../../../core/widgets/core/divider";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -140,6 +145,7 @@ const StubStackEditor: ComponentType<WidgetEditorProps<StackData>> = () => null;
 const StubSplitLayoutEditor: ComponentType<WidgetEditorProps<SplitLayoutData>> = () =>
   null;
 const StubSpacerEditor: ComponentType<WidgetEditorProps<SpacerData>> = () => null;
+const StubDividerEditor: ComponentType<WidgetEditorProps<DividerData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -553,6 +559,44 @@ test("renderer outputs spacer markers", () => {
   expect(html).toContain('data-spacer-tablet="64px"');
   expect(html).toContain('data-spacer-mobile="12"');
   expect(html.replace(/<!-- -->/g, "")).toContain("Spacer 6rem");
+});
+
+test("renderer outputs divider markers", () => {
+  clearWidgets();
+  registerWidget(
+    createDividerWidget({
+      wizard: StubDividerEditor,
+      visual: StubDividerEditor,
+      advanced: StubDividerEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "divider-1",
+        type: "divider",
+        variant: "label-center",
+        data: {
+          ...dividerDefaults,
+          label: "Features",
+          thickness: 2,
+          color: "#cbd5e1",
+          width: "custom",
+          customWidth: "60%",
+          marginTop: "8",
+          marginBottom: "10",
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-divider="true"');
+  expect(html).toContain('data-divider-variant="label-center"');
+  expect(html).toContain('data-divider-thickness="2"');
+  expect(html).toContain('data-divider-width-mode="custom"');
+  expect(html).toContain('data-divider-has-label="true"');
+  expect(html).toContain("Features");
 });
 
 test("renderer renders navigation right slot content", () => {

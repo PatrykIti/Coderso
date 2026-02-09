@@ -23,6 +23,11 @@ export {
   SpacerVisualEditor,
   SpacerWizardEditor,
 } from "./SpacerEditors";
+export {
+  DividerAdvancedEditor,
+  DividerVisualEditor,
+  DividerWizardEditor,
+} from "./DividerEditors";
 export { HeroAdvancedEditor, HeroVisualEditor, HeroWizardEditor } from "./HeroEditors";
 export {
   TimelineAdvancedEditor,

@@ -20,6 +20,7 @@ export function ensureRuntimeWidgetsRegistered() {
     gridColumns: noopEditors,
     splitLayout: noopEditors,
     spacer: noopEditors,
+    divider: noopEditors,
     stack: noopEditors,
     hero: noopEditors,
     featureGrid: noopEditors,

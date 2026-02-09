@@ -107,6 +107,11 @@ import {
   SpacerVisualEditor,
   SpacerWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/SpacerEditors";
+import {
+  DividerAdvancedEditor,
+  DividerVisualEditor,
+  DividerWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/DividerEditors";
 import { WidgetTemplateEditorPage } from "../../../core/admin/ui/widgets/WidgetTemplateEditorPage";
 import {
   compareTimelineDefaults,
@@ -192,6 +197,10 @@ import {
   createSpacerWidget,
   spacerDefaults,
 } from "../../../core/widgets/core/spacer";
+import {
+  createDividerWidget,
+  dividerDefaults,
+} from "../../../core/widgets/core/divider";
 
 test("WidgetTemplateEditorPage renders canvas placeholder", () => {
   const html = renderToString(<WidgetTemplateEditorPage />);
@@ -544,6 +553,35 @@ test("widget template block settings render spacer visual sections", () => {
   expect(html).toContain("Variant and responsive behavior");
   expect(html).toContain("Responsive heights");
   expect(html).toContain("Editor guide");
+});
+
+test("widget template block settings render divider visual sections", () => {
+  const widget = createDividerWidget({
+    wizard: DividerWizardEditor,
+    visual: DividerVisualEditor,
+    advanced: DividerAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "divider-1",
+        type: "divider",
+        variant: "line",
+        data: dividerDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and label");
+  expect(html).toContain("Line style and width");
+  expect(html).toContain("Spacing around divider");
 });
 
 test("widget template block settings render testimonials visual sections", () => {
