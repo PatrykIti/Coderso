@@ -82,6 +82,16 @@ import {
   TimelineVisualEditor,
   TimelineWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/TimelineEditors";
+import {
+  SectionAdvancedEditor,
+  SectionVisualEditor,
+  SectionWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/SectionEditors";
+import {
+  GridColumnsAdvancedEditor,
+  GridColumnsVisualEditor,
+  GridColumnsWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/GridColumnsEditors";
 import { WidgetTemplateEditorPage } from "../../../core/admin/ui/widgets/WidgetTemplateEditorPage";
 import {
   compareTimelineDefaults,
@@ -147,6 +157,14 @@ import {
   createTimelineWidget,
   timelineDefaults,
 } from "../../../core/widgets/core/timeline";
+import {
+  createSectionWidget,
+  sectionDefaults,
+} from "../../../core/widgets/core/section";
+import {
+  createGridColumnsWidget,
+  gridColumnsDefaults,
+} from "../../../core/widgets/core/gridColumns";
 
 test("WidgetTemplateEditorPage renders canvas placeholder", () => {
   const html = renderToString(<WidgetTemplateEditorPage />);
@@ -343,6 +361,68 @@ test("widget template block settings render feature grid visual sections", () =>
   expect(html).toContain("Header copy");
   expect(html).toContain("Feature cards and actions");
   expect(html).toContain("Colors and borders");
+});
+
+test("widget template block settings render section visual sections", () => {
+  const widget = createSectionWidget({
+    wizard: SectionWizardEditor,
+    visual: SectionVisualEditor,
+    advanced: SectionAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "section-1",
+        type: "section",
+        variant: "default",
+        data: sectionDefaults,
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and structure");
+  expect(html).toContain("Semantics and anchor");
+  expect(html).toContain("Surface and borders");
+});
+
+test("widget template block settings render grid columns visual sections", () => {
+  const widget = createGridColumnsWidget({
+    wizard: GridColumnsWizardEditor,
+    visual: GridColumnsVisualEditor,
+    advanced: GridColumnsAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "grid-columns-1",
+        type: "grid-columns",
+        variant: "equal",
+        data: gridColumnsDefaults,
+        slots: {
+          "column:1": [],
+          "column:2": [],
+        },
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and layout structure");
+  expect(html).toContain("Column sizing and labels");
+  expect(html).toContain("Gap and column surface");
 });
 
 test("widget template block settings render testimonials visual sections", () => {

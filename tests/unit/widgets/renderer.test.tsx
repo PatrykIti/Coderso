@@ -83,6 +83,16 @@ import {
   richTextSectionDefaults,
   type RichTextSectionData,
 } from "../../../core/widgets/core/richTextSection";
+import {
+  createSectionWidget,
+  sectionDefaults,
+  type SectionData,
+} from "../../../core/widgets/core/section";
+import {
+  createGridColumnsWidget,
+  gridColumnsDefaults,
+  type GridColumnsData,
+} from "../../../core/widgets/core/gridColumns";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -107,6 +117,9 @@ const StubGalleryMosaicEditor: ComponentType<WidgetEditorProps<GalleryMosaicData
 const StubStatsKpiEditor: ComponentType<WidgetEditorProps<StatsKpiData>> = () => null;
 const StubTeamEditor: ComponentType<WidgetEditorProps<TeamData>> = () => null;
 const StubRichTextSectionEditor: ComponentType<WidgetEditorProps<RichTextSectionData>> = () =>
+  null;
+const StubSectionEditor: ComponentType<WidgetEditorProps<SectionData>> = () => null;
+const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () =>
   null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
@@ -336,6 +349,68 @@ test("renderer passes slots to widget render", () => {
   const html = renderToString(<WidgetRenderer block={block} />);
   const normalizedHtml = html.replace(/<!--.*?-->/g, "");
   expect(normalizedHtml).toContain("Slots:1");
+});
+
+test("renderer outputs section variant and region markers", () => {
+  clearWidgets();
+  registerWidget(
+    createSectionWidget({
+      wizard: StubSectionEditor,
+      visual: StubSectionEditor,
+      advanced: StubSectionEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "section-1",
+        type: "section",
+        variant: "contained",
+        data: sectionDefaults,
+        slots: {
+          "region:1": [],
+          "region:2": [],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-section-variant="contained"');
+  expect(html).toContain('data-section-regions="2"');
+  expect(html).toContain('data-section-region="region:1"');
+});
+
+test("renderer outputs grid columns responsive markers", () => {
+  clearWidgets();
+  registerWidget(
+    createGridColumnsWidget({
+      wizard: StubGridColumnsEditor,
+      visual: StubGridColumnsEditor,
+      advanced: StubGridColumnsEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "grid-columns-1",
+        type: "grid-columns",
+        variant: "asymmetric",
+        data: gridColumnsDefaults,
+        slots: {
+          "column:1": [],
+          "column:2": [],
+          "column:3": [],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-grid-columns-variant="asymmetric"');
+  expect(html).toContain('data-grid-columns-count="3"');
+  expect(html).toContain('data-grid-column="column:1"');
+  expect(html).toContain('data-grid-column="column:3"');
 });
 
 test("renderer renders navigation right slot content", () => {

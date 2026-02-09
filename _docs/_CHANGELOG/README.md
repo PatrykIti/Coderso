@@ -180,6 +180,8 @@ Project Change Log.
 | 183 | 2026-02-08 | Content list widget | CMS/Widgets |
 | 184 | 2026-02-08 | Entry teaser widget | CMS/Widgets |
 | 185 | 2026-02-09 | Repeatable slots core | CMS/Widgets |
+| 186 | 2026-02-09 | Section layout widget | CMS/Widgets |
+| 187 | 2026-02-09 | Grid columns layout widget | CMS/Widgets |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

@@ -1,3 +1,13 @@
+export {
+  SectionAdvancedEditor,
+  SectionVisualEditor,
+  SectionWizardEditor,
+} from "./SectionEditors";
+export {
+  GridColumnsAdvancedEditor,
+  GridColumnsVisualEditor,
+  GridColumnsWizardEditor,
+} from "./GridColumnsEditors";
 export { HeroAdvancedEditor, HeroVisualEditor, HeroWizardEditor } from "./HeroEditors";
 export {
   TimelineAdvancedEditor,

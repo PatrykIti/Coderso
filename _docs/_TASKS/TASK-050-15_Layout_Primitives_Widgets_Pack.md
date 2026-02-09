@@ -40,7 +40,9 @@ an elastic number of slots instead of fixed slot sets.
 ## Progress
 
 - Done: `TASK-050-15-01`
-- Next: `TASK-050-15-02`
+- Done: `TASK-050-15-02`
+- Done: `TASK-050-15-03`
+- Next: `TASK-050-15-04`
 
 ---
 

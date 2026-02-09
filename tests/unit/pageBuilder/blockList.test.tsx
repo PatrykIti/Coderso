@@ -165,3 +165,34 @@ test("repeatable slot helpers enforce min and max limits", () => {
   );
   expect(blockedByMin[0]?.slots?.["column:2"]).toEqual([]);
 });
+
+test("grid columns supports nested insert and reorder per repeatable column slot", () => {
+  const parent: Block = { ...createBlock("grid-columns"), id: "grid-parent" };
+  const childA: Block = { ...createBlock("hero"), id: "grid-child-a" };
+  const childB: Block = { ...createBlock("newsletter"), id: "grid-child-b" };
+
+  const withChildren = appendSlotBlock(
+    appendSlotBlock([parent], "grid-parent", "column:1", childA),
+    "grid-parent",
+    "column:1",
+    childB
+  );
+
+  const reordered = reorderBlocksAtPath(
+    withChildren,
+    [{ index: 0, slotId: "column:1" }],
+    0,
+    1
+  );
+  expect(reordered[0]?.slots?.["column:1"]?.[0]?.id).toBe("grid-child-b");
+  expect(reordered[0]?.slots?.["column:1"]?.[1]?.id).toBe("grid-child-a");
+
+  const moved = moveBlockIntoSlot(
+    reordered,
+    "grid-child-a",
+    "grid-parent",
+    "column:2"
+  );
+  expect(moved[0]?.slots?.["column:1"]?.[0]?.id).toBe("grid-child-b");
+  expect(moved[0]?.slots?.["column:2"]?.[0]?.id).toBe("grid-child-a");
+});

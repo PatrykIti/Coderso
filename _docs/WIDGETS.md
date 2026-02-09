@@ -25,6 +25,8 @@ System widgetow zostal zaprojektowany, aby rozwiazac odwieczny konflikt miedzy "
 ## Lista widgetow w core v1
 
 Wymagane:
+- Section (layout wrapper z repeatable regions)
+- Grid/Columns (layout primitive z responsywnym podzialem kolumn)
 - Hero section
 - Timeline (bez dat; etapy/proces w formie osi)
 - Compare timeline (porownanie dwoch procesow na jednej osi)
@@ -97,6 +99,8 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
 - `_docs/_WIDGETS/CONTENT_LIST.md`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
+- `_docs/_WIDGETS/SECTION.md`
+- `_docs/_WIDGETS/GRID_COLUMNS.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
 

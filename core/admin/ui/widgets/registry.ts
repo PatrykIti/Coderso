@@ -4,6 +4,12 @@ import {
   CompareTimelineAdvancedEditor,
   CompareTimelineVisualEditor,
   CompareTimelineWizardEditor,
+  GridColumnsAdvancedEditor,
+  GridColumnsVisualEditor,
+  GridColumnsWizardEditor,
+  SectionAdvancedEditor,
+  SectionVisualEditor,
+  SectionWizardEditor,
   ContactAdvancedEditor,
   ContactVisualEditor,
   ContactWizardEditor,
@@ -62,6 +68,16 @@ import {
 
 export function ensureCoreWidgetsRegistered() {
   registerCoreWidgets({
+    section: {
+      wizard: SectionWizardEditor,
+      visual: SectionVisualEditor,
+      advanced: SectionAdvancedEditor,
+    },
+    gridColumns: {
+      wizard: GridColumnsWizardEditor,
+      visual: GridColumnsVisualEditor,
+      advanced: GridColumnsAdvancedEditor,
+    },
     hero: {
       wizard: HeroWizardEditor,
       visual: HeroVisualEditor,

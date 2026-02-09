@@ -10,6 +10,7 @@ import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
 import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion";
 import { createGalleryMosaicWidget, type GalleryMosaicData } from "./galleryMosaic";
+import { createGridColumnsWidget, type GridColumnsData } from "./gridColumns";
 import { createHeroWidget, type HeroData } from "./hero";
 import { createLogoCloudWidget, type LogoCloudData } from "./logoCloud";
 import { createNavigationWidget, type NavigationData } from "./navigation";
@@ -19,6 +20,7 @@ import {
   createRichTextSectionWidget,
   type RichTextSectionData,
 } from "./richTextSection";
+import { createSectionWidget, type SectionData } from "./section";
 import { createStatsKpiWidget, type StatsKpiData } from "./statsKpi";
 import { createTeamWidget, type TeamData } from "./team";
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
@@ -31,6 +33,8 @@ type EditorBundle<T> = {
 };
 
 export type CoreWidgetEditors = {
+  section: EditorBundle<SectionData>;
+  gridColumns: EditorBundle<GridColumnsData>;
   hero: EditorBundle<HeroData>;
   featureGrid: EditorBundle<FeatureGridData>;
   testimonials: EditorBundle<TestimonialsData>;
@@ -56,6 +60,8 @@ export function createCoreWidgetDefinitions(
   editors: CoreWidgetEditors
 ): Array<WidgetDefinition<any>> {
   return [
+    createSectionWidget(editors.section),
+    createGridColumnsWidget(editors.gridColumns),
     createHeroWidget(editors.hero),
     createFeatureGridWidget(editors.featureGrid),
     createTestimonialsWidget(editors.testimonials),

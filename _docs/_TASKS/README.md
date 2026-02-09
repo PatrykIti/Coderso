@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 26 tasks
+- **To Do:** 24 tasks
 - **In Progress:** 1 task
-- **Done:** 255 tasks
+- **Done:** 257 tasks
 
 ---
 
@@ -56,8 +56,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-050 | Widget Templates Preview + Revisions | Medium | Medium | Index for TASK-050-01..15 |
 | TASK-050-04 | Widget Slot System (Core) | High | Large | Slot model + insert UI |
 | TASK-050-05 | Hero Widget Expansion + Slots | High | Medium | Wizard/visual/advanced |
-| TASK-050-15-02 | Section Layout Widget | High | Medium | Section wrapper + semantic regions + repeatable slots |
-| TASK-050-15-03 | Grid/Columns Layout Widget | High | Large | Dynamic columns with per-breakpoint sizing |
 | TASK-050-15-04 | Stack Layout Widget | Medium | Medium | Vertical/horizontal flow container |
 | TASK-050-15-05 | Split Layout Widget | Medium | Medium | Two-pane layout with ratio controls |
 | TASK-050-15-06 | Spacer Widget | Medium | Small | Responsive spacing primitive |
@@ -82,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-050-15 | Layout Primitives Widgets Pack | High | Large | 050-15-01 complete, 050-15-02 next |
+| TASK-050-15 | Layout Primitives Widgets Pack | High | Large | 050-15-01/02/03 complete, 050-15-04 next |
 
 ---
 
@@ -90,6 +88,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-050-15-03 | Grid/Columns Layout Widget | High | Large | Dynamic columns with per-breakpoint sizing |
+| TASK-050-15-02 | Section Layout Widget | High | Medium | Section wrapper + semantic regions + repeatable slots |
 | TASK-050-15-01 | Repeatable Slots Core for Layout Widgets | High | Large | Slot kind contract + repeatable slot normalization + insertion flow |
 | TASK-050-14-02 | Entry Teaser Widget | High | Medium | Dynamic entry teaser widget + runtime resolver + Wizard/Visual/Advanced |
 | TASK-050-14 | Dynamic Content Widgets Pack | High | Large | 050-14-01/02 complete |

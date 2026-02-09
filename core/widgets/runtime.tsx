@@ -16,6 +16,8 @@ let registered = false;
 export function ensureRuntimeWidgetsRegistered() {
   if (registered) return;
   registerCoreWidgets({
+    section: noopEditors,
+    gridColumns: noopEditors,
     hero: noopEditors,
     featureGrid: noopEditors,
     testimonials: noopEditors,
