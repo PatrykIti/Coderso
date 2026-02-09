@@ -48,3 +48,31 @@ test("registerWidget rejects empty variants", () => {
     "widget_variants_required"
   );
 });
+
+test("registerWidget rejects minItems on fixed slot", () => {
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "layout-fixed",
+      slots: [{ id: "content", label: "Content", minItems: 1 }],
+    })
+  ).toThrow("widget_slot_min_unsupported");
+});
+
+test("registerWidget accepts repeatable slot limits", () => {
+  registerWidget({
+    ...baseDef,
+    type: "layout-repeatable",
+    slots: [
+      {
+        id: "column",
+        label: "Column",
+        kind: "repeatable",
+        minItems: 1,
+        maxItems: 3,
+      },
+    ],
+  });
+
+  expect(listWidgets().some((item) => item.type === "layout-repeatable")).toBe(true);
+});

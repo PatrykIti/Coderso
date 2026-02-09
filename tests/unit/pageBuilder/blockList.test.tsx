@@ -1,18 +1,22 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import { BlockList } from "../../../core/admin/ui/pages/builder/BlockList";
 import {
+  addRepeatableSlotInstance,
   appendSlotBlock,
   createBlock,
   duplicateBlock,
   findBlockById,
   insertBlockAfterId,
   moveBlockIntoSlot,
+  removeRepeatableSlotInstance,
   reorderBlocks,
   reorderBlocksAtPath,
 } from "../../../core/admin/ui/pages/builder/blockUtils";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
+import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
+import type { WidgetDefinition } from "../../../core/widgets/types";
 
 const blockA: Block = {
   ...createBlock("hero"),
@@ -24,6 +28,33 @@ const blockB: Block = {
   id: "b",
   variant: "inline",
 };
+
+const Dummy = () => null;
+const repeatableDefinition: WidgetDefinition<{ headline: string }> = {
+  type: "layout-columns",
+  title: "Layout Columns",
+  description: "Layout",
+  category: "layout",
+  variants: [{ id: "equal", label: "Equal" }],
+  slots: [
+    { id: "column", label: "Column", kind: "repeatable", minItems: 1, maxItems: 2 },
+  ],
+  schema: {
+    type: "object",
+    required: ["headline"],
+    additionalProperties: false,
+    properties: {
+      headline: { type: "string" },
+    },
+  },
+  defaults: { headline: "Columns" },
+  editor: { wizard: Dummy, visual: Dummy, advanced: Dummy },
+  render: Dummy,
+};
+
+afterEach(() => {
+  clearWidgets();
+});
 
 test("reorderBlocks moves items", () => {
   const reordered = reorderBlocks([blockA, blockB], 0, 1);
@@ -103,4 +134,34 @@ test("moveBlockIntoSlot moves block under target slot", () => {
   const moved = moveBlockIntoSlot([parent, child], "child", "parent", "main");
   expect(moved).toHaveLength(1);
   expect(moved[0].slots?.main?.[0]?.id).toBe("child");
+});
+
+test("createBlock initializes repeatable slots from minimum", () => {
+  const block = createBlock(repeatableDefinition);
+  expect(block.slots?.["column:1"]).toEqual([]);
+});
+
+test("repeatable slot helpers enforce min and max limits", () => {
+  registerWidget(repeatableDefinition);
+  const parent: Block = { ...createBlock("layout-columns"), id: "parent" };
+  const withSecondSlot = addRepeatableSlotInstance([parent], "parent", "column");
+  expect(withSecondSlot[0]?.slots?.["column:2"]).toEqual([]);
+
+  const blockedByMax = addRepeatableSlotInstance(withSecondSlot, "parent", "column");
+  expect(blockedByMax[0]?.slots?.["column:3"]).toBeUndefined();
+
+  const removedFirst = removeRepeatableSlotInstance(
+    blockedByMax,
+    "parent",
+    "column:1"
+  );
+  expect(removedFirst[0]?.slots?.["column:1"]).toBeUndefined();
+  expect(removedFirst[0]?.slots?.["column:2"]).toEqual([]);
+
+  const blockedByMin = removeRepeatableSlotInstance(
+    removedFirst,
+    "parent",
+    "column:2"
+  );
+  expect(blockedByMin[0]?.slots?.["column:2"]).toEqual([]);
 });

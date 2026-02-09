@@ -1,4 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { resolveWidgetSlotTargets } from "../../../../widgets/slots";
 
 import type { Block, EditorMode, WidgetDefinition } from "./types";
 import { AdvancedPanel } from "./AdvancedPanel";
@@ -29,7 +30,8 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
         ? { default: block.children }
         : {};
   const slotDefinitions = widget.slots ?? [];
-  const supportsSlots = slotDefinitions.length > 0;
+  const slotTargets = resolveWidgetSlotTargets(slotDefinitions, slotMap);
+  const supportsSlots = slotTargets.length > 0;
   const nestedCount = Object.values(slotMap).reduce(
     (sum, items) => sum + (Array.isArray(items) ? items.length : 0),
     0
@@ -53,12 +55,12 @@ export function BlockSettings({ block, widget, onChange }: BlockSettingsProps) {
         <div className="mb-3 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
           Slots:
           <div className="mt-2 space-y-1">
-            {slotDefinitions.map((slot) => {
-              const count = Array.isArray(slotMap[slot.id])
-                ? slotMap[slot.id].length
+            {slotTargets.map((slot) => {
+              const count = Array.isArray(slotMap[slot.slotId])
+                ? slotMap[slot.slotId].length
                 : 0;
               return (
-                <div key={slot.id} className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5">
+                <div key={slot.slotId} className="rounded-md border border-border/60 bg-background/40 px-2 py-1.5">
                   <div className="flex items-center justify-between">
                     <span>{slot.label} slot</span>
                     <span>

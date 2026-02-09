@@ -7,6 +7,13 @@ import type {
 } from "./types";
 import { containerTokens, spacingTokens } from "./types";
 import { getRegisteredWidget } from "@/ui/widgets/registry";
+import {
+  buildRepeatableSlotId,
+  getNextRepeatableSlotInstanceId,
+  getRepeatableSlotIds,
+  getWidgetSlotKind,
+  parseRepeatableSlotId,
+} from "../../../../widgets/slots";
 
 const defaultLayout: LayoutValue = {
   container: "default",
@@ -133,7 +140,22 @@ export function createBlock(definition: WidgetDefinition | string): Block {
   const slotDefinitions = resolved?.slots ?? [];
   const slotMap =
     slotDefinitions.length > 0
-      ? Object.fromEntries(slotDefinitions.map((slot) => [slot.id, [] as Block[]]))
+      ? (() => {
+          const slots: Record<string, Block[]> = {};
+          for (const slot of slotDefinitions) {
+            if (getWidgetSlotKind(slot) === "fixed") {
+              slots[slot.id] = [];
+              continue;
+            }
+            const minimum = Number.isFinite(slot.minItems)
+              ? Math.max(0, Math.floor(slot.minItems ?? 0))
+              : 0;
+            for (let index = 0; index < minimum; index += 1) {
+              slots[buildRepeatableSlotId(slot.id, String(index + 1))] = [];
+            }
+          }
+          return Object.keys(slots).length > 0 ? slots : undefined;
+        })()
       : undefined;
   return {
     id: crypto.randomUUID(),
@@ -236,6 +258,69 @@ export function appendSlotBlock(
 
 export function appendChildBlock(blocks: Block[], parentId: string, child: Block) {
   return appendSlotBlock(blocks, parentId, "default", child);
+}
+
+export function addRepeatableSlotInstance(
+  blocks: Block[],
+  parentId: string,
+  definitionId: string
+) {
+  return updateBlockById(blocks, parentId, (block) => {
+    const definition = getRegisteredWidget(block.type);
+    const slot = definition?.slots?.find((item) => item.id === definitionId);
+    if (!slot || getWidgetSlotKind(slot) !== "repeatable") return block;
+
+    const slots = getSlotMap(block);
+    const existing = getRepeatableSlotIds(slot, slots);
+    if (
+      Number.isFinite(slot.maxItems) &&
+      existing.length >= Math.floor(slot.maxItems ?? 0)
+    ) {
+      return block;
+    }
+
+    const nextInstanceId = getNextRepeatableSlotInstanceId(definitionId, slots);
+    const nextSlotId = buildRepeatableSlotId(definitionId, nextInstanceId);
+    if (slots[nextSlotId]) return block;
+
+    return {
+      ...block,
+      slots: { ...slots, [nextSlotId]: [] },
+      children: undefined,
+    };
+  });
+}
+
+export function removeRepeatableSlotInstance(
+  blocks: Block[],
+  parentId: string,
+  slotId: string
+) {
+  return updateBlockById(blocks, parentId, (block) => {
+    const parsed = parseRepeatableSlotId(slotId);
+    if (!parsed) return block;
+
+    const definition = getRegisteredWidget(block.type);
+    const slot = definition?.slots?.find((item) => item.id === parsed.definitionId);
+    if (!slot || getWidgetSlotKind(slot) !== "repeatable") return block;
+
+    const slots = getSlotMap(block);
+    if (!(slotId in slots)) return block;
+
+    const existing = getRepeatableSlotIds(slot, slots);
+    const minimum = Number.isFinite(slot.minItems)
+      ? Math.max(0, Math.floor(slot.minItems ?? 0))
+      : 0;
+    if (existing.length <= minimum) return block;
+
+    const nextSlots = { ...slots };
+    delete nextSlots[slotId];
+    return {
+      ...block,
+      slots: nextSlots,
+      children: undefined,
+    };
+  });
 }
 
 const blockContainsId = (block: Block, id: string): boolean => {

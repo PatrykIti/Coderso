@@ -2,6 +2,12 @@ import Ajv, { type ValidateFunction } from "ajv";
 
 import { getWidget } from "./registry";
 import type { WidgetBlock, WidgetDefinition } from "./types";
+import {
+  buildRepeatableSlotId,
+  getNextRepeatableSlotInstanceId,
+  getRepeatableSlotIds,
+  getWidgetSlotKind,
+} from "./slots";
 
 const ajv = new Ajv({ allErrors: true, strict: true });
 const validators = new Map<string, ValidateFunction>();
@@ -38,6 +44,63 @@ function normalizeSlotMap(block: WidgetBlock) {
   return undefined;
 }
 
+function normalizeSlotsForDefinition(
+  def: WidgetDefinition<any>,
+  slotMap: Record<string, WidgetBlock[]> | undefined
+) {
+  if (!Array.isArray(def.slots) || def.slots.length === 0) return slotMap;
+
+  const normalized: Record<string, WidgetBlock[]> = {
+    ...(slotMap ?? {}),
+  };
+  for (const slot of def.slots) {
+    if (getWidgetSlotKind(slot) === "fixed") {
+      normalized[slot.id] = normalized[slot.id] ?? [];
+      continue;
+    }
+
+    const legacyItems = normalized[slot.id];
+    const repeatableIds = getRepeatableSlotIds(slot, normalized);
+    if (Array.isArray(legacyItems)) {
+      if (repeatableIds.length === 0) {
+        normalized[buildRepeatableSlotId(slot.id, "1")] = legacyItems;
+      } else {
+        const first = repeatableIds[0]!;
+        normalized[first] = [...(normalized[first] ?? []), ...legacyItems];
+      }
+      delete normalized[slot.id];
+    }
+
+    let instanceIds = getRepeatableSlotIds(slot, normalized);
+    const minimum =
+      Number.isFinite(slot.minItems) && (slot.minItems ?? 0) > 0
+        ? Math.floor(slot.minItems ?? 0)
+        : 0;
+
+    while (instanceIds.length < minimum) {
+      const nextInstanceId = getNextRepeatableSlotInstanceId(slot.id, normalized);
+      const nextSlotId = buildRepeatableSlotId(slot.id, nextInstanceId);
+      normalized[nextSlotId] = normalized[nextSlotId] ?? [];
+      instanceIds = getRepeatableSlotIds(slot, normalized);
+    }
+
+    if (
+      Number.isFinite(slot.maxItems) &&
+      (slot.maxItems ?? 0) >= 0 &&
+      instanceIds.length > Math.floor(slot.maxItems ?? 0)
+    ) {
+      const keep = new Set(
+        instanceIds.slice(0, Math.floor(slot.maxItems ?? 0))
+      );
+      for (const key of instanceIds) {
+        if (!keep.has(key)) delete normalized[key];
+      }
+    }
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
 export function normalizeWidgetBlock(block: WidgetBlock): WidgetBlock {
   const def = getWidget(block.type);
   if (!def) throw new Error("widget_unknown_type");
@@ -56,7 +119,7 @@ export function normalizeWidgetBlock(block: WidgetBlock): WidgetBlock {
     throw new Error("widget_schema_invalid");
   }
 
-  const slots = normalizeSlotMap(block);
+  const slots = normalizeSlotsForDefinition(def, normalizeSlotMap(block));
   const children = slots ? undefined : Array.isArray(block.children) ? block.children : undefined;
 
   return {

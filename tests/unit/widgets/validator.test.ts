@@ -26,6 +26,28 @@ const definition: WidgetDefinition<{ headline: string; tone?: string }> = {
   render: Dummy,
 };
 
+const repeatableDefinition: WidgetDefinition<{ headline: string }> = {
+  type: "layout-columns",
+  title: "Layout Columns",
+  description: "Layout",
+  category: "layout",
+  variants: [{ id: "equal", label: "Equal" }],
+  slots: [
+    { id: "column", label: "Column", kind: "repeatable", minItems: 2, maxItems: 3 },
+  ],
+  schema: {
+    type: "object",
+    required: ["headline"],
+    additionalProperties: false,
+    properties: {
+      headline: { type: "string" },
+    },
+  },
+  defaults: { headline: "Columns" },
+  editor: { wizard: Dummy, visual: Dummy, advanced: Dummy },
+  render: Dummy,
+};
+
 afterEach(() => {
   clearWidgets();
   clearWidgetValidators();
@@ -88,4 +110,41 @@ test("normalizeWidgetBlock maps legacy children into default slot", () => {
   const normalized = normalizeWidgetBlock(block);
   expect(normalized.slots?.default).toHaveLength(1);
   expect(normalized.children).toBeUndefined();
+});
+
+test("normalizeWidgetBlock enforces repeatable minimum slots", () => {
+  registerWidget(repeatableDefinition);
+  const block: WidgetBlock = {
+    id: "1",
+    type: "layout-columns",
+    data: {},
+  };
+
+  const normalized = normalizeWidgetBlock(block);
+  expect(normalized.slots?.["column:1"]).toEqual([]);
+  expect(normalized.slots?.["column:2"]).toEqual([]);
+});
+
+test("normalizeWidgetBlock migrates legacy repeatable key and enforces max slots", () => {
+  registerWidget(repeatableDefinition);
+  const block: WidgetBlock = {
+    id: "1",
+    type: "layout-columns",
+    data: {},
+    slots: {
+      column: [{ id: "legacy", type: "hero", data: { headline: "Legacy" } }],
+      "column:2": [{ id: "child-2", type: "hero", data: { headline: "Child 2" } }],
+      "column:3": [],
+      "column:4": [],
+      "column:5": [],
+    },
+  };
+
+  const normalized = normalizeWidgetBlock(block);
+  expect(normalized.slots?.column).toBeUndefined();
+  expect(normalized.slots?.["column:2"]).toHaveLength(2);
+  expect(normalized.slots?.["column:5"]).toBeUndefined();
+  expect(
+    Object.keys(normalized.slots ?? {}).filter((key) => key.startsWith("column:"))
+  ).toHaveLength(3);
 });

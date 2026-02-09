@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 import type { WidgetRendererPageDefaults } from "../../../../widgets/renderers/widgetRenderer";
+import { resolveWidgetSlotTargets } from "../../../../widgets/slots";
 import type { Block } from "./types";
 import { getWidgetRegistry } from "./widgetRegistry";
 import type { BlockPath } from "./blockUtils";
@@ -96,12 +97,14 @@ export function BlockList({
         const widget = widgetRegistry.find((item) => item.type === block.type);
         const label = widget?.title ?? block.type;
         const slotMap = getSlotMap(block);
-        const slotDefinitions =
+        const slotTargets =
           widget?.slots && widget.slots.length > 0
-            ? widget.slots
+            ? resolveWidgetSlotTargets(widget.slots, slotMap)
             : Object.keys(slotMap).map((slotId) => ({
-                id: slotId,
+                definitionId: slotId,
+                slotId,
                 label: slotId === "default" ? "Default slot" : slotId,
+                kind: "fixed" as const,
               }));
         const nestedCount = Object.values(slotMap).reduce(
           (sum, items) => sum + items.length,
@@ -213,13 +216,13 @@ export function BlockList({
             <div className="border-t bg-muted/5">
               <WidgetRenderer block={block} pageDefaults={pageDefaults} />
             </div>
-            {slotDefinitions.length > 0 ? (
+            {slotTargets.length > 0 ? (
               <div className="border-t p-4 space-y-4">
-                {slotDefinitions.map((slot) => {
-                  const slotBlocks = slotMap[slot.id] ?? [];
+                {slotTargets.map((slot) => {
+                  const slotBlocks = slotMap[slot.slotId] ?? [];
                   return (
                     <div
-                      key={`${block.id}-slot-${slot.id}`}
+                      key={`${block.id}-slot-${slot.slotId}`}
                       className="space-y-2"
                       onDragOver={(event) => {
                         const hasWidget = Boolean(
@@ -235,12 +238,12 @@ export function BlockList({
                         event.stopPropagation();
                         const widgetType = event.dataTransfer.getData("widget-type");
                         if (widgetType && onInsert) {
-                          onInsert(block.id, slot.id, widgetType);
+                          onInsert(block.id, slot.slotId, widgetType);
                           return;
                         }
                         const blockId = event.dataTransfer.getData("block-id");
                         if (blockId && onMoveToSlot) {
-                          onMoveToSlot(blockId, block.id, slot.id);
+                          onMoveToSlot(blockId, block.id, slot.slotId);
                         }
                       }}
                     >
@@ -261,7 +264,7 @@ export function BlockList({
                           onDelete={onDelete}
                           onInsert={onInsert}
                           onMoveToSlot={onMoveToSlot}
-                          path={[...listPath, { index, slotId: slot.id }]}
+                          path={[...listPath, { index, slotId: slot.slotId }]}
                           depth={level + 1}
                         />
                       ) : (

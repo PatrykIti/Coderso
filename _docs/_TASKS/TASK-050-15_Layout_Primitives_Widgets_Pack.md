@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-050-14, TASK-050-04, TASK-051-03  
-**Status:** To Do
+**Status:** In Progress (2026-02-09)
 
 ---
 
@@ -36,6 +36,11 @@ an elastic number of slots instead of fixed slot sets.
 - **TASK-050-15-05:** Split Layout Widget
 - **TASK-050-15-06:** Spacer Widget
 - **TASK-050-15-07:** Divider Widget
+
+## Progress
+
+- Done: `TASK-050-15-01`
+- Next: `TASK-050-15-02`
 
 ---
 

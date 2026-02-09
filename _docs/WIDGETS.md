@@ -135,7 +135,7 @@ type WidgetBlock = {
   editor?: {
     mode?: "wizard" | "visual" | "advanced";
   };
-  slots?: Record<string, WidgetBlock[]>;
+  slots?: Record<string, WidgetBlock[]>; // fixed ids and repeatable instance ids (e.g. "column:1")
   children?: WidgetBlock[]; // legacy
 };
 ```
@@ -156,7 +156,14 @@ type WidgetDefinition<T = Record<string, unknown>> = {
   description?: string;
   category: "layout" | "content" | "forms" | "navigation" | "media";
   canHaveChildren?: boolean;
-  slots?: { id: string; label: string; maxItems?: number; allowedTypes?: string[] }[];
+  slots?: {
+    id: string;
+    label: string;
+    kind?: "fixed" | "repeatable";
+    minItems?: number; // repeatable only
+    maxItems?: number; // fixed: max children in slot, repeatable: max instances
+    allowedTypes?: string[];
+  }[];
   variants: { id: string; label: string; description?: string }[];
   schema: Record<string, unknown>; // JSON schema (draft-07)
   defaults: T;
@@ -175,6 +182,18 @@ type WidgetDefinition<T = Record<string, unknown>> = {
   }>;
 };
 ```
+
+### Slot kinds (fixed vs repeatable)
+
+- `fixed` (default): stable slot id (`content`, `right`, `bottom`).
+- `repeatable`: dynamic slot instances with deterministic keys in `slots` map:
+  - format: `<slotId>:<instanceId>` (example: `column:1`, `column:2`)
+  - `minItems` i `maxItems` kontroluja liczbe instancji.
+
+Normalization rules:
+- Legacy key `slots.<slotId>` dla repeatable jest migrowany do pierwszej instancji.
+- Przy brakujacych instancjach dodawane sa automatycznie instancje do `minItems`.
+- Nadmiarowe instancje ponad `maxItems` sa odcinane deterministycznie.
 
 ### WidgetEditorProps
 

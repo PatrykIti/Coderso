@@ -1,4 +1,5 @@
 import type { WidgetDefinition } from "./types";
+import { getWidgetSlotKind } from "./slots";
 
 const registry = new Map<string, WidgetDefinition<any>>();
 
@@ -62,9 +63,33 @@ export function registerWidget(def: WidgetDefinition<any>) {
       slotIds.add(trimmedId);
       if (
         slot.maxItems !== undefined &&
-        (!Number.isFinite(slot.maxItems) || slot.maxItems <= 0)
+        (!Number.isFinite(slot.maxItems) ||
+          slot.maxItems <= 0 ||
+          Math.floor(slot.maxItems) !== slot.maxItems)
       ) {
         throw new Error("widget_slot_max_invalid");
+      }
+      if (
+        slot.minItems !== undefined &&
+        (!Number.isFinite(slot.minItems) ||
+          slot.minItems < 0 ||
+          Math.floor(slot.minItems) !== slot.minItems)
+      ) {
+        throw new Error("widget_slot_min_invalid");
+      }
+      const kind = getWidgetSlotKind(slot);
+      if (slot.kind !== undefined && kind !== slot.kind) {
+        throw new Error("widget_slot_kind_invalid");
+      }
+      if (kind === "fixed" && slot.minItems !== undefined) {
+        throw new Error("widget_slot_min_unsupported");
+      }
+      if (
+        slot.minItems !== undefined &&
+        slot.maxItems !== undefined &&
+        slot.minItems > slot.maxItems
+      ) {
+        throw new Error("widget_slot_min_max_invalid");
       }
       if (
         slot.allowedTypes !== undefined &&

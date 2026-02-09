@@ -1,3 +1,10 @@
+import {
+  getWidgetSlotKind,
+  isSlotIdMatchingDefinition,
+  parseRepeatableSlotId,
+  resolveWidgetSlotTargets,
+} from "../../../widgets/slots";
+
 export type WidgetBlockOption = {
   id: string;
   label: string;
@@ -9,6 +16,9 @@ export type WidgetSlotOption = {
   id: string;
   label: string;
   count: number;
+  definitionId: string;
+  kind: "fixed" | "repeatable";
+  instanceId?: string;
   maxItems?: number;
   allowedTypes?: string[];
   disabled: boolean;
@@ -18,6 +28,8 @@ export type WidgetSlotOption = {
 type SlotDefinition = {
   id: string;
   label: string;
+  kind?: "fixed" | "repeatable";
+  minItems?: number;
   maxItems?: number;
   allowedTypes?: string[];
 };
@@ -83,10 +95,34 @@ export const buildSlotOptions = (
   widgetType?: string | null
 ): WidgetSlotOption[] => {
   const slotMap = getSlotMap(block);
-  return slotDefinitions.map((slot) => {
-    const count = Array.isArray(slotMap[slot.id]) ? slotMap[slot.id].length : 0;
+  const resolvedSlots = resolveWidgetSlotTargets(slotDefinitions, slotMap);
+
+  return resolvedSlots.map((resolvedSlot) => {
+    const slot = slotDefinitions.find((item) =>
+      isSlotIdMatchingDefinition(item, resolvedSlot.slotId)
+    );
+    if (!slot) {
+      return {
+        id: resolvedSlot.slotId,
+        label: resolvedSlot.label,
+        count: Array.isArray(slotMap[resolvedSlot.slotId])
+          ? slotMap[resolvedSlot.slotId]!.length
+          : 0,
+        definitionId: resolvedSlot.definitionId,
+        kind: resolvedSlot.kind,
+        instanceId: resolvedSlot.instanceId,
+        disabled: false,
+      };
+    }
+
+    const count = Array.isArray(slotMap[resolvedSlot.slotId])
+      ? slotMap[resolvedSlot.slotId]!.length
+      : 0;
+    const isFixed = getWidgetSlotKind(slot) === "fixed";
     const isFull =
-      typeof slot.maxItems === "number" && count >= slot.maxItems;
+      isFixed &&
+      typeof slot.maxItems === "number" &&
+      count >= slot.maxItems;
     const isAllowed =
       !slot.allowedTypes ||
       slot.allowedTypes.length === 0 ||
@@ -97,11 +133,15 @@ export const buildSlotOptions = (
       : !isAllowed
         ? "Widget type not allowed"
         : undefined;
+    const parsed = parseRepeatableSlotId(resolvedSlot.slotId);
     return {
-      id: slot.id,
-      label: slot.label,
+      id: resolvedSlot.slotId,
+      label: resolvedSlot.label,
       count,
-      maxItems: slot.maxItems,
+      definitionId: slot.id,
+      kind: getWidgetSlotKind(slot),
+      instanceId: parsed?.instanceId,
+      maxItems: isFixed ? slot.maxItems : undefined,
       allowedTypes: slot.allowedTypes,
       disabled,
       reason,

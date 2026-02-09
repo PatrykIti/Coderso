@@ -42,6 +42,10 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import {
+  getWidgetSlotKind,
+  isSlotIdMatchingDefinition,
+} from "../../../widgets/slots";
+import {
   appendSlotBlock,
   createBlock,
   findBlockById,
@@ -540,7 +544,9 @@ export function WidgetLibraryPage() {
       if (slotDefinitions.length > 0) {
         const resolvedSlotId = slotId?.trim();
         if (!resolvedSlotId) return null;
-        const slot = slotDefinitions.find((item) => item.id === resolvedSlotId);
+        const slot = slotDefinitions.find((item) =>
+          isSlotIdMatchingDefinition(item, resolvedSlotId)
+        );
         if (!slot) return null;
         if (
           Array.isArray(slot.allowedTypes) &&
@@ -549,9 +555,11 @@ export function WidgetLibraryPage() {
         ) {
           return null;
         }
-        const count = getSlotBlocks(target, resolvedSlotId).length;
-        if (typeof slot.maxItems === "number" && count >= slot.maxItems) {
-          return null;
+        if (getWidgetSlotKind(slot) === "fixed") {
+          const count = getSlotBlocks(target, resolvedSlotId).length;
+          if (typeof slot.maxItems === "number" && count >= slot.maxItems) {
+            return null;
+          }
         }
         return resolvedSlotId;
       }

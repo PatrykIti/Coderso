@@ -16,6 +16,8 @@ export type WidgetVariant = {
 export type WidgetSlotDefinition = {
   id: string;
   label: string;
+  kind?: "fixed" | "repeatable";
+  minItems?: number;
   maxItems?: number;
   allowedTypes?: string[];
 };

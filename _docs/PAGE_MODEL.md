@@ -98,8 +98,17 @@ Notes:
 - `editor` jest tylko dla `current_data` (nie kopiujemy do published).
 - `variant` jest opcjonalny, ale rekomendowany dla widgetow.
 - `slots` to preferowany model zagniezdzania (nazwane miejsca w contanerze).
+- `slots` wspiera:
+  - sloty stale (`content`, `right`, `bottom`)
+  - sloty repeatable z instancjami (`column:1`, `column:2`, ...).
 - `children` jest legacy — jesli wystepuje bez `slots`, mapujemy do `slots.default`.
 - Przyklad: `hero` uzywa slotu `content` na dodatkowe bloki pod CTA.
+
+Repeatable slot contract:
+- definicja widgetu ustawia `slots[].kind = "repeatable"`.
+- `minItems` i `maxItems` reguluja liczbe instancji slotu.
+- normalizacja migruje legacy `slots.<id>` do pierwszej instancji
+  i zapewnia minimalna liczbe instancji.
 
 ---
 
