@@ -50,6 +50,16 @@ Uwaga:
 - Dozwolone MIME types (whitelist: `MEDIA_ALLOWED_MIME`).
 - Metadane: alt, title, caption.
 
+## Assistant avatar assets (TASK-101-06)
+
+- Assistant panel supports optional avatar asset URL (`assistant.ui.avatarAsset`).
+- Recommended formats:
+  - 3D: `.glb` / `.gltf` (rendered as optional enhanced mode, never required)
+  - 2D fallback: `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`
+  - Motion fallback: `.mp4`, `.webm`, `.ogg`
+- If WebGL is unavailable or 3D renderer is not active, UI falls back to 2D placeholder.
+- Avatar failures must never block assistant chat interaction.
+
 ## Content fields (entry data)
 
 Media fields w Content Types przechowuja **ID assetu**:

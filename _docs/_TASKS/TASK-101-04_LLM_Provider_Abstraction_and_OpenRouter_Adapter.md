@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Integrations  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-01, TASK-101-03, TASK-042  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 
@@ -66,8 +66,8 @@ type AssistantProviderResponse = {
 | `core/services/assistant/providers/openRouterProvider.ts` | new | OpenRouter adapter |
 | `core/services/assistant/providers/index.ts` | new | provider resolver |
 | `core/services/assistant/assistantService.ts` | update | llm-rag path + fallback |
-| `core/services/assistant/providers/openRouterProvider.test.ts` | new | adapter tests |
-| `core/services/assistant/assistantService.test.ts` | update | llm fallback tests |
+| `tests/unit/assistant/openRouterProvider.test.ts` | new | adapter tests |
+| `tests/unit/assistant/assistantService.test.ts` | update | llm fallback tests |
 
 ---
 
@@ -98,6 +98,35 @@ type AssistantProviderResponse = {
 
 ---
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-assistant-openrouter-adapter.md`
+- `_docs/_CHANGELOG/201-2026-02-09-assistant-openrouter-adapter.md`
+
+---
+
+## Implementation Notes (Done)
+
+- Added provider abstraction contracts in:
+  - `core/services/assistant/providers/providerTypes.ts`
+- Added OpenRouter adapter with:
+  - timeout guard (`AbortController`)
+  - retry-once for retryable failures
+  - strict response parsing to normalized `text + usage + providerRequestId`
+  - file: `core/services/assistant/providers/openRouterProvider.ts`
+- Added provider resolver:
+  - `core/services/assistant/providers/index.ts`
+  - resolves OpenRouter runtime credentials from encrypted Integrations config
+- Added OpenRouter integration definition in:
+  - `core/services/integrations/registry.ts`
+- Added runtime config reader for integrations secrets:
+  - `core/services/integrations/integrationsService.ts` (`getIntegrationRuntimeConfig`)
+- Updated assistant orchestration:
+  - `core/services/assistant/assistantService.ts`
+  - `llm-rag` now attempts provider call with docs snippets
+  - hard fallback to `docs-only` on provider missing/failure/no-snippets
+  - includes `llm` metadata in chat result on successful provider response
+- Added/updated tests:
+  - `tests/unit/assistant/openRouterProvider.test.ts`
+  - `tests/unit/assistant/providerResolver.test.ts`
+  - `tests/unit/assistant/assistantService.test.ts`
+  - `tests/unit/integrations/integrationsService.test.ts`

@@ -4,6 +4,7 @@ import { sql, inArray } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { integrationRequests, integrations } from "../../../core/db/schema";
 import {
+  getIntegrationRuntimeConfig,
   listIntegrations,
   requestIntegration,
   updateIntegration,
@@ -68,4 +69,32 @@ testIfDb("request integration stores request", async () => {
 
   expect(request.name).toContain("HubSpot");
   expect(request.status).toBe("pending");
+});
+
+testIfDb("openrouter runtime config resolves decrypted secret values", async () => {
+  const config: Record<string, string | null> = {
+    baseUrl: "https://openrouter.ai/api/v1",
+    siteUrl: "https://cms.example.com",
+    appName: "Nextless Assistant",
+  };
+  if (hasMasterKey) {
+    config.apiKey = "sk-or-v1-test";
+  }
+
+  const updated = await updateIntegration("openrouter", { config });
+  cleanupIntegrations.add(updated.id);
+
+  const runtime = await getIntegrationRuntimeConfig("openrouter");
+  expect(runtime).not.toBeNull();
+  expect(runtime?.baseUrl).toBe("https://openrouter.ai/api/v1");
+  expect(runtime?.siteUrl).toBe("https://cms.example.com");
+  expect(runtime?.appName).toBe("Nextless Assistant");
+
+  if (hasMasterKey) {
+    expect(runtime?.apiKey).toBe("sk-or-v1-test");
+    expect(updated.status).toBe("connected");
+  } else {
+    expect(runtime?.apiKey ?? null).toBeNull();
+    expect(updated.status).toBe("disconnected");
+  }
 });

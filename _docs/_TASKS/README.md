@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 3 tasks
+- **To Do:** 2 tasks
 - **In Progress:** 1 task
-- **Done:** 284 tasks
+- **Done:** 287 tasks
 
 ---
 
@@ -48,9 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
 | TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
-| TASK-101-04 | LLM Provider Abstraction and OpenRouter Adapter | Medium | Medium | llm-rag provider layer + fallback |
-| TASK-101-05 | Admin UI Assistant Chat and Modes | High | Large | Chat panel + mode switch + sources |
-| TASK-101-06 | Assistant Avatar Rendering and Preferences | Medium | Medium | Optional GLB avatar + fallback |
 | TASK-101-07 | Assistant Security, Quotas, Observability and Hardening | High | Medium | Rate limits, audit, redaction |
 
 ---
@@ -59,7 +56,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Phase A2 in progress, TASK-101-01/02/03/08 complete |
+| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Phase B in progress, TASK-101-01/02/03/04/05/06/08 complete |
 
 ---
 
@@ -68,6 +65,9 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | High | Large | 100-01/02/03/04/05 complete |
+| TASK-101-06 | Assistant Avatar Rendering and Preferences | Medium | Medium | Optional avatar layer + user preferences + 2D fallback |
+| TASK-101-05 | Admin UI Assistant Chat and Modes | High | Large | Global assistant drawer in AdminShell + mode persistence + sources/fallback UX |
+| TASK-101-04 | LLM Provider Abstraction and OpenRouter Adapter | Medium | Medium | Provider abstraction + OpenRouter adapter + llm-rag fallback path |
 | TASK-101-08 | Internal Docs KB Schema, Ingest, and DB Retrieval | High | Large | DB KB tables + `_docs/_internal` ingest + DB retriever + runtime fallback |
 | TASK-100-05 | First-Run Setup Wizard and Gating | High | Medium | Setup wizard + authenticated gate + setup.completed flow |
 | TASK-100-04 | Admin UI Runtime URL and Auth TTL Wiring | High | Medium | General/Security UI fields + runtime settings payload wiring |

@@ -18,6 +18,7 @@ import {
 import { SearchBar } from "@/ui/search/SearchBar";
 import { SidebarNav } from "@/ui/shared/SidebarNav";
 import { TopBar } from "@/ui/shared/TopBar";
+import { AssistantPanel } from "@/ui/assistant/AssistantPanel";
 import { mapNavItems, mapNavSections, resolveAdminHref } from "@/utils/adminPaths";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 
@@ -79,7 +80,12 @@ export function AdminShell({
         <TopBar
           breadcrumbs={breadcrumbs}
           search={showSearch ? (search ?? <SearchBar />) : search}
-          actions={topbarActions}
+          actions={
+            <>
+              {topbarActions}
+              <AssistantPanel />
+            </>
+          }
           user={user}
           navToggle={
             <Button

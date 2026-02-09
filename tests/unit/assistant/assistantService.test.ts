@@ -54,6 +54,10 @@ const createDeps = (
       "assistant.docs.sourceRoot": "_docs/_internal",
       "assistant.llm.enabled": false,
       "assistant.llm.provider": "none",
+      "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+      "assistant.llm.maxInputTokens": 8192,
+      "assistant.llm.maxOutputTokens": 2048,
+      "assistant.llm.timeoutMs": 20000,
     };
     return values[key];
   },
@@ -92,12 +96,22 @@ const createDeps = (
     finishedAt: "2026-02-09T21:00:01.000Z",
     buildDurationMs: 1000,
   }),
+  resolveAssistantProvider: async () => null,
   composeDocsAnswer: () => ({
     mode: "docs-only",
     template: "how_to_answer",
     answer: "Follow docs",
     confidence: 0.8,
-    sources: [],
+    sources: [
+      {
+        path: "_docs/widgets/hero.md",
+        heading: "Hero > Visual",
+        lineStart: 10,
+        lineEnd: 20,
+        snippet: "Use visual tab to configure hero widget.",
+        score: 2.4,
+      },
+    ],
     fallbackUsed: false,
   }),
   logAudit: async () => ({
@@ -145,6 +159,10 @@ test("getAssistantStatus returns DB status when DB backend is configured", async
           "assistant.docs.sourceRoot": "_docs/_internal",
           "assistant.llm.enabled": false,
           "assistant.llm.provider": "none",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
         };
         return values[key];
       },
@@ -198,6 +216,10 @@ test("answerAssistantQuestion uses DB backend when DB index is ready", async () 
           "assistant.docs.sourceRoot": "_docs/_internal",
           "assistant.llm.enabled": false,
           "assistant.llm.provider": "none",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
         };
         return values[key];
       },
@@ -236,6 +258,10 @@ test("answerAssistantQuestion falls back to filesystem when DB backend is not re
           "assistant.docs.sourceRoot": "_docs/_internal",
           "assistant.llm.enabled": false,
           "assistant.llm.provider": "none",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
         };
         return values[key];
       },
@@ -266,6 +292,127 @@ test("answerAssistantQuestion throws when assistant is disabled", async () => {
       })
     )
   ).rejects.toThrow("assistant_disabled");
+});
+
+test("answerAssistantQuestion uses llm-rag provider when configured", async () => {
+  const result = await answerAssistantQuestion(
+    {
+      message: "Where are hero settings?",
+      mode: "llm-rag",
+    },
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "llm-rag",
+          "assistant.docs.backend": "filesystem",
+          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.llm.enabled": true,
+          "assistant.llm.provider": "openrouter",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
+        };
+        return values[key];
+      },
+      resolveAssistantProvider: async () => ({
+        id: "openrouter",
+        complete: async () => ({
+          text: "Use Hero Visual tab in template editor [1].",
+          providerRequestId: "or-req-1",
+          usage: {
+            inputTokens: 120,
+            outputTokens: 35,
+            totalTokens: 155,
+          },
+        }),
+      }),
+    })
+  );
+
+  expect(result.mode).toBe("llm-rag");
+  expect(result.effectiveMode).toBe("llm-rag");
+  expect(result.fallbackUsed).toBe(false);
+  expect(result.llm).toEqual({
+    provider: "openrouter",
+    model: "google/gemma-3n-e2b-it:free",
+    providerRequestId: "or-req-1",
+    usage: {
+      inputTokens: 120,
+      outputTokens: 35,
+      totalTokens: 155,
+    },
+  });
+});
+
+test("answerAssistantQuestion falls back when llm provider is not configured", async () => {
+  const result = await answerAssistantQuestion(
+    {
+      message: "Where are hero settings?",
+      mode: "llm-rag",
+    },
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "llm-rag",
+          "assistant.docs.backend": "filesystem",
+          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.llm.enabled": true,
+          "assistant.llm.provider": "openrouter",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
+        };
+        return values[key];
+      },
+      resolveAssistantProvider: async () => null,
+    })
+  );
+
+  expect(result.mode).toBe("docs-only");
+  expect(result.effectiveMode).toBe("docs-only");
+  expect(result.fallbackUsed).toBe(true);
+  expect(result.llm).toBeNull();
+});
+
+test("answerAssistantQuestion falls back when llm provider fails", async () => {
+  const result = await answerAssistantQuestion(
+    {
+      message: "Where are hero settings?",
+      mode: "llm-rag",
+    },
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "llm-rag",
+          "assistant.docs.backend": "filesystem",
+          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.llm.enabled": true,
+          "assistant.llm.provider": "openrouter",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
+        };
+        return values[key];
+      },
+      resolveAssistantProvider: async () => ({
+        id: "openrouter",
+        complete: async () => {
+          throw new Error("assistant_provider_failed");
+        },
+      }),
+    })
+  );
+
+  expect(result.mode).toBe("docs-only");
+  expect(result.effectiveMode).toBe("docs-only");
+  expect(result.fallbackUsed).toBe(true);
+  expect(result.llm).toBeNull();
 });
 
 test("reindexAssistantDocs returns stats and writes audit", async () => {
@@ -307,6 +454,10 @@ test("reindexAssistantDocs runs ingest pipeline for DB backend", async () => {
           "assistant.docs.sourceRoot": "_docs/_internal",
           "assistant.llm.enabled": false,
           "assistant.llm.provider": "none",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
         };
         return values[key];
       },

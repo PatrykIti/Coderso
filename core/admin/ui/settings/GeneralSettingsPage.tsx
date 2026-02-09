@@ -202,9 +202,12 @@ export function GeneralSettingsPage({
         </div>
       }
       topbarActions={
-        <span className="text-xs text-muted-foreground">
-          {busy ? "Saving changes..." : "Manage site identity and branding"}
-        </span>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <span>{busy ? "Saving changes..." : "Manage site identity and branding"}</span>
+          <span className="hidden md:inline">
+            Use the Assistant button in top bar to test Doc Navigator replies.
+          </span>
+        </div>
       }
     >
       <div className="flex min-h-full flex-col">

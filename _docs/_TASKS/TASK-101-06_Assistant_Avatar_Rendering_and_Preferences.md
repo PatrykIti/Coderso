@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Media  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-05, TASK-005  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 
@@ -36,9 +36,9 @@ Avatar nie moze byc wymagany do korzystania z chatu.
 | `core/admin/ui/assistant/AssistantAvatar.tsx` | new | avatar renderer shell |
 | `core/admin/ui/assistant/avatarStates.ts` | new | state-to-animation mapping |
 | `core/admin/ui/assistant/AssistantPanel.tsx` | update | mount optional avatar |
-| `core/services/settings/userSettingsService.ts` | update | avatar preference keys |
-| `core/admin/services/userSettingsClient.ts` | update | avatar preference API |
-| `tests/integration/ui/assistant-avatar.test.tsx` | new | render fallback + toggle |
+| `core/services/settings/userSettingsService.ts` | no-op | avatar keys already available from TASK-101-01 |
+| `core/admin/services/userSettingsClient.ts` | update | avatar preference API typing |
+| `tests/unit/ui/assistant-avatar.test.tsx` | new | render fallback + asset mode coverage |
 
 ---
 
@@ -65,6 +65,25 @@ Avatar nie moze byc wymagany do korzystania z chatu.
 
 ---
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-assistant-avatar-rendering-and-preferences.md`
+- `_docs/_CHANGELOG/203-2026-02-09-assistant-avatar-rendering-and-preferences.md`
+
+---
+
+## Implementation Notes (Done)
+
+- Added avatar runtime state map in `core/admin/ui/assistant/avatarStates.ts`.
+- Added optional avatar renderer in `core/admin/ui/assistant/AssistantAvatar.tsx`:
+  - supports `image`, `video`, and `glb/gltf` asset URL detection
+  - uses safe 2D fallback placeholder when no asset or unsupported runtime
+  - never blocks chat flow on asset/runtime issues
+- Updated `core/admin/ui/assistant/AssistantPanel.tsx`:
+  - user toggle for `assistant.ui.avatarEnabled`
+  - asset URL field persisted to `assistant.ui.avatarAsset`
+  - avatar state transitions (`idle` / `thinking` / `answer`) from chat lifecycle
+- Updated `core/admin/services/userSettingsClient.ts` type map with assistant avatar keys.
+- Added tests in `tests/unit/ui/assistant-avatar.test.tsx` for disabled/fallback/image/glb modes.
+- Updated docs:
+  - `_docs/ARCHITECTURE.md` (assistant optional avatar layer)
+  - `_docs/MEDIA_SPEC.md` (assistant avatar asset formats and fallback)

@@ -94,6 +94,15 @@ Rotacja klucza:
   - `assistant.llm.enabled=true`
   - `assistant.llm.provider != none`
 - Gdy provider nie jest skonfigurowany, runtime wraca do bezpiecznego `docs-only`.
+- OpenRouter credentials sa pobierane tylko na backendzie przez Integrations runtime config:
+  - integration id: `openrouter`
+  - `apiKey` (secret) jest szyfrowany w DB i nigdy nie trafia do frontend payloadow
+  - `baseUrl`, `siteUrl`, `appName` sa opcjonalne i nie sa traktowane jako sekrety
+- Sciezka `llm-rag` ma guardrails:
+  - timeout requestu (`assistant.llm.timeoutMs`)
+  - limity tokenow (`assistant.llm.maxInputTokens`, `assistant.llm.maxOutputTokens`)
+  - retry-once tylko dla bledow retryable (HTTP 429/5xx)
+  - brak snippets -> brak wywolania provider API i fallback do `docs-only`
 - `assistant.docs.paths` musi byc niepuste gdy `assistant.enabled=true`.
 - `assistant.docs.sourceRoot` musi byc niepusty.
 - `assistant.docs.backend` (`filesystem`/`db`) steruje backendem retrieval.
@@ -122,6 +131,9 @@ Rotacja klucza:
   - `assistant_reindex_failed`
   - `assistant_message_invalid`
   - mapped errors zawieraja `requestId` w payload `error.details.requestId`
+- Chat response telemetry:
+  - przy sukcesie `llm-rag` odpowiedz zawiera `llm.provider`, `llm.model`, `llm.providerRequestId`, `llm.usage`
+  - przy fallbacku lub trybie `docs-only` pole `llm` ma wartosc `null`
 - Reindex:
   - triggerowany recznie endpointem `POST /assistant/reindex`
   - opcjonalny boot reindex przez `assistant.docs.reindexOnBoot=true`

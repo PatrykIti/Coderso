@@ -67,6 +67,7 @@ test("chat route calls service and returns payload", async () => {
         requestedMode: "docs-only",
         effectiveMode: "docs-only",
         retrievalBackend: "filesystem",
+        llm: null,
       }),
     },
   });

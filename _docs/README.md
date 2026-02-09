@@ -12,6 +12,7 @@
 - `DATA_MODEL.md` - database schema overview
 - `DESIGN_TOKENS.md` - design tokens and theming
 - `MEDIA_SPEC.md` - media storage and uploads
+- `INTEGRATIONS.md` - integrations registry and runtime/security rules
 - `PAGE_MODEL.md` - page builder JSON model
 - `PREVIEW_SPEC.md` - draft preview flow
 - `ORM_SPEC.md` - ORM choice and configuration

@@ -104,6 +104,44 @@ const INTEGRATIONS: IntegrationDefinition[] = [
       },
     ],
   },
+  {
+    id: "openrouter",
+    name: "OpenRouter",
+    description:
+      "Use OpenRouter as the optional LLM provider for Assistant llm-rag responses.",
+    category: "Developer Tools",
+    scopes: ["assistant:generate", "assistant:retrieve"],
+    fields: [
+      {
+        key: "apiKey",
+        label: "API Key",
+        type: "secret",
+        required: true,
+        placeholder: "sk-or-v1-...",
+      },
+      {
+        key: "baseUrl",
+        label: "Base URL",
+        type: "url",
+        required: false,
+        placeholder: "https://openrouter.ai/api/v1",
+      },
+      {
+        key: "siteUrl",
+        label: "Site URL",
+        type: "url",
+        required: false,
+        placeholder: "https://cms.example.com",
+      },
+      {
+        key: "appName",
+        label: "App Name",
+        type: "text",
+        required: false,
+        placeholder: "Nextless Assistant",
+      },
+    ],
+  },
 ];
 
 const integrationMap = new Map(INTEGRATIONS.map((item) => [item.id, item]));

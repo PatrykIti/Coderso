@@ -71,6 +71,27 @@ Zasady runtime:
 - Cache filesystem index trzymany jest w pamieci procesu.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
 
+## Assistant LLM mode + Admin UI integration (Phase B)
+
+Rozszerzenie `llm-rag` korzysta z provider abstraction:
+- `core/services/assistant/providers/providerTypes.ts`
+- `core/services/assistant/providers/openRouterProvider.ts`
+- `core/services/assistant/providers/index.ts`
+
+Zasady:
+- provider jest uruchamiany tylko gdy retrieval zwroci snippets,
+- brak konfiguracji providera albo blad requestu powoduje fallback do `docs-only`,
+- odpowiedz API zawiera `llm` metadata (`provider`, `model`, `providerRequestId`, `usage`) lub `null`.
+
+Warstwa Admin UI:
+- `core/admin/ui/layouts/AdminShell.tsx` montuje globalny trigger asystenta.
+- `core/admin/ui/assistant/AssistantPanel.tsx` renderuje drawer czatu.
+- `core/admin/ui/assistant/AssistantModeSwitch.tsx` obsluguje `docs-only`/`llm-rag`.
+- `core/admin/ui/assistant/AssistantMessage.tsx` pokazuje fallback badge, confidence i sources.
+- `core/admin/ui/assistant/AssistantAvatar.tsx` renderuje opcjonalna warstwe avatara z fallback 2D.
+- `core/admin/services/assistantClient.ts` obsluguje `/assistant/status`, `/assistant/chat`, `/assistant/reindex`.
+- preferencje usera (`assistant.mode`, `assistant.ui.enabled`, `assistant.ui.avatarEnabled`, `assistant.ui.avatarAsset`) sa trzymane w `user_settings`.
+
 ## Terminologia
 
 - Core: glowna aplikacja (SSR + admin).

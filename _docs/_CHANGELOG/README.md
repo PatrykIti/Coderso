@@ -190,6 +190,9 @@ Project Change Log.
 | 198 | 2026-02-09 | Assistant doc index and retrieval | Core/Assistant |
 | 199 | 2026-02-09 | Assistant API doc navigator runtime | Core/API |
 | 200 | 2026-02-09 | Assistant internal docs DB knowledge base | Core/Assistant |
+| 201 | 2026-02-09 | Assistant OpenRouter provider adapter and llm-rag fallback | Core/Assistant |
+| 202 | 2026-02-09 | Assistant admin UI chat and modes | Admin/UI |
+| 203 | 2026-02-09 | Assistant avatar rendering and preferences | Admin/UI |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

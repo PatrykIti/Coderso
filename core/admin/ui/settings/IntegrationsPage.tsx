@@ -31,6 +31,7 @@ const iconMap: Record<string, { icon: IntegrationCardProps["icon"]; accent: Inte
   slack: { icon: MessageSquare, accent: "violet" },
   zapier: { icon: Zap, accent: "orange" },
   sentry: { icon: ShieldAlert, accent: "rose" },
+  openrouter: { icon: Zap, accent: "orange" },
 };
 
 function IntegrationsSearch({

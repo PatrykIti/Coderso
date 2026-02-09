@@ -54,6 +54,8 @@ export type IntegrationRequestInput = {
   notes?: string | null;
 };
 
+export type IntegrationRuntimeConfig = Record<string, string | null>;
+
 type StoredConfig = Record<string, string | ReturnType<typeof encryptSecret> | null>;
 
 type IntegrationRow = typeof integrations.$inferSelect;
@@ -287,8 +289,8 @@ export async function requestIntegration(input: IntegrationRequestInput) {
 
 export function decryptIntegrationConfig(
   config: StoredConfig
-): Record<string, string | null> {
-  const resolved: Record<string, string | null> = {};
+): IntegrationRuntimeConfig {
+  const resolved: IntegrationRuntimeConfig = {};
   for (const [key, value] of Object.entries(config)) {
     if (typeof value === "string") {
       resolved[key] = value;
@@ -299,4 +301,16 @@ export function decryptIntegrationConfig(
     }
   }
   return resolved;
+}
+
+export async function getIntegrationRuntimeConfig(
+  id: string
+): Promise<IntegrationRuntimeConfig | null> {
+  const definition = getIntegrationDefinition(id);
+  if (!definition) return null;
+
+  const [row] = await db.select().from(integrations).where(eq(integrations.id, id));
+  if (!row) return {};
+
+  return decryptIntegrationConfig(normalizeStoredConfig(row.config));
 }

@@ -17,7 +17,14 @@ import {
 } from "./docsIngestService";
 import { searchAssistantDocsDb } from "./docsDbRetriever";
 import { searchDocsIndex } from "./docsRetriever";
-import type { DocsComposedAnswer, DocsIndex, DocsSearchHit } from "./docsTypes";
+import { resolveAssistantProvider } from "./providers";
+import type { AssistantProviderResponse } from "./providers/providerTypes";
+import type {
+  DocsAnswerSource,
+  DocsAnswerTemplate,
+  DocsIndex,
+  DocsSearchHit,
+} from "./docsTypes";
 
 const ASSISTANT_MESSAGE_MAX_LENGTH = 2000;
 const BLOCKED_MARKERS = [
@@ -29,6 +36,18 @@ const BLOCKED_MARKERS = [
 ] as const;
 
 const DEFAULT_ASSISTANT_SOURCE_ROOT = "_docs/_internal";
+const DEFAULT_ASSISTANT_LLM_MODEL = "google/gemma-3n-e2b-it:free";
+const DEFAULT_ASSISTANT_LLM_MAX_INPUT_TOKENS = 8192;
+const DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS = 2048;
+const DEFAULT_ASSISTANT_LLM_TIMEOUT_MS = 20000;
+
+const ASSISTANT_LLM_SYSTEM_PROMPT = [
+  "You are Nextless Assistant running in strict RAG mode.",
+  "Only answer using provided documentation snippets.",
+  "Do not invent features, settings, or paths outside snippets.",
+  "Always cite source snippet numbers like [1], [2].",
+  "If snippets are insufficient, say clearly what is missing.",
+].join(" ");
 
 type AssistantRuntimeSettings = {
   enabled: boolean;
@@ -37,6 +56,10 @@ type AssistantRuntimeSettings = {
   docsSourceRoot: string;
   llmEnabled: boolean;
   llmProvider: AssistantLlmProvider;
+  llmModel: string;
+  llmMaxInputTokens: number;
+  llmMaxOutputTokens: number;
+  llmTimeoutMs: number;
 };
 
 export type AssistantRetrievalBackend = "filesystem" | "db";
@@ -52,10 +75,28 @@ export type AssistantChatInput = {
   context?: AssistantChatContext;
 };
 
-export type AssistantChatResult = DocsComposedAnswer & {
+export type AssistantLlmResult = {
+  provider: AssistantLlmProvider;
+  model: string;
+  providerRequestId: string | null;
+  usage?: {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
+};
+
+export type AssistantChatResult = {
+  mode: "docs-only" | "llm-rag";
+  template: DocsAnswerTemplate;
+  answer: string;
+  confidence: number;
+  sources: DocsAnswerSource[];
+  fallbackUsed: boolean;
   requestedMode: AssistantMode;
-  effectiveMode: "docs-only";
+  effectiveMode: "docs-only" | "llm-rag";
   retrievalBackend: AssistantRetrievalBackend;
+  llm: AssistantLlmResult | null;
 };
 
 export type AssistantStatusResult = {
@@ -90,6 +131,7 @@ export type AssistantServiceDeps = {
   searchAssistantDocsDb: typeof searchAssistantDocsDb;
   getAssistantDocsDbStatus: typeof getAssistantDocsDbStatus;
   ingestInternalDocsToDb: typeof ingestInternalDocsToDb;
+  resolveAssistantProvider: typeof resolveAssistantProvider;
   composeDocsAnswer: typeof composeDocsAnswer;
   logAudit: typeof logAudit;
 };
@@ -103,6 +145,7 @@ const defaultDeps: AssistantServiceDeps = {
   searchAssistantDocsDb,
   getAssistantDocsDbStatus,
   ingestInternalDocsToDb,
+  resolveAssistantProvider,
   composeDocsAnswer,
   logAudit,
 };
@@ -137,6 +180,21 @@ const normalizeDocsSourceRoot = (value: unknown, fallback: string) => {
 const normalizeBoolean = (value: unknown, fallback: boolean) =>
   typeof value === "boolean" ? value : fallback;
 
+const normalizePositiveInteger = (value: unknown, fallback: number) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  const normalized = Math.floor(value);
+  return normalized > 0 ? normalized : fallback;
+};
+
+const normalizeModel = (value: unknown, fallback: string) => {
+  if (typeof value !== "string") return fallback;
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : fallback;
+};
+
+const normalizeConfidence = (value: number) =>
+  Math.min(0.97, Math.max(0.2, Number(value.toFixed(4))));
+
 const getSettingSafe = async (
   deps: AssistantServiceDeps,
   key: string,
@@ -159,6 +217,10 @@ const readRuntimeSettings = async (
     docsSourceRootRaw,
     llmEnabledRaw,
     llmProviderRaw,
+    llmModelRaw,
+    llmMaxInputTokensRaw,
+    llmMaxOutputTokensRaw,
+    llmTimeoutMsRaw,
   ] = await Promise.all([
     getSettingSafe(deps, "assistant.enabled", false),
     getSettingSafe(deps, "assistant.defaultMode", "docs-only"),
@@ -166,6 +228,18 @@ const readRuntimeSettings = async (
     getSettingSafe(deps, "assistant.docs.sourceRoot", DEFAULT_ASSISTANT_SOURCE_ROOT),
     getSettingSafe(deps, "assistant.llm.enabled", false),
     getSettingSafe(deps, "assistant.llm.provider", "none"),
+    getSettingSafe(deps, "assistant.llm.model", DEFAULT_ASSISTANT_LLM_MODEL),
+    getSettingSafe(
+      deps,
+      "assistant.llm.maxInputTokens",
+      DEFAULT_ASSISTANT_LLM_MAX_INPUT_TOKENS
+    ),
+    getSettingSafe(
+      deps,
+      "assistant.llm.maxOutputTokens",
+      DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS
+    ),
+    getSettingSafe(deps, "assistant.llm.timeoutMs", DEFAULT_ASSISTANT_LLM_TIMEOUT_MS),
   ]);
 
   return {
@@ -178,6 +252,19 @@ const readRuntimeSettings = async (
     ),
     llmEnabled: normalizeBoolean(llmEnabledRaw, false),
     llmProvider: normalizeProvider(llmProviderRaw, "none"),
+    llmModel: normalizeModel(llmModelRaw, DEFAULT_ASSISTANT_LLM_MODEL),
+    llmMaxInputTokens: normalizePositiveInteger(
+      llmMaxInputTokensRaw,
+      DEFAULT_ASSISTANT_LLM_MAX_INPUT_TOKENS
+    ),
+    llmMaxOutputTokens: normalizePositiveInteger(
+      llmMaxOutputTokensRaw,
+      DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS
+    ),
+    llmTimeoutMs: normalizePositiveInteger(
+      llmTimeoutMsRaw,
+      DEFAULT_ASSISTANT_LLM_TIMEOUT_MS
+    ),
   };
 };
 
@@ -215,6 +302,11 @@ const resolveMode = (
         fallbackUsed: true,
       };
     }
+    return {
+      requestedMode,
+      effectiveMode: "llm-rag" as const,
+      fallbackUsed: false,
+    };
   }
   return {
     requestedMode,
@@ -249,11 +341,93 @@ const searchFilesystemHits = async (
   });
 };
 
+const retrieveDocsHits = async (
+  deps: AssistantServiceDeps,
+  settings: AssistantRuntimeSettings,
+  message: string
+): Promise<{
+  hits: DocsSearchHit[];
+  retrievalBackend: AssistantRetrievalBackend;
+  backendFallbackUsed: boolean;
+}> => {
+  if (settings.docsBackend === "db") {
+    const dbStatus = await deps.getAssistantDocsDbStatus();
+    if (dbStatus.ready) {
+      try {
+        const hits = await deps.searchAssistantDocsDb(message, {
+          topK: 5,
+          minScore: 0.01,
+        });
+        return {
+          hits,
+          retrievalBackend: "db",
+          backendFallbackUsed: false,
+        };
+      } catch {
+        const hits = await searchFilesystemHits(deps, message);
+        return {
+          hits,
+          retrievalBackend: "filesystem",
+          backendFallbackUsed: true,
+        };
+      }
+    }
+    const hits = await searchFilesystemHits(deps, message);
+    return {
+      hits,
+      retrievalBackend: "filesystem",
+      backendFallbackUsed: true,
+    };
+  }
+
+  return {
+    hits: await searchFilesystemHits(deps, message),
+    retrievalBackend: "filesystem",
+    backendFallbackUsed: false,
+  };
+};
+
+const toLlmSnippets = (sources: DocsAnswerSource[]) =>
+  sources.slice(0, 3).map((source) => ({
+    path: source.path,
+    heading: source.heading,
+    content: source.snippet,
+  }));
+
+const toLlmResult = (
+  response: AssistantProviderResponse,
+  settings: AssistantRuntimeSettings
+): AssistantLlmResult => ({
+  provider: settings.llmProvider,
+  model: settings.llmModel,
+  providerRequestId: response.providerRequestId ?? null,
+  usage: response.usage,
+});
+
+const resolveLlmAvailability = async (
+  deps: AssistantServiceDeps,
+  settings: AssistantRuntimeSettings
+) => {
+  if (!settings.llmEnabled || settings.llmProvider === "none") {
+    return false;
+  }
+  try {
+    const provider = await deps.resolveAssistantProvider({
+      provider: settings.llmProvider,
+      model: settings.llmModel,
+    });
+    return Boolean(provider);
+  } catch {
+    return false;
+  }
+};
+
 export const getAssistantStatus = async (
   overrides?: Partial<AssistantServiceDeps>
 ): Promise<AssistantStatusResult> => {
   const deps = resolveDeps(overrides);
   const settings = await readRuntimeSettings(deps);
+  const llmAvailable = await resolveLlmAvailability(deps, settings);
 
   if (settings.docsBackend === "db") {
     const dbStatus = await deps.getAssistantDocsDbStatus();
@@ -261,7 +435,7 @@ export const getAssistantStatus = async (
       enabled: settings.enabled,
       defaultMode: settings.defaultMode,
       retrievalBackend: "db",
-      llmAvailable: settings.llmEnabled && settings.llmProvider !== "none",
+      llmAvailable,
       indexReady: dbStatus.ready,
       indexBuilding: false,
       indexError: dbStatus.indexError,
@@ -276,7 +450,7 @@ export const getAssistantStatus = async (
     enabled: settings.enabled,
     defaultMode: settings.defaultMode,
     retrievalBackend: "filesystem",
-    llmAvailable: settings.llmEnabled && settings.llmProvider !== "none",
+    llmAvailable,
     indexReady: indexStatus.ready,
     indexBuilding: indexStatus.building,
     indexError: indexStatus.error,
@@ -387,44 +561,80 @@ export const answerAssistantQuestion = async (
   const requestedMode = normalizeMode(input.mode, settings.defaultMode);
   const mode = resolveMode(requestedMode, settings);
 
-  let hits: DocsSearchHit[] = [];
-  let retrievalBackend: AssistantRetrievalBackend =
-    settings.docsBackend === "db" ? "db" : "filesystem";
-  let backendFallbackUsed = false;
-
-  if (settings.docsBackend === "db") {
-    const dbStatus = await deps.getAssistantDocsDbStatus();
-    if (dbStatus.ready) {
-      try {
-        hits = await deps.searchAssistantDocsDb(normalizedMessage, {
-          topK: 5,
-          minScore: 0.01,
-        });
-      } catch {
-        backendFallbackUsed = true;
-        retrievalBackend = "filesystem";
-        hits = await searchFilesystemHits(deps, normalizedMessage);
-      }
-    } else {
-      backendFallbackUsed = true;
-      retrievalBackend = "filesystem";
-      hits = await searchFilesystemHits(deps, normalizedMessage);
-    }
-  } else {
-    hits = await searchFilesystemHits(deps, normalizedMessage);
-  }
-
+  const retrieval = await retrieveDocsHits(deps, settings, normalizedMessage);
   const composed = deps.composeDocsAnswer({
     question: normalizedMessage,
-    hits,
+    hits: retrieval.hits,
     maxSources: 3,
   });
 
+  let effectiveMode: "docs-only" | "llm-rag" = mode.effectiveMode;
+  let llm: AssistantLlmResult | null = null;
+  let llmFallbackUsed = false;
+
+  if (mode.effectiveMode === "llm-rag" && composed.sources.length > 0) {
+    try {
+      const provider = await deps.resolveAssistantProvider({
+        provider: settings.llmProvider,
+        model: settings.llmModel,
+      });
+
+      if (provider) {
+        const llmResponse = await provider.complete({
+          systemPrompt: ASSISTANT_LLM_SYSTEM_PROMPT,
+          userMessage: normalizedMessage,
+          snippets: toLlmSnippets(composed.sources),
+          limits: {
+            maxInputTokens: settings.llmMaxInputTokens,
+            maxOutputTokens: settings.llmMaxOutputTokens,
+            timeoutMs: settings.llmTimeoutMs,
+          },
+        });
+
+        const answer = llmResponse.text.trim();
+        if (answer) {
+          llm = toLlmResult(llmResponse, settings);
+          return {
+            mode: "llm-rag",
+            template: composed.template,
+            answer,
+            confidence: normalizeConfidence(Math.max(0.35, composed.confidence)),
+            sources: composed.sources,
+            fallbackUsed:
+              composed.fallbackUsed || mode.fallbackUsed || retrieval.backendFallbackUsed,
+            requestedMode: mode.requestedMode,
+            effectiveMode: "llm-rag",
+            retrievalBackend: retrieval.retrievalBackend,
+            llm,
+          };
+        }
+      }
+
+      llmFallbackUsed = true;
+      effectiveMode = "docs-only";
+    } catch {
+      llmFallbackUsed = true;
+      effectiveMode = "docs-only";
+    }
+  } else if (mode.effectiveMode === "llm-rag") {
+    llmFallbackUsed = true;
+    effectiveMode = "docs-only";
+  }
+
   return {
-    ...composed,
-    fallbackUsed: composed.fallbackUsed || mode.fallbackUsed || backendFallbackUsed,
+    mode: "docs-only",
+    template: composed.template,
+    answer: composed.answer,
+    confidence: composed.confidence,
+    sources: composed.sources,
+    fallbackUsed:
+      composed.fallbackUsed ||
+      mode.fallbackUsed ||
+      retrieval.backendFallbackUsed ||
+      llmFallbackUsed,
     requestedMode: mode.requestedMode,
-    effectiveMode: mode.effectiveMode,
-    retrievalBackend,
+    effectiveMode,
+    retrievalBackend: retrieval.retrievalBackend,
+    llm,
   };
 };

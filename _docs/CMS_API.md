@@ -1369,9 +1369,9 @@ Endpoints:
 
 ```json
 {
-  "mode": "docs-only",
+  "mode": "llm-rag",
   "template": "location_answer",
-  "answer": "Most relevant locations in docs:\n1. _docs/_internal/widgets/hero-basics.md -> Hero widget basics > Step By Step",
+  "answer": "Use Hero visual settings in Block Settings > Visual tab [1].",
   "confidence": 0.76,
   "sources": [
     {
@@ -1384,9 +1384,19 @@ Endpoints:
     }
   ],
   "fallbackUsed": false,
-  "requestedMode": "docs-only",
-  "effectiveMode": "docs-only",
-  "retrievalBackend": "filesystem"
+  "requestedMode": "llm-rag",
+  "effectiveMode": "llm-rag",
+  "retrievalBackend": "db",
+  "llm": {
+    "provider": "openrouter",
+    "model": "google/gemma-3n-e2b-it:free",
+    "providerRequestId": "gen-abc123",
+    "usage": {
+      "inputTokens": 512,
+      "outputTokens": 174,
+      "totalTokens": 686
+    }
+  }
 }
 ```
 
@@ -1420,6 +1430,7 @@ Error codes:
 Uwagi:
 - Message sanitization usuwa control chars i blokuje prompt-injection markers.
 - Gdy żądany tryb to `llm-rag`, a LLM jest wyłączony, runtime zwraca `docs-only` z `fallbackUsed=true`.
+- Gdy provider nie odpowie lub nie jest skonfigurowany, runtime zwraca odpowiedz `docs-only` oraz `llm=null`.
 - Dla backendu `db` retrieval idzie najpierw po DB; fallback do filesystem aktywuje sie tylko gdy DB jest puste lub niedostepne.
 
 ---

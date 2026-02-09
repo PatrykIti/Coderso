@@ -12,6 +12,10 @@ export type UserSettings = {
   "media.openAfterUpload": boolean;
   "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSetting[];
+  "assistant.mode": "docs-only" | "llm-rag" | null;
+  "assistant.ui.enabled": boolean;
+  "assistant.ui.avatarEnabled": boolean;
+  "assistant.ui.avatarAsset": string | null;
 };
 
 export type UserSettingResponse = {
