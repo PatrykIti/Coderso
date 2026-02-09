@@ -27,6 +27,7 @@ import {
   getEntryBySlug,
   listEntries,
 } from "../services/content/entryService";
+import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
 import { getWidgetTemplatePreviewModel } from "../services/widgets/widgetTemplatePreviewService";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
@@ -36,6 +37,10 @@ import type { ContentSchema } from "../services/content/validation";
 import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
 import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
 import { resolveDevAssetUrl } from "./utils/styleUrl";
+import {
+  normalizeContentListData,
+  type ContentListData,
+} from "../widgets/core/contentList";
 
 export type PublicPageData = {
   title: string;
@@ -153,6 +158,63 @@ const toBlocks = (data?: Record<string, unknown> | null): WidgetBlock[] => {
   return blocks as WidgetBlock[];
 };
 
+const ensureRecord = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, unknown>;
+};
+
+const hydrateRuntimeBlock = async (
+  block: WidgetBlock,
+  options: { preview: boolean; contentRoutes: ContentRouteSetting[] }
+): Promise<WidgetBlock> => {
+  let nextBlock: WidgetBlock = block;
+
+  if (block.type === "content-list") {
+    const normalizedData = normalizeContentListData(
+      ensureRecord(block.data) as ContentListData
+    );
+    const resolved = await resolveContentListRuntimeData(normalizedData, {
+      preview: options.preview,
+      contentRoutes: options.contentRoutes,
+    });
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        resolved,
+      },
+    };
+  }
+
+  const sourceSlots = nextBlock.slots;
+  if (sourceSlots && typeof sourceSlots === "object") {
+    const slotEntries = await Promise.all(
+      Object.entries(sourceSlots).map(async ([slotId, slotBlocks]) => [
+        slotId,
+        await hydrateRuntimeBlocks(slotBlocks, options),
+      ])
+    );
+    nextBlock = {
+      ...nextBlock,
+      slots: Object.fromEntries(slotEntries),
+    };
+  }
+
+  if (Array.isArray(nextBlock.children) && nextBlock.children.length > 0) {
+    nextBlock = {
+      ...nextBlock,
+      children: await hydrateRuntimeBlocks(nextBlock.children, options),
+    };
+  }
+
+  return nextBlock;
+};
+
+const hydrateRuntimeBlocks = async (
+  blocks: WidgetBlock[],
+  options: { preview: boolean; contentRoutes: ContentRouteSetting[] }
+) => Promise.all(blocks.map((block) => hydrateRuntimeBlock(block, options)));
+
 const buildHtmlResponse = (html: string) =>
   new Response(html, { headers: { "Content-Type": "text/html" } });
 
@@ -163,8 +225,12 @@ const renderPublicPageHtmlInternal = async (
   ensureRuntimeWidgetsRegistered();
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
+  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
   const sourceData = options?.preview ? page.currentData : page.publishedData;
-  const blocks = toBlocks(sourceData);
+  const blocks = await hydrateRuntimeBlocks(toBlocks(sourceData), {
+    preview: options?.preview ?? false,
+    contentRoutes,
+  });
   return renderPublicPageHtml({
     title: page.title ?? "Page",
     blocks,
@@ -206,9 +272,14 @@ const renderWidgetTemplatePreviewHtml = async (
   ensureRuntimeWidgetsRegistered();
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   const template = await getWidgetTemplatePreviewModel(templateId);
+  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+  const blocks = await hydrateRuntimeBlocks(template.blocks, {
+    preview: true,
+    contentRoutes,
+  });
   return renderPublicPageHtml({
     title: template.name,
-    blocks: template.blocks,
+    blocks,
     cssHref,
     inlineCss,
     isPreview: true,

@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Admin/UI + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-050-13, TASK-003-06, TASK-048  
-**Status:** To Do
+**Status:** In Progress (2026-02-08)
 
 ---
 
@@ -24,6 +24,11 @@ Order inside section:
 
 - **TASK-050-14-01:** Content List Widget
 - **TASK-050-14-02:** Entry Teaser Widget
+
+## Progress
+
+- Done: `TASK-050-14-01`
+- Remaining: `TASK-050-14-02`
 
 ---
 

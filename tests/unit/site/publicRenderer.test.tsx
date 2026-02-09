@@ -7,10 +7,16 @@ import {
   heroDefaults,
   type HeroData,
 } from "../../../core/widgets/core/hero";
+import {
+  createContentListWidget,
+  type ContentListData,
+} from "../../../core/widgets/core/contentList";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
+const StubContentListEditor: ComponentType<WidgetEditorProps<ContentListData>> = () =>
+  null;
 
 test("renderPublicPageHtml renders title and preview banner", () => {
   const html = renderPublicPageHtml({
@@ -173,4 +179,76 @@ test("renderPublicPageHtml filters blocks by preview device visibility", () => {
 
   expect(html).not.toContain("Desktop Hero");
   expect(html).toContain("Tablet Hero");
+});
+
+test("renderPublicPageHtml renders content list resolved payload deterministically", () => {
+  clearWidgets();
+  registerWidget(
+    createContentListWidget({
+      wizard: StubContentListEditor,
+      visual: StubContentListEditor,
+      advanced: StubContentListEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "Blog",
+    blocks: [
+      {
+        id: "content-list-1",
+        type: "content-list",
+        variant: "cards",
+        data: {
+          source: {
+            contentTypeId: "blog-type-id",
+            statusScope: "published",
+            limit: 6,
+            sort: "published-desc",
+          },
+          filters: {},
+          fields: {
+            showImage: false,
+            showExcerpt: true,
+            showMeta: true,
+            showCta: true,
+          },
+          emptyState: {
+            title: "No posts",
+            description: "Publish your first post.",
+          },
+          style: {
+            columns: "2",
+            gap: "md",
+            cardStyle: "outlined",
+            ctaLabel: "Read post",
+            backgroundColor: "var(--color-bg)",
+            borderColor: "var(--color-border)",
+            textColor: "var(--color-text)",
+          },
+          resolved: {
+            items: [
+              {
+                id: "post-1",
+                title: "First post",
+                href: "/blog/first-post",
+                excerpt: "Post summary.",
+                status: "published",
+                publishedAt: "2026-02-08T10:00:00.000Z",
+              },
+            ],
+            total: 1,
+            sourceTypeId: "blog-type-id",
+            sourceTypeSlug: "blog",
+            resolvedAt: "2026-02-08T10:01:00.000Z",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain("First post");
+  expect(html).toContain("Read post");
+  expect(html).toContain('data-content-list-variant="cards"');
+  expect(html).toContain('data-content-list-items="1"');
+  expect(html).toContain('data-content-list-state="ready"');
 });

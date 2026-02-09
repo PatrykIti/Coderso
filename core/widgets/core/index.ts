@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { getWidget, registerWidget } from "../registry";
 import { createCompareTimelineWidget, type CompareTimelineData } from "./compareTimeline";
+import { createContentListWidget, type ContentListData } from "./contentList";
 import { createContactWidget, type ContactData } from "./contact";
 import { createCtaBannerWidget, type CtaBannerData } from "./ctaBanner";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
@@ -40,6 +41,7 @@ export type CoreWidgetEditors = {
   statsKpi: EditorBundle<StatsKpiData>;
   team: EditorBundle<TeamData>;
   richTextSection: EditorBundle<RichTextSectionData>;
+  contentList: EditorBundle<ContentListData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -63,6 +65,7 @@ export function createCoreWidgetDefinitions(
     createStatsKpiWidget(editors.statsKpi),
     createTeamWidget(editors.team),
     createRichTextSectionWidget(editors.richTextSection),
+    createContentListWidget(editors.contentList),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

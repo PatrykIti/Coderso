@@ -12,5 +12,6 @@
 - `STATS_KPI.md` - Stats KPI
 - `TEAM.md` - Team
 - `RICH_TEXT_SECTION.md` - Rich text section
+- `CONTENT_LIST.md` - Dynamic content list
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

@@ -79,3 +79,8 @@ export {
   RichTextSectionVisualEditor,
   RichTextSectionWizardEditor,
 } from "./RichTextSectionEditors";
+export {
+  ContentListAdvancedEditor,
+  ContentListVisualEditor,
+  ContentListWizardEditor,
+} from "./ContentListEditors";

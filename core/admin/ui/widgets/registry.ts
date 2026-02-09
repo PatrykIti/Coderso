@@ -10,6 +10,9 @@ import {
   CtaBannerAdvancedEditor,
   CtaBannerVisualEditor,
   CtaBannerWizardEditor,
+  ContentListAdvancedEditor,
+  ContentListVisualEditor,
+  ContentListWizardEditor,
   FaqAccordionAdvancedEditor,
   FaqAccordionVisualEditor,
   FaqAccordionWizardEditor,
@@ -110,6 +113,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: RichTextSectionWizardEditor,
       visual: RichTextSectionVisualEditor,
       advanced: RichTextSectionAdvancedEditor,
+    },
+    contentList: {
+      wizard: ContentListWizardEditor,
+      visual: ContentListVisualEditor,
+      advanced: ContentListAdvancedEditor,
     },
     timeline: {
       wizard: TimelineWizardEditor,

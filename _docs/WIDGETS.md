@@ -37,6 +37,7 @@ Wymagane:
 - Stats KPI (sekcja metryk i proof points)
 - Team (profile zespolu z rolami i social links)
 - Rich Text Section (dluzszy blok tresci z bezpiecznym HTML)
+- Content List (dynamiczna lista wpisow z Content Types)
 - Menu/Nawigacja
 - Stopka (linki, dane, social)
 
@@ -93,6 +94,7 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/STATS_KPI.md`
 - `_docs/_WIDGETS/TEAM.md`
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
+- `_docs/_WIDGETS/CONTENT_LIST.md`
 - `_docs/_WIDGETS/NAVIGATION.md`
 - `_docs/_WIDGETS/FOOTER.md`
 

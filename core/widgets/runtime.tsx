@@ -27,6 +27,7 @@ export function ensureRuntimeWidgetsRegistered() {
     statsKpi: noopEditors,
     team: noopEditors,
     richTextSection: noopEditors,
+    contentList: noopEditors,
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,
