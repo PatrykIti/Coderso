@@ -96,6 +96,35 @@ Rotacja klucza:
 - Gdy provider nie jest skonfigurowany, runtime wraca do bezpiecznego `docs-only`.
 - `assistant.docs.paths` musi byc niepuste gdy `assistant.enabled=true`.
 
+### Assistant API runtime (TASK-101-03)
+
+- Endpointy:
+  - `GET /admin/api/assistant/status`
+  - `POST /admin/api/assistant/chat`
+  - `POST /admin/api/assistant/reindex`
+- RBAC:
+  - `settings:read` dla `status` i `chat`
+  - `settings:write` dla `reindex`
+- Input hardening:
+  - `chat.message` max 2000 znakow
+  - control chars sa usuwane przed retrieval
+  - blokowane markery prompt-injection:
+    - `<system>`
+    - `</system>`
+    - `ignore previous instructions`
+    - `developer message`
+    - `prompt injection`
+- Error mapping:
+  - `assistant_disabled`
+  - `assistant_index_missing`
+  - `assistant_reindex_failed`
+  - `assistant_message_invalid`
+  - mapped errors zawieraja `requestId` w payload `error.details.requestId`
+- Reindex:
+  - triggerowany recznie endpointem `POST /assistant/reindex`
+  - opcjonalny boot reindex przez `assistant.docs.reindexOnBoot=true`
+  - sukces reindex logowany jako audit event `assistant.docs.reindex`
+
 ## API Keys (v1)
 
 - API keys sa hashowane (argon2id), plaintext nie trafia do DB.

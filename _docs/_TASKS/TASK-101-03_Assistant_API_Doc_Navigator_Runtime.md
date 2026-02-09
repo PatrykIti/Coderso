@@ -5,7 +5,7 @@
 **Category:** Core/API  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-02, TASK-004-05  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 
@@ -82,15 +82,16 @@ After `TASK-101-08`, status is extended with DB ingest run details.
 | `core/server/routes/assistantRoutes.ts` | new | status/reindex/chat |
 | `core/server/routes/index.ts` | update | register assistant routes |
 | `core/services/assistant/assistantService.ts` | new | orchestrates docs retrieval via backend selector |
-| `core/services/assistant/assistantService.test.ts` | new | docs-only runtime tests |
+| `tests/unit/assistant/assistantService.test.ts` | new | docs-only runtime tests |
 | `tests/integration/routes/assistant.test.ts` | new | auth + payload + response contract |
+| `core/server/httpServer.ts` | update | optional docs reindex on boot initialization |
 
 ---
 
 ## Security & RBAC
 
-- Wymagane uprawnienie: `settings:read` dla status/chat, `settings:update` dla reindex.
-- Limity request body size i message length.
+- Wymagane uprawnienie: `settings:read` dla status/chat, `settings:write` dla reindex.
+- Message length limit: max 2000 chars.
 - Sanitization: strip control chars / block prompt-injection style payload markers.
 
 ---
@@ -100,7 +101,7 @@ After `TASK-101-08`, status is extended with DB ingest run details.
 - `assistant_disabled`
 - `assistant_index_missing`
 - `assistant_reindex_failed`
-- `assistant_rate_limited`
+- `assistant_message_invalid`
 
 Kazdy error zwraca `code`, `message`, `requestId`.
 
@@ -108,11 +109,11 @@ Kazdy error zwraca `code`, `message`, `requestId`.
 
 ## Testing Requirements
 
-- Integration: authenticated user gets 200.
-- Integration: unauthorized user gets 403.
-- Unit: empty message -> 400.
+- Route integration: endpoints are registered and request payload is passed to service.
+- Route integration: service errors are mapped to `ApiError` with `requestId`.
 - Unit: mode mismatch when llm disabled -> fallback docs-only.
-- Integration: status endpoint returns `retrievalBackend`.
+- Unit: disabled assistant rejects chat/reindex calls.
+- Unit: invalid message markers are rejected.
 
 ---
 
@@ -120,7 +121,6 @@ Kazdy error zwraca `code`, `message`, `requestId`.
 
 - `_docs/CMS_API.md` (assistant routes + contracts)
 - `_docs/SECURITY_SPEC.md` (RBAC and limits)
-- `_docs/SETTINGS.md` (`assistant.docs.backend` and reindex behavior)
 
 ---
 

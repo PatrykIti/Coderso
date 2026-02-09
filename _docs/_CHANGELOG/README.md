@@ -188,6 +188,7 @@ Project Change Log.
 | 191 | 2026-02-09 | Divider widget | CMS/Widgets |
 | 192 | 2026-02-09 | Assistant settings and data model | CMS/Settings |
 | 198 | 2026-02-09 | Assistant doc index and retrieval | Core/Assistant |
+| 199 | 2026-02-09 | Assistant API doc navigator runtime | Core/API |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

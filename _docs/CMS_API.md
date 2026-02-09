@@ -1319,6 +1319,105 @@ Przykładowe klucze:
 
 ---
 
+## Assistant (Doc Navigator runtime)
+
+Permissions:
+- `settings:read` dla `GET /assistant/status` i `POST /assistant/chat`
+- `settings:write` dla `POST /assistant/reindex`
+
+Endpoints:
+- `GET /assistant/status`
+- `POST /assistant/chat`
+- `POST /assistant/reindex`
+
+`GET /assistant/status` response
+
+```json
+{
+  "enabled": true,
+  "defaultMode": "docs-only",
+  "retrievalBackend": "filesystem",
+  "llmAvailable": false,
+  "indexReady": true,
+  "indexBuilding": false,
+  "indexError": null,
+  "lastReindexAt": "2026-02-09T21:00:00.000Z",
+  "docCount": 2,
+  "chunkCount": 14
+}
+```
+
+`POST /assistant/chat` request
+
+```json
+{
+  "message": "where can I find hero visual settings?",
+  "mode": "docs-only",
+  "context": {
+    "page": "widgets/templates",
+    "locale": "pl"
+  }
+}
+```
+
+`POST /assistant/chat` response
+
+```json
+{
+  "mode": "docs-only",
+  "template": "location_answer",
+  "answer": "Most relevant locations in docs:\n1. _docs/widgets/hero.md -> Hero Widget > Visual",
+  "confidence": 0.76,
+  "sources": [
+    {
+      "path": "_docs/widgets/hero.md",
+      "heading": "Hero Widget > Visual",
+      "lineStart": 10,
+      "lineEnd": 28,
+      "snippet": "Use visual tab to change colors and spacing.",
+      "score": 2.4211
+    }
+  ],
+  "fallbackUsed": false,
+  "requestedMode": "docs-only",
+  "effectiveMode": "docs-only",
+  "retrievalBackend": "filesystem"
+}
+```
+
+`POST /assistant/reindex` request
+
+```json
+{}
+```
+
+`POST /assistant/reindex` response
+
+```json
+{
+  "retrievalBackend": "filesystem",
+  "builtAt": "2026-02-09T21:05:00.000Z",
+  "buildDurationMs": 84,
+  "docCount": 2,
+  "chunkCount": 14,
+  "totalTokens": 578,
+  "actorId": "user-id"
+}
+```
+
+Error codes:
+- `assistant_disabled`
+- `assistant_index_missing`
+- `assistant_reindex_failed`
+- `assistant_message_invalid`
+- `validation_error` (payload schema mismatch)
+
+Uwagi:
+- Message sanitization usuwa control chars i blokuje prompt-injection markers.
+- Gdy żądany tryb to `llm-rag`, a LLM jest wyłączony, runtime zwraca `docs-only` z `fallbackUsed=true`.
+
+---
+
 ## Security settings
 
 Permissions: `settings:read`, `settings:write`

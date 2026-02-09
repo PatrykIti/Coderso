@@ -62,5 +62,5 @@ export type DocsComposedAnswer = {
   answer: string;
   confidence: number;
   sources: DocsAnswerSource[];
-  fallbackUsed: false;
+  fallbackUsed: boolean;
 };

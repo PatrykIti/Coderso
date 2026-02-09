@@ -30,6 +30,7 @@ import { registerWidgetRoutes } from "./widgetRoutes";
 import { registerWidgetTemplateRoutes } from "./widgetTemplateRoutes";
 import { registerWidgetTemplateCategoryRoutes } from "./widgetTemplateCategoryRoutes";
 import { registerTaxonomyRoutes } from "./taxonomyRoutes";
+import { registerAssistantRoutes } from "./assistantRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -72,6 +73,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerTaxonomyRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerAssistantRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

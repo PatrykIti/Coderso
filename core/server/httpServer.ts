@@ -17,6 +17,7 @@ import { validate } from "./validation/schemaValidator";
 import { getMediaStorageAdapter } from "../services/media/storage";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 import { getStorageSettingsInternal } from "../services/settings/storageSettings";
+import { initializeDocsIndexOnBootIfEnabled } from "../services/assistant/docsIndexService";
 import { ensureThemesLoaded } from "../themes/registry";
 import { handlePublicRequest } from "./publicSite";
 import { resolveAdminPath } from "./utils/adminPath";
@@ -374,6 +375,9 @@ export function startHttpServer(options: HttpServerOptions = {}) {
   const adminDevUrl = options.adminDevUrl ?? process.env.VITE_DEV_SERVER_URL;
   void ensureThemesLoaded().catch((error) => {
     console.warn("Theme registry failed to load:", error);
+  });
+  void initializeDocsIndexOnBootIfEnabled().catch((error) => {
+    console.warn("Assistant docs index initialization failed:", error);
   });
 
   return Bun.serve({
