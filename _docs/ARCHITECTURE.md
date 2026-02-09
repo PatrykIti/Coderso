@@ -45,6 +45,23 @@ Po pierwszym logowaniu admin otrzymuje prosty Setup Wizard, aby ustawic:
 Wizard zapisuje dane do settings (DB) i oznacza konfiguracje jako zakonczona
 przez `setup.completed=true`.
 
+## Assistant Doc Navigator (Phase A)
+
+Aktualny fundament asystenta (bez LLM) sklada sie z trzech warstw:
+- `core/services/assistant/docsIndexService.ts`
+- `core/services/assistant/docsRetriever.ts`
+- `core/services/assistant/docsAnswerComposer.ts`
+
+Przeplyw:
+1. `docsIndexService` skanuje `assistant.docs.paths` (domyslnie `_docs`), parsuje markdown po naglowkach i dzieli tresc na chunki z metadanymi (`docPath`, `headingPath`, `lineStart`, `lineEnd`).
+2. `docsRetriever` wykonuje deterministyczne wyszukiwanie in-memory (BM25-like + boosty naglowka/sciezki + mapy synonimow).
+3. `docsAnswerComposer` sklada bezpieczna odpowiedz szablonowa (`location_answer`, `how_to_answer`, `missing_answer`) i zawsze zwraca liste zrodel.
+
+Zasady runtime:
+- Cache indeksu trzymany jest w pamieci procesu.
+- Reindex moze byc odpalony przy starcie przez `assistant.docs.reindexOnBoot=true`.
+- Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
+
 ## Terminologia
 
 - Core: glowna aplikacja (SSR + admin).

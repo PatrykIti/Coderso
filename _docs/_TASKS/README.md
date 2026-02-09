@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 5 tasks
+- **To Do:** 4 tasks
 - **In Progress:** 1 task
-- **Done:** 281 tasks
+- **Done:** 282 tasks
 
 ---
 
@@ -48,7 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
 | TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
-| TASK-101-02 | Documentation Index and Retrieval Engine | High | Large | Parser + chunking + BM25/FTS |
 | TASK-101-03 | Assistant API (Doc Navigator Runtime) | High | Medium | status/reindex/chat docs-only |
 | TASK-101-04 | LLM Provider Abstraction and OpenRouter Adapter | Medium | Medium | llm-rag provider layer + fallback |
 | TASK-101-05 | Admin UI Assistant Chat and Modes | High | Large | Chat panel + mode switch + sources |
@@ -61,7 +60,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Phase A started, TASK-101-01 complete |
+| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Phase A started, TASK-101-01/02 complete |
 
 ---
 
@@ -82,6 +81,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-049-03 | Widget Catalog + API Routes | High | Medium | `/widgets` + template CRUD aliases |
 | TASK-049-02 | Widget Templates Service | High | Medium | Service CRUD + structural block validation |
 | TASK-049-01 | Widget Templates DB Schema | High | Medium | `widget_templates` schema + migration |
+| TASK-101-02 | Documentation Index and Retrieval Engine | High | Large | Docs parser/chunking + in-memory BM25 retriever + deterministic answer composer |
 | TASK-101-01 | Assistant Settings and Data Model | High | Medium | Global/user assistant settings + validation + General Settings UI |
 | TASK-048 | Content Types & Content UX Expansion | Medium | Large | 048-01..09 complete |
 | TASK-048-04 | Taxonomy System & Terms | Medium | Large | Categories/tags model + terms + assignments |

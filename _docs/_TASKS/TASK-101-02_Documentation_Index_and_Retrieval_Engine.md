@@ -5,7 +5,7 @@
 **Category:** Core/Assistant  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-01  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 
@@ -52,9 +52,9 @@ Budujemy silnik Doc Navigatora bez LLM:
 | `core/services/assistant/docsRetriever.ts` | new | ranked search + topK |
 | `core/services/assistant/docsAnswerComposer.ts` | new | deterministic answer templates |
 | `core/services/assistant/docsTypes.ts` | new | shared contracts |
-| `core/services/assistant/docsIndexService.test.ts` | new | parse/index tests |
-| `core/services/assistant/docsRetriever.test.ts` | new | ranking + relevance tests |
-| `core/services/assistant/docsAnswerComposer.test.ts` | new | response formatting tests |
+| `tests/unit/assistant/docsIndexService.test.ts` | new | parse/index tests |
+| `tests/unit/assistant/docsRetriever.test.ts` | new | ranking + relevance tests |
+| `tests/unit/assistant/docsAnswerComposer.test.ts` | new | response formatting tests |
 
 ---
 
