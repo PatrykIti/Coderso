@@ -1,198 +1,131 @@
 # TASK-100: Runtime Base URL + Auth TTL + Setup Wizard
 # FileName: TASK-100_Runtime_BaseUrl_Security_TTL_and_Setup_Wizard.md
 
-**Priority:** Medium  
-**Category:** Core/Settings + Admin UI  
-**Estimated Effort:** Medium  
-**Dependencies:** TASK-004, TASK-007, TASK-002, TASK-003, TASK-006-33, TASK-006-18  
-**Status:** To Do  
+**Priority:** High  
+**Category:** Core/Security + Core/Settings + Admin/UI  
+**Estimated Effort:** Large  
+**Dependencies:** TASK-004, TASK-007, TASK-020-10, TASK-047, TASK-046  
+**Status:** To Do
 
 ---
 
 ## Overview
 
-Cel: przeniesc krytyczne, ale nie-infrastrukturalne parametry do Settings (DB)
-i umozliwic ich konfiguracje z Admin UI. To pozwoli ustawic m.in. publiczny
-baseUrl dla preview/linkow oraz polityki sesji i resetu hasla bez restartu.
+TASK-100 domyka konfiguracje runtime i security policy przez Settings (DB),
+z pelna kontrola z panelu admina, bez wymagania restartu aplikacji.
 
-Dodatkowo dodajemy lekki Setup Wizard przy pierwszym logowaniu, ktory poprosi
-o uzupelnienie tych kluczowych ustawien.
-
-**Zakres:**
-- `site.baseUrl` w settings (zamiast `PUBLIC_BASE_URL`) + UI.
-- `auth.sessionTtlDays` + `auth.resetTtlMinutes` w settings + Security UI.
-- Setup Wizard (first-run) do ustawienia: baseUrl, locale, session TTL,
-  reset TTL, opcjonalnie site name.
-- Zachowac fallback na ENV dla infrastruktury (DB, master key itd).
+Docelowy efekt:
+- Publiczny URL runtime ma jedno, przewidywalne zrodlo prawdy.
+- TTL sesji i TTL reset tokenu nie sa hardcoded.
+- Pierwsze uruchomienie prowadzi admina przez konfiguracje krytycznych ustawien.
+- Zachowane sa fallbacki kompatybilnosciowe (ENV + legacy key), ale DB jest nadrzedne.
 
 ---
 
-## Architecture
+## Scope
 
-```
-core/services/settings/
-  settingsService.ts         # rozszerzenie o nowe klucze
-core/server/utils/
-  publicBaseUrl.ts            # helper do budowania base url
-core/server/routes/
-  pageRoutes.ts               # preview url z helpera
-  contentEntryRoutes.ts       # preview url z helpera
-  authRoutes.ts               # reset linki z helpera (jesli wysylamy)
-core/admin/ui/settings/
-  GeneralSettingsPage.tsx     # dodanie site.baseUrl
-  SecuritySettingsPage.tsx    # dodanie ttl fields
-core/admin/ui/setup/
-  SetupWizard.tsx             # nowy wizard
-core/admin/AdminApp.tsx       # uruchomienie wizarda przy first-run
-```
+1. Canonical runtime URL:
+- preferowany key: `site.publicBaseUrl` (juz obecny)
+- kompatybilnosc: opcjonalny alias write/read dla `site.baseUrl`
+
+2. Auth TTL runtime:
+- `auth.sessionTtlDays` (global auth TTL)
+- `auth.resetTtlMinutes` (reset token TTL)
+- fallback do bezpiecznych defaultow
+
+3. Setup state:
+- `setup.completed` (wizard gate)
+
+4. First-run Setup Wizard:
+- prowadzi przez base URL + locale + auth TTL + site name
+- zapis przez bulk `PATCH /settings`
+- tylko dla uwierzytelnionego admina
 
 ---
 
-## Sub-Tasks
+## Current vs Target
 
-### TASK-100-01: Settings keys for baseUrl + auth TTL
+| Area | Current | Target |
+| --- | --- | --- |
+| Public URL resolver | `site.publicBaseUrl` + ENV fallback | canonical resolver + route/request fallback + shared helper |
+| Session TTL | z `security.settings.session.ttlDays` | auth-level TTL w `settings` + bezpieczny fallback i precedence |
+| Reset TTL | hardcoded `DEFAULT_RESET_TTL_MS` | runtime z `auth.resetTtlMinutes` |
+| Setup gate | brak | `setup.completed` + wizard |
+| UX pierwszego uruchomienia | reczna konfiguracja | guided setup flow |
 
-**Goal:** Dodac nowe klucze settings i ich walidacje.
+---
 
-**Keys:**
-- `site.baseUrl` (string | null)
-- `auth.sessionTtlDays` (number, > 0)
-- `auth.resetTtlMinutes` (number, > 0)
-- `setup.completed` (boolean) - pomocnicze do Setup Wizard
+## Architecture (Target)
 
-**Files to update:**
-- `core/services/settings/settingsService.ts`
-  - dodaj defaulty do `DEFAULT_SETTINGS`
-  - walidacja typow (string/number/boolean)
-  - `listSettings()` zwraca nowe klucze
-- `core/services/settings/settingsService.test.ts`
-  - testy: set/get dla nowych kluczy + walidacja
+```txt
+core/services/settings/settingsService.ts
+  -> nowe keys + walidacja + aliasy
 
-**Example:**
-```ts
-const DEFAULT_SETTINGS = {
-  "site.name": "Nextless",
-  "site.locale": "en",
-  "site.baseUrl": null,
-  "design.tokens": {},
-  "auth.sessionTtlDays": 14,
-  "auth.resetTtlMinutes": 60,
-  "setup.completed": false,
-};
+core/server/utils/publicBaseUrl.ts
+  -> canonical resolver (settings > env > request)
+
+core/services/auth/sessionService.ts
+core/services/auth/passwordResetService.ts
+  -> TTL z settings (fallback-safe)
+
+core/admin/ui/settings/GeneralSettingsPage.tsx
+core/admin/ui/settings/SecuritySettingsPage.tsx
+  -> pola runtime URL + auth TTL
+
+core/admin/ui/setup/SetupWizard.tsx
+core/admin/app/AdminApp.tsx
+  -> first-run gate i zapis setup.completed
 ```
 
 ---
 
-### TASK-100-02: Public base URL resolver
+## Physical Sub-Tasks
 
-**Goal:** Jeden helper do budowania publicznego URL (preview, reset, itp).
-
-**New file:**
-- `core/server/utils/publicBaseUrl.ts`
-
-**Behavior:**
-1. jeśli `site.baseUrl` w settings -> uzyj tego
-2. else jeśli `PUBLIC_BASE_URL` w ENV -> uzyj (kompat)
-3. else zbuduj z request (`host`, `x-forwarded-proto`)
-4. fallback: `/admin`
-
-**Usage updates:**
-- `core/server/routes/pageRoutes.ts`
-- `core/server/routes/contentEntryRoutes.ts`
-- `core/server/routes/authRoutes.ts` (jesli generujemy reset URL)
-
-**Example:**
-```ts
-export async function resolvePublicBaseUrl(ctx: RouteContext): Promise<string> {
-  const settings = await listSettings();
-  if (settings["site.baseUrl"]) return settings["site.baseUrl"];
-  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
-  const host = ctx.headers?.host;
-  const proto = ctx.headers?.["x-forwarded-proto"] ?? "http";
-  if (host) return `${proto}://${host}`;
-  return "/admin";
-}
-```
+- `TASK-100-01_Settings_Keys_and_Runtime_Validation.md`
+- `TASK-100-02_Public_Base_Url_Resolver_and_Consumers.md`
+- `TASK-100-03_Auth_TTL_Runtime_Sources.md`
+- `TASK-100-04_Admin_UI_Runtime_URL_and_Auth_TTL_Wiring.md`
+- `TASK-100-05_First_Run_Setup_Wizard_and_Gating.md`
 
 ---
 
-### TASK-100-03: Session TTL + Reset TTL in auth services
+## Implementation Order
 
-**Goal:** TTL sterowane z settings.
-
-**Updates:**
-- `core/services/auth/sessionService.ts`
-  - `createSession()` czyta `auth.sessionTtlDays` z settings
-- `core/services/auth/passwordResetService.ts`
-  - `createResetToken()` uzywa `auth.resetTtlMinutes`
-- `core/server/routes/authRoutes.ts`
-  - usuwa hardcoded TTL, polega na service layer
-
-**Tests:**
-- `tests/unit/auth/sessionService.test.ts` (TTL z settings)
-- `tests/unit/auth/passwordResetService.test.ts` (TTL z settings)
+1. `100-01` kontrakty settings i walidacja.
+2. `100-02` resolver URL i konsumenci preview/reset.
+3. `100-03` TTL runtime w auth services.
+4. `100-04` admin UI wiring i walidacja formularzy.
+5. `100-05` wizard + gate + final integration.
 
 ---
 
-### TASK-100-04: Admin UI wiring for baseUrl + auth TTL
+## Security Requirements
 
-**General Settings:**
-- `core/admin/ui/settings/GeneralSettingsPage.tsx`
-  - pole `Site Base URL` (helper text: required for preview/reset links)
-
-**Security Settings:**
-- `core/admin/ui/settings/SecuritySettingsPage.tsx`
-  - `Session TTL (days)`
-  - `Reset token TTL (minutes)`
-
-**Admin API:**
-Korzystamy z istniejacych `/settings` endpoints, tylko nowe klucze.
-
-**Tests:**
-- UI tests (snapshot / render) dla nowych pol.
-- `tests/unit/admin/settingsClient.test.ts` jesli trzeba.
+- Brak cichych fallbackow do niepoprawnych wartosci (walidacja strict).
+- Brak ujawniania sekretnych/politykowych wartosci w logach bledow.
+- Wizard dostepny tylko po auth.
+- Bulk update wizarda idempotentny i transakcyjny.
+- TTL limits: minimalne i maksymalne progi, aby uniknac niebezpiecznych konfiguracji.
 
 ---
 
-### TASK-100-05: First-run Setup Wizard
+## Testing Strategy
 
-**Goal:** Po pierwszym logowaniu user widzi wizard, ktory zbiera
-`site.baseUrl`, `site.locale`, `site.name`, `auth.sessionTtlDays`,
-`auth.resetTtlMinutes`, i zapisuje `setup.completed=true`.
-
-**UI:**
-- Nowy komponent: `core/admin/ui/setup/SetupWizard.tsx`
-- Renderowany nad `AdminApp` jesli `setup.completed === false`
-
-**Flow:**
-1. `AdminApp` pobiera `/settings` przy starcie.
-2. Jesli `setup.completed=false` -> pokaz Wizard.
-3. Wizard zapisuje `/settings` (bulk) i zamyka sie.
-
-**Security:**
-Wizard dostepny tylko po zalogowaniu (admin UI).
-
-**Tests:**
-- UI test: wizard renderuje sie gdy `setup.completed=false`
-- UI test: wizard nie renderuje sie gdy `setup.completed=true`
+- Unit: settings validation, URL resolver, TTL calculations.
+- Integration: auth/login + reset token expiry behavior.
+- UI: general/security forms + setup wizard gate.
+- Regression: preview URL contracts dla page/content/widget-template.
 
 ---
 
-## Testing Requirements
+## Documentation Updates Required (After Each Sub-Task)
 
-- Unit tests dla settings keys + TTL behavior
-- Unit tests dla `resolvePublicBaseUrl`
-- UI tests dla General/Security settings i Setup Wizard
-- Integracyjny test route preview (opcjonalnie) dla baseUrl
-
----
-
-## Documentation Updates Required
-
-- `_docs/CMS_API.md` (nowe settings keys)
-- `_docs/ARCHITECTURE.md` (baseUrl z settings)
-- `_docs/SECURITY_SPEC.md` (TTL z settings)
-- `_docs/README.md` lub `_docs/_TASKS/README.md` (status)
+- Po `100-01`: `_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`
+- Po `100-02`: `_docs/CMS_API.md`, `_docs/PREVIEW_SPEC.md`
+- Po `100-03`: `_docs/SECURITY_SPEC.md`, `_docs/AUTH_SPEC.md`
+- Po `100-04`: `_docs/UI` sekcje ustawien + `_docs/CMS_API.md`
+- Po `100-05`: `_docs/ARCHITECTURE.md`, `_docs/CMS_SPEC.md`
+- Po calosci: `_docs/_TASKS/README.md` + nowy wpis `_docs/_CHANGELOG/*`
 
 ---
 
