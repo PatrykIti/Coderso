@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-049-03, TASK-049-06  
-**Status:** In Progress (Phase 3)
+**Status:** In Progress (Phase 4)
 
 ---
 
@@ -16,6 +16,8 @@ Phase 2 expanded slot-based nesting and richer widget configuration for
 Hero, Navigation, Footer, Timeline, Compare Timeline, Newsletter, and Contact.
 Phase 3 expands the widget catalog in three ordered sections:
 conversion widgets, trust/content widgets, and dynamic content widgets.
+Phase 4 adds layout primitive widgets and repeatable-slot infrastructure
+for elastic page structures.
 
 ---
 
@@ -61,6 +63,14 @@ conversion widgets, trust/content widgets, and dynamic content widgets.
 - **TASK-050-14:** Dynamic Content Widgets Pack
 - **TASK-050-14-01:** Content List Widget
 - **TASK-050-14-02:** Entry Teaser Widget
+- **TASK-050-15:** Layout Primitives Widgets Pack
+- **TASK-050-15-01:** Repeatable Slots Core for Layout Widgets
+- **TASK-050-15-02:** Section Layout Widget
+- **TASK-050-15-03:** Grid/Columns Layout Widget
+- **TASK-050-15-04:** Stack Layout Widget
+- **TASK-050-15-05:** Split Layout Widget
+- **TASK-050-15-06:** Spacer Widget
+- **TASK-050-15-07:** Divider Widget
 
 ---
 
@@ -94,6 +104,12 @@ conversion widgets, trust/content widgets, and dynamic content widgets.
 - `_docs/_WIDGETS/RICH_TEXT_SECTION.md`
 - `_docs/_WIDGETS/CONTENT_LIST.md`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
+- `_docs/_WIDGETS/SECTION.md`
+- `_docs/_WIDGETS/GRID_COLUMNS.md`
+- `_docs/_WIDGETS/STACK.md`
+- `_docs/_WIDGETS/SPLIT_LAYOUT.md`
+- `_docs/_WIDGETS/SPACER.md`
+- `_docs/_WIDGETS/DIVIDER.md`
 - `_docs/README.md` (index if new docs are added)
 
 ---
