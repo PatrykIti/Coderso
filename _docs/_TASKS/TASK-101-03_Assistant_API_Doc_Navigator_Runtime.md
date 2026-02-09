@@ -17,6 +17,7 @@ Wystawiamy API dla asystenta w trybie `docs-only`:
 - endpoint reindex.
 
 API ma byc deterministyczne, bez odpalania LLM.
+API ma byc backend-agnostic dla docs retrieval (`filesystem` teraz, `db` po TASK-101-08).
 
 ---
 
@@ -44,6 +45,7 @@ API ma byc deterministyczne, bez odpalania LLM.
 ```json
 {
   "mode": "docs-only",
+  "retrievalBackend": "filesystem",
   "answer": "Opcje Hero znajdziesz w ...",
   "confidence": 0.86,
   "sources": [
@@ -58,6 +60,19 @@ API ma byc deterministyczne, bez odpalania LLM.
 }
 ```
 
+### Status response (minimum)
+
+```json
+{
+  "enabled": true,
+  "retrievalBackend": "filesystem",
+  "indexReady": true,
+  "lastReindexAt": "2026-02-09T20:00:00.000Z"
+}
+```
+
+After `TASK-101-08`, status is extended with DB ingest run details.
+
 ---
 
 ## Implementation Checklist
@@ -66,7 +81,7 @@ API ma byc deterministyczne, bez odpalania LLM.
 | --- | --- | --- |
 | `core/server/routes/assistantRoutes.ts` | new | status/reindex/chat |
 | `core/server/routes/index.ts` | update | register assistant routes |
-| `core/services/assistant/assistantService.ts` | new | orchestrates docs retrieval |
+| `core/services/assistant/assistantService.ts` | new | orchestrates docs retrieval via backend selector |
 | `core/services/assistant/assistantService.test.ts` | new | docs-only runtime tests |
 | `tests/integration/routes/assistant.test.ts` | new | auth + payload + response contract |
 
@@ -97,6 +112,7 @@ Kazdy error zwraca `code`, `message`, `requestId`.
 - Integration: unauthorized user gets 403.
 - Unit: empty message -> 400.
 - Unit: mode mismatch when llm disabled -> fallback docs-only.
+- Integration: status endpoint returns `retrievalBackend`.
 
 ---
 
@@ -104,6 +120,7 @@ Kazdy error zwraca `code`, `message`, `requestId`.
 
 - `_docs/CMS_API.md` (assistant routes + contracts)
 - `_docs/SECURITY_SPEC.md` (RBAC and limits)
+- `_docs/SETTINGS.md` (`assistant.docs.backend` and reindex behavior)
 
 ---
 

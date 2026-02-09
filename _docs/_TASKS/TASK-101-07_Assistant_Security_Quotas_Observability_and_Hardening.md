@@ -4,7 +4,7 @@
 **Priority:** High  
 **Category:** Core/Security + Platform  
 **Estimated Effort:** Medium  
-**Dependencies:** TASK-101-03, TASK-101-04, TASK-020  
+**Dependencies:** TASK-101-03, TASK-101-04, TASK-101-08, TASK-020  
 **Status:** To Do
 
 ---
@@ -25,6 +25,7 @@ Hardening warstwy asystenta:
 - Input sanitization (control chars, oversized payloads, policy violations).
 - Secret redaction w logach provider integration.
 - RBAC validation dla endpointow asystenta.
+- Ingest hardening: frontmatter/section contract validation + chunk size guard.
 
 ### Quotas and rate limits
 - per-minute i per-day limity requestow.
@@ -34,6 +35,7 @@ Hardening warstwy asystenta:
 ### Observability
 - metrics: request count, latency, fallback rate, no-hit rate.
 - audit events: mode switch, reindex trigger, provider failure.
+- ingest metrics: files scanned, docs/chunks upserted, validation errors.
 
 ---
 
@@ -43,11 +45,13 @@ Hardening warstwy asystenta:
 | --- | --- | --- |
 | `core/server/middleware/rateLimit.ts` | update | assistant bucket(s) |
 | `core/services/assistant/assistantService.ts` | update | quota checks + telemetry hooks |
+| `core/services/assistant/docsIngestService.ts` | update | ingest validation hardening + structured errors |
 | `core/services/auditLogService.ts` | update | assistant events |
 | `core/server/routes/assistantRoutes.ts` | update | consistent error mapping |
 | `tests/unit/assistant/assistantQuota.test.ts` | new | quota logic |
 | `tests/integration/routes/assistant-rate-limit.test.ts` | new | rate-limit behavior |
 | `tests/unit/assistant/assistantRedaction.test.ts` | new | secret redaction |
+| `tests/unit/assistant/docsIngestService.test.ts` | update | contract validation + oversized chunk checks |
 
 ---
 
@@ -66,6 +70,7 @@ Hardening warstwy asystenta:
 - Unit: sensitive fields are redacted.
 - Integration: rate-limited requests return expected code.
 - Integration: provider timeout still returns docs-only answer with fallback flag.
+- Integration: ingest partial failure returns structured validation errors.
 
 ---
 
@@ -74,6 +79,7 @@ Hardening warstwy asystenta:
 - `_docs/SECURITY_SPEC.md` (assistant hardening policy)
 - `_docs/ARCHITECTURE.md` (observability flows)
 - `_docs/CMS_API.md` (error codes and fallback flags)
+- `_docs/_internal/README.md` (content quality policy and validation rules)
 
 ---
 

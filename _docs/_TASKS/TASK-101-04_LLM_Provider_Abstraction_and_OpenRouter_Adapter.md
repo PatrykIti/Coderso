@@ -15,6 +15,7 @@ Dodajemy opcjonalny tryb `llm-rag` przez warstwe provider abstraction.
 Pierwsza implementacja: OpenRouter.
 
 Zasada: LLM nigdy nie dziala bez retrieval snippets z docs.
+Zrodla snippets pochodza z backendu wybranego przez assistant (`filesystem` lub `db`).
 
 ---
 
@@ -76,6 +77,7 @@ type AssistantProviderResponse = {
 2. Odpowiedz bez zrodel -> oznacz `confidence` low + fallback hint.
 3. Brak klucza providera -> natychmiast fallback `docs-only`.
 4. Provider errors logowane bez wycieku klucza/token payloadu.
+5. Brak snippets z retrieval -> bez wywolania providera, fallback `docs-only`.
 
 ---
 

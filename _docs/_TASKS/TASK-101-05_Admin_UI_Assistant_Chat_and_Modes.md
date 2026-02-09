@@ -26,6 +26,7 @@ Implementacja UI asystenta w panelu admina:
 3. Odpowiedz zawsze pokazuje `Sources` (klikane sciezki/sekcje).
 4. Oznaczenie trybu i fallbacku (`LLM failed, switched to docs-only`).
 5. Czytelny empty state: "Zapytaj gdzie cos jest w dokumentacji".
+6. Przy backendzie `db` pokazywany badge `Internal Docs` przy zrodlach.
 
 ---
 
@@ -35,7 +36,7 @@ Implementacja UI asystenta w panelu admina:
 | --- | --- | --- |
 | `core/admin/services/assistantClient.ts` | new | status/chat/reindex client |
 | `core/admin/ui/assistant/AssistantPanel.tsx` | new | chat shell + messages |
-| `core/admin/ui/assistant/AssistantMessage.tsx` | new | answer + sources + badges |
+| `core/admin/ui/assistant/AssistantMessage.tsx` | new | answer + sources + fallback/backend badges |
 | `core/admin/ui/assistant/AssistantModeSwitch.tsx` | new | docs-only / llm-rag |
 | `core/admin/ui/assistant/AssistantEmptyState.tsx` | new | starter prompts |
 | `core/admin/AdminApp.tsx` | update | mount panel + route-level availability |

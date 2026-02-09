@@ -37,9 +37,11 @@ Cel biznesowy:
 
 ```
 core/services/assistant/
-  docsIndexService.ts           # parser + indexing docs
-  docsRetriever.ts              # BM25/FTS retrieval + scoring
-  assistantService.ts           # orchestrator odpowiedzi
+  docsIndexService.ts           # filesystem parser + in-memory index (fallback)
+  docsRetriever.ts              # in-memory BM25-like retrieval (Phase A)
+  docsIngestService.ts          # _docs/_internal -> DB ingest pipeline (Phase A2)
+  docsDbRetriever.ts            # DB retrieval/scoring (Phase A2)
+  assistantService.ts           # orchestrator odpowiedzi + backend selection
   providers/
     providerTypes.ts            # kontrakty providerow
     openRouterProvider.ts       # adapter OpenRouter
