@@ -8,6 +8,11 @@ export {
   GridColumnsVisualEditor,
   GridColumnsWizardEditor,
 } from "./GridColumnsEditors";
+export {
+  StackAdvancedEditor,
+  StackVisualEditor,
+  StackWizardEditor,
+} from "./StackEditors";
 export { HeroAdvancedEditor, HeroVisualEditor, HeroWizardEditor } from "./HeroEditors";
 export {
   TimelineAdvancedEditor,

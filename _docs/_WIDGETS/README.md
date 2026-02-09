@@ -2,6 +2,7 @@
 
 - `SECTION.md` - Section layout wrapper
 - `GRID_COLUMNS.md` - Grid/columns layout primitive
+- `STACK.md` - Flow layout primitive
 - `HERO.md` - Hero section
 - `TIMELINE.md` - Timeline (proces bez dat)
 - `COMPARE_TIMELINE.md` - Compare timeline (porownanie dwoch procesow)

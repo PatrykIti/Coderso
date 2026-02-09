@@ -7,6 +7,9 @@ import {
   GridColumnsAdvancedEditor,
   GridColumnsVisualEditor,
   GridColumnsWizardEditor,
+  StackAdvancedEditor,
+  StackVisualEditor,
+  StackWizardEditor,
   SectionAdvancedEditor,
   SectionVisualEditor,
   SectionWizardEditor,
@@ -77,6 +80,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: GridColumnsWizardEditor,
       visual: GridColumnsVisualEditor,
       advanced: GridColumnsAdvancedEditor,
+    },
+    stack: {
+      wizard: StackWizardEditor,
+      visual: StackVisualEditor,
+      advanced: StackAdvancedEditor,
     },
     hero: {
       wizard: HeroWizardEditor,

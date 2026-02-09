@@ -93,6 +93,11 @@ import {
   gridColumnsDefaults,
   type GridColumnsData,
 } from "../../../core/widgets/core/gridColumns";
+import {
+  createStackWidget,
+  stackDefaults,
+  type StackData,
+} from "../../../core/widgets/core/stack";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { WidgetRenderer } from "../../../core/widgets/renderers/widgetRenderer";
 import type { WidgetEditorProps, WidgetBlock } from "../../../core/widgets/types";
@@ -121,6 +126,7 @@ const StubRichTextSectionEditor: ComponentType<WidgetEditorProps<RichTextSection
 const StubSectionEditor: ComponentType<WidgetEditorProps<SectionData>> = () => null;
 const StubGridColumnsEditor: ComponentType<WidgetEditorProps<GridColumnsData>> = () =>
   null;
+const StubStackEditor: ComponentType<WidgetEditorProps<StackData>> = () => null;
 const StubUnknownEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderer shows missing widget fallback", () => {
@@ -411,6 +417,49 @@ test("renderer outputs grid columns responsive markers", () => {
   expect(html).toContain('data-grid-columns-count="3"');
   expect(html).toContain('data-grid-column="column:1"');
   expect(html).toContain('data-grid-column="column:3"');
+});
+
+test("renderer outputs stack responsive markers", () => {
+  clearWidgets();
+  registerWidget(
+    createStackWidget({
+      wizard: StubStackEditor,
+      visual: StubStackEditor,
+      advanced: StubStackEditor,
+    })
+  );
+
+  const html = renderToString(
+    <WidgetRenderer
+      block={{
+        id: "stack-1",
+        type: "stack",
+        variant: "responsive",
+        data: {
+          ...stackDefaults,
+          direction: {
+            desktop: "row",
+            tablet: "row",
+            mobile: "column",
+          },
+          gap: {
+            desktop: "8",
+            tablet: "6",
+            mobile: "4",
+          },
+          wrap: true,
+        },
+        slots: {
+          content: [],
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain('data-stack-variant="responsive"');
+  expect(html).toContain('data-stack-direction-desktop="row"');
+  expect(html).toContain('data-stack-gap-desktop="8"');
+  expect(html).toContain('data-stack-wrap="true"');
 });
 
 test("renderer renders navigation right slot content", () => {

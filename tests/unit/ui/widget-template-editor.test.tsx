@@ -92,6 +92,11 @@ import {
   GridColumnsVisualEditor,
   GridColumnsWizardEditor,
 } from "../../../core/admin/ui/widgets/editors/GridColumnsEditors";
+import {
+  StackAdvancedEditor,
+  StackVisualEditor,
+  StackWizardEditor,
+} from "../../../core/admin/ui/widgets/editors/StackEditors";
 import { WidgetTemplateEditorPage } from "../../../core/admin/ui/widgets/WidgetTemplateEditorPage";
 import {
   compareTimelineDefaults,
@@ -165,6 +170,10 @@ import {
   createGridColumnsWidget,
   gridColumnsDefaults,
 } from "../../../core/widgets/core/gridColumns";
+import {
+  createStackWidget,
+  stackDefaults,
+} from "../../../core/widgets/core/stack";
 
 test("WidgetTemplateEditorPage renders canvas placeholder", () => {
   const html = renderToString(<WidgetTemplateEditorPage />);
@@ -423,6 +432,38 @@ test("widget template block settings render grid columns visual sections", () =>
   expect(html).toContain("Variant and layout structure");
   expect(html).toContain("Column sizing and labels");
   expect(html).toContain("Gap and column surface");
+});
+
+test("widget template block settings render stack visual sections", () => {
+  const widget = createStackWidget({
+    wizard: StackWizardEditor,
+    visual: StackVisualEditor,
+    advanced: StackAdvancedEditor,
+  });
+
+  const html = renderToString(
+    <BlockSettings
+      widget={widget}
+      block={{
+        id: "stack-1",
+        type: "stack",
+        variant: "vertical",
+        data: stackDefaults,
+        slots: {
+          content: [],
+        },
+        editor: {
+          mode: "visual",
+          wizardCompleted: true,
+        },
+      }}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Variant and flow");
+  expect(html).toContain("Responsive direction");
+  expect(html).toContain("Spacing and distribution");
 });
 
 test("widget template block settings render testimonials visual sections", () => {
