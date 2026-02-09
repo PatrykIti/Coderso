@@ -186,6 +186,7 @@ Project Change Log.
 | 189 | 2026-02-09 | Split layout widget | CMS/Widgets |
 | 190 | 2026-02-09 | Spacer widget | CMS/Widgets |
 | 191 | 2026-02-09 | Divider widget | CMS/Widgets |
+| 192 | 2026-02-09 | Assistant settings and data model | CMS/Settings |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

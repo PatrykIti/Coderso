@@ -81,6 +81,20 @@ Rotacja klucza:
 - Nigdy nie logujemy tokenow/hasel.
 - ENV tylko po stronie serwera.
 - Hasla SMTP sa szyfrowane w DB (AES-256-GCM) tym samym master key.
+- Klucze providerow LLM (np. OpenRouter) traktujemy jak sekrety:
+  - trzymane poza frontendem i poza plain text w logach,
+  - redagowane w audit metadata oraz error payloadach.
+
+## Assistant security baseline (v1)
+
+- Konfiguracja limitow asystenta jest trzymana w global settings:
+  - `assistant.quotas.requestsPerMinute`
+  - `assistant.quotas.requestsPerDay`
+- `assistant.defaultMode=llm-rag` jest dozwolony tylko gdy:
+  - `assistant.llm.enabled=true`
+  - `assistant.llm.provider != none`
+- Gdy provider nie jest skonfigurowany, runtime wraca do bezpiecznego `docs-only`.
+- `assistant.docs.paths` musi byc niepuste gdy `assistant.enabled=true`.
 
 ## API Keys (v1)
 

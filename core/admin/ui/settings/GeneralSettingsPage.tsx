@@ -8,40 +8,102 @@ import { isApiClientError } from "@/services/apiClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
+import {
+  AssistantSettingsCard,
+  type AssistantSettingsValues,
+} from "./AssistantSettingsCard";
 import { BrandingCard } from "./BrandingCard";
 import { LogoUploadCard } from "./LogoUploadCard";
 import { SettingsSidebar } from "./SettingsSidebar";
 
-type GeneralSettingsValues = {
+export type GeneralSettingsValues = AssistantSettingsValues & {
   siteName: string;
   siteLocale: string;
 };
 
 type GeneralSettingsPageProps = {
-  values?: GeneralSettingsValues;
+  values?: Partial<GeneralSettingsValues>;
   onSave?: (values: GeneralSettingsValues) => Promise<void> | void;
   isLoading?: boolean;
   isSaving?: boolean;
   error?: string | null;
 };
 
-const defaultValues: GeneralSettingsValues = {
+export const GENERAL_SETTINGS_DEFAULT_VALUES: GeneralSettingsValues = {
   siteName: "Nextless",
   siteLocale: "en",
+  assistantEnabled: false,
+  assistantDefaultMode: "docs-only",
+  assistantDocsPaths: ["_docs"],
+  assistantDocsReindexOnBoot: false,
+  assistantLlmEnabled: false,
+  assistantLlmProvider: "none",
+  assistantLlmModel: "google/gemma-3n-e2b-it:free",
+  assistantLlmMaxInputTokens: 8192,
+  assistantLlmMaxOutputTokens: 2048,
+  assistantLlmTimeoutMs: 20000,
+  assistantQuotaRequestsPerMinute: 20,
+  assistantQuotaRequestsPerDay: 1000,
+};
+
+const resolveAssistantValidationError = (
+  input: GeneralSettingsValues
+): string | null => {
+  if (input.assistantEnabled && input.assistantDocsPaths.length === 0) {
+    return "Assistant docs paths cannot be empty when assistant is enabled.";
+  }
+  if (
+    input.assistantDefaultMode === "llm-rag" &&
+    (!input.assistantLlmEnabled || input.assistantLlmProvider === "none")
+  ) {
+    return "LLM mode requires enabled LLM and a provider different than 'none'.";
+  }
+  return null;
 };
 
 export function GeneralSettingsPage({
-  values = defaultValues,
+  values = GENERAL_SETTINGS_DEFAULT_VALUES,
   onSave,
   isLoading = false,
   isSaving = false,
   error = null,
 }: GeneralSettingsPageProps) {
   const normalizeValues = (input: Partial<GeneralSettingsValues>) => ({
-    ...defaultValues,
+    ...GENERAL_SETTINGS_DEFAULT_VALUES,
     ...input,
-    siteName: input.siteName ?? defaultValues.siteName,
-    siteLocale: input.siteLocale ?? defaultValues.siteLocale,
+    siteName: input.siteName ?? GENERAL_SETTINGS_DEFAULT_VALUES.siteName,
+    siteLocale: input.siteLocale ?? GENERAL_SETTINGS_DEFAULT_VALUES.siteLocale,
+    assistantEnabled:
+      input.assistantEnabled ?? GENERAL_SETTINGS_DEFAULT_VALUES.assistantEnabled,
+    assistantDefaultMode:
+      input.assistantDefaultMode ??
+      GENERAL_SETTINGS_DEFAULT_VALUES.assistantDefaultMode,
+    assistantDocsPaths: Array.isArray(input.assistantDocsPaths)
+      ? input.assistantDocsPaths.filter((entry) => typeof entry === "string")
+      : GENERAL_SETTINGS_DEFAULT_VALUES.assistantDocsPaths,
+    assistantDocsReindexOnBoot:
+      input.assistantDocsReindexOnBoot ??
+      GENERAL_SETTINGS_DEFAULT_VALUES.assistantDocsReindexOnBoot,
+    assistantLlmEnabled:
+      input.assistantLlmEnabled ?? GENERAL_SETTINGS_DEFAULT_VALUES.assistantLlmEnabled,
+    assistantLlmProvider:
+      input.assistantLlmProvider ?? GENERAL_SETTINGS_DEFAULT_VALUES.assistantLlmProvider,
+    assistantLlmModel:
+      input.assistantLlmModel ?? GENERAL_SETTINGS_DEFAULT_VALUES.assistantLlmModel,
+    assistantLlmMaxInputTokens:
+      input.assistantLlmMaxInputTokens ??
+      GENERAL_SETTINGS_DEFAULT_VALUES.assistantLlmMaxInputTokens,
+    assistantLlmMaxOutputTokens:
+      input.assistantLlmMaxOutputTokens ??
+      GENERAL_SETTINGS_DEFAULT_VALUES.assistantLlmMaxOutputTokens,
+    assistantLlmTimeoutMs:
+      input.assistantLlmTimeoutMs ?? GENERAL_SETTINGS_DEFAULT_VALUES.assistantLlmTimeoutMs,
+    assistantQuotaRequestsPerMinute:
+      input.assistantQuotaRequestsPerMinute ??
+      GENERAL_SETTINGS_DEFAULT_VALUES.assistantQuotaRequestsPerMinute,
+    assistantQuotaRequestsPerDay:
+      input.assistantQuotaRequestsPerDay ??
+      GENERAL_SETTINGS_DEFAULT_VALUES.assistantQuotaRequestsPerDay,
   });
 
   const [form, setForm] = useState(() => normalizeValues(values));
@@ -51,7 +113,8 @@ export function GeneralSettingsPage({
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
     useSettingsAutoSave();
 
-  const hasValidationErrors = false;
+  const validationError = resolveAssistantValidationError(form);
+  const hasValidationErrors = Boolean(validationError);
 
   useEffect(() => {
     setForm(normalizeValues(values));
@@ -126,6 +189,12 @@ export function GeneralSettingsPage({
                 <AlertDescription>{saveError}</AlertDescription>
               </Alert>
             ) : null}
+            {validationError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Validation error</AlertTitle>
+                <AlertDescription>{validationError}</AlertDescription>
+              </Alert>
+            ) : null}
             {saveSuccess ? (
               <Alert>
                 <AlertTitle>Saved</AlertTitle>
@@ -140,6 +209,29 @@ export function GeneralSettingsPage({
                   ...prev,
                   siteName: next.siteName,
                   siteLocale: next.siteLocale,
+                }))
+              }
+              disabled={busy}
+            />
+            <AssistantSettingsCard
+              values={{
+                assistantEnabled: form.assistantEnabled,
+                assistantDefaultMode: form.assistantDefaultMode,
+                assistantDocsPaths: form.assistantDocsPaths,
+                assistantDocsReindexOnBoot: form.assistantDocsReindexOnBoot,
+                assistantLlmEnabled: form.assistantLlmEnabled,
+                assistantLlmProvider: form.assistantLlmProvider,
+                assistantLlmModel: form.assistantLlmModel,
+                assistantLlmMaxInputTokens: form.assistantLlmMaxInputTokens,
+                assistantLlmMaxOutputTokens: form.assistantLlmMaxOutputTokens,
+                assistantLlmTimeoutMs: form.assistantLlmTimeoutMs,
+                assistantQuotaRequestsPerMinute: form.assistantQuotaRequestsPerMinute,
+                assistantQuotaRequestsPerDay: form.assistantQuotaRequestsPerDay,
+              }}
+              onChange={(patch) =>
+                setForm((prev) => ({
+                  ...prev,
+                  ...patch,
                 }))
               }
               disabled={busy}

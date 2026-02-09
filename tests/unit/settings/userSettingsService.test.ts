@@ -8,6 +8,7 @@ import {
   getUserSetting,
   listUserSettings,
   setUserSetting,
+  validateUserSettingValue,
 } from "../../../core/services/settings/userSettingsService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
@@ -49,6 +50,20 @@ testIfDb("set/get/list user settings", async () => {
   expect(defaultFavorites).toEqual([]);
   const defaultHeroPresets = await getUserSetting(userId, "widgets.hero.presets");
   expect(defaultHeroPresets).toEqual([]);
+  const defaultAssistantMode = await getUserSetting(userId, "assistant.mode");
+  expect(defaultAssistantMode).toBeNull();
+  const defaultAssistantUi = await getUserSetting(userId, "assistant.ui.enabled");
+  expect(defaultAssistantUi).toBe(true);
+  const defaultAssistantAvatarEnabled = await getUserSetting(
+    userId,
+    "assistant.ui.avatarEnabled"
+  );
+  expect(defaultAssistantAvatarEnabled).toBe(false);
+  const defaultAssistantAvatarAsset = await getUserSetting(
+    userId,
+    "assistant.ui.avatarAsset"
+  );
+  expect(defaultAssistantAvatarAsset).toBeNull();
 
   await setUserSetting(userId, "pages.openAfterCreate", false);
   await setUserSetting(userId, "media.openAfterUpload", true);
@@ -61,6 +76,10 @@ testIfDb("set/get/list user settings", async () => {
       updatedAt: "2026-02-06T10:00:00.000Z",
     },
   ]);
+  await setUserSetting(userId, "assistant.mode", "docs-only");
+  await setUserSetting(userId, "assistant.ui.enabled", false);
+  await setUserSetting(userId, "assistant.ui.avatarEnabled", true);
+  await setUserSetting(userId, "assistant.ui.avatarAsset", "assistant-bot.glb");
   const updated = await getUserSetting(userId, "pages.openAfterCreate");
   expect(updated).toBe(false);
   const updatedMedia = await getUserSetting(userId, "media.openAfterUpload");
@@ -76,6 +95,20 @@ testIfDb("set/get/list user settings", async () => {
       updatedAt: "2026-02-06T10:00:00.000Z",
     },
   ]);
+  const updatedAssistantMode = await getUserSetting(userId, "assistant.mode");
+  expect(updatedAssistantMode).toBe("docs-only");
+  const updatedAssistantUi = await getUserSetting(userId, "assistant.ui.enabled");
+  expect(updatedAssistantUi).toBe(false);
+  const updatedAssistantAvatarEnabled = await getUserSetting(
+    userId,
+    "assistant.ui.avatarEnabled"
+  );
+  expect(updatedAssistantAvatarEnabled).toBe(true);
+  const updatedAssistantAvatarAsset = await getUserSetting(
+    userId,
+    "assistant.ui.avatarAsset"
+  );
+  expect(updatedAssistantAvatarAsset).toBe("assistant-bot.glb");
 
   const list = await listUserSettings(userId);
   expect(list["pages.openAfterCreate"]).toBe(false);
@@ -89,6 +122,10 @@ testIfDb("set/get/list user settings", async () => {
       updatedAt: "2026-02-06T10:00:00.000Z",
     },
   ]);
+  expect(list["assistant.mode"]).toBe("docs-only");
+  expect(list["assistant.ui.enabled"]).toBe(false);
+  expect(list["assistant.ui.avatarEnabled"]).toBe(true);
+  expect(list["assistant.ui.avatarAsset"]).toBe("assistant-bot.glb");
 });
 
 testIfDb("rejects unknown key", async () => {
@@ -192,4 +229,44 @@ testIfDb("rejects invalid hero presets", async () => {
       }))
     )
   ).rejects.toThrow("user_settings_value_invalid");
+});
+
+testIfDb("rejects invalid assistant user settings", async () => {
+  const userId = randomUUID();
+  cleanupUserIds.push(userId);
+
+  await db.insert(users).values({
+    id: userId,
+    email: `user-${userId}@example.com`,
+    passwordHash: "hash",
+  });
+
+  await expect(setUserSetting(userId, "assistant.mode", "invalid")).rejects.toThrow(
+    "user_settings_value_invalid"
+  );
+  await expect(setUserSetting(userId, "assistant.ui.enabled", "yes")).rejects.toThrow(
+    "user_settings_value_invalid"
+  );
+  await expect(
+    setUserSetting(userId, "assistant.ui.avatarAsset", 123)
+  ).rejects.toThrow("user_settings_value_invalid");
+});
+
+test("validateUserSettingValue validates assistant user settings", () => {
+  expect(validateUserSettingValue("assistant.mode", "llm-rag")).toBe("llm-rag");
+  expect(validateUserSettingValue("assistant.mode", null)).toBeNull();
+  expect(validateUserSettingValue("assistant.ui.enabled", true)).toBe(true);
+  expect(validateUserSettingValue("assistant.ui.avatarEnabled", false)).toBe(false);
+  expect(
+    validateUserSettingValue("assistant.ui.avatarAsset", " assistant.glb ")
+  ).toBe("assistant.glb");
+  expect(validateUserSettingValue("assistant.ui.avatarAsset", " ")).toBeNull();
+  expect(() =>
+    validateUserSettingValue("assistant.mode", "unsupported")
+  ).toThrow("user_settings_value_invalid");
+  expect(() =>
+    validateUserSettingValue("assistant.ui.avatarAsset", {
+      id: "asset-1",
+    })
+  ).toThrow("user_settings_value_invalid");
 });

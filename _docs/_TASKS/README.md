@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 20 tasks
-- **In Progress:** 0 tasks
-- **Done:** 262 tasks
+- **To Do:** 18 tasks
+- **In Progress:** 1 task
+- **Done:** 263 tasks
 
 ---
 
@@ -61,8 +61,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
 | TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
 | TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | Medium | Medium | LAST: first-run wizard + baseUrl |
-| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Index for TASK-101-01..07 |
-| TASK-101-01 | Assistant Settings and Data Model | High | Medium | Global/user settings + validation |
 | TASK-101-02 | Documentation Index and Retrieval Engine | High | Large | Parser + chunking + BM25/FTS |
 | TASK-101-03 | Assistant API (Doc Navigator Runtime) | High | Medium | status/reindex/chat docs-only |
 | TASK-101-04 | LLM Provider Abstraction and OpenRouter Adapter | Medium | Medium | llm-rag provider layer + fallback |
@@ -76,7 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| - | - | - | - | - |
+| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Phase A started, TASK-101-01 complete |
 
 ---
 
@@ -84,6 +82,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-01 | Assistant Settings and Data Model | High | Medium | Global/user assistant settings + validation + General Settings UI |
 | TASK-050-15 | Layout Primitives Widgets Pack | High | Large | 050-15-01/02/03/04/05/06/07 complete |
 | TASK-050-15-07 | Divider Widget | Medium | Small | Visual separator primitive |
 | TASK-050-15-06 | Spacer Widget | Medium | Small | Responsive spacing primitive |

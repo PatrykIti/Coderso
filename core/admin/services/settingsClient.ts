@@ -7,9 +7,33 @@ export type SettingResponse = {
   value: unknown;
 };
 
-export type SettingsResponse = Record<string, unknown>;
+export type AssistantMode = "docs-only" | "llm-rag";
+export type AssistantLlmProvider = "openrouter" | "none";
 
-export type SettingsUpdate = Record<string, unknown>;
+export type AssistantSettingsPayload = {
+  "assistant.enabled": boolean;
+  "assistant.defaultMode": AssistantMode;
+  "assistant.docs.paths": string[];
+  "assistant.docs.reindexOnBoot": boolean;
+  "assistant.llm.enabled": boolean;
+  "assistant.llm.provider": AssistantLlmProvider;
+  "assistant.llm.model": string;
+  "assistant.llm.maxInputTokens": number;
+  "assistant.llm.maxOutputTokens": number;
+  "assistant.llm.timeoutMs": number;
+  "assistant.quotas.requestsPerMinute": number;
+  "assistant.quotas.requestsPerDay": number;
+};
+
+export type GeneralSettingsPayload = {
+  "site.name": string;
+  "site.locale": string;
+} & AssistantSettingsPayload;
+
+export type SettingsResponse = Record<string, unknown> &
+  Partial<GeneralSettingsPayload>;
+
+export type SettingsUpdate = Record<string, unknown> & Partial<GeneralSettingsPayload>;
 
 export type StorageSettingsResponse = {
   driver: StorageDriver;

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import {
+  assertAssistantSettingsConsistency,
   deleteSetting,
   getSetting,
   listSettings,
@@ -30,6 +31,18 @@ const cleanupKeys = [
   "site.adminPath",
   "site.adminRedirectEnabled",
   "design.tokens",
+  "assistant.enabled",
+  "assistant.defaultMode",
+  "assistant.docs.paths",
+  "assistant.docs.reindexOnBoot",
+  "assistant.llm.enabled",
+  "assistant.llm.provider",
+  "assistant.llm.model",
+  "assistant.llm.maxInputTokens",
+  "assistant.llm.maxOutputTokens",
+  "assistant.llm.timeoutMs",
+  "assistant.quotas.requestsPerMinute",
+  "assistant.quotas.requestsPerDay",
 ];
 
 afterAll(async () => {
@@ -89,4 +102,77 @@ testIfDb("rejects unknown key", async () => {
   await expect(setSetting("unknown.key", "value")).rejects.toThrow(
     "settings_key_invalid"
   );
+});
+
+testIfDb("assistant settings enforce consistency in persistence layer", async () => {
+  await setSettings({
+    "assistant.enabled": true,
+    "assistant.defaultMode": "llm-rag",
+    "assistant.docs.paths": ["_docs"],
+    "assistant.docs.reindexOnBoot": false,
+    "assistant.llm.enabled": true,
+    "assistant.llm.provider": "openrouter",
+    "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+    "assistant.llm.maxInputTokens": 8192,
+    "assistant.llm.maxOutputTokens": 2048,
+    "assistant.llm.timeoutMs": 20000,
+    "assistant.quotas.requestsPerMinute": 20,
+    "assistant.quotas.requestsPerDay": 1000,
+  });
+
+  const list = await listSettings();
+  expect(list["assistant.enabled"]).toBe(true);
+  expect(list["assistant.defaultMode"]).toBe("llm-rag");
+  expect(list["assistant.llm.provider"]).toBe("openrouter");
+
+  await expect(setSetting("assistant.docs.paths", [])).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("assistant.llm.enabled", false)).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("assistant.llm.provider", "invalid")).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("assistant.llm.maxInputTokens", 0)).rejects.toThrow(
+    "settings_value_invalid"
+  );
+});
+
+test("assertAssistantSettingsConsistency accepts docs-only mode without llm", () => {
+  expect(() =>
+    assertAssistantSettingsConsistency({
+      "assistant.enabled": true,
+      "assistant.defaultMode": "docs-only",
+      "assistant.docs.paths": ["_docs"],
+      "assistant.docs.reindexOnBoot": false,
+      "assistant.llm.enabled": false,
+      "assistant.llm.provider": "none",
+      "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+      "assistant.llm.maxInputTokens": 8192,
+      "assistant.llm.maxOutputTokens": 2048,
+      "assistant.llm.timeoutMs": 20000,
+      "assistant.quotas.requestsPerMinute": 20,
+      "assistant.quotas.requestsPerDay": 1000,
+    })
+  ).not.toThrow();
+});
+
+test("assertAssistantSettingsConsistency rejects invalid llm-rag combinations", () => {
+  expect(() =>
+    assertAssistantSettingsConsistency({
+      "assistant.enabled": true,
+      "assistant.defaultMode": "llm-rag",
+      "assistant.docs.paths": ["_docs"],
+      "assistant.docs.reindexOnBoot": false,
+      "assistant.llm.enabled": false,
+      "assistant.llm.provider": "none",
+      "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+      "assistant.llm.maxInputTokens": 8192,
+      "assistant.llm.maxOutputTokens": 2048,
+      "assistant.llm.timeoutMs": 20000,
+      "assistant.quotas.requestsPerMinute": 20,
+      "assistant.quotas.requestsPerDay": 1000,
+    })
+  ).toThrow("settings_value_invalid");
 });

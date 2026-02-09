@@ -14,11 +14,17 @@ type HeroPresetSettingValue = {
   updatedAt: string;
 };
 
+export type AssistantUserMode = "docs-only" | "llm-rag";
+
 export type UserSettingValueMap = {
   "pages.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
   "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSettingValue[];
+  "assistant.mode": AssistantUserMode | null;
+  "assistant.ui.enabled": boolean;
+  "assistant.ui.avatarEnabled": boolean;
+  "assistant.ui.avatarAsset": string | null;
 };
 
 export type UserSettingKey = keyof UserSettingValueMap;
@@ -28,6 +34,10 @@ const DEFAULT_USER_SETTINGS: UserSettingValueMap = {
   "media.openAfterUpload": false,
   "widgets.favorites": [],
   "widgets.hero.presets": [],
+  "assistant.mode": null,
+  "assistant.ui.enabled": true,
+  "assistant.ui.avatarEnabled": false,
+  "assistant.ui.avatarAsset": null,
 };
 
 const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_USER_SETTINGS));
@@ -38,7 +48,18 @@ function assertUserSettingKey(key: string): asserts key is UserSettingKey {
   }
 }
 
-function validateUserSettingValue<K extends UserSettingKey>(
+const assistantModes = new Set<AssistantUserMode>(["docs-only", "llm-rag"]);
+
+const normalizeOptionalString = (value: unknown) => {
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw new Error("user_settings_value_invalid");
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+export function validateUserSettingValue<K extends UserSettingKey>(
   key: K,
   value: unknown
 ): UserSettingValueMap[K] {
@@ -123,6 +144,28 @@ function validateUserSettingValue<K extends UserSettingKey>(
       heroPresetLimit
     ) as UserSettingValueMap[K];
   }
+  if (key === "assistant.mode") {
+    if (value === null) {
+      return null as UserSettingValueMap[K];
+    }
+    if (typeof value !== "string" || !assistantModes.has(value as AssistantUserMode)) {
+      throw new Error("user_settings_value_invalid");
+    }
+    return value as UserSettingValueMap[K];
+  }
+  if (key === "assistant.ui.enabled" || key === "assistant.ui.avatarEnabled") {
+    if (typeof value !== "boolean") {
+      throw new Error("user_settings_value_invalid");
+    }
+    return value as UserSettingValueMap[K];
+  }
+  if (key === "assistant.ui.avatarAsset") {
+    const normalized = normalizeOptionalString(value);
+    if (normalized && normalized.length > 512) {
+      throw new Error("user_settings_value_invalid");
+    }
+    return normalized as UserSettingValueMap[K];
+  }
 
   throw new Error("user_settings_value_invalid");
 }
@@ -135,25 +178,14 @@ export async function listUserSettings(userId: string) {
     .where(and(eq(userSettings.userId, userId), inArray(userSettings.key, keys)));
 
   const merged = { ...DEFAULT_USER_SETTINGS } as UserSettingValueMap;
+  const mergedByKey = merged as Record<UserSettingKey, UserSettingValueMap[UserSettingKey]>;
   for (const row of rows) {
     const key = row.key as UserSettingKey;
     if (!(key in merged)) continue;
-    switch (key) {
-      case "pages.openAfterCreate":
-      case "media.openAfterUpload":
-        merged[key] = row.value as boolean;
-        break;
-      case "widgets.favorites":
-        merged[key] = Array.isArray(row.value)
-          ? (row.value as string[])
-          : [];
-        break;
-      case "widgets.hero.presets":
-        merged["widgets.hero.presets"] = validateUserSettingValue(
-          "widgets.hero.presets",
-          row.value
-        );
-        break;
+    try {
+      mergedByKey[key] = validateUserSettingValue(key, row.value);
+    } catch {
+      mergedByKey[key] = DEFAULT_USER_SETTINGS[key];
     }
   }
 
@@ -167,7 +199,11 @@ export async function getUserSetting(userId: string, key: string) {
     .from(userSettings)
     .where(and(eq(userSettings.userId, userId), eq(userSettings.key, key)));
   if (!row) return DEFAULT_USER_SETTINGS[key];
-  return row.value as UserSettingValueMap[UserSettingKey];
+  try {
+    return validateUserSettingValue(key, row.value);
+  } catch {
+    return DEFAULT_USER_SETTINGS[key];
+  }
 }
 
 export async function setUserSetting(

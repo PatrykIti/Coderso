@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { me } from "@/services/authClient";
 import { isApiClientError } from "@/services/apiClient";
-import { getSettings, updateSettings } from "@/services/settingsClient";
+import {
+  getSettings,
+  updateSettings,
+  type GeneralSettingsPayload,
+} from "@/services/settingsClient";
 import {
   listAdminThemeProfiles,
   listAdminThemeTemplates,
@@ -37,7 +41,11 @@ import { WidgetLibraryPage } from "@/ui/widgets/WidgetLibraryPage";
 import { WidgetTemplateEditorPage } from "@/ui/widgets/WidgetTemplateEditorPage";
 import { ApiKeysPage } from "@/ui/settings/ApiKeysPage";
 import { EmailSettingsPage } from "@/ui/settings/EmailSettingsPage";
-import { GeneralSettingsPage } from "@/ui/settings/GeneralSettingsPage";
+import {
+  GeneralSettingsPage,
+  type GeneralSettingsValues,
+  GENERAL_SETTINGS_DEFAULT_VALUES,
+} from "@/ui/settings/GeneralSettingsPage";
 import { IntegrationsPage } from "@/ui/settings/IntegrationsPage";
 import { IpAllowlistPage } from "@/ui/settings/IpAllowlistPage";
 import { LoginAlertsPage } from "@/ui/settings/LoginAlertsPage";
@@ -96,14 +104,10 @@ const matchRoute = (pattern: string, path: string) => {
   return params;
 };
 
-type SettingsValues = {
-  siteName: string;
-  siteLocale: string;
-};
+type SettingsValues = GeneralSettingsValues;
 
 const defaultSettingsValues: SettingsValues = {
-  siteName: "Nextless",
-  siteLocale: "en",
+  ...GENERAL_SETTINGS_DEFAULT_VALUES,
 };
 
 type SettingsState = {
@@ -141,6 +145,35 @@ const resolveSettingsPayload = (
   payload: Record<string, unknown>,
   fallback: SettingsState
 ) => {
+  const resolveBoolean = (value: unknown, fallbackValue: boolean) =>
+    typeof value === "boolean" ? value : fallbackValue;
+  const resolveString = (value: unknown, fallbackValue: string) =>
+    typeof value === "string" ? value : fallbackValue;
+  const resolvePositiveInteger = (value: unknown, fallbackValue: number) =>
+    typeof value === "number" && Number.isFinite(value) && value > 0
+      ? Math.floor(value)
+      : fallbackValue;
+  const resolveMode = (
+    value: unknown,
+    fallbackValue: SettingsValues["assistantDefaultMode"]
+  ): SettingsValues["assistantDefaultMode"] =>
+    value === "docs-only" || value === "llm-rag" ? value : fallbackValue;
+  const resolveProvider = (
+    value: unknown,
+    fallbackValue: SettingsValues["assistantLlmProvider"]
+  ): SettingsValues["assistantLlmProvider"] =>
+    value === "openrouter" || value === "none" ? value : fallbackValue;
+  const resolveDocsPaths = (
+    value: unknown,
+    fallbackValue: string[]
+  ): string[] => {
+    if (!Array.isArray(value)) return fallbackValue;
+    return value
+      .filter((entry): entry is string => typeof entry === "string")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  };
+
   const siteName =
     typeof payload["site.name"] === "string"
       ? payload["site.name"]
@@ -153,9 +186,76 @@ const resolveSettingsPayload = (
     values: {
       siteName,
       siteLocale,
+      assistantEnabled: resolveBoolean(
+        payload["assistant.enabled"],
+        fallback.values.assistantEnabled
+      ),
+      assistantDefaultMode: resolveMode(
+        payload["assistant.defaultMode"],
+        fallback.values.assistantDefaultMode
+      ),
+      assistantDocsPaths: resolveDocsPaths(
+        payload["assistant.docs.paths"],
+        fallback.values.assistantDocsPaths
+      ),
+      assistantDocsReindexOnBoot: resolveBoolean(
+        payload["assistant.docs.reindexOnBoot"],
+        fallback.values.assistantDocsReindexOnBoot
+      ),
+      assistantLlmEnabled: resolveBoolean(
+        payload["assistant.llm.enabled"],
+        fallback.values.assistantLlmEnabled
+      ),
+      assistantLlmProvider: resolveProvider(
+        payload["assistant.llm.provider"],
+        fallback.values.assistantLlmProvider
+      ),
+      assistantLlmModel: resolveString(
+        payload["assistant.llm.model"],
+        fallback.values.assistantLlmModel
+      ),
+      assistantLlmMaxInputTokens: resolvePositiveInteger(
+        payload["assistant.llm.maxInputTokens"],
+        fallback.values.assistantLlmMaxInputTokens
+      ),
+      assistantLlmMaxOutputTokens: resolvePositiveInteger(
+        payload["assistant.llm.maxOutputTokens"],
+        fallback.values.assistantLlmMaxOutputTokens
+      ),
+      assistantLlmTimeoutMs: resolvePositiveInteger(
+        payload["assistant.llm.timeoutMs"],
+        fallback.values.assistantLlmTimeoutMs
+      ),
+      assistantQuotaRequestsPerMinute: resolvePositiveInteger(
+        payload["assistant.quotas.requestsPerMinute"],
+        fallback.values.assistantQuotaRequestsPerMinute
+      ),
+      assistantQuotaRequestsPerDay: resolvePositiveInteger(
+        payload["assistant.quotas.requestsPerDay"],
+        fallback.values.assistantQuotaRequestsPerDay
+      ),
     },
   };
 };
+
+const buildGeneralSettingsUpdate = (
+  values: SettingsValues
+): Partial<GeneralSettingsPayload> => ({
+  "site.name": values.siteName,
+  "site.locale": values.siteLocale,
+  "assistant.enabled": values.assistantEnabled,
+  "assistant.defaultMode": values.assistantDefaultMode,
+  "assistant.docs.paths": values.assistantDocsPaths,
+  "assistant.docs.reindexOnBoot": values.assistantDocsReindexOnBoot,
+  "assistant.llm.enabled": values.assistantLlmEnabled,
+  "assistant.llm.provider": values.assistantLlmProvider,
+  "assistant.llm.model": values.assistantLlmModel,
+  "assistant.llm.maxInputTokens": values.assistantLlmMaxInputTokens,
+  "assistant.llm.maxOutputTokens": values.assistantLlmMaxOutputTokens,
+  "assistant.llm.timeoutMs": values.assistantLlmTimeoutMs,
+  "assistant.quotas.requestsPerMinute": values.assistantQuotaRequestsPerMinute,
+  "assistant.quotas.requestsPerDay": values.assistantQuotaRequestsPerDay,
+});
 
 type AdminAppProps = {
   path: string;
@@ -197,6 +297,34 @@ export function AdminApp({ path }: AdminAppProps) {
     [adminThemeTokens]
   );
 
+  const saveGeneralSettings = useCallback(async (values: SettingsValues) => {
+    setSettingsSaving(true);
+    setSettingsState((prev) => ({ ...prev, error: null }));
+    try {
+      const updated = await updateSettings(buildGeneralSettingsUpdate(values));
+      setSettingsState((prev) => {
+        const resolved = resolveSettingsPayload(updated, prev);
+        return {
+          ...prev,
+          status: "ready",
+          ...resolved,
+        };
+      });
+    } catch (error) {
+      const message = isApiClientError(error)
+        ? error.message
+        : "Failed to save general settings.";
+      setSettingsState((prev) => ({
+        ...prev,
+        error: message,
+        status: "error",
+      }));
+      throw error;
+    } finally {
+      setSettingsSaving(false);
+    }
+  }, []);
+
   const match = useMemo(() => {
     const routes: RouteDefinition[] = [
       { pattern: "/", element: <DashboardPage /> },
@@ -236,36 +364,7 @@ export function AdminApp({ path }: AdminAppProps) {
             isLoading={settingsState.status === "loading"}
             isSaving={settingsSaving}
             error={settingsState.error}
-            onSave={async (values) => {
-              setSettingsSaving(true);
-              setSettingsState((prev) => ({ ...prev, error: null }));
-              try {
-                const updated = await updateSettings({
-                  "site.name": values.siteName,
-                  "site.locale": values.siteLocale,
-                });
-                setSettingsState((prev) => {
-                  const resolved = resolveSettingsPayload(updated, prev);
-                  return {
-                    ...prev,
-                    status: "ready",
-                    ...resolved,
-                  };
-                });
-              } catch (error) {
-                const message = isApiClientError(error)
-                  ? error.message
-                  : "Failed to save general settings.";
-                setSettingsState((prev) => ({
-                  ...prev,
-                  error: message,
-                  status: "error",
-                }));
-                throw error;
-              } finally {
-                setSettingsSaving(false);
-              }
-            }}
+            onSave={saveGeneralSettings}
           />
         ),
       },
@@ -277,36 +376,7 @@ export function AdminApp({ path }: AdminAppProps) {
             isLoading={settingsState.status === "loading"}
             isSaving={settingsSaving}
             error={settingsState.error}
-            onSave={async (values) => {
-              setSettingsSaving(true);
-              setSettingsState((prev) => ({ ...prev, error: null }));
-              try {
-                const updated = await updateSettings({
-                  "site.name": values.siteName,
-                  "site.locale": values.siteLocale,
-                });
-                setSettingsState((prev) => {
-                  const resolved = resolveSettingsPayload(updated, prev);
-                  return {
-                    ...prev,
-                    status: "ready",
-                    ...resolved,
-                  };
-                });
-              } catch (error) {
-                const message = isApiClientError(error)
-                  ? error.message
-                  : "Failed to save general settings.";
-                setSettingsState((prev) => ({
-                  ...prev,
-                  error: message,
-                  status: "error",
-                }));
-                throw error;
-              } finally {
-                setSettingsSaving(false);
-              }
-            }}
+            onSave={saveGeneralSettings}
           />
         ),
       },
@@ -325,7 +395,7 @@ export function AdminApp({ path }: AdminAppProps) {
     ];
 
     return resolveRoute(relativePath, routes);
-  }, [relativePath, settingsSaving, settingsState]);
+  }, [relativePath, saveGeneralSettings, settingsSaving, settingsState]);
 
   const refreshSettings = useCallback(() => {
     setSettingsState((prev) => ({

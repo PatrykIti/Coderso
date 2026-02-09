@@ -5,7 +5,7 @@
 **Category:** Core/Settings + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-007, TASK-100  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 

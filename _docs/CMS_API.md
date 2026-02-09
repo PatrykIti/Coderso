@@ -1245,7 +1245,19 @@ Payloady:
   "site.contentRoutes": [
     { "type": "blog", "listPath": "/blog", "detailPath": "/blog/:slug", "enabled": true }
   ],
-  "design.tokens": { "colors": { "primary": "#111111" } }
+  "design.tokens": { "colors": { "primary": "#111111" } },
+  "assistant.enabled": true,
+  "assistant.defaultMode": "docs-only",
+  "assistant.docs.paths": ["_docs"],
+  "assistant.docs.reindexOnBoot": false,
+  "assistant.llm.enabled": false,
+  "assistant.llm.provider": "none",
+  "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+  "assistant.llm.maxInputTokens": 8192,
+  "assistant.llm.maxOutputTokens": 2048,
+  "assistant.llm.timeoutMs": 20000,
+  "assistant.quotas.requestsPerMinute": 20,
+  "assistant.quotas.requestsPerDay": 1000
 }
 ```
 
@@ -1258,6 +1270,9 @@ Response:
 - `site.previewEnabled` włącza/wyłącza preview.
 - `site.cacheTtlSeconds` kontroluje TTL cache HTML (0 = off).
 - `site.contentRoutes` mapuje content types na trasy (list + detail).
+- `assistant.*` klucze sterują globalną konfiguracją Doc Navigatora i opcjonalnego trybu LLM.
+- Walidacja: `assistant.defaultMode=llm-rag` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
+- Walidacja: `assistant.enabled=true` wymaga niepustego `assistant.docs.paths`.
 
 ---
 
@@ -1277,6 +1292,13 @@ Auth: wymagane zalogowanie (session cookie). Dotyczy preferencji per użytkownik
 
 Przykładowe klucze:
 - `pages.openAfterCreate` (bool)
+- `media.openAfterUpload` (bool)
+- `widgets.favorites` (string[])
+- `widgets.hero.presets` (preset[])
+- `assistant.mode` (`docs-only` | `llm-rag` | null)
+- `assistant.ui.enabled` (bool)
+- `assistant.ui.avatarEnabled` (bool)
+- `assistant.ui.avatarAsset` (string | null)
 
 ---
 
