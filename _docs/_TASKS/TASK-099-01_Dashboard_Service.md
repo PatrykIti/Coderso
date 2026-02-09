@@ -4,45 +4,126 @@
 **Priority:** Medium  
 **Category:** Admin/Dashboard  
 **Estimated Effort:** Medium  
-**Dependencies:** TASK-002, TASK-003, TASK-005, TASK-014  
+**Dependencies:** TASK-099, TASK-002, TASK-003, TASK-005, TASK-014, TASK-020-10  
 **Status:** To Do  
 
 ---
 
 ## Overview
 
-Agregacja danych do Dashboardu w jednym serwisie. Dane mają pochodzić
-z istniejących tabel (pages, content entries, media, audit logs).
+Implementacja backendowego agregatora danych dla dashboardu.
+
+Serwis ma zwracac pojedynczy, stabilny DTO dla UI, oparty o dane z:
+- `pages`
+- `content_entries`
+- `media`
+- `users`
+- `security.settings`
 
 ---
 
 ## Contract
 
 ```ts
-type DashboardStats = {
+type DashboardStatus = "ok" | "warning" | "critical";
+
+type DashboardRecentEdit = {
+  id: string;
+  type: "page" | "entry" | "media";
+  title: string;
+  path: string | null;
+  status: "draft" | "published" | "scheduled" | "archived" | "active";
+  updatedAt: string;
+  author: {
+    id: string | null;
+    name: string | null;
+    email: string | null;
+  };
+};
+
+type DashboardPayload = {
+  generatedAt: string;
   totals: {
     pages: number;
     entries: number;
     media: number;
     users: number;
   };
-  recentEdits: Array<{
-    id: string;
-    title: string;
-    type: "page" | "entry" | "media";
-    updatedAt: string;
-    author?: string | null;
-  }>;
+  recentEdits: DashboardRecentEdit[];
   storage: {
     usedBytes: number;
     limitBytes: number | null;
-    usedPercent: number;
+    usedPercent: number | null;
   };
   security: {
-    status: "ok" | "warning" | "critical";
+    status: DashboardStatus;
     issues: number;
+    checks: Array<{
+      id: "csrf" | "rateLimit" | "headers" | "sessionPolicy";
+      label: string;
+      status: DashboardStatus;
+      detail: string;
+    }>;
   };
 };
+```
+
+---
+
+## Pseudo-Implementation
+
+```ts
+// core/services/dashboard/dashboardService.ts
+export async function getDashboardData(): Promise<DashboardPayload> {
+  const [totals, recentEdits, storage, security] = await Promise.all([
+    getTotals(),
+    getRecentEdits(10),
+    getStorageUsage(),
+    getSecuritySummary(),
+  ]);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    totals,
+    recentEdits,
+    storage,
+    security,
+  };
+}
+
+async function getTotals() {
+  return {
+    pages: await countRows(pages),
+    entries: await countRows(contentEntries),
+    media: await countRows(media),
+    users: await countRows(users),
+  };
+}
+
+async function getRecentEdits(limit: number): Promise<DashboardRecentEdit[]> {
+  const [pageRows, entryRows, mediaRows] = await Promise.all([
+    selectRecentPages(limit),
+    selectRecentEntries(limit),
+    selectRecentMedia(limit),
+  ]);
+
+  return [...pageRows, ...entryRows, ...mediaRows]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, limit);
+}
+```
+
+```ts
+// security scoring heuristic (MVP)
+const checks = [
+  security.csrf.enabled ? ok("csrf") : warning("csrf"),
+  security.rateLimit.enabled ? ok("rateLimit") : warning("rateLimit"),
+  security.headers.enabled ? ok("headers") : warning("headers"),
+  security.session.maxPerUser <= 5 ? ok("sessionPolicy") : warning("sessionPolicy"),
+];
+
+const issues = checks.filter((c) => c.status !== "ok").length;
+const status = issues === 0 ? "ok" : issues <= 2 ? "warning" : "critical";
 ```
 
 ---
@@ -51,29 +132,42 @@ type DashboardStats = {
 
 | File | Action | Notes |
 | --- | --- | --- |
-| `core/services/dashboard/dashboardService.ts` | new | agreguje metryki |
-| `core/services/dashboard/dashboardTypes.ts` | new | typy kontraktu |
-| `tests/unit/dashboard/dashboardService.test.ts` | new | metryki i edge cases |
+| `core/services/dashboard/dashboardTypes.ts` | new | wspolne typy payloadu dashboard |
+| `core/services/dashboard/dashboardService.ts` | new | agregator totals/storage/recent/security |
+| `tests/unit/dashboard/dashboardService.test.ts` | new | unit testy agregacji i heurystyk |
 
-**Rules:**
-- `recentEdits`: ostatnie 10 zmian (pages + entries + media).
-- `security`: proste heurystyki (np. liczba failed logins z audit logs).
-- `storage`: suma rozmiarow media z DB.
+Rules:
+- `recentEdits` to globalny top 10 po `updatedAt` (merge 3 zrodel).
+- `storage.usedBytes` to suma `media.size`.
+- `storage.limitBytes` na MVP moze byc `null` (jesli brak zrodla limitu).
+- `usedPercent`:
+  - `null`, gdy `limitBytes === null` lub `limitBytes <= 0`,
+  - w innym przypadku clamp `0..100`.
 
 ---
 
 ## Testing Requirements
 
-- correct totals
-- recentEdits sorted by updatedAt desc
-- storage percent is clamped 0..100
+Unit test checklist:
+- totals poprawnie liczone dla seeded danych,
+- recent edits sa posortowane malejaco po czasie i przyciete do limitu,
+- security status:
+  - `ok` gdy wszystkie checki OK,
+  - `warning` przy 1-2 issue,
+  - `critical` przy >= 3 issue,
+- storage percent:
+  - `null` bez limitu,
+  - clamp do `100` przy przekroczeniu limitu.
+
+Suggested command:
+- `bun test tests/unit/dashboard/dashboardService.test.ts`
 
 ---
 
 ## Documentation Updates Required
 
-- `_docs/CMS_SPEC.md`
-- `_docs/CMS_API.md`
+- `_docs/CMS_SPEC.md` (sekcja dashboard payload)
+- `_docs/ARCHITECTURE.md` (dashboard aggregate flow)
 
 ---
 
