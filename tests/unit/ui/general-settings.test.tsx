@@ -7,6 +7,7 @@ test("GeneralSettingsPage renders general settings cards", () => {
   const html = renderToString(<GeneralSettingsPage />);
 
   expect(html).toContain("Site Identity");
+  expect(html).toContain("Public Site URL");
   expect(html).toContain("Branding");
   expect(html).toContain("Assistant");
   expect(html).toContain("Save changes");

@@ -38,11 +38,12 @@ Nie-cele:
 ## Pierwsze uruchomienie (Setup Wizard)
 
 Po pierwszym logowaniu admin otrzymuje prosty Setup Wizard, aby ustawic:
-- `site.baseUrl` (publiczny URL, potrzebny m.in. do preview i linkow w mailach)
+- `site.publicBaseUrl` (publiczny URL, potrzebny m.in. do preview i linkow w mailach)
 - `site.locale`, `site.name`
 - `auth.sessionTtlDays` i `auth.resetTtlMinutes`
 
-Wizard zapisuje dane do settings (DB) i oznacza konfiguracje jako zakonczona.
+Wizard zapisuje dane do settings (DB) i oznacza konfiguracje jako zakonczona
+przez `setup.completed=true`.
 
 ## Terminologia
 

@@ -57,6 +57,11 @@ import { PluginDetailsPage } from "@/ui/store/PluginDetailsPage";
 import { PluginStorePage } from "@/ui/store/PluginStorePage";
 import { PagePreview } from "@/ui/pages/PagePreview";
 import { SiteSettingsPage } from "@/ui/site/SiteSettingsPage";
+import { SetupWizard } from "@/ui/setup/SetupWizard";
+import {
+  toSetupWizardSettingsPayload,
+  type SetupWizardValues,
+} from "@/ui/setup/setupWizardValidation";
 import { toAdminThemeCssVariables } from "../../ui/theme/tokenCss";
 import { DEFAULT_ADMIN_THEME_TOKENS } from "../../services/adminThemes/tokenTypes";
 import { mergeAdminThemeTokens } from "../../services/adminThemes/tokenUtils";
@@ -104,10 +109,17 @@ const matchRoute = (pattern: string, path: string) => {
   return params;
 };
 
-type SettingsValues = GeneralSettingsValues;
+type SettingsValues = GeneralSettingsValues & {
+  authSessionTtlDays: number;
+  authResetTtlMinutes: number;
+  setupCompleted: boolean;
+};
 
 const defaultSettingsValues: SettingsValues = {
   ...GENERAL_SETTINGS_DEFAULT_VALUES,
+  authSessionTtlDays: 14,
+  authResetTtlMinutes: 60,
+  setupCompleted: false,
 };
 
 type SettingsState = {
@@ -141,6 +153,17 @@ const Loading = () => (
   </div>
 );
 
+export const shouldShowSetupWizard = (input: {
+  isProtected: boolean;
+  authState: "checking" | "authenticated" | "unauthenticated";
+  settingsStatus: SettingsState["status"];
+  setupCompleted: boolean;
+}) =>
+  input.isProtected &&
+  input.authState === "authenticated" &&
+  input.settingsStatus === "ready" &&
+  !input.setupCompleted;
+
 const resolveSettingsPayload = (
   payload: Record<string, unknown>,
   fallback: SettingsState
@@ -153,6 +176,17 @@ const resolveSettingsPayload = (
     typeof value === "number" && Number.isFinite(value) && value > 0
       ? Math.floor(value)
       : fallbackValue;
+  const resolveBoundedInteger = (
+    value: unknown,
+    fallbackValue: number,
+    min: number,
+    max: number
+  ) => {
+    if (typeof value !== "number" || !Number.isFinite(value)) return fallbackValue;
+    const normalized = Math.floor(value);
+    if (normalized < min || normalized > max) return fallbackValue;
+    return normalized;
+  };
   const resolveMode = (
     value: unknown,
     fallbackValue: SettingsValues["assistantDefaultMode"]
@@ -182,10 +216,31 @@ const resolveSettingsPayload = (
     typeof payload["site.locale"] === "string"
       ? payload["site.locale"]
       : fallback.values.siteLocale;
+  const publicBaseUrl =
+    typeof payload["site.publicBaseUrl"] === "string"
+      ? payload["site.publicBaseUrl"]
+      : fallback.values.publicBaseUrl;
   return {
     values: {
       siteName,
       siteLocale,
+      publicBaseUrl,
+      authSessionTtlDays: resolveBoundedInteger(
+        payload["auth.sessionTtlDays"],
+        fallback.values.authSessionTtlDays,
+        1,
+        365
+      ),
+      authResetTtlMinutes: resolveBoundedInteger(
+        payload["auth.resetTtlMinutes"],
+        fallback.values.authResetTtlMinutes,
+        5,
+        1440
+      ),
+      setupCompleted: resolveBoolean(
+        payload["setup.completed"],
+        fallback.values.setupCompleted
+      ),
       assistantEnabled: resolveBoolean(
         payload["assistant.enabled"],
         fallback.values.assistantEnabled
@@ -239,10 +294,11 @@ const resolveSettingsPayload = (
 };
 
 const buildGeneralSettingsUpdate = (
-  values: SettingsValues
+  values: GeneralSettingsValues
 ): Partial<GeneralSettingsPayload> => ({
   "site.name": values.siteName,
   "site.locale": values.siteLocale,
+  "site.publicBaseUrl": values.publicBaseUrl.trim() || null,
   "assistant.enabled": values.assistantEnabled,
   "assistant.defaultMode": values.assistantDefaultMode,
   "assistant.docs.paths": values.assistantDocsPaths,
@@ -280,6 +336,8 @@ export function AdminApp({ path }: AdminAppProps) {
     error: null,
   });
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [setupSaving, setSetupSaving] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
   const [adminThemeTokens, setAdminThemeTokens] = useState(() => {
     if (typeof window === "undefined") return DEFAULT_ADMIN_THEME_TOKENS;
     const cached = window.localStorage.getItem("nextless.adminThemeTokens");
@@ -297,7 +355,7 @@ export function AdminApp({ path }: AdminAppProps) {
     [adminThemeTokens]
   );
 
-  const saveGeneralSettings = useCallback(async (values: SettingsValues) => {
+  const saveGeneralSettings = useCallback(async (values: GeneralSettingsValues) => {
     setSettingsSaving(true);
     setSettingsState((prev) => ({ ...prev, error: null }));
     try {
@@ -324,6 +382,45 @@ export function AdminApp({ path }: AdminAppProps) {
       setSettingsSaving(false);
     }
   }, []);
+
+  const completeSetup = useCallback(async (values: SetupWizardValues) => {
+    setSetupSaving(true);
+    setSetupError(null);
+    try {
+      const updated = await updateSettings({
+        ...toSetupWizardSettingsPayload(values),
+        "setup.completed": true,
+      });
+      setSettingsState((prev) => {
+        const resolved = resolveSettingsPayload(updated, prev);
+        return {
+          ...prev,
+          status: "ready",
+          error: null,
+          ...resolved,
+        };
+      });
+    } catch (error) {
+      const message = isApiClientError(error)
+        ? error.message
+        : "Failed to complete setup wizard.";
+      setSetupError(message);
+      throw error;
+    } finally {
+      setSetupSaving(false);
+    }
+  }, []);
+
+  const setupInitialValues = useMemo<SetupWizardValues>(
+    () => ({
+      siteName: settingsState.values.siteName,
+      siteLocale: settingsState.values.siteLocale,
+      publicBaseUrl: settingsState.values.publicBaseUrl,
+      authSessionTtlDays: String(settingsState.values.authSessionTtlDays),
+      authResetTtlMinutes: String(settingsState.values.authResetTtlMinutes),
+    }),
+    [settingsState.values]
+  );
 
   const match = useMemo(() => {
     const routes: RouteDefinition[] = [
@@ -517,12 +614,35 @@ export function AdminApp({ path }: AdminAppProps) {
     }
   }, [adminBasePath, authState, isProtected, isPublic, relativePath]);
 
+  const showSetupWizard = shouldShowSetupWizard({
+    isProtected,
+    authState,
+    settingsStatus: settingsState.status,
+    setupCompleted: settingsState.values.setupCompleted,
+  });
+
   if (isProtected && authState !== "authenticated") {
     return (
       <>
         <style id="nextless-theme-tokens">{tokenCss}</style>
         <Loading />
       </>
+    );
+  }
+
+  if (showSetupWizard) {
+    return (
+      <AdminBasePathProvider value={adminBasePath}>
+        <>
+          <style id="nextless-theme-tokens">{tokenCss}</style>
+          <SetupWizard
+            initialValues={setupInitialValues}
+            onSubmit={completeSetup}
+            isSaving={setupSaving}
+            error={setupError}
+          />
+        </>
+      </AdminBasePathProvider>
     );
   }
 

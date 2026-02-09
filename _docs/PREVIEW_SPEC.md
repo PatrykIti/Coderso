@@ -43,6 +43,12 @@ Dotyczy:
 - `GET /preview?type=content&token=<token>`
 - `GET /preview?type=widget-template&token=<token>`
 
+Resolver policy dla `previewUrl` zwracanego przez Admin API:
+1. `settings["site.publicBaseUrl"]`
+2. `PUBLIC_BASE_URL` (ENV fallback)
+3. request-derived `proto://host` (`x-forwarded-host` / `x-forwarded-proto` / `host`)
+4. relative path fallback (`/preview?...`)
+
 ## Admin API response contract
 
 Preview endpoints zwracaja spojny shape:
@@ -51,6 +57,16 @@ Preview endpoints zwracaja spojny shape:
 {
   "token": "preview-token",
   "previewUrl": "/preview?type=page&token=preview-token",
+  "expiresAt": "2026-02-07T12:00:00.000Z"
+}
+```
+
+Gdy resolver ma poprawny base URL, `previewUrl` jest absolutny, np.:
+
+```json
+{
+  "token": "preview-token",
+  "previewUrl": "https://www.example.com/preview?type=page&token=preview-token",
   "expiresAt": "2026-02-07T12:00:00.000Z"
 }
 ```

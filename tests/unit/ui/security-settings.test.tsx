@@ -12,6 +12,9 @@ test("SecuritySettingsPage renders cards and allowlist table", () => {
   expect(html).toContain("CORS Policy");
   expect(html).toContain("Rate Limiting");
   expect(html).toContain("Session Limits");
+  expect(html).toContain("Auth Token TTL");
+  expect(html).toContain("Auth session TTL (days)");
+  expect(html).toContain("Password reset TTL (minutes)");
   expect(html).toContain("Plugin Safety");
   expect(html).toContain("Active Restrictions");
   expect(html).toContain("Login Alerts");

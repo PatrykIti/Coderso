@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 11 tasks
+- **To Do:** 5 tasks
 - **In Progress:** 1 task
-- **Done:** 275 tasks
+- **Done:** 281 tasks
 
 ---
 
@@ -48,12 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
 | TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
-| TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | High | Large | Index for TASK-100-01..05 (security/runtime hardening) |
-| TASK-100-01 | Settings Keys and Runtime Validation | High | Medium | Add auth TTL + setup keys + alias compatibility |
-| TASK-100-02 | Public Base URL Resolver and Consumers | High | Medium | Unified resolver for preview/reset URLs |
-| TASK-100-03 | Auth TTL Runtime Sources | High | Medium | Session/reset TTL precedence and fallback policy |
-| TASK-100-04 | Admin UI Runtime URL and Auth TTL Wiring | High | Medium | General/Security UI fields + validation |
-| TASK-100-05 | First-Run Setup Wizard and Gating | High | Medium | Auth-only wizard + setup.completed flow |
 | TASK-101-02 | Documentation Index and Retrieval Engine | High | Large | Parser + chunking + BM25/FTS |
 | TASK-101-03 | Assistant API (Doc Navigator Runtime) | High | Medium | status/reindex/chat docs-only |
 | TASK-101-04 | LLM Provider Abstraction and OpenRouter Adapter | Medium | Medium | llm-rag provider layer + fallback |
@@ -75,6 +69,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | High | Large | 100-01/02/03/04/05 complete |
+| TASK-100-05 | First-Run Setup Wizard and Gating | High | Medium | Setup wizard + authenticated gate + setup.completed flow |
+| TASK-100-04 | Admin UI Runtime URL and Auth TTL Wiring | High | Medium | General/Security UI fields + runtime settings payload wiring |
+| TASK-100-03 | Auth TTL Runtime Sources | High | Medium | Session/reset TTL precedence + auth runtime settings source |
+| TASK-100-02 | Public Base URL Resolver and Consumers | High | Medium | Unified resolver + request fallback for preview URLs |
+| TASK-100-01 | Settings Keys and Runtime Validation | High | Medium | New runtime/auth settings keys + alias + validation |
 | TASK-049 | Widget Library — Core + Templates + Favorites | High | Large | 049-01/02/03/04/05/06 complete |
 | TASK-049-06 | Widget Template Editor UI | Medium | Medium | Template editor route + builder reuse + DnD wiring |
 | TASK-049-05 | Widget Library UI Wiring | High | Large | Catalog API wiring + insert + details/favorites UX |

@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { registerSettingsRoutes } from "../../../core/server/routes/settingsRoutes";
+import {
+  registerSettingsRoutes,
+  resolveSettingsRouteKey,
+} from "../../../core/server/routes/settingsRoutes";
 
 type Route = { method: string; path: string };
 
@@ -36,4 +39,9 @@ test("registerSettingsRoutes wires endpoints", () => {
       "PATCH /settings",
     ])
   );
+});
+
+test("resolveSettingsRouteKey maps site.baseUrl alias", () => {
+  expect(resolveSettingsRouteKey("site.baseUrl")).toBe("site.publicBaseUrl");
+  expect(resolveSettingsRouteKey("site.publicBaseUrl")).toBe("site.publicBaseUrl");
 });

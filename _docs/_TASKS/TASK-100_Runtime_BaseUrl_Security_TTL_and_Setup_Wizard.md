@@ -5,7 +5,7 @@
 **Category:** Core/Security + Core/Settings + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-004, TASK-007, TASK-020-10, TASK-047, TASK-046  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 

@@ -1,6 +1,7 @@
 import {
   getSetting,
   listSettings,
+  resolveSettingKey,
   setSetting,
   setSettings,
 } from "../../services/settings/settingsService";
@@ -42,6 +43,8 @@ export type SettingsRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
 };
+
+export const resolveSettingsRouteKey = (key: string) => resolveSettingKey(key);
 
 export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) {
   const { requirePermission, validate } = deps;
@@ -101,13 +104,16 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     "/settings/:key",
     requirePermission("settings:read"),
     async (ctx) => {
-      if (ctx.params.key === "design.tokens") {
+      const settingKey = await withSettingsErrors(async () =>
+        resolveSettingsRouteKey(ctx.params.key)
+      );
+      if (settingKey === "design.tokens") {
         const tokens = await getResolvedTokens();
-        return { key: ctx.params.key, value: tokens };
+        return { key: settingKey, value: tokens };
       }
 
-      const value = await getSetting(ctx.params.key);
-      return { key: ctx.params.key, value };
+      const value = await withSettingsErrors(() => getSetting(settingKey));
+      return { key: settingKey, value };
     }
   );
 
@@ -153,15 +159,18 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     async (ctx) => {
       validate(settingsUpdateSchema, ctx.body);
       const body = ctx.body as { value: unknown };
+      const settingKey = await withSettingsErrors(async () =>
+        resolveSettingsRouteKey(ctx.params.key)
+      );
       const updated = await withSettingsErrors(() =>
-        setSetting(ctx.params.key, body.value)
+        setSetting(settingKey, body.value)
       );
       await logAudit({
         actorId: ctx.user?.id ?? null,
         action: "settings.update",
         targetType: "settings",
-        targetId: ctx.params.key,
-        metadata: { keys: [ctx.params.key] },
+        targetId: settingKey,
+        metadata: { keys: [settingKey] },
       });
       return updated;
     }
@@ -173,6 +182,13 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     async (ctx) => {
       validate(settingsBulkSchema, ctx.body);
       const payload = ctx.body as Record<string, unknown>;
+      const normalizedKeys = await withSettingsErrors(async () => {
+        const unique = new Set<string>();
+        for (const key of Object.keys(payload)) {
+          unique.add(resolveSettingsRouteKey(key));
+        }
+        return [...unique];
+      });
       const updated = await withSettingsErrors(() => setSettings(payload));
       const tokens = await getResolvedTokens();
       await logAudit({
@@ -180,7 +196,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
         action: "settings.update",
         targetType: "settings",
         targetId: "bulk",
-        metadata: { keys: Object.keys(payload) },
+        metadata: { keys: normalizedKeys },
       });
       return { ...updated, "design.tokens": tokens };
     }

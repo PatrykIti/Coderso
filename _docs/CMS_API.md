@@ -524,6 +524,12 @@ Create/Update payload (summary):
 }
 ```
 
+Preview URL resolution policy (dotyczy pages/content/widget templates):
+- 1) `settings["site.publicBaseUrl"]`
+- 2) `PUBLIC_BASE_URL` (ENV fallback)
+- 3) request-derived `proto://host` (`x-forwarded-host` / `x-forwarded-proto` / `host`)
+- 4) relative path fallback (`/preview?...`) gdy brak poprawnego base URL
+
 ---
 
 ## Widgets
@@ -754,6 +760,8 @@ Preview response (example):
   "expiresAt": "2026-01-27T10:00:00Z"
 }
 ```
+
+`previewUrl` w odpowiedzi moze byc relatywny albo absolutny, zgodnie z policy wyzej.
 
 Metadata update payload (example):
 
@@ -1242,6 +1250,9 @@ Payloady:
   "site.notFoundPageId": "page-id",
   "site.previewEnabled": true,
   "site.cacheTtlSeconds": 30,
+  "auth.sessionTtlDays": 14,
+  "auth.resetTtlMinutes": 60,
+  "setup.completed": false,
   "site.contentRoutes": [
     { "type": "blog", "listPath": "/blog", "detailPath": "/blog/:slug", "enabled": true }
   ],
@@ -1269,8 +1280,14 @@ Response:
 - `site.homepageId` i `site.notFoundPageId` sterują stronami start/404.
 - `site.previewEnabled` włącza/wyłącza preview.
 - `site.cacheTtlSeconds` kontroluje TTL cache HTML (0 = off).
+- `auth.sessionTtlDays` ustawia TTL sesji logowania (zakres `1..365` dni).
+- `auth.resetTtlMinutes` ustawia TTL tokenu resetu hasla (zakres `5..1440` minut).
+- `setup.completed` ustawia stan pierwszej konfiguracji.
+- UI mapping: `site.publicBaseUrl` jest zarzadzane w Settings -> General, a `auth.*TTL*` w Settings -> Security.
+- Setup Wizard zapisuje `site.*`, `auth.*` i finalnie `setup.completed=true` jednym bulk requestem.
 - `site.contentRoutes` mapuje content types na trasy (list + detail).
 - `assistant.*` klucze sterują globalną konfiguracją Doc Navigatora i opcjonalnego trybu LLM.
+- Alias kompatybilnosciowy: `site.baseUrl` mapuje read/write na `site.publicBaseUrl`.
 - Walidacja: `assistant.defaultMode=llm-rag` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
 - Walidacja: `assistant.enabled=true` wymaga niepustego `assistant.docs.paths`.
 

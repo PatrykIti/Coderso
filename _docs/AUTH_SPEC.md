@@ -20,7 +20,11 @@ Poza zakresem v1:
 - Sessions w DB (`sessions`).
 - Token w cookie, w DB trzymamy hash.
 - Cookie: httpOnly, secure, sameSite=strict.
-- TTL domyslnie 7-14 dni.
+- TTL source precedence:
+  - `createSession(input.ttlDays)` (explicit override)
+  - `settings["auth.sessionTtlDays"]` (default `14`, zakres `1..365`)
+  - `security.settings.session.ttlDays` (fallback kompatybilnosciowy)
+  - `DEFAULT_SESSION_TTL_DAYS` (`7`)
 
 ## Logout
 
@@ -43,6 +47,7 @@ Poza zakresem v1:
 ## Password reset (v1.1)
 
 - Token resetu w DB z TTL.
+- TTL source: `settings["auth.resetTtlMinutes"]` (default `60`, zakres `5..1440`), fallback do `60`.
 - Email poza zakresem v1.
 - UI: `/auth/reset` wysyla email, `/auth/reset/confirm` ustawia nowe haslo.
 - Bledy walidacji i nieprawidlowy token pokazywane w UI.

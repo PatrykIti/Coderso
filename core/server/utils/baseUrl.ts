@@ -1,10 +1,106 @@
 import { getSetting } from "../../services/settings/settingsService";
 
-export async function resolvePublicBaseUrl() {
-  const setting = await getSetting("site.publicBaseUrl");
-  if (typeof setting === "string" && setting.trim().length > 0) {
-    return setting;
+export type PublicUrlContext = {
+  host?: string | null;
+  forwardedHost?: string | null;
+  forwardedProto?: string | null;
+  protocol?: string | null;
+};
+
+type PublicBaseUrlSources = {
+  settingValue: unknown;
+  envValue: string | undefined;
+  context?: PublicUrlContext;
+};
+
+const isHttpProtocol = (protocol: string) =>
+  protocol === "http:" || protocol === "https:";
+
+const normalizeHttpUrl = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (!isHttpProtocol(parsed.protocol)) return null;
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return null;
   }
-  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL;
-  return null;
+};
+
+const normalizeHost = (value: string | null | undefined) => {
+  if (typeof value !== "string") return null;
+  const first = value
+    .split(",")
+    .map((part) => part.trim())
+    .find(Boolean);
+  if (!first) return null;
+  if (first.includes("/") || first.includes(" ")) return null;
+  try {
+    const parsed = new URL(`http://${first}`);
+    return parsed.host;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeProto = (value: string | null | undefined) => {
+  if (typeof value !== "string") return null;
+  const first = value
+    .split(",")
+    .map((part) => part.trim().toLowerCase())
+    .find(Boolean);
+  if (!first) return null;
+  const normalized = first.endsWith(":") ? first : `${first}:`;
+  return isHttpProtocol(normalized) ? normalized.slice(0, -1) : null;
+};
+
+const resolveProtocol = (context: PublicUrlContext | undefined) => {
+  const candidates = [context?.forwardedProto, context?.protocol];
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string") continue;
+    if (!candidate.trim()) continue;
+    const normalized = normalizeProto(candidate);
+    if (!normalized) return null;
+    return normalized;
+  }
+  return "https";
+};
+
+export function resolvePublicBaseUrlFromSources(
+  sources: PublicBaseUrlSources
+): string | null {
+  const settingBaseUrl = normalizeHttpUrl(sources.settingValue);
+  if (settingBaseUrl) return settingBaseUrl;
+
+  const envBaseUrl = normalizeHttpUrl(sources.envValue);
+  if (envBaseUrl) return envBaseUrl;
+
+  const host =
+    normalizeHost(sources.context?.forwardedHost) ??
+    normalizeHost(sources.context?.host);
+  if (!host) return null;
+
+  const protocol = resolveProtocol(sources.context);
+  if (!protocol) return null;
+
+  return `${protocol}://${host}/`;
+}
+
+export async function resolvePublicBaseUrl(
+  context?: PublicUrlContext
+): Promise<string | null> {
+  const settingValue = await getSetting("site.publicBaseUrl");
+  return resolvePublicBaseUrlFromSources({
+    settingValue,
+    envValue: process.env.PUBLIC_BASE_URL,
+    context,
+  });
+}
+
+export function buildAbsolutePublicUrl(baseUrl: string | null, path: string): string {
+  if (!baseUrl) return path;
+  return new URL(path, baseUrl).toString();
 }

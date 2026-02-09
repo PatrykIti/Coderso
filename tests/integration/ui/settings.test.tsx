@@ -30,5 +30,6 @@ test("GeneralSettingsPage renders form actions", () => {
 
   expect(html).toContain("General Settings");
   expect(html).toContain("Assistant");
+  expect(html).toContain("Public Site URL");
   expect(html).toContain("Save changes");
 });

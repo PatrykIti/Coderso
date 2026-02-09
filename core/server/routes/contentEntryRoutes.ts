@@ -16,13 +16,17 @@ import {
   contentEntryPreviewSchema,
   contentEntryUpdateSchema,
 } from "../validation/contentSchemas";
-import { resolvePreviewUrl } from "../utils/previewUrls";
+import {
+  createPublicUrlContextFromHeaders,
+  resolvePreviewUrl,
+} from "../utils/previewUrls";
 import { ApiError } from "../errorHandler";
 
 export type RouteContext = {
   params: Record<string, string>;
   query: Record<string, string | undefined>;
   body: unknown;
+  headers?: Record<string, string | undefined>;
   user?: { id: string };
 };
 
@@ -233,7 +237,7 @@ export function registerContentEntryRoutes(
         token,
         contentType: type.slug,
         slug: entry.slug,
-      });
+      }, createPublicUrlContextFromHeaders(ctx.headers));
       return { token, previewUrl, expiresAt };
     }
   );

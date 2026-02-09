@@ -30,6 +30,9 @@ const cleanupKeys = [
   "site.publicBaseUrl",
   "site.adminPath",
   "site.adminRedirectEnabled",
+  "auth.sessionTtlDays",
+  "auth.resetTtlMinutes",
+  "setup.completed",
   "design.tokens",
   "assistant.enabled",
   "assistant.defaultMode",
@@ -58,8 +61,12 @@ testIfDb("set/get/list/delete settings", async () => {
   await setSetting("site.locale", "pl-PL");
   await setSetting("site.adminBaseUrl", "https://admin.example.com");
   await setSetting("site.publicBaseUrl", "https://www.example.com");
+  await setSetting("site.baseUrl", "https://legacy.example.com");
   await setSetting("site.adminPath", "/super-admin");
   await setSetting("site.adminRedirectEnabled", true);
+  await setSetting("auth.sessionTtlDays", 30);
+  await setSetting("auth.resetTtlMinutes", 90);
+  await setSetting("setup.completed", true);
   await setSetting("design.tokens", {
     colors: { primary: "#111111" },
   });
@@ -71,9 +78,13 @@ testIfDb("set/get/list/delete settings", async () => {
   expect(list["site.name"]).toBe(siteName);
   expect(list["site.locale"]).toBe("pl-PL");
   expect(list["site.adminBaseUrl"]).toBe("https://admin.example.com/");
-  expect(list["site.publicBaseUrl"]).toBe("https://www.example.com/");
+  expect(list["site.publicBaseUrl"]).toBe("https://legacy.example.com/");
+  expect(await getSetting("site.baseUrl")).toBe("https://legacy.example.com/");
   expect(list["site.adminPath"]).toBe("/super-admin");
   expect(list["site.adminRedirectEnabled"]).toBe(true);
+  expect(list["auth.sessionTtlDays"]).toBe(30);
+  expect(list["auth.resetTtlMinutes"]).toBe(90);
+  expect(list["setup.completed"]).toBe(true);
   expect(list["design.tokens"]).toEqual({
     colors: { primary: "#111111" },
   });
@@ -82,9 +93,12 @@ testIfDb("set/get/list/delete settings", async () => {
     "site.name": "Nextless Updated",
     "site.locale": "en-US",
     "site.adminBaseUrl": null,
-    "site.publicBaseUrl": "https://public.example.com",
+    "site.baseUrl": "https://public.example.com",
     "site.adminPath": "admin-panel",
     "site.adminRedirectEnabled": false,
+    "auth.sessionTtlDays": 14,
+    "auth.resetTtlMinutes": 45,
+    "setup.completed": false,
   });
   expect(bulk["site.name"]).toBe("Nextless Updated");
   expect(bulk["site.locale"]).toBe("en-US");
@@ -92,16 +106,54 @@ testIfDb("set/get/list/delete settings", async () => {
   expect(bulk["site.publicBaseUrl"]).toBe("https://public.example.com/");
   expect(bulk["site.adminPath"]).toBe("/admin-panel");
   expect(bulk["site.adminRedirectEnabled"]).toBe(false);
+  expect(bulk["auth.sessionTtlDays"]).toBe(14);
+  expect(bulk["auth.resetTtlMinutes"]).toBe(45);
+  expect(bulk["setup.completed"]).toBe(false);
 
   await deleteSetting("site.name");
   const defaultName = await getSetting("site.name");
   expect(defaultName).toBe("Nextless");
 });
 
+testIfDb("enforces auth TTL bounds and setup boolean type", async () => {
+  await expect(setSetting("auth.sessionTtlDays", 0)).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("auth.sessionTtlDays", 366)).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("auth.resetTtlMinutes", 4)).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("auth.resetTtlMinutes", 1441)).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("setup.completed", "yes")).rejects.toThrow(
+    "settings_value_invalid"
+  );
+
+  await setSetting("auth.sessionTtlDays", 365);
+  await setSetting("auth.resetTtlMinutes", 1440);
+  await setSetting("setup.completed", true);
+
+  expect(await getSetting("auth.sessionTtlDays")).toBe(365);
+  expect(await getSetting("auth.resetTtlMinutes")).toBe(1440);
+  expect(await getSetting("setup.completed")).toBe(true);
+});
+
 testIfDb("rejects unknown key", async () => {
   await expect(setSetting("unknown.key", "value")).rejects.toThrow(
     "settings_key_invalid"
   );
+});
+
+testIfDb("rejects duplicate keys after alias normalization in bulk payload", async () => {
+  await expect(
+    setSettings({
+      "site.baseUrl": "https://alias.example.com",
+      "site.publicBaseUrl": "https://canonical.example.com",
+    })
+  ).rejects.toThrow("settings_payload_invalid");
 });
 
 testIfDb("assistant settings enforce consistency in persistence layer", async () => {

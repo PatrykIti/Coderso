@@ -5,13 +5,16 @@ import { db } from "../../../core/db/client";
 import { sessions, settings, users } from "../../../core/db/schema";
 import {
   createSession,
+  DEFAULT_SESSION_TTL_DAYS,
   getSessionByToken,
+  resolveSessionTtlDaysFromSources,
   revokeSession,
 } from "../../../core/services/auth/sessionService";
 import {
   resetSecuritySettingsCache,
   setSecuritySettings,
 } from "../../../core/services/settings/securitySettings";
+import { setSetting } from "../../../core/services/settings/settingsService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -40,11 +43,40 @@ const cleanup = async () => {
     await db.delete(users).where(eq(users.id, userId));
   }
   await db.delete(settings).where(eq(settings.key, "security.settings"));
+  await db.delete(settings).where(eq(settings.key, "auth.sessionTtlDays"));
   resetSecuritySettingsCache();
 };
 
 afterAll(async () => {
   await cleanup();
+});
+
+test("resolveSessionTtlDaysFromSources applies precedence and clamping", () => {
+  const explicit = resolveSessionTtlDaysFromSources({
+    inputTtlDays: 400,
+    authSettingTtlDays: 30,
+    securitySettingTtlDays: 7,
+  });
+  const fromAuth = resolveSessionTtlDaysFromSources({
+    inputTtlDays: 0,
+    authSettingTtlDays: 30,
+    securitySettingTtlDays: 7,
+  });
+  const fromSecurity = resolveSessionTtlDaysFromSources({
+    inputTtlDays: 0,
+    authSettingTtlDays: null,
+    securitySettingTtlDays: 7,
+  });
+  const fallback = resolveSessionTtlDaysFromSources({
+    inputTtlDays: -1,
+    authSettingTtlDays: null,
+    securitySettingTtlDays: null,
+  });
+
+  expect(explicit).toBe(365);
+  expect(fromAuth).toBe(30);
+  expect(fromSecurity).toBe(7);
+  expect(fallback).toBe(DEFAULT_SESSION_TTL_DAYS);
 });
 
 testIfDb("create and revoke session", async () => {
@@ -145,6 +177,29 @@ testIfDb("single session mode revokes previous sessions", async () => {
 
   expect(firstRow?.revokedAt).not.toBeNull();
   expect(secondRow?.revokedAt).toBeNull();
+
+  await cleanup();
+  userId = undefined;
+});
+
+testIfDb("auth session ttl setting takes precedence over security session ttl", async () => {
+  const [user] = await db
+    .insert(users)
+    .values({
+      email: `ttl-${randomUUID()}@example.com`,
+      passwordHash: "hash",
+      status: "active",
+    })
+    .returning();
+
+  userId = user?.id;
+  await setSecuritySettings({
+    session: { ttlDays: 7, maxPerUser: 3, singleSession: false },
+  });
+  await setSetting("auth.sessionTtlDays", 21);
+
+  const { ttlDays } = await createSession({ userId: user.id });
+  expect(ttlDays).toBe(21);
 
   await cleanup();
   userId = undefined;

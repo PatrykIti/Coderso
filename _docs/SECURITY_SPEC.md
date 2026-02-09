@@ -139,11 +139,25 @@ Rotacja klucza:
 ## Session policy
 
 - Konfigurowalne w Admin UI: Settings → Security → Session Limits.
+- Globalny runtime key dla TTL sesji: `auth.sessionTtlDays` (default `14`, zakres `1..365`).
+- UI exposure: Settings → Security → Auth Token TTL.
+- Kolejnosc source dla TTL sesji:
+  - `createSession(input.ttlDays)` (explicit override)
+  - `settings["auth.sessionTtlDays"]`
+  - `security.settings.session.ttlDays` (fallback kompatybilnosciowy)
+  - `DEFAULT_SESSION_TTL_DAYS`
 - Parametry:
   - `session.ttlDays` (domyslnie 7)
   - `session.maxPerUser` (domyslnie 3)
   - `session.singleSession` (domyslnie false)
 - `singleSession` uniewaznia poprzednie sesje przy nowym logowaniu.
+- `session.ttlDays` pozostaje fallbackiem kompatybilnosciowym dla starszej konfiguracji.
+
+## Password reset TTL policy
+
+- Runtime key: `auth.resetTtlMinutes` (default `60`, zakres `5..1440`).
+- Ustawienie kontroluje waznosc tokenu resetu hasla.
+- Fallback: gdy key jest brakujacy/niepoprawny, runtime uzywa domyslnego `60` minut.
 
 ## Login alerts (v1.0)
 

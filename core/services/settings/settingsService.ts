@@ -57,6 +57,9 @@ const DEFAULT_SETTINGS = {
   "site.previewEnabled": true,
   "site.contentRoutes": DEFAULT_CONTENT_ROUTES,
   "site.cacheTtlSeconds": 30,
+  "auth.sessionTtlDays": 14,
+  "auth.resetTtlMinutes": 60,
+  "setup.completed": false,
   "design.tokens": {} as DesignTokenOverrides,
   "search.categoryOverrides": {} as SearchCategoryOverrides,
   "widgets.templateCategories": DEFAULT_WIDGET_TEMPLATE_CATEGORIES,
@@ -83,6 +86,9 @@ export type SearchCategoryOverrides = Record<
 >;
 
 const ALLOWED_KEYS = new Set(Object.keys(DEFAULT_SETTINGS));
+const SETTING_KEY_ALIASES = {
+  "site.baseUrl": "site.publicBaseUrl",
+} as const;
 
 const isBaseUrlKey = (key: SettingKey) =>
   key === "site.adminBaseUrl" || key === "site.publicBaseUrl";
@@ -90,10 +96,12 @@ const isBaseUrlKey = (key: SettingKey) =>
 const isAdminPathKey = (key: SettingKey) => key === "site.adminPath";
 const isAdminRedirectKey = (key: SettingKey) => key === "site.adminRedirectEnabled";
 
-function assertSettingKey(key: string): asserts key is SettingKey {
-  if (!ALLOWED_KEYS.has(key)) {
+export function resolveSettingKey(key: string): SettingKey {
+  const normalized = SETTING_KEY_ALIASES[key as keyof typeof SETTING_KEY_ALIASES] ?? key;
+  if (!ALLOWED_KEYS.has(normalized)) {
     throw new Error("settings_key_invalid");
   }
+  return normalized as SettingKey;
 }
 
 const ASSISTANT_SETTING_KEYS = [
@@ -132,6 +140,17 @@ const normalizePositiveInteger = (value: unknown) => {
   }
   const normalized = Math.floor(value);
   if (normalized <= 0) {
+    throw new Error("settings_value_invalid");
+  }
+  return normalized;
+};
+
+const normalizeBoundedInteger = (value: unknown, min: number, max: number) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error("settings_value_invalid");
+  }
+  const normalized = Math.floor(value);
+  if (normalized < min || normalized > max) {
     throw new Error("settings_value_invalid");
   }
   return normalized;
@@ -378,6 +397,18 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return Math.floor(value);
   }
 
+  if (key === "auth.sessionTtlDays") {
+    return normalizeBoundedInteger(value, 1, 365);
+  }
+
+  if (key === "auth.resetTtlMinutes") {
+    return normalizeBoundedInteger(value, 5, 1440);
+  }
+
+  if (key === "setup.completed") {
+    return normalizeBooleanValue(value);
+  }
+
   if (key === "site.contentRoutes") {
     return normalizeContentRoutes(value);
   }
@@ -530,6 +561,19 @@ export async function listSettings(): Promise<SettingValueMap> {
       continue;
     }
 
+    if (
+      key === "auth.sessionTtlDays" ||
+      key === "auth.resetTtlMinutes" ||
+      key === "setup.completed"
+    ) {
+      try {
+        mergedByKey[key] = validateSettingValue(key, row.value);
+      } catch {
+        mergedByKey[key] = DEFAULT_SETTINGS[key];
+      }
+      continue;
+    }
+
     if (key === "site.contentRoutes") {
       merged[key] = row.value as ContentRouteSetting[];
       continue;
@@ -544,54 +588,65 @@ export async function listSettings(): Promise<SettingValueMap> {
 }
 
 export async function getSetting(key: string) {
-  assertSettingKey(key);
-  const [row] = await db.select().from(settings).where(eq(settings.key, key));
-  if (!row) return DEFAULT_SETTINGS[key];
-  if (isBaseUrlKey(key)) {
+  const normalizedKey = resolveSettingKey(key);
+  const [row] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, normalizedKey));
+  if (!row) return DEFAULT_SETTINGS[normalizedKey];
+  if (isBaseUrlKey(normalizedKey)) {
     return normalizeBaseUrlOutput(row.value);
   }
-  if (isAdminPathKey(key)) {
+  if (isAdminPathKey(normalizedKey)) {
     return normalizeAdminPathValue(row.value);
   }
-  if (isAdminRedirectKey(key)) {
+  if (isAdminRedirectKey(normalizedKey)) {
     return Boolean(row.value);
   }
-  if (key === "site.homepageId" || key === "site.notFoundPageId") {
+  if (normalizedKey === "site.homepageId" || normalizedKey === "site.notFoundPageId") {
     return normalizeOptionalId(row.value);
   }
-  if (key === "site.previewEnabled") {
+  if (normalizedKey === "site.previewEnabled") {
     return Boolean(row.value);
   }
-  if (key === "site.cacheTtlSeconds") {
-    return typeof row.value === "number" ? row.value : DEFAULT_SETTINGS[key];
+  if (normalizedKey === "site.cacheTtlSeconds") {
+    return typeof row.value === "number" ? row.value : DEFAULT_SETTINGS[normalizedKey];
   }
-  if (key === "site.contentRoutes") {
+  if (normalizedKey === "site.contentRoutes") {
     return row.value as ContentRouteSetting[];
   }
-  if (isAssistantSettingKey(key)) {
+  if (
+    normalizedKey === "auth.sessionTtlDays" ||
+    normalizedKey === "auth.resetTtlMinutes" ||
+    normalizedKey === "setup.completed" ||
+    isAssistantSettingKey(normalizedKey)
+  ) {
     try {
-      return validateSettingValue(key, row.value);
+      return validateSettingValue(normalizedKey, row.value);
     } catch {
-      return DEFAULT_SETTINGS[key];
+      return DEFAULT_SETTINGS[normalizedKey];
     }
   }
-  return row.value as SettingValueMap[SettingKey];
+  return row.value as SettingValueMap[typeof normalizedKey];
 }
 
 export async function getSettingRecord(key: string) {
-  assertSettingKey(key);
-  const [row] = await db.select().from(settings).where(eq(settings.key, key));
+  const normalizedKey = resolveSettingKey(key);
+  const [row] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.key, normalizedKey));
   return row ?? null;
 }
 
 export async function setSetting(key: string, value: unknown) {
-  assertSettingKey(key);
-  const typedValue = validateSettingValue(key, value);
-  if (isAssistantSettingKey(key)) {
+  const normalizedKey = resolveSettingKey(key);
+  const typedValue = validateSettingValue(normalizedKey, value);
+  if (isAssistantSettingKey(normalizedKey)) {
     const current = await listSettings();
     const next = {
       ...current,
-      [key]: typedValue,
+      [normalizedKey]: typedValue,
     } as SettingValueMap;
     assertAssistantSettingsConsistency(pickAssistantSettings(next));
   }
@@ -599,7 +654,7 @@ export async function setSetting(key: string, value: unknown) {
 
   const [row] = await db
     .insert(settings)
-    .values({ key, value: typedValue, updatedAt: now })
+    .values({ key: normalizedKey, value: typedValue, updatedAt: now })
     .onConflictDoUpdate({
       target: settings.key,
       set: { value: typedValue, updatedAt: now },
@@ -616,10 +671,15 @@ export async function setSettings(values: Record<string, unknown>) {
 
   const entries = Object.entries(values);
   const now = new Date();
-  const validated = entries.map(([key, value]) => {
-    assertSettingKey(key);
-    const typedValue = validateSettingValue(key, value);
-    return { key, value: typedValue };
+  const usedKeys = new Set<SettingKey>();
+  const validated = entries.map(([rawKey, value]) => {
+    const normalizedKey = resolveSettingKey(rawKey);
+    if (usedKeys.has(normalizedKey)) {
+      throw new Error("settings_payload_invalid");
+    }
+    usedKeys.add(normalizedKey);
+    const typedValue = validateSettingValue(normalizedKey, value);
+    return { key: normalizedKey, value: typedValue };
   });
 
   if (validated.some((entry) => isAssistantSettingKey(entry.key))) {
@@ -647,10 +707,10 @@ export async function setSettings(values: Record<string, unknown>) {
 }
 
 export async function deleteSetting(key: string) {
-  assertSettingKey(key);
+  const normalizedKey = resolveSettingKey(key);
   const [row] = await db
     .delete(settings)
-    .where(eq(settings.key, key))
+    .where(eq(settings.key, normalizedKey))
     .returning();
 
   return row ?? null;

@@ -5,7 +5,7 @@
 **Category:** Core/Settings  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-007, TASK-047  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 

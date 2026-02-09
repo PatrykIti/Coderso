@@ -32,27 +32,40 @@ const labelClassName =
 type BrandingCardProps = {
   siteName: string;
   siteLocale: string;
-  onChange?: (next: { siteName: string; siteLocale: string }) => void;
+  publicBaseUrl: string;
+  publicBaseUrlError?: string | null;
+  onChange?: (next: {
+    siteName: string;
+    siteLocale: string;
+    publicBaseUrl: string;
+  }) => void;
   disabled?: boolean;
 };
 
 const defaultValues = {
   siteName: "Nextless",
   siteLocale: "en",
+  publicBaseUrl: "",
 };
 
 export function BrandingCard({
   siteName = defaultValues.siteName,
   siteLocale = defaultValues.siteLocale,
+  publicBaseUrl = defaultValues.publicBaseUrl,
+  publicBaseUrlError = null,
   onChange,
   disabled = false,
 }: BrandingCardProps) {
   const handleNameChange = (value: string) => {
-    onChange?.({ siteName: value, siteLocale });
+    onChange?.({ siteName: value, siteLocale, publicBaseUrl });
   };
 
   const handleLocaleChange = (value: string) => {
-    onChange?.({ siteName, siteLocale: value });
+    onChange?.({ siteName, siteLocale: value, publicBaseUrl });
+  };
+
+  const handlePublicBaseUrlChange = (value: string) => {
+    onChange?.({ siteName, siteLocale, publicBaseUrl: value });
   };
 
   return (
@@ -100,6 +113,25 @@ export function BrandingCard({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2 md:col-span-2">
+            <label className={labelClassName} htmlFor="public-site-url">
+              Public Site URL
+            </label>
+            <Input
+              id="public-site-url"
+              value={publicBaseUrl}
+              placeholder="https://example.com"
+              onChange={(event) => handlePublicBaseUrlChange(event.target.value)}
+              disabled={disabled}
+              aria-invalid={publicBaseUrlError ? true : undefined}
+            />
+            <p className="text-xs text-muted-foreground">
+              Used for preview links, reset links, and runtime absolute URLs.
+            </p>
+            {publicBaseUrlError ? (
+              <p className="text-xs text-destructive">{publicBaseUrlError}</p>
+            ) : null}
           </div>
           <div className="space-y-2 md:col-span-2">
             <label className={labelClassName} htmlFor="site-timezone">

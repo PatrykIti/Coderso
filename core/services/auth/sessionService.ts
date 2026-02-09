@@ -3,9 +3,12 @@ import { and, asc, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { db } from "../../db/client";
 import { sessions } from "../../db/schema";
 import { getSecuritySettings } from "../settings/securitySettings";
+import { getSetting } from "../settings/settingsService";
 
 export const SESSION_COOKIE_NAME = "session";
 export const DEFAULT_SESSION_TTL_DAYS = 7;
+const MIN_SESSION_TTL_DAYS = 1;
+const MAX_SESSION_TTL_DAYS = 365;
 
 export type SessionRow = typeof sessions.$inferSelect;
 
@@ -101,6 +104,42 @@ async function getSessionPolicy() {
   return settings.session;
 }
 
+const toBoundedInteger = (value: unknown, min: number, max: number) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  const normalized = Math.floor(value);
+  if (normalized <= 0) return null;
+  return Math.min(max, Math.max(min, normalized));
+};
+
+export function resolveSessionTtlDaysFromSources(input: {
+  inputTtlDays?: number;
+  authSettingTtlDays?: unknown;
+  securitySettingTtlDays?: unknown;
+}): number {
+  const fromInput = toBoundedInteger(
+    input.inputTtlDays,
+    MIN_SESSION_TTL_DAYS,
+    MAX_SESSION_TTL_DAYS
+  );
+  if (fromInput !== null) return fromInput;
+
+  const fromAuthSettings = toBoundedInteger(
+    input.authSettingTtlDays,
+    MIN_SESSION_TTL_DAYS,
+    MAX_SESSION_TTL_DAYS
+  );
+  if (fromAuthSettings !== null) return fromAuthSettings;
+
+  const fromSecuritySettings = toBoundedInteger(
+    input.securitySettingTtlDays,
+    MIN_SESSION_TTL_DAYS,
+    MAX_SESSION_TTL_DAYS
+  );
+  if (fromSecuritySettings !== null) return fromSecuritySettings;
+
+  return DEFAULT_SESSION_TTL_DAYS;
+}
+
 async function enforceSessionLimits(userId: string, policy: {
   maxPerUser: number;
   singleSession: boolean;
@@ -139,7 +178,12 @@ async function enforceSessionLimits(userId: string, policy: {
 
 export async function createSession(input: CreateSessionInput) {
   const policy = await getSessionPolicy();
-  const ttlDays = input.ttlDays ?? policy.ttlDays ?? DEFAULT_SESSION_TTL_DAYS;
+  const authSessionTtlDays = await getSetting("auth.sessionTtlDays");
+  const ttlDays = resolveSessionTtlDaysFromSources({
+    inputTtlDays: input.ttlDays,
+    authSettingTtlDays: authSessionTtlDays,
+    securitySettingTtlDays: policy.ttlDays,
+  });
   await enforceSessionLimits(input.userId, policy);
   const token = generateToken();
   const tokenHash = hashSessionToken(token);

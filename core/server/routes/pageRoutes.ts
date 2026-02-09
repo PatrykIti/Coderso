@@ -15,7 +15,10 @@ import {
   restoreRevision,
 } from "../../services/pages/revisionService";
 import { logAudit } from "../../services/audit/auditService";
-import { resolvePreviewUrl } from "../utils/previewUrls";
+import {
+  createPublicUrlContextFromHeaders,
+  resolvePreviewUrl,
+} from "../utils/previewUrls";
 import {
   pageCreateSchema,
   pagePreviewSchema,
@@ -27,6 +30,7 @@ export type RouteContext = {
   params: Record<string, string>;
   query: Record<string, string | undefined>;
   body: unknown;
+  headers?: Record<string, string | undefined>;
   user?: { id: string };
 };
 
@@ -140,7 +144,7 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
         targetType: "page",
         token,
         path: slugPath,
-      });
+      }, createPublicUrlContextFromHeaders(ctx.headers));
       return { token, previewUrl, expiresAt };
     }
   );

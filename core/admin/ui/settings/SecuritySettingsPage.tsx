@@ -27,7 +27,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  getSettings,
   getSecuritySettings,
+  updateSettings,
   updateSecuritySettings,
   type SecuritySettingsResponse,
 } from "@/services/settingsClient";
@@ -74,6 +76,8 @@ type SecurityFormState = {
   sessionTtlDays: string;
   sessionMaxPerUser: string;
   sessionSingleSession: boolean;
+  authSessionTtlDays: string;
+  authResetTtlMinutes: string;
   loginAlertsEnabled: boolean;
   loginAlertsNewDevice: boolean;
   loginAlertsNewLocation: boolean;
@@ -107,10 +111,26 @@ const toFormState = (settings: SecuritySettingsResponse): SecurityFormState => (
   sessionTtlDays: String(settings.session.ttlDays),
   sessionMaxPerUser: String(settings.session.maxPerUser),
   sessionSingleSession: settings.session.singleSession,
+  authSessionTtlDays: "14",
+  authResetTtlMinutes: "60",
   loginAlertsEnabled: settings.loginAlerts.enabled,
   loginAlertsNewDevice: settings.loginAlerts.notifyOnNewDevice,
   loginAlertsNewLocation: settings.loginAlerts.notifyOnNewLocation,
 });
+
+const resolveRuntimeTtl = (
+  payload: Record<string, unknown>,
+  key: "auth.sessionTtlDays" | "auth.resetTtlMinutes",
+  fallback: number,
+  min: number,
+  max: number
+) => {
+  const value = payload[key];
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  const normalized = Math.floor(value);
+  if (normalized < min || normalized > max) return fallback;
+  return normalized;
+};
 
 const defaultFormState: SecurityFormState = {
   requestIdEnabled: true,
@@ -140,6 +160,8 @@ const defaultFormState: SecurityFormState = {
   sessionTtlDays: "7",
   sessionMaxPerUser: "3",
   sessionSingleSession: false,
+  authSessionTtlDays: "14",
+  authResetTtlMinutes: "60",
   loginAlertsEnabled: true,
   loginAlertsNewDevice: true,
   loginAlertsNewLocation: true,
@@ -165,11 +187,29 @@ export function SecuritySettingsPage() {
     let active = true;
     setIsLoading(true);
     setError(null);
-    getSecuritySettings()
-      .then((result) => {
+    Promise.all([getSecuritySettings(), getSettings()])
+      .then(([securityResult, runtimeSettings]) => {
         if (!active) return;
-        setSettings(result);
-        setForm(toFormState(result));
+        const authSessionTtlDays = resolveRuntimeTtl(
+          runtimeSettings,
+          "auth.sessionTtlDays",
+          14,
+          1,
+          365
+        );
+        const authResetTtlMinutes = resolveRuntimeTtl(
+          runtimeSettings,
+          "auth.resetTtlMinutes",
+          60,
+          5,
+          1440
+        );
+        setSettings(securityResult);
+        setForm({
+          ...toFormState(securityResult),
+          authSessionTtlDays: String(authSessionTtlDays),
+          authResetTtlMinutes: String(authResetTtlMinutes),
+        });
       })
       .catch((err) => {
         if (!active) return;
@@ -205,7 +245,23 @@ export function SecuritySettingsPage() {
     const parsed = Number(value);
     return !Number.isFinite(parsed) || parsed <= 0;
   });
-  const hasValidationErrors = headerInvalid || numericInvalid;
+  const authSessionTtlValue = Number(form.authSessionTtlDays);
+  const authResetTtlValue = Number(form.authResetTtlMinutes);
+  const authSessionTtlInvalid =
+    !Number.isFinite(authSessionTtlValue) ||
+    authSessionTtlValue < 1 ||
+    authSessionTtlValue > 365;
+  const authResetTtlInvalid =
+    !Number.isFinite(authResetTtlValue) ||
+    authResetTtlValue < 5 ||
+    authResetTtlValue > 1440;
+  const hasValidationErrors =
+    headerInvalid || numericInvalid || authSessionTtlInvalid || authResetTtlInvalid;
+  const validationMessage = authSessionTtlInvalid || authResetTtlInvalid
+    ? "Auth TTL values must be within allowed ranges (1-365 days, 5-1440 minutes)."
+    : hasValidationErrors
+      ? "Please correct invalid security fields before saving."
+      : null;
 
   const handleFieldChange = <K extends keyof SecurityFormState>(
     key: K,
@@ -224,6 +280,20 @@ export function SecuritySettingsPage() {
       const csrfHeader = form.csrfHeaderName.trim();
       if (!requestIdHeader || !csrfHeader) {
         throw new Error("header_required");
+      }
+      const authSessionTtlDays = parsePositiveNumber(
+        form.authSessionTtlDays,
+        "auth_session_ttl"
+      );
+      const authResetTtlMinutes = parsePositiveNumber(
+        form.authResetTtlMinutes,
+        "auth_reset_ttl"
+      );
+      if (authSessionTtlDays < 1 || authSessionTtlDays > 365) {
+        throw new Error("auth_session_ttl_invalid");
+      }
+      if (authResetTtlMinutes < 5 || authResetTtlMinutes > 1440) {
+        throw new Error("auth_reset_ttl_invalid");
       }
 
       const payload = {
@@ -303,14 +373,30 @@ export function SecuritySettingsPage() {
         },
       };
 
-      const updated = await updateSecuritySettings(payload);
+      const [updated] = await Promise.all([
+        updateSecuritySettings(payload),
+        updateSettings({
+          "auth.sessionTtlDays": authSessionTtlDays,
+          "auth.resetTtlMinutes": authResetTtlMinutes,
+        }),
+      ]);
       setSettings(updated);
-      setForm(toFormState(updated));
+      setForm({
+        ...toFormState(updated),
+        authSessionTtlDays: String(authSessionTtlDays),
+        authResetTtlMinutes: String(authResetTtlMinutes),
+      });
       setSuccess("Security settings updated.");
       return true;
     } catch (err) {
       if (err instanceof Error && err.message.endsWith("_missing")) {
         setError("Please fill in all required numeric fields.");
+      } else if (
+        err instanceof Error &&
+        (err.message === "auth_session_ttl_invalid" ||
+          err.message === "auth_reset_ttl_invalid")
+      ) {
+        setError("Auth TTL values must be within allowed ranges.");
       } else if (err instanceof Error && err.message.endsWith("_invalid")) {
         setError("All numeric values must be greater than zero.");
       } else if (err instanceof Error && err.message === "header_required") {
@@ -376,6 +462,12 @@ export function SecuritySettingsPage() {
               <Alert>
                 <AlertTitle>Saved</AlertTitle>
                 <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            ) : null}
+            {validationMessage ? (
+              <Alert variant="destructive">
+                <AlertTitle>Validation error</AlertTitle>
+                <AlertDescription>{validationMessage}</AlertDescription>
               </Alert>
             ) : null}
 
@@ -675,6 +767,47 @@ export function SecuritySettingsPage() {
                   }
                   aria-label="Enable single session mode"
                 />
+              </div>
+            </SecurityPolicyCard>
+
+            <SecurityPolicyCard
+              title="Auth Token TTL"
+              description="Configure runtime TTL for sessions and password reset tokens."
+              icon={<LockKeyhole className="h-4 w-4" />}
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Auth session TTL (days)</p>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={form.authSessionTtlDays}
+                    onChange={(event) =>
+                      handleFieldChange("authSessionTtlDays", event.target.value)
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Allowed range: 1-365 days.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">
+                    Password reset TTL (minutes)
+                  </p>
+                  <Input
+                    type="number"
+                    min={5}
+                    max={1440}
+                    value={form.authResetTtlMinutes}
+                    onChange={(event) =>
+                      handleFieldChange("authResetTtlMinutes", event.target.value)
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Allowed range: 5-1440 minutes.
+                  </p>
+                </div>
               </div>
             </SecurityPolicyCard>
 

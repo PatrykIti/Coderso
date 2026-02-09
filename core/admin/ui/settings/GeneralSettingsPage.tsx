@@ -19,6 +19,7 @@ import { SettingsSidebar } from "./SettingsSidebar";
 export type GeneralSettingsValues = AssistantSettingsValues & {
   siteName: string;
   siteLocale: string;
+  publicBaseUrl: string;
 };
 
 type GeneralSettingsPageProps = {
@@ -32,6 +33,7 @@ type GeneralSettingsPageProps = {
 export const GENERAL_SETTINGS_DEFAULT_VALUES: GeneralSettingsValues = {
   siteName: "Nextless",
   siteLocale: "en",
+  publicBaseUrl: "",
   assistantEnabled: false,
   assistantDefaultMode: "docs-only",
   assistantDocsPaths: ["_docs"],
@@ -61,6 +63,20 @@ const resolveAssistantValidationError = (
   return null;
 };
 
+const resolvePublicBaseUrlValidationError = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return "Public Site URL must use http or https.";
+    }
+    return null;
+  } catch {
+    return "Enter a valid URL (for example: https://example.com).";
+  }
+};
+
 export function GeneralSettingsPage({
   values = GENERAL_SETTINGS_DEFAULT_VALUES,
   onSave,
@@ -73,6 +89,8 @@ export function GeneralSettingsPage({
     ...input,
     siteName: input.siteName ?? GENERAL_SETTINGS_DEFAULT_VALUES.siteName,
     siteLocale: input.siteLocale ?? GENERAL_SETTINGS_DEFAULT_VALUES.siteLocale,
+    publicBaseUrl:
+      input.publicBaseUrl ?? GENERAL_SETTINGS_DEFAULT_VALUES.publicBaseUrl,
     assistantEnabled:
       input.assistantEnabled ?? GENERAL_SETTINGS_DEFAULT_VALUES.assistantEnabled,
     assistantDefaultMode:
@@ -114,7 +132,8 @@ export function GeneralSettingsPage({
     useSettingsAutoSave();
 
   const validationError = resolveAssistantValidationError(form);
-  const hasValidationErrors = Boolean(validationError);
+  const publicBaseUrlError = resolvePublicBaseUrlValidationError(form.publicBaseUrl);
+  const hasValidationErrors = Boolean(validationError || publicBaseUrlError);
 
   useEffect(() => {
     setForm(normalizeValues(values));
@@ -195,6 +214,12 @@ export function GeneralSettingsPage({
                 <AlertDescription>{validationError}</AlertDescription>
               </Alert>
             ) : null}
+            {publicBaseUrlError ? (
+              <Alert variant="destructive">
+                <AlertTitle>URL validation error</AlertTitle>
+                <AlertDescription>{publicBaseUrlError}</AlertDescription>
+              </Alert>
+            ) : null}
             {saveSuccess ? (
               <Alert>
                 <AlertTitle>Saved</AlertTitle>
@@ -204,11 +229,14 @@ export function GeneralSettingsPage({
             <BrandingCard
               siteName={form.siteName}
               siteLocale={form.siteLocale}
+              publicBaseUrl={form.publicBaseUrl}
+              publicBaseUrlError={publicBaseUrlError}
               onChange={(next) =>
                 setForm((prev) => ({
                   ...prev,
                   siteName: next.siteName,
                   siteLocale: next.siteLocale,
+                  publicBaseUrl: next.publicBaseUrl,
                 }))
               }
               disabled={busy}

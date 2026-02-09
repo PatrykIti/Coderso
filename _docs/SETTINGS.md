@@ -2,6 +2,18 @@
 
 Dokument zbiera klucze `settings` i ich znaczenie dla runtime/admin UI.
 
+## Runtime + auth settings (`settings`)
+
+| Key | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `site.publicBaseUrl` | `string \| null` | `null` | Publiczny base URL runtime (`http/https`, trailing slash normalizowany) |
+| `auth.sessionTtlDays` | `number` | `14` | TTL sesji logowania w dniach (`1..365`) |
+| `auth.resetTtlMinutes` | `number` | `60` | TTL tokenu resetu hasla w minutach (`5..1440`) |
+| `setup.completed` | `boolean` | `false` | Flaga zamkniecia pierwszej konfiguracji |
+
+Alias kompatybilnosciowy:
+- `site.baseUrl` -> `site.publicBaseUrl` (read/write, brak osobnego source of truth).
+
 ## Assistant settings (`settings`)
 
 | Key | Type | Default | Notes |

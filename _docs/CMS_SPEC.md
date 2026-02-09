@@ -153,7 +153,19 @@ Storage:
 
 Global settings (v1):
 - `site.name`, `site.locale`
+- `site.publicBaseUrl`
+- `auth.sessionTtlDays`, `auth.resetTtlMinutes`
+- `setup.completed`
 - `design.tokens` (override tokenow UI)
+
+### First-run setup lifecycle
+
+- Po pierwszym logowaniu (gdy `setup.completed=false`) Admin App renderuje Setup Wizard.
+- Wizard zbiera minimalny zestaw runtime/security:
+  - `site.name`, `site.locale`, `site.publicBaseUrl`
+  - `auth.sessionTtlDays`, `auth.resetTtlMinutes`
+- Submit wykonuje jeden bulk `PATCH /settings` i ustawia `setup.completed=true`.
+- Po sukcesie wizard znika i nie jest ponownie pokazywany (stan z DB).
 
 ---
 

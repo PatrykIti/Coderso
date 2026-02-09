@@ -16,7 +16,10 @@ import {
 import { getWidgetTemplatePreviewModel } from "../../services/widgets/widgetTemplatePreviewService";
 import { logAudit } from "../../services/audit/auditService";
 import { createPreviewToken } from "../../services/pages/previewService";
-import { resolvePreviewUrl } from "../utils/previewUrls";
+import {
+  createPublicUrlContextFromHeaders,
+  resolvePreviewUrl,
+} from "../utils/previewUrls";
 import {
   widgetTemplateCreateSchema,
   widgetTemplatePreviewSchema,
@@ -123,7 +126,7 @@ export function registerWidgetTemplateRoutes(
           const previewUrl = await resolvePreviewUrl({
             targetType: "widget-template",
             token,
-          });
+          }, createPublicUrlContextFromHeaders(ctx.headers));
 
           return {
             token,

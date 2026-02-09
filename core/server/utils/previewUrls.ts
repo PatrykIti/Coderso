@@ -1,5 +1,9 @@
 import type { PreviewTargetType } from "../../services/pages/previewService";
-import { resolvePublicBaseUrl } from "./baseUrl";
+import {
+  buildAbsolutePublicUrl,
+  resolvePublicBaseUrl,
+  type PublicUrlContext,
+} from "./baseUrl";
 
 type BuildPreviewPathInput = {
   targetType: PreviewTargetType;
@@ -23,9 +27,26 @@ export function buildPreviewPath(input: BuildPreviewPathInput) {
   return `/preview?${params.toString()}`;
 }
 
-export async function resolvePreviewUrl(input: BuildPreviewPathInput) {
+export function buildPreviewUrl(input: BuildPreviewPathInput, baseUrl: string | null) {
+  return buildAbsolutePublicUrl(baseUrl, buildPreviewPath(input));
+}
+
+export function createPublicUrlContextFromHeaders(
+  headers?: Record<string, string | undefined>
+): PublicUrlContext | undefined {
+  if (!headers) return undefined;
+  return {
+    host: headers.host ?? null,
+    forwardedHost: headers["x-forwarded-host"] ?? null,
+    forwardedProto: headers["x-forwarded-proto"] ?? null,
+  };
+}
+
+export async function resolvePreviewUrl(
+  input: BuildPreviewPathInput,
+  context?: PublicUrlContext
+) {
   const previewPath = buildPreviewPath(input);
-  const baseUrl = await resolvePublicBaseUrl();
-  if (!baseUrl) return previewPath;
-  return new URL(previewPath, baseUrl).toString();
+  const baseUrl = await resolvePublicBaseUrl(context);
+  return buildAbsolutePublicUrl(baseUrl, previewPath);
 }

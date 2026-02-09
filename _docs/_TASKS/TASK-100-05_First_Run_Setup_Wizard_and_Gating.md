@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Core/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-100-01, TASK-100-04, TASK-004-07  
-**Status:** To Do
+**Status:** Done (2026-02-09)
 
 ---
 

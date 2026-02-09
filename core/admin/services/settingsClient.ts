@@ -25,15 +25,24 @@ export type AssistantSettingsPayload = {
   "assistant.quotas.requestsPerDay": number;
 };
 
+export type RuntimeSettingsPayload = {
+  "site.publicBaseUrl": string | null;
+  "auth.sessionTtlDays": number;
+  "auth.resetTtlMinutes": number;
+  "setup.completed": boolean;
+};
+
 export type GeneralSettingsPayload = {
   "site.name": string;
   "site.locale": string;
+  "site.publicBaseUrl": string | null;
 } & AssistantSettingsPayload;
 
 export type SettingsResponse = Record<string, unknown> &
-  Partial<GeneralSettingsPayload>;
+  Partial<GeneralSettingsPayload & RuntimeSettingsPayload>;
 
-export type SettingsUpdate = Record<string, unknown> & Partial<GeneralSettingsPayload>;
+export type SettingsUpdate = Record<string, unknown> &
+  Partial<GeneralSettingsPayload & RuntimeSettingsPayload>;
 
 export type StorageSettingsResponse = {
   driver: StorageDriver;
