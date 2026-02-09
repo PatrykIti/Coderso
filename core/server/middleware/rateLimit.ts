@@ -1,7 +1,7 @@
 import { ApiError } from "../errorHandler";
 import type { SecuritySettings } from "../../services/settings/securitySettings";
 
-export type RateLimitBucket = "admin" | "auth";
+export type RateLimitBucket = "admin" | "auth" | "assistant";
 
 type BucketState = {
   hits: number;
@@ -35,6 +35,13 @@ export function checkRateLimit(
   }
 
   if (existing.hits >= limits.maxRequests) {
+    if (bucket === "assistant") {
+      throw new ApiError(
+        "assistant_rate_limited",
+        "Assistant rate limit exceeded",
+        429
+      );
+    }
     throw new ApiError("rate_limited", "Too many requests", 429);
   }
 

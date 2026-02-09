@@ -90,3 +90,77 @@ test("buildInternalDocChunks creates deterministic heading-aware chunks", () => 
     true
   );
 });
+
+test("buildInternalDocChunks rejects non-positive maxChunkChars", () => {
+  const parsed = parseInternalDoc(validInternalDoc);
+  expect(() => buildInternalDocChunks(parsed, 0)).toThrow(
+    "assistant_doc_chunk_limit_invalid"
+  );
+});
+
+test("buildInternalDocChunks rejects oversized lines that exceed chunk limit", () => {
+  const parsed = parseInternalDoc(
+    [
+      "---",
+      'title: "Oversized line doc"',
+      'audience: "editor"',
+      'productArea: "widgets"',
+      'language: "pl"',
+      "keywords: [hero]",
+      "---",
+      "",
+      "# What Is It",
+      "x".repeat(200),
+      "",
+      "# When To Use",
+      "ok",
+      "",
+      "# Step By Step",
+      "ok",
+      "",
+      "# Examples",
+      "ok",
+      "",
+      "# Common Mistakes",
+      "ok",
+      "",
+    ].join("\n")
+  );
+
+  expect(() => buildInternalDocChunks(parsed, 120)).toThrow(
+    "assistant_doc_chunk_oversized"
+  );
+});
+
+test("validateInternalDocContract reports body_too_large", () => {
+  const parsed = parseInternalDoc(
+    [
+      "---",
+      'title: "Huge doc"',
+      'audience: "editor"',
+      'productArea: "widgets"',
+      'language: "pl"',
+      "keywords: [hero]",
+      "---",
+      "",
+      "# What Is It",
+      "x".repeat(130_000),
+      "",
+      "# When To Use",
+      "ok",
+      "",
+      "# Step By Step",
+      "ok",
+      "",
+      "# Examples",
+      "ok",
+      "",
+      "# Common Mistakes",
+      "ok",
+      "",
+    ].join("\n")
+  );
+
+  const errors = validateInternalDocContract("_docs/_internal/widgets/huge.md", parsed);
+  expect(errors.some((error) => error.code === "doc_body_too_large")).toBe(true);
+});

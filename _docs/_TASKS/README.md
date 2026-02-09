@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 2 tasks
-- **In Progress:** 1 task
-- **Done:** 287 tasks
+- **In Progress:** 0 tasks
+- **Done:** 289 tasks
 
 ---
 
@@ -48,7 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-099-01 | Dashboard Service | Medium | Medium | Aggregate metrics |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard |
 | TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Wire UI to API |
-| TASK-101-07 | Assistant Security, Quotas, Observability and Hardening | High | Medium | Rate limits, audit, redaction |
 
 ---
 
@@ -56,7 +55,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | Phase B in progress, TASK-101-01/02/03/04/05/06/08 complete |
 
 ---
 
@@ -64,6 +62,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101 | Doc Navigator Assistant + Optional LLM Connector | High | Large | 101-01/02/03/04/05/06/07/08 complete |
+| TASK-101-07 | Assistant Security, Quotas, Observability and Hardening | High | Medium | Quota enforcement + assistant metrics + audit redaction hardening |
 | TASK-100 | Runtime Base URL + Auth TTL + Setup Wizard | High | Large | 100-01/02/03/04/05 complete |
 | TASK-101-06 | Assistant Avatar Rendering and Preferences | Medium | Medium | Optional avatar layer + user preferences + 2D fallback |
 | TASK-101-05 | Admin UI Assistant Chat and Modes | High | Large | Global assistant drawer in AdminShell + mode persistence + sources/fallback UX |

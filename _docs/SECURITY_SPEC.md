@@ -90,6 +90,12 @@ Rotacja klucza:
 - Konfiguracja limitow asystenta jest trzymana w global settings:
   - `assistant.quotas.requestsPerMinute`
   - `assistant.quotas.requestsPerDay`
+- Runtime quota enforcement (TASK-101-07):
+  - per-user minute/day request counters sa egzekwowane przed retrieval/provider call
+  - optional global request limits i optional LLM token budget sa wspierane przez runtime quota layer
+  - przekroczenia zwracaja:
+    - `assistant_rate_limited` (HTTP 429)
+    - `assistant_budget_exceeded` (HTTP 429)
 - `assistant.defaultMode=llm-rag` jest dozwolony tylko gdy:
   - `assistant.llm.enabled=true`
   - `assistant.llm.provider != none`
@@ -130,10 +136,17 @@ Rotacja klucza:
   - `assistant_index_missing`
   - `assistant_reindex_failed`
   - `assistant_message_invalid`
+  - `assistant_rate_limited`
+  - `assistant_budget_exceeded`
   - mapped errors zawieraja `requestId` w payload `error.details.requestId`
 - Chat response telemetry:
   - przy sukcesie `llm-rag` odpowiedz zawiera `llm.provider`, `llm.model`, `llm.providerRequestId`, `llm.usage`
   - przy fallbacku lub trybie `docs-only` pole `llm` ma wartosc `null`
+- Observability:
+  - in-memory metrics: request/error/fallback/no-hit/latency
+  - audit events:
+    - `assistant.mode.fallback`
+    - `assistant.provider.failure`
 - Reindex:
   - triggerowany recznie endpointem `POST /assistant/reindex`
   - opcjonalny boot reindex przez `assistant.docs.reindexOnBoot=true`

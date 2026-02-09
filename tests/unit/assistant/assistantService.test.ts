@@ -7,6 +7,7 @@ import {
   sanitizeAssistantMessage,
   type AssistantServiceDeps,
 } from "../../../core/services/assistant/assistantService";
+import { resetAssistantQuotaState } from "../../../core/services/assistant/assistantQuota";
 import type { DocsIndex, DocsSearchHit } from "../../../core/services/assistant/docsTypes";
 
 const makeIndex = (): DocsIndex => {
@@ -491,4 +492,41 @@ test("reindexAssistantDocs runs ingest pipeline for DB backend", async () => {
   expect(result.chunkCount).toBe(20);
   expect(result.totalTokens).toBe(77);
   expect(result.actorId).toBe("user-2");
+});
+
+test("answerAssistantQuestion enforces assistant request quotas", async () => {
+  resetAssistantQuotaState();
+  const deps = createDeps({
+    getSetting: async (key: string) => {
+      const values: Record<string, unknown> = {
+        "assistant.enabled": true,
+        "assistant.defaultMode": "docs-only",
+        "assistant.docs.backend": "filesystem",
+        "assistant.docs.sourceRoot": "_docs/_internal",
+        "assistant.llm.enabled": false,
+        "assistant.llm.provider": "none",
+        "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+        "assistant.llm.maxInputTokens": 8192,
+        "assistant.llm.maxOutputTokens": 2048,
+        "assistant.llm.timeoutMs": 20000,
+        "assistant.quotas.requestsPerMinute": 1,
+        "assistant.quotas.requestsPerDay": 1000,
+      };
+      return values[key];
+    },
+  });
+
+  await answerAssistantQuestion(
+    { message: "Where are hero settings?", actorId: "quota-user" },
+    deps
+  );
+
+  await expect(
+    answerAssistantQuestion(
+      { message: "Where are hero settings again?", actorId: "quota-user" },
+      deps
+    )
+  ).rejects.toThrow("assistant_rate_limited");
+
+  resetAssistantQuotaState();
 });

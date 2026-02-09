@@ -294,7 +294,11 @@ const handleApi = async (req: Request, apiPrefix: string) => {
 
     try {
       checkRateLimit(
-        pathname.startsWith("/auth") ? "auth" : "admin",
+        pathname.startsWith("/auth")
+          ? "auth"
+          : pathname.startsWith("/assistant")
+            ? "assistant"
+            : "admin",
         ctx.ip,
         security.rateLimit
       );

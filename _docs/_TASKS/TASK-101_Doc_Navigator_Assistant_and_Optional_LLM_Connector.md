@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Core/Assistant  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-007, TASK-100, TASK-042  
-**Status:** In Progress (Phase B started - 2026-02-09, 101-01/02/03/04/05/06/08 done)
+**Status:** Done (2026-02-09)
 
 ---
 
@@ -134,6 +134,6 @@ core/admin/ui/assistant/
 
 ---
 
-## Changelog Entry (planned)
+## Changelog Entry
 
-- `_docs/_CHANGELOG/{N}-{YYYY-MM-DD}-assistant-doc-navigator-and-optional-llm-connector.md`
+- `_docs/_CHANGELOG/204-2026-02-09-assistant-security-quotas-observability.md`

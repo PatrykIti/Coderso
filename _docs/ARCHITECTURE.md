@@ -77,11 +77,17 @@ Rozszerzenie `llm-rag` korzysta z provider abstraction:
 - `core/services/assistant/providers/providerTypes.ts`
 - `core/services/assistant/providers/openRouterProvider.ts`
 - `core/services/assistant/providers/index.ts`
+- `core/services/assistant/assistantQuota.ts`
+- `core/services/assistant/assistantMetrics.ts`
+- `core/services/assistant/assistantRedaction.ts`
 
 Zasady:
 - provider jest uruchamiany tylko gdy retrieval zwroci snippets,
 - brak konfiguracji providera albo blad requestu powoduje fallback do `docs-only`,
 - odpowiedz API zawiera `llm` metadata (`provider`, `model`, `providerRequestId`, `usage`) lub `null`.
+- quota layer egzekwuje request limits (`per-user` + optional global) oraz optional token budget dla `llm-rag`.
+- observability layer zapisuje metryki: request/error/fallback/no-hit/latency.
+- audit events rejestruja fallback mode i provider failures bez wycieku sekretow.
 
 Warstwa Admin UI:
 - `core/admin/ui/layouts/AdminShell.tsx` montuje globalny trigger asystenta.

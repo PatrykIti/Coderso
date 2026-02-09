@@ -1425,6 +1425,8 @@ Error codes:
 - `assistant_index_missing`
 - `assistant_reindex_failed`
 - `assistant_message_invalid`
+- `assistant_rate_limited`
+- `assistant_budget_exceeded`
 - `validation_error` (payload schema mismatch)
 
 Uwagi:
@@ -1432,6 +1434,7 @@ Uwagi:
 - Gdy żądany tryb to `llm-rag`, a LLM jest wyłączony, runtime zwraca `docs-only` z `fallbackUsed=true`.
 - Gdy provider nie odpowie lub nie jest skonfigurowany, runtime zwraca odpowiedz `docs-only` oraz `llm=null`.
 - Dla backendu `db` retrieval idzie najpierw po DB; fallback do filesystem aktywuje sie tylko gdy DB jest puste lub niedostepne.
+- Quota enforcement dziala per user (`assistant.quotas.requestsPerMinute`, `assistant.quotas.requestsPerDay`) przed retrieval/provider call.
 
 ---
 

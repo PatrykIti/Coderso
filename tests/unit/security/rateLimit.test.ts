@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { checkRateLimit, resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit";
+import { ApiError } from "../../../core/server/errorHandler";
 
 const baseConfig = {
   enabled: true,
@@ -31,5 +32,26 @@ test("checkRateLimit resets after window", () => {
     checkRateLimit("auth", "10.0.0.1", baseConfig);
   } finally {
     Date.now = originalNow;
+  }
+});
+
+test("checkRateLimit maps assistant bucket to assistant_rate_limited", () => {
+  resetRateLimitBuckets();
+  const config = {
+    enabled: true,
+    admin: { windowSeconds: 10, maxRequests: 1 },
+    auth: { windowSeconds: 5, maxRequests: 1 },
+  };
+
+  checkRateLimit("assistant", "127.0.0.1", config);
+
+  try {
+    checkRateLimit("assistant", "127.0.0.1", config);
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_rate_limited");
+    expect(apiError.status).toBe(429);
   }
 });

@@ -17,6 +17,12 @@ import {
 } from "./docsIngestService";
 import { searchAssistantDocsDb } from "./docsDbRetriever";
 import { searchDocsIndex } from "./docsRetriever";
+import { recordAssistantMetric } from "./assistantMetrics";
+import { enforceAssistantQuota } from "./assistantQuota";
+import {
+  redactAssistantMetadata,
+  redactAssistantText,
+} from "./assistantRedaction";
 import { resolveAssistantProvider } from "./providers";
 import type { AssistantProviderResponse } from "./providers/providerTypes";
 import type {
@@ -40,6 +46,12 @@ const DEFAULT_ASSISTANT_LLM_MODEL = "google/gemma-3n-e2b-it:free";
 const DEFAULT_ASSISTANT_LLM_MAX_INPUT_TOKENS = 8192;
 const DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS = 2048;
 const DEFAULT_ASSISTANT_LLM_TIMEOUT_MS = 20000;
+const DEFAULT_ASSISTANT_QUOTA_REQUESTS_PER_MINUTE = 20;
+const DEFAULT_ASSISTANT_QUOTA_REQUESTS_PER_DAY = 1000;
+const DEFAULT_ASSISTANT_QUOTA_GLOBAL_REQUESTS_PER_MINUTE = 0;
+const DEFAULT_ASSISTANT_QUOTA_GLOBAL_REQUESTS_PER_DAY = 0;
+const DEFAULT_ASSISTANT_QUOTA_LLM_TOKENS_PER_DAY = 0;
+const DEFAULT_ASSISTANT_QUOTA_GLOBAL_LLM_TOKENS_PER_DAY = 0;
 
 const ASSISTANT_LLM_SYSTEM_PROMPT = [
   "You are Nextless Assistant running in strict RAG mode.",
@@ -60,6 +72,12 @@ type AssistantRuntimeSettings = {
   llmMaxInputTokens: number;
   llmMaxOutputTokens: number;
   llmTimeoutMs: number;
+  quotaRequestsPerMinute: number;
+  quotaRequestsPerDay: number;
+  quotaGlobalRequestsPerMinute: number;
+  quotaGlobalRequestsPerDay: number;
+  quotaLlmTokensPerDay: number;
+  quotaGlobalLlmTokensPerDay: number;
 };
 
 export type AssistantRetrievalBackend = "filesystem" | "db";
@@ -73,6 +91,7 @@ export type AssistantChatInput = {
   message: string;
   mode?: AssistantMode;
   context?: AssistantChatContext;
+  actorId?: string | null;
 };
 
 export type AssistantLlmResult = {
@@ -221,6 +240,12 @@ const readRuntimeSettings = async (
     llmMaxInputTokensRaw,
     llmMaxOutputTokensRaw,
     llmTimeoutMsRaw,
+    quotaRequestsPerMinuteRaw,
+    quotaRequestsPerDayRaw,
+    quotaGlobalRequestsPerMinuteRaw,
+    quotaGlobalRequestsPerDayRaw,
+    quotaLlmTokensPerDayRaw,
+    quotaGlobalLlmTokensPerDayRaw,
   ] = await Promise.all([
     getSettingSafe(deps, "assistant.enabled", false),
     getSettingSafe(deps, "assistant.defaultMode", "docs-only"),
@@ -240,6 +265,36 @@ const readRuntimeSettings = async (
       DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS
     ),
     getSettingSafe(deps, "assistant.llm.timeoutMs", DEFAULT_ASSISTANT_LLM_TIMEOUT_MS),
+    getSettingSafe(
+      deps,
+      "assistant.quotas.requestsPerMinute",
+      DEFAULT_ASSISTANT_QUOTA_REQUESTS_PER_MINUTE
+    ),
+    getSettingSafe(
+      deps,
+      "assistant.quotas.requestsPerDay",
+      DEFAULT_ASSISTANT_QUOTA_REQUESTS_PER_DAY
+    ),
+    getSettingSafe(
+      deps,
+      "assistant.quotas.globalRequestsPerMinute",
+      DEFAULT_ASSISTANT_QUOTA_GLOBAL_REQUESTS_PER_MINUTE
+    ),
+    getSettingSafe(
+      deps,
+      "assistant.quotas.globalRequestsPerDay",
+      DEFAULT_ASSISTANT_QUOTA_GLOBAL_REQUESTS_PER_DAY
+    ),
+    getSettingSafe(
+      deps,
+      "assistant.quotas.llmTokensPerDay",
+      DEFAULT_ASSISTANT_QUOTA_LLM_TOKENS_PER_DAY
+    ),
+    getSettingSafe(
+      deps,
+      "assistant.quotas.globalLlmTokensPerDay",
+      DEFAULT_ASSISTANT_QUOTA_GLOBAL_LLM_TOKENS_PER_DAY
+    ),
   ]);
 
   return {
@@ -264,6 +319,30 @@ const readRuntimeSettings = async (
     llmTimeoutMs: normalizePositiveInteger(
       llmTimeoutMsRaw,
       DEFAULT_ASSISTANT_LLM_TIMEOUT_MS
+    ),
+    quotaRequestsPerMinute: normalizePositiveInteger(
+      quotaRequestsPerMinuteRaw,
+      DEFAULT_ASSISTANT_QUOTA_REQUESTS_PER_MINUTE
+    ),
+    quotaRequestsPerDay: normalizePositiveInteger(
+      quotaRequestsPerDayRaw,
+      DEFAULT_ASSISTANT_QUOTA_REQUESTS_PER_DAY
+    ),
+    quotaGlobalRequestsPerMinute: normalizePositiveInteger(
+      quotaGlobalRequestsPerMinuteRaw,
+      DEFAULT_ASSISTANT_QUOTA_GLOBAL_REQUESTS_PER_MINUTE
+    ),
+    quotaGlobalRequestsPerDay: normalizePositiveInteger(
+      quotaGlobalRequestsPerDayRaw,
+      DEFAULT_ASSISTANT_QUOTA_GLOBAL_REQUESTS_PER_DAY
+    ),
+    quotaLlmTokensPerDay: normalizePositiveInteger(
+      quotaLlmTokensPerDayRaw,
+      DEFAULT_ASSISTANT_QUOTA_LLM_TOKENS_PER_DAY
+    ),
+    quotaGlobalLlmTokensPerDay: normalizePositiveInteger(
+      quotaGlobalLlmTokensPerDayRaw,
+      DEFAULT_ASSISTANT_QUOTA_GLOBAL_LLM_TOKENS_PER_DAY
     ),
   };
 };
@@ -552,89 +631,175 @@ export const answerAssistantQuestion = async (
   overrides?: Partial<AssistantServiceDeps>
 ): Promise<AssistantChatResult> => {
   const deps = resolveDeps(overrides);
-  const settings = await readRuntimeSettings(deps);
-  if (!settings.enabled) {
-    throw new Error("assistant_disabled");
-  }
+  const startedAtMs = Date.now();
+  let metricFallbackUsed = false;
+  let metricNoHit = false;
+  let metricLlmUsed = false;
+  let metricLlmFailed = false;
+  let metricErrorCode: string | null = null;
 
-  const normalizedMessage = sanitizeAssistantMessage(input.message);
-  const requestedMode = normalizeMode(input.mode, settings.defaultMode);
-  const mode = resolveMode(requestedMode, settings);
+  try {
+    const settings = await readRuntimeSettings(deps);
+    if (!settings.enabled) {
+      throw new Error("assistant_disabled");
+    }
 
-  const retrieval = await retrieveDocsHits(deps, settings, normalizedMessage);
-  const composed = deps.composeDocsAnswer({
-    question: normalizedMessage,
-    hits: retrieval.hits,
-    maxSources: 3,
-  });
+    const normalizedMessage = sanitizeAssistantMessage(input.message);
+    const requestedMode = normalizeMode(input.mode, settings.defaultMode);
+    const mode = resolveMode(requestedMode, settings);
 
-  let effectiveMode: "docs-only" | "llm-rag" = mode.effectiveMode;
-  let llm: AssistantLlmResult | null = null;
-  let llmFallbackUsed = false;
+    enforceAssistantQuota(
+      {
+        requestsPerMinute: settings.quotaRequestsPerMinute,
+        requestsPerDay: settings.quotaRequestsPerDay,
+        globalRequestsPerMinute: settings.quotaGlobalRequestsPerMinute,
+        globalRequestsPerDay: settings.quotaGlobalRequestsPerDay,
+        llmTokensPerDay: settings.quotaLlmTokensPerDay,
+        globalLlmTokensPerDay: settings.quotaGlobalLlmTokensPerDay,
+      },
+      {
+        actorId: input.actorId ?? null,
+        mode: mode.effectiveMode,
+        estimatedLlmTokens:
+          mode.effectiveMode === "llm-rag" ? settings.llmMaxOutputTokens : 0,
+        nowMs: startedAtMs,
+      }
+    );
 
-  if (mode.effectiveMode === "llm-rag" && composed.sources.length > 0) {
-    try {
-      const provider = await deps.resolveAssistantProvider({
-        provider: settings.llmProvider,
-        model: settings.llmModel,
-      });
+    const retrieval = await retrieveDocsHits(deps, settings, normalizedMessage);
+    const composed = deps.composeDocsAnswer({
+      question: normalizedMessage,
+      hits: retrieval.hits,
+      maxSources: 3,
+    });
 
-      if (provider) {
-        const llmResponse = await provider.complete({
-          systemPrompt: ASSISTANT_LLM_SYSTEM_PROMPT,
-          userMessage: normalizedMessage,
-          snippets: toLlmSnippets(composed.sources),
-          limits: {
-            maxInputTokens: settings.llmMaxInputTokens,
-            maxOutputTokens: settings.llmMaxOutputTokens,
-            timeoutMs: settings.llmTimeoutMs,
-          },
+    metricNoHit = composed.sources.length === 0;
+
+    let effectiveMode: "docs-only" | "llm-rag" = mode.effectiveMode;
+    let llm: AssistantLlmResult | null = null;
+    let llmFallbackUsed = false;
+
+    if (mode.effectiveMode === "llm-rag" && composed.sources.length > 0) {
+      try {
+        const provider = await deps.resolveAssistantProvider({
+          provider: settings.llmProvider,
+          model: settings.llmModel,
         });
 
-        const answer = llmResponse.text.trim();
-        if (answer) {
-          llm = toLlmResult(llmResponse, settings);
-          return {
-            mode: "llm-rag",
-            template: composed.template,
-            answer,
-            confidence: normalizeConfidence(Math.max(0.35, composed.confidence)),
-            sources: composed.sources,
-            fallbackUsed:
-              composed.fallbackUsed || mode.fallbackUsed || retrieval.backendFallbackUsed,
-            requestedMode: mode.requestedMode,
-            effectiveMode: "llm-rag",
-            retrievalBackend: retrieval.retrievalBackend,
-            llm,
-          };
+        if (provider) {
+          const llmResponse = await provider.complete({
+            systemPrompt: ASSISTANT_LLM_SYSTEM_PROMPT,
+            userMessage: normalizedMessage,
+            snippets: toLlmSnippets(composed.sources),
+            limits: {
+              maxInputTokens: settings.llmMaxInputTokens,
+              maxOutputTokens: settings.llmMaxOutputTokens,
+              timeoutMs: settings.llmTimeoutMs,
+            },
+          });
+
+          const answer = llmResponse.text.trim();
+          if (answer) {
+            metricLlmUsed = true;
+            llm = toLlmResult(llmResponse, settings);
+            const fallbackUsed =
+              composed.fallbackUsed || mode.fallbackUsed || retrieval.backendFallbackUsed;
+            metricFallbackUsed = fallbackUsed;
+            return {
+              mode: "llm-rag",
+              template: composed.template,
+              answer,
+              confidence: normalizeConfidence(Math.max(0.35, composed.confidence)),
+              sources: composed.sources,
+              fallbackUsed,
+              requestedMode: mode.requestedMode,
+              effectiveMode: "llm-rag",
+              retrievalBackend: retrieval.retrievalBackend,
+              llm,
+            };
+          }
+        }
+
+        llmFallbackUsed = true;
+        metricLlmFailed = true;
+        effectiveMode = "docs-only";
+      } catch (error) {
+        llmFallbackUsed = true;
+        metricLlmFailed = true;
+        effectiveMode = "docs-only";
+
+        try {
+          await deps.logAudit({
+            actorId: input.actorId ?? null,
+            action: "assistant.provider.failure",
+            targetType: "assistant",
+            targetId: settings.llmProvider,
+            metadata: redactAssistantMetadata({
+              provider: settings.llmProvider,
+              model: settings.llmModel,
+              error:
+                error instanceof Error
+                  ? redactAssistantText(error.message)
+                  : "assistant_provider_failed",
+            }),
+          });
+        } catch {
+          // Audit is best-effort and must not block assistant chat response.
         }
       }
-
-      llmFallbackUsed = true;
-      effectiveMode = "docs-only";
-    } catch {
+    } else if (mode.effectiveMode === "llm-rag") {
       llmFallbackUsed = true;
       effectiveMode = "docs-only";
     }
-  } else if (mode.effectiveMode === "llm-rag") {
-    llmFallbackUsed = true;
-    effectiveMode = "docs-only";
-  }
 
-  return {
-    mode: "docs-only",
-    template: composed.template,
-    answer: composed.answer,
-    confidence: composed.confidence,
-    sources: composed.sources,
-    fallbackUsed:
+    const fallbackUsed =
       composed.fallbackUsed ||
       mode.fallbackUsed ||
       retrieval.backendFallbackUsed ||
-      llmFallbackUsed,
-    requestedMode: mode.requestedMode,
-    effectiveMode,
-    retrievalBackend: retrieval.retrievalBackend,
-    llm,
-  };
+      llmFallbackUsed;
+
+    metricFallbackUsed = fallbackUsed;
+
+    if (mode.requestedMode === "llm-rag" && effectiveMode === "docs-only") {
+      try {
+        await deps.logAudit({
+          actorId: input.actorId ?? null,
+          action: "assistant.mode.fallback",
+          targetType: "assistant",
+          targetId: "llm-rag",
+          metadata: {
+            reason: llmFallbackUsed ? "provider_or_snippet_fallback" : "llm_disabled",
+            retrievalBackend: retrieval.retrievalBackend,
+          },
+        });
+      } catch {
+        // Audit is best-effort and must not block assistant chat response.
+      }
+    }
+
+    return {
+      mode: "docs-only",
+      template: composed.template,
+      answer: composed.answer,
+      confidence: composed.confidence,
+      sources: composed.sources,
+      fallbackUsed,
+      requestedMode: mode.requestedMode,
+      effectiveMode,
+      retrievalBackend: retrieval.retrievalBackend,
+      llm,
+    };
+  } catch (error) {
+    metricErrorCode = error instanceof Error ? error.message : "assistant_error";
+    throw error;
+  } finally {
+    recordAssistantMetric({
+      latencyMs: Date.now() - startedAtMs,
+      fallbackUsed: metricFallbackUsed,
+      noHit: metricNoHit,
+      llmUsed: metricLlmUsed,
+      llmFailed: metricLlmFailed,
+      errorCode: metricErrorCode,
+    });
+  }
 };

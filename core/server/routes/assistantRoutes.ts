@@ -66,6 +66,18 @@ const mapAssistantError = (error: unknown) => {
         message: "Invalid assistant message",
         status: 400,
       };
+    case "assistant_rate_limited":
+      return {
+        code: "assistant_rate_limited",
+        message: "Assistant rate limit exceeded",
+        status: 429,
+      };
+    case "assistant_budget_exceeded":
+      return {
+        code: "assistant_budget_exceeded",
+        message: "Assistant token budget exceeded",
+        status: 429,
+      };
     default:
       return null;
   }
@@ -133,6 +145,7 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
           message: body.message,
           mode: body.mode,
           context: body.context,
+          actorId: ctx.user?.id ?? null,
         })
       );
     }

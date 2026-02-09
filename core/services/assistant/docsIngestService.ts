@@ -7,6 +7,8 @@ import { expandDocsTokens, normalizeDocsText, tokenizeDocsText } from "./docsInd
 
 const DEFAULT_INTERNAL_DOCS_ROOT = "_docs/_internal";
 const DEFAULT_MAX_CHUNK_CHARS = 1200;
+const DEFAULT_MAX_DOC_BODY_CHARS = 120_000;
+const DEFAULT_MAX_CHUNKS_PER_DOC = 240;
 const HEADING_REGEX = /^(#{1,6})\s+(.+?)\s*$/;
 const SKIPPED_FILENAMES = new Set(["README.md", "INTERNAL_DOC_TEMPLATE.md"]);
 const REQUIRED_SECTIONS = [
@@ -265,6 +267,14 @@ export const validateInternalDocContract = (
     });
   }
 
+  if (parsed.body.length > DEFAULT_MAX_DOC_BODY_CHARS) {
+    errors.push({
+      path: sourcePath,
+      code: "doc_body_too_large",
+      message: `Document body exceeds ${DEFAULT_MAX_DOC_BODY_CHARS} characters.`,
+    });
+  }
+
   const headings = new Set<string>();
   for (const line of parsed.body.split(/\r?\n/)) {
     const headingMatch = line.match(HEADING_REGEX);
@@ -389,6 +399,10 @@ const splitSectionIntoChunks = (
     const absoluteLine = section.lineStart + index;
     const trimmed = line.trimEnd();
 
+    if (trimmed.length > maxChunkChars) {
+      throw new Error("assistant_doc_chunk_oversized");
+    }
+
     if (buffer.length === 0 && trimmed.trim().length === 0) {
       bufferStartLine = absoluteLine + 1;
       continue;
@@ -422,6 +436,10 @@ export const buildInternalDocChunks = (
   parsed: ParsedInternalDoc,
   maxChunkChars = DEFAULT_MAX_CHUNK_CHARS
 ): InternalDocChunkInput[] => {
+  if (!Number.isFinite(maxChunkChars) || maxChunkChars <= 0) {
+    throw new Error("assistant_doc_chunk_limit_invalid");
+  }
+
   const fallbackHeading =
     parsed.meta.title || "Internal Documentation";
   const sections = parseSections(parsed.body, parsed.bodyStartLine, fallbackHeading);
@@ -434,6 +452,10 @@ export const buildInternalDocChunks = (
         chunkIndex: chunks.length,
       });
     }
+  }
+
+  if (chunks.length > DEFAULT_MAX_CHUNKS_PER_DOC) {
+    throw new Error("assistant_doc_chunks_excessive");
   }
   return chunks;
 };
@@ -534,7 +556,22 @@ export const ingestInternalDocsToDb = async (
         continue;
       }
 
-      const chunks = buildInternalDocChunks(parsed);
+      const chunks = (() => {
+        try {
+          return buildInternalDocChunks(parsed);
+        } catch (error) {
+          errors.push({
+            path: sourcePath,
+            code: "chunk_build_failed",
+            message:
+              error instanceof Error
+                ? error.message
+                : "assistant_doc_chunk_build_failed",
+          });
+          return null;
+        }
+      })();
+      if (!chunks) continue;
       const checksum = toChecksum(raw);
       const slug = path
         .relative(resolvedRoot, filePath)

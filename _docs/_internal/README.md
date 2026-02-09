@@ -63,5 +63,9 @@ Ingest pipeline validates:
 - frontmatter presence,
 - required sections,
 - parseability of markdown + frontmatter.
+- document body size guard (`doc_body_too_large`),
+- chunk generation guard (`assistant_doc_chunk_limit_invalid`, `assistant_doc_chunk_oversized`),
+- max chunks-per-doc guard (`assistant_doc_chunks_excessive`),
+- structured chunk build errors (`chunk_build_failed`).
 
 Invalid docs are reported in ingest run logs.
