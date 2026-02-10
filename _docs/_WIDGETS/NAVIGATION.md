@@ -80,7 +80,7 @@ CTA jest renderowane dla wariantow:
 
 ### Runtime link sources
 
-- `linksSource = "manual"`: renderuje `items` z konfiguracji widgetu.
+- `linksSource = "manual"`: renderuje `items` z konfiguracji widgetu (gdy brak poprawnych linkow, fallback do default items).
 - `linksSource = "menu"`:
   - gdy `menuKey` jest ustawione: runtime pobiera menu po ID i mapuje je do linkow.
   - gdy `menuKey` brak: fallback do menu o `location = "primary"`.

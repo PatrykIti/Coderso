@@ -138,7 +138,7 @@ export async function resolveNavigationRuntimeData(
 
   const requestedSource = normalizeLinksSource(data.linksSource);
   const manualItemsCandidate = normalizeNavigationItems(data.items);
-  const manualItems = ensureMinimumItems(manualItemsCandidate, navigationDefaults.items);
+  const manualItems = ensureMinimumItems(manualItemsCandidate, navigationDefaults.items, 1);
 
   if (requestedSource === "manual") {
     return { items: manualItems, linksSource: "manual" };

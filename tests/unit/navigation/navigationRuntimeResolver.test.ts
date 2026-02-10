@@ -4,10 +4,20 @@ import { resolveNavigationRuntimeData } from "../../../core/services/navigation/
 import { navigationDefaults } from "../../../core/widgets/core/navigation";
 import type { MenuItemNode } from "../../../core/services/menus/treeBuilder";
 
-test("resolveNavigationRuntimeData returns manual items and enforces minimum length", async () => {
+test("resolveNavigationRuntimeData keeps manual items when at least one is provided", async () => {
   const resolved = await resolveNavigationRuntimeData({
     linksSource: "manual",
     items: [{ label: "One", href: "/one" }],
+  });
+
+  expect(resolved.linksSource).toBe("manual");
+  expect(resolved.items).toEqual([{ label: "One", href: "/one" }]);
+});
+
+test("resolveNavigationRuntimeData falls back to defaults when manual items are empty", async () => {
+  const resolved = await resolveNavigationRuntimeData({
+    linksSource: "manual",
+    items: [],
   });
 
   expect(resolved.linksSource).toBe("manual");
