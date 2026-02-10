@@ -259,6 +259,13 @@ Flow:
 - Przykład: `footer` renderuje `slots.column-1/2/3` w kolumnach i `slots.bottom`
   w dolnym pasku legal/actions.
 
+## Navigation widget (runtime links)
+
+- `linksSource` wspiera `manual`, `menu`, `pages`.
+- `pages` buduje linki z opublikowanych stron z `page.data.settings.showInNav = true`.
+- Gdy wynik ma mniej niz 2 linki, runtime fallbackuje do manual `items`.
+- Szczegolowy kontrakt: `_docs/_WIDGETS/NAVIGATION.md`.
+
 ## Inheritance and page defaults
 
 - `page.settings.layout.sections.defaults` definiuje fallback dla blokow z

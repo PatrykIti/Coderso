@@ -56,6 +56,7 @@ const variantOptions = [
 const linkSourceOptions = [
   { id: "manual", label: "Manual links" },
   { id: "menu", label: "Existing menu" },
+  { id: "pages", label: "Pages index" },
 ] as const;
 
 const logoSourceOptions = [
@@ -426,6 +427,7 @@ export function NavigationWizardEditor({
     ...value.logo,
   };
   const linksSource = value.linksSource ?? "manual";
+  const usesPagesIndex = linksSource === "pages";
   const items = value.items.length > 0 ? value.items : navigationDefaults.items;
   const ctaEnabled = variantSupportsCta(variant);
 
@@ -481,7 +483,15 @@ export function NavigationWizardEditor({
         />
       ) : (
         <div className="space-y-2">
-          <p className="text-sm font-medium">Quick links</p>
+          <p className="text-sm font-medium">
+            {usesPagesIndex ? "Fallback links" : "Quick links"}
+          </p>
+          {usesPagesIndex ? (
+            <p className="text-xs text-muted-foreground">
+              Pages index uses published pages with <span className="font-medium">Show in navigation</span> enabled.
+              Fallback links appear when fewer than 2 pages match.
+            </p>
+          ) : null}
           <div className="space-y-2">
             {items.slice(0, 3).map((item, index) => (
               <div key={`${item.href || item.label}-${index}`} className="grid gap-2 sm:grid-cols-2">
@@ -840,6 +850,12 @@ export function NavigationVisualEditor({
           </p>
         ) : (
           <>
+            {linksSource === "pages" ? (
+              <p className="text-xs text-muted-foreground">
+                Links are sourced from published pages with <span className="font-medium">Show in navigation</span> enabled.
+                Manual links below act as fallback when fewer than 2 pages match.
+              </p>
+            ) : null}
             <div className="space-y-2">
               {items.map((item, index) => (
                 <div

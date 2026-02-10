@@ -43,6 +43,16 @@ export type PreviewResponse = {
   expiresAt: string;
 };
 
+export type PageTemplateOption = {
+  key: string;
+  label: string;
+};
+
+export type PageTemplateOptionsResponse = {
+  themeName: string;
+  templates: PageTemplateOption[];
+};
+
 export async function listPages() {
   return apiRequest<PageSummary[]>("/pages", { method: "GET" });
 }
@@ -105,4 +115,10 @@ export async function deletePage(id: string) {
   return apiRequest<{ ok: boolean }>(`/pages/${id}`, {
     method: "DELETE",
   }, { withCsrf: true });
+}
+
+export async function getPageTemplateOptions() {
+  return apiRequest<PageTemplateOptionsResponse>("/pages/template-options", {
+    method: "GET",
+  });
 }

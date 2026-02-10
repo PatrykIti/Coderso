@@ -1,19 +1,20 @@
-import { renderToString } from "react-dom/server";
-import type { CSSProperties, ReactNode } from "react";
+import { pathToFileURL } from "node:url";
 
-import { WidgetRenderer } from "../widgets/renderers/widgetRenderer";
-import type {
-  ContainerToken,
-  DeviceTarget,
-  SpacingToken,
-  WidgetBlock,
-} from "../widgets/types";
+import { renderToString } from "react-dom/server";
+import type { ReactNode } from "react";
+
+import { createTemplateCache } from "../themes/cache";
+import type { DeviceTarget, WidgetBlock } from "../widgets/types";
+import type { PageLayoutSettings } from "../services/pages/layoutSettings";
 import {
-  normalizePageLayoutSettings,
-  type PageLayoutSettings,
-  type PageMaxWidthToken,
-} from "../services/pages/layoutSettings";
-import type { WidgetRendererPageDefaults } from "../widgets/renderers/widgetRenderer";
+  DEFAULT_PAGE_TEMPLATE_KEY,
+  normalizePageTemplateKey,
+  resolvePageTemplatePath,
+} from "../services/pages/pageTemplateService";
+import {
+  DefaultRuntimePageShell,
+  type PageTemplateProps,
+} from "./pageRuntime";
 
 export type PublicPageRenderOptions = {
   title: string;
@@ -27,155 +28,35 @@ export type PublicPageRenderOptions = {
   layoutSettings?: PageLayoutSettings;
 };
 
-const spacingTokenToGapClassMap: Record<SpacingToken, string> = {
-  none: "gap-0",
-  xs: "gap-2",
-  sm: "gap-4",
-  md: "gap-6",
-  lg: "gap-8",
-  xl: "gap-12",
-  "2xl": "gap-16",
+export type PublicPageRuntimeRenderOptions = PublicPageRenderOptions & {
+  themeName?: string | null;
+  templateKey?: unknown;
 };
 
-const spacingTokenToPaddingTopClassMap: Record<SpacingToken, string> = {
-  none: "pt-0",
-  xs: "pt-2",
-  sm: "pt-4",
-  md: "pt-6",
-  lg: "pt-8",
-  xl: "pt-12",
-  "2xl": "pt-16",
-};
+type TemplateComponent<Props> = (props: Props) => ReactNode;
 
-const spacingTokenToPaddingBottomClassMap: Record<SpacingToken, string> = {
-  none: "pb-0",
-  xs: "pb-2",
-  sm: "pb-4",
-  md: "pb-6",
-  lg: "pb-8",
-  xl: "pb-12",
-  "2xl": "pb-16",
-};
-
-const pageContainerClassMap: Record<ContainerToken, string> = {
-  default: "mx-auto w-full max-w-6xl",
-  narrow: "mx-auto w-full max-w-4xl",
-  full: "w-full",
-};
-
-const pageMaxWidthClassMap: Record<PageMaxWidthToken, string> = {
-  "4xl": "max-w-4xl",
-  "5xl": "max-w-5xl",
-  "6xl": "max-w-6xl",
-  "7xl": "max-w-7xl",
-};
-
-const joinClasses = (...classes: Array<string | undefined | false>) =>
-  classes.filter(Boolean).join(" ");
-
-const renderBlocks = (
-  blocks: WidgetBlock[],
-  sectionGap: SpacingToken,
-  pageDefaults: WidgetRendererPageDefaults,
-  previewDevice?: DeviceTarget
+const loadTemplateComponent = async <Props extends PageTemplateProps>(
+  templatePath: string
 ) => {
-  if (!blocks.length) {
-    return (
-      <div className="mx-auto w-full max-w-4xl px-6 py-16 text-center text-muted-foreground">
-        This page has no content yet.
-      </div>
-    );
+  try {
+    const mod = await import(pathToFileURL(templatePath).href);
+    if (typeof mod.default === "function") {
+      return mod.default as TemplateComponent<Props>;
+    }
+  } catch (error) {
+    console.warn(`Failed to load template ${templatePath}`, error);
   }
-  return (
-    <main className={joinClasses("flex flex-col", spacingTokenToGapClassMap[sectionGap])}>
-      {blocks.map((block) => (
-        <WidgetRenderer
-          key={block.id}
-          block={block}
-          pageDefaults={pageDefaults}
-          previewDevice={previewDevice}
-        />
-      ))}
-    </main>
-  );
+  return null;
 };
 
-export function renderPublicPageHtml(options: PublicPageRenderOptions) {
-  const {
-    title,
-    blocks,
-    cssHref,
-    inlineCss,
-    devModuleScripts,
-    isPreview,
-    previewDevice,
-    metaDescription,
-    layoutSettings: rawLayoutSettings,
-  } = options;
-  const layoutSettings = normalizePageLayoutSettings(rawLayoutSettings);
-  const pageDefaults = layoutSettings.sections.defaults;
-  const wrapperPaddingClass = joinClasses(
-    spacingTokenToPaddingTopClassMap[layoutSettings.wrapper.padding.top],
-    spacingTokenToPaddingBottomClassMap[layoutSettings.wrapper.padding.bottom]
-  );
-  const wrapperContainerClass = joinClasses(
-    pageContainerClassMap[layoutSettings.wrapper.container],
-    layoutSettings.wrapper.container !== "full" && layoutSettings.wrapper.maxWidth
-      ? pageMaxWidthClassMap[layoutSettings.wrapper.maxWidth]
-      : undefined
-  );
-  const wrapperBackgroundMedia = layoutSettings.wrapper.background.media;
-  const wrapperBackgroundImage =
-    wrapperBackgroundMedia.type === "image"
-      ? wrapperBackgroundMedia.src ?? layoutSettings.wrapper.background.image ?? null
-      : null;
-  const wrapperBackgroundVideo =
-    wrapperBackgroundMedia.type === "video"
-      ? wrapperBackgroundMedia.src
-      : null;
-  const wrapperBackgroundStyle: CSSProperties = {
-    backgroundColor: layoutSettings.wrapper.background.color,
-    backgroundImage: wrapperBackgroundImage
-      ? `url(${wrapperBackgroundImage})`
-      : undefined,
-    backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
-    backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
-  };
-
-  const body = renderToString(
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
-      {isPreview ? (
-        <div className="sticky top-0 z-50 w-full bg-amber-500/90 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-black">
-          Preview mode
-        </div>
-      ) : null}
-      <div
-        className={joinClasses("relative overflow-hidden", wrapperPaddingClass)}
-        style={wrapperBackgroundStyle}
-      >
-        {wrapperBackgroundVideo ? (
-          <video
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-            src={wrapperBackgroundVideo}
-            autoPlay
-            loop
-            muted
-            playsInline
-            aria-hidden="true"
-          />
-        ) : null}
-        <div
-          className={joinClasses(
-            wrapperContainerClass,
-            wrapperBackgroundVideo ? "relative z-[1]" : undefined
-          )}
-        >
-          {renderBlocks(blocks, layoutSettings.sections.gap, pageDefaults, previewDevice)}
-        </div>
-      </div>
-    </div>
-  );
-
+const renderDocument = (
+  title: string,
+  body: ReactNode,
+  cssHref?: string | null,
+  inlineCss?: string | null,
+  metaDescription?: string | null,
+  devModuleScripts?: string[] | null
+) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
     <meta
@@ -197,9 +78,7 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
   }
 
   if (cssHref) {
-    headTags.push(
-      <link key="css" rel="stylesheet" href={cssHref} />
-    );
+    headTags.push(<link key="css" rel="stylesheet" href={cssHref} />);
   }
 
   if (Array.isArray(devModuleScripts)) {
@@ -212,6 +91,108 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
   }
 
   const head = renderToString(<>{headTags}</>);
+  const bodyHtml = renderToString(body);
 
-  return `<!doctype html><html lang="en"><head>${head}</head><body>${body}</body></html>`;
+  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}</body></html>`;
+};
+
+const PreviewBanner = () => (
+  <div className="sticky top-0 z-50 w-full bg-amber-500/90 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wider text-black">
+    Preview mode
+  </div>
+);
+
+const PageRuntimeRoot = ({
+  templateKey,
+  isPreview,
+  children,
+}: {
+  templateKey: string;
+  isPreview?: boolean;
+  children: ReactNode;
+}) => (
+  <div
+    className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)]"
+    data-template={`page-${templateKey}`}
+  >
+    {isPreview ? <PreviewBanner /> : null}
+    {children}
+  </div>
+);
+
+export function renderPublicPageHtml(options: PublicPageRenderOptions) {
+  const {
+    title,
+    blocks,
+    cssHref,
+    inlineCss,
+    devModuleScripts,
+    isPreview,
+    previewDevice,
+    metaDescription,
+    layoutSettings: rawLayoutSettings,
+  } = options;
+
+  const templateProps: PageTemplateProps = {
+    title,
+    templateKey: DEFAULT_PAGE_TEMPLATE_KEY,
+    blocks,
+    layoutSettings: rawLayoutSettings,
+    isPreview,
+    previewDevice,
+  };
+
+  const body = (
+    <PageRuntimeRoot templateKey={templateProps.templateKey} isPreview={isPreview}>
+      <DefaultRuntimePageShell {...templateProps} />
+    </PageRuntimeRoot>
+  );
+
+  return renderDocument(title, body, cssHref, inlineCss, metaDescription, devModuleScripts);
+}
+
+export async function renderPublicPageRuntimeHtml(
+  options: PublicPageRuntimeRenderOptions
+) {
+  const {
+    title,
+    blocks,
+    cssHref,
+    inlineCss,
+    devModuleScripts,
+    isPreview,
+    previewDevice,
+    metaDescription,
+    layoutSettings: rawLayoutSettings,
+    themeName,
+    templateKey,
+  } = options;
+
+  const normalizedTemplateKey = normalizePageTemplateKey(templateKey);
+  const cache = createTemplateCache();
+  const templatePath = await resolvePageTemplatePath({
+    themeName,
+    templateKey,
+    cache,
+  });
+  const Template = templatePath
+    ? await loadTemplateComponent<PageTemplateProps>(templatePath)
+    : null;
+
+  const templateProps: PageTemplateProps = {
+    title,
+    templateKey: normalizedTemplateKey,
+    blocks,
+    layoutSettings: rawLayoutSettings,
+    isPreview,
+    previewDevice,
+  };
+
+  const body = (
+    <PageRuntimeRoot templateKey={templateProps.templateKey} isPreview={isPreview}>
+      {Template ? <Template {...templateProps} /> : <DefaultRuntimePageShell {...templateProps} />}
+    </PageRuntimeRoot>
+  );
+
+  return renderDocument(title, body, cssHref, inlineCss, metaDescription, devModuleScripts);
 }

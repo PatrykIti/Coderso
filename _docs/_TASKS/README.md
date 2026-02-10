@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 9 tasks
+- **To Do:** 3 tasks
 - **In Progress:** 0 tasks
-- **Done:** 294 tasks
+- **Done:** 300 tasks
 
 ---
 
@@ -38,12 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-052 | Page Template and Navigation Runtime Parity | High | Large | 052-01..05 planned |
-| TASK-052-01 | Page Template Contract and Resolver | High | Medium | Normalize template key + resolver + fallback |
-| TASK-052-02 | Page Runtime Template Wiring | High | Medium | Public + preview page render use resolved page templates |
-| TASK-052-03 | Navigation Runtime Pages Source and ShowInNav | High | Large | `linksSource=pages` + runtime resolver + fallback rules |
-| TASK-052-04 | Admin UI Template and Navigation Source Wiring | High | Medium | Dynamic template options + navigation source UX |
-| TASK-052-05 | Regression Tests and Documentation Parity | Medium | Medium | QA matrix + docs/contracts sync |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -61,6 +55,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-052 | Page Template and Navigation Runtime Parity | High | Large | 052-01..05 complete |
+| TASK-052-05 | Regression Tests and Documentation Parity | Medium | Medium | QA matrix + docs/contracts sync |
+| TASK-052-04 | Admin UI Template and Navigation Source Wiring | High | Medium | Dynamic template options + navigation source UX |
+| TASK-052-03 | Navigation Runtime Pages Source and ShowInNav | High | Large | `linksSource=pages` + runtime resolver + fallback rules |
+| TASK-052-02 | Page Runtime Template Wiring | High | Medium | Public + preview page render use resolved page templates |
+| TASK-052-01 | Page Template Contract and Resolver | High | Medium | Normalize template key + resolver + fallback |
 | TASK-099 | Dashboard Data Wiring (Functional) | Medium | Medium | 099-01/02/03 complete |
 | TASK-099-03 | Dashboard UI Wiring | Medium | Medium | Dashboard page wired to API + loading/error states |
 | TASK-099-02 | Dashboard API | Medium | Medium | GET /dashboard route + registration + test |

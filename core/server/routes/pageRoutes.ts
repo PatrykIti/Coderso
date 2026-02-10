@@ -9,12 +9,14 @@ import {
   updatePage,
   type PageData,
 } from "../../services/pages/pageService";
+import { listPageTemplateOptions } from "../../services/pages/pageTemplateService";
 import { createPreviewToken } from "../../services/pages/previewService";
 import {
   listRevisions,
   restoreRevision,
 } from "../../services/pages/revisionService";
 import { logAudit } from "../../services/audit/auditService";
+import { getActiveThemeProfile } from "../../services/themes/themeProfileService";
 import {
   createPublicUrlContextFromHeaders,
   resolvePreviewUrl,
@@ -54,6 +56,20 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
   router.get("/pages", requirePermission("content:read"), async () => {
     return listPages();
   });
+
+  router.get(
+    "/pages/template-options",
+    requirePermission("content:read"),
+    async () => {
+      const profile = await getActiveThemeProfile();
+      const themeName = profile?.themeName ?? "default";
+      const resolved = await listPageTemplateOptions({ themeName });
+      return {
+        themeName: resolved.themeName,
+        templates: resolved.templates.map((item) => ({ key: item.key, label: item.label })),
+      };
+    }
+  );
 
   router.post("/pages", requirePermission("content:write"), async (ctx) => {
     validate(pageCreateSchema, ctx.body);

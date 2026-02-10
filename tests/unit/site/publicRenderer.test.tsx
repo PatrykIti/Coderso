@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { ComponentType } from "react";
 
-import { renderPublicPageHtml } from "../../../core/site/renderPublicPage";
+import { renderPublicPageHtml, renderPublicPageRuntimeHtml } from "../../../core/site/renderPublicPage";
 import {
   createHeroWidget,
   heroDefaults,
@@ -327,4 +327,29 @@ test("renderPublicPageHtml renders entry teaser resolved payload deterministical
   expect(html).toContain('data-entry-teaser-variant="horizontal"');
   expect(html).toContain('data-entry-teaser-source-mode="manual"');
   expect(html).toContain('data-entry-teaser-state="ready"');
+});
+
+test("renderPublicPageRuntimeHtml renders deterministic template marker", async () => {
+  const html = await renderPublicPageRuntimeHtml({
+    title: "Home",
+    blocks: [],
+    inlineCss: ":root{--color-bg:#ffffff;}",
+    themeName: "default",
+    templateKey: "landing",
+  });
+
+  expect(html).toContain('data-template="page-landing"');
+  expect(html).toContain("This page has no content yet.");
+});
+
+test("renderPublicPageRuntimeHtml normalizes template keys for runtime markers", async () => {
+  const html = await renderPublicPageRuntimeHtml({
+    title: "About",
+    blocks: [],
+    inlineCss: ":root{--color-bg:#ffffff;}",
+    themeName: "default",
+    templateKey: " About us ",
+  });
+
+  expect(html).toContain('data-template="page-about-us"');
 });

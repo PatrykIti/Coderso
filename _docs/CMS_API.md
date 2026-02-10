@@ -462,6 +462,7 @@ Delivery logs response (summary):
 Permissions: `content:read`, `content:write`, `content:publish`
 
 - `GET /pages`
+- `GET /pages/template-options`
 - `POST /pages`
 - `GET /pages/:id`
 - `PATCH /pages/:id`
@@ -521,6 +522,15 @@ Create/Update payload (summary):
   "token": "preview-token",
   "previewUrl": "/preview?type=page&token=preview-token",
   "expiresAt": "2026-02-07T12:00:00.000Z"
+}
+```
+
+`GET /pages/template-options` response:
+
+```json
+{
+  "themeName": "default",
+  "templates": [{ "key": "landing", "label": "Landing" }]
 }
 ```
 

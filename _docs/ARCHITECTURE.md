@@ -137,6 +137,12 @@ Zakres CMS, model danych, auth i security opisane sa w:
 
 ---
 
+## Public runtime rendering (pages)
+
+- Public rendering i runtime preview korzystaja z tego samego pipeline w `core/server/publicSite.tsx`.
+- Pipeline: resolve danych strony (published vs draft) -> normalizacja template key -> resolver theme/plugin/core -> render runtime page shell.
+- Navigation runtime hydration rozstrzyga `linksSource` (manual/menu/pages) przed renderem; tryb `pages` respektuje `settings.showInNav`.
+
 ## SEO Manager (v1)
 
 - Metadane SEO i wyniki audytu przechowywane w `seo_documents`.

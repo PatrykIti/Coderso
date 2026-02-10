@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { pages, users } from "../../db/schema";
 import { createRevisionTx, type RevisionData } from "./revisionService";
@@ -246,4 +246,78 @@ export async function deletePage(id: string) {
     .where(eq(pages.id, id))
     .returning();
   return page ?? null;
+}
+
+type PublishedPageNavigationRow = {
+  id: string;
+  title: string;
+  slug: string;
+  publishedData: Record<string, unknown> | null;
+};
+
+export type NavigationPageSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  showInNav: boolean;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const resolveShowInNav = (publishedData: unknown): boolean => {
+  if (!isRecord(publishedData)) return true;
+  const settings = isRecord(publishedData.settings) ? publishedData.settings : {};
+  return typeof settings.showInNav === "boolean" ? settings.showInNav : true;
+};
+
+export async function listPublishedPagesForNavigation(): Promise<NavigationPageSummary[]> {
+  const rows = await db
+    .select({
+      id: pages.id,
+      title: pages.title,
+      slug: pages.slug,
+      publishedData: pages.publishedData,
+    })
+    .from(pages)
+    .where(eq(pages.status, "published" as PageStatus));
+
+  const items = (rows as PublishedPageNavigationRow[])
+    .filter((row) => Boolean(row.publishedData))
+    .map((row) => ({
+      id: row.id,
+      title: (row.title ?? "").trim(),
+      slug: normalizeSitePath(row.slug ?? "/"),
+      showInNav: resolveShowInNav(row.publishedData),
+    }))
+    .filter((page) => page.showInNav);
+
+  items.sort((a, b) => {
+    const titleCompare = a.title.localeCompare(b.title);
+    if (titleCompare !== 0) return titleCompare;
+    const slugCompare = a.slug.localeCompare(b.slug);
+    if (slugCompare !== 0) return slugCompare;
+    return a.id.localeCompare(b.id);
+  });
+
+  return items;
+}
+
+export async function getPageSlugsByIds(pageIds: string[]) {
+  const ids = Array.from(
+    new Set(
+      pageIds
+        .filter((id): id is string => typeof id === "string")
+        .map((id) => id.trim())
+        .filter(Boolean)
+    )
+  );
+  if (ids.length === 0) return new Map<string, string>();
+
+  const rows = await db
+    .select({ id: pages.id, slug: pages.slug })
+    .from(pages)
+    .where(inArray(pages.id, ids));
+
+  return new Map(rows.map((row) => [row.id, normalizeSitePath(row.slug)]));
 }

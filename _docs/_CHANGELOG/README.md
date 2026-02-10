@@ -187,6 +187,11 @@ Project Change Log.
 | 190 | 2026-02-09 | Spacer widget | CMS/Widgets |
 | 191 | 2026-02-09 | Divider widget | CMS/Widgets |
 | 192 | 2026-02-09 | Assistant settings and data model | CMS/Settings |
+| 193 | 2026-02-09 | TASK-100-01 settings keys and runtime validation | Core/Settings |
+| 194 | 2026-02-09 | TASK-100-02 public base URL resolver and consumers | Core/Platform |
+| 195 | 2026-02-09 | TASK-100-03 auth TTL runtime sources | Core/Auth |
+| 196 | 2026-02-09 | TASK-100-04 admin UI runtime URL and auth TTL wiring | Admin/UI |
+| 197 | 2026-02-09 | TASK-100-05 first-run setup wizard and gating | Admin/UI |
 | 198 | 2026-02-09 | Assistant doc index and retrieval | Core/Assistant |
 | 199 | 2026-02-09 | Assistant API doc navigator runtime | Core/API |
 | 200 | 2026-02-09 | Assistant internal docs DB knowledge base | Core/Assistant |
@@ -197,6 +202,8 @@ Project Change Log.
 | 205 | 2026-02-09 | Dashboard service | Core/Services |
 | 206 | 2026-02-09 | Dashboard API | Core/API |
 | 207 | 2026-02-09 | Dashboard UI wiring | Admin/UI |
+| 208 | 2026-02-10 | Page template and navigation runtime parity | CMS/Pages |
+| 209 | 2026-02-10 | TASK-052 parity follow-up | CMS/Pages |
 | 141 | 2026-02-03 | Site settings steps & errors | Admin/UI |
 | 094 | 2026-01-31 | Forms core | CMS/Forms |
 | 095 | 2026-01-31 | Forms UI wiring | Admin/UI |

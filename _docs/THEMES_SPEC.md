@@ -73,6 +73,15 @@ Domyslne route mapping:
 2. Plugin view (jesli dostepny)
 3. Core default
 
+### Page template file naming
+
+Page templates use `type = "page"` and follow these conventions:
+
+- Default page template: `themes/<theme>/templates/page.tsx`
+- Keyed page template: `themes/<theme>/templates/page-<key>.tsx`
+
+`<key>` comes from `page.data.settings.template` (see `_docs/PAGE_MODEL.md`) and is normalized to a safe string (default: `landing`).
+
 Conflict rules:
 - Theme template zawsze wygrywa (explicit override).
 - Plugin view uzywane, gdy theme nie dostarcza template.

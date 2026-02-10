@@ -38,7 +38,7 @@ export type NavigationData = {
   logo: NavigationLogo;
   items: NavigationItem[];
   cta?: NavigationCta;
-  linksSource?: "manual" | "menu";
+  linksSource?: "manual" | "menu" | "pages";
   menuKey?: string;
   behavior?: NavigationBehavior;
   layout?: {
@@ -113,9 +113,9 @@ export const navigationSchema = {
       properties: {
         label: { type: "string" },
         href: { type: "string" },
-      },
     },
-    linksSource: { enum: ["manual", "menu"] },
+    },
+    linksSource: { enum: ["manual", "menu", "pages"] },
     menuKey: { type: "string" },
     behavior: {
       type: "object",

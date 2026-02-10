@@ -29,6 +29,7 @@ test("registerPageRoutes wires endpoints", () => {
   expect(paths).toEqual(
     expect.arrayContaining([
       "GET /pages",
+      "GET /pages/template-options",
       "POST /pages",
       "GET /pages/:id",
       "PATCH /pages/:id",

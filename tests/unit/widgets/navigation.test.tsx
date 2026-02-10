@@ -130,6 +130,29 @@ test("navigation schema accepts submenu children and image logo metadata", () =>
   ).not.toThrow();
 });
 
+test("navigation schema accepts pages links source", () => {
+  clearWidgets();
+  registerWidget(
+    createNavigationWidget({
+      wizard: StubEditor,
+      visual: StubEditor,
+      advanced: StubEditor,
+    })
+  );
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "nav-pages-source",
+      type: "navigation",
+      variant: "simple",
+      data: {
+        ...navigationDefaults,
+        linksSource: "pages",
+      },
+    })
+  ).not.toThrow();
+});
+
 test("navigation widget exposes right slot and visual variant ownership", () => {
   const widget = createNavigationWidget({
     wizard: StubEditor,

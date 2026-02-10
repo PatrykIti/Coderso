@@ -19,7 +19,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import type { PageDetail } from "@/services/pagesClient";
+import type { PageDetail, PageTemplateOption } from "@/services/pagesClient";
 import {
   normalizePageLayoutSettings,
   pageLayoutTokens,
@@ -44,6 +44,9 @@ type PageSettingsDrawerProps = {
   onOpenChange: (open: boolean) => void;
   page: PageDetail | null;
   settings: PageSettingsValue;
+  templateOptions?: PageTemplateOption[] | null;
+  templateOptionsLoading?: boolean;
+  templateOptionsError?: string | null;
   onSave: (payload: {
     title: string;
     slug: string;
@@ -70,6 +73,9 @@ export function PageSettingsDrawer({
   onOpenChange,
   page,
   settings,
+  templateOptions,
+  templateOptionsLoading = false,
+  templateOptionsError,
   onSave,
   isSubmitting = false,
   error,
@@ -80,6 +86,38 @@ export function PageSettingsDrawer({
   const [template, setTemplate] = useState(settings.template);
   const [showInNav, setShowInNav] = useState(settings.showInNav);
   const [layout, setLayout] = useState<PageLayoutSettings>(settings.layout);
+
+  const resolvedTemplateOptions = useMemo(() => {
+    const map = new Map<string, { key: string; label: string }>();
+    if (Array.isArray(templateOptions)) {
+      for (const option of templateOptions) {
+        const key = typeof option.key === "string" ? option.key.trim() : "";
+        if (!key) continue;
+        const label = typeof option.label === "string" ? option.label.trim() : key;
+        map.set(key, { key, label: label || key });
+      }
+    }
+
+    const currentKey = template.trim();
+    if (currentKey && !map.has(currentKey)) {
+      map.set(currentKey, {
+        key: currentKey,
+        label: `Custom (${currentKey})`,
+      });
+    }
+
+    if (!map.has("landing")) {
+      map.set("landing", { key: "landing", label: "Landing" });
+    }
+
+    const list = Array.from(map.values());
+    list.sort((a, b) => {
+      if (a.key === "landing") return -1;
+      if (b.key === "landing") return 1;
+      return a.label.localeCompare(b.label);
+    });
+    return list;
+  }, [templateOptions, template]);
 
   const canSubmit = useMemo(
     () => title.trim().length > 0 && slug.trim().length > 0,
@@ -186,15 +224,26 @@ export function PageSettingsDrawer({
                   </label>
                   <Select value={template} onValueChange={setTemplate}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Choose template" />
+                      <SelectValue
+                        placeholder={
+                          templateOptionsLoading ? "Loading templates..." : "Choose template"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="landing">Landing page</SelectItem>
-                      <SelectItem value="about">About</SelectItem>
-                      <SelectItem value="contact">Contact</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
+                      {resolvedTemplateOptions.map((option) => (
+                        <SelectItem key={option.key} value={option.key}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {templateOptionsLoading ? (
+                    <p className="text-xs text-muted-foreground">Loading template options...</p>
+                  ) : null}
+                  {templateOptionsError ? (
+                    <p className="text-xs text-destructive">{templateOptionsError}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">

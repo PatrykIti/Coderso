@@ -24,7 +24,7 @@ CTA jest renderowane dla wariantow:
 
 - minimal onboarding:
   - variant
-  - links source (`manual` / `menu`)
+  - links source (`manual` / `menu` / `pages`)
   - logo type + basic logo value
   - CTA on/off
 - safe defaults for non-technical users.
@@ -54,8 +54,8 @@ CTA jest renderowane dla wariantow:
 - `logo`: `type`, `value`, `href`, `alt`, `source`, `assetId`
 - `items`: `label`, `href`, optional `children[]`
 - `cta`: `label`, `href`
-- `linksSource`: `manual | menu`
-- `menuKey`: string
+- `linksSource`: `manual | menu | pages`
+- `menuKey`: string (menu id)
 - `behavior`: `sticky`, `transparent`, `collapseOnScroll`, `mobileMode`, `hideCtaOnMobile`
 - `layout`: `alignment`, `maxWidth`, `paddingY`, `itemGap`
 - `style`: surface/text/link/logo/CTA colors, border width/color, typography tokens
@@ -78,6 +78,17 @@ CTA jest renderowane dla wariantow:
   - `drawer` / `minimal`: linki ukryte na mobile + kompaktowy trigger
 - `behavior.hideCtaOnMobile = true` -> CTA ukryte na mobile.
 
+### Runtime link sources
+
+- `linksSource = "manual"`: renderuje `items` z konfiguracji widgetu.
+- `linksSource = "menu"`:
+  - gdy `menuKey` jest ustawione: runtime pobiera menu po ID i mapuje je do linkow.
+  - gdy `menuKey` brak: fallback do menu o `location = "primary"`.
+  - gdy wynik ma mniej niz 2 linki: fallback do manual `items`.
+- `linksSource = "pages"`:
+  - runtime buduje linki z opublikowanych stron (`status = published`) z `page.data.settings.showInNav = true` (brak pola traktujemy jako `true`).
+  - gdy wynik ma mniej niz 2 linki: fallback do manual `items`.
+
 ## Data model (summary)
 
 ```json
@@ -92,7 +103,7 @@ CTA jest renderowane dla wariantow:
     "assetId": "optional-media-id"
   },
   "linksSource": "manual",
-  "menuKey": "main",
+  "menuKey": "menu-id",
   "items": [
     {
       "label": "string",

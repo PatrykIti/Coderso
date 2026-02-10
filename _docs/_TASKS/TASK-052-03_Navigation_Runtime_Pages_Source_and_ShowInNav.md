@@ -5,7 +5,7 @@
 **Category:** CMS/Menus + CMS/Widgets + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-050-06-02, TASK-052-01, TASK-052-02  
-**Status:** To Do
+**Status:** Done (2026-02-10)  
 
 ---
 

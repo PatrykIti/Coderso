@@ -65,6 +65,30 @@ Notes:
 - `applyDefaultsToNewBlocks` affects editor insertion behavior (new blocks), not
   published rendering.
 
+## settings.template (v1)
+
+`page.data.settings.template` controls which **page template** is used in runtime rendering (public + runtime preview).
+
+Template resolution uses the same resolver order as other theme templates:
+1. Theme: `themes/<theme>/templates/page-<key>.tsx` then `themes/<theme>/templates/page.tsx`
+2. Plugins: `plugins/views/page-<key>.tsx` then `plugins/views/page.tsx`
+3. Core: `core/templates/page-<key>.tsx` then `core/templates/page.tsx`
+
+Key normalization rules:
+- trim + lowercase
+- replace non-alphanumeric sequences with `-`
+- strip leading/trailing `-`
+- fallback to `landing` when empty/invalid
+
+## settings.showInNav (v1)
+
+`page.data.settings.showInNav` controls whether a page participates in the runtime pages index used by the Navigation widget when `linksSource = "pages"`.
+
+Runtime semantics:
+- published pages only
+- missing `showInNav` is treated as `true` (backwards compatibility)
+- stable sort: `title` then `slug`
+
 ## Block structure
 
 ```json

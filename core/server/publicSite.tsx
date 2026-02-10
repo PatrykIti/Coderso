@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { DeviceTarget, WidgetBlock } from "../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
-import { renderPublicPageHtml } from "../site/renderPublicPage";
+import { renderPublicPageHtml, renderPublicPageRuntimeHtml } from "../site/renderPublicPage";
 import {
   renderPublicEntryDetailHtml,
   renderPublicEntryListHtml,
@@ -46,6 +46,7 @@ import {
   normalizeEntryTeaserData,
   type EntryTeaserData,
 } from "../widgets/core/entryTeaser";
+import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 
 export type PublicPageData = {
   title: string;
@@ -206,6 +207,18 @@ const hydrateRuntimeBlock = async (
       },
     };
   }
+  if (block.type === "navigation") {
+    const data = ensureRecord(block.data);
+    const resolved = await resolveNavigationRuntimeData(data);
+    nextBlock = {
+      ...block,
+      data: {
+        ...data,
+        items: resolved.items,
+        linksSource: resolved.linksSource,
+      },
+    };
+  }
 
   const sourceSlots = nextBlock.slots;
   if (sourceSlots && typeof sourceSlots === "object") {
@@ -241,18 +254,27 @@ const buildHtmlResponse = (html: string) =>
 
 const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
-  options?: { preview?: boolean; previewDevice?: DeviceTarget }
+  options?: { preview?: boolean; previewDevice?: DeviceTarget; themeName?: string }
 ) => {
   ensureRuntimeWidgetsRegistered();
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
   const sourceData = options?.preview ? page.currentData : page.publishedData;
+  const sourceRecord = ensureRecord(sourceData);
+  const settingsRecord = ensureRecord(sourceRecord.settings);
+  const seoRecord = ensureRecord(sourceRecord.seo);
+  const themeName = options?.themeName ?? (await resolvePublicThemeName());
+  const metaDescription =
+    typeof seoRecord.description === "string" && seoRecord.description.trim().length > 0
+      ? seoRecord.description.trim()
+      : null;
   const blocks = await hydrateRuntimeBlocks(toBlocks(sourceData), {
     preview: options?.preview ?? false,
     contentRoutes,
   });
-  return renderPublicPageHtml({
+
+  return renderPublicPageRuntimeHtml({
     title: page.title ?? "Page",
     blocks,
     cssHref,
@@ -261,6 +283,9 @@ const renderPublicPageHtmlInternal = async (
     previewDevice: options?.previewDevice,
     layoutSettings: getPageLayoutSettingsFromData(sourceData),
     devModuleScripts,
+    metaDescription,
+    themeName,
+    templateKey: settingsRecord.template,
   });
 };
 
@@ -495,7 +520,7 @@ export async function handlePublicRequest(req: Request) {
   if (page.status !== "published" || !page.publishedData) {
     return new Response("Not Found", { status: 404 });
   }
-  const html = await renderPublicPageHtmlInternal(page as PublicPageData);
+  const html = await renderPublicPageHtmlInternal(page as PublicPageData, { themeName });
   if (cacheTtlSeconds > 0) {
     setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
   }

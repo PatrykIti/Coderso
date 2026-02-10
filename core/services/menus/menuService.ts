@@ -166,6 +166,17 @@ export async function getMenuWithItems(menuId: string): Promise<MenuWithItems | 
   return { menu, items };
 }
 
+export async function getMenuWithItemsByLocation(location: string): Promise<MenuWithItems | null> {
+  const normalized = normalizeString(location);
+  if (!normalized) return null;
+
+  const [menu] = await db.select().from(menus).where(eq(menus.location, normalized));
+  if (!menu) return null;
+
+  const items = await listMenuItems(menu.id);
+  return { menu, items };
+}
+
 export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
   const menu = await getMenu(menuId);
   if (!menu) throw new Error("menu_not_found");

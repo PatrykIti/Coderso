@@ -12,10 +12,12 @@ import {
 import { isApiClientError } from "@/services/apiClient";
 import {
   getPage,
+  getPageTemplateOptions,
   publishPage,
   previewPage,
   updatePage,
   type PageDetail,
+  type PageTemplateOptionsResponse,
 } from "@/services/pagesClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { DeviceSwitcher } from "@/ui/pages/DeviceSwitcher";
@@ -208,6 +210,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [isPublishing, setIsPublishing] = useState(false);
   const [isUpdatingMeta, setIsUpdatingMeta] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
+  const [templateOptions, setTemplateOptions] = useState<PageTemplateOptionsResponse | null>(null);
+  const [templateOptionsError, setTemplateOptionsError] = useState<string | null>(null);
+  const [templateOptionsLoading, setTemplateOptionsLoading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -290,6 +295,33 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       active = false;
     };
   }, [initialPage, pageId]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    if (templateOptions || templateOptionsLoading) return;
+    let active = true;
+    setTemplateOptionsLoading(true);
+    setTemplateOptionsError(null);
+    getPageTemplateOptions()
+      .then((payload) => {
+        if (!active) return;
+        setTemplateOptions(payload);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setTemplateOptionsError(err.message);
+        } else {
+          setTemplateOptionsError("Failed to load template options.");
+        }
+      })
+      .finally(() => {
+        if (active) setTemplateOptionsLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [settingsOpen, templateOptions, templateOptionsLoading]);
 
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
@@ -638,6 +670,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         onOpenChange={setSettingsOpen}
         page={page}
         settings={pageSettings}
+        templateOptions={templateOptions?.templates ?? null}
+        templateOptionsLoading={templateOptionsLoading}
+        templateOptionsError={templateOptionsError}
         onSave={handleSaveSettings}
         isSubmitting={isUpdatingMeta}
         error={metaError}

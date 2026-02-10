@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + CMS/Themes + CMS/Menus + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-008-03, TASK-044, TASK-045, TASK-046, TASK-050-06, TASK-051  
-**Status:** To Do
+**Status:** Done (2026-02-10)  
 
 ---
 

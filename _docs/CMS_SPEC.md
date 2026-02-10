@@ -51,6 +51,12 @@ Przechowywanie:
 - Biezacy stan strony trzymany w `pages.current_data` (JSONB).
 - Historia zmian w `page_revisions.data` (JSONB).
 
+## Pages runtime parity (v1)
+
+- Public rendering i runtime preview korzystaja z tego samego pipeline.
+- `page.data.settings.template` wybiera page template przez resolver theme -> plugin -> core (fallback `landing`).
+- Navigation widget moze zrodlo `linksSource = "pages"` i filtruje po `settings.showInNav` (fallback do manual przy zbyt malej liczbie linkow).
+
 ---
 
 ## Publishing

@@ -14,7 +14,7 @@ public rendering.
 - Read-only.
 - Otwierany w modalu iframe z device switcherem.
 - Stylowany tokenami Site Theme.
-- Uzywa tego samego render pipeline co output publiczny.
+- Uzywa tego samego render pipeline co output publiczny (page templates + runtime link sources).
 
 ## Unified admin preview UX
 
