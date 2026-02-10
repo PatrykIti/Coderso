@@ -489,7 +489,7 @@ export function NavigationWizardEditor({
           {usesPagesIndex ? (
             <p className="text-xs text-muted-foreground">
               Pages index uses published pages with <span className="font-medium">Show in navigation</span> enabled.
-              Fallback links appear when fewer than 2 pages match.
+              Fallback links appear when no pages match.
             </p>
           ) : null}
           <div className="space-y-2">
@@ -850,12 +850,12 @@ export function NavigationVisualEditor({
           </p>
         ) : (
           <>
-            {linksSource === "pages" ? (
-              <p className="text-xs text-muted-foreground">
-                Links are sourced from published pages with <span className="font-medium">Show in navigation</span> enabled.
-                Manual links below act as fallback when fewer than 2 pages match.
-              </p>
-            ) : null}
+              {linksSource === "pages" ? (
+                <p className="text-xs text-muted-foreground">
+                  Links are sourced from published pages with <span className="font-medium">Show in navigation</span> enabled.
+                  Manual links below act as fallback when no pages match.
+                </p>
+              ) : null}
             <div className="space-y-2">
               {items.map((item, index) => (
                 <div

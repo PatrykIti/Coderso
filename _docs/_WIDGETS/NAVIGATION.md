@@ -84,10 +84,10 @@ CTA jest renderowane dla wariantow:
 - `linksSource = "menu"`:
   - gdy `menuKey` jest ustawione: runtime pobiera menu po ID i mapuje je do linkow.
   - gdy `menuKey` brak: fallback do menu o `location = "primary"`.
-  - gdy wynik ma mniej niz 2 linki: fallback do manual `items`.
+  - gdy wynik ma 0 linkow: fallback do manual `items`.
 - `linksSource = "pages"`:
   - runtime buduje linki z opublikowanych stron (`status = published`) z `page.data.settings.showInNav = true` (brak pola traktujemy jako `true`).
-  - gdy wynik ma mniej niz 2 linki: fallback do manual `items`.
+  - gdy wynik ma 0 linkow: fallback do manual `items`.
 
 ## Data model (summary)
 

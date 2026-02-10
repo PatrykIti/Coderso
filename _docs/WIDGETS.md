@@ -263,7 +263,7 @@ Flow:
 
 - `linksSource` wspiera `manual`, `menu`, `pages`.
 - `pages` buduje linki z opublikowanych stron z `page.data.settings.showInNav = true`.
-- Gdy wynik ma mniej niz 2 linki, runtime fallbackuje do manual `items`.
+- Gdy wynik (menu/pages) ma 0 linkow, runtime fallbackuje do manual `items`.
 - Szczegolowy kontrakt: `_docs/_WIDGETS/NAVIGATION.md`.
 
 ## Inheritance and page defaults

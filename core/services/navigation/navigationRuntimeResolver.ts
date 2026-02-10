@@ -82,8 +82,11 @@ const normalizeNavigationItems = (value: unknown): NavigationItem[] => {
   return normalizeList(value);
 };
 
-const ensureMinimumItems = (items: NavigationItem[], fallback: NavigationItem[]) =>
-  items.length >= 2 ? items : fallback;
+const ensureMinimumItems = (
+  items: NavigationItem[],
+  fallback: NavigationItem[],
+  minimumItems = 2
+) => (items.length >= minimumItems ? items : fallback);
 
 const collectMenuPageIds = (nodes: MenuItemNode[]) => {
   const ids: string[] = [];
@@ -150,7 +153,7 @@ export async function resolveNavigationRuntimeData(
       }))
       .filter((item) => item.label.trim().length > 0);
 
-    const safeItems = ensureMinimumItems(items, manualItems);
+    const safeItems = ensureMinimumItems(items, manualItems, 1);
     return {
       items: safeItems,
       linksSource: safeItems === items ? "pages" : "manual",
@@ -171,7 +174,6 @@ export async function resolveNavigationRuntimeData(
   const pageSlugsById = await resolvedDeps.getPageSlugsByIds(pageIds);
   const menuItems = mapMenuNodesToNavigationItems(menu.items, pageSlugsById);
 
-  const safeItems = ensureMinimumItems(menuItems, manualItems);
+  const safeItems = ensureMinimumItems(menuItems, manualItems, 1);
   return { items: safeItems, linksSource: safeItems === menuItems ? "menu" : "manual" };
 }
-

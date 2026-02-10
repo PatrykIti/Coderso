@@ -35,7 +35,7 @@ test("resolveNavigationRuntimeData resolves pages index when at least 2 pages ma
   expect(resolved.items.map((item) => item.href)).toEqual(["/", "/about"]);
 });
 
-test("resolveNavigationRuntimeData falls back to manual links when pages index is too small", async () => {
+test("resolveNavigationRuntimeData keeps pages source when exactly 1 page matches", async () => {
   const resolved = await resolveNavigationRuntimeData(
     { linksSource: "pages", items: navigationDefaults.items },
     undefined,
@@ -43,6 +43,19 @@ test("resolveNavigationRuntimeData falls back to manual links when pages index i
       listPublishedPagesForNavigation: async () => [
         { id: "p1", title: "Only", slug: "/only", showInNav: true },
       ],
+    }
+  );
+
+  expect(resolved.linksSource).toBe("pages");
+  expect(resolved.items.map((item) => item.href)).toEqual(["/only"]);
+});
+
+test("resolveNavigationRuntimeData falls back to manual links when pages index is empty", async () => {
+  const resolved = await resolveNavigationRuntimeData(
+    { linksSource: "pages", items: navigationDefaults.items },
+    undefined,
+    {
+      listPublishedPagesForNavigation: async () => [],
     }
   );
 
@@ -89,6 +102,33 @@ test("resolveNavigationRuntimeData resolves menu source and maps pageId to slug"
   ]);
 });
 
+test("resolveNavigationRuntimeData keeps menu source when only one item exists", async () => {
+  const nodes: MenuItemNode[] = [
+    {
+      id: "item-1",
+      label: "Home",
+      href: "/",
+      pageId: null,
+      parentId: null,
+      orderIndex: 0,
+      children: [],
+    },
+  ];
+
+  const resolved = await resolveNavigationRuntimeData(
+    { linksSource: "menu", menuKey: "menu-1", items: navigationDefaults.items },
+    undefined,
+    {
+      getMenuWithItems: async () =>
+        ({ menu: { id: "menu-1" }, items: nodes } as any),
+      getPageSlugsByIds: async () => new Map(),
+    }
+  );
+
+  expect(resolved.linksSource).toBe("menu");
+  expect(resolved.items).toEqual([{ label: "Home", href: "/", children: undefined }]);
+});
+
 test("resolveNavigationRuntimeData falls back to menu location when menuKey is missing", async () => {
   let calledLocation = 0;
   const nodes: MenuItemNode[] = [
@@ -128,4 +168,3 @@ test("resolveNavigationRuntimeData falls back to menu location when menuKey is m
   expect(resolved.linksSource).toBe("menu");
   expect(resolved.items.map((item) => item.href)).toEqual(["/", "/about"]);
 });
-
