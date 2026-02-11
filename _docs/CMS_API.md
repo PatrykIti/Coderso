@@ -540,6 +540,8 @@ Preview URL resolution policy (dotyczy pages/content/widget templates):
 - 3) request-derived `proto://host` (`x-forwarded-host` / `x-forwarded-proto` / `host`)
 - 4) relative path fallback (`/preview?...`) gdy brak poprawnego base URL
 
+Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhost/127.0.0.1` -> `http`.
+
 ---
 
 ## Widgets

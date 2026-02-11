@@ -45,6 +45,34 @@ test("resolvePublicBaseUrlFromSources builds URL from forwarded host/proto", () 
   expect(result).toBe("http://public.example.com/");
 });
 
+test("resolvePublicBaseUrlFromSources defaults to http for localhost when proto is missing", () => {
+  const result = resolvePublicBaseUrlFromSources({
+    settingValue: null,
+    envValue: "",
+    context: {
+      host: "localhost:3000",
+      forwardedHost: null,
+      forwardedProto: null,
+    },
+  });
+
+  expect(result).toBe("http://localhost:3000/");
+});
+
+test("resolvePublicBaseUrlFromSources defaults to https for non-localhost when proto is missing", () => {
+  const result = resolvePublicBaseUrlFromSources({
+    settingValue: null,
+    envValue: "",
+    context: {
+      host: "public.example.com",
+      forwardedHost: null,
+      forwardedProto: null,
+    },
+  });
+
+  expect(result).toBe("https://public.example.com/");
+});
+
 test("resolvePublicBaseUrlFromSources rejects invalid request host/proto", () => {
   const invalidHost = resolvePublicBaseUrlFromSources({
     settingValue: null,

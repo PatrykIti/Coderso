@@ -49,6 +49,8 @@ Resolver policy dla `previewUrl` zwracanego przez Admin API:
 3. request-derived `proto://host` (`x-forwarded-host` / `x-forwarded-proto` / `host`)
 4. relative path fallback (`/preview?...`)
 
+Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhost/127.0.0.1` -> `http`.
+
 ## Admin API response contract
 
 Preview endpoints zwracaja spojny shape:

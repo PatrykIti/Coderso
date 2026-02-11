@@ -57,7 +57,21 @@ const normalizeProto = (value: string | null | undefined) => {
   return isHttpProtocol(normalized) ? normalized.slice(0, -1) : null;
 };
 
-const resolveProtocol = (context: PublicUrlContext | undefined) => {
+const readHostname = (host: string) => {
+  try {
+    return new URL(`http://${host}`).hostname.toLowerCase();
+  } catch {
+    return host.toLowerCase();
+  }
+};
+
+const isLoopbackHost = (host: string | null) => {
+  if (!host) return false;
+  const hostname = readHostname(host);
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+};
+
+const resolveProtocol = (context: PublicUrlContext | undefined, host: string | null) => {
   const candidates = [context?.forwardedProto, context?.protocol];
   for (const candidate of candidates) {
     if (typeof candidate !== "string") continue;
@@ -66,7 +80,7 @@ const resolveProtocol = (context: PublicUrlContext | undefined) => {
     if (!normalized) return null;
     return normalized;
   }
-  return "https";
+  return isLoopbackHost(host) ? "http" : "https";
 };
 
 export function resolvePublicBaseUrlFromSources(
@@ -83,7 +97,7 @@ export function resolvePublicBaseUrlFromSources(
     normalizeHost(sources.context?.host);
   if (!host) return null;
 
-  const protocol = resolveProtocol(sources.context);
+  const protocol = resolveProtocol(sources.context, host);
   if (!protocol) return null;
 
   return `${protocol}://${host}/`;
