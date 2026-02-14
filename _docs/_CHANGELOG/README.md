@@ -243,6 +243,7 @@ Project Change Log.
 | 214 | 2026-02-14 | Page list clickable title | Admin/UI |
 | 215 | 2026-02-14 | Entry list clickable title | Admin/UI |
 | 216 | 2026-02-14 | Entry author panel fix | CMS/Content |
+| 217 | 2026-02-14 | Content type list clickable title | Admin/UI |
 
 ---
 *Details of changes are in the linked files.*
