@@ -112,9 +112,14 @@ export function PageTable({
               </TableCell>
               <TableCell>
                 <div className="flex flex-col">
-                  <span className="break-words font-semibold text-foreground">
+                  <button
+                    type="button"
+                    className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                    onClick={() => onEdit(page.id)}
+                    aria-label={`Edit page: ${page.title}`}
+                  >
                     {page.title}
-                  </span>
+                  </button>
                   <span className="text-xs text-muted-foreground break-all">
                     {page.slug}
                   </span>
