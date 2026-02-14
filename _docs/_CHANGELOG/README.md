@@ -238,6 +238,7 @@ Project Change Log.
 | 124 | 2026-02-02 | Widget template editor drag-and-drop | Admin/UI |
 | 210 | 2026-02-14 | Page settings retention and runtime preview polish | CMS/Pages |
 | 211 | 2026-02-14 | Page builder template sections | Admin/UI |
+| 212 | 2026-02-14 | Runtime preview FOUC dev modules | CMS/Site |
 
 ---
 *Details of changes are in the linked files.*

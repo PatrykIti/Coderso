@@ -61,6 +61,30 @@ test("renderPublicEntryListHtml renders entries and preview banner", async () =>
   expect(html).toContain("data-template=\"content-list\"");
 });
 
+test("renderPublicEntryListHtml hides preview until load when using dev modules", async () => {
+  const html = await renderPublicEntryListHtml({
+    title: "Blog",
+    contentType: baseContentType,
+    items: [
+      {
+        id: "1",
+        title: "Hello",
+        href: "/blog/hello",
+        entry: baseEntry,
+      },
+    ],
+    inlineCss: ":root{--color-bg:#ffffff;}",
+    isPreview: true,
+    devModuleScripts: [
+      "http://localhost:5174/site/@vite/client",
+      "http://localhost:5174/site/main.ts",
+    ],
+  });
+
+  expect(html).toContain("body{opacity:0}");
+  expect(html).toContain('window.addEventListener("load"');
+});
+
 test("renderPublicEntryDetailHtml renders entry data", async () => {
   const html = await renderPublicEntryDetailHtml({
     title: "Hello",

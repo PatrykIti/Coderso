@@ -88,7 +88,7 @@ Widget template preview moze dodac metadata UI:
 ## Runtime preview CSS loading
 
 - When a CSS bundle is available, we emit `rel="preload" as="style"` + `rel="stylesheet"`.
-- In preview mode, the body stays hidden until `window.load` to reduce FOUC.
+- In preview mode, the body stays hidden until `window.load`, regardless of whether styles come from a built CSS bundle or dev module scripts.
 
 ## Security
 

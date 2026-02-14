@@ -67,6 +67,22 @@ test("renderPublicPageHtml includes dev module scripts when provided", () => {
   expect(html).toContain("type=\"module\"");
 });
 
+test("renderPublicPageHtml hides preview until load when using dev modules", () => {
+  const html = renderPublicPageHtml({
+    title: "Dev preview",
+    blocks: [],
+    inlineCss: ":root{--color-bg:#fff;}",
+    isPreview: true,
+    devModuleScripts: [
+      "http://localhost:5174/site/@vite/client",
+      "http://localhost:5174/site/main.ts",
+    ],
+  });
+
+  expect(html).toContain("body{opacity:0}");
+  expect(html).toContain('window.addEventListener("load"');
+});
+
 test("renderPublicPageHtml applies wrapper settings and inherited block defaults", () => {
   clearWidgets();
   registerWidget(

@@ -156,7 +156,7 @@ const renderDocument = (
     headTags.push(<style key="inline-css">{inlineCss}</style>);
   }
 
-  if (isPreview && cssHref) {
+  if (isPreview) {
     headTags.push(<style key="preview-hide">{`body{opacity:0}`}</style>);
     headTags.push(
       <script
