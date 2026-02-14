@@ -40,6 +40,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-053 | Page Editor Templates Mode | High | Large | 053-01..06 |
 | TASK-053-06 | Page Settings Autosave + History | Medium | Large | Autosave + history labels |
+| TASK-053-07 | Admin Cache Layer | High | Large | WordPress-like cache with cross-tab refresh |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
