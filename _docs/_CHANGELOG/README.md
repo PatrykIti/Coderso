@@ -241,6 +241,7 @@ Project Change Log.
 | 212 | 2026-02-14 | Runtime preview FOUC dev modules | CMS/Site |
 | 213 | 2026-02-14 | Page preview + template section fixes summary | CMS/Pages |
 | 214 | 2026-02-14 | Page list clickable title | Admin/UI |
+| 215 | 2026-02-14 | Entry list clickable title | Admin/UI |
 
 ---
 *Details of changes are in the linked files.*

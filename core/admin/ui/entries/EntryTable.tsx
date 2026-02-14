@@ -165,9 +165,20 @@ export function EntryTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-semibold text-foreground">
-                      {entry.title}
-                    </span>
+                    {onEdit ? (
+                      <button
+                        type="button"
+                        className="text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                        onClick={() => onEdit(entry.id)}
+                        aria-label={`Edit entry: ${entry.title}`}
+                      >
+                        {entry.title}
+                      </button>
+                    ) : (
+                      <span className="font-semibold text-foreground">
+                        {entry.title}
+                      </span>
+                    )}
                     <span className="text-xs text-muted-foreground">
                       {entry.slug}
                     </span>
