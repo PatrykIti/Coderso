@@ -12,6 +12,7 @@ import {
 } from "../../../core/db/schema";
 import {
   createEntry,
+  updateEntry,
   createEntryPreview,
   getEntry,
   listEntryRevisions,
@@ -134,6 +135,42 @@ testIfDb("enforces slug uniqueness per type", async () => {
 
   await cleanup();
   contentTypeId = undefined;
+});
+
+testIfDb("updateEntry preserves author metadata", async () => {
+  const [user] = await db
+    .insert(users)
+    .values({
+      email: `author-${randomUUID()}@example.com`,
+      passwordHash: "test",
+      status: "active",
+    })
+    .returning();
+  userId = user?.id;
+
+  const type = await createContentType({
+    name: "Notes",
+    slug: `notes-${randomUUID()}`,
+    schema,
+  });
+  contentTypeId = type.id;
+
+  const entry = await createEntry(type.id, {
+    title: "Entry",
+    slug: `entry-${randomUUID()}`,
+    data: { title: "Hello" },
+    authorId: userId,
+  });
+  entryId = entry?.id;
+
+  const updated = await updateEntry(entry.id, { title: "Updated" });
+  expect(updated?.author?.id).toBe(userId);
+  expect(updated?.author?.email).toBe(user?.email);
+
+  await cleanup();
+  contentTypeId = undefined;
+  entryId = undefined;
+  userId = undefined;
 });
 
 testIfDb("updateEntryMetadata stores taxonomy tags, schedule, and SEO", async () => {

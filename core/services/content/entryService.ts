@@ -576,7 +576,7 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
     db
   );
 
-  const [row] = await db
+  await db
     .update(contentEntries)
     .set({
       title: input.title ?? entry.title,
@@ -596,7 +596,7 @@ export async function updateEntry(id: string, input: UpdateEntryInput) {
     });
   }
 
-  return row ?? null;
+  return getEntry(entry.id);
 }
 
 export async function publishEntry(entryId: string, userId: string) {
