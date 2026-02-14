@@ -150,6 +150,33 @@ Repeatable slot contract:
 
 ---
 
+## Template section block (v1)
+
+Template sections render widget templates inside page content flow.
+
+```json
+{
+  "id": "b-template",
+  "type": "template-section",
+  "variant": "default",
+  "data": {
+    "templateId": "template-id",
+    "templateName": "Hero Cluster",
+    "resolved": {
+      "blocks": [],
+      "error": "template_missing"
+    }
+  }
+}
+```
+
+Notes:
+- `data.resolved` is runtime-only; it is injected during preview/public rendering.
+- `error` values: `template_missing | template_unpublished | template_loop`.
+
+
+---
+
 ## Layout tokens (v1)
 
 Dozwolone wartosci:

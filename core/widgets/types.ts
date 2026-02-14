@@ -54,6 +54,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     variant: string;
     slots?: Record<string, WidgetBlock[]>;
     previewDevice?: DeviceTarget;
+    pageDefaults?: WidgetLayoutDefaults;
   }>;
 };
 
@@ -80,6 +81,12 @@ export type WidgetLayout = {
   padding: { top: InheritableSpacingToken; bottom: InheritableSpacingToken };
   margin: { top: InheritableSpacingToken; bottom: InheritableSpacingToken };
   background: { color: string; image?: string | null };
+};
+
+export type WidgetLayoutDefaults = {
+  container: ContainerToken;
+  padding: { top: SpacingToken; bottom: SpacingToken };
+  margin: { top: SpacingToken; bottom: SpacingToken };
 };
 
 export type WidgetVisibility = {

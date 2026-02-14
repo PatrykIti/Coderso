@@ -119,3 +119,9 @@ export {
   EntryTeaserVisualEditor,
   EntryTeaserWizardEditor,
 } from "./EntryTeaserEditors";
+
+export {
+  TemplateSectionAdvancedEditor,
+  TemplateSectionVisualEditor,
+  TemplateSectionWizardEditor,
+} from "./TemplateSectionEditors";

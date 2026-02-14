@@ -47,6 +47,7 @@ import {
   type EntryTeaserData,
 } from "../widgets/core/entryTeaser";
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
+import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
 
 export type PublicPageData = {
   title: string;
@@ -171,7 +172,7 @@ const ensureRecord = (value: unknown): Record<string, unknown> => {
 
 const hydrateRuntimeBlock = async (
   block: WidgetBlock,
-  options: { preview: boolean; contentRoutes: ContentRouteSetting[] }
+  options: { preview: boolean; contentRoutes: ContentRouteSetting[]; templateStack?: string[] }
 ): Promise<WidgetBlock> => {
   let nextBlock: WidgetBlock = block;
 
@@ -219,6 +220,36 @@ const hydrateRuntimeBlock = async (
       },
     };
   }
+  if (block.type === "template-section") {
+    const data = ensureRecord(block.data);
+    const templateId = typeof data.templateId === "string" ? data.templateId.trim() : "";
+    const resolution = await resolveTemplateSectionRuntimeData(templateId, {
+      preview: options.preview,
+      templateStack: options.templateStack ?? [],
+    });
+    const nextStack = templateId
+      ? [...(options.templateStack ?? []), templateId]
+      : options.templateStack;
+    const resolvedBlocks = resolution.blocks.length
+      ? await hydrateRuntimeBlocks(resolution.blocks, {
+          ...options,
+          templateStack: nextStack,
+        })
+      : [];
+
+    nextBlock = {
+      ...block,
+      data: {
+        ...data,
+        ...(templateId ? { templateId } : {}),
+        ...(resolution.templateName ? { templateName: resolution.templateName } : {}),
+        resolved: {
+          blocks: resolvedBlocks,
+          ...(resolution.error ? { error: resolution.error } : {}),
+        },
+      },
+    };
+  }
 
   const sourceSlots = nextBlock.slots;
   if (sourceSlots && typeof sourceSlots === "object") {
@@ -246,7 +277,7 @@ const hydrateRuntimeBlock = async (
 
 const hydrateRuntimeBlocks = async (
   blocks: WidgetBlock[],
-  options: { preview: boolean; contentRoutes: ContentRouteSetting[] }
+  options: { preview: boolean; contentRoutes: ContentRouteSetting[]; templateStack?: string[] }
 ) => Promise.all(blocks.map((block) => hydrateRuntimeBlock(block, options)));
 
 const buildHtmlResponse = (html: string) =>

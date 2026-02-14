@@ -27,6 +27,10 @@ import { createSpacerWidget, type SpacerData } from "./spacer";
 import { createStackWidget, type StackData } from "./stack";
 import { createStatsKpiWidget, type StatsKpiData } from "./statsKpi";
 import { createTeamWidget, type TeamData } from "./team";
+import {
+  createTemplateSectionWidget,
+  type TemplateSectionData,
+} from "./templateSection";
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
 import { createTimelineWidget, type TimelineData } from "./timeline";
 
@@ -38,6 +42,7 @@ type EditorBundle<T> = {
 
 export type CoreWidgetEditors = {
   section: EditorBundle<SectionData>;
+  templateSection: EditorBundle<TemplateSectionData>;
   gridColumns: EditorBundle<GridColumnsData>;
   splitLayout: EditorBundle<SplitLayoutData>;
   spacer: EditorBundle<SpacerData>;

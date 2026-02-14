@@ -15,6 +15,10 @@ import {
   createEntryTeaserWidget,
   type EntryTeaserData,
 } from "../../../core/widgets/core/entryTeaser";
+import {
+  createTemplateSectionWidget,
+  type TemplateSectionData,
+} from "../../../core/widgets/core/templateSection";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
 
@@ -23,6 +27,11 @@ const StubContentListEditor: ComponentType<WidgetEditorProps<ContentListData>> =
   null;
 const StubEntryTeaserEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> = () =>
   null;
+
+const StubTemplateSectionEditor: ComponentType<WidgetEditorProps<TemplateSectionData>> = () =>
+  null;
+
+const DummyWidgetEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
 test("renderPublicPageHtml renders title and preview banner", () => {
   const html = renderPublicPageHtml({
@@ -355,4 +364,54 @@ test("renderPublicPageRuntimeHtml normalizes template keys for runtime markers",
   });
 
   expect(html).toContain('data-template="page-about-us"');
+});
+
+
+test("renderPublicPageHtml renders template sections deterministically", () => {
+  clearWidgets();
+  registerWidget(
+    createTemplateSectionWidget({
+      wizard: StubTemplateSectionEditor,
+      visual: StubTemplateSectionEditor,
+      advanced: StubTemplateSectionEditor,
+    })
+  );
+  registerWidget({
+    type: "dummy",
+    title: "Dummy",
+    description: "Test widget",
+    category: "layout",
+    variants: [{ id: "default", label: "Default" }],
+    schema: { type: "object", additionalProperties: true },
+    defaults: {},
+    editor: {
+      wizard: DummyWidgetEditor,
+      visual: DummyWidgetEditor,
+      advanced: DummyWidgetEditor,
+    },
+    render: () => <div data-dummy="true" />,
+  });
+
+  const html = renderPublicPageHtml({
+    title: "Home",
+    blocks: [
+      {
+        id: "template-section-1",
+        type: "template-section",
+        variant: "default",
+        data: {
+          templateId: "template-1",
+          templateName: "Hero Cluster",
+          resolved: {
+            blocks: [
+              { id: "dummy-1", type: "dummy", variant: "default", data: {} },
+            ],
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain('data-template-section-state="ready"');
+  expect(html).toContain('data-dummy="true"');
 });

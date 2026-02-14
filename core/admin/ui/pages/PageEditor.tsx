@@ -25,7 +25,7 @@ import { RuntimePreviewDialog, type RuntimePreviewDeviceId } from "@/ui/preview/
 
 import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
-import { WidgetPicker } from "./builder/WidgetPicker";
+import { LibraryPanel } from "./builder/LibraryPanel";
 import { PageSettingsDrawer, type PageSettingsValue } from "./PageSettingsDrawer";
 import {
   applyWizardSelection,
@@ -381,6 +381,18 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setSelectedId(nextBlock.id);
   };
 
+  const handleAddTemplateSection = (template: { id: string; name: string }) => {
+    const nextBlock = buildNewBlock("template-section");
+    const nextData = {
+      ...(nextBlock.data as Record<string, unknown>),
+      templateId: template.id,
+      templateName: template.name,
+    };
+    const finalized = { ...nextBlock, data: nextData };
+    updateBlocks([...blocks, finalized]);
+    setSelectedId(finalized.id);
+  };
+
   const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
     const nextBlock = buildNewBlock(type);
     updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
@@ -519,7 +531,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   return (
     <EditorShell
       activeHref="/admin/pages"
-      leftPanel={<WidgetPicker onAdd={handleAddBlock} />}
+      leftPanel={<LibraryPanel onAddWidget={handleAddBlock} onAddTemplate={handleAddTemplateSection} />}
       rightPanel={
         <BlockSettings
           block={selectedBlock}
@@ -702,9 +714,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
             Browse available components and widgets.
           </SheetDescription>
           <div className="flex h-full flex-col overflow-y-auto">
-            <WidgetPicker
-              onAdd={(type) => {
+            <LibraryPanel
+              onAddWidget={(type) => {
                 handleAddBlock(type);
+                setMobileLibraryOpen(false);
+              }}
+              onAddTemplate={(template) => {
+                handleAddTemplateSection(template);
                 setMobileLibraryOpen(false);
               }}
             />

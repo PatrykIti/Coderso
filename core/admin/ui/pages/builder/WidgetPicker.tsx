@@ -12,7 +12,7 @@ type WidgetPickerProps = {
 };
 
 export function WidgetPicker({ onAdd }: WidgetPickerProps) {
-  const widgetRegistry = getWidgetRegistry();
+  const widgetRegistry = getWidgetRegistry().filter((widget) => widget.type !== "template-section");
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const filteredWidgets = useMemo(() => {

@@ -26,6 +26,7 @@ System widgetow zostal zaprojektowany, aby rozwiazac odwieczny konflikt miedzy "
 
 Wymagane:
 - Section (layout wrapper z repeatable regions)
+- Template section (reusable widget templates as sections)
 - Grid/Columns (layout primitive z responsywnym podzialem kolumn)
 - Stack (flow layout primitive dla sekwencyjnych grup widgetow)
 - Split Layout (dwu-kolumnowy layout z kontrola proporcji i collapse mobile)
@@ -104,6 +105,7 @@ Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:
 - `_docs/_WIDGETS/CONTENT_LIST.md`
 - `_docs/_WIDGETS/ENTRY_TEASER.md`
 - `_docs/_WIDGETS/SECTION.md`
+- `_docs/_WIDGETS/TEMPLATE_SECTION.md`
 - `_docs/_WIDGETS/GRID_COLUMNS.md`
 - `_docs/_WIDGETS/STACK.md`
 - `_docs/_WIDGETS/SPLIT_LAYOUT.md`

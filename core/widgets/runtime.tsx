@@ -17,6 +17,7 @@ export function ensureRuntimeWidgetsRegistered() {
   if (registered) return;
   registerCoreWidgets({
     section: noopEditors,
+    templateSection: noopEditors,
     gridColumns: noopEditors,
     splitLayout: noopEditors,
     spacer: noopEditors,

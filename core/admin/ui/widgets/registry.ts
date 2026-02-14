@@ -22,6 +22,9 @@ import {
   SectionAdvancedEditor,
   SectionVisualEditor,
   SectionWizardEditor,
+  TemplateSectionAdvancedEditor,
+  TemplateSectionVisualEditor,
+  TemplateSectionWizardEditor,
   ContactAdvancedEditor,
   ContactVisualEditor,
   ContactWizardEditor,
@@ -84,6 +87,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: SectionWizardEditor,
       visual: SectionVisualEditor,
       advanced: SectionAdvancedEditor,
+    },
+    templateSection: {
+      wizard: TemplateSectionWizardEditor,
+      visual: TemplateSectionVisualEditor,
+      advanced: TemplateSectionAdvancedEditor,
     },
     gridColumns: {
       wizard: GridColumnsWizardEditor,

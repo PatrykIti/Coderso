@@ -7,6 +7,7 @@ import type {
   DeviceTarget,
   SpacingToken,
   WidgetBlock,
+  WidgetLayoutDefaults,
 } from "../types";
 
 const containerClassMap: Record<ContainerToken, string> = {
@@ -67,11 +68,7 @@ const defaultLayout: {
   background: { color: "transparent", image: null },
 };
 
-export type WidgetRendererPageDefaults = {
-  container: ContainerToken;
-  padding: { top: SpacingToken; bottom: SpacingToken };
-  margin: { top: SpacingToken; bottom: SpacingToken };
-};
+export type WidgetRendererPageDefaults = WidgetLayoutDefaults;
 
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
@@ -198,6 +195,7 @@ export function WidgetRenderer({
           variant={normalized.variant ?? def.variants[0].id}
           slots={slots}
           previewDevice={previewDevice}
+          pageDefaults={pageDefaults}
         />
         {!hasSlotDefinitions && legacyChildren.length ? (
           <div className="mt-6 flex flex-col gap-6">

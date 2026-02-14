@@ -1,6 +1,7 @@
 # Widgets Index (v1)
 
 - `SECTION.md` - Section layout wrapper
+- `TEMPLATE_SECTION.md` - Template section (widget templates)
 - `GRID_COLUMNS.md` - Grid/columns layout primitive
 - `STACK.md` - Flow layout primitive
 - `SPLIT_LAYOUT.md` - Two-pane layout primitive

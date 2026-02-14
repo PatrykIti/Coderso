@@ -46,6 +46,7 @@ Model:
 - Strona sklada sie z blokow (widgetow).
 - Kazdy blok ma `type` (np. `hero`, `timeline`, `compare-timeline`) i `data`.
 - `data` jest walidowane przez JSON schema danego widgetu.
+- Page builder posiada zakladki Widgets/Templates; template sections renderuja widget templates jako bloki.
 
 Przechowywanie:
 - Biezacy stan strony trzymany w `pages.current_data` (JSONB).
