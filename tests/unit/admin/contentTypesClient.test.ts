@@ -285,7 +285,7 @@ test("listContentTypesCached reads from session storage", async () => {
     ];
     storage.setItem(
       "nextless.contentTypesCache",
-      JSON.stringify({ items: cached, savedAt: Date.now() })
+      JSON.stringify({ value: cached, savedAt: Date.now() })
     );
 
     const result = await listContentTypesCached();

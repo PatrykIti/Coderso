@@ -1,4 +1,5 @@
 import { apiRequest } from "./apiClient";
+import { clearSessionCache, readSessionCache, writeSessionCache } from "@/utils/sessionCache";
 
 export type ContentSchemaProperty = {
   type?: "string" | "number" | "boolean" | "array";
@@ -39,57 +40,20 @@ export type ContentTypePayload = {
 let cachedContentTypes: ContentTypeSummary[] | null = null;
 let cachedContentTypesPromise: Promise<ContentTypeSummary[]> | null = null;
 
+const isContentTypeList = (value: unknown): value is ContentTypeSummary[] =>
+  Array.isArray(value);
+
 const CONTENT_TYPES_CACHE_KEY = "nextless.contentTypesCache";
 const CONTENT_TYPES_CACHE_TTL_MS = 5 * 60 * 1000;
-
-const getSessionStorage = () => {
-  if (typeof sessionStorage === "undefined") return null;
-  return sessionStorage;
-};
-
-const readSessionCache = () => {
-  const storage = getSessionStorage();
-  if (!storage) return null;
-  const raw = storage.getItem(CONTENT_TYPES_CACHE_KEY);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as { items?: unknown; savedAt?: unknown };
-    if (!parsed || !Array.isArray(parsed.items) || typeof parsed.savedAt !== "number") {
-      storage.removeItem(CONTENT_TYPES_CACHE_KEY);
-      return null;
-    }
-    if (Date.now() - parsed.savedAt > CONTENT_TYPES_CACHE_TTL_MS) {
-      storage.removeItem(CONTENT_TYPES_CACHE_KEY);
-      return null;
-    }
-    return parsed.items as ContentTypeSummary[];
-  } catch {
-    storage.removeItem(CONTENT_TYPES_CACHE_KEY);
-    return null;
-  }
-};
-
-const writeSessionCache = (items: ContentTypeSummary[]) => {
-  const storage = getSessionStorage();
-  if (!storage) return;
-  const payload = JSON.stringify({ items, savedAt: Date.now() });
-  storage.setItem(CONTENT_TYPES_CACHE_KEY, payload);
-};
-
-const clearSessionCache = () => {
-  const storage = getSessionStorage();
-  if (!storage) return;
-  storage.removeItem(CONTENT_TYPES_CACHE_KEY);
-};
 
 const primeContentTypesCacheInternal = (items: ContentTypeSummary[]) => {
   cachedContentTypes = items;
   cachedContentTypesPromise = null;
-  writeSessionCache(items);
+  writeSessionCache(CONTENT_TYPES_CACHE_KEY, items);
 };
 
 const upsertCachedContentType = (item: ContentTypeSummary) => {
-  const current = cachedContentTypes ?? readSessionCache() ?? [];
+  const current = cachedContentTypes ?? readSessionCache(CONTENT_TYPES_CACHE_KEY, CONTENT_TYPES_CACHE_TTL_MS, isContentTypeList) ?? [];
   const index = current.findIndex((cached) => cached.id === item.id);
   const next = [...current];
   if (index == -1) {
@@ -101,14 +65,14 @@ const upsertCachedContentType = (item: ContentTypeSummary) => {
 };
 
 const removeCachedContentType = (id: string) => {
-  const current = cachedContentTypes ?? readSessionCache();
+  const current = cachedContentTypes ?? readSessionCache(CONTENT_TYPES_CACHE_KEY, CONTENT_TYPES_CACHE_TTL_MS, isContentTypeList);
   if (!current) return;
   primeContentTypesCacheInternal(current.filter((item) => item.id !== id));
 };
 
 export const getCachedContentTypes = () => {
   if (cachedContentTypes) return cachedContentTypes;
-  const sessionCached = readSessionCache();
+  const sessionCached = readSessionCache(CONTENT_TYPES_CACHE_KEY, CONTENT_TYPES_CACHE_TTL_MS, isContentTypeList);
   if (sessionCached) {
     cachedContentTypes = sessionCached;
   }
@@ -122,7 +86,7 @@ export const primeContentTypesCache = (items: ContentTypeSummary[]) => {
 export const clearContentTypesCache = () => {
   cachedContentTypes = null;
   cachedContentTypesPromise = null;
-  clearSessionCache();
+  clearSessionCache(CONTENT_TYPES_CACHE_KEY);
 };
 
 export async function listContentTypes() {
