@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -9,17 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { isApiClientError } from "@/services/apiClient";
-import {
-  listWidgetTemplates,
-  type WidgetTemplate,
-} from "@/services/widgetTemplatesClient";
-
 import {
   normalizeTemplateSectionData,
   templateSectionDefaults,
   type TemplateSectionData,
 } from "../../../../widgets/core/templateSection";
+import { useWidgetTemplates } from "../hooks/useWidgetTemplates";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 
 const NO_TEMPLATE_VALUE = "__no-template__";
@@ -57,33 +52,7 @@ function TemplateSelectField({
   value: TemplateSectionData;
   onChange: (next: TemplateSectionData) => void;
 }) {
-  const [templates, setTemplates] = useState<WidgetTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    listWidgetTemplates()
-      .then((payload) => {
-        if (!active) return;
-        setTemplates(payload.items ?? []);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load widget templates.");
-        }
-      })
-      .finally(() => {
-        if (!active) return;
-        setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const { items: templates, isLoading, error } = useWidgetTemplates();
 
   const options = useMemo(() => templates, [templates]);
   const selectedId = value.templateId?.trim();

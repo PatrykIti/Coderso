@@ -1,15 +1,11 @@
 import { Plus, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { isApiClientError } from "@/services/apiClient";
-import {
-  listWidgetTemplates,
-  type WidgetTemplate,
-} from "@/services/widgetTemplatesClient";
+import { useWidgetTemplates } from "@/ui/widgets/hooks/useWidgetTemplates";
 
 const statusBadgeMap: Record<string, string> = {
   published: "Published",
@@ -21,34 +17,8 @@ type TemplatePickerProps = {
 };
 
 export function TemplatePicker({ onAdd }: TemplatePickerProps) {
-  const [templates, setTemplates] = useState<WidgetTemplate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { items: templates, isLoading, error } = useWidgetTemplates();
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    let active = true;
-    listWidgetTemplates()
-      .then((payload) => {
-        if (!active) return;
-        setTemplates(payload.items ?? []);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load templates.");
-        }
-      })
-      .finally(() => {
-        if (!active) return;
-        setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredTemplates = useMemo(() => {
