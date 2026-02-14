@@ -74,6 +74,7 @@ export function createCoreWidgetDefinitions(
 ): Array<WidgetDefinition<any>> {
   return [
     createSectionWidget(editors.section),
+    createTemplateSectionWidget(editors.templateSection),
     createGridColumnsWidget(editors.gridColumns),
     createSplitLayoutWidget(editors.splitLayout),
     createSpacerWidget(editors.spacer),
