@@ -26,6 +26,7 @@ import {
   type PageLayoutSettings,
   type PageMaxWidthToken,
 } from "../../../services/pages/layoutSettings";
+import { DEFAULT_PAGE_REVISION_RETENTION, MAX_PAGE_REVISION_RETENTION, MIN_PAGE_REVISION_RETENTION, normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
 import {
   containerTokens,
   spacingTokens,
@@ -37,6 +38,7 @@ type PageSettingsValue = {
   template: string;
   showInNav: boolean;
   layout: PageLayoutSettings;
+  revisionRetention: number;
 };
 
 type PageSettingsDrawerProps = {
@@ -86,6 +88,7 @@ export function PageSettingsDrawer({
   const [template, setTemplate] = useState(settings.template);
   const [showInNav, setShowInNav] = useState(settings.showInNav);
   const [layout, setLayout] = useState<PageLayoutSettings>(settings.layout);
+  const [revisionRetention, setRevisionRetention] = useState(settings.revisionRetention);
 
   const resolvedTemplateOptions = useMemo(() => {
     const map = new Map<string, { key: string; label: string }>();
@@ -134,6 +137,7 @@ export function PageSettingsDrawer({
         template,
         showInNav,
         layout,
+        revisionRetention,
       },
     });
   };
@@ -142,7 +146,7 @@ export function PageSettingsDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex h-full min-h-0 w-full flex-col p-0 sm:max-w-2xl"
+        className="flex h-full min-h-0 w-full flex-col overflow-hidden p-0 sm:max-w-2xl"
         showCloseButton={false}
       >
         <div className="flex items-center justify-between border-b px-6 py-4">
@@ -159,7 +163,7 @@ export function PageSettingsDrawer({
           </SheetClose>
         </div>
 
-        <ScrollArea className="flex-1 px-6 py-6">
+        <ScrollArea className="flex-1 min-h-0 px-6 py-6">
           <div className="space-y-6">
             {error ? (
               <Alert variant="destructive">
@@ -259,6 +263,34 @@ export function PageSettingsDrawer({
                     />
                   </div>
                 </div>
+              </div>
+            </div>
+
+
+            <div className="rounded-lg border p-4">
+              <p className="text-sm font-semibold">Revision history</p>
+              <p className="text-xs text-muted-foreground">
+                Limit how many publish snapshots are kept per page.
+              </p>
+              <div className="mt-4 space-y-2">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  Revisions to keep
+                </label>
+                <Input
+                  type="number"
+                  min={MIN_PAGE_REVISION_RETENTION}
+                  max={MAX_PAGE_REVISION_RETENTION}
+                  value={revisionRetention}
+                  onChange={(event) => {
+                    setRevisionRetention(
+                      normalizePageRevisionRetentionValue(event.target.value)
+                    );
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Default is {DEFAULT_PAGE_REVISION_RETENTION}. Range{" "}
+                  {MIN_PAGE_REVISION_RETENTION}–{MAX_PAGE_REVISION_RETENTION}.
+                </p>
               </div>
             </div>
 

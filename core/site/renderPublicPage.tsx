@@ -55,7 +55,8 @@ const renderDocument = (
   cssHref?: string | null,
   inlineCss?: string | null,
   metaDescription?: string | null,
-  devModuleScripts?: string[] | null
+  devModuleScripts?: string[] | null,
+  isPreview?: boolean
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -77,7 +78,23 @@ const renderDocument = (
     headTags.push(<style key="inline-css">{inlineCss}</style>);
   }
 
+  if (isPreview && cssHref) {
+    headTags.push(<style key="preview-hide">{`body{opacity:0}`}</style>);
+    headTags.push(
+      <script
+        key="preview-show"
+        dangerouslySetInnerHTML={{
+          __html:
+            "window.addEventListener(\"load\",()=>{document.body.style.opacity=\"1\";});",
+        }}
+      />
+    );
+  }
+
   if (cssHref) {
+    headTags.push(
+      <link key="css-preload" rel="preload" as="style" href={cssHref} />
+    );
     headTags.push(<link key="css" rel="stylesheet" href={cssHref} />);
   }
 
@@ -148,7 +165,7 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     </PageRuntimeRoot>
   );
 
-  return renderDocument(title, body, cssHref, inlineCss, metaDescription, devModuleScripts);
+  return renderDocument(title, body, cssHref, inlineCss, metaDescription, devModuleScripts, isPreview);
 }
 
 export async function renderPublicPageRuntimeHtml(
@@ -194,5 +211,5 @@ export async function renderPublicPageRuntimeHtml(
     </PageRuntimeRoot>
   );
 
-  return renderDocument(title, body, cssHref, inlineCss, metaDescription, devModuleScripts);
+  return renderDocument(title, body, cssHref, inlineCss, metaDescription, devModuleScripts, isPreview);
 }

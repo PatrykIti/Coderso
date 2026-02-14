@@ -1,10 +1,11 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { pages, users } from "../../db/schema";
-import { createRevisionTx, type RevisionData } from "./revisionService";
+import { createRevisionTx, pruneRevisionsTx, type RevisionData } from "./revisionService";
 import { invalidateSiteCachePath, normalizeSitePath } from "../../site/cache/siteCache";
 import { getSetting } from "../settings/settingsService";
 import { normalizePageDataLayout } from "./layoutSettings";
+import { resolvePageRevisionRetention } from "./revisionRetention";
 
 export type PageStatus = "draft" | "published" | "scheduled" | "archived";
 export type PageData = Record<string, unknown>;
@@ -152,7 +153,10 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
 
     const nextData = preparePageData((data ?? page.currentData) as PageData);
 
+    const retention = resolvePageRevisionRetention(nextData as Record<string, unknown>);
+
     await createRevisionTx(tx, id, nextData as RevisionData, userId);
+    await pruneRevisionsTx(tx, id, retention);
 
     const publishedData = toPublishedData(nextData);
     const [updated] = await tx

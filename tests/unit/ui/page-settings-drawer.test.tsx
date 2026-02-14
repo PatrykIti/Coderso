@@ -18,6 +18,7 @@ const baseSettings = {
   template: "landing",
   showInNav: true,
   layout: normalizePageLayoutSettings(undefined),
+  revisionRetention: 10,
 };
 
 const renderDrawer = (
@@ -40,6 +41,7 @@ test("PageSettingsDrawer renders layout and defaults sections", () => {
   const html = renderDrawer();
 
   expect(html).toContain("Template and navigation");
+  expect(html).toContain("Revision history");
   expect(html).toContain("Layout and appearance");
   expect(html).toContain("Default widget layout");
   expect(html).toContain("Apply defaults to new blocks");

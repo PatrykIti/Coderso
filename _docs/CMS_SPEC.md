@@ -69,7 +69,8 @@ Zasady:
 - publikacja kopiuje dane z draft do published.
 - publikacja tworzy revision.
 - rollback do revision przywraca dane.
-- v2: rozwazyc pruning starych rewizji i/lub kompresje JSONB.
+- retain policy: `settings.revisionRetention` (default 10) controls how many publish revisions are kept per page.
+- oldest revisions are pruned on publish when limit is exceeded.
 
 ---
 

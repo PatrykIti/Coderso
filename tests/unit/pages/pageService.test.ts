@@ -115,6 +115,44 @@ testIfDb("create/update/publish/unpublish page", async () => {
   createdUserId = undefined;
 });
 
+testIfDb("publish respects revision retention", async () => {
+  const email = `editor-${randomUUID()}@example.com`;
+  const [user] = await db
+    .insert(users)
+    .values({ email, passwordHash: "test", status: "active" })
+    .returning();
+  const userId = user?.id;
+  if (!userId) throw new Error("missing_test_user");
+
+  const slug = `retain-${randomUUID()}`;
+  const page = await createPage({
+    title: "Retention",
+    slug,
+    data: {
+      schemaVersion: 1,
+      blocks: [],
+      settings: { revisionRetention: 2 },
+    },
+  });
+
+  const payload = {
+    schemaVersion: 1,
+    blocks: [],
+    settings: { revisionRetention: 2 },
+  };
+
+  await publishPage(page.id, userId!, payload);
+  await publishPage(page.id, userId!, payload);
+  await publishPage(page.id, userId!, payload);
+
+  const revisions = await listRevisions(page.id);
+  expect(revisions.length).toBe(2);
+  expect(revisions[0]?.version).toBe(3);
+  expect(revisions[1]?.version).toBe(2);
+
+  await cleanup(page.id, userId);
+});
+
 testIfDb("delete page removes it", async () => {
   const page = await createPage({
     title: "Delete Me",

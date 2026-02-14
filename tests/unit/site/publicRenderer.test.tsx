@@ -36,6 +36,9 @@ test("renderPublicPageHtml renders title and preview banner", () => {
   expect(html).toContain("<title>About Us</title>");
   expect(html).toContain("Preview mode");
   expect(html).toContain("/site/assets/site.css");
+  expect(html).toContain("rel=\"preload\"");
+  expect(html).toContain("as=\"style\"");
+  expect(html).toContain("body{opacity:0}");
   expect(html).toContain("--color-bg:#ffffff");
 });
 

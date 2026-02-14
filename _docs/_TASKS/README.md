@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 10 tasks
+- **To Do:** 6 tasks
 - **In Progress:** 0 tasks
-- **Done:** 300 tasks
+- **Done:** 304 tasks
 
 ---
 
@@ -40,10 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-053 | Page Editor Templates Mode | High | Large | 053-01..06 |
 | TASK-053-01 | Page Builder Templates Mode | High | Large | Templates tab + template sections |
-| TASK-053-02 | Page Settings Drawer Usability | High | Medium | Scroll + template edits |
-| TASK-053-03 | Runtime Preview Dialog UX + Device Sync | Medium | Medium | Single close + device sync |
-| TASK-053-04 | Page Revisions Retention Policy | Medium | Medium | Retention rules + pruning |
-| TASK-053-05 | Runtime Preview FOUC Reduction | Medium | Medium | CSS preload + reduce flash |
 | TASK-053-06 | Page Settings Autosave + History | Medium | Large | Autosave + history labels |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
@@ -62,6 +58,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-053-05 | Runtime Preview FOUC Reduction | Medium | Medium | CSS preload + preview hide |
+| TASK-053-04 | Page Revisions Retention Policy | Medium | Medium | Per-page retention + pruning |
+| TASK-053-03 | Runtime Preview Dialog UX + Device Sync | Medium | Medium | Single close + device sync |
+| TASK-053-02 | Page Settings Drawer Usability | High | Medium | Scroll + retention input |
 | TASK-052 | Page Template and Navigation Runtime Parity | High | Large | 052-01..05 complete |
 | TASK-052-05 | Regression Tests and Documentation Parity | Medium | Medium | QA matrix + docs/contracts sync |
 | TASK-052-04 | Admin UI Template and Navigation Source Wiring | High | Medium | Dynamic template options + navigation source UX |

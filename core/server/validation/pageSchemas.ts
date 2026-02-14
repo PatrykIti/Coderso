@@ -205,6 +205,7 @@ const pageDataSchema = {
         template: { type: "string" },
         showInNav: { type: "boolean" },
         layout: pageLayoutSchema,
+        revisionRetention: { type: "number", minimum: 1, maximum: 100 },
       },
     },
   },

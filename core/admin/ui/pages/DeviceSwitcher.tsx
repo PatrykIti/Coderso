@@ -10,13 +10,20 @@ const devices = [
   { id: "mobile", label: "Mobile", icon: Smartphone },
 ] as const;
 
-type DeviceId = (typeof devices)[number]["id"];
+export type DeviceId = (typeof devices)[number]["id"];
 
-export function DeviceSwitcher() {
-  const [active, setActive] = useState<DeviceId>("desktop");
+type DeviceSwitcherProps = {
+  value?: DeviceId;
+  onChange?: (value: DeviceId) => void;
+  className?: string;
+};
+
+export function DeviceSwitcher({ value, onChange, className }: DeviceSwitcherProps) {
+  const [internalValue, setInternalValue] = useState<DeviceId>("desktop");
+  const active = value ?? internalValue;
 
   return (
-    <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+    <div className={cn("flex items-center gap-1 rounded-lg bg-muted p-1", className)}>
       {devices.map((device) => {
         const isActive = device.id === active;
         const Icon = device.icon;
@@ -26,7 +33,12 @@ export function DeviceSwitcher() {
             type="button"
             variant={isActive ? "secondary" : "ghost"}
             size="icon-sm"
-            onClick={() => setActive(device.id)}
+            onClick={() => {
+              onChange?.(device.id);
+              if (!value) {
+                setInternalValue(device.id);
+              }
+            }}
             className={cn(isActive && "shadow-sm")}
             aria-label={device.label}
           >

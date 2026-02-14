@@ -21,7 +21,7 @@ import {
 } from "@/services/pagesClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { DeviceSwitcher } from "@/ui/pages/DeviceSwitcher";
-import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
+import { RuntimePreviewDialog, type RuntimePreviewDeviceId } from "@/ui/preview/RuntimePreviewDialog";
 
 import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
@@ -48,6 +48,7 @@ import {
   normalizePageLayoutSettings,
   type PageMaxWidthToken,
 } from "../../../services/pages/layoutSettings";
+import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
 import { type ContainerToken, type SpacingToken } from "../../../widgets/types";
 
 const heroBlockDefaults = createBlock("hero");
@@ -170,6 +171,7 @@ const resolvePageSettings = (
     showInNav:
       typeof settings.showInNav === "boolean" ? settings.showInNav : true,
     layout: normalizePageLayoutSettings(settings.layout),
+    revisionRetention: normalizePageRevisionRetentionValue(settings.revisionRetention),
   };
 };
 
@@ -185,6 +187,7 @@ const applyPageSettings = (
       template: settingsValue.template,
       showInNav: settingsValue.showInNav,
       layout: settingsValue.layout,
+      revisionRetention: settingsValue.revisionRetention,
     },
   };
 };
@@ -218,6 +221,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewDevice, setPreviewDevice] = useState<RuntimePreviewDeviceId>("desktop");
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -545,9 +549,9 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Canvas preview
+                Runtime preview device
               </p>
-              <DeviceSwitcher />
+              <DeviceSwitcher value={previewDevice} onChange={setPreviewDevice} />
             </div>
             <Button
               variant="outline"
@@ -688,6 +692,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         error={previewError}
         cannotPreviewMessage="Save this page first to generate a runtime preview."
         iframeTitle="Page runtime preview"
+        device={previewDevice}
+        onDeviceChange={setPreviewDevice}
       />
       <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
         <SheetContent side="left" className="w-80 p-0">

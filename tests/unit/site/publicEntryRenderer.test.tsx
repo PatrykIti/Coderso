@@ -55,6 +55,9 @@ test("renderPublicEntryListHtml renders entries and preview banner", async () =>
   expect(html).toContain("Preview mode");
   expect(html).toContain("/blog/hello");
   expect(html).toContain("/site/assets/site.css");
+  expect(html).toContain("rel=\"preload\"");
+  expect(html).toContain("as=\"style\"");
+  expect(html).toContain("body{opacity:0}");
   expect(html).toContain("data-template=\"content-list\"");
 });
 

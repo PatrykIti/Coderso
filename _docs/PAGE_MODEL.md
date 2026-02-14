@@ -28,6 +28,7 @@ published rendering.
   "settings": {
     "template": "landing",
     "showInNav": true,
+    "revisionRetention": 10,
     "layout": {
       "wrapper": {
         "container": "full",
@@ -88,6 +89,19 @@ Runtime semantics:
 - published pages only
 - missing `showInNav` is treated as `true` (backwards compatibility)
 - stable sort: `title` then `slug`
+
+## settings.revisionRetention (v1)
+
+`page.data.settings.revisionRetention` controls how many publish revisions are kept per page.
+
+Defaults and limits:
+- default: 10
+- min: 1
+- max: 100
+
+Runtime semantics:
+- applied on publish
+- oldest revisions are pruned when the limit is exceeded
 
 ## Block structure
 

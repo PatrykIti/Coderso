@@ -1,4 +1,4 @@
-import { desc, eq, max } from "drizzle-orm";
+import { desc, eq, inArray, max } from "drizzle-orm";
 import { db } from "../../db/client";
 import { pageRevisions, pages } from "../../db/schema";
 
@@ -47,6 +47,31 @@ export async function createRevisionTx(
     .returning();
 
   return revision ?? null;
+}
+
+export async function pruneRevisions(pageId: string, keep: number) {
+  return pruneRevisionsTx(db, pageId, keep);
+}
+
+export async function pruneRevisionsTx(
+  tx: DbClient,
+  pageId: string,
+  keep: number
+) {
+  if (!Number.isFinite(keep) || keep < 1) return;
+
+  const excess = await tx
+    .select({ id: pageRevisions.id })
+    .from(pageRevisions)
+    .where(eq(pageRevisions.pageId, pageId))
+    .orderBy(desc(pageRevisions.version))
+    .offset(keep);
+
+  if (excess.length === 0) return;
+
+  await tx
+    .delete(pageRevisions)
+    .where(inArray(pageRevisions.id, excess.map((row) => row.id)));
 }
 
 export async function restoreRevision(revisionId: string) {

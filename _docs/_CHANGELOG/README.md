@@ -236,7 +236,7 @@ Project Change Log.
 | 122 | 2026-02-01 | Menus editor validation | Admin/UI |
 | 123 | 2026-02-02 | Widgets library UI refresh | Admin/UI |
 | 124 | 2026-02-02 | Widget template editor drag-and-drop | Admin/UI |
-
+| 210 | 2026-02-14 | Page settings retention and runtime preview polish | CMS/Pages |
 
 ---
 *Details of changes are in the linked files.*

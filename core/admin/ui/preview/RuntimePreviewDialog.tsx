@@ -16,7 +16,7 @@ const runtimePreviewDevices = [
   { id: "mobile", label: "Mobile", width: 390, height: 720, icon: Smartphone },
 ] as const;
 
-type RuntimePreviewDeviceId = (typeof runtimePreviewDevices)[number]["id"];
+export type RuntimePreviewDeviceId = (typeof runtimePreviewDevices)[number]["id"];
 
 const isAbsoluteUrl = (value: string) => /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value);
 
@@ -46,6 +46,8 @@ export type RuntimePreviewDialogProps = {
   cannotPreviewMessage?: string;
   unavailableMessage?: string;
   iframeTitle?: string;
+  device?: RuntimePreviewDeviceId;
+  onDeviceChange?: (device: RuntimePreviewDeviceId) => void;
 };
 
 export function RuntimePreviewDialog({
@@ -62,22 +64,36 @@ export function RuntimePreviewDialog({
   cannotPreviewMessage = "Save this resource to generate a runtime preview.",
   unavailableMessage = "Preview data is not available yet.",
   iframeTitle = "Runtime preview",
+  device,
+  onDeviceChange,
 }: RuntimePreviewDialogProps) {
-  const [device, setDevice] = useState<RuntimePreviewDeviceId>("desktop");
-  const [iframeReady, setIframeReady] = useState(false);
+  const [internalDevice, setInternalDevice] = useState<RuntimePreviewDeviceId>("desktop");
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+
+  const resolvedDevice = device ?? internalDevice;
+
+  const handleDeviceChange = (nextDevice: RuntimePreviewDeviceId) => {
+    if (onDeviceChange) {
+      onDeviceChange(nextDevice);
+    } else {
+      setInternalDevice(nextDevice);
+    }
+  };
 
   const viewport = useMemo(
-    () => runtimePreviewDevices.find((entry) => entry.id === device) ?? runtimePreviewDevices[0],
-    [device]
+    () => runtimePreviewDevices.find((entry) => entry.id === resolvedDevice) ?? runtimePreviewDevices[0],
+    [resolvedDevice]
   );
   const iframeSrc = useMemo(
-    () => (previewUrl ? withPreviewDevice(previewUrl, device) : null),
-    [device, previewUrl]
+    () => (previewUrl ? withPreviewDevice(previewUrl, resolvedDevice) : null),
+    [resolvedDevice, previewUrl]
   );
+  const iframeKey = iframeSrc ?? previewUrl ?? "runtime-preview";
+  const iframeReady = loadedSrc === iframeKey;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-5xl">
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 p-0 sm:max-w-5xl" showCloseButton={false}>
         <DialogHeader className="flex flex-row items-center justify-between gap-4 border-b px-6 py-4">
           <div className="space-y-1">
             <DialogTitle>{title}</DialogTitle>
@@ -88,7 +104,7 @@ export function RuntimePreviewDialog({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
               {runtimePreviewDevices.map((entry) => {
-                const isActive = entry.id === device;
+                const isActive = entry.id === resolvedDevice;
                 const Icon = entry.icon;
                 return (
                   <Button
@@ -96,10 +112,7 @@ export function RuntimePreviewDialog({
                     type="button"
                     variant={isActive ? "secondary" : "ghost"}
                     size="icon-sm"
-                    onClick={() => {
-                      setIframeReady(false);
-                      setDevice(entry.id);
-                    }}
+                    onClick={() => handleDeviceChange(entry.id)}
                     className={cn(isActive && "shadow-sm")}
                     aria-label={entry.label}
                   >
@@ -142,7 +155,7 @@ export function RuntimePreviewDialog({
           ) : (
             <div className="mx-auto w-fit rounded-2xl border bg-background shadow-sm">
               <iframe
-                key={iframeSrc ?? previewUrl}
+                key={iframeKey}
                 title={iframeTitle}
                 sandbox="allow-same-origin allow-scripts"
                 src={iframeSrc ?? previewUrl}
@@ -151,8 +164,8 @@ export function RuntimePreviewDialog({
                   iframeReady ? "opacity-100" : "opacity-0"
                 )}
                 style={{ width: viewport.width, height: viewport.height }}
-                data-preview-device={device}
-                onLoad={() => setIframeReady(true)}
+                data-preview-device={resolvedDevice}
+                onLoad={() => setLoadedSrc(iframeKey)}
               />
             </div>
           )}

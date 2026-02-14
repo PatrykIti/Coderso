@@ -15,6 +15,7 @@ public rendering.
 - Otwierany w modalu iframe z device switcherem.
 - Stylowany tokenami Site Theme.
 - Uzywa tego samego render pipeline co output publiczny (page templates + runtime link sources).
+- Device selection jest synchronizowany miedzy headerem edytora a modalem i przekazywany jako `?device=desktop|tablet|mobile`.
 
 ## Unified admin preview UX
 
@@ -83,6 +84,11 @@ Widget template preview moze dodac metadata UI:
   "blocksCount": 3
 }
 ```
+
+## Runtime preview CSS loading
+
+- When a CSS bundle is available, we emit `rel="preload" as="style"` + `rel="stylesheet"`.
+- In preview mode, the body stays hidden until `window.load` to reduce FOUC.
 
 ## Security
 

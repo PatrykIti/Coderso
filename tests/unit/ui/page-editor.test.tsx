@@ -9,6 +9,6 @@ test("PageEditorPage renders key panels", () => {
   expect(html).toContain("Homepage");
   expect(html).toContain("Publish");
   expect(html).toContain("Find components");
-  expect(html).toContain("Canvas preview");
+  expect(html).toContain("Runtime preview device");
   expect(html).toContain("Runtime preview");
 });
