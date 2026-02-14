@@ -36,21 +36,83 @@ export type ContentTypePayload = {
   schema: ContentSchema;
 };
 
+let cachedContentTypes: ContentTypeSummary[] | null = null;
+let cachedContentTypesPromise: Promise<ContentTypeSummary[]> | null = null;
+
+const primeContentTypesCacheInternal = (items: ContentTypeSummary[]) => {
+  cachedContentTypes = items;
+  cachedContentTypesPromise = null;
+};
+
+const upsertCachedContentType = (item: ContentTypeSummary) => {
+  if (!cachedContentTypes) {
+    cachedContentTypes = [item];
+    return;
+  }
+  const index = cachedContentTypes.findIndex((cached) => cached.id === item.id);
+  if (index === -1) {
+    cachedContentTypes = [item, ...cachedContentTypes];
+    return;
+  }
+  const next = [...cachedContentTypes];
+  next[index] = item;
+  cachedContentTypes = next;
+};
+
+const removeCachedContentType = (id: string) => {
+  if (!cachedContentTypes) return;
+  cachedContentTypes = cachedContentTypes.filter((item) => item.id !== id);
+};
+
+export const getCachedContentTypes = () => cachedContentTypes;
+
+export const primeContentTypesCache = (items: ContentTypeSummary[]) => {
+  primeContentTypesCacheInternal(items);
+};
+
+export const clearContentTypesCache = () => {
+  cachedContentTypes = null;
+  cachedContentTypesPromise = null;
+};
+
 export async function listContentTypes() {
   return apiRequest<ContentTypeSummary[]>("/content-types", { method: "GET" });
+}
+
+export async function listContentTypesCached(options?: { force?: boolean }) {
+  if (cachedContentTypes && !options?.force) return cachedContentTypes;
+  if (cachedContentTypesPromise) return cachedContentTypesPromise;
+  const request = listContentTypes();
+  cachedContentTypesPromise = request;
+  const items = await request;
+  primeContentTypesCacheInternal(items);
+  return items;
 }
 
 export async function getContentType(id: string) {
   return apiRequest<ContentTypeSummary>(`/content-types/${id}`, { method: "GET" });
 }
 
+export async function getContentTypeCached(
+  id: string,
+  options?: { force?: boolean }
+) {
+  if (!options?.force && cachedContentTypes) {
+    const cached = cachedContentTypes.find((item) => item.id === id);
+    if (cached) return cached;
+  }
+  const result = await getContentType(id);
+  if (result) upsertCachedContentType(result);
+  return result;
+}
+
 export async function getContentTypeBySlug(slug: string) {
-  const types = await listContentTypes();
+  const types = await listContentTypesCached();
   return types.find((type) => type.slug === slug) ?? null;
 }
 
 export async function createContentType(payload: ContentTypePayload) {
-  return apiRequest<ContentTypeSummary>(
+  const created = await apiRequest<ContentTypeSummary>(
     "/content-types",
     {
       method: "POST",
@@ -59,13 +121,17 @@ export async function createContentType(payload: ContentTypePayload) {
     },
     { withCsrf: true }
   );
+  if (created) {
+    upsertCachedContentType(created);
+  }
+  return created;
 }
 
 export async function updateContentType(
   id: string,
   payload: Partial<ContentTypePayload>
 ) {
-  return apiRequest<ContentTypeSummary>(
+  const updated = await apiRequest<ContentTypeSummary>(
     `/content-types/${id}`,
     {
       method: "PATCH",
@@ -74,14 +140,22 @@ export async function updateContentType(
     },
     { withCsrf: true }
   );
+  if (updated) {
+    upsertCachedContentType(updated);
+  }
+  return updated;
 }
 
 export async function deleteContentType(id: string) {
-  return apiRequest<{ ok: boolean }>(
+  const result = await apiRequest<{ ok: boolean }>(
     `/content-types/${id}`,
     {
       method: "DELETE",
     },
     { withCsrf: true }
   );
+  if (result?.ok) {
+    removeCachedContentType(id);
+  }
+  return result;
 }

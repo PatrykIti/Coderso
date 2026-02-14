@@ -5,7 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
-  listContentTypes,
+  listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
@@ -35,7 +35,7 @@ export function ContentTypeList() {
 
   useEffect(() => {
     let active = true;
-    listContentTypes()
+    listContentTypesCached()
       .then((result) => {
         if (!active) return;
         setTypes(result);

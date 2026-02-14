@@ -1,5 +1,5 @@
 import { Save, Send } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,9 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
 import {
-  getContentType,
-  listContentTypes,
+  getCachedContentTypes,
+  getContentTypeCached,
+  listContentTypesCached,
   updateContentType,
 } from "@/services/contentTypesClient";
 import { listTaxonomies, updateTaxonomyConfig } from "@/services/taxonomyClient";
@@ -70,6 +71,11 @@ export function ContentTypeEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const hasUnsavedChangesRef = useRef(false);
+  const setUnsavedChanges = (value: boolean) => {
+    hasUnsavedChangesRef.current = value;
+    setHasUnsavedChanges(value);
+  };
   const [relationTargets, setRelationTargets] = useState<
     Array<{ slug: string; name: string }>
   >([]);
@@ -85,51 +91,73 @@ export function ContentTypeEditor() {
   });
   const [isTaxonomySaving, setIsTaxonomySaving] = useState(false);
 
+  const applyContentType = (result: { name: string; slug: string; schema: unknown }) => {
+    setName(result.name);
+    setSlug(result.slug);
+    const mappedFields = fieldsFromSchema(result.schema);
+    setFields(mappedFields);
+    setUnsavedChanges(false);
+    setSelectedFieldId(mappedFields[0]?.id ?? null);
+  };
+
   useEffect(() => {
     if (!typeId) return;
     let active = true;
-    getContentType(typeId)
-      .then(async (result) => {
-        if (!active) return;
-        setName(result.name);
-        setSlug(result.slug);
-        const mappedFields = fieldsFromSchema(result.schema);
-        setFields(mappedFields);
-        setHasUnsavedChanges(false);
-        setSelectedFieldId(mappedFields[0]?.id ?? null);
-        setError(null);
 
-        try {
-          const { items } = await listTaxonomies(typeId);
-          if (!active) return;
-          setTaxonomyConfig({
-            categories: items.some((item) => item.kind === "category"),
-            tags: items.some((item) => item.kind === "tag"),
-          });
-        } catch {
-          if (!active) return;
-          setTaxonomyConfig({ categories: false, tags: false });
-        }
-      })
-      .catch((err) => {
+    const cached = getCachedContentTypes();
+    const cachedType = cached?.find((type) => type.id === typeId) ?? null;
+    if (cachedType) {
+      applyContentType(cachedType);
+      setError(null);
+      setIsLoading(false);
+    }
+
+    (async () => {
+      try {
+        const result = await getContentTypeCached(typeId, { force: true });
+        if (!active || !result) return;
+        if (hasUnsavedChangesRef.current && cachedType) return;
+        applyContentType(result);
+        setError(null);
+      } catch (err) {
         if (!active) return;
         if (isApiClientError(err)) {
           setError(err.message);
         } else {
           setError("Failed to load content type.");
         }
-      })
-      .finally(() => {
+      } finally {
         if (active) setIsLoading(false);
-      });
+      }
+    })();
+
+    (async () => {
+      try {
+        const { items } = await listTaxonomies(typeId);
+        if (!active) return;
+        setTaxonomyConfig({
+          categories: items.some((item) => item.kind === "category"),
+          tags: items.some((item) => item.kind === "tag"),
+        });
+      } catch {
+        if (!active) return;
+        setTaxonomyConfig({ categories: false, tags: false });
+      }
+    })();
+
     return () => {
       active = false;
     };
   }, [typeId]);
 
+
   useEffect(() => {
     let active = true;
-    listContentTypes()
+    const cached = getCachedContentTypes();
+    if (cached) {
+      setRelationTargets(cached.map((type) => ({ slug: type.slug, name: type.name })));
+    }
+    listContentTypesCached()
       .then((types) => {
         if (!active) return;
         setRelationTargets(types.map((type) => ({ slug: type.slug, name: type.name })));
@@ -139,6 +167,7 @@ export function ContentTypeEditor() {
       active = false;
     };
   }, []);
+
 
   useEffect(() => {
     if (fields.length === 0) {
@@ -179,7 +208,7 @@ export function ContentTypeEditor() {
       setName(updated.name);
       setSlug(updated.slug);
       setFields(fieldsFromSchema(updated.schema));
-      setHasUnsavedChanges(false);
+      setUnsavedChanges(false);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -197,7 +226,7 @@ export function ContentTypeEditor() {
 
   const handleFieldChange = (next: ContentField[]) => {
     setFields(next);
-    setHasUnsavedChanges(true);
+    setUnsavedChanges(true);
   };
 
   const handleTaxonomyToggle = async (
@@ -351,7 +380,7 @@ export function ContentTypeEditor() {
                 value={name}
                 onChange={(event) => {
                   setName(event.target.value);
-                  setHasUnsavedChanges(true);
+                  setUnsavedChanges(true);
                 }}
                 disabled={isLoading}
               />
@@ -364,7 +393,7 @@ export function ContentTypeEditor() {
                 value={slug}
                 onChange={(event) => {
                   setSlug(event.target.value);
-                  setHasUnsavedChanges(true);
+                  setUnsavedChanges(true);
                 }}
                 disabled={isLoading}
               />

@@ -1,10 +1,15 @@
 import { expect, test } from "bun:test";
 
 import {
+  clearContentTypesCache,
   createContentType,
   deleteContentType,
+  getCachedContentTypes,
   getContentType,
+  getContentTypeCached,
   listContentTypes,
+  listContentTypesCached,
+  primeContentTypesCache,
   updateContentType,
 } from "../../../core/admin/services/contentTypesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
@@ -14,6 +19,10 @@ const jsonResponse = (payload: unknown, status = 200) =>
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+const resetCaches = () => {
+  clearContentTypesCache();
+};
 
 test("listContentTypes hits GET /content-types", async () => {
   const originalFetch = globalThis.fetch;
@@ -126,5 +135,113 @@ test("deleteContentType uses CSRF", async () => {
     expect(calls[1]?.init?.method).toBe("DELETE");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("listContentTypesCached returns cached items without fetch", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+
+  try {
+    resetCaches();
+    const cached = [
+      {
+        id: "ct-1",
+        name: "Blog",
+        slug: "blog",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        createdAt: "2026-02-14T00:00:00.000Z",
+        updatedAt: "2026-02-14T00:00:00.000Z",
+      },
+    ];
+    // Prime cache and read without hitting fetch.
+    clearContentTypesCache();
+    primeContentTypesCache(cached);
+
+    const result = await listContentTypesCached();
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+test("getContentTypeCached returns cached entry by id", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ id: "ct-2" });
+  };
+
+  try {
+    resetCaches();
+    const cached = [
+      {
+        id: "ct-2",
+        name: "Docs",
+        slug: "docs",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        createdAt: "2026-02-14T00:00:00.000Z",
+        updatedAt: "2026-02-14T00:00:00.000Z",
+      },
+    ];
+    primeContentTypesCache(cached);
+
+    const result = await getContentTypeCached("ct-2");
+    expect(result?.id).toBe("ct-2");
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+test("updateContentType updates cached entries", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      id: "ct-3",
+      name: "Updated",
+      slug: "updated",
+      schema: { type: "object", additionalProperties: false, properties: {} },
+      createdAt: "2026-02-14T00:00:00.000Z",
+      updatedAt: "2026-02-14T00:00:00.000Z",
+    });
+  };
+
+  try {
+    resetCaches();
+    primeContentTypesCache([
+      {
+        id: "ct-3",
+        name: "Old",
+        slug: "old",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        createdAt: "2026-02-14T00:00:00.000Z",
+        updatedAt: "2026-02-14T00:00:00.000Z",
+      },
+    ]);
+
+    await updateContentType("ct-3", { name: "Updated" });
+    const cached = getCachedContentTypes();
+    expect(cached?.[0]?.name).toBe("Updated");
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
   }
 });
