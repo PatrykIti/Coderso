@@ -39,32 +39,81 @@ export type ContentTypePayload = {
 let cachedContentTypes: ContentTypeSummary[] | null = null;
 let cachedContentTypesPromise: Promise<ContentTypeSummary[]> | null = null;
 
+const CONTENT_TYPES_CACHE_KEY = "nextless.contentTypesCache";
+const CONTENT_TYPES_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const getSessionStorage = () => {
+  if (typeof sessionStorage === "undefined") return null;
+  return sessionStorage;
+};
+
+const readSessionCache = () => {
+  const storage = getSessionStorage();
+  if (!storage) return null;
+  const raw = storage.getItem(CONTENT_TYPES_CACHE_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { items?: unknown; savedAt?: unknown };
+    if (!parsed || !Array.isArray(parsed.items) || typeof parsed.savedAt !== "number") {
+      storage.removeItem(CONTENT_TYPES_CACHE_KEY);
+      return null;
+    }
+    if (Date.now() - parsed.savedAt > CONTENT_TYPES_CACHE_TTL_MS) {
+      storage.removeItem(CONTENT_TYPES_CACHE_KEY);
+      return null;
+    }
+    return parsed.items as ContentTypeSummary[];
+  } catch {
+    storage.removeItem(CONTENT_TYPES_CACHE_KEY);
+    return null;
+  }
+};
+
+const writeSessionCache = (items: ContentTypeSummary[]) => {
+  const storage = getSessionStorage();
+  if (!storage) return;
+  const payload = JSON.stringify({ items, savedAt: Date.now() });
+  storage.setItem(CONTENT_TYPES_CACHE_KEY, payload);
+};
+
+const clearSessionCache = () => {
+  const storage = getSessionStorage();
+  if (!storage) return;
+  storage.removeItem(CONTENT_TYPES_CACHE_KEY);
+};
+
 const primeContentTypesCacheInternal = (items: ContentTypeSummary[]) => {
   cachedContentTypes = items;
   cachedContentTypesPromise = null;
+  writeSessionCache(items);
 };
 
 const upsertCachedContentType = (item: ContentTypeSummary) => {
-  if (!cachedContentTypes) {
-    cachedContentTypes = [item];
-    return;
+  const current = cachedContentTypes ?? readSessionCache() ?? [];
+  const index = current.findIndex((cached) => cached.id === item.id);
+  const next = [...current];
+  if (index == -1) {
+    next.unshift(item);
+  } else {
+    next[index] = item;
   }
-  const index = cachedContentTypes.findIndex((cached) => cached.id === item.id);
-  if (index === -1) {
-    cachedContentTypes = [item, ...cachedContentTypes];
-    return;
-  }
-  const next = [...cachedContentTypes];
-  next[index] = item;
-  cachedContentTypes = next;
+  primeContentTypesCacheInternal(next);
 };
 
 const removeCachedContentType = (id: string) => {
-  if (!cachedContentTypes) return;
-  cachedContentTypes = cachedContentTypes.filter((item) => item.id !== id);
+  const current = cachedContentTypes ?? readSessionCache();
+  if (!current) return;
+  primeContentTypesCacheInternal(current.filter((item) => item.id !== id));
 };
 
-export const getCachedContentTypes = () => cachedContentTypes;
+export const getCachedContentTypes = () => {
+  if (cachedContentTypes) return cachedContentTypes;
+  const sessionCached = readSessionCache();
+  if (sessionCached) {
+    cachedContentTypes = sessionCached;
+  }
+  return cachedContentTypes;
+};
 
 export const primeContentTypesCache = (items: ContentTypeSummary[]) => {
   primeContentTypesCacheInternal(items);
@@ -73,6 +122,7 @@ export const primeContentTypesCache = (items: ContentTypeSummary[]) => {
 export const clearContentTypesCache = () => {
   cachedContentTypes = null;
   cachedContentTypesPromise = null;
+  clearSessionCache();
 };
 
 export async function listContentTypes() {
@@ -80,8 +130,11 @@ export async function listContentTypes() {
 }
 
 export async function listContentTypesCached(options?: { force?: boolean }) {
-  if (cachedContentTypes && !options?.force) return cachedContentTypes;
-  if (cachedContentTypesPromise) return cachedContentTypesPromise;
+  if (!options?.force) {
+    const cached = getCachedContentTypes();
+    if (cached) return cached;
+    if (cachedContentTypesPromise) return cachedContentTypesPromise;
+  }
   const request = listContentTypes();
   cachedContentTypesPromise = request;
   const items = await request;
@@ -97,9 +150,10 @@ export async function getContentTypeCached(
   id: string,
   options?: { force?: boolean }
 ) {
-  if (!options?.force && cachedContentTypes) {
-    const cached = cachedContentTypes.find((item) => item.id === id);
-    if (cached) return cached;
+  if (!options?.force) {
+    const cached = getCachedContentTypes();
+    const match = cached?.find((item) => item.id === id);
+    if (match) return match;
   }
   const result = await getContentType(id);
   if (result) upsertCachedContentType(result);

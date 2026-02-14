@@ -20,6 +20,19 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+const createSessionStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
 const resetCaches = () => {
   clearContentTypesCache();
 };
@@ -242,6 +255,49 @@ test("updateContentType updates cached entries", async () => {
     expect(cached?.[0]?.name).toBe("Updated");
   } finally {
     globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+test("listContentTypesCached reads from session storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalSession = (globalThis as { sessionStorage?: unknown }).sessionStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createSessionStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+  (globalThis as { sessionStorage?: unknown }).sessionStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    const cached = [
+      {
+        id: "ct-9",
+        name: "FAQ",
+        slug: "faq",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        createdAt: "2026-02-14T00:00:00.000Z",
+        updatedAt: "2026-02-14T00:00:00.000Z",
+      },
+    ];
+    storage.setItem(
+      "nextless.contentTypesCache",
+      JSON.stringify({ items: cached, savedAt: Date.now() })
+    );
+
+    const result = await listContentTypesCached();
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalSession === undefined) {
+      delete (globalThis as { sessionStorage?: unknown }).sessionStorage;
+    } else {
+      (globalThis as { sessionStorage?: unknown }).sessionStorage = originalSession;
+    }
     resetCaches();
   }
 });

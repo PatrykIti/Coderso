@@ -116,7 +116,7 @@ export function ContentTypeEditor() {
       try {
         const result = await getContentTypeCached(typeId, { force: true });
         if (!active || !result) return;
-        if (hasUnsavedChangesRef.current && cachedType) return;
+        if (hasUnsavedChangesRef.current) return;
         applyContentType(result);
         setError(null);
       } catch (err) {

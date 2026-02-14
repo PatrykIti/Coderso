@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  getCachedContentTypes,
   listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
@@ -35,7 +36,12 @@ export function ContentTypeList() {
 
   useEffect(() => {
     let active = true;
-    listContentTypesCached()
+    const cached = getCachedContentTypes();
+    if (cached) {
+      setTypes(cached);
+      setIsLoading(false);
+    }
+    listContentTypesCached({ force: true })
       .then((result) => {
         if (!active) return;
         setTypes(result);
