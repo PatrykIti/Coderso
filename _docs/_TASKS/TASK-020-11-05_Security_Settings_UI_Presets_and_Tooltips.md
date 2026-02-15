@@ -17,7 +17,8 @@ Redesign Settings → Security into user-friendly sections with presets and tool
 
 ## Goals
 
-1. Split settings into clear sections/tabs.
+1. Use vertical tabs layout (same as Settings → Site).
+2. Split settings into clear sections/tabs.
 2. Add longer, non-technical descriptions and tooltips (WordPress-like).
 3. Provide presets: `WordPress-like`, `Strict`, `Relaxed`.
 4. Preserve advanced control for power users.
@@ -45,7 +46,7 @@ function applyPreset(name) {
 
 | File | Action |
 | --- | --- |
-| `core/admin/ui/settings/SecuritySettingsPage.tsx` | New sections, tooltips, presets UI |
+| `core/admin/ui/settings/SecuritySettingsPage.tsx` | Use SettingsShell + vertical tabs; add sections, tooltips, presets UI |
 | `core/admin/ui/settings/*` | Reusable helper components for sections |
 | `tests/unit/ui/security-settings.test.tsx` | Preset apply + sections render |
 

@@ -86,6 +86,7 @@ This task also clarifies internal vs public endpoints and upgrades rate limiting
 - Add tests that unauthenticated calls to internal routes are rejected.
 
 ### 6) Security Settings UX
+- Use the same **vertical tabs layout** as Settings → Site (`SettingsShell` + left sidebar).
 - Restructure Settings → Security into tabs/sections:
   - Auth & Bot Protection
   - Rate Limits
