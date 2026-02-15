@@ -229,3 +229,26 @@ function applyPreset(name) {
     - CIDR list (default: empty)
       - Helper: “Leave empty to allow access from anywhere.”
   - Tooltip: “Best for teams with fixed office or VPN IPs.”
+
+
+### UI Microcopy Additions (Placeholders + Recommended + Validation Copy)
+
+Apply across Security Settings inputs:
+
+- **Placeholders** (examples)
+  - Allowed origins: `https://admin.example.com`
+  - CIDR list: `203.0.113.0/24, 198.51.100.0/24`
+  - CSP: `default-src 'self'; img-src 'self' https:`
+  - HSTS: `max-age=31536000; includeSubDomains; preload`
+  - Allowed headers: `content-type, x-csrf-token`
+
+- **Recommended badges**
+  - Add a subtle "Recommended" badge next to defaults (e.g., WordPress‑like preset, CSRF enabled, Frame options = DENY).
+
+- **Validation copy (user-friendly)**
+  - Origins: “Please enter full URLs (with https://).”
+  - CSRF TTL: “Enter a number of minutes (e.g., 30).”
+  - Rate limits: “Enter a number per minute.”
+  - CIDR: “Use valid CIDR blocks (e.g., 203.0.113.0/24).”
+  - CSP/HSTS: “This is an advanced setting. Invalid values can break your site.”
+
