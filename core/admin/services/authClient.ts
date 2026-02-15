@@ -10,12 +10,19 @@ export type AuthSession = {
   expiresAt: string;
 };
 
+export type BotProtectionConfig = {
+  enabled: boolean;
+  provider: "recaptcha_v3";
+  siteKey: string | null;
+  enforceOnLocalhost: boolean;
+};
+
 export type LoginResponse = {
   user: AuthUser;
   session: AuthSession;
 };
 
-export async function login(payload: { email: string; password: string }) {
+export async function login(payload: { email: string; password: string; captchaToken?: string }) {
   return apiRequest<LoginResponse>("/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -33,6 +40,10 @@ export async function me() {
   return apiRequest<{ user: AuthUser }>("/auth/me", { method: "GET" });
 }
 
+export async function getAuthBotProtection() {
+  return apiRequest<BotProtectionConfig>("/auth/bot-protection", { method: "GET" });
+}
+
 export async function verifyOtp(payload: { code?: string; recoveryCode?: string }) {
   return apiRequest<{ ok: boolean }>("/auth/verify-otp", {
     method: "POST",
@@ -41,7 +52,7 @@ export async function verifyOtp(payload: { code?: string; recoveryCode?: string 
   }, { withCsrf: true });
 }
 
-export async function requestPasswordReset(payload: { email: string }) {
+export async function requestPasswordReset(payload: { email: string; captchaToken?: string }) {
   return apiRequest<{ ok: boolean }>("/auth/reset", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

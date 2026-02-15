@@ -3,6 +3,7 @@ import { eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import { contentEntries, contentTypes, media, pages, users } from "../../db/schema";
 import { getSetting } from "../settings/settingsService";
+import { hashEmail, isLikelyEmail, normalizeEmail, resolveEmailValue } from "../security/piiEmail";
 
 export type SearchItemType = "page" | "entry" | "media" | "user";
 
@@ -56,6 +57,9 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
   const tsQuery = buildPrefixQuery(normalized);
   if (!tsQuery) return [] as SearchItem[];
   const likeQuery = `%${normalized}%`;
+
+  const emailQuery = isLikelyEmail(normalized) ? normalizeEmail(normalized) : null;
+  const emailHash = emailQuery ? hashEmail(emailQuery) : null;
 
   const limit = resolveSearchLimit(options.limit);
   const perType = Math.max(1, Math.ceil(limit / 4));
@@ -119,21 +123,25 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
     )
     .limit(perType);
 
+  const userConditions = [
+    sql`to_tsvector('simple', coalesce(${users.name}, '')) @@ to_tsquery('simple', ${tsQuery})`,
+    ilike(users.name, likeQuery),
+  ];
+  if (emailHash) {
+    userConditions.push(eq(users.emailHash, emailHash));
+    userConditions.push(eq(users.email, emailQuery));
+  }
+
   const userRows = await db
     .select({
       id: users.id,
       name: users.name,
       email: users.email,
+      emailEncrypted: users.emailEncrypted,
       updatedAt: users.updatedAt,
     })
     .from(users)
-    .where(
-      or(
-        sql`to_tsvector('simple', coalesce(${users.name}, '') || ' ' || ${users.email}) @@ to_tsquery('simple', ${tsQuery})`,
-        ilike(users.name, likeQuery),
-        ilike(users.email, likeQuery)
-      )
-    )
+    .where(or(...userConditions))
     .limit(perType);
 
   const results: SearchItem[] = [
@@ -164,15 +172,21 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
       categoryId: "media",
       categoryLabel: "Media",
     })),
-    ...userRows.map((row) => ({
-      id: row.id,
-      title: row.name ?? row.email,
-      slug: row.email,
-      type: "user" as const,
-      updatedAt: toIso(row.updatedAt),
-      categoryId: "user",
-      categoryLabel: "Users",
-    })),
+    ...userRows.map((row) => {
+      const resolvedEmail = resolveEmailValue({
+        emailEncrypted: row.emailEncrypted,
+        email: row.email,
+      });
+      return {
+        id: row.id,
+        title: row.name ?? resolvedEmail ?? row.email,
+        slug: resolvedEmail ?? row.email,
+        type: "user" as const,
+        updatedAt: toIso(row.updatedAt),
+        categoryId: "user",
+        categoryLabel: "Users",
+      };
+    }),
   ];
 
   results.sort(

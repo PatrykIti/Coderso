@@ -1,6 +1,7 @@
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { db } from "../../db/client";
 import { users } from "../../db/schema";
+import { buildEmailFields, hashEmail, isLikelyEmail, normalizeEmail } from "../security/piiEmail";
 
 export async function getUserById(id: string) {
   const [row] = await db.select().from(users).where(eq(users.id, id));
@@ -8,10 +9,28 @@ export async function getUserById(id: string) {
 }
 
 export async function getUserByEmail(email: string) {
+  const normalized = normalizeEmail(email);
+  const emailHash = hashEmail(normalized);
   const [row] = await db
     .select()
     .from(users)
-    .where(eq(users.email, email));
+    .where(or(eq(users.emailHash, emailHash), eq(users.email, normalized)));
+
+  if (row && (!row.emailHash || !row.emailEncrypted) && isLikelyEmail(row.email)) {
+    const fields = buildEmailFields(row.email);
+    const [updated] = await db
+      .update(users)
+      .set({
+        email: fields.email,
+        emailHash: fields.emailHash,
+        emailEncrypted: fields.emailEncrypted,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, row.id))
+      .returning();
+    return updated ?? row;
+  }
+
   return row ?? null;
 }
 

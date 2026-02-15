@@ -5,6 +5,7 @@ import { db } from "../../db/client";
 import { contentEntries, contentTypes, media, pages, users } from "../../db/schema";
 import { getSecuritySettings } from "../settings/securitySettings";
 import type { SecuritySettings } from "../settings/securitySettings";
+import { resolveEmailValue } from "../security/piiEmail";
 import type {
   DashboardPayload,
   DashboardRecentEdit,
@@ -36,6 +37,9 @@ const toIsoString = (value: Date | string) => {
   if (value instanceof Date) return value.toISOString();
   return new Date(value).toISOString();
 };
+
+const resolveAuthorEmail = (row: { authorEmailEncrypted?: unknown; authorEmail?: string | null }) =>
+  resolveEmailValue({ emailEncrypted: row.authorEmailEncrypted, email: row.authorEmail });
 
 const toStatus = (value: string | null | undefined): DashboardRecentEditStatus => {
   if (!value) return "draft";
@@ -97,6 +101,7 @@ async function getRecentPages(limit: number): Promise<DashboardRecentEdit[]> {
       authorId: users.id,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(pages)
     .leftJoin(users, eq(pages.authorId, users.id))
@@ -110,7 +115,7 @@ async function getRecentPages(limit: number): Promise<DashboardRecentEdit[]> {
     path: ensurePath(row.slug),
     status: toStatus(row.status),
     updatedAt: toIsoString(row.updatedAt),
-    author: toAuthor(row.authorId ?? null, row.authorName ?? null, row.authorEmail ?? null),
+    author: toAuthor(row.authorId ?? null, row.authorName ?? null, resolveAuthorEmail(row)),
   }));
 }
 
@@ -126,6 +131,7 @@ async function getRecentEntries(limit: number): Promise<DashboardRecentEdit[]> {
       authorId: users.id,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(contentEntries)
     .leftJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
@@ -140,7 +146,7 @@ async function getRecentEntries(limit: number): Promise<DashboardRecentEdit[]> {
     path: row.typeSlug ? ensurePath(`${row.typeSlug}/${row.slug}`) : null,
     status: toStatus(row.status),
     updatedAt: toIsoString(row.updatedAt),
-    author: toAuthor(row.authorId ?? null, row.authorName ?? null, row.authorEmail ?? null),
+    author: toAuthor(row.authorId ?? null, row.authorName ?? null, resolveAuthorEmail(row)),
   }));
 }
 
@@ -156,6 +162,7 @@ async function getRecentMedia(limit: number): Promise<DashboardRecentEdit[]> {
       authorId: users.id,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(media)
     .leftJoin(users, eq(media.createdBy, users.id))
@@ -169,7 +176,7 @@ async function getRecentMedia(limit: number): Promise<DashboardRecentEdit[]> {
     path: row.url ?? null,
     status: "active",
     updatedAt: toIsoString(row.createdAt),
-    author: toAuthor(row.authorId ?? null, row.authorName ?? null, row.authorEmail ?? null),
+    author: toAuthor(row.authorId ?? null, row.authorName ?? null, resolveAuthorEmail(row)),
   }));
 }
 
@@ -210,10 +217,11 @@ export function buildSecuritySummary(
   security: SecuritySettings
 ): DashboardSecuritySummary {
   const csrfEnabled = security.csrf.enabled;
+  const buckets = security.rateLimit.buckets;
   const rateLimitEnabled =
     security.rateLimit.enabled &&
-    security.rateLimit.admin.maxRequests > 0 &&
-    security.rateLimit.auth.maxRequests > 0;
+    buckets.auth.maxRequests > 0 &&
+    buckets.public_write.maxRequests > 0;
   const headersEnabled =
     security.headers.enabled &&
     security.headers.contentTypeOptions &&
@@ -234,7 +242,7 @@ export function buildSecuritySummary(
       "rateLimit",
       "Rate limiting",
       rateLimitEnabled,
-      `Enabled (${security.rateLimit.admin.maxRequests}/${security.rateLimit.auth.maxRequests}).`,
+      `Enabled (auth ${buckets.auth.maxRequests}/min, public write ${buckets.public_write.maxRequests}/min).`,
       "Disabled or invalid thresholds."
     ),
     buildCheck(

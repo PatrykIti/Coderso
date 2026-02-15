@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Layers } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -9,8 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import { AuthShell } from "@/ui/layouts/AuthShell";
 import { InfoBanner } from "@/ui/auth/InfoBanner";
 import { isApiClientError } from "@/services/apiClient";
-import { requestPasswordReset } from "@/services/authClient";
+import { getAuthBotProtection, requestPasswordReset, type BotProtectionConfig } from "@/services/authClient";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
+import { executeRecaptcha } from "@/ui/auth/recaptcha";
 
 type ResetPasswordPageProps = {
   initialEmail?: string;
@@ -27,13 +28,46 @@ export function ResetPasswordPage({
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(initialError);
 
+  const [botConfig, setBotConfig] = useState<BotProtectionConfig | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getAuthBotProtection()
+      .then((config) => {
+        if (!active) return;
+        setBotConfig(config);
+      })
+      .catch(() => {
+        if (!active) return;
+        setBotConfig({
+          enabled: false,
+          provider: "recaptcha_v3",
+          siteKey: null,
+          enforceOnLocalhost: true,
+        });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setLoading(true);
     setSuccess(false);
     try {
-      await requestPasswordReset({ email });
+      let captchaToken: string | undefined = undefined;
+      if (botConfig?.enabled) {
+        if (!botConfig.siteKey) {
+          setError("reCAPTCHA is enabled but missing the site key.");
+          return;
+        }
+        captchaToken = await executeRecaptcha(botConfig.siteKey, "reset");
+      }
+
+      await requestPasswordReset({ email, captchaToken });
       setSuccess(true);
     } catch (err) {
       if (isApiClientError(err)) {

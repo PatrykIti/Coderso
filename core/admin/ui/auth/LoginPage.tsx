@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Layers } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -12,8 +12,9 @@ import { AuthShell } from "@/ui/layouts/AuthShell";
 import { AuthBrandPanel } from "@/ui/auth/AuthBrandPanel";
 import { SsoButtons } from "@/ui/auth/SsoButtons";
 import { isApiClientError } from "@/services/apiClient";
-import { login, toFieldErrors } from "@/services/authClient";
+import { getAuthBotProtection, login, toFieldErrors, type BotProtectionConfig } from "@/services/authClient";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
+import { executeRecaptcha } from "@/ui/auth/recaptcha";
 
 type LoginPageProps = {
   initialEmail?: string;
@@ -28,6 +29,30 @@ export function LoginPage({ initialEmail = "", initialError = "" }: LoginPagePro
   const [error, setError] = useState(initialError);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const [botConfig, setBotConfig] = useState<BotProtectionConfig | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getAuthBotProtection()
+      .then((config) => {
+        if (!active) return;
+        setBotConfig(config);
+      })
+      .catch(() => {
+        if (!active) return;
+        setBotConfig({
+          enabled: false,
+          provider: "recaptcha_v3",
+          siteKey: null,
+          enforceOnLocalhost: true,
+        });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
@@ -35,7 +60,16 @@ export function LoginPage({ initialEmail = "", initialError = "" }: LoginPagePro
     setLoading(true);
 
     try {
-      await login({ email, password });
+      let captchaToken: string | undefined = undefined;
+      if (botConfig?.enabled) {
+        if (!botConfig.siteKey) {
+          setError("reCAPTCHA is enabled but missing the site key.");
+          return;
+        }
+        captchaToken = await executeRecaptcha(botConfig.siteKey, "login");
+      }
+
+      await login({ email, password, captchaToken });
       if (typeof window !== "undefined") {
         const basePath = resolveAdminBasePath();
         window.location.assign(withAdminBasePath(basePath, "/"));

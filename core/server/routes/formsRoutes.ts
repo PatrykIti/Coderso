@@ -11,6 +11,8 @@ import {
   listSubmissions,
   submitForm,
 } from "../../services/forms/submissionService";
+import { enforceBotProtection } from "../../services/security/botProtection";
+import { getSecuritySettings } from "../../services/settings/securitySettings";
 import {
   formCreateSchema,
   formFieldsSchema,
@@ -41,7 +43,7 @@ export type FormsRouteDeps = {
   validate: (schema: unknown, payload: unknown) => void;
 };
 
-type SubmissionBody = { data: Record<string, unknown> };
+type SubmissionBody = { data: Record<string, unknown>; captchaToken?: string };
 
 export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
   const { requirePermission, validate } = deps;
@@ -94,6 +96,13 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
   router.post("/forms/:id/submissions", async (ctx) => {
     validate(formSubmissionSchema, ctx.body);
     const body = ctx.body as SubmissionBody;
+    const securitySettings = await getSecuritySettings();
+    await enforceBotProtection({
+      token: body.captchaToken,
+      action: "public_write",
+      ip: ctx.ip,
+      settings: securitySettings.botProtection,
+    });
     return submitForm(ctx.params.id, body.data, {
       ip: ctx.ip,
       userAgent: ctx.userAgent,

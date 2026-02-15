@@ -33,6 +33,27 @@ Alias kompatybilnosciowy:
 | `assistant.quotas.requestsPerMinute` | `number` | `20` | Soft quota/min |
 | `assistant.quotas.requestsPerDay` | `number` | `1000` | Soft quota/day |
 
+## Security settings (`settings.key = security.settings`)
+
+Ustawienia security sa przechowywane jako JSON w `settings.key = security.settings`.
+
+- `requestId`: `enabled`, `headerName`
+- `csrf`: `enabled`, `headerName`, `tokenTtlMinutes`
+- `cors`: `allowedOrigins`, `allowCredentials`, `allowedMethods`, `allowedHeaders`, `maxAgeSeconds`
+- `rateLimit`:
+  - `enabled`
+  - `buckets`: `auth`, `admin_read`, `admin_write`, `public_read`, `public_write`, `assistant`
+- `headers`: `enabled`, `frameOptions`, `contentTypeOptions`, `referrerPolicy`, `permissionsPolicy`, `csp`, `hsts`
+- `session`: `ttlDays`, `maxPerUser`, `singleSession`
+- `loginAlerts`: `enabled`, `notifyOnNewDevice`, `notifyOnNewLocation`
+- `botProtection`: `enabled`, `provider`, `siteKey`, `secretKey`, `thresholds`, `enforceOnLocalhost`
+- `plugins`: `safeMode`
+- `validation`: `rejectUnknownFields`
+
+Publiczny payload z API `/settings/security` zwraca:
+- `botProtection.secretKey.configured` (maskowanie sekretu)
+- `passwordPepperConfigured` (ENV `AUTH_PASSWORD_PEPPER`)
+
 ## Assistant user settings (`user_settings`)
 
 | Key | Type | Default | Notes |

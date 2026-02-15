@@ -119,6 +119,60 @@ export const securitySettingsSchema = {
       additionalProperties: false,
       properties: {
         enabled: { type: "boolean" },
+        buckets: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            auth: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                windowSeconds: { type: "number" },
+                maxRequests: { type: "number" },
+              },
+            },
+            admin_read: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                windowSeconds: { type: "number" },
+                maxRequests: { type: "number" },
+              },
+            },
+            admin_write: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                windowSeconds: { type: "number" },
+                maxRequests: { type: "number" },
+              },
+            },
+            public_read: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                windowSeconds: { type: "number" },
+                maxRequests: { type: "number" },
+              },
+            },
+            public_write: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                windowSeconds: { type: "number" },
+                maxRequests: { type: "number" },
+              },
+            },
+            assistant: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                windowSeconds: { type: "number" },
+                maxRequests: { type: "number" },
+              },
+            },
+          },
+        },
         admin: {
           type: "object",
           additionalProperties: false,
@@ -135,6 +189,26 @@ export const securitySettingsSchema = {
             maxRequests: { type: "number" },
           },
         },
+      },
+    },
+    botProtection: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        provider: { enum: ["recaptcha_v3"] },
+        siteKey: { type: ["string", "null"] },
+        secretKey: { type: ["string", "null"] },
+        thresholds: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            login: { type: "number" },
+            reset: { type: "number" },
+            publicWrite: { type: "number" },
+          },
+        },
+        enforceOnLocalhost: { type: "boolean" },
       },
     },
     headers: {

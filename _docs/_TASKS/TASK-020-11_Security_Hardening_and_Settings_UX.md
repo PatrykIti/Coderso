@@ -5,7 +5,7 @@
 **Category:** Core/Security + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-020-01..10, TASK-036, TASK-047  
-**Status:** To Do  
+**Status:** Done  
 
 ---
 
@@ -115,12 +115,12 @@ Each section renders a right-side panel with cards similar to `SiteSettingsPage`
 
 | ID | Title | Owner | Status |
 | --- | --- | --- | --- |
-| TASK-020-11-01 | Rate Limit Buckets + Keying Strategy | — | To Do |
-| TASK-020-11-02 | Auth Hardening + Bot Protection | — | To Do |
-| TASK-020-11-03 | Public Endpoint Policy + Protection | — | To Do |
-| TASK-020-11-04 | Security Settings Model + API | — | To Do |
-| TASK-020-11-05 | Security Settings UI + Presets | — | To Do |
-| TASK-020-11-06 | PII (Email) Encryption Decision + Implementation | — | To Do |
+| TASK-020-11-01 | Rate Limit Buckets + Keying Strategy | — | Done |
+| TASK-020-11-02 | Auth Hardening + Bot Protection | — | Done |
+| TASK-020-11-03 | Public Endpoint Policy + Protection | — | Done |
+| TASK-020-11-04 | Security Settings Model + API | — | Done |
+| TASK-020-11-05 | Security Settings UI + Presets | — | Done |
+| TASK-020-11-06 | PII (Email) Encryption Decision + Implementation | — | Done |
 
 ---
 

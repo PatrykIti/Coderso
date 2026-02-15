@@ -16,7 +16,9 @@ import {
   updateLastLogin,
   updatePassword,
 } from "../../services/auth/userService";
+import { resolveEmailValue } from "../../services/security/piiEmail";
 import { hashPassword, verifyPassword } from "../../services/auth/password";
+import { enforceBotProtection } from "../../services/security/botProtection";
 import { logAudit } from "../../services/audit/auditService";
 import { getSecuritySettings } from "../../services/settings/securitySettings";
 import {
@@ -35,9 +37,9 @@ export type AuthRouteDeps = {
   validate: (schema: unknown, payload: unknown) => void;
 };
 
-type LoginBody = { email: string; password: string };
+type LoginBody = { email: string; password: string; captchaToken?: string };
 type OtpBody = { code?: string; recoveryCode?: string };
-type ResetBody = { email: string };
+type ResetBody = { email: string; captchaToken?: string };
 type ResetConfirmBody = { token: string; password: string };
 
 type PublicUser = {
@@ -46,20 +48,45 @@ type PublicUser = {
   name?: string | null;
 };
 
+const resolveUserEmail = (user: { email: string; emailEncrypted?: unknown }) =>
+  resolveEmailValue({
+    emailEncrypted: user.emailEncrypted,
+    email: user.email,
+  }) ?? user.email;
+
 function toPublicUser(user: {
   id: string;
   email: string;
+  emailEncrypted?: unknown;
   name?: string | null;
 }): PublicUser {
-  return { id: user.id, email: user.email, name: user.name ?? null };
+  return { id: user.id, email: resolveUserEmail(user), name: user.name ?? null };
 }
 
 export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
   const { requireAuth, validate } = deps;
 
+  router.get("/auth/bot-protection", async () => {
+    const settings = await getSecuritySettings();
+    return {
+      enabled: settings.botProtection.enabled,
+      provider: settings.botProtection.provider,
+      siteKey: settings.botProtection.siteKey,
+      enforceOnLocalhost: settings.botProtection.enforceOnLocalhost,
+    };
+  });
+
   router.post("/auth/login", async (ctx) => {
     validate(authLoginSchema, ctx.body);
     const body = ctx.body as LoginBody;
+
+    const securitySettings = await getSecuritySettings();
+    await enforceBotProtection({
+      token: body.captchaToken,
+      action: "login",
+      ip: ctx.ip,
+      settings: securitySettings.botProtection,
+    });
 
     const user = await getUserByEmail(body.email);
     if (!user || user.status !== "active") {
@@ -71,7 +98,6 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       throw new ApiError("auth_failed", "Invalid credentials", 401);
     }
 
-    const securitySettings = await getSecuritySettings();
     const lastFingerprint = await getLastSessionFingerprint(user.id);
     const alertFlags = evaluateLoginAlert(lastFingerprint, {
       ip: ctx.ip ?? null,
@@ -92,7 +118,7 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       action: "auth.login",
       targetType: "user",
       targetId: user.id,
-      metadata: { email: user.email },
+      metadata: { email: resolveUserEmail(user) },
       ip: ctx.ip,
       userAgent: ctx.userAgent,
     });
@@ -177,6 +203,14 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
     validate(authResetSchema, ctx.body);
     const body = ctx.body as ResetBody;
 
+    const securitySettings = await getSecuritySettings();
+    await enforceBotProtection({
+      token: body.captchaToken,
+      action: "reset",
+      ip: ctx.ip,
+      settings: securitySettings.botProtection,
+    });
+
     const user = await getUserByEmail(body.email);
     if (!user) {
       return { ok: true };
@@ -189,7 +223,7 @@ export function registerAuthRoutes(router: Router, deps: AuthRouteDeps) {
       action: "auth.reset.request",
       targetType: "user",
       targetId: user.id,
-      metadata: { email: user.email },
+      metadata: { email: resolveUserEmail(user) },
       ip: ctx.ip,
       userAgent: ctx.userAgent,
     });

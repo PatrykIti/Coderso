@@ -13,6 +13,9 @@ import {
   updateUser,
 } from "../../../core/services/admin/usersService";
 
+process.env.PII_HASH_KEY ||= "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.PII_ENC_KEY ||= "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
 

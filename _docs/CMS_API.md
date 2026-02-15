@@ -22,6 +22,10 @@ Access:
 - Admin UI komunikuje sie po HTTPS w tej samej domenie.
 - Internal service layer to modul w core, bez publicznego endpointu.
 
+Dodatkowe kody bledow zwiazane z ochrona:
+- `rate_limited` / `assistant_rate_limited` (HTTP 429)
+- `bot_protection_required`, `bot_protection_failed`, `bot_protection_score_low` (HTTP 4xx)
+
 Przyklad error:
 
 ```json
@@ -41,6 +45,7 @@ Przyklad error:
 - `POST /auth/login` (public)
 - `POST /auth/logout`
 - `GET /auth/me`
+- `GET /auth/bot-protection` (public config dla reCAPTCHA)
 - `GET /auth/csrf` (pobiera token CSRF)
 - `POST /auth/verify-otp` (MFA)
 - `POST /auth/reset` (public)
@@ -51,7 +56,7 @@ Przyklad error:
 Payload login:
 
 ```json
-{ "email": "user@example.com", "password": "secret" }
+{ "email": "user@example.com", "password": "secret", "captchaToken": "optional" }
 ```
 
 OTP verify payload (summary):
@@ -69,7 +74,7 @@ Recovery verify payload (summary):
 Reset request payload (summary):
 
 ```json
-{ "email": "user@example.com" }
+{ "email": "user@example.com", "captchaToken": "optional" }
 ```
 
 Reset confirm payload (summary):
@@ -1617,7 +1622,8 @@ Permissions: `forms:read`, `forms:write`
   "data": {
     "full_name": "Patryk",
     "email": "patryk@example.com"
-  }
+  },
+  "captchaToken": "optional"
 }
 ```
 

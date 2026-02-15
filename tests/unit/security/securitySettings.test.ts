@@ -52,13 +52,25 @@ testIfDb("getSecuritySettings returns defaults when missing", async () => {
     notifyOnNewDevice: true,
     notifyOnNewLocation: true,
   });
+  expect(current.botProtection).toEqual({
+    enabled: false,
+    provider: "recaptcha_v3",
+    siteKey: null,
+    secretKey: null,
+    thresholds: {
+      login: 0.5,
+      reset: 0.6,
+      publicWrite: 0.5,
+    },
+    enforceOnLocalhost: true,
+  });
 });
 
 testIfDb("setSecuritySettings merges partial updates", async () => {
   await setSecuritySettings({
     csrf: { enabled: false },
     cors: { allowedOrigins: ["https://admin.example.com"] },
-    rateLimit: { admin: { maxRequests: 50 } },
+    rateLimit: { buckets: { admin_read: { maxRequests: 50 } } },
     plugins: { safeMode: true },
     session: { ttlDays: 5, maxPerUser: 2, singleSession: true },
     loginAlerts: { enabled: false, notifyOnNewDevice: false },
@@ -67,9 +79,9 @@ testIfDb("setSecuritySettings merges partial updates", async () => {
   const updated = await getSecuritySettings();
   expect(updated.csrf.enabled).toBe(false);
   expect(updated.cors.allowedOrigins).toEqual(["https://admin.example.com"]);
-  expect(updated.rateLimit.admin.maxRequests).toBe(50);
-  expect(updated.rateLimit.admin.windowSeconds).toBe(
-    SECURITY_SETTINGS_DEFAULTS.rateLimit.admin.windowSeconds
+  expect(updated.rateLimit.buckets.admin_read.maxRequests).toBe(50);
+  expect(updated.rateLimit.buckets.admin_read.windowSeconds).toBe(
+    SECURITY_SETTINGS_DEFAULTS.rateLimit.buckets.admin_read.windowSeconds
   );
   expect(updated.plugins.safeMode).toBe(true);
   expect(updated.session.ttlDays).toBe(5);
@@ -87,6 +99,12 @@ testIfDb("setSecuritySettings validates input", async () => {
   await expect(
     setSecuritySettings({ session: { maxPerUser: 0 } })
   ).rejects.toThrow("security_settings_invalid");
+});
+
+testIfDb("bot protection requires keys when enabled", async () => {
+  await expect(setSecuritySettings({ botProtection: { enabled: true } })).rejects.toThrow(
+    "bot_protection_site_key_missing"
+  );
 });
 
 testIfDb("cors wildcard disables credentials", async () => {

@@ -3,6 +3,7 @@ import {
   getSessionByToken,
 } from "../../services/auth/sessionService";
 import { getUserById } from "../../services/auth/userService";
+import { resolveEmailValue } from "../../services/security/piiEmail";
 
 export type AuthContext = {
   cookies?: Record<string, string | undefined>;
@@ -24,7 +25,16 @@ export async function attachUserFromSession(
   const user = await getUserById(session.userId);
   if (!user || user.status !== "active") return;
 
-  ctx.user = { id: user.id, email: user.email, name: user.name };
+  const resolvedEmail = resolveEmailValue({
+    emailEncrypted: user.emailEncrypted,
+    email: user.email,
+  });
+
+  ctx.user = {
+    id: user.id,
+    email: resolvedEmail ?? undefined,
+    name: user.name,
+  };
   ctx.sessionId = session.id;
 }
 

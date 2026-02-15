@@ -4,12 +4,16 @@ import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import { contentEntries, contentTypes, media, pages, users } from "../../../core/db/schema";
+import { buildEmailFields } from "../../../core/services/security/piiEmail";
 import {
   buildSecuritySummary,
   calculateUsedPercent,
   getDashboardData,
 } from "../../../core/services/dashboard/dashboardService";
 import type { SecuritySettings } from "../../../core/services/settings/securitySettings";
+
+process.env.PII_HASH_KEY ||= "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+process.env.PII_ENC_KEY ||= "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
 
 async function canConnect() {
   try {
@@ -54,8 +58,14 @@ const baselineSecuritySettings: SecuritySettings = {
   },
   rateLimit: {
     enabled: true,
-    admin: { windowSeconds: 60, maxRequests: 120 },
-    auth: { windowSeconds: 60, maxRequests: 20 },
+    buckets: {
+      auth: { windowSeconds: 60, maxRequests: 20 },
+      admin_read: { windowSeconds: 60, maxRequests: 600 },
+      admin_write: { windowSeconds: 60, maxRequests: 120 },
+      public_read: { windowSeconds: 60, maxRequests: 300 },
+      public_write: { windowSeconds: 60, maxRequests: 30 },
+      assistant: { windowSeconds: 60, maxRequests: 30 },
+    },
   },
   headers: {
     enabled: true,
@@ -82,16 +92,32 @@ const baselineSecuritySettings: SecuritySettings = {
     notifyOnNewDevice: true,
     notifyOnNewLocation: true,
   },
+  botProtection: {
+    enabled: false,
+    provider: "recaptcha_v3",
+    siteKey: null,
+    secretKey: null,
+    thresholds: {
+      login: 0.5,
+      reset: 0.6,
+      publicWrite: 0.5,
+    },
+    enforceOnLocalhost: true,
+  },
 };
 
 beforeAll(async () => {
   if (!hasDb) return;
 
   const suffix = randomUUID();
+  const emailValue = `dashboard-${suffix}@example.com`;
+  const emailFields = buildEmailFields(emailValue);
   const [user] = await db
     .insert(users)
     .values({
-      email: `dashboard-${suffix}@example.com`,
+      email: emailFields.email,
+      emailHash: emailFields.emailHash,
+      emailEncrypted: emailFields.emailEncrypted,
       passwordHash: "test",
       status: "active",
       name: "Dashboard Tester",

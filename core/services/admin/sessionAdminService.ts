@@ -2,6 +2,7 @@ import { and, desc, eq, gt, isNull, ne } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { sessions, users } from "../../db/schema";
+import { resolveEmailValue } from "../security/piiEmail";
 
 export type SessionSummary = {
   id: string;
@@ -26,6 +27,7 @@ export async function listActiveSessions(userId?: string) {
       id: sessions.id,
       userId: sessions.userId,
       userEmail: users.email,
+      userEmailEncrypted: users.emailEncrypted,
       userName: users.name,
       ip: sessions.ip,
       userAgent: sessions.userAgent,
@@ -40,7 +42,10 @@ export async function listActiveSessions(userId?: string) {
   return rows.map((row) => ({
     id: row.id,
     userId: row.userId,
-    userEmail: row.userEmail ?? "",
+    userEmail: resolveEmailValue({
+      emailEncrypted: row.userEmailEncrypted,
+      email: row.userEmail,
+    }) ?? "",
     userName: row.userName ?? null,
     ip: row.ip ?? null,
     userAgent: row.userAgent ?? null,

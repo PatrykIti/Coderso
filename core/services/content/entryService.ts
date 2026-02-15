@@ -14,6 +14,7 @@ import {
   getSeoDocumentByTarget,
   upsertSeoDocument,
 } from "../seo/seoService";
+import { resolveEmailValue } from "../security/piiEmail";
 import {
   getEntryTaxonomies,
   replaceEntryTaxonomies,
@@ -419,6 +420,7 @@ export async function listEntries(typeId: string) {
       updatedAt: contentEntries.updatedAt,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(contentEntries)
     .leftJoin(users, eq(contentEntries.authorId, users.id))
@@ -441,7 +443,10 @@ export async function listEntries(typeId: string) {
       ? {
           id: row.authorId,
           name: row.authorName ?? null,
-          email: row.authorEmail ?? "",
+          email: resolveEmailValue({
+            emailEncrypted: row.authorEmailEncrypted,
+            email: row.authorEmail,
+          }) ?? "",
         }
       : null,
   }));
@@ -464,6 +469,7 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
       updatedAt: contentEntries.updatedAt,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(contentEntries)
     .leftJoin(users, eq(contentEntries.authorId, users.id))
@@ -490,7 +496,10 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
       ? {
           id: row.authorId,
           name: row.authorName ?? null,
-          email: row.authorEmail ?? "",
+          email: resolveEmailValue({
+            emailEncrypted: row.authorEmailEncrypted,
+            email: row.authorEmail,
+          }) ?? "",
         }
       : null,
     seo: seo

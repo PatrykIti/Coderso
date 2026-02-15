@@ -24,6 +24,18 @@ import { resolveAdminPath } from "./utils/adminPath";
 
 const MEDIA_PREFIX = "/media";
 
+const READ_METHODS = new Set(["GET", "HEAD"]);
+
+const isReadMethod = (method: string) => READ_METHODS.has(method.toUpperCase());
+
+const isPublicWritePath = (pathname: string) =>
+  /^\/forms\/[^/]+\/submissions$/.test(pathname);
+
+const resolvePublicWriteIdentifier = (pathname: string) => {
+  const match = pathname.match(/^\/forms\/([^/]+)\/submissions$/);
+  return match ? match[1] : null;
+};
+
 const parseCookies = (header: string | null) => {
   if (!header) return {} as Record<string, string>;
   const entries = header.split(";").map((pair) => pair.trim());
@@ -196,6 +208,14 @@ const handleAdmin = async (req: Request, adminPath: string, devUrl?: string) => 
   if (devUrl) return redirectToDev(req, devUrl);
 
   const security = await getSecuritySettings();
+  checkRateLimit(
+    "public_read",
+    {
+      ip: resolveIp(req),
+      userAgent: req.headers.get("user-agent") ?? undefined,
+    },
+    security.rateLimit
+  );
 
   const normalizedAssetPath = normalizeAdminAssetPath(url.pathname, adminPath);
   if (normalizedAssetPath) {
@@ -293,13 +313,33 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     await attachUserFromSession(ctx);
 
     try {
+      const isAuthRoute = pathname.startsWith("/auth");
+      const isAssistantRoute = pathname.startsWith("/assistant");
+      const isPublicWrite = req.method === "POST" && isPublicWritePath(pathname);
+      const bucket = isAuthRoute
+        ? "auth"
+        : isAssistantRoute
+          ? "assistant"
+          : isPublicWrite
+            ? "public_write"
+            : isReadMethod(req.method)
+              ? "admin_read"
+              : "admin_write";
+      const identifierFromBody =
+        isAuthRoute && ctx.body && typeof ctx.body === "object"
+          ? (ctx.body as { email?: string }).email
+          : undefined;
+      const identifier = isPublicWrite
+        ? resolvePublicWriteIdentifier(pathname) ?? undefined
+        : identifierFromBody;
       checkRateLimit(
-        pathname.startsWith("/auth")
-          ? "auth"
-          : pathname.startsWith("/assistant")
-            ? "assistant"
-            : "admin",
-        ctx.ip,
+        bucket,
+        {
+          ip: ctx.ip,
+          userAgent: ctx.userAgent,
+          userId: ctx.user?.id,
+          identifier,
+        },
         security.rateLimit,
         { isAuthenticated: Boolean(ctx.user) }
       );
@@ -357,6 +397,16 @@ const handleMedia = async (req: Request) => {
 
   const key = url.pathname.slice(MEDIA_PREFIX.length).replace(/^\/+/, "");
   if (!key) return new Response("Not Found", { status: 404 });
+
+  const security = await getSecuritySettings();
+  checkRateLimit(
+    "public_read",
+    {
+      ip: resolveIp(req),
+      userAgent: req.headers.get("user-agent") ?? undefined,
+    },
+    security.rateLimit
+  );
 
   const config = await getStorageSettingsInternal();
   if (config.driver !== "local") {

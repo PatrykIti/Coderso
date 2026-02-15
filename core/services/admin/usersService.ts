@@ -1,9 +1,10 @@
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, or } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 import { db } from "../../db/client";
 import { roles, userRoles, users } from "../../db/schema";
 import { hashPassword } from "../auth/password";
+import { buildEmailFields, normalizeEmail, resolveEmailValue } from "../security/piiEmail";
 import { getAdminRoleIds } from "./rolesService";
 
 export type UserStatus = "active" | "inactive" | "pending";
@@ -36,8 +37,6 @@ export type UserUpdateInput = {
   password?: string;
 };
 
-const normalizeEmail = (email: string) => email.trim().toLowerCase();
-
 async function listRoleIdsForUsers(userIds: string[]) {
   if (userIds.length === 0) return new Map<string, string[]>();
   const rows = await db
@@ -53,6 +52,10 @@ async function listRoleIdsForUsers(userIds: string[]) {
   });
   return map;
 }
+
+
+const resolveUserEmail = (row: { emailEncrypted?: unknown; email?: string | null }) =>
+  resolveEmailValue({ emailEncrypted: row.emailEncrypted, email: row.email }) ?? "";
 
 async function getAdminUserIdsExcluding(userId?: string) {
   const adminRoleIds = await getAdminRoleIds();
@@ -102,7 +105,7 @@ export async function listUsers(): Promise<UserSummary[]> {
   return rows.map((row) => ({
     id: row.id,
     name: row.name ?? null,
-    email: row.email,
+    email: resolveUserEmail(row),
     status: row.status as UserStatus,
     roleIds: roleMap.get(row.id) ?? [],
     createdAt: row.createdAt,
@@ -118,7 +121,7 @@ export async function getUser(id: string) {
   return {
     id: row.id,
     name: row.name ?? null,
-    email: row.email,
+    email: resolveUserEmail(row),
     status: row.status as UserStatus,
     roleIds: roleMap.get(row.id) ?? [],
     createdAt: row.createdAt,
@@ -136,12 +139,14 @@ export async function createUser(input: UserCreateInput) {
     throw new Error("user_invalid");
   }
 
+  const emailFields = buildEmailFields(email);
+
   await assertRoleIdsExist(roleIds);
 
   const existing = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, email));
+    .where(or(eq(users.emailHash, emailFields.emailHash), eq(users.email, email)));
   if (existing.length > 0) {
     throw new Error("user_exists");
   }
@@ -158,7 +163,9 @@ export async function createUser(input: UserCreateInput) {
     const [row] = await tx
       .insert(users)
       .values({
-        email,
+        email: emailFields.email,
+        emailHash: emailFields.emailHash,
+        emailEncrypted: emailFields.emailEncrypted,
         name,
         passwordHash,
         status,
@@ -179,7 +186,7 @@ export async function createUser(input: UserCreateInput) {
     return {
       id: row.id,
       name: row.name ?? null,
-      email: row.email,
+      email: resolveUserEmail(row),
       status: row.status as UserStatus,
       roleIds,
       createdAt: row.createdAt,
@@ -206,14 +213,22 @@ export async function updateUser(id: string, input: UserUpdateInput) {
   if (input.email !== undefined) {
     const email = normalizeEmail(input.email);
     if (!email) throw new Error("user_invalid");
+    const emailFields = buildEmailFields(email);
     const conflict = await db
       .select({ id: users.id })
       .from(users)
-      .where(and(eq(users.email, email), ne(users.id, id)));
+      .where(
+        and(
+          or(eq(users.emailHash, emailFields.emailHash), eq(users.email, email)),
+          ne(users.id, id)
+        )
+      );
     if (conflict.length > 0) {
       throw new Error("user_exists");
     }
-    update.email = email;
+    update.email = emailFields.email;
+    update.emailHash = emailFields.emailHash;
+    update.emailEncrypted = emailFields.emailEncrypted;
   }
 
   if (input.status !== undefined) {
@@ -235,7 +250,7 @@ export async function updateUser(id: string, input: UserUpdateInput) {
   return {
     id: row.id,
     name: row.name ?? null,
-    email: row.email,
+    email: resolveUserEmail(row),
     status: row.status as UserStatus,
     roleIds: roleMap.get(row.id) ?? [],
     createdAt: row.createdAt,
@@ -273,7 +288,7 @@ export async function setUserRoles(userId: string, roleIds: string[]) {
     return {
       id: userRow.id,
       name: userRow.name ?? null,
-      email: userRow.email,
+      email: resolveUserEmail(userRow),
       status: userRow.status as UserStatus,
       roleIds,
       createdAt: userRow.createdAt,

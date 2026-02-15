@@ -2,6 +2,43 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { settings } from "../../db/schema";
+import {
+  decryptSecret,
+  encryptSecret,
+  isEncryptedSecret,
+  type EncryptedSecret,
+} from "../security/secretStore";
+import { isPasswordPepperConfigured } from "../auth/password";
+
+export type RateLimitBucket =
+  | "auth"
+  | "admin_read"
+  | "admin_write"
+  | "public_read"
+  | "public_write"
+  | "assistant";
+
+export type RateLimitBucketConfig = {
+  windowSeconds: number;
+  maxRequests: number;
+};
+
+export type BotProtectionSettings = {
+  enabled: boolean;
+  provider: "recaptcha_v3";
+  siteKey: string | null;
+  secretKey: string | EncryptedSecret | null;
+  thresholds: {
+    login: number;
+    reset: number;
+    publicWrite: number;
+  };
+  enforceOnLocalhost: boolean;
+};
+
+export type BotProtectionSettingsPublic = Omit<BotProtectionSettings, "secretKey"> & {
+  secretKey: { configured: boolean };
+};
 
 export type SecuritySettings = {
   requestId: {
@@ -22,8 +59,7 @@ export type SecuritySettings = {
   };
   rateLimit: {
     enabled: boolean;
-    admin: { windowSeconds: number; maxRequests: number };
-    auth: { windowSeconds: number; maxRequests: number };
+    buckets: Record<RateLimitBucket, RateLimitBucketConfig>;
   };
   headers: {
     enabled: boolean;
@@ -50,6 +86,12 @@ export type SecuritySettings = {
     notifyOnNewDevice: boolean;
     notifyOnNewLocation: boolean;
   };
+  botProtection: BotProtectionSettings;
+};
+
+export type SecuritySettingsPublic = Omit<SecuritySettings, "botProtection"> & {
+  botProtection: BotProtectionSettingsPublic;
+  passwordPepperConfigured: boolean;
 };
 
 export type SecuritySettingsUpdate = {
@@ -58,17 +100,37 @@ export type SecuritySettingsUpdate = {
   cors?: Partial<SecuritySettings["cors"]>;
   rateLimit?: {
     enabled?: boolean;
-    admin?: Partial<SecuritySettings["rateLimit"]["admin"]>;
-    auth?: Partial<SecuritySettings["rateLimit"]["auth"]>;
+    buckets?: Partial<
+      Record<RateLimitBucket, Partial<SecuritySettings["rateLimit"]["buckets"][RateLimitBucket]>>
+    >;
+    admin?: Partial<RateLimitBucketConfig>;
+    auth?: Partial<RateLimitBucketConfig>;
   };
   headers?: Partial<SecuritySettings["headers"]>;
   validation?: Partial<SecuritySettings["validation"]>;
   plugins?: Partial<SecuritySettings["plugins"]>;
   session?: Partial<SecuritySettings["session"]>;
   loginAlerts?: Partial<SecuritySettings["loginAlerts"]>;
+  botProtection?: {
+    enabled?: boolean;
+    provider?: "recaptcha_v3";
+    siteKey?: string | null;
+    secretKey?: string | null;
+    thresholds?: Partial<SecuritySettings["botProtection"]["thresholds"]>;
+    enforceOnLocalhost?: boolean;
+  };
 };
 
 const SECURITY_SETTINGS_KEY = "security.settings";
+
+const RATE_LIMIT_BUCKETS: RateLimitBucket[] = [
+  "auth",
+  "admin_read",
+  "admin_write",
+  "public_read",
+  "public_write",
+  "assistant",
+];
 
 const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
   requestId: {
@@ -89,8 +151,14 @@ const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
   },
   rateLimit: {
     enabled: true,
-    admin: { windowSeconds: 60, maxRequests: 120 },
-    auth: { windowSeconds: 60, maxRequests: 20 },
+    buckets: {
+      auth: { windowSeconds: 60, maxRequests: 10 },
+      admin_read: { windowSeconds: 60, maxRequests: 600 },
+      admin_write: { windowSeconds: 60, maxRequests: 120 },
+      public_read: { windowSeconds: 60, maxRequests: 300 },
+      public_write: { windowSeconds: 60, maxRequests: 30 },
+      assistant: { windowSeconds: 60, maxRequests: 30 },
+    },
   },
   headers: {
     enabled: true,
@@ -116,6 +184,18 @@ const DEFAULT_SECURITY_SETTINGS: SecuritySettings = {
     enabled: true,
     notifyOnNewDevice: true,
     notifyOnNewLocation: true,
+  },
+  botProtection: {
+    enabled: false,
+    provider: "recaptcha_v3",
+    siteKey: null,
+    secretKey: null,
+    thresholds: {
+      login: 0.5,
+      reset: 0.6,
+      publicWrite: 0.5,
+    },
+    enforceOnLocalhost: true,
   },
 };
 
@@ -153,6 +233,18 @@ const normalizeNumber = (value: unknown, fallback: number) => {
   if (typeof value === "string" && value.trim() !== "") {
     const parsed = Number(value);
     if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  throw new Error("security_settings_invalid");
+};
+
+const normalizeScore = (value: unknown, fallback: number) => {
+  if (value === undefined) return fallback;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (value >= 0 && value <= 1) return value;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 0 && parsed <= 1) return parsed;
   }
   throw new Error("security_settings_invalid");
 };
@@ -210,6 +302,61 @@ const normalizeFrameOptions = (
   throw new Error("security_settings_invalid");
 };
 
+const normalizeRateLimitBucket = (
+  value: unknown,
+  fallback: RateLimitBucketConfig
+): RateLimitBucketConfig => {
+  if (value === undefined) return fallback;
+  if (!assertPlainObject(value)) throw new Error("security_settings_invalid");
+  const record = value as Record<string, unknown>;
+  return {
+    windowSeconds: normalizeNumber(record.windowSeconds, fallback.windowSeconds),
+    maxRequests: normalizeNumber(record.maxRequests, fallback.maxRequests),
+  };
+};
+
+const normalizeBotProvider = (
+  value: unknown,
+  fallback: BotProtectionSettings["provider"]
+) => {
+  if (value === undefined) return fallback;
+  if (value === "recaptcha_v3") return value;
+  throw new Error("security_settings_invalid");
+};
+
+const normalizeBotSecret = (
+  value: unknown,
+  fallback: BotProtectionSettings["secretKey"]
+) => {
+  if (value === undefined) return fallback;
+  if (value === null) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) throw new Error("security_settings_invalid");
+    return trimmed;
+  }
+  if (isEncryptedSecret(value)) return value;
+  throw new Error("security_settings_invalid");
+};
+
+const hasBotSecretConfigured = (secret: BotProtectionSettings["secretKey"]) => {
+  if (typeof secret === "string") return Boolean(secret.trim());
+  if (isEncryptedSecret(secret)) return true;
+  return false;
+};
+
+const resolveBotSecretValue = (secret: BotProtectionSettings["secretKey"]) => {
+  if (typeof secret === "string") return secret.trim() || null;
+  if (isEncryptedSecret(secret)) {
+    try {
+      return decryptSecret(secret);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
 const mergeSecuritySettings = (
   base: SecuritySettings,
   update: SecuritySettingsUpdate
@@ -223,8 +370,11 @@ const mergeSecuritySettings = (
   assertObjectOrUndefined(update.plugins);
   assertObjectOrUndefined(update.session);
   assertObjectOrUndefined(update.loginAlerts);
+  assertObjectOrUndefined(update.botProtection);
   assertObjectOrUndefined(update.rateLimit?.admin);
   assertObjectOrUndefined(update.rateLimit?.auth);
+  assertObjectOrUndefined(update.rateLimit?.buckets);
+  assertObjectOrUndefined(update.botProtection?.thresholds);
 
   assertAllowedKeys(update, [
     "requestId",
@@ -236,6 +386,7 @@ const mergeSecuritySettings = (
     "plugins",
     "session",
     "loginAlerts",
+    "botProtection",
   ]);
   if (update.requestId) {
     assertAllowedKeys(update.requestId, ["enabled", "headerName"]);
@@ -253,12 +404,21 @@ const mergeSecuritySettings = (
     ]);
   }
   if (update.rateLimit) {
-    assertAllowedKeys(update.rateLimit, ["enabled", "admin", "auth"]);
+    assertAllowedKeys(update.rateLimit, ["enabled", "buckets", "admin", "auth"]);
     if (update.rateLimit.admin) {
       assertAllowedKeys(update.rateLimit.admin, ["windowSeconds", "maxRequests"]);
     }
     if (update.rateLimit.auth) {
       assertAllowedKeys(update.rateLimit.auth, ["windowSeconds", "maxRequests"]);
+    }
+    if (update.rateLimit.buckets) {
+      assertAllowedKeys(update.rateLimit.buckets, RATE_LIMIT_BUCKETS);
+      for (const bucket of RATE_LIMIT_BUCKETS) {
+        const bucketUpdate = update.rateLimit.buckets[bucket];
+        if (bucketUpdate) {
+          assertAllowedKeys(bucketUpdate, ["windowSeconds", "maxRequests"]);
+        }
+      }
     }
   }
   if (update.headers) {
@@ -287,6 +447,19 @@ const mergeSecuritySettings = (
       "notifyOnNewDevice",
       "notifyOnNewLocation",
     ]);
+  }
+  if (update.botProtection) {
+    assertAllowedKeys(update.botProtection, [
+      "enabled",
+      "provider",
+      "siteKey",
+      "secretKey",
+      "thresholds",
+      "enforceOnLocalhost",
+    ]);
+    if (update.botProtection.thresholds) {
+      assertAllowedKeys(update.botProtection.thresholds, ["login", "reset", "publicWrite"]);
+    }
   }
 
   const requestId = {
@@ -330,28 +503,41 @@ const mergeSecuritySettings = (
     maxAgeSeconds: normalizeNumber(update.cors?.maxAgeSeconds, base.cors.maxAgeSeconds),
   };
 
+  const rateLimitEnabled = normalizeBoolean(update.rateLimit?.enabled, base.rateLimit.enabled);
+  const legacyAdmin = update.rateLimit?.admin;
+  const legacyAuth = update.rateLimit?.auth;
+  const bucketUpdates = update.rateLimit?.buckets ?? {};
+
+  const rateLimitBuckets: Record<RateLimitBucket, RateLimitBucketConfig> = {
+    auth: normalizeRateLimitBucket(
+      bucketUpdates.auth ?? legacyAuth,
+      base.rateLimit.buckets.auth
+    ),
+    admin_read: normalizeRateLimitBucket(
+      bucketUpdates.admin_read ?? legacyAdmin,
+      base.rateLimit.buckets.admin_read
+    ),
+    admin_write: normalizeRateLimitBucket(
+      bucketUpdates.admin_write ?? legacyAdmin,
+      base.rateLimit.buckets.admin_write
+    ),
+    public_read: normalizeRateLimitBucket(
+      bucketUpdates.public_read,
+      base.rateLimit.buckets.public_read
+    ),
+    public_write: normalizeRateLimitBucket(
+      bucketUpdates.public_write,
+      base.rateLimit.buckets.public_write
+    ),
+    assistant: normalizeRateLimitBucket(
+      bucketUpdates.assistant,
+      base.rateLimit.buckets.assistant
+    ),
+  };
+
   const rateLimit = {
-    enabled: normalizeBoolean(update.rateLimit?.enabled, base.rateLimit.enabled),
-    admin: {
-      windowSeconds: normalizeNumber(
-        update.rateLimit?.admin?.windowSeconds,
-        base.rateLimit.admin.windowSeconds
-      ),
-      maxRequests: normalizeNumber(
-        update.rateLimit?.admin?.maxRequests,
-        base.rateLimit.admin.maxRequests
-      ),
-    },
-    auth: {
-      windowSeconds: normalizeNumber(
-        update.rateLimit?.auth?.windowSeconds,
-        base.rateLimit.auth.windowSeconds
-      ),
-      maxRequests: normalizeNumber(
-        update.rateLimit?.auth?.maxRequests,
-        base.rateLimit.auth.maxRequests
-      ),
-    },
+    enabled: rateLimitEnabled,
+    buckets: rateLimitBuckets,
   };
 
   const headers = {
@@ -400,6 +586,33 @@ const mergeSecuritySettings = (
     ),
   };
 
+  const botProtection = {
+    enabled: normalizeBoolean(update.botProtection?.enabled, base.botProtection.enabled),
+    provider: normalizeBotProvider(update.botProtection?.provider, base.botProtection.provider),
+    siteKey: normalizeString(update.botProtection?.siteKey, base.botProtection.siteKey, {
+      allowNull: true,
+    }),
+    secretKey: normalizeBotSecret(update.botProtection?.secretKey, base.botProtection.secretKey),
+    thresholds: {
+      login: normalizeScore(
+        update.botProtection?.thresholds?.login,
+        base.botProtection.thresholds.login
+      ),
+      reset: normalizeScore(
+        update.botProtection?.thresholds?.reset,
+        base.botProtection.thresholds.reset
+      ),
+      publicWrite: normalizeScore(
+        update.botProtection?.thresholds?.publicWrite,
+        base.botProtection.thresholds.publicWrite
+      ),
+    },
+    enforceOnLocalhost: normalizeBoolean(
+      update.botProtection?.enforceOnLocalhost,
+      base.botProtection.enforceOnLocalhost
+    ),
+  };
+
   return {
     requestId,
     csrf,
@@ -410,6 +623,7 @@ const mergeSecuritySettings = (
     plugins,
     session,
     loginAlerts,
+    botProtection,
   };
 };
 
@@ -419,6 +633,47 @@ const normalizeStoredSettings = (value: unknown): SecuritySettings => {
     return mergeSecuritySettings(DEFAULT_SECURITY_SETTINGS, value as SecuritySettingsUpdate);
   } catch {
     return DEFAULT_SECURITY_SETTINGS;
+  }
+};
+
+const toStoredSettings = (settings: SecuritySettings): SecuritySettings => {
+  const secret = settings.botProtection.secretKey;
+  const encryptedSecret = (() => {
+    if (typeof secret === "string") {
+      return encryptSecret(secret);
+    }
+    if (isEncryptedSecret(secret)) {
+      return secret;
+    }
+    return null;
+  })();
+
+  return {
+    ...settings,
+    botProtection: {
+      ...settings.botProtection,
+      secretKey: encryptedSecret,
+    },
+  };
+};
+
+const toPublicSettings = (settings: SecuritySettings): SecuritySettingsPublic => ({
+  ...settings,
+  botProtection: {
+    ...settings.botProtection,
+    secretKey: { configured: hasBotSecretConfigured(settings.botProtection.secretKey) },
+  },
+  passwordPepperConfigured: isPasswordPepperConfigured(),
+});
+
+const assertBotProtectionConfig = (settings: SecuritySettings) => {
+  if (!settings.botProtection.enabled) return;
+  if (!settings.botProtection.siteKey) {
+    throw new Error("bot_protection_site_key_missing");
+  }
+  const secretValue = resolveBotSecretValue(settings.botProtection.secretKey);
+  if (!secretValue) {
+    throw new Error("bot_protection_secret_key_missing");
   }
 };
 
@@ -440,23 +695,35 @@ export async function getSecuritySettings(): Promise<SecuritySettings> {
   return merged;
 }
 
+export async function getSecuritySettingsPublic(): Promise<SecuritySettingsPublic> {
+  const current = await getSecuritySettings();
+  return toPublicSettings(current);
+}
+
 export async function setSecuritySettings(update: SecuritySettingsUpdate) {
   if (!assertPlainObject(update)) throw new Error("security_settings_invalid");
   const current = await getSecuritySettings();
   const merged = mergeSecuritySettings(current, update);
+  assertBotProtectionConfig(merged);
   const now = new Date();
+  const stored = toStoredSettings(merged);
 
   await db
     .insert(settings)
-    .values({ key: SECURITY_SETTINGS_KEY, value: merged, updatedAt: now })
+    .values({ key: SECURITY_SETTINGS_KEY, value: stored, updatedAt: now })
     .onConflictDoUpdate({
       target: settings.key,
-      set: { value: merged, updatedAt: now },
+      set: { value: stored, updatedAt: now },
     });
 
   cachedSettings = merged;
   cachedUpdatedAt = now.getTime();
   return merged;
+}
+
+export async function setSecuritySettingsPublic(update: SecuritySettingsUpdate) {
+  const updated = await setSecuritySettings(update);
+  return toPublicSettings(updated);
 }
 
 export async function getSecuritySettingsUpdatedAt() {

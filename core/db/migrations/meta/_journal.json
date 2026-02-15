@@ -239,6 +239,13 @@
       "when": 1770671008879,
       "tag": "0033_assistant_docs_kb",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1771191111874,
+      "tag": "0034_user_email_encryption",
+      "breakpoints": true
     }
   ]
 }

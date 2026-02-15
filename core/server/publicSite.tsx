@@ -48,6 +48,8 @@ import {
 } from "../widgets/core/entryTeaser";
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
+import { checkRateLimit } from "./middleware/rateLimit";
+import { getSecuritySettings } from "../services/settings/securitySettings";
 
 export type PublicPageData = {
   title: string;
@@ -88,6 +90,12 @@ const resolveAdminCss = () =>
     "/admin",
     ["admin/main.tsx", "admin/index.html"]
   );
+
+const resolveIp = (req: Request) => {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]?.trim();
+  return undefined;
+};
 
 const isSiteAsset = (pathname: string) =>
   pathname.startsWith("/site/assets/") || pathname === "/site/favicon.ico";
@@ -456,6 +464,15 @@ const renderEntryDetailHtml = async (
 
 export async function handlePublicRequest(req: Request) {
   const url = new URL(req.url);
+  const security = await getSecuritySettings();
+  checkRateLimit(
+    "public_read",
+    {
+      ip: resolveIp(req),
+      userAgent: req.headers.get("user-agent") ?? undefined,
+    },
+    security.rateLimit
+  );
   if (isSiteAsset(url.pathname)) {
     return serveSiteAsset(url.pathname);
   }

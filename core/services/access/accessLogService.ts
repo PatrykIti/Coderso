@@ -2,6 +2,7 @@ import { and, desc, eq, gte, ilike, lt, lte, or, type SQL } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { accessLogs, users } from "../../db/schema";
+import { hashEmail, isLikelyEmail, normalizeEmail, resolveEmailValue } from "../security/piiEmail";
 
 export type AccessLogInput = {
   method: string;
@@ -73,13 +74,20 @@ export async function listAccessLogs(filters: AccessLogFilters = {}) {
   }
 
   if (filters.query) {
-    const value = `%${filters.query.toLowerCase()}%`;
-    const queryFilter = or(
+    const rawQuery = filters.query.toLowerCase();
+    const value = `%${rawQuery}%`;
+    const queryFilters = [
       ilike(accessLogs.path, value),
       ilike(accessLogs.ip, value),
-      ilike(users.email, value),
-      ilike(users.name, value)
-    );
+      ilike(users.name, value),
+    ];
+    if (isLikelyEmail(rawQuery)) {
+      const normalized = normalizeEmail(rawQuery);
+      const emailHash = hashEmail(normalized);
+      queryFilters.push(eq(users.emailHash, emailHash));
+      queryFilters.push(eq(users.email, normalized));
+    }
+    const queryFilter = or(...queryFilters);
     if (queryFilter) {
       conditions.push(queryFilter);
     }
@@ -98,6 +106,7 @@ export async function listAccessLogs(filters: AccessLogFilters = {}) {
       userId: accessLogs.userId,
       userName: users.name,
       userEmail: users.email,
+      userEmailEncrypted: users.emailEncrypted,
       durationMs: accessLogs.durationMs,
       createdAt: accessLogs.createdAt,
     })
@@ -107,5 +116,11 @@ export async function listAccessLogs(filters: AccessLogFilters = {}) {
     .orderBy(desc(accessLogs.createdAt))
     .limit(limit);
 
-  return rows as AccessLogRecord[];
+  return rows.map((row) => ({
+    ...row,
+    userEmail: resolveEmailValue({
+      emailEncrypted: row.userEmailEncrypted,
+      email: row.userEmail,
+    }),
+  })) as AccessLogRecord[];
 }

@@ -101,8 +101,14 @@ export type SecuritySettingsResponse = {
   };
   rateLimit: {
     enabled: boolean;
-    admin: { windowSeconds: number; maxRequests: number };
-    auth: { windowSeconds: number; maxRequests: number };
+    buckets: {
+      auth: { windowSeconds: number; maxRequests: number };
+      admin_read: { windowSeconds: number; maxRequests: number };
+      admin_write: { windowSeconds: number; maxRequests: number };
+      public_read: { windowSeconds: number; maxRequests: number };
+      public_write: { windowSeconds: number; maxRequests: number };
+      assistant: { windowSeconds: number; maxRequests: number };
+    };
   };
   headers: {
     enabled: boolean;
@@ -121,6 +127,19 @@ export type SecuritySettingsResponse = {
     notifyOnNewDevice: boolean;
     notifyOnNewLocation: boolean;
   };
+  botProtection: {
+    enabled: boolean;
+    provider: "recaptcha_v3";
+    siteKey: string | null;
+    secretKey: { configured: boolean };
+    thresholds: {
+      login: number;
+      reset: number;
+      publicWrite: number;
+    };
+    enforceOnLocalhost: boolean;
+  };
+  passwordPepperConfigured: boolean;
 };
 
 export type SecuritySettingsUpdate = {
@@ -129,14 +148,30 @@ export type SecuritySettingsUpdate = {
   cors?: Partial<SecuritySettingsResponse["cors"]>;
   rateLimit?: {
     enabled?: boolean;
-    admin?: Partial<SecuritySettingsResponse["rateLimit"]["admin"]>;
-    auth?: Partial<SecuritySettingsResponse["rateLimit"]["auth"]>;
+    buckets?: Partial<{
+      auth: Partial<SecuritySettingsResponse["rateLimit"]["buckets"]["auth"]>;
+      admin_read: Partial<SecuritySettingsResponse["rateLimit"]["buckets"]["admin_read"]>;
+      admin_write: Partial<SecuritySettingsResponse["rateLimit"]["buckets"]["admin_write"]>;
+      public_read: Partial<SecuritySettingsResponse["rateLimit"]["buckets"]["public_read"]>;
+      public_write: Partial<SecuritySettingsResponse["rateLimit"]["buckets"]["public_write"]>;
+      assistant: Partial<SecuritySettingsResponse["rateLimit"]["buckets"]["assistant"]>;
+    }>;
+    admin?: Partial<SecuritySettingsResponse["rateLimit"]["buckets"]["admin_read"]>;
+    auth?: Partial<SecuritySettingsResponse["rateLimit"]["buckets"]["auth"]>;
   };
   headers?: Partial<SecuritySettingsResponse["headers"]>;
   validation?: Partial<SecuritySettingsResponse["validation"]>;
   plugins?: Partial<SecuritySettingsResponse["plugins"]>;
   session?: Partial<SecuritySettingsResponse["session"]>;
   loginAlerts?: Partial<SecuritySettingsResponse["loginAlerts"]>;
+  botProtection?: {
+    enabled?: boolean;
+    provider?: "recaptcha_v3";
+    siteKey?: string | null;
+    secretKey?: string | null;
+    thresholds?: Partial<SecuritySettingsResponse["botProtection"]["thresholds"]>;
+    enforceOnLocalhost?: boolean;
+  };
 };
 
 export async function getStorageSettings() {

@@ -18,21 +18,21 @@ export function SettingsShell({
   ...props
 }: SettingsShellProps) {
   return (
-    <AdminShell contentClassName="p-0" {...props}>
-      <div className="flex h-full min-h-[calc(100vh-4rem)]">
+    <AdminShell contentClassName="p-0 overflow-hidden" {...props}>
+      <div className="flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden">
         <aside
           className={cn(
-            "hidden w-64 shrink-0 border-r bg-background lg:block",
+            "hidden w-64 shrink-0 border-r bg-background lg:block h-full min-h-0 overflow-y-auto overscroll-contain",
             sidebarClassName
           )}
         >
           {sidebar}
         </aside>
-        <section className="min-w-0 flex-1 bg-muted/30">{children}</section>
+        <section className="min-w-0 flex-1 bg-muted/30 h-full min-h-0 overflow-y-auto overscroll-contain">{children}</section>
         {preview ? (
           <aside
             className={cn(
-              "hidden w-[420px] shrink-0 border-l bg-background xl:block",
+              "hidden w-[420px] shrink-0 border-l bg-background xl:block h-full min-h-0 overflow-y-auto overscroll-contain",
               previewClassName
             )}
           >

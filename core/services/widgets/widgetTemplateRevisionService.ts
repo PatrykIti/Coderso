@@ -8,6 +8,7 @@ import {
   normalizeWidgetTemplateSettings,
   type WidgetTemplateSettings,
 } from "./widgetTemplateSettings";
+import { resolveEmailValue } from "../security/piiEmail";
 
 export type WidgetTemplateRevisionPayload = {
   name: string;
@@ -56,6 +57,7 @@ export async function listWidgetTemplateRevisions(templateId: string) {
       createdBy: widgetTemplateRevisions.createdBy,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(widgetTemplateRevisions)
     .leftJoin(users, eq(widgetTemplateRevisions.createdBy, users.id))
@@ -77,7 +79,10 @@ export async function listWidgetTemplateRevisions(templateId: string) {
       ? {
           id: row.createdBy,
           name: row.authorName ?? null,
-          email: row.authorEmail ?? "",
+          email: resolveEmailValue({
+            emailEncrypted: row.authorEmailEncrypted,
+            email: row.authorEmail,
+          }) ?? "",
         }
       : null,
   }));

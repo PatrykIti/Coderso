@@ -1,6 +1,8 @@
 import { Algorithm, hash } from "@node-rs/argon2";
 import { and, eq } from "drizzle-orm";
 import { db } from "./client";
+import { getUserByEmail } from "../services/auth/userService";
+import { buildEmailFields, normalizeEmail } from "../services/security/piiEmail";
 import { roles, userRoles, users } from "./schema";
 
 export async function seedAdmin() {
@@ -28,16 +30,20 @@ export async function seedAdmin() {
   }
 
   // 2. Create or get admin user.
-  let [user] = await db.select().from(users).where(eq(users.email, adminEmail));
+  const normalizedEmail = normalizeEmail(adminEmail);
+  let user = await getUserByEmail(normalizedEmail);
 
   if (!user) {
     const passwordHash = await hash(adminPassword, {
       algorithm: Algorithm.Argon2id,
     });
+    const emailFields = buildEmailFields(normalizedEmail);
     [user] = await db
       .insert(users)
       .values({
-        email: adminEmail,
+        email: emailFields.email,
+        emailHash: emailFields.emailHash,
+        emailEncrypted: emailFields.emailEncrypted,
         passwordHash,
         name: "System Admin",
       })

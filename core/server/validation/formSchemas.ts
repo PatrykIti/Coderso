@@ -43,6 +43,7 @@ export const formSubmissionSchema = {
   required: ["data"],
   properties: {
     data: { type: "object" },
+    captchaToken: { type: "string", minLength: 1 },
   },
   additionalProperties: false,
 };

@@ -5,6 +5,7 @@ import { createRevisionTx, pruneRevisionsTx, type RevisionData } from "./revisio
 import { invalidateSiteCachePath, normalizeSitePath } from "../../site/cache/siteCache";
 import { getSetting } from "../settings/settingsService";
 import { normalizePageDataLayout } from "./layoutSettings";
+import { resolveEmailValue } from "../security/piiEmail";
 import { resolvePageRevisionRetention } from "./revisionRetention";
 
 export type PageStatus = "draft" | "published" | "scheduled" | "archived";
@@ -93,6 +94,7 @@ export async function listPages(): Promise<PageSummary[]> {
       authorId: pages.authorId,
       authorName: users.name,
       authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
     })
     .from(pages)
     .leftJoin(users, eq(pages.authorId, users.id))
@@ -108,7 +110,10 @@ export async function listPages(): Promise<PageSummary[]> {
       ? {
           id: row.authorId,
           name: row.authorName ?? null,
-          email: row.authorEmail ?? "",
+          email: resolveEmailValue({
+            emailEncrypted: row.authorEmailEncrypted,
+            email: row.authorEmail,
+          }) ?? "",
         }
       : null,
   }));

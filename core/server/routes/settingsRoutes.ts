@@ -12,8 +12,8 @@ import {
   type StorageSettingsUpdate,
 } from "../../services/settings/storageSettings";
 import {
-  getSecuritySettings,
-  setSecuritySettings,
+  getSecuritySettingsPublic,
+  setSecuritySettingsPublic,
   type SecuritySettingsUpdate,
 } from "../../services/settings/securitySettings";
 import { getResolvedTokens } from "../../services/theme/tokenService";
@@ -96,7 +96,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     "/settings/security",
     requirePermission("settings:read"),
     async () => {
-      return getSecuritySettings();
+      return getSecuritySettingsPublic();
     }
   );
 
@@ -141,7 +141,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     async (ctx) => {
       validate(securitySettingsSchema, ctx.body);
       const payload = ctx.body as SecuritySettingsUpdate;
-      const updated = await setSecuritySettings(payload);
+      const updated = await setSecuritySettingsPublic(payload);
       await logAudit({
         actorId: ctx.user?.id ?? null,
         action: "settings.update",

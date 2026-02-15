@@ -8,6 +8,7 @@ export const authLoginSchema = {
       pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
     },
     password: { type: "string", minLength: 8 },
+    captchaToken: { type: "string", minLength: 1 },
   },
   additionalProperties: false,
 };
@@ -38,8 +39,9 @@ export const authResetSchema = {
     email: {
       type: "string",
       minLength: 3,
-      pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+      pattern: "^[^\s@]+@[^\s@]+\.[^\s@]+$",
     },
+    captchaToken: { type: "string", minLength: 1 },
   },
   additionalProperties: false,
 };

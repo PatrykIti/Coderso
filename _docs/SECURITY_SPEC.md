@@ -5,11 +5,19 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 ## Middleware (core)
 
 - Request ID: generowany per request, logowany.
-- Rate limiting: per IP dla login i admin API (admin ograniczenia nie obowiazuja zalogowanych uzytkownikow).
+- Rate limiting: bucket-based limits dla auth/admin/public (admin nie limituje zalogowanych uzytkownikow).
+  - Buckety: `auth`, `admin_read`, `admin_write`, `public_read`, `public_write`, `assistant`.
+  - Auth: limit po `email + IP` (identifier) z domieszka `User-Agent`.
+  - Public: read ma wyzszy limit niz write.
+  - Admin: authenticated bypass, anonimowe requesty nadal limitowane.
 - CORS: tylko zaufane originy dla admina.
 - CSRF: token dla POST/PUT/DELETE w admin.
   - Token pobierany z `GET /admin/api/auth/csrf`.
   - UI dodaje `X-CSRF-Token` do mutacji.
+- Bot protection (reCAPTCHA v3):
+  - `POST /auth/login`, `POST /auth/reset`, `POST /forms/:id/submissions`.
+  - Score thresholds per action (login/reset/public_write).
+  - Moze byc wlaczone w dev (opcja `enforceOnLocalhost`).
 - Security headers:
   - Content-Security-Policy (basic)
   - X-Content-Type-Options
@@ -25,8 +33,12 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - requestId (enabled, headerName)
   - csrf (enabled, headerName, tokenTtlMinutes)
   - cors (allowedOrigins, allowCredentials, allowedMethods, allowedHeaders, maxAgeSeconds)
-  - rateLimit (enabled, admin/auth limits)
+  - rateLimit (enabled, bucket limits)
+  - botProtection (reCAPTCHA v3, thresholds, enforceOnLocalhost)
   - headers (frameOptions, referrerPolicy, CSP, HSTS, itd.)
+  - session (ttlDays, maxPerUser, singleSession)
+  - loginAlerts (notifyOnNewDevice, notifyOnNewLocation)
+  - plugins (safeMode)
   - validation (rejectUnknownFields)
 
 Uwaga: header CSRF jest weryfikowany na podstawie tokenu z prefiksem timestamp (`<ts>.<token>`),
@@ -76,10 +88,20 @@ Rotacja klucza:
 - Jesli zmienisz klucz bez ponownego zapisu sekretow, konfiguracja storage
   stanie sie nieczytelna do czasu ich ponownej edycji.
 
+## Email encryption (PII)
+
+- Emails w `users` sa trzymane jako:
+  - `email_hash` (HMAC-SHA256) do lookupu,
+  - `email_encrypted` (AES-256-GCM) do odczytu w UI,
+  - `email` jest nadpisywany hash-em dla kompatybilnosci.
+- Wymagane ENV: `PII_HASH_KEY`, `PII_ENC_KEY` (32 bajty).
+- Bez kluczy system powinien fail-fast.
+
 ## Secrets
 
 - Nigdy nie logujemy tokenow/hasel.
 - ENV tylko po stronie serwera.
+- Opcjonalny pepper do hasel: `AUTH_PASSWORD_PEPPER` (rotacja wymaga resetu hasel).
 - Hasla SMTP sa szyfrowane w DB (AES-256-GCM) tym samym master key.
 - Klucze providerow LLM (np. OpenRouter) traktujemy jak sekrety:
   - trzymane poza frontendem i poza plain text w logach,
