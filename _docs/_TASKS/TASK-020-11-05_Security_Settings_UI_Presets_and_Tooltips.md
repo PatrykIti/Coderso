@@ -252,3 +252,59 @@ Apply across Security Settings inputs:
   - CIDR: “Use valid CIDR blocks (e.g., 203.0.113.0/24).”
   - CSP/HSTS: “This is an advanced setting. Invalid values can break your site.”
 
+
+
+### Error State UI Patterns
+
+Use the same error patterns as `SiteSettingsPage`:
+
+- **Page-level error banner** (top of right panel)
+  - Use `Alert` with title “Settings error” for fetch failures.
+  - Example copy: “We couldn’t load security settings. Try again.”
+
+- **Save failure banner**
+  - Use `Alert` with title “Save failed”.
+  - Example copy: “We couldn’t save your changes. Please try again.”
+
+- **Success banner**
+  - Use `Alert` with title “Saved”.
+  - Example copy: “Security settings updated.”
+
+- **Inline field validation**
+  - Show under each field in red text.
+  - Keep copy short and non‑technical (see validation copy list).
+
+- **Blocking action error** (when a feature is enabled without required keys)
+  - Use destructive `Alert` with title “Action blocked”.
+  - Example copy: “Add reCAPTCHA keys to enable this feature.”
+
+- **Disabled controls with hint**
+  - When ENV‑only value is missing (e.g., pepper), show a muted helper: “Set in server environment to enable.”
+
+
+
+### UX Guardrails (End‑User Value, Non‑Overwhelming)
+
+- Keep one primary action per view (Save / Apply preset).
+- Show only the most important toggles first; hide advanced fields behind "Advanced" disclosure.
+- Use short, human language; avoid acronyms unless explained in the tooltip.
+- Group related fields into 1–3 cards per section; avoid long scrolls.
+- Prefer defaults over empty fields; show “Recommended” badges instead of long explanations.
+- Avoid showing raw technical errors; map to friendly copy.
+- Don’t block exploration: changes are staged until Save; show clear “Unsaved changes” state.
+- Keep iconography consistent with Site Settings; no new icon styles.
+
+### UX Flow (Concise)
+
+- **Load**: show skeleton or subtle loading state; avoid full‑page spinners.
+- **Edit**: inline validation only after input blur.
+- **Save**: show a success banner, then auto‑dismiss.
+- **Fail**: show a top banner + keep user edits intact.
+
+### QA Checklist (End‑User Focused)
+
+- First‑time user can understand each section without reading docs.
+- No section requires more than 2 scrolls on a laptop screen.
+- Defaults are visible and labeled as recommended.
+- Enabling a feature without required keys shows a single, clear error.
+- Toggling a preset doesn’t wipe unrelated changes unless confirmed.
