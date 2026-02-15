@@ -42,6 +42,13 @@ This task also clarifies internal vs public endpoints and upgrades rate limiting
 
 ---
 
+
+## Config Source Policy
+
+- **ENV-only**: critical secrets required for safe boot (DB URL, master keys, encryption keys, password pepper).
+- **UI Settings**: optional security features that can be disabled at boot (e.g., reCAPTCHA, rate limits, headers), configurable runtime.
+- If a feature is enabled in UI but missing required keys, it should fail fast with a clear error.
+
 ## Scope
 
 ### 1) Auth Hardening

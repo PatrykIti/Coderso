@@ -21,7 +21,7 @@ Redesign Settings → Security into user-friendly sections with presets and tool
 2. Add longer, non-technical descriptions and tooltips (WordPress-like).
 3. Provide presets: `WordPress-like`, `Strict`, `Relaxed`.
 4. Preserve advanced control for power users.
-5. Add a reCAPTCHA v3 section with thresholds per action.
+5. Add a reCAPTCHA v3 section with thresholds per action (disabled by default until keys are provided).
 
 ---
 

@@ -34,6 +34,7 @@ Use **HMAC hash for lookup** and **AES-256-GCM encryption for display**.
 - `PII_HASH_KEY` (HMAC key for `email_hash`)
 - `PII_ENC_KEY` (AES-256-GCM key for `email_encrypted`)
 
+These are **ENV-only** and required at boot.
 Add these to `.env.example` with comments.
 
 

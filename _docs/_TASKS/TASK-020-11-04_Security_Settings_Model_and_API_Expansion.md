@@ -46,10 +46,10 @@ Add `botProtection`:
 
 ```ts
 botProtection: {
-  enabled: boolean;
+  enabled: boolean; // default: false
   provider: "recaptcha_v3";
   siteKey: string | null;
-  secretKey: string | null; // stored encrypted
+  secretKey: string | null; // stored encrypted (required when enabled)
   thresholds: {
     login: number;
     reset: number;
