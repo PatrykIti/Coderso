@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 4 tasks
+- **To Do:** 12 tasks
 - **In Progress:** 0 tasks
 - **Done:** 306 tasks
 
@@ -38,6 +38,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-020-11 | Security Hardening + Settings UX | High | Large | Auth/public/admin protection & UX presets |
+| TASK-020-11-01 | Rate Limit Buckets + Keying | High | Medium | New buckets + keying strategy |
+| TASK-020-11-02 | Auth Hardening + Bot Protection | High | Medium | Login throttling + CAPTCHA |
+| TASK-020-11-03 | Public Endpoint Protection | High | Medium | Public read/write buckets + guardrails |
+| TASK-020-11-04 | Security Settings Model + API | High | Medium | Per-bucket config + validation |
+| TASK-020-11-05 | Security Settings UI + Presets | High | Large | New sections + presets + tooltips |
+| TASK-020-11-06 | PII Email Encryption | Medium | Large | Decision + optional implementation |
 | TASK-053 | Page Editor Templates Mode | High | Large | 053-01..06 |
 | TASK-053-06 | Page Settings Autosave + History | Medium | Large | Autosave + history labels |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
