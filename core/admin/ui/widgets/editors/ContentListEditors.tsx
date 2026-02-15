@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import {
-  listContentTypes,
+  listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 
@@ -160,7 +160,7 @@ function ContentTypeSelect({
 
   useEffect(() => {
     let active = true;
-    listContentTypes()
+    listContentTypesCached({ force: true })
       .then((items) => {
         if (!active) return;
         setTypes(items);

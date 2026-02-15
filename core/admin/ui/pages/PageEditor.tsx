@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Eye, Save, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -10,8 +10,10 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import {
-  getPage,
+  getCachedPageDetail,
+  getPageCached,
   getPageTemplateOptions,
   publishPage,
   previewPage,
@@ -20,6 +22,7 @@ import {
   type PageTemplateOptionsResponse,
 } from "@/services/pagesClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { DeviceSwitcher } from "@/ui/pages/DeviceSwitcher";
 import { RuntimePreviewDialog, type RuntimePreviewDeviceId } from "@/ui/preview/RuntimePreviewDialog";
 
@@ -206,6 +209,12 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [blocks, setBlocks] = useState<Block[]>(normalizeBlocks(initialPage?.currentData));
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const hasUnsavedChangesRef = useRef(false);
+  const setUnsavedChanges = (value: boolean) => {
+    hasUnsavedChangesRef.current = value;
+    setHasUnsavedChanges(value);
+  };
+  const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [isLoading, setIsLoading] = useState(
     !initialPage && typeof window !== "undefined"
   );
@@ -261,6 +270,52 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
   };
 
+  const applyPage = useCallback(
+    (result: PageDetail, options?: { preserveSelection?: boolean }) => {
+      setPage(result);
+      const nextData = result.currentData ?? { blocks: defaultBlocks };
+      setPageData(nextData as Record<string, unknown>);
+      const nextBlocks = normalizeBlocks(result.currentData as Record<string, unknown>);
+      setBlocks(nextBlocks);
+      setSelectedId((current) => {
+        if (options?.preserveSelection && current) {
+          return findBlockById(nextBlocks, current) ? current : nextBlocks[0]?.id ?? null;
+        }
+        return nextBlocks[0]?.id ?? null;
+      });
+      setUnsavedChanges(false);
+      setRemoteUpdatePending(false);
+    },
+    []
+  );
+
+  const refreshPage = useCallback(
+    async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
+      if (!pageId) return;
+      const shouldSetLoading = options?.setLoading !== false;
+      if (shouldSetLoading) setIsLoading(true);
+      setError(null);
+      try {
+        const result = await getPageCached(pageId, { force: true });
+        if (!result) return;
+        if (!options?.allowUnsaved && hasUnsavedChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
+        }
+        applyPage(result, { preserveSelection: true });
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load page.");
+        }
+      } finally {
+        if (shouldSetLoading) setIsLoading(false);
+      }
+    },
+    [applyPage, pageId]
+  );
+
   useEffect(() => {
     if (pageId || typeof window === "undefined") return;
     const resolved = resolvePageId(window.location.pathname);
@@ -270,35 +325,21 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   useEffect(() => {
     if (!pageId) return;
     if (initialPage) return;
-    let active = true;
-    setIsLoading(true);
-    setError(null);
-    getPage(pageId)
-      .then((result) => {
-        if (!active) return;
-        setPage(result);
-        const nextData = result.currentData ?? { blocks: defaultBlocks };
-        setPageData(nextData as Record<string, unknown>);
-        const nextBlocks = normalizeBlocks(result.currentData as Record<string, unknown>);
-        setBlocks(nextBlocks);
-        setSelectedId(nextBlocks[0]?.id ?? null);
-        setHasUnsavedChanges(false);
-      })
-      .catch((err) => {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load page.");
-        }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [initialPage, pageId]);
+    const cachedDetail = getCachedPageDetail(pageId);
+    if (cachedDetail) {
+      applyPage(cachedDetail, { preserveSelection: true });
+      setIsLoading(false);
+    }
+    refreshPage({ setLoading: !cachedDetail }).catch(() => undefined);
+  }, [applyPage, initialPage, pageId, refreshPage]);
+
+  useEffect(() => {
+    if (!pageId) return;
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.pageDetail(pageId)) return;
+      refreshPage({ setLoading: false }).catch(() => undefined);
+    });
+  }, [pageId, refreshPage]);
 
   useEffect(() => {
     if (!settingsOpen) return;
@@ -340,7 +381,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const updateBlocks = (next: Block[]) => {
     setBlocks(next);
     setPageData((prev) => ({ ...prev, blocks: next }));
-    setHasUnsavedChanges(true);
+    setUnsavedChanges(true);
   };
 
   const buildNewBlock = (type: string) => {
@@ -434,7 +475,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         data: pageData,
       });
       setPage(updated);
-      setHasUnsavedChanges(false);
+      setUnsavedChanges(false);
+      setRemoteUpdatePending(false);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -452,9 +494,13 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setError(null);
     try {
       await publishPage(pageId, pageData);
-      const updated = await getPage(pageId);
-      setPage(updated);
-      setHasUnsavedChanges(false);
+      const updated = await getPageCached(pageId, { force: true });
+      if (updated) {
+        applyPage(updated, { preserveSelection: true });
+      } else {
+        setUnsavedChanges(false);
+        setRemoteUpdatePending(false);
+      }
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -513,6 +559,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         setPage((prev) => (prev ? { ...prev, ...updated } : updated));
       }
       setPageData((prev) => applyPageSettings(prev, payload.settings));
+      setRemoteUpdatePending(false);
       setSettingsOpen(false);
     } catch (err) {
       if (isApiClientError(err)) {
@@ -633,6 +680,21 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           <Alert variant="destructive">
             <AlertTitle>Page error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {remoteUpdatePending ? (
+          <Alert>
+            <AlertTitle>Updated in another tab</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>New changes are available. Refresh to load the latest version.</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshPage({ allowUnsaved: true })}
+              >
+                Refresh
+              </Button>
+            </AlertDescription>
           </Alert>
         ) : null}
         {isLoading ? (

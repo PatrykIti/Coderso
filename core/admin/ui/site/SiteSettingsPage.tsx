@@ -23,8 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
-import { listContentTypes, type ContentTypeSummary } from "@/services/contentTypesClient";
-import { listPages, previewPage, type PageSummary } from "@/services/pagesClient";
+import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
+import { listPagesCached, previewPage, type PageSummary } from "@/services/pagesClient";
 import {
   getSiteSettings,
   updateSiteSettings,
@@ -193,7 +193,7 @@ export function SiteSettingsPage() {
     setStatus("loading");
     setError(null);
 
-    Promise.all([getSiteSettings(), listPages(), listContentTypes()])
+    Promise.all([getSiteSettings(), listPagesCached({ force: true }), listContentTypesCached({ force: true })])
       .then(([settings, pagesResult, typesResult]) => {
         if (!active) return;
         setForm((prev) => ({

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { isApiClientError } from "@/services/apiClient";
-import { listMedia } from "@/services/mediaClient";
+import { getCachedMedia, listMediaCached } from "@/services/mediaClient";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import type { MediaItem } from "@/ui/media/types";
 import { formatBytes, toMediaItem } from "@/ui/media/utils";
@@ -77,11 +77,11 @@ export function MediaPicker({
   const canAddMore =
     !multiple || !maxItems || selectedIds.length < maxItems;
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await listMedia();
+      const result = await listMediaCached({ force });
       setItems(result.map(toMediaItem));
     } catch (err) {
       if (isApiClientError(err)) {
@@ -98,7 +98,12 @@ export function MediaPicker({
   useEffect(() => {
     if (hasLoaded) return;
     if (!isOpen && selectedIds.length === 0) return;
-    void refresh();
+    const cached = getCachedMedia();
+    if (cached) {
+      setItems(cached.map(toMediaItem));
+      setIsLoading(false);
+    }
+    void refresh(true);
   }, [hasLoaded, isOpen, refresh, selectedIds.length]);
 
   const filteredItems = useMemo(() => {

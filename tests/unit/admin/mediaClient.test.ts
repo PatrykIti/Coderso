@@ -1,12 +1,15 @@
 import { expect, test } from "bun:test";
 
 import {
+  clearMediaCache,
   deleteMedia,
   listMedia,
+  listMediaCached,
   updateMedia,
   uploadMedia,
 } from "../../../core/admin/services/mediaClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -14,6 +17,23 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+const resetCaches = () => {
+  clearMediaCache();
+};
 test("listMedia hits GET /media", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -112,5 +132,50 @@ test("deleteMedia sends DELETE with CSRF", async () => {
     expect(calls[1]?.init?.method).toBe("DELETE");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+
+test("listMediaCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    const cached = [
+      {
+        id: "media-1",
+        key: "key-1",
+        url: "https://example.com/1.png",
+        type: "image" as const,
+        mimeType: "image/png",
+        size: 1200,
+        createdAt: "2026-02-14T00:00:00.000Z",
+      },
+    ];
+    storage.setItem(
+      cacheKeys.mediaList,
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await listMediaCached();
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
   }
 });

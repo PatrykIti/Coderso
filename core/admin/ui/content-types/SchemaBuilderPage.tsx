@@ -12,8 +12,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
-  getContentType,
-  listContentTypes,
+  getCachedContentTypes,
+  getContentTypeCached,
+  listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
@@ -81,7 +82,9 @@ export function SchemaBuilderPage() {
 
   useEffect(() => {
     let active = true;
-    listContentTypes()
+    const cached = getCachedContentTypes();
+    if (cached) setList(cached);
+    listContentTypesCached({ force: true })
       .then((types) => {
         if (active) setList(types);
       })
@@ -94,9 +97,18 @@ export function SchemaBuilderPage() {
   useEffect(() => {
     if (!typeId) return;
     let active = true;
-    getContentType(typeId)
+    const cached = getCachedContentTypes()?.find((item) => item.id === typeId);
+    if (cached) {
+      setContentType(cached);
+      const mappedFields = fieldsFromSchema(cached.schema);
+      setFields(mappedFields);
+      setSchema(buildSchemaFromFields(mappedFields));
+      setError(null);
+      setIsLoading(false);
+    }
+    getContentTypeCached(typeId, { force: true })
       .then((result) => {
-        if (!active) return;
+        if (!active || !result) return;
         setContentType(result);
         const mappedFields = fieldsFromSchema(result.schema);
         setFields(mappedFields);

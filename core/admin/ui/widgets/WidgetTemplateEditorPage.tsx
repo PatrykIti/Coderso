@@ -16,7 +16,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
-import { listMedia } from "@/services/mediaClient";
+import { cacheKeys } from "@/services/cachePolicy";
+import { listMediaCached } from "@/services/mediaClient";
 import {
   previewWidgetTemplate,
   type WidgetTemplatePreviewResponse,
@@ -28,8 +29,10 @@ import {
 } from "@/services/widgetTemplateRevisionsClient";
 import {
   createWidgetTemplate,
-  getWidgetTemplate,
+  getCachedWidgetTemplate,
+  getWidgetTemplateCached,
   updateWidgetTemplate,
+  type WidgetTemplate,
   type WidgetTemplateStatus,
 } from "@/services/widgetTemplatesClient";
 import {
@@ -37,6 +40,7 @@ import {
   type WidgetTemplateCategory,
 } from "@/services/widgetTemplateCategoriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { BlockList } from "@/ui/pages/builder/BlockList";
@@ -186,6 +190,7 @@ export function WidgetTemplateEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewData, setPreviewData] =
@@ -378,7 +383,7 @@ export function WidgetTemplateEditorPage() {
       }));
 
       try {
-        const items = await listMedia();
+        const items = await listMediaCached({ force: true });
         if (requestId !== backgroundLookupRequestIdRef.current) return;
         const match = items.find((item) => item.id === assetId);
         if (!match) {
@@ -423,34 +428,54 @@ export function WidgetTemplateEditorPage() {
     setBlocks((prev) => moveBlockIntoSlot(prev, blockId, parentId, slotId));
   };
 
+  const applyTemplate = useCallback((template: WidgetTemplate) => {
+    setName(template.name ?? "");
+    setDescription(template.description ?? "");
+    setCategory(template.category);
+    setStatus(template.status);
+    setBlocks((template.blocks as Block[]) ?? []);
+    setTemplateSettings(normalizeWidgetTemplateSettings(template.settings));
+    setRemoteUpdatePending(false);
+  }, []);
+
   const loadTemplate = useCallback(async () => {
     if (!templateId || templateId === "new") {
       setIsLoading(false);
       return;
     }
-    setIsLoading(true);
+    const cached = getCachedWidgetTemplate(templateId);
+    if (cached) {
+      applyTemplate(cached);
+      setIsLoading(false);
+    }
+    const shouldSetLoading = !cached;
+    if (shouldSetLoading) setIsLoading(true);
     setError(null);
     try {
-      const template = await getWidgetTemplate(templateId);
-      setName(template.name ?? "");
-      setDescription(template.description ?? "");
-      setCategory(template.category);
-      setStatus(template.status);
-      setBlocks((template.blocks as Block[]) ?? []);
-      setTemplateSettings(normalizeWidgetTemplateSettings(template.settings));
+      const template = await getWidgetTemplateCached(templateId, { force: true });
+      if (!template) return;
+      applyTemplate(template);
     } catch (err) {
       const message = isApiClientError(err)
         ? err.message
         : "Failed to load template.";
       setError(message);
     } finally {
-      setIsLoading(false);
+      if (shouldSetLoading) setIsLoading(false);
     }
-  }, [templateId]);
+  }, [applyTemplate, templateId]);
 
   useEffect(() => {
     void loadTemplate();
   }, [loadTemplate]);
+
+  useEffect(() => {
+    if (!templateId || templateId === "new") return;
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.widgetTemplateDetail(templateId)) return;
+      setRemoteUpdatePending(true);
+    });
+  }, [templateId]);
 
   useEffect(() => {
     let active = true;
@@ -508,6 +533,7 @@ export function WidgetTemplateEditorPage() {
         blocks,
         settings: templateSettings,
       });
+      setRemoteUpdatePending(false);
     } catch (err) {
       const message = isApiClientError(err)
         ? err.message
@@ -674,6 +700,19 @@ export function WidgetTemplateEditorPage() {
                 <Alert variant="destructive">
                   <AlertTitle>Error</AlertTitle>
                   <AlertDescription>{displayError}</AlertDescription>
+                </Alert>
+              </div>
+            ) : null}
+            {remoteUpdatePending ? (
+              <div className="mt-4">
+                <Alert>
+                  <AlertTitle>Updated in another tab</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span>New changes are available. Refresh to load the latest version.</span>
+                    <Button variant="outline" size="sm" onClick={() => loadTemplate()}>
+                      Refresh
+                    </Button>
+                  </AlertDescription>
                 </Alert>
               </div>
             ) : null}

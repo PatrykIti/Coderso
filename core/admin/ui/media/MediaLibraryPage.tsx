@@ -5,14 +5,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import {
   deleteMedia,
-  listMedia,
+  getCachedMedia,
+  listMediaCached,
   updateMedia,
   uploadMedia,
 } from "@/services/mediaClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { MediaDetailsDrawer } from "@/ui/media/MediaDetailsDrawer";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -31,7 +34,8 @@ import { toMediaItem } from "@/ui/media/utils";
 
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);
-  const [items, setItems] = useState<MediaItem[]>([]);
+  const initialCached = getCachedMedia();
+  const [items, setItems] = useState<MediaItem[]>(() => (initialCached ? initialCached.map(toMediaItem) : []));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -40,8 +44,9 @@ export function MediaLibraryPage() {
   const [openAfterUpload, setOpenAfterUpload] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
+  const hasHydratedRef = useRef(false);
 
   const initialSelectedId = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -49,32 +54,48 @@ export function MediaLibraryPage() {
     return params.get("selected");
   }, []);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await listMedia();
-      setItems(result.map(toMediaItem));
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load media assets.");
+  const refresh = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const force = options?.force ?? false;
+      const background = options?.background ?? hasHydratedRef.current;
+      if (!background) {
+        setIsLoading(true);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      setError(null);
+      try {
+        const result = await listMediaCached({ force });
+        setItems(result.map(toMediaItem));
+        hasHydratedRef.current = true;
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load media assets.");
+        }
+      } finally {
+        if (!background) {
+          setIsLoading(false);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      await refresh();
-      if (!active) return;
-    })();
-    return () => {
-      active = false;
-    };
+    const cached = initialCached;
+    if (cached) {
+      setItems(cached.map(toMediaItem));
+      setIsLoading(false);
+      hasHydratedRef.current = true;
+    }
+    refresh({ force: true }).catch(() => undefined);
+  }, [refresh]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.mediaList) return;
+      refresh({ force: true, background: true }).catch(() => undefined);
+    });
   }, [refresh]);
 
   useEffect(() => {
@@ -135,7 +156,7 @@ export function MediaLibraryPage() {
         const result = await uploadMedia(file);
         uploaded.push(result);
       }
-      await refresh();
+      await refresh({ force: true, background: true });
       if (uploaded[0]?.id) {
         setSelectedId(uploaded[0].id);
         setIsDrawerOpen(openAfterUpload);

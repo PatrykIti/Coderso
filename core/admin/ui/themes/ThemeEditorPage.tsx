@@ -13,7 +13,7 @@ import {
   type ThemeMeta,
   type ThemeProfile,
 } from "@/services/themeClient";
-import { listPages, type PageSummary } from "@/services/pagesClient";
+import { listPagesCached, type PageSummary } from "@/services/pagesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
 import { ThemePreviewPanel } from "./ThemePreviewPanel";
@@ -99,7 +99,7 @@ export function ThemeEditorPage({
       const [profileResult, themesResult, pagesResult] = await Promise.all([
         getThemeProfile(id),
         listThemes(),
-        listPages(),
+        listPagesCached({ force: true }),
       ]);
       setProfile(profileResult);
       setThemes(themesResult.items);

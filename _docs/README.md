@@ -17,6 +17,8 @@
 - `PREVIEW_SPEC.md` - draft preview flow
 - `ORM_SPEC.md` - ORM choice and configuration
 - `AUTH_SPEC.md` - authentication and sessions
+- `ADMIN_CACHE.md` - admin cache layer policy and behavior
+- `ADMIN_CACHE_MAP.md` - admin cache route map
 - `RBAC_SPEC.md` - roles and permissions
 - `THEMES_SPEC.md` - themes and theme profiles
 - `SEARCH_SPEC.md` - search and indexing

@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import {
   getCachedContentTypes,
   listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { resolveAdminBasePath } from "@/utils/adminPaths";
@@ -61,6 +63,15 @@ export function ContentTypeList() {
     return () => {
       active = false;
     };
+  }, []);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.contentTypesList) return;
+      listContentTypesCached({ force: true })
+        .then((result) => setTypes(result))
+        .catch(() => undefined);
+    });
   }, []);
 
   const handleCreated = (created: ContentTypeSummary) => {

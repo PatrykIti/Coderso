@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { getPage } from "@/services/pagesClient";
-import { getWidgetTemplate } from "@/services/widgetTemplatesClient";
+import { getPageCached } from "@/services/pagesClient";
+import { getWidgetTemplateCached } from "@/services/widgetTemplatesClient";
 import type { Block } from "@/ui/pages/builder/types";
 import { findBlockById } from "@/ui/pages/builder/blockUtils";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
@@ -142,7 +142,7 @@ export function WidgetInsertDialog({
     const loadBlocks = async () => {
       try {
         if (targetType === "template") {
-          const template = await getWidgetTemplate(targetId);
+          const template = await getWidgetTemplateCached(targetId, { force: true });
           const items = Array.isArray(template.blocks) ? template.blocks : [];
           const mapped = mapWidgetBlockOptions(items, (type) =>
             widgetMetaMap.get(type)?.label ?? type
@@ -152,7 +152,7 @@ export function WidgetInsertDialog({
           setBlockTree(items as Block[]);
           setBlockId(mapped[0]?.id ?? "");
         } else {
-          const page = await getPage(targetId);
+          const page = await getPageCached(targetId, { force: true });
           const data = (page.currentData ?? {}) as Record<string, unknown>;
           const items = Array.isArray(data.blocks) ? (data.blocks as unknown[]) : [];
           const mapped = mapWidgetBlockOptions(items, (type) =>

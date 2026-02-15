@@ -1,14 +1,16 @@
 import { Plus } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import {
   createPage,
   deletePage,
   duplicatePage,
-  listPages,
+  getCachedPages,
+  listPagesCached,
   previewPage,
   publishPage,
   type PageSummary,
@@ -21,6 +23,7 @@ import {
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { PageFilters } from "./PageFilters";
 import { PageTable } from "./PageTable";
@@ -46,43 +49,61 @@ export function filterPages(
 
 export function PageListPage() {
   const basePath = resolveAdminBasePath();
-  const [items, setItems] = useState<PageSummary[]>([]);
+  const initialCached = getCachedPages();
+  const [items, setItems] = useState<PageSummary[]>(() => initialCached ?? []);
   const [createOpen, setCreateOpen] = useState(false);
   const [drawerKey, setDrawerKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [authorFilter, setAuthorFilter] = useState("any");
   const [openAfterCreate, setOpenAfterCreate] = useState(true);
+  const hasHydratedRef = useRef(false);
 
-  const refresh = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const next = await listPages();
-      setItems(next);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load pages.");
+  const refresh = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const force = options?.force ?? false;
+      const background = options?.background ?? hasHydratedRef.current;
+      if (!background) {
+        setIsLoading(true);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      setError(null);
+      try {
+        const next = await listPagesCached({ force });
+        setItems(next);
+        hasHydratedRef.current = true;
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load pages.");
+        }
+      } finally {
+        if (!background) {
+          setIsLoading(false);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      await refresh();
-      if (!active) return;
-    })();
-    return () => {
-      active = false;
-    };
+    const cached = initialCached;
+    if (cached) {
+      setItems(cached);
+      setIsLoading(false);
+      hasHydratedRef.current = true;
+    }
+    refresh({ force: true }).catch(() => undefined);
+  }, [refresh]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.pagesList) return;
+      refresh({ force: true, background: true }).catch(() => undefined);
+    });
   }, [refresh]);
 
   useEffect(() => {
@@ -138,7 +159,7 @@ export function PageListPage() {
         );
         return;
       }
-      await refresh();
+      await refresh({ force: true, background: true });
       setCreateOpen(false);
     } catch (err) {
       if (isApiClientError(err)) {
@@ -179,7 +200,7 @@ export function PageListPage() {
     setError(null);
     try {
       await publishPage(id);
-      await refresh();
+      await refresh({ force: true, background: true });
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -193,7 +214,7 @@ export function PageListPage() {
     setError(null);
     try {
       await unpublishPage(id);
-      await refresh();
+      await refresh({ force: true, background: true });
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -231,7 +252,7 @@ export function PageListPage() {
     setError(null);
     try {
       await deletePage(id);
-      await refresh();
+      await refresh({ force: true, background: true });
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);

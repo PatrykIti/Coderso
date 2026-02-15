@@ -1,5 +1,5 @@
 import { Save, Send } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import {
   getCachedContentTypes,
   getContentTypeCached,
@@ -21,6 +22,7 @@ import {
 } from "@/services/contentTypesClient";
 import { listTaxonomies, updateTaxonomyConfig } from "@/services/taxonomyClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { ContentTypePreviewPanel } from "./ContentTypePreviewPanel";
@@ -76,6 +78,7 @@ export function ContentTypeEditor() {
     hasUnsavedChangesRef.current = value;
     setHasUnsavedChanges(value);
   };
+  const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [relationTargets, setRelationTargets] = useState<
     Array<{ slug: string; name: string }>
   >([]);
@@ -97,8 +100,36 @@ export function ContentTypeEditor() {
     const mappedFields = fieldsFromSchema(result.schema);
     setFields(mappedFields);
     setUnsavedChanges(false);
+    setRemoteUpdatePending(false);
     setSelectedFieldId(mappedFields[0]?.id ?? null);
   };
+
+  const refreshContentType = useCallback(
+    async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
+      if (!typeId) return;
+      const shouldSetLoading = options?.setLoading !== false;
+      if (shouldSetLoading) setIsLoading(true);
+      try {
+        const result = await getContentTypeCached(typeId, { force: true });
+        if (!result) return;
+        if (!options?.allowUnsaved && hasUnsavedChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
+        }
+        applyContentType(result);
+        setError(null);
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load content type.");
+        }
+      } finally {
+        if (shouldSetLoading) setIsLoading(false);
+      }
+    },
+    [applyContentType, typeId]
+  );
 
   useEffect(() => {
     if (!typeId) return;
@@ -112,24 +143,7 @@ export function ContentTypeEditor() {
       setIsLoading(false);
     }
 
-    (async () => {
-      try {
-        const result = await getContentTypeCached(typeId, { force: true });
-        if (!active || !result) return;
-        if (hasUnsavedChangesRef.current) return;
-        applyContentType(result);
-        setError(null);
-      } catch (err) {
-        if (!active) return;
-        if (isApiClientError(err)) {
-          setError(err.message);
-        } else {
-          setError("Failed to load content type.");
-        }
-      } finally {
-        if (active) setIsLoading(false);
-      }
-    })();
+    refreshContentType({ setLoading: !cachedType }).catch(() => undefined);
 
     (async () => {
       try {
@@ -148,8 +162,15 @@ export function ContentTypeEditor() {
     return () => {
       active = false;
     };
-  }, [typeId]);
+  }, [applyContentType, refreshContentType, typeId]);
 
+  useEffect(() => {
+    if (!typeId) return;
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.contentTypeDetail(typeId)) return;
+      refreshContentType({ setLoading: false }).catch(() => undefined);
+    });
+  }, [refreshContentType, typeId]);
 
   useEffect(() => {
     let active = true;
@@ -209,6 +230,7 @@ export function ContentTypeEditor() {
       setSlug(updated.slug);
       setFields(fieldsFromSchema(updated.schema));
       setUnsavedChanges(false);
+      setRemoteUpdatePending(false);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -307,6 +329,21 @@ export function ContentTypeEditor() {
             <Alert variant="destructive" className="mt-4">
               <AlertTitle>Unable to load content type</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          {remoteUpdatePending ? (
+            <Alert className="mt-4">
+              <AlertTitle>Updated in another tab</AlertTitle>
+              <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <span>New changes are available. Refresh to load the latest version.</span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refreshContentType({ allowUnsaved: true })}
+                >
+                  Refresh
+                </Button>
+              </AlertDescription>
             </Alert>
           ) : null}
           {hasUnsavedChanges ? (

@@ -246,6 +246,7 @@ Project Change Log.
 | 217 | 2026-02-14 | Content type list clickable title | Admin/UI |
 | 218 | 2026-02-14 | Content type editor cache | Admin/UI |
 | 219 | 2026-02-14 | Admin session cache utilities | Admin/UI |
+| 220 | 2026-02-15 | Admin cache layer | Admin/UI |
 
 ---
 *Details of changes are in the linked files.*

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
-import { listEntries, type EntrySummary } from "@/services/entriesClient";
+import { listEntriesCached, type EntrySummary } from "@/services/entriesClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import type { ContentField } from "../content-types/SchemaBuilder";
@@ -50,7 +50,7 @@ function RelationSelect({
 
   useEffect(() => {
     let active = true;
-    listEntries(targetSlug)
+    listEntriesCached(targetSlug, { force: true })
       .then((result) => {
         if (!active) return;
         setEntries(result);

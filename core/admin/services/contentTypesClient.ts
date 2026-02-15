@@ -1,5 +1,7 @@
 import { apiRequest } from "./apiClient";
-import { clearSessionCache, readSessionCache, writeSessionCache } from "@/utils/sessionCache";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
+import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
+import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
 
 export type ContentSchemaProperty = {
   type?: "string" | "number" | "boolean" | "array";
@@ -43,17 +45,24 @@ let cachedContentTypesPromise: Promise<ContentTypeSummary[]> | null = null;
 const isContentTypeList = (value: unknown): value is ContentTypeSummary[] =>
   Array.isArray(value);
 
-const CONTENT_TYPES_CACHE_KEY = "nextless.contentTypesCache";
-const CONTENT_TYPES_CACHE_TTL_MS = 5 * 60 * 1000;
+const isContentType = (value: unknown): value is ContentTypeSummary =>
+  Boolean(value && typeof value === "object");
+
+const writeContentTypeDetailCache = (item: ContentTypeSummary) => {
+  writeLocalCache(cacheKeys.contentTypeDetail(item.id), item);
+};
+
+const readContentTypeDetailCache = (id: string) =>
+  readLocalCache(cacheKeys.contentTypeDetail(id), cacheTtlMs.detail, isContentType);
 
 const primeContentTypesCacheInternal = (items: ContentTypeSummary[]) => {
   cachedContentTypes = items;
   cachedContentTypesPromise = null;
-  writeSessionCache(CONTENT_TYPES_CACHE_KEY, items);
+  writeLocalCache(cacheKeys.contentTypesList, items);
 };
 
 const upsertCachedContentType = (item: ContentTypeSummary) => {
-  const current = cachedContentTypes ?? readSessionCache(CONTENT_TYPES_CACHE_KEY, CONTENT_TYPES_CACHE_TTL_MS, isContentTypeList) ?? [];
+  const current = cachedContentTypes ?? readLocalCache(cacheKeys.contentTypesList, cacheTtlMs.list, isContentTypeList) ?? [];
   const index = current.findIndex((cached) => cached.id === item.id);
   const next = [...current];
   if (index == -1) {
@@ -62,17 +71,19 @@ const upsertCachedContentType = (item: ContentTypeSummary) => {
     next[index] = item;
   }
   primeContentTypesCacheInternal(next);
+  writeContentTypeDetailCache(item);
 };
 
 const removeCachedContentType = (id: string) => {
-  const current = cachedContentTypes ?? readSessionCache(CONTENT_TYPES_CACHE_KEY, CONTENT_TYPES_CACHE_TTL_MS, isContentTypeList);
+  const current = cachedContentTypes ?? readLocalCache(cacheKeys.contentTypesList, cacheTtlMs.list, isContentTypeList);
   if (!current) return;
   primeContentTypesCacheInternal(current.filter((item) => item.id !== id));
+  clearLocalCache(cacheKeys.contentTypeDetail(id));
 };
 
 export const getCachedContentTypes = () => {
   if (cachedContentTypes) return cachedContentTypes;
-  const sessionCached = readSessionCache(CONTENT_TYPES_CACHE_KEY, CONTENT_TYPES_CACHE_TTL_MS, isContentTypeList);
+  const sessionCached = readLocalCache(cacheKeys.contentTypesList, cacheTtlMs.list, isContentTypeList);
   if (sessionCached) {
     cachedContentTypes = sessionCached;
   }
@@ -86,7 +97,7 @@ export const primeContentTypesCache = (items: ContentTypeSummary[]) => {
 export const clearContentTypesCache = () => {
   cachedContentTypes = null;
   cachedContentTypesPromise = null;
-  clearSessionCache(CONTENT_TYPES_CACHE_KEY);
+  clearLocalCache(cacheKeys.contentTypesList);
 };
 
 export async function listContentTypes() {
@@ -115,6 +126,8 @@ export async function getContentTypeCached(
   options?: { force?: boolean }
 ) {
   if (!options?.force) {
+    const cachedDetail = readContentTypeDetailCache(id);
+    if (cachedDetail) return cachedDetail;
     const cached = getCachedContentTypes();
     const match = cached?.find((item) => item.id === id);
     if (match) return match;
@@ -141,6 +154,8 @@ export async function createContentType(payload: ContentTypePayload) {
   );
   if (created) {
     upsertCachedContentType(created);
+    broadcastCacheEvent({ key: cacheKeys.contentTypesList, action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.contentTypeDetail(created.id), action: "update" });
   }
   return created;
 }
@@ -160,6 +175,8 @@ export async function updateContentType(
   );
   if (updated) {
     upsertCachedContentType(updated);
+    broadcastCacheEvent({ key: cacheKeys.contentTypesList, action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.contentTypeDetail(updated.id), action: "update" });
   }
   return updated;
 }
@@ -174,6 +191,8 @@ export async function deleteContentType(id: string) {
   );
   if (result?.ok) {
     removeCachedContentType(id);
+    broadcastCacheEvent({ key: cacheKeys.contentTypesList, action: "invalidate" });
+    broadcastCacheEvent({ key: cacheKeys.contentTypeDetail(id), action: "invalidate" });
   }
   return result;
 }

@@ -38,7 +38,7 @@ import {
   replaceMenuItems,
   updateMenu,
 } from "@/services/menusClient";
-import { listPages, type PageSummary } from "@/services/pagesClient";
+import { listPagesCached, type PageSummary } from "@/services/pagesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { MenuCreateDialog } from "@/ui/menus/MenuCreateDialog";
@@ -207,7 +207,7 @@ export function MenuEditorPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [menuList, pageList] = await Promise.all([listMenus(), listPages()]);
+      const [menuList, pageList] = await Promise.all([listMenus(), listPagesCached({ force: true })]);
       setMenus(menuList);
       setPages(pageList);
       if (menuList.length > 0) {

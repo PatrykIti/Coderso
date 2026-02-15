@@ -12,6 +12,7 @@ import {
   primeContentTypesCache,
   updateContentType,
 } from "../../../core/admin/services/contentTypesClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -20,7 +21,7 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
-const createSessionStorage = () => {
+const createLocalStorage = () => {
   const store = new Map<string, string>();
   return {
     getItem: (key: string) => store.get(key) ?? null,
@@ -259,17 +260,17 @@ test("updateContentType updates cached entries", async () => {
   }
 });
 
-test("listContentTypesCached reads from session storage", async () => {
+test("listContentTypesCached reads from local storage", async () => {
   const originalFetch = globalThis.fetch;
-  const originalSession = (globalThis as { sessionStorage?: unknown }).sessionStorage;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
-  const storage = createSessionStorage();
+  const storage = createLocalStorage();
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
     return jsonResponse([]);
   };
-  (globalThis as { sessionStorage?: unknown }).sessionStorage = storage as unknown;
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
 
   try {
     resetCaches();
@@ -284,7 +285,7 @@ test("listContentTypesCached reads from session storage", async () => {
       },
     ];
     storage.setItem(
-      "nextless.contentTypesCache",
+      cacheKeys.contentTypesList,
       JSON.stringify({ value: cached, savedAt: Date.now() })
     );
 
@@ -293,10 +294,10 @@ test("listContentTypesCached reads from session storage", async () => {
     expect(calls.length).toBe(0);
   } finally {
     globalThis.fetch = originalFetch;
-    if (originalSession === undefined) {
-      delete (globalThis as { sessionStorage?: unknown }).sessionStorage;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
     } else {
-      (globalThis as { sessionStorage?: unknown }).sessionStorage = originalSession;
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
     }
     resetCaches();
   }

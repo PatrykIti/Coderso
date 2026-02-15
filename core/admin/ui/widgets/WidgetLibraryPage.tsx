@@ -21,12 +21,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { getPage, listPages, updatePage, type PageSummary } from "@/services/pagesClient";
+import { getPageCached, listPagesCached, updatePage, type PageSummary } from "@/services/pagesClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { listWidgetCatalog, type WidgetCatalogItem } from "@/services/widgetsClient";
 import {
   createWidgetTemplate,
-  getWidgetTemplate,
+  getWidgetTemplateCached,
   updateWidgetTemplate,
 } from "@/services/widgetTemplatesClient";
 import {
@@ -299,7 +299,7 @@ export function WidgetLibraryPage() {
 
   useEffect(() => {
     let active = true;
-    listPages()
+    listPagesCached({ force: true })
       .then((result) => {
         if (!active) return;
         setPages(result);
@@ -582,7 +582,7 @@ export function WidgetLibraryPage() {
 
     try {
       if (payload.placement === "new") {
-        const page = await getPage(payload.targetId);
+        const page = await getPageCached(payload.targetId, { force: true });
         const currentData = (page.currentData ?? {}) as Record<string, unknown>;
         const blocks = Array.isArray(currentData.blocks)
           ? (currentData.blocks as Block[])
@@ -595,7 +595,7 @@ export function WidgetLibraryPage() {
       }
 
       if (targetType === "template") {
-        const template = await getWidgetTemplate(payload.targetId);
+        const template = await getWidgetTemplateCached(payload.targetId, { force: true });
         const blocks = Array.isArray(template.blocks)
           ? (template.blocks as Block[])
           : [];
@@ -604,7 +604,7 @@ export function WidgetLibraryPage() {
         return;
       }
 
-      const page = await getPage(payload.targetId);
+      const page = await getPageCached(payload.targetId, { force: true });
       const currentData = (page.currentData ?? {}) as Record<string, unknown>;
       const blocks = Array.isArray(currentData.blocks)
         ? (currentData.blocks as Block[])

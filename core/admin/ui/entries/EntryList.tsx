@@ -5,16 +5,20 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import {
-  listContentTypes,
+  getCachedContentTypes,
+  listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import {
   deleteEntry,
-  listEntries,
+  getCachedEntries,
+  listEntriesCached,
   updateEntryMetadata,
 } from "@/services/entriesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
 import { ContentTypeCreateDrawer } from "../content-types/ContentTypeCreateDrawer";
@@ -32,7 +36,7 @@ import { EntryTypeSidebar } from "./EntryTypeSidebar";
 type EntryView = "list" | "grid";
 
 export function filterEntries(
-  entries: Awaited<ReturnType<typeof listEntries>>,
+  entries: Awaited<ReturnType<typeof listEntriesCached>>,
   query: string,
   status: string,
   author: string
@@ -56,7 +60,7 @@ export function EntryList() {
   const [collectionOpen, setCollectionOpen] = useState(false);
   const [types, setTypes] = useState<ContentTypeSummary[]>([]);
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
-  const [entries, setEntries] = useState([] as Awaited<ReturnType<typeof listEntries>>);
+  const [entries, setEntries] = useState([] as Awaited<ReturnType<typeof listEntriesCached>>);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<EntryView>("list");
@@ -69,7 +73,13 @@ export function EntryList() {
 
   useEffect(() => {
     let active = true;
-    listContentTypes()
+    const cached = getCachedContentTypes();
+    if (cached) {
+      setTypes(cached);
+      setActiveSlug((prev) => prev ?? cached[0]?.slug ?? null);
+      setIsLoading(false);
+    }
+    listContentTypesCached({ force: true })
       .then((result) => {
         if (!active) return;
         setTypes(result);
@@ -93,9 +103,30 @@ export function EntryList() {
   }, []);
 
   useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.contentTypesList) return;
+      listContentTypesCached({ force: true })
+        .then((result) => setTypes(result))
+        .catch(() => undefined);
+    });
+  }, []);
+
+  useEffect(() => {
     if (!activeSlug) return;
     let active = true;
-    listEntries(activeSlug)
+    const cached = getCachedEntries(activeSlug);
+    if (cached) {
+      setEntries(cached);
+      setTypes((prev) =>
+        prev.map((type) =>
+          type.slug === activeSlug
+            ? { ...type, entryCount: cached.length }
+            : type
+        )
+      );
+      setIsLoading(false);
+    }
+    listEntriesCached(activeSlug, { force: true })
       .then((result) => {
         if (!active) return;
         setEntries(result);
@@ -122,6 +153,25 @@ export function EntryList() {
     return () => {
       active = false;
     };
+  }, [activeSlug]);
+
+  useEffect(() => {
+    if (!activeSlug) return;
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.entriesList(activeSlug)) return;
+      listEntriesCached(activeSlug, { force: true })
+        .then((result) => {
+          setEntries(result);
+          setTypes((prev) =>
+            prev.map((type) =>
+              type.slug === activeSlug
+                ? { ...type, entryCount: result.length }
+                : type
+            )
+          );
+        })
+        .catch(() => undefined);
+    });
   }, [activeSlug]);
 
   const activeType = useMemo(
@@ -162,7 +212,7 @@ export function EntryList() {
 
   const refreshEntries = async () => {
     if (!activeSlug) return;
-    const updated = await listEntries(activeSlug);
+    const updated = await listEntriesCached(activeSlug, { force: true });
     setEntries(updated);
     setTypes((prev) =>
       prev.map((type) =>
@@ -222,7 +272,7 @@ export function EntryList() {
       )
     );
     if (typeSlug === activeSlug) {
-      listEntries(typeSlug).then((result) => {
+      listEntriesCached(typeSlug, { force: true }).then((result) => {
         setEntries(result);
         setTypes((prev) =>
           prev.map((type) =>

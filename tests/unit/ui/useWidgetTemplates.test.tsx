@@ -2,13 +2,13 @@ import { afterEach, expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import {
-  clearWidgetTemplatesCache,
-  primeWidgetTemplatesCache,
   useWidgetTemplates,
 } from "../../../core/admin/ui/widgets/hooks/useWidgetTemplates";
+import { clearWidgetTemplatesCache } from "../../../core/admin/services/widgetTemplatesClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { normalizeWidgetTemplateSettings } from "../../../core/services/widgets/widgetTemplateSettings";
 
-const createSessionStorage = () => {
+const createLocalStorage = () => {
   const store = new Map<string, string>();
   return {
     getItem: (key: string) => store.get(key) ?? null,
@@ -31,7 +31,10 @@ afterEach(() => {
 });
 
 test("useWidgetTemplates returns cached items when primed", () => {
-  primeWidgetTemplatesCache([
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+  const cached = [
     {
       id: "tmpl-1",
       name: "Main Footer",
@@ -43,16 +46,26 @@ test("useWidgetTemplates returns cached items when primed", () => {
       createdAt: "2026-02-14T00:00:00.000Z",
       updatedAt: "2026-02-14T00:00:00.000Z",
     },
-  ]);
+  ];
+  storage.setItem(
+    cacheKeys.widgetTemplatesList,
+    JSON.stringify({ value: cached, savedAt: Date.now() })
+  );
 
   const html = renderToString(<TemplateCount />);
   expect(html).toContain("count:1");
+
+  if (originalLocal === undefined) {
+    delete (globalThis as { localStorage?: unknown }).localStorage;
+  } else {
+    (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+  }
 });
 
-test("useWidgetTemplates reads from session cache", () => {
-  const originalSession = (globalThis as { sessionStorage?: unknown }).sessionStorage;
-  const storage = createSessionStorage();
-  (globalThis as { sessionStorage?: unknown }).sessionStorage = storage as unknown;
+test("useWidgetTemplates reads from local cache", () => {
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
 
   try {
     clearWidgetTemplatesCache();
@@ -70,17 +83,17 @@ test("useWidgetTemplates reads from session cache", () => {
       },
     ];
     storage.setItem(
-      "nextless.widgetTemplatesCache",
+      cacheKeys.widgetTemplatesList,
       JSON.stringify({ value: cached, savedAt: Date.now() })
     );
 
     const html = renderToString(<TemplateCount />);
     expect(html).toContain("count:1");
   } finally {
-    if (originalSession === undefined) {
-      delete (globalThis as { sessionStorage?: unknown }).sessionStorage;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
     } else {
-      (globalThis as { sessionStorage?: unknown }).sessionStorage = originalSession;
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
     }
     clearWidgetTemplatesCache();
   }

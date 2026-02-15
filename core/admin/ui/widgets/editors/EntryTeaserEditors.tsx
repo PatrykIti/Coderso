@@ -14,10 +14,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import {
-  listContentTypes,
+  listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
-import { listEntries, type EntrySummary } from "@/services/entriesClient";
+import { listEntriesCached, type EntrySummary } from "@/services/entriesClient";
 
 import {
   normalizeEntryTeaserData,
@@ -147,7 +147,7 @@ function useContentTypeEntries(types: ContentTypeSummary[]) {
       if (!typeSlug) return;
       if (entriesByTypeSlug[typeSlug]) return;
       try {
-        const rows = await listEntries(typeSlug);
+        const rows = await listEntriesCached(typeSlug, { force: true });
         setEntriesByTypeSlug((current) => ({
           ...current,
           [typeSlug]: rows,
@@ -287,7 +287,7 @@ function SourcePickerFields({
 
   useEffect(() => {
     let active = true;
-    listContentTypes()
+    listContentTypesCached({ force: true })
       .then((items) => {
         if (!active) return;
         setTypes(items);

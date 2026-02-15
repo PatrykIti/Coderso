@@ -13,7 +13,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
-import { listMedia } from "@/services/mediaClient";
+import { listMediaCached } from "@/services/mediaClient";
 import {
   getMenuWithItems,
   listMenus,
@@ -340,7 +340,7 @@ function NavigationLogoSourceFields({
     onChange({ assetId, source: "library" });
     setLookupError(null);
     try {
-      const items = await listMedia();
+      const items = await listMediaCached({ force: true });
       if (requestId !== requestIdRef.current) return;
       const match = items.find((item) => item.id === assetId);
       if (!match) {

@@ -22,7 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
-import { listMedia } from "@/services/mediaClient";
+import { listMediaCached } from "@/services/mediaClient";
 import {
   getUserSetting,
   setUserSetting,
@@ -186,7 +186,7 @@ function HeroMediaSourceFields({
     onChange({ assetId, source: "library" });
     setLookupError(null);
     try {
-      const items = await listMedia();
+      const items = await listMediaCached({ force: true });
       if (requestId !== requestIdRef.current) return;
       const match = items.find((item) => item.id === assetId);
       if (match) {

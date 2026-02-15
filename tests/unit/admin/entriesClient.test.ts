@@ -1,10 +1,13 @@
 import { expect, test } from "bun:test";
 
 import {
+  clearEntriesCache,
   createEntry,
   deleteEntry,
   getEntry,
+  getEntryCached,
   listEntries,
+  listEntriesCached,
   previewEntry,
   publishEntry,
   unpublishEntry,
@@ -12,6 +15,7 @@ import {
   updateEntryMetadata,
 } from "../../../core/admin/services/entriesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -19,6 +23,23 @@ const jsonResponse = (payload: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
+
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+const resetCaches = (typeSlug: string) => {
+  clearEntriesCache(typeSlug);
+};
 test("listEntries hits GET /content/:type/entries", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -225,5 +246,95 @@ test("deleteEntry uses CSRF and DELETE", async () => {
     expect(calls[1]?.init?.method).toBe("DELETE");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+
+test("listEntriesCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches("blog");
+    const cached = [
+      {
+        id: "entry-9",
+        typeId: "type-1",
+        title: "Hello",
+        slug: "hello",
+        status: "draft" as const,
+        data: {},
+        createdAt: "2026-02-14T00:00:00.000Z",
+        updatedAt: "2026-02-14T00:00:00.000Z",
+      },
+    ];
+    storage.setItem(
+      cacheKeys.entriesList("blog"),
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await listEntriesCached("blog");
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches("blog");
+  }
+});
+
+test("getEntryCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ id: "entry-10" });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches("blog");
+    const cached = {
+      id: "entry-10",
+      typeId: "type-1",
+      title: "Cached",
+      slug: "cached",
+      status: "draft" as const,
+      data: {},
+      createdAt: "2026-02-14T00:00:00.000Z",
+      updatedAt: "2026-02-14T00:00:00.000Z",
+      taxonomy: null,
+    };
+    storage.setItem(
+      cacheKeys.entryDetail("blog", "entry-10"),
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await getEntryCached("blog", "entry-10");
+    expect(result?.id).toBe("entry-10");
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches("blog");
   }
 });

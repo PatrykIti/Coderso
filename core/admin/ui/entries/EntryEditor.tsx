@@ -1,5 +1,5 @@
 import { Eye, RefreshCcw, Save, Send, SlidersHorizontal } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -22,9 +22,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
-import { getContentTypeBySlug, listContentTypes } from "@/services/contentTypesClient";
+import { cacheKeys } from "@/services/cachePolicy";
+import { getCachedContentTypes, listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
 import {
-  getEntry,
+  getCachedEntryDetail,
+  getEntryCached,
   previewEntry,
   publishEntry,
   updateEntryMetadata,
@@ -38,6 +40,7 @@ import {
   type TaxonomyOverview,
 } from "@/services/taxonomyClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
 import { EntryEditorHeader } from "./EntryEditorHeader";
@@ -106,6 +109,12 @@ export function EntryEditor() {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [status, setStatus] = useState<EntryStatus>("draft");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const hasUnsavedChangesRef = useRef(false);
+  const setUnsavedChanges = (value: boolean) => {
+    hasUnsavedChangesRef.current = value;
+    setHasUnsavedChanges(value);
+  };
+  const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
   const [title, setTitle] = useState("");
@@ -134,62 +143,122 @@ export function EntryEditor() {
     [fields]
   );
 
-  useEffect(() => {
-    if (!type || !id) return;
-    let active = true;
-    setTaxonomyOverview(null);
-    setSelectedCategoryId(null);
-    setSelectedTagIds([]);
-    Promise.all([getEntry(type, id), getContentTypeBySlug(type)])
-      .then(async ([entryResult, contentType]) => {
-        if (!active) return;
+  const applyEntry = useCallback(
+    (entryResult: EntryDetail, contentType: ContentTypeSummary) => {
+      const mappedFields = fieldsFromSchema(contentType.schema);
+      setFields(mappedFields);
+      setEntry(entryResult);
+      setContentTypeName(contentType.name);
+      setTitle(entryResult.title);
+      setSlug(entryResult.slug);
+      setValues(buildInitialValues(mappedFields, entryResult.data ?? {}));
+      setStatus(entryResult.status);
+      setUnsavedChanges(false);
+      setScheduledAt(entryResult.scheduledAt ?? "");
+      setSeoDescription(entryResult.seo?.description ?? "");
+      setError(null);
+      setRemoteUpdatePending(false);
+    },
+    []
+  );
+
+  const loadTaxonomy = useCallback(
+    async (contentTypeId: string, entryResult: EntryDetail) => {
+      let overview: TaxonomyOverview | null = null;
+      try {
+        overview = await getTaxonomyOverview(contentTypeId);
+      } catch {
+        overview = null;
+      }
+      setTaxonomyOverview(overview);
+      setSelectedCategoryId(entryResult.taxonomy?.category?.id ?? null);
+      setSelectedTagIds(entryResult.taxonomy?.tags?.map((tag) => tag.id) ?? []);
+    },
+    []
+  );
+
+  const resolveContentType = useCallback(
+    async (force?: boolean) => {
+      if (!type) return null;
+      const cached = getCachedContentTypes()?.find((item) => item.slug === type) ?? null;
+      if (cached && !force) return cached;
+      const types = await listContentTypesCached({ force: true });
+      return types.find((item) => item.slug === type) ?? null;
+    },
+    [type]
+  );
+
+  const refreshEntry = useCallback(
+    async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
+      if (!type || !id) return;
+      const shouldSetLoading = options?.setLoading !== false;
+      if (shouldSetLoading) setIsLoading(true);
+      setError(null);
+      try {
+        const [entryResult, contentType] = await Promise.all([
+          getEntryCached(type, id, { force: true }),
+          resolveContentType(true),
+        ]);
         if (!contentType) {
           setError("Content type not found.");
           return;
         }
-        const mappedFields = fieldsFromSchema(contentType.schema);
-        setFields(mappedFields);
-        setEntry(entryResult);
-        setContentTypeName(contentType.name);
-        setTitle(entryResult.title);
-        setSlug(entryResult.slug);
-        setValues(buildInitialValues(mappedFields, entryResult.data ?? {}));
-        setStatus(entryResult.status);
-        setHasUnsavedChanges(false);
-        setScheduledAt(entryResult.scheduledAt ?? "");
-        setSeoDescription(entryResult.seo?.description ?? "");
-        setError(null);
-
-        let overview: TaxonomyOverview | null = null;
-        try {
-          overview = await getTaxonomyOverview(contentType.id);
-        } catch {
-          overview = null;
+        if (!entryResult) return;
+        if (!options?.allowUnsaved && hasUnsavedChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
         }
-        if (!active) return;
-        setTaxonomyOverview(overview);
-        setSelectedCategoryId(entryResult.taxonomy?.category?.id ?? null);
-        setSelectedTagIds(entryResult.taxonomy?.tags?.map((tag) => tag.id) ?? []);
-      })
-      .catch((err) => {
-        if (!active) return;
+        applyEntry(entryResult, contentType);
+        await loadTaxonomy(contentType.id, entryResult);
+      } catch (err) {
         if (isApiClientError(err)) {
           setError(err.message);
         } else {
           setError("Failed to load entry.");
         }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [id, type]);
+      } finally {
+        if (shouldSetLoading) setIsLoading(false);
+      }
+    },
+    [applyEntry, id, loadTaxonomy, resolveContentType, type]
+  );
+
+  useEffect(() => {
+    if (!type || !id) return;
+    const cachedEntry = getCachedEntryDetail(type, id);
+    const cachedContentType =
+      getCachedContentTypes()?.find((item) => item.slug === type) ?? null;
+
+    if (cachedEntry && cachedContentType) {
+      applyEntry(cachedEntry, cachedContentType);
+      loadTaxonomy(cachedContentType.id, cachedEntry).catch(() => undefined);
+      setIsLoading(false);
+    } else {
+      setTaxonomyOverview(null);
+      setSelectedCategoryId(null);
+      setSelectedTagIds([]);
+    }
+
+    refreshEntry({ setLoading: !(cachedEntry && cachedContentType) }).catch(
+      () => undefined
+    );
+  }, [applyEntry, id, loadTaxonomy, refreshEntry, type]);
+
+  useEffect(() => {
+    if (!type || !id) return;
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.entryDetail(type, id)) return;
+      refreshEntry({ setLoading: false }).catch(() => undefined);
+    });
+  }, [id, refreshEntry, type]);
 
   useEffect(() => {
     let active = true;
-    listContentTypes()
+    const cached = getCachedContentTypes();
+    if (cached) {
+      setRelationTargets(cached.map((item) => ({ slug: item.slug, name: item.name })));
+    }
+    listContentTypesCached({ force: true })
       .then((types) => {
         if (!active) return;
         setRelationTargets(types.map((item) => ({ slug: item.slug, name: item.name })));
@@ -200,9 +269,20 @@ export function EntryEditor() {
     };
   }, []);
 
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.contentTypesList) return;
+      listContentTypesCached({ force: true })
+        .then((types) => {
+          setRelationTargets(types.map((item) => ({ slug: item.slug, name: item.name })));
+        })
+        .catch(() => undefined);
+    });
+  }, []);
+
   const handleFieldChange = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
-    setHasUnsavedChanges(true);
+    setUnsavedChanges(true);
   };
 
   const handleTitleChange = (value: string) => {
@@ -210,7 +290,7 @@ export function EntryEditor() {
     if (schemaFieldNames.has("title")) {
       setValues((prev) => ({ ...prev, title: value }));
     }
-    setHasUnsavedChanges(true);
+    setUnsavedChanges(true);
   };
 
   const handleSlugChange = (value: string) => {
@@ -218,7 +298,7 @@ export function EntryEditor() {
     if (schemaFieldNames.has("slug")) {
       setValues((prev) => ({ ...prev, slug: value }));
     }
-    setHasUnsavedChanges(true);
+    setUnsavedChanges(true);
   };
 
   const handlePreview = async () => {
@@ -271,7 +351,8 @@ export function EntryEditor() {
       setStatus(updated.status);
       setScheduledAt(updated.scheduledAt ?? scheduledAt);
       setSeoDescription(updated.seo?.description ?? seoDescription);
-      setHasUnsavedChanges(false);
+      setUnsavedChanges(false);
+      setRemoteUpdatePending(false);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -296,12 +377,15 @@ export function EntryEditor() {
         await handleSaveDraft();
       } else {
         await publishEntry(type, id);
-        const updated = await getEntry(type, id);
-        setEntry(updated);
-        setStatus(updated.status);
-        setScheduledAt(updated.scheduledAt ?? "");
-        setSeoDescription(updated.seo?.description ?? "");
-        setHasUnsavedChanges(false);
+        const updated = await getEntryCached(type, id, { force: true });
+        if (updated) {
+          setEntry(updated);
+          setStatus(updated.status);
+          setScheduledAt(updated.scheduledAt ?? "");
+          setSeoDescription(updated.seo?.description ?? "");
+        }
+        setUnsavedChanges(false);
+        setRemoteUpdatePending(false);
       }
     } catch (err) {
       if (isApiClientError(err)) {
@@ -404,6 +488,7 @@ export function EntryEditor() {
       setSeoDescription(updated.seo?.description ?? "");
       setSelectedCategoryId(updated.taxonomy?.category?.id ?? null);
       setSelectedTagIds(updated.taxonomy?.tags?.map((tag) => tag.id) ?? []);
+      setRemoteUpdatePending(false);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -578,6 +663,21 @@ export function EntryEditor() {
               <Alert variant="destructive">
                 <AlertTitle>Unable to load entry</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            {remoteUpdatePending ? (
+              <Alert>
+                <AlertTitle>Updated in another tab</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>New changes are available. Refresh to load the latest version.</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => refreshEntry({ allowUnsaved: true })}
+                  >
+                    Refresh
+                  </Button>
+                </AlertDescription>
               </Alert>
             ) : null}
             {hasUnsavedChanges ? (

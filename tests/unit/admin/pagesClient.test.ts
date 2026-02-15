@@ -1,18 +1,39 @@
 import { expect, test } from "bun:test";
 
 import {
+  clearPagesCache,
   createPage,
   duplicatePage,
+  getPageCached,
   listPages,
+  listPagesCached,
   previewPage,
 } from "../../../core/admin/services/pagesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+const resetCaches = () => {
+  clearPagesCache();
+};
 
 test("listPages hits GET /pages", async () => {
   const originalFetch = globalThis.fetch;
@@ -111,5 +132,90 @@ test("duplicatePage posts to duplicate endpoint", async () => {
     expect(calls[1]?.input).toBe("/admin/api/pages/page-1/duplicate");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("listPagesCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    const cached = [
+      {
+        id: "page-1",
+        title: "Home",
+        slug: "/",
+        status: "draft" as const,
+        updatedAt: "2026-02-14T00:00:00.000Z",
+        author: null,
+      },
+    ];
+    storage.setItem(
+      cacheKeys.pagesList,
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await listPagesCached();
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("getPageCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ id: "page-2" });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    const cached = {
+      id: "page-2",
+      title: "Docs",
+      slug: "/docs",
+      status: "draft" as const,
+      currentData: { blocks: [] },
+      updatedAt: "2026-02-14T00:00:00.000Z",
+      author: null,
+    };
+    storage.setItem(
+      cacheKeys.pageDetail("page-2"),
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await getPageCached("page-2");
+    expect(result?.id).toBe("page-2");
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
   }
 });
