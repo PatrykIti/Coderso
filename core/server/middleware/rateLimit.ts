@@ -17,9 +17,12 @@ export function resetRateLimitBuckets() {
 export function checkRateLimit(
   bucket: RateLimitBucket,
   ip: string | undefined,
-  config: SecuritySettings["rateLimit"]
+  config: SecuritySettings["rateLimit"],
+  options?: { isAuthenticated?: boolean }
 ) {
   if (!config.enabled) return;
+
+  if (bucket == "admin" && options?.isAuthenticated) return;
 
   const limits = bucket === "auth" ? config.auth : config.admin;
   const key = `${bucket}:${ip ?? "unknown"}`;

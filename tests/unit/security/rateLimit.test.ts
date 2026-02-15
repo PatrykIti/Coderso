@@ -55,3 +55,15 @@ test("checkRateLimit maps assistant bucket to assistant_rate_limited", () => {
     expect(apiError.status).toBe(429);
   }
 });
+
+test("authenticated admin requests skip rate limits", () => {
+  resetRateLimitBuckets();
+  const config = {
+    enabled: true,
+    admin: { windowSeconds: 10, maxRequests: 1 },
+    auth: { windowSeconds: 5, maxRequests: 1 },
+  };
+
+  checkRateLimit("admin", "127.0.0.1", config, { isAuthenticated: true });
+  checkRateLimit("admin", "127.0.0.1", config, { isAuthenticated: true });
+});

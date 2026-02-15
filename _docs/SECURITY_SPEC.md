@@ -5,7 +5,7 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
 ## Middleware (core)
 
 - Request ID: generowany per request, logowany.
-- Rate limiting: per IP dla login i admin API.
+- Rate limiting: per IP dla login i admin API (admin ograniczenia nie obowiazuja zalogowanych uzytkownikow).
 - CORS: tylko zaufane originy dla admina.
 - CSRF: token dla POST/PUT/DELETE w admin.
   - Token pobierany z `GET /admin/api/auth/csrf`.

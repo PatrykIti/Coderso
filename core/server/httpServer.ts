@@ -300,7 +300,8 @@ const handleApi = async (req: Request, apiPrefix: string) => {
             ? "assistant"
             : "admin",
         ctx.ip,
-        security.rateLimit
+        security.rateLimit,
+        { isAuthenticated: Boolean(ctx.user) }
       );
       await enforceCsrf(req, ctx, security.csrf);
       let result: unknown = undefined;
