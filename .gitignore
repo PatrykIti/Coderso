@@ -4,6 +4,7 @@ core/dist/
 store/dist/
 .env
 .env.*
+!.env.example
 /plugins-runtime/
 /data/
 coverage/

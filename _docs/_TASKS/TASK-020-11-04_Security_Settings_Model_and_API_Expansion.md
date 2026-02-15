@@ -41,6 +41,24 @@ security.rateLimit = {
 
 ---
 
+
+Add `botProtection`:
+
+```ts
+botProtection: {
+  enabled: boolean;
+  provider: "recaptcha_v3";
+  siteKey: string | null;
+  secretKey: string | null; // stored encrypted
+  thresholds: {
+    login: number;
+    reset: number;
+    public_write: number;
+  };
+  enforceOnLocalhost: boolean; // default: true (dev enforcement)
+}
+```
+
 ## Implementation Checklist
 
 | File | Action |

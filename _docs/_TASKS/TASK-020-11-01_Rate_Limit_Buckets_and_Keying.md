@@ -30,17 +30,23 @@ Buckets: `auth`, `admin_read`, `admin_write`, `public_read`, `public_write`, `as
 
 ```ts
 // bucket resolution
-function resolveBucket(req, ctx) {
+function resolveBucket(req, ctx, routeMatch) {
   if (path.startsWith("/auth")) return "auth";
   if (path.startsWith("/assistant")) return "assistant";
+
+  // admin API with public exceptions (e.g. forms submissions)
   if (path.startsWith("/admin/api")) {
+    if (routeMatch?.path === "/forms/:id/submissions") return "public_write";
     if (method === "GET") return "admin_read";
     return "admin_write";
   }
-  if (path.startsWith("/public")) {
-    if (method === "GET") return "public_read";
-    return "public_write";
+
+  // public runtime
+  if (path.startsWith("/media") || path.startsWith("/site") || path === "/preview" || path.startsWith("/admin")) {
+    return "public_read";
   }
+
+  // default: public read for site routes
   return "public_read";
 }
 

@@ -25,6 +25,11 @@ This task also clarifies internal vs public endpoints and upgrades rate limiting
 - Bot protection: Google reCAPTCHA v3.
 - Admin rate limits: bypass for authenticated users (WordPress-like).
 - Presets: apply-only with a Custom option.
+- reCAPTCHA v3 enforced in dev and prod; thresholds per action (login 0.5, reset 0.6, public_write 0.5).
+- Password hashing: add optional pepper (ENV).
+- Email encryption at rest: HMAC hash + AES-GCM columns.
+- Admin static assets: protect with `public_read` bucket (high limit) + CDN/WAF if available.
+- Public write endpoints: `POST /forms/:id/submissions` (auth endpoints remain in `auth` bucket).
 
 ## Goals
 
@@ -42,7 +47,7 @@ This task also clarifies internal vs public endpoints and upgrades rate limiting
 ### 1) Auth Hardening
 - Verify password hashing strategy (argon2id params, optional pepper).
 - Add login throttling by identifier + IP (email + IP), not only IP.
-- Add optional bot protection for login/reset (Turnstile/hCaptcha).
+- Add reCAPTCHA v3 protection for login/reset and public write endpoints.
 - Confirm CSRF + strict origin validation on auth endpoints.
 
 ### 2) Rate Limiting Tiers
@@ -62,7 +67,7 @@ This task also clarifies internal vs public endpoints and upgrades rate limiting
 ### 3) Public Endpoint Hardening
 - Explicitly list public endpoints and their buckets.
 - Apply stricter limits to POST/PUT/PATCH/DELETE vs GET.
-- Add optional CAPTCHA gate for public write endpoints.
+- Add reCAPTCHA v3 gate for public write endpoints.
 
 ### 4) Security Headers + Origin Controls
 - Review/strengthen admin CSP, HSTS, and referrer policy defaults.
@@ -97,18 +102,6 @@ This task also clarifies internal vs public endpoints and upgrades rate limiting
 | TASK-020-11-04 | Security Settings Model + API | — | To Do |
 | TASK-020-11-05 | Security Settings UI + Presets | — | To Do |
 | TASK-020-11-06 | PII (Email) Encryption Decision + Implementation | — | To Do |
-
-## Open Questions (Need Decisions)
-
-1. **Email encryption at rest**:
-   - Confirm approach: `email_hash` (HMAC) for lookup + `email_encrypted` (AES-GCM) for display.
-   - Provide env key names and rotation plan.
-2. **reCAPTCHA v3 scope**:
-   - Apply to auth (login + reset) and public write endpoints (forms)?
-3. **Public write endpoints list**:
-   - Provide the exact endpoints to classify as `public_write`.
-4. **reCAPTCHA thresholds**:
-   - Default score per action (e.g. login 0.5, reset 0.6, forms 0.5) and whether dev/localhost bypass is allowed.
 
 ---
 

@@ -15,6 +15,10 @@ Implement email encryption at rest while preserving login by email and uniquenes
 
 ---
 
+## Decisions
+
+- Use separate keys for hashing and encryption.
+
 ## Recommended Approach
 
 Use **HMAC hash for lookup** and **AES-256-GCM encryption for display**.
@@ -23,6 +27,15 @@ Use **HMAC hash for lookup** and **AES-256-GCM encryption for display**.
 - Query by `email_hash`, never by plaintext.
 
 ---
+
+
+## Env Keys
+
+- `PII_HASH_KEY` (HMAC key for `email_hash`)
+- `PII_ENC_KEY` (AES-256-GCM key for `email_encrypted`)
+
+Add these to `.env.example` with comments.
+
 
 ## Pseudocode
 
@@ -52,9 +65,7 @@ SELECT * FROM users WHERE email_hash = hmacSha256(input, HASH_KEY);
 
 ## Open Questions
 
-1. Confirm we proceed with hash + encrypted email. Provide env key names.
-2. Are you OK with separate keys for hashing and encryption?
-3. Should we add a migration to backfill existing users?
+1. Should we add a migration to backfill existing users?
 
 ---
 

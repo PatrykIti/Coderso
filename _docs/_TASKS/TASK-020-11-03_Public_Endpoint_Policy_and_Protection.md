@@ -22,14 +22,36 @@ Define explicit public endpoints and apply read/write rate limits plus reCAPTCHA
 3. Ensure preview tokens cannot be brute-forced.
 4. Add reCAPTCHA v3 gate to public write endpoints.
 
+## Public Endpoint Inventory (from docs + code)
+
+**Admin API public writes:**
+- `POST /forms/:id/submissions` (public submit)
+
+**Auth endpoints (strict auth bucket, not public_write):**
+- `POST /auth/login`
+- `POST /auth/reset`
+- `POST /auth/reset/confirm`
+
+**Public site reads:**
+- `GET /admin/*` and `/admin/assets/*` (admin SPA bootstrap + assets)
+- `GET /preview` (tokenized preview)
+- `GET /media/*` (media files)
+- `GET /site/assets/*` and `GET /site/favicon.ico`
+- `GET /` and all other public site routes (pages + content routes)
+
+**Notes:**
+- Admin UI assets (`/admin/*`) are served publicly for bootstrapping and should use the `public_read` bucket with high limits.
+- Public site requests are handled in `core/server/publicSite.tsx` (not `/admin/api`).
+
+
 ---
 
 ## Pseudocode
 
 ```ts
 // public route classification
-const PUBLIC_WRITE = ["/forms/submit", "/webhooks/*"]; // example
-const PUBLIC_READ = ["/site/*", "/preview/*"]; // example
+const PUBLIC_WRITE = ["/admin/api/forms/:id/submissions"];
+const PUBLIC_READ = ["/preview", "/media/*", "/site/*", "/admin/*"];
 
 if (PUBLIC_WRITE.matches(path)) bucket = "public_write";
 else if (PUBLIC_READ.matches(path)) bucket = "public_read";
@@ -51,8 +73,7 @@ else if (PUBLIC_READ.matches(path)) bucket = "public_read";
 
 ## Open Questions
 
-1. Which public endpoints should be classified as write?
-2. Should preview endpoints be considered read (high limit) or write (stricter)?
+- None (list resolved from docs/code).
 
 ---
 
