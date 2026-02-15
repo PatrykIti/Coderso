@@ -88,6 +88,17 @@ This task also clarifies internal vs public endpoints and upgrades rate limiting
 ### 6) Security Settings UX
 - Use the same **vertical tabs layout** as Settings → Site (`SettingsShell` + left sidebar).
 - Restructure Settings → Security into tabs/sections:
+
+**Security sections (vertical sidebar cards like Site Settings):**
+- `auth` — Login protection + reCAPTCHA + password policy
+- `rate_limits` — Buckets + thresholds + presets
+- `csrf` — CSRF enable + header + TTL
+- `cors` — Allowed origins + methods + headers
+- `headers` — CSP, HSTS, referrer policy, frame options
+- `sessions` — Session TTL, max sessions, single-session
+- `ip_allowlist` — Allowlist enable + CIDR list
+
+Each section renders a right-side panel with cards similar to `SiteSettingsPage`.
   - Auth & Bot Protection
   - Rate Limits
   - CSRF/CORS
