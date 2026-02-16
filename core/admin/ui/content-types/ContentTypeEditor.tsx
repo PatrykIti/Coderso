@@ -94,7 +94,7 @@ export function ContentTypeEditor() {
   });
   const [isTaxonomySaving, setIsTaxonomySaving] = useState(false);
 
-  const applyContentType = (result: { name: string; slug: string; schema: unknown }) => {
+  const applyContentType = useCallback((result: { name: string; slug: string; schema: unknown }) => {
     setName(result.name);
     setSlug(result.slug);
     const mappedFields = fieldsFromSchema(result.schema);
@@ -102,7 +102,7 @@ export function ContentTypeEditor() {
     setUnsavedChanges(false);
     setRemoteUpdatePending(false);
     setSelectedFieldId(mappedFields[0]?.id ?? null);
-  };
+  }, []);
 
   const refreshContentType = useCallback(
     async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
@@ -162,7 +162,7 @@ export function ContentTypeEditor() {
     return () => {
       active = false;
     };
-  }, [applyContentType, refreshContentType, typeId]);
+  }, [refreshContentType, typeId]);
 
   useEffect(() => {
     if (!typeId) return;

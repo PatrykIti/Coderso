@@ -249,6 +249,7 @@ Project Change Log.
 | 220 | 2026-02-15 | Admin cache layer | Admin/UI |
 
 | 221 | 2026-02-15 | Admin rate limit auth bypass | Core/Security |
+| 222 | 2026-02-16 | Settings UI polish + content type editor fix | Admin/UI |
 | 204 | 2026-02-15 | Security hardening and settings UX | Core/Security |
 
 ---

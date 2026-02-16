@@ -427,6 +427,7 @@ export function SecuritySettingsPage() {
     entries: allowlistEntries,
     isLoading: allowlistLoading,
     error: allowlistError,
+    addEntry,
     removeEntry,
   } = useIpAllowlist();
 

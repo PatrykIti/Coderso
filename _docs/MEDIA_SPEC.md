@@ -9,7 +9,7 @@
 
 ## Local storage
 
-- Katalog: `MEDIA_DIR` (np. `/data/media`).
+- Katalog: `MEDIA_DIR` (default `./storage/media`, np. `/data/media`).
 - URL publiczny: `/media/<path>` (lub `MEDIA_BASE_URL`).
 - Struktura sciezek: `/<yyyy>/<mm>/<uuid>.<ext>`.
 - Cache-Control: long cache dla niezmiennych plikow.

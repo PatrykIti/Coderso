@@ -16,6 +16,8 @@ Alias kompatybilnosciowy:
 
 ## Assistant settings (`settings`)
 
+Admin UI: Settings → Assistant.
+
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `assistant.enabled` | `boolean` | `false` | Globalny toggle asystenta w Admin UI |
