@@ -15,5 +15,5 @@ test("SecuritySettingsPage renders sections and cards", () => {
   expect(html).toContain("Sessions");
   expect(html).toContain("IP allowlist");
   expect(html).toContain("Sign-in protection");
-  expect(html).toContain("Auto-save");
+  expect(html).toContain("Auto-save settings across all screens");
 });

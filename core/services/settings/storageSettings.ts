@@ -98,6 +98,7 @@ let cachedUpdatedAt: number | null = null;
 
 const DEFAULT_MAX_SIZE = 10 * 1024 * 1024;
 const DEFAULT_ALLOWED_MIME = "image/*,application/pdf";
+const DEFAULT_LOCAL_DIR = "./storage/media";
 
 const normalizeString = (value: unknown) => {
   if (value === null) return null;
@@ -251,7 +252,7 @@ export async function getStorageSettings(): Promise<StorageSettingsPublic> {
     local: {
       dir: resolveStringWithFallback(
         map.get(STORAGE_KEYS.localDir)?.value,
-        process.env.MEDIA_DIR
+        process.env.MEDIA_DIR ?? DEFAULT_LOCAL_DIR
       ),
     },
     publicBaseUrl,
@@ -296,7 +297,7 @@ export async function getStorageSettingsInternal(): Promise<StorageSettingsInter
   );
   const localDir = resolveStringWithFallback(
     map.get(STORAGE_KEYS.localDir)?.value,
-    process.env.MEDIA_DIR ?? null
+    process.env.MEDIA_DIR ?? DEFAULT_LOCAL_DIR
   );
 
   const maxSizeBytes = resolveMaxSizeWithFallback(

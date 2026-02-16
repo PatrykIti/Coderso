@@ -20,6 +20,7 @@ import {
   type IntegrationRecord,
 } from "@/services/integrationsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { IntegrationCard, type IntegrationCardProps } from "./IntegrationCard";
 import { IntegrationDrawer } from "./IntegrationDrawer";
@@ -173,19 +174,21 @@ export function IntegrationsPage() {
         </div>
       }
       search={<IntegrationsSearch value={query} onChange={setQuery} />}
-      topbarActions={
-        <Button size="sm" className="gap-2" onClick={() => setRequestOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Request new
-        </Button>
-      }
     >
       <div className="flex h-full flex-col">
-        <div className="border-b bg-background/70 px-6 py-4">
-          <h1 className="text-2xl font-semibold">Integrations</h1>
-          <p className="text-sm text-muted-foreground">
-            Connect your workflow with third-party services.
-          </p>
+        <div className="border-b bg-background/70 px-6 py-5">
+          <div className="mx-auto flex max-w-6xl flex-col gap-4">
+            <PageHeader
+              title="Integrations"
+              description="Connect your workflow with third-party services."
+              actions={
+                <Button className="gap-2" onClick={() => setRequestOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Request new
+                </Button>
+              }
+            />
+          </div>
         </div>
         <div className="flex-1 p-6">
           <div className="mx-auto flex max-w-6xl flex-col gap-6">

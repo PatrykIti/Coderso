@@ -28,6 +28,23 @@ export type AssistantSettingsValues = {
   assistantQuotaRequestsPerMinute: number;
   assistantQuotaRequestsPerDay: number;
 };
+export const ASSISTANT_SETTINGS_DEFAULT_VALUES: AssistantSettingsValues = {
+  assistantEnabled: false,
+  assistantDefaultMode: "docs-only",
+  assistantDocsBackend: "filesystem",
+  assistantDocsSourceRoot: "_docs/_internal",
+  assistantDocsPaths: ["_docs"],
+  assistantDocsReindexOnBoot: false,
+  assistantLlmEnabled: false,
+  assistantLlmProvider: "none",
+  assistantLlmModel: "google/gemma-3n-e2b-it:free",
+  assistantLlmMaxInputTokens: 8192,
+  assistantLlmMaxOutputTokens: 2048,
+  assistantLlmTimeoutMs: 20000,
+  assistantQuotaRequestsPerMinute: 20,
+  assistantQuotaRequestsPerDay: 1000,
+};
+
 
 type AssistantSettingsCardProps = {
   values: AssistantSettingsValues;

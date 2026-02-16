@@ -1,4 +1,5 @@
 import {
+  Bot,
   Globe,
   HardDrive,
   KeyRound,
@@ -15,6 +16,7 @@ import { resolveAdminHref } from "@/utils/adminPaths";
 
 const items = [
   { id: "general", label: "General", icon: Settings, href: "/admin/settings/general" },
+  { id: "assistant", label: "Assistant", icon: Bot, href: "/admin/settings/assistant" },
   { id: "site", label: "Site", icon: Globe, href: "/admin/settings/site" },
   { id: "security", label: "Security", icon: Shield, href: "/admin/settings/security" },
   { id: "api-keys", label: "API Keys", icon: KeyRound, href: "/admin/settings/api-keys" },

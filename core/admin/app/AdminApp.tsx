@@ -40,7 +40,12 @@ import { ThemesPage } from "@/ui/themes/ThemesPage";
 import { WidgetLibraryPage } from "@/ui/widgets/WidgetLibraryPage";
 import { WidgetTemplateEditorPage } from "@/ui/widgets/WidgetTemplateEditorPage";
 import { ApiKeysPage } from "@/ui/settings/ApiKeysPage";
+import { AssistantSettingsPage } from "@/ui/settings/AssistantSettingsPage";
 import { EmailSettingsPage } from "@/ui/settings/EmailSettingsPage";
+import {
+  ASSISTANT_SETTINGS_DEFAULT_VALUES,
+  type AssistantSettingsValues,
+} from "@/ui/settings/AssistantSettingsCard";
 import {
   GeneralSettingsPage,
   type GeneralSettingsValues,
@@ -109,7 +114,8 @@ const matchRoute = (pattern: string, path: string) => {
   return params;
 };
 
-type SettingsValues = GeneralSettingsValues & {
+type SettingsValues = GeneralSettingsValues & AssistantSettingsValues & {
+  publicBaseUrl: string;
   authSessionTtlDays: number;
   authResetTtlMinutes: number;
   setupCompleted: boolean;
@@ -117,6 +123,8 @@ type SettingsValues = GeneralSettingsValues & {
 
 const defaultSettingsValues: SettingsValues = {
   ...GENERAL_SETTINGS_DEFAULT_VALUES,
+  ...ASSISTANT_SETTINGS_DEFAULT_VALUES,
+  publicBaseUrl: "",
   authSessionTtlDays: 14,
   authResetTtlMinutes: 60,
   setupCompleted: false,
@@ -319,7 +327,11 @@ const buildGeneralSettingsUpdate = (
 ): Partial<GeneralSettingsPayload> => ({
   "site.name": values.siteName,
   "site.locale": values.siteLocale,
-  "site.publicBaseUrl": values.publicBaseUrl.trim() || null,
+});
+
+const buildAssistantSettingsUpdate = (
+  values: AssistantSettingsValues
+): Partial<GeneralSettingsPayload> => ({
   "assistant.enabled": values.assistantEnabled,
   "assistant.defaultMode": values.assistantDefaultMode,
   "assistant.docs.backend": values.assistantDocsBackend,
@@ -395,6 +407,34 @@ export function AdminApp({ path }: AdminAppProps) {
       const message = isApiClientError(error)
         ? error.message
         : "Failed to save general settings.";
+      setSettingsState((prev) => ({
+        ...prev,
+        error: message,
+        status: "error",
+      }));
+      throw error;
+    } finally {
+      setSettingsSaving(false);
+    }
+  }, []);
+
+  const saveAssistantSettings = useCallback(async (values: AssistantSettingsValues) => {
+    setSettingsSaving(true);
+    setSettingsState((prev) => ({ ...prev, error: null }));
+    try {
+      const updated = await updateSettings(buildAssistantSettingsUpdate(values));
+      setSettingsState((prev) => {
+        const resolved = resolveSettingsPayload(updated, prev);
+        return {
+          ...prev,
+          status: "ready",
+          ...resolved,
+        };
+      });
+    } catch (error) {
+      const message = isApiClientError(error)
+        ? error.message
+        : "Failed to save assistant settings.";
       setSettingsState((prev) => ({
         ...prev,
         error: message,
@@ -501,6 +541,18 @@ export function AdminApp({ path }: AdminAppProps) {
         ),
       },
       { pattern: "/settings/site", element: <SiteSettingsPage /> },
+      {
+        pattern: "/settings/assistant",
+        element: (
+          <AssistantSettingsPage
+            values={settingsState.values}
+            isLoading={settingsState.status === "loading"}
+            isSaving={settingsSaving}
+            error={settingsState.error}
+            onSave={saveAssistantSettings}
+          />
+        ),
+      },
       { pattern: "/settings/security", element: <SecuritySettingsPage /> },
       { pattern: "/settings/security/ip-allowlist", element: <IpAllowlistPage /> },
       { pattern: "/settings/security/sessions", element: <SessionsPage /> },
@@ -515,7 +567,7 @@ export function AdminApp({ path }: AdminAppProps) {
     ];
 
     return resolveRoute(relativePath, routes);
-  }, [relativePath, saveGeneralSettings, settingsSaving, settingsState]);
+  }, [relativePath, saveAssistantSettings, saveGeneralSettings, settingsSaving, settingsState]);
 
   const refreshSettings = useCallback(() => {
     setSettingsState((prev) => ({

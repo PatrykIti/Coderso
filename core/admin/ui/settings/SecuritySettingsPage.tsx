@@ -5,6 +5,7 @@ import {
   Globe,
   KeyRound,
   Network,
+  Plus,
   Shield,
   ShieldCheck,
   Sliders,
@@ -37,6 +38,7 @@ import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { InfoTip } from "@/ui/shared/InfoTip";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
+import { IpAllowlistDrawer } from "./IpAllowlistDrawer";
 import { IpAllowlistTable } from "./IpAllowlistTable";
 import { SecurityPolicyCard } from "./SecurityPolicyCard";
 import { SettingsSidebar } from "./SettingsSidebar";
@@ -732,21 +734,7 @@ export function SecuritySettingsPage() {
           </span>
         </div>
       }
-      topbarActions={
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Switch
-              checked={autoSaveEnabled}
-              onCheckedChange={setAutoSaveEnabled}
-              id="auto-save-security"
-            />
-            <label htmlFor="auto-save-security">Auto-save</label>
-          </div>
-          <Button size="sm" onClick={handleSave} disabled={saveDisabled}>
-            {busy ? "Saving..." : "Save changes"}
-          </Button>
-        </div>
-      }
+      topbarActions={null}
     >
       <div className="flex min-h-full flex-col">
         <div className="flex-1">
@@ -1826,12 +1814,23 @@ export function SecuritySettingsPage() {
                     title="Access restrictions"
                     description="Allow admin access only from trusted networks."
                     icon={<Network className="h-4 w-4" />}
+                    action={
+                      <div className="flex items-center gap-2">
+                        <InfoTip content="Add CIDR ranges to enable the allowlist. Leave empty to allow access from anywhere." />
+                        <IpAllowlistDrawer
+                          trigger={
+                            <Button size="sm" variant="outline" className="gap-2">
+                              <Plus className="h-4 w-4" />
+                              Add IP Range
+                            </Button>
+                          }
+                          onSubmit={addEntry}
+                          error={allowlistError}
+                        />
+                      </div>
+                    }
                   >
                     <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Add CIDR ranges to enable the allowlist. Leave empty to allow access
-                        from anywhere.
-                      </p>
                       {allowlistError ? (
                         <Alert variant="destructive">
                           <AlertDescription>{allowlistError}</AlertDescription>
@@ -1846,6 +1845,28 @@ export function SecuritySettingsPage() {
                   </SecurityPolicyCard>
                 ) : null}
               </div>
+            </div>
+          </div>
+        </div>
+        <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Checkbox
+                checked={autoSaveEnabled}
+                onCheckedChange={(checked) => setAutoSaveEnabled(Boolean(checked))}
+                disabled={busy}
+              />
+              <span>Auto-save settings across all screens</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={handleSave}
+                disabled={saveDisabled}
+              >
+                {busy ? "Saving..." : "Save changes"}
+              </Button>
             </div>
           </div>
         </div>

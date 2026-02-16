@@ -44,7 +44,6 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerPageRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerMediaRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerMenuRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
-  registerSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerContentTypeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerContentEntryRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerSearchRoutes(router, { requirePermission: deps.requirePermission });
@@ -67,6 +66,7 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerWebhooksRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerEmailSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerIntegrationsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerUserSettingsRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
   registerWidgetRoutes(router, { requirePermission: deps.requirePermission });
   registerWidgetTemplateRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });

@@ -63,10 +63,20 @@ type StorageFieldOption = {
   label: string;
 };
 
+type StorageSizeUnit = "KB" | "MB" | "GB";
+
+const STORAGE_SIZE_UNITS: { value: StorageSizeUnit; label: string; multiplier: number }[] = [
+  { value: "KB", label: "KB", multiplier: 1024 },
+  { value: "MB", label: "MB", multiplier: 1024 ** 2 },
+  { value: "GB", label: "GB", multiplier: 1024 ** 3 },
+];
+
+const DEFAULT_SIZE_UNIT: StorageSizeUnit = "MB";
+
 type StorageFieldId =
   | "localDir"
   | "publicBaseUrl"
-  | "maxSizeBytes"
+  | "maxSizeValue"
   | "allowedMime"
   | "s3AccessKey"
   | "s3SecretKey"
@@ -101,7 +111,8 @@ type StorageFormState = {
   driver: StorageProviderId;
   localDir: string;
   publicBaseUrl: string;
-  maxSizeBytes: string;
+  maxSizeValue: string;
+  maxSizeUnit: StorageSizeUnit;
   allowedMime: string;
   s3AccessKey: string;
   s3SecretKey: string;
@@ -264,11 +275,12 @@ const globalFields: StorageField[] = [
       "Leave blank to auto-generate (S3/Azure endpoint or your public site URL + /media).",
   },
   {
-    id: "maxSizeBytes",
-    label: "Max Upload Size (bytes)",
+    id: "maxSizeValue",
+    label: "Max Upload Size",
     type: "text",
-    placeholder: "10485760",
+    placeholder: "10",
     icon: ShieldCheck,
+    helper: "Choose a size and unit (KB, MB, or GB).",
   },
   {
     id: "allowedMime",
@@ -284,9 +296,10 @@ const labelClassName =
 
 const emptyFormState: StorageFormState = {
   driver: "local",
-  localDir: "",
+  localDir: "./storage/media",
   publicBaseUrl: "",
-  maxSizeBytes: "",
+  maxSizeValue: "",
+  maxSizeUnit: DEFAULT_SIZE_UNIT,
   allowedMime: "",
   s3AccessKey: "",
   s3SecretKey: "",
@@ -317,14 +330,31 @@ const normalizeSecret = (value: string) => {
   return trimmed;
 };
 
-const normalizeNumber = (value: string) => {
+const resolveSizeFromBytes = (value: number | null | undefined) => {
+  if (!value || value <= 0) {
+    return { value: "", unit: DEFAULT_SIZE_UNIT };
+  }
+  for (const unit of ["GB", "MB", "KB"] as StorageSizeUnit[]) {
+    const multiplier = STORAGE_SIZE_UNITS.find((entry) => entry.value === unit)?.multiplier ?? 1;
+    if (value % multiplier === 0) {
+      return { value: String(value / multiplier), unit };
+    }
+  }
+  const fallbackUnit = value >= 1024 ** 2 ? "MB" : "KB";
+  const multiplier = STORAGE_SIZE_UNITS.find((entry) => entry.value === fallbackUnit)?.multiplier ?? 1;
+  const rounded = Math.round((value / multiplier) * 100) / 100;
+  return { value: String(rounded), unit: fallbackUnit };
+};
+
+const normalizeMaxSize = (value: string, unit: StorageSizeUnit) => {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const parsed = Number(trimmed);
-  if (!Number.isFinite(parsed)) {
+  if (!Number.isFinite(parsed) || parsed < 0) {
     throw new Error("max_size_invalid");
   }
-  return parsed;
+  const multiplier = STORAGE_SIZE_UNITS.find((entry) => entry.value === unit)?.multiplier ?? 1;
+  return Math.round(parsed * multiplier);
 };
 
 export function StorageSettingsPage() {
@@ -351,11 +381,13 @@ export function StorageSettingsPage() {
         if (!active) return;
         const driver = result.driver as StorageProviderId;
         setActiveProvider(driver);
+        const sizeState = resolveSizeFromBytes(result.maxSizeBytes);
         setForm({
           driver,
-          localDir: result.local.dir ?? "",
+          localDir: result.local.dir ?? "./storage/media",
           publicBaseUrl: result.publicBaseUrl ?? "",
-          maxSizeBytes: result.maxSizeBytes ? String(result.maxSizeBytes) : "",
+          maxSizeValue: sizeState.value,
+          maxSizeUnit: sizeState.unit,
           allowedMime: result.allowedMime ?? "",
           s3AccessKey: "",
           s3SecretKey: "",
@@ -397,10 +429,10 @@ export function StorageSettingsPage() {
 
   const busy = isLoading || isSaving;
   const maxSizeInvalid = (() => {
-    const trimmed = form.maxSizeBytes.trim();
+    const trimmed = form.maxSizeValue.trim();
     if (!trimmed) return false;
     const parsed = Number(trimmed);
-    return !Number.isFinite(parsed);
+    return !Number.isFinite(parsed) || parsed < 0;
   })();
   const hasValidationErrors = maxSizeInvalid;
 
@@ -422,7 +454,7 @@ export function StorageSettingsPage() {
         driver: activeProvider as StorageDriver,
         local: { dir: normalizeOptional(form.localDir) },
         publicBaseUrl: normalizeOptional(form.publicBaseUrl),
-        maxSizeBytes: normalizeNumber(form.maxSizeBytes),
+        maxSizeBytes: normalizeMaxSize(form.maxSizeValue, form.maxSizeUnit),
         allowedMime: normalizeOptional(form.allowedMime),
         s3: {
           bucket: normalizeOptional(form.s3Bucket),
@@ -443,9 +475,10 @@ export function StorageSettingsPage() {
       setForm((prev) => ({
         ...prev,
         driver: updated.driver,
-        localDir: updated.local.dir ?? "",
+        localDir: updated.local.dir ?? "./storage/media",
         publicBaseUrl: updated.publicBaseUrl ?? "",
-        maxSizeBytes: updated.maxSizeBytes ? String(updated.maxSizeBytes) : "",
+        maxSizeValue: resolveSizeFromBytes(updated.maxSizeBytes).value,
+        maxSizeUnit: resolveSizeFromBytes(updated.maxSizeBytes).unit,
         allowedMime: updated.allowedMime ?? "",
         s3AccessKey: "",
         s3SecretKey: "",
@@ -496,6 +529,47 @@ export function StorageSettingsPage() {
       (field.id === "s3SecretKey" && secrets.s3SecretKey) ||
       (field.id === "azureKey" && secrets.azureKey) ||
       (field.id === "azureConnectionString" && secrets.azureConnectionString);
+
+    if (field.id === "maxSizeValue") {
+      return (
+        <div className="space-y-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.maxSizeValue}
+              placeholder={field.placeholder}
+              onChange={(event) => handleFieldChange(field.id, event.target.value)}
+              className="bg-muted/30"
+            />
+            <Select
+              value={form.maxSizeUnit}
+              onValueChange={(next) =>
+                setForm((prev) => ({
+                  ...prev,
+                  maxSizeUnit: next as StorageSizeUnit,
+                }))
+              }
+            >
+              <SelectTrigger className="bg-muted/40 sm:w-[120px]">
+                <SelectValue placeholder="Unit" />
+              </SelectTrigger>
+              <SelectContent>
+                {STORAGE_SIZE_UNITS.map((unit) => (
+                  <SelectItem key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {field.helper ? (
+            <p className="text-xs text-muted-foreground">{field.helper}</p>
+          ) : null}
+        </div>
+      );
+    }
 
     if (field.type === "select" && field.options) {
       return (

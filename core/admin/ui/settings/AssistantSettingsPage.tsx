@@ -7,40 +7,74 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { isApiClientError } from "@/services/apiClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
-import { BrandingCard } from "./BrandingCard";
-import { LogoUploadCard } from "./LogoUploadCard";
+
+import {
+  AssistantSettingsCard,
+  ASSISTANT_SETTINGS_DEFAULT_VALUES,
+  type AssistantSettingsValues,
+} from "./AssistantSettingsCard";
 import { SettingsSidebar } from "./SettingsSidebar";
 
-export type GeneralSettingsValues = {
-  siteName: string;
-  siteLocale: string;
-};
-
-type GeneralSettingsPageProps = {
-  values?: Partial<GeneralSettingsValues>;
-  onSave?: (values: GeneralSettingsValues) => Promise<void> | void;
+export type AssistantSettingsPageProps = {
+  values?: Partial<AssistantSettingsValues>;
+  onSave?: (values: AssistantSettingsValues) => Promise<void> | void;
   isLoading?: boolean;
   isSaving?: boolean;
   error?: string | null;
 };
 
-export const GENERAL_SETTINGS_DEFAULT_VALUES: GeneralSettingsValues = {
-  siteName: "Nextless",
-  siteLocale: "en",
+const resolveAssistantValidationError = (
+  input: AssistantSettingsValues
+): string | null => {
+  if (input.assistantEnabled && input.assistantDocsPaths.length === 0) {
+    return "Assistant docs paths cannot be empty when assistant is enabled.";
+  }
+  if (!input.assistantDocsSourceRoot.trim()) {
+    return "Assistant docs source root cannot be empty.";
+  }
+  if (
+    input.assistantDefaultMode === "llm-rag" &&
+    (!input.assistantLlmEnabled || input.assistantLlmProvider === "none")
+  ) {
+    return "LLM mode requires enabled LLM and a provider different than 'none'.";
+  }
+  return null;
 };
 
-export function GeneralSettingsPage({
-  values = GENERAL_SETTINGS_DEFAULT_VALUES,
+export function AssistantSettingsPage({
+  values = ASSISTANT_SETTINGS_DEFAULT_VALUES,
   onSave,
   isLoading = false,
   isSaving = false,
   error = null,
-}: GeneralSettingsPageProps) {
-  const normalizeValues = (input: Partial<GeneralSettingsValues>) => ({
-    ...GENERAL_SETTINGS_DEFAULT_VALUES,
+}: AssistantSettingsPageProps) {
+  const normalizeValues = (input: Partial<AssistantSettingsValues>) => ({
+    ...ASSISTANT_SETTINGS_DEFAULT_VALUES,
     ...input,
-    siteName: input.siteName ?? GENERAL_SETTINGS_DEFAULT_VALUES.siteName,
-    siteLocale: input.siteLocale ?? GENERAL_SETTINGS_DEFAULT_VALUES.siteLocale,
+    assistantDocsBackend:
+      input.assistantDocsBackend === "db" || input.assistantDocsBackend === "filesystem"
+        ? input.assistantDocsBackend
+        : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantDocsBackend,
+    assistantDocsSourceRoot:
+      typeof input.assistantDocsSourceRoot === "string" &&
+      input.assistantDocsSourceRoot.trim().length > 0
+        ? input.assistantDocsSourceRoot
+        : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantDocsSourceRoot,
+    assistantDocsPaths: Array.isArray(input.assistantDocsPaths)
+      ? input.assistantDocsPaths.filter((entry) => typeof entry === "string")
+      : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantDocsPaths,
+    assistantDefaultMode:
+      input.assistantDefaultMode === "llm-rag" || input.assistantDefaultMode === "docs-only"
+        ? input.assistantDefaultMode
+        : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantDefaultMode,
+    assistantLlmProvider:
+      input.assistantLlmProvider === "openrouter" || input.assistantLlmProvider === "none"
+        ? input.assistantLlmProvider
+        : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantLlmProvider,
+    assistantLlmModel:
+      typeof input.assistantLlmModel === "string"
+        ? input.assistantLlmModel
+        : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantLlmModel,
   });
 
   const [form, setForm] = useState(() => normalizeValues(values));
@@ -50,7 +84,8 @@ export function GeneralSettingsPage({
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
     useSettingsAutoSave();
 
-  const hasValidationErrors = false;
+  const validationError = resolveAssistantValidationError(form);
+  const hasValidationErrors = Boolean(validationError);
 
   useEffect(() => {
     setForm(normalizeValues(values));
@@ -64,13 +99,13 @@ export function GeneralSettingsPage({
     setLocalSaving(true);
     try {
       await onSave(form);
-      setSaveSuccess("General settings updated.");
+      setSaveSuccess("Assistant settings updated.");
       return true;
     } catch (err) {
       if (isApiClientError(err)) {
         setSaveError(err.message);
       } else {
-        setSaveError("Failed to save general settings.");
+        setSaveError("Failed to save assistant settings.");
       }
       return false;
     } finally {
@@ -91,24 +126,20 @@ export function GeneralSettingsPage({
 
   return (
     <SettingsShell
-      activeHref="/admin/settings"
+      activeHref="/admin/settings/assistant"
       showSearch={false}
-      sidebar={<SettingsSidebar activeId="general" />}
+      sidebar={<SettingsSidebar activeId="assistant" />}
       breadcrumbs={
         <div className="flex flex-col gap-1">
           <span className="text-base font-semibold text-foreground">
-            General Settings
+            Assistant Settings
           </span>
           <span className="text-xs text-muted-foreground">
-            Manage your global site configuration and preferences
+            Control Doc Navigator defaults and LLM behavior
           </span>
         </div>
       }
-      topbarActions={
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span>{busy ? "Saving changes..." : "Manage site identity and branding"}</span>
-        </div>
-      }
+      topbarActions={null}
     >
       <div className="flex min-h-full flex-col">
         <div className="flex-1">
@@ -125,25 +156,29 @@ export function GeneralSettingsPage({
                 <AlertDescription>{saveError}</AlertDescription>
               </Alert>
             ) : null}
+            {validationError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Validation error</AlertTitle>
+                <AlertDescription>{validationError}</AlertDescription>
+              </Alert>
+            ) : null}
             {saveSuccess ? (
               <Alert>
                 <AlertTitle>Saved</AlertTitle>
                 <AlertDescription>{saveSuccess}</AlertDescription>
               </Alert>
             ) : null}
-            <BrandingCard
-              siteName={form.siteName}
-              siteLocale={form.siteLocale}
-              onChange={(next) =>
+
+            <AssistantSettingsCard
+              values={form}
+              onChange={(patch) =>
                 setForm((prev) => ({
                   ...prev,
-                  siteName: next.siteName,
-                  siteLocale: next.siteLocale,
+                  ...patch,
                 }))
               }
               disabled={busy}
             />
-            <LogoUploadCard />
           </div>
         </div>
         <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">

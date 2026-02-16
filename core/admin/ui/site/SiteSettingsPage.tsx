@@ -31,6 +31,7 @@ import {
   type SiteSettingsResponse,
 } from "@/services/siteSettingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { InfoTip } from "@/ui/shared/InfoTip";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import { SettingsSidebar } from "@/ui/settings/SettingsSidebar";
@@ -698,7 +699,10 @@ export function SiteSettingsPage() {
                         <Timer className="h-5 w-5" />
                       </div>
                       <div>
-                        <CardTitle>Cache settings</CardTitle>
+                        <CardTitle className="flex items-center gap-2">
+                          Cache settings
+                          <InfoTip content="Controls server-side HTML cache for public pages. Higher values improve speed but delay content updates until the TTL expires. Set 0 to disable caching." />
+                        </CardTitle>
                         <CardDescription>
                           Control the HTML cache lifespan for public pages.
                         </CardDescription>

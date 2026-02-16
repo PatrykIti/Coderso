@@ -12,6 +12,7 @@ import {
   type WebhookRecord,
 } from "@/services/webhooksClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { SettingsSidebar } from "./SettingsSidebar";
 import { WebhookDrawer } from "./WebhookDrawer";
@@ -174,22 +175,20 @@ export function WebhooksPage() {
           <span className="text-foreground">Webhooks</span>
         </div>
       }
-      topbarActions={
-        <Button size="sm" className="gap-2" onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          Create Webhook
-        </Button>
-      }
     >
       <div className="flex h-full flex-col">
-        <div className="border-b bg-background/70 px-6 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold">Webhooks</h1>
-              <p className="text-sm text-muted-foreground">
-                Send real-time content updates to external services.
-              </p>
-            </div>
+        <div className="border-b bg-background/70 px-6 py-5">
+          <div className="mx-auto flex max-w-6xl flex-col gap-4">
+            <PageHeader
+              title="Webhooks"
+              description="Send real-time content updates to external services."
+              actions={
+                <Button className="gap-2" onClick={openCreate}>
+                  <Plus className="h-4 w-4" />
+                  Create Webhook
+                </Button>
+              }
+            />
           </div>
         </div>
         <div className="flex-1 p-6">
