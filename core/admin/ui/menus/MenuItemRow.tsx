@@ -1,3 +1,4 @@
+import type { DragEvent } from "react";
 import { AlertTriangle, GripVertical, Pencil, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -13,10 +14,10 @@ type MenuItemRowProps = {
   onEdit?: (item: MenuItemDisplay) => void;
   onDelete?: (item: MenuItemDisplay) => void;
   onSelect?: (item: MenuItemDisplay) => void;
-  onDragStart?: (item: MenuItemDisplay) => void;
+  onDragStart?: (item: MenuItemDisplay, event: DragEvent<HTMLElement>) => void;
   onDragEnd?: () => void;
-  onDrop?: (item: MenuItemDisplay) => void;
-  onDragOver?: (item: MenuItemDisplay) => void;
+  onDrop?: (item: MenuItemDisplay, event: DragEvent<HTMLDivElement>) => void;
+  onDragOver?: (item: MenuItemDisplay, event: DragEvent<HTMLDivElement>) => void;
 };
 
 export function MenuItemRow({
@@ -36,73 +37,75 @@ export function MenuItemRow({
   return (
     <div
       className={cn(
-        "group flex items-center gap-3 rounded-xl border bg-background px-3 py-3 shadow-sm transition",
+        "group flex items-stretch gap-3 rounded-xl border bg-background px-3 shadow-sm transition select-none cursor-grab active:cursor-grabbing",
         active && "border-primary/60 ring-1 ring-primary/20",
         isDragTarget && "border-primary/50 ring-2 ring-primary/10"
       )}
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelect?.(item)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect?.(item);
-        }
-      }}
       onDragOver={(event) => {
         event.preventDefault();
-        onDragOver?.(item);
+        onDragOver?.(item, event);
       }}
       onDrop={(event) => {
         event.preventDefault();
-        onDrop?.(item);
+        onDrop?.(item, event);
       }}
       style={{ marginLeft: depth * 24 }}
     >
       <button
         type="button"
-        className="flex items-center justify-center rounded-md border bg-muted/40 p-2 text-muted-foreground"
+        className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left cursor-grab active:cursor-grabbing"
         draggable
-        aria-label={`Reorder ${label}`}
+        onClick={() => onSelect?.(item)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect?.(item);
+          }
+        }}
         onDragStart={(event) => {
           event.dataTransfer.setData("text/plain", item.id);
           event.dataTransfer.effectAllowed = "move";
-          onDragStart?.(item);
+          onDragStart?.(item, event);
         }}
         onDragEnd={() => onDragEnd?.()}
       >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <div
-        className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground",
-          item.status === "error" &&
-            "bg-rose-500/10 text-rose-500 border border-rose-200"
-        )}
-      >
-        {item.status === "error" ? (
-          <AlertTriangle className="h-4 w-4" />
-        ) : (
-          <span className="text-xs font-semibold">{label[0] ?? "?"}</span>
-        )}
-      </div>
-      <div className="flex-1">
-        <div className="text-sm font-semibold">{label}</div>
-        <div className="text-xs text-muted-foreground">
-          {item.pageTitle
-            ? `Page: ${item.pageTitle}`
-            : item.href || "Missing link"}
-        </div>
-      </div>
-      {item.status === "error" ? (
-        <Badge
-          variant="outline"
-          className="border-rose-200 bg-rose-500/10 text-rose-600"
+        <div
+          className="pointer-events-none flex items-center justify-center rounded-md border bg-muted/40 p-2 text-muted-foreground"
+          aria-hidden="true"
         >
-          Missing URL
-        </Badge>
-      ) : null}
-      <div className="flex items-center gap-1 opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100">
+          <GripVertical className="h-4 w-4" />
+        </div>
+        <div
+          className={cn(
+            "pointer-events-none flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground",
+            item.status === "error" &&
+              "bg-rose-500/10 text-rose-500 border border-rose-200"
+          )}
+        >
+          {item.status === "error" ? (
+            <AlertTriangle className="h-4 w-4" />
+          ) : (
+            <span className="text-xs font-semibold">{label[0] ?? "?"}</span>
+          )}
+        </div>
+        <div className="pointer-events-none flex-1">
+          <div className="text-sm font-semibold">{label}</div>
+          <div className="text-xs text-muted-foreground">
+            {item.pageTitle
+              ? `Page: ${item.pageTitle}`
+              : item.href || "Missing link"}
+          </div>
+        </div>
+        {item.status === "error" ? (
+          <Badge
+            variant="outline"
+            className="pointer-events-none border-rose-200 bg-rose-500/10 text-rose-600"
+          >
+            Missing URL
+          </Badge>
+        ) : null}
+      </button>
+      <div className="flex items-center gap-1 py-3 opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100">
         <Button
           variant={active ? "secondary" : "ghost"}
           size="icon"

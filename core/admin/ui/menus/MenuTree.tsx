@@ -1,8 +1,19 @@
-import type { ReactElement } from "react";
-import { useState } from "react";
+import type { DragEvent, ReactElement } from "react";
+import { useRef, useState } from "react";
 
 import type { MenuItemDisplay } from "@/ui/menus/types";
 import { MenuItemRow } from "@/ui/menus/MenuItemRow";
+
+export type MenuDropIntent = "sibling" | "child";
+
+const INDENT_THRESHOLD = 36;
+const CLICK_SUPPRESS_MS = 250;
+
+const resolveDropIntent = (event: DragEvent<HTMLDivElement>): MenuDropIntent => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const offsetX = event.clientX - rect.left;
+  return offsetX > INDENT_THRESHOLD ? "child" : "sibling";
+};
 
 const renderTree = (
   items: MenuItemDisplay[],
@@ -10,12 +21,15 @@ const renderTree = (
   activeId: string | null,
   dragId: string | null,
   hoverId: string | null,
+  hoverIntent: MenuDropIntent,
   onSelect: (item: MenuItemDisplay) => void,
   onEdit: (item: MenuItemDisplay) => void,
   onDelete: (item: MenuItemDisplay) => void,
-  onMove: (dragId: string, targetId: string) => void,
+  onMove: (dragId: string, targetId: string, intent: MenuDropIntent) => void,
   setDragId: (value: string | null) => void,
-  setHoverId: (value: string | null) => void
+  setHoverId: (value: string | null) => void,
+  setHoverIntent: (value: MenuDropIntent) => void,
+  markDrag: () => void
 ): ReactElement[] =>
   items.flatMap((item): ReactElement[] => [
     <MenuItemRow
@@ -28,20 +42,27 @@ const renderTree = (
       onEdit={onEdit}
       onDelete={onDelete}
       onDragStart={(dragItem) => {
+        markDrag();
         setDragId(dragItem.id);
       }}
       onDragEnd={() => {
+        markDrag();
         setDragId(null);
         setHoverId(null);
+        setHoverIntent("sibling");
       }}
-      onDragOver={(hovered) => {
-        if (dragId) setHoverId(hovered.id);
+      onDragOver={(hovered, event) => {
+        if (!dragId) return;
+        setHoverId(hovered.id);
+        setHoverIntent(resolveDropIntent(event));
       }}
       onDrop={(target) => {
         if (!dragId || dragId === target.id) return;
-        onMove(dragId, target.id);
+        markDrag();
+        onMove(dragId, target.id, hoverIntent);
         setDragId(null);
         setHoverId(null);
+        setHoverIntent("sibling");
       }}
     />,
     ...(item.children
@@ -51,12 +72,15 @@ const renderTree = (
           activeId,
           dragId,
           hoverId,
+          hoverIntent,
           onSelect,
           onEdit,
           onDelete,
           onMove,
           setDragId,
-          setHoverId
+          setHoverId,
+          setHoverIntent,
+          markDrag
         )
       : []),
   ]);
@@ -67,7 +91,8 @@ type MenuTreeProps = {
   onSelect: (item: MenuItemDisplay) => void;
   onEdit: (item: MenuItemDisplay) => void;
   onDelete: (item: MenuItemDisplay) => void;
-  onMove: (dragId: string, targetId: string) => void;
+  onMove: (dragId: string, targetId: string, intent: MenuDropIntent) => void;
+  onMoveToRoot: (dragId: string, position: "start" | "end") => void;
 };
 
 export function MenuTree({
@@ -77,25 +102,88 @@ export function MenuTree({
   onEdit,
   onDelete,
   onMove,
+  onMoveToRoot,
 }: MenuTreeProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [hoverIntent, setHoverIntent] = useState<MenuDropIntent>("sibling");
+  const suppressClickUntilRef = useRef(0);
+  const [rootDrop, setRootDrop] = useState<"start" | "end" | null>(null);
+
+  const markDrag = () => {
+    suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
+  };
+
+  const handleSelect = (item: MenuItemDisplay) => {
+    if (Date.now() < suppressClickUntilRef.current) return;
+    onSelect(item);
+  };
+
+  const handleRootDragOver = (event: DragEvent<HTMLDivElement>, position: "start" | "end") => {
+    if (!dragId) return;
+    event.preventDefault();
+    setRootDrop(position);
+  };
+
+  const handleRootDrop = (event: DragEvent<HTMLDivElement>, position: "start" | "end") => {
+    if (!dragId) return;
+    event.preventDefault();
+    markDrag();
+    onMoveToRoot(dragId, position);
+    setDragId(null);
+    setHoverId(null);
+    setHoverIntent("sibling");
+    setRootDrop(null);
+  };
 
   return (
     <div className="space-y-3">
+      {dragId ? (
+        <div
+          className={
+            rootDrop === "start"
+              ? "rounded-lg border border-dashed border-primary/60 bg-primary/5 px-3 py-2 text-xs text-primary"
+              : "rounded-lg border border-dashed border-muted-foreground/40 px-3 py-2 text-xs text-muted-foreground"
+          }
+          onDragOver={(event) => handleRootDragOver(event, "start")}
+          onDragLeave={() => setRootDrop(null)}
+          onDrop={(event) => handleRootDrop(event, "start")}
+        >
+          Drop here to move to top level
+        </div>
+      ) : null}
+
       {renderTree(
         items,
         0,
         activeId,
         dragId,
         hoverId,
-        onSelect,
+        hoverIntent,
+        handleSelect,
         onEdit,
         onDelete,
         onMove,
         setDragId,
-        setHoverId
+        setHoverId,
+        setHoverIntent,
+        markDrag
       )}
+
+      {dragId ? (
+        <div
+          className={
+            rootDrop === "end"
+              ? "rounded-lg border border-dashed border-primary/60 bg-primary/5 px-3 py-2 text-xs text-primary"
+              : "rounded-lg border border-dashed border-muted-foreground/40 px-3 py-2 text-xs text-muted-foreground"
+          }
+          onDragOver={(event) => handleRootDragOver(event, "end")}
+          onDragLeave={() => setRootDrop(null)}
+          onDrop={(event) => handleRootDrop(event, "end")}
+        >
+          Drop here to move to top level
+        </div>
+      ) : null}
     </div>
   );
 }

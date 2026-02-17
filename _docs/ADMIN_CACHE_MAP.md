@@ -54,7 +54,7 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 ## Menus / Themes / Site Settings
 - Menu editor
   - UI: `core/admin/ui/menus/MenuEditorPage.tsx`
-  - Cached APIs: `listPagesCached`
+  - Cached APIs: `listMenusCached`, `getMenuWithItemsCached`, `getCachedMenus`, `getCachedMenuDetail`, `listPagesCached`, `getCachedPages`
 - Theme editor
   - UI: `core/admin/ui/themes/ThemeEditorPage.tsx`
   - Cached APIs: `listPagesCached`, `listContentTypesCached`

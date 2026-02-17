@@ -29,6 +29,8 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `entries:detail:<typeSlug>:<id>`
 - `contentTypes:list`
 - `contentTypes:detail:<id>`
+- `menus:list`
+- `menus:detail:<id>`
 - `widgetTemplates:list`
 - `widgetTemplates:detail:<id>`
 - `media:list`

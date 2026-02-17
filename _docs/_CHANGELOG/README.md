@@ -250,6 +250,7 @@ Project Change Log.
 
 | 221 | 2026-02-15 | Admin rate limit auth bypass | Core/Security |
 | 222 | 2026-02-16 | Settings UI polish + content type editor fix | Admin/UI |
+| 223 | 2026-02-16 | Menu editor cache + drag nesting | Admin/UI |
 | 204 | 2026-02-15 | Security hardening and settings UX | Core/Security |
 
 ---

@@ -1,12 +1,36 @@
 import { expect, test } from "bun:test";
 
-import { listMenus, getMenuWithItems } from "../../../core/admin/services/menusClient";
+import {
+  clearMenusCache,
+  getMenuWithItems,
+  getMenuWithItemsCached,
+  listMenus,
+  listMenusCached,
+} from "../../../core/admin/services/menusClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+const resetCaches = () => {
+  clearMenusCache();
+};
 
 test("listMenus hits /menus", async () => {
   const originalFetch = globalThis.fetch;
@@ -43,5 +67,88 @@ test("getMenuWithItems hits /menus/:id", async () => {
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("listMenusCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    const cached = [
+      {
+        id: "menu-1",
+        name: "Main",
+        location: null,
+        createdAt: "2026-02-16T00:00:00.000Z",
+      },
+    ];
+    storage.setItem(
+      cacheKeys.menusList,
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await listMenusCached();
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
+  }
+});
+
+test("getMenuWithItemsCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ menu: { id: "menu-1" }, items: [] });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    const cached = {
+      menu: {
+        id: "menu-1",
+        name: "Main",
+        location: null,
+        createdAt: "2026-02-16T00:00:00.000Z",
+      },
+      items: [],
+    };
+    storage.setItem(
+      cacheKeys.menuDetail("menu-1"),
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await getMenuWithItemsCached("menu-1");
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
   }
 });

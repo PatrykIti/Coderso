@@ -5,7 +5,7 @@ import {
   Save,
   SlidersHorizontal,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import type {
   MenuItemNode,
   MenuItemRecord,
@@ -33,12 +34,18 @@ import type {
 } from "@/services/menusClient";
 import {
   createMenu,
-  getMenuWithItems,
-  listMenus,
+  getCachedMenuDetail,
+  getCachedMenus,
+  getMenuWithItemsCached,
+  listMenusCached,
   replaceMenuItems,
   updateMenu,
 } from "@/services/menusClient";
-import { listPagesCached, type PageSummary } from "@/services/pagesClient";
+import {
+  getCachedPages,
+  listPagesCached,
+  type PageSummary,
+} from "@/services/pagesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { MenuCreateDialog } from "@/ui/menus/MenuCreateDialog";
@@ -46,8 +53,9 @@ import {
   MenuItemDrawer,
   type MenuItemDraft,
 } from "@/ui/menus/MenuItemDrawer";
-import { MenuTree } from "@/ui/menus/MenuTree";
+import { MenuTree, type MenuDropIntent } from "@/ui/menus/MenuTree";
 import type { MenuItemDisplay } from "@/ui/menus/types";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 const createTempId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -82,7 +90,12 @@ const buildDisplayTree = (
   const nodes = new Map<string, MenuItemDisplay>();
   for (const item of items) {
     const page = item.pageId ? pageMap.get(item.pageId) : null;
-    const status = !item.href && !item.pageId ? "error" : page === undefined && item.pageId ? "error" : "ok";
+    const status =
+      !item.href && !item.pageId
+        ? "error"
+        : page === undefined && item.pageId
+          ? "error"
+          : "ok";
     nodes.set(item.id, {
       ...item,
       pageTitle: page?.title ?? null,
@@ -150,6 +163,109 @@ const collectDescendants = (items: MenuItemDisplay[], id: string) => {
   return descendants;
 };
 
+const collectRecordDescendants = (items: MenuItemRecord[], id: string) => {
+  const childrenMap = new Map<string | null, MenuItemRecord[]>();
+  items.forEach((item) => {
+    const key = item.parentId ?? null;
+    const existing = childrenMap.get(key) ?? [];
+    existing.push(item);
+    childrenMap.set(key, existing);
+  });
+
+  const descendants = new Set<string>();
+  const stack = [id];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+    const children = childrenMap.get(current) ?? [];
+    for (const child of children) {
+      if (descendants.has(child.id)) continue;
+      descendants.add(child.id);
+      stack.push(child.id);
+    }
+  }
+  return descendants;
+};
+
+export const moveMenuItems = (
+  items: MenuItemRecord[],
+  dragId: string,
+  targetId: string,
+  intent: MenuDropIntent
+) => {
+  if (dragId === targetId) return items;
+  const dragItem = items.find((item) => item.id === dragId);
+  const targetItem = items.find((item) => item.id === targetId);
+  if (!dragItem || !targetItem) return items;
+
+  const nextParentId = intent === "child" ? targetItem.id : targetItem.parentId ?? null;
+  if (nextParentId === dragId) return items;
+
+  const descendants = collectRecordDescendants(items, dragId);
+  if (nextParentId && descendants.has(nextParentId)) return items;
+
+  const oldParentId = dragItem.parentId ?? null;
+  const buildSiblings = (parentId: string | null) =>
+    items
+      .filter((item) => (item.parentId ?? null) === parentId && item.id !== dragId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+  const oldSiblings = buildSiblings(oldParentId);
+  const newSiblings = oldParentId === nextParentId ? oldSiblings : buildSiblings(nextParentId);
+
+  let insertIndex = newSiblings.length;
+  if (intent === "sibling") {
+    const targetIndex = newSiblings.findIndex((item) => item.id === targetId);
+    insertIndex = targetIndex === -1 ? newSiblings.length : targetIndex;
+  }
+
+  const moved = { ...dragItem, parentId: nextParentId };
+  const nextSiblings = [...newSiblings];
+  nextSiblings.splice(insertIndex, 0, moved);
+
+  const updates = new Map<string, MenuItemRecord>();
+  oldSiblings.forEach((item, index) => {
+    updates.set(item.id, { ...item, orderIndex: index });
+  });
+  nextSiblings.forEach((item, index) => {
+    updates.set(item.id, { ...item, orderIndex: index });
+  });
+
+  return items.map((item) => updates.get(item.id) ?? item);
+};
+
+export const moveMenuItemToRoot = (
+  items: MenuItemRecord[],
+  dragId: string,
+  position: "start" | "end" = "end"
+) => {
+  const dragItem = items.find((item) => item.id === dragId);
+  if (!dragItem) return items;
+
+  const oldParentId = dragItem.parentId ?? null;
+  const buildSiblings = (parentId: string | null) =>
+    items
+      .filter((item) => (item.parentId ?? null) === parentId && item.id !== dragId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+  const oldSiblings = buildSiblings(oldParentId);
+  const rootSiblings = buildSiblings(null);
+
+  const moved = { ...dragItem, parentId: null };
+  const nextRoot =
+    position === "start" ? [moved, ...rootSiblings] : [...rootSiblings, moved];
+
+  const updates = new Map<string, MenuItemRecord>();
+  oldSiblings.forEach((item, index) => {
+    updates.set(item.id, { ...item, orderIndex: index });
+  });
+  nextRoot.forEach((item, index) => {
+    updates.set(item.id, { ...item, orderIndex: index });
+  });
+
+  return items.map((item) => updates.get(item.id) ?? item);
+};
+
 export const validateMenuItemsPayload = (items: MenuItemRecord[]) => {
   for (const entry of items) {
     if (!entry.label.trim()) {
@@ -173,26 +289,44 @@ export const validateMenuItemsPayload = (items: MenuItemRecord[]) => {
 };
 
 export function MenuEditorPage() {
-  const [menus, setMenus] = useState<MenuSummary[]>([]);
-  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const initialMenus = getCachedMenus();
+  const initialPages = getCachedPages();
+  const [menus, setMenus] = useState<MenuSummary[]>(() => initialMenus ?? []);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(
+    () => initialMenus?.[0]?.id ?? null
+  );
   const [menuName, setMenuName] = useState("");
   const [menuLocation, setMenuLocation] = useState("");
   const [originalMenu, setOriginalMenu] = useState<MenuSummary | null>(null);
   const [items, setItems] = useState<MenuItemRecord[]>([]);
   const [originalItems, setOriginalItems] = useState<MenuItemRecord[]>([]);
-  const [pages, setPages] = useState<PageSummary[]>([]);
+  const [pages, setPages] = useState<PageSummary[]>(() => initialPages ?? []);
   const [activeItemId, setActiveItemId] = useState<string | null>(null);
   const [isLargeScreen, setIsLargeScreen] = useState(true);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
+  const hasUnsavedChangesRef = useRef(false);
+  const hasHydratedRef = useRef(false);
+  const skipNextLoadRef = useRef<string | null>(null);
+  const activeMenuIdRef = useRef<string | null>(activeMenuId);
+  const activeItemIdRef = useRef<string | null>(activeItemId);
+  const [isLoading, setIsLoading] = useState(() => !initialMenus);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const pageMap = useMemo(() => new Map(pages.map((page) => [page.id, page])), [pages]);
   const displayTree = useMemo(() => buildDisplayTree(items, pageMap), [items, pageMap]);
   const parentOptions = useMemo(() => buildParentOptions(displayTree), [displayTree]);
+
+  useEffect(() => {
+    activeMenuIdRef.current = activeMenuId;
+  }, [activeMenuId]);
+
+  useEffect(() => {
+    activeItemIdRef.current = activeItemId;
+  }, [activeItemId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -203,61 +337,145 @@ export function MenuEditorPage() {
     return () => media.removeEventListener("change", update);
   }, []);
 
-  const refreshMenus = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const [menuList, pageList] = await Promise.all([listMenus(), listPagesCached({ force: true })]);
-      setMenus(menuList);
-      setPages(pageList);
-      if (menuList.length > 0) {
-        setActiveMenuId((prev) => prev ?? menuList[0]?.id ?? null);
-      } else {
-        setActiveMenuId(null);
-      }
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load menus.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshMenus();
-  }, [refreshMenus]);
-
-  const loadMenu = useCallback(async (menuId: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const payload = await getMenuWithItems(menuId);
+  const applyMenuPayload = useCallback(
+    (
+      payload: { menu: MenuSummary; items: MenuItemNode[] },
+      options?: { preserveItemId?: string | null }
+    ) => {
       setOriginalMenu(payload.menu);
       setMenuName(payload.menu.name);
       setMenuLocation(payload.menu.location ?? "");
       const flattened = flattenMenuItems(payload.items);
       setItems(flattened);
       setOriginalItems(flattened);
-      setActiveItemId(null);
+      const preserveId = options?.preserveItemId ?? null;
+      const nextActiveId =
+        preserveId && flattened.some((item) => item.id === preserveId)
+          ? preserveId
+          : null;
+      setActiveItemId(nextActiveId);
       setIsDirty(false);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load menu items.");
+      setRemoteUpdatePending(false);
+    },
+    []
+  );
+
+  const loadMenu = useCallback(
+    async (
+      menuId: string,
+      options?: { allowUnsaved?: boolean; setLoading?: boolean; preserveItemId?: string | null }
+    ) => {
+      const shouldSetLoading = options?.setLoading !== false;
+      if (shouldSetLoading) setIsLoading(true);
+      setError(null);
+      try {
+        const payload = await getMenuWithItemsCached(menuId, { force: true });
+        if (!payload) return;
+        if (!options?.allowUnsaved && hasUnsavedChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
+        }
+        applyMenuPayload(payload, { preserveItemId: options?.preserveItemId ?? null });
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load menu items.");
+        }
+      } finally {
+        if (shouldSetLoading) setIsLoading(false);
       }
-    } finally {
+    },
+    [applyMenuPayload]
+  );
+
+  const refreshMenus = useCallback(
+    async (options?: { force?: boolean; background?: boolean; reloadActive?: boolean }) => {
+      const force = options?.force ?? false;
+      const background = options?.background ?? hasHydratedRef.current;
+      const reloadActive = options?.reloadActive ?? true;
+      const currentActiveId = activeMenuIdRef.current;
+      if (!background) {
+        setIsLoading(true);
+      }
+      setError(null);
+      try {
+        const [menuList, pageList] = await Promise.all([
+          listMenusCached({ force }),
+          listPagesCached({ force }),
+        ]);
+        setMenus(menuList);
+        setPages(pageList);
+        const nextActiveId =
+          currentActiveId && menuList.some((menu) => menu.id === currentActiveId)
+            ? currentActiveId
+            : menuList[0]?.id ?? null;
+        setActiveMenuId(nextActiveId);
+        hasHydratedRef.current = true;
+
+        const shouldLoadMenu = nextActiveId && (reloadActive || nextActiveId !== currentActiveId);
+        if (shouldLoadMenu && nextActiveId) {
+          const preserveItemId = nextActiveId === currentActiveId ? activeItemIdRef.current : null;
+          if (nextActiveId !== currentActiveId) {
+            skipNextLoadRef.current = nextActiveId;
+          }
+          await loadMenu(nextActiveId, { setLoading: false, preserveItemId });
+        }
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load menus.");
+        }
+      } finally {
+        if (!background) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [loadMenu]
+  );
+
+  useEffect(() => {
+    if (initialMenus) {
+      setMenus(initialMenus);
       setIsLoading(false);
+      hasHydratedRef.current = true;
     }
-  }, []);
+    if (initialPages) {
+      setPages(initialPages);
+    }
+    refreshMenus({ force: true, reloadActive: true }).catch(() => undefined);
+  }, [refreshMenus]);
 
   useEffect(() => {
     if (!activeMenuId) return;
-    void loadMenu(activeMenuId);
-  }, [activeMenuId, loadMenu]);
+    if (skipNextLoadRef.current === activeMenuId) {
+      skipNextLoadRef.current = null;
+      return;
+    }
+    const cached = getCachedMenuDetail(activeMenuId);
+    if (cached) {
+      applyMenuPayload(cached);
+      setIsLoading(false);
+    }
+    loadMenu(activeMenuId, { setLoading: !cached, allowUnsaved: true }).catch(() => undefined);
+  }, [activeMenuId, applyMenuPayload, loadMenu]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.menusList) return;
+      refreshMenus({ force: true, background: true, reloadActive: false }).catch(() => undefined);
+    });
+  }, [refreshMenus]);
+
+  useEffect(() => {
+    if (!activeMenuId) return;
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.menuDetail(activeMenuId)) return;
+      loadMenu(activeMenuId, { setLoading: false, preserveItemId: activeItemId }).catch(() => undefined);
+    });
+  }, [activeMenuId, activeItemId, loadMenu]);
 
   const activeItem = useMemo(() => {
     if (!activeItemId) return null;
@@ -287,6 +505,10 @@ export function MenuEditorPage() {
   }, [menuName, menuLocation, originalMenu]);
 
   const canSave = hasMetaChanges || isDirty;
+
+  useEffect(() => {
+    hasUnsavedChangesRef.current = canSave;
+  }, [canSave]);
 
   const handleCreateMenu = async (payload: { name: string; location?: string }) => {
     const created = await createMenu({
@@ -373,33 +595,24 @@ export function MenuEditorPage() {
     setIsDirty(true);
   };
 
-  const handleReorder = (dragId: string, targetId: string) => {
-    if (dragId === targetId) return;
-    const dragItem = items.find((item) => item.id === dragId);
-    const targetItem = items.find((item) => item.id === targetId);
-    if (!dragItem || !targetItem) return;
-    if (dragItem.parentId !== targetItem.parentId) return;
+  const handleMove = (dragId: string, targetId: string, intent: MenuDropIntent) => {
+    setItems((prev) => {
+      const next = moveMenuItems(prev, dragId, targetId, intent);
+      if (next !== prev) {
+        setIsDirty(true);
+      }
+      return next;
+    });
+  };
 
-    const siblings = items
-      .filter((item) => item.parentId === dragItem.parentId)
-      .sort((a, b) => a.orderIndex - b.orderIndex);
-
-    const fromIndex = siblings.findIndex((item) => item.id === dragId);
-    const toIndex = siblings.findIndex((item) => item.id === targetId);
-    if (fromIndex === -1 || toIndex === -1) return;
-
-    const reordered = [...siblings];
-    const [moved] = reordered.splice(fromIndex, 1);
-    reordered.splice(toIndex, 0, moved);
-
-    setItems((prev) =>
-      prev.map((item) => {
-        const index = reordered.findIndex((entry) => entry.id === item.id);
-        if (index === -1) return item;
-        return { ...item, orderIndex: index };
-      })
-    );
-    setIsDirty(true);
+  const handleMoveToRoot = (dragId: string, position: "start" | "end") => {
+    setItems((prev) => {
+      const next = moveMenuItemToRoot(prev, dragId, position);
+      if (next !== prev) {
+        setIsDirty(true);
+      }
+      return next;
+    });
   };
 
   const handleDiscard = () => {
@@ -410,6 +623,7 @@ export function MenuEditorPage() {
     setItems(originalItems);
     setActiveItemId(null);
     setIsDirty(false);
+    setRemoteUpdatePending(false);
   };
 
   const handleSave = async () => {
@@ -458,7 +672,7 @@ export function MenuEditorPage() {
         });
         await replaceMenuItems(activeMenuId, payload);
       }
-      await loadMenu(activeMenuId);
+      await loadMenu(activeMenuId, { allowUnsaved: true, preserveItemId: activeItemId });
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -470,7 +684,7 @@ export function MenuEditorPage() {
     }
   };
 
-  const rightPanel = (
+  const rightPanel = activeItem ? (
     <MenuItemDrawer
       item={activeItem}
       pages={pages}
@@ -483,7 +697,7 @@ export function MenuEditorPage() {
       onSave={handleSaveItem}
       onDelete={handleDeleteItem}
     />
-  );
+  ) : null;
 
   return (
     <SplitShell
@@ -503,7 +717,7 @@ export function MenuEditorPage() {
           description="Build navigation structures and map them to your site."
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" className="gap-2" onClick={refreshMenus}>
+              <Button variant="outline" className="gap-2" onClick={() => refreshMenus({ force: true, reloadActive: true })}>
                 <RefreshCcw className="h-4 w-4" />
                 Refresh
               </Button>
@@ -515,10 +729,60 @@ export function MenuEditorPage() {
           }
         />
 
+        {menus.length > 0 ? (
+          <div className="rounded-xl border bg-card/60 px-4 py-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Badge variant={canSave ? "secondary" : "outline"}>
+                {canSave ? "Unsaved changes" : "All changes saved"}
+              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                {!isLargeScreen ? (
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setDetailsOpen(true)}
+                    disabled={!activeItemId}
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Details
+                  </Button>
+                ) : null}
+                <Button variant="ghost" onClick={handleDiscard} disabled={!canSave}>
+                  Discard
+                </Button>
+                <Button onClick={handleSave} disabled={!canSave || isSaving}>
+                  <Save className="mr-2 h-4 w-4" />
+                  {isSaving ? "Saving…" : "Save changes"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {error ? (
           <Alert variant="destructive">
             <AlertTitle>Menu error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {remoteUpdatePending ? (
+          <Alert>
+            <AlertTitle>Updated in another tab</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>New changes are available. Refresh to load the latest version.</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (activeMenuId) {
+                    loadMenu(activeMenuId, { allowUnsaved: true, preserveItemId: activeItemId }).catch(() => undefined);
+                  }
+                }}
+              >
+                Refresh
+              </Button>
+            </AlertDescription>
           </Alert>
         ) : null}
 
@@ -593,43 +857,13 @@ export function MenuEditorPage() {
               </CardContent>
             </Card>
 
-            <div className="sticky top-0 z-10 flex flex-col gap-2 rounded-xl border bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant={canSave ? "secondary" : "outline"}>
-                    {canSave ? "Unsaved changes" : "All changes saved"}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {!isLargeScreen ? (
-                    <Button
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => setDetailsOpen(true)}
-                      disabled={!activeItemId}
-                    >
-                      <SlidersHorizontal className="h-4 w-4" />
-                      Details
-                    </Button>
-                  ) : null}
-                  <Button variant="ghost" onClick={handleDiscard} disabled={!canSave}>
-                    Discard
-                  </Button>
-                  <Button onClick={handleSave} disabled={!canSave || isSaving}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {isSaving ? "Saving…" : "Save changes"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-
             <Card className="border-border/60">
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-semibold">Menu Structure</h3>
                     <p className="text-xs text-muted-foreground">
-                      Drag and drop to reorder items within the same level.
+                      Drag up or down to reorder. Drag right to create sub-menus.
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={handleAddItem}>
@@ -648,7 +882,8 @@ export function MenuEditorPage() {
                     onSelect={handleSelectItem}
                     onEdit={handleEditItem}
                     onDelete={handleDeleteItem}
-                    onMove={handleReorder}
+                    onMove={handleMove}
+                    onMoveToRoot={handleMoveToRoot}
                   />
                 )}
               </CardContent>
@@ -657,7 +892,10 @@ export function MenuEditorPage() {
         ) : null}
       </div>
 
-      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+      <Sheet
+        open={Boolean(activeItem) && detailsOpen}
+        onOpenChange={(open) => setDetailsOpen(open)}
+      >
         <SheetContent side="right" className="w-full p-4 sm:max-w-md">
           <SheetTitle className="sr-only">Menu item details</SheetTitle>
           <SheetDescription className="sr-only">
