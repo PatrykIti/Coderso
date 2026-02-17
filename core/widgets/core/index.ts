@@ -9,6 +9,7 @@ import { createDividerWidget, type DividerData } from "./divider";
 import { createEntryTeaserWidget, type EntryTeaserData } from "./entryTeaser";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
+import { createFormEmbedWidget, type FormEmbedData } from "./formEmbed";
 import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion";
 import { createGalleryMosaicWidget, type GalleryMosaicData } from "./galleryMosaic";
 import { createGridColumnsWidget, type GridColumnsData } from "./gridColumns";
@@ -96,6 +97,7 @@ export function createCoreWidgetDefinitions(
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),
+    createFormEmbedWidget(editors.formEmbed),
     createContactWidget(editors.contact),
     createNavigationWidget(editors.navigation),
     createFooterWidget(editors.footer),

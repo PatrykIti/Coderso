@@ -25,6 +25,7 @@ import { SchemaBuilderPage } from "@/ui/content-types/SchemaBuilderPage";
 import { EntryEditor } from "@/ui/entries/EntryEditor";
 import { EntryList } from "@/ui/entries/EntryList";
 import { FormBuilderPage } from "@/ui/forms/FormBuilderPage";
+import { FormListPage } from "@/ui/forms/FormListPage";
 import { ImportExportPage } from "@/ui/import-export/ImportExportPage";
 import { PageListPage } from "@/ui/pages/PageListPage";
 import { PageEditor } from "@/ui/pages/PageEditor";
@@ -508,7 +509,8 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/seo", element: <SeoManagerPage /> },
       { pattern: "/redirects", element: <RedirectsPage /> },
       { pattern: "/tools/import-export", element: <ImportExportPage /> },
-      { pattern: "/forms", element: <FormBuilderPage /> },
+      { pattern: "/forms", element: <FormListPage /> },
+      { pattern: "/forms/:id", element: <FormBuilderPage /> },
       { pattern: "/content-types", element: <ContentTypeList /> },
       { pattern: "/content-types/:id", element: <ContentTypeEditor /> },
       { pattern: "/content-types/:id/schema", element: <SchemaBuilderPage /> },

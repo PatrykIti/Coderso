@@ -2,6 +2,7 @@ import { listContentTypesCached } from "@/services/contentTypesClient";
 import { listMenusCached } from "@/services/menusClient";
 import { listMediaCached } from "@/services/mediaClient";
 import { listPagesCached } from "@/services/pagesClient";
+import { listFormsCached } from "@/services/formsClient";
 import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
@@ -93,6 +94,10 @@ const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/entries",
     run: () => listContentTypesCached({ force: true }),
+  },
+  {
+    match: "/forms",
+    run: () => listFormsCached({ force: true }),
   },
   {
     match: "/menus",

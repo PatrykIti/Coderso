@@ -32,6 +32,18 @@ test("parseRequestBody parses multipart form data", async () => {
   expect(payload.file).toBeInstanceOf(File);
 });
 
+
+test("parseRequestBody parses urlencoded bodies", async () => {
+  const req = new Request("http://localhost", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "name=Jane+Doe&email=jane%40example.com",
+  });
+
+  const body = await parseRequestBody(req);
+  expect(body).toEqual({ name: "Jane Doe", email: "jane@example.com" });
+});
+
 test("parseRequestBody rejects invalid JSON", async () => {
   const req = new Request("http://localhost", {
     method: "POST",

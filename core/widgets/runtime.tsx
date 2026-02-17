@@ -39,6 +39,7 @@ export function ensureRuntimeWidgetsRegistered() {
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,
+    formEmbed: noopEditors,
     contact: noopEditors,
     navigation: noopEditors,
     footer: noopEditors,

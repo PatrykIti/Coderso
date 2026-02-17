@@ -18,6 +18,14 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/entries/EntryEditor.tsx`
   - Cached APIs: `listContentTypesCached`, `getEntryCached`, `getCachedEntryDetail`
 
+## Forms
+- Forms list
+  - UI: `core/admin/ui/forms/FormListPage.tsx`
+  - Cached APIs: `listFormsCached`, `getCachedForms`
+- Form editor
+  - UI: `core/admin/ui/forms/FormBuilderPage.tsx`
+  - Cached APIs: `getFormDetailCached`, `getCachedFormDetail`
+
 ## Content Types
 - Content types list
   - UI: `core/admin/ui/content-types/ContentTypeList.tsx`

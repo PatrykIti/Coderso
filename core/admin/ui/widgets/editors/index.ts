@@ -125,3 +125,8 @@ export {
   TemplateSectionVisualEditor,
   TemplateSectionWizardEditor,
 } from "./TemplateSectionEditors";
+export {
+  FormEmbedAdvancedEditor,
+  FormEmbedVisualEditor,
+  FormEmbedWizardEditor,
+} from "./FormEmbedEditors";

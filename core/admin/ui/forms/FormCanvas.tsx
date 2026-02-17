@@ -33,7 +33,10 @@ function FieldPreview({
   return (
     <div
       role={onSelect ? "button" : undefined}
-      onClick={() => onSelect?.(id)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect?.(id);
+      }}
       className={cn(
         "group relative rounded-xl border p-4 transition",
         selected
@@ -105,6 +108,9 @@ function FieldPreview({
 }
 
 type FormCanvasProps = {
+  formTitle: string;
+  formDescription?: string;
+  formSelected: boolean;
   selectedFieldId: string | null;
   fields: Array<{
     id: string;
@@ -118,13 +124,18 @@ type FormCanvasProps = {
     };
   }>;
   onSelectField: (id: string) => void;
+  onSelectForm: () => void;
   onRemoveField: (id: string) => void;
 };
 
 export function FormCanvas({
+  formTitle,
+  formDescription,
+  formSelected,
   selectedFieldId,
   fields,
   onSelectField,
+  onSelectForm,
   onRemoveField,
 }: FormCanvasProps) {
   const hasFields = fields.length > 0;
@@ -133,13 +144,22 @@ export function FormCanvas({
     <ScrollArea className="h-full">
       <div className="min-h-full bg-[radial-gradient(circle_at_1px_1px,_rgba(148,163,184,0.25),_transparent_0)] bg-[size:20px_20px] px-8 py-10 dark:bg-[radial-gradient(circle_at_1px_1px,_rgba(51,65,85,0.45),_transparent_0)] lg:px-12">
         <div className="mx-auto flex w-full max-w-2xl flex-col">
-          <Card className="gap-6 rounded-3xl border-border/60 bg-background p-8 shadow-xl">
+          <Card
+            className={cn(
+              "gap-6 rounded-3xl border-border/60 bg-background p-8 shadow-xl transition",
+              formSelected ? "border-primary/40 ring-1 ring-primary/20" : "hover:border-border"
+            )}
+            role="button"
+            onClick={onSelectForm}
+          >
             <div className="space-y-1 border-b border-border/60 pb-6">
               <h2 className="text-2xl font-semibold text-foreground">
-                Contact Us
+                {formTitle.trim().length > 0 ? formTitle : "Form title"}
               </h2>
               <p className="text-sm text-muted-foreground">
-                We&apos;ll get back to you within 24 hours.
+                {formDescription && formDescription.trim().length > 0
+                  ? formDescription
+                  : "Add a short description for this form."}
               </p>
             </div>
             <div className="space-y-4">
@@ -181,7 +201,7 @@ export function FormCanvas({
               )}
             </div>
             <div className="pt-4">
-              <Button className="w-full">Submit Message</Button>
+              <Button className="w-full">Submit Form</Button>
             </div>
           </Card>
         </div>

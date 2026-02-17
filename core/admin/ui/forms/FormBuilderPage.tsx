@@ -1,34 +1,44 @@
 import {
   AlignLeft,
-  ArrowLeft,
   AtSign,
   Calendar,
   CheckSquare,
-  Eye,
   ListChecks,
-  Loader2,
   Save,
   Type,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { isApiClientError } from "@/services/apiClient";
 import {
-  createForm,
-  listFormFields,
-  listForms,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
+import {
+  getCachedFormDetail,
+  getFormDetailCached,
+  updateForm,
   updateFormFields,
-  type FormFieldInput,
+  type FormDetail,
   type FormField as ApiFormField,
+  type FormFieldInput,
   type FormRecord,
+  type FormStatus,
 } from "@/services/formsClient";
-import { AdminShell } from "@/ui/layouts/AdminShell";
+import { EditorShell } from "@/ui/layouts/EditorShell";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { FieldLibrary, type FieldLibraryItem } from "./FieldLibrary";
+import { FieldListPanel, type FormFieldListItem } from "./FieldListPanel";
 import { FieldSettingsPanel, type FieldSettings } from "./FieldSettingsPanel";
 import { FormCanvas } from "./FormCanvas";
+import { FormSettingsPanel } from "./FormSettingsPanel";
 
 const fieldLibraryItems: FieldLibraryItem[] = [
   {
@@ -82,29 +92,20 @@ type FormFieldState = FieldSettings & {
   settings: FieldSettings["settings"];
 };
 
-const defaultFields: FormFieldInput[] = [
-  {
-    type: "text",
-    label: "Full Name",
-    name: "full_name",
-    required: true,
-    settings: { placeholder: "John Doe" },
-  },
-  {
-    type: "email",
-    label: "Email Address",
-    name: "email",
-    required: true,
-    settings: { placeholder: "example@email.com" },
-  },
-  {
-    type: "textarea",
-    label: "Message",
-    name: "message",
-    required: true,
-    settings: { placeholder: "Type your request..." },
-  },
-];
+type SelectedTarget = { type: "form" } | { type: "field"; id: string } | null;
+
+type FormMetaState = {
+  name: string;
+  description: string;
+  status: FormStatus;
+};
+
+const resolveFormId = (pathname: string) => {
+  const parts = pathname.split("/").filter(Boolean);
+  const index = parts.findIndex((segment) => segment === "forms");
+  if (index === -1) return null;
+  return parts[index + 1] ?? null;
+};
 
 const createLocalId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -125,71 +126,122 @@ const toFieldState = (field: ApiFormField): FormFieldState => ({
   },
 });
 
+const toFormMeta = (form: FormRecord): FormMetaState => ({
+  name: form.name ?? "",
+  description: form.description ?? "",
+  status: form.status ?? "draft",
+});
+
 export function FormBuilderPage() {
+  const [formId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return resolveFormId(window.location.pathname);
+  });
   const [activeForm, setActiveForm] = useState<FormRecord | null>(null);
+  const [meta, setMeta] = useState<FormMetaState>({
+    name: "",
+    description: "",
+    status: "draft",
+  });
   const [fields, setFields] = useState<FormFieldState[]>([]);
-  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<SelectedTarget>({ type: "form" });
+  const [leftTab, setLeftTab] = useState("fields");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [dirty, setDirty] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const hasUnsavedChangesRef = useRef(false);
+  const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
+  const [mobileFieldsOpen, setMobileFieldsOpen] = useState(false);
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
 
+  const setUnsavedChanges = (value: boolean) => {
+    hasUnsavedChangesRef.current = value;
+    setHasUnsavedChanges(value);
+  };
+
+  const selectedFieldId = selectedTarget?.type === "field" ? selectedTarget.id : null;
   const selectedField = useMemo(
     () => fields.find((field) => field.id === selectedFieldId) ?? null,
     [fields, selectedFieldId]
   );
 
-  useEffect(() => {
-    let active = true;
-    setIsLoading(true);
-    setLoadError(null);
-    listForms()
-      .then(async (result) => {
-        if (!active) return;
-        if (result.length === 0) {
-          const created = await createForm({
-            name: "Contact Support Form",
-            status: "draft",
-          });
-          await updateFormFields(created.id, defaultFields);
-          const fieldsResult = await listFormFields(created.id);
-          if (!active) return;
-          setActiveForm(created);
-          const mapped = fieldsResult.map(toFieldState);
-          setFields(mapped);
-          setSelectedFieldId(mapped[0]?.id ?? null);
-          setDirty(false);
+  const fieldListItems = useMemo<FormFieldListItem[]>(
+    () =>
+      fields.map((field) => ({
+        id: field.id,
+        label: field.label,
+        name: field.name,
+        type: field.type,
+        required: field.required,
+      })),
+    [fields]
+  );
+
+  const applyDetail = useCallback((detail: FormDetail) => {
+    setActiveForm(detail.form);
+    setMeta(toFormMeta(detail.form));
+    const mapped = detail.fields.map(toFieldState);
+    setFields(mapped);
+    if (mapped.length > 0) {
+      setSelectedTarget({ type: "field", id: mapped[0].id });
+    } else {
+      setSelectedTarget({ type: "form" });
+    }
+    setUnsavedChanges(false);
+    setRemoteUpdatePending(false);
+  }, []);
+
+  const refreshForm = useCallback(
+    async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
+      if (!formId) return;
+      const shouldSetLoading = options?.setLoading !== false;
+      if (shouldSetLoading) setIsLoading(true);
+      try {
+        const detail = await getFormDetailCached(formId, { force: true });
+        if (!detail) {
+          setLoadError("Form not found.");
           return;
         }
-
-        const first = result[0] ?? null;
-        setActiveForm(first);
-        if (first) {
-          const fieldsResult = await listFormFields(first.id);
-          if (!active) return;
-          const mapped = fieldsResult.map(toFieldState);
-          setFields(mapped);
-          setSelectedFieldId(mapped[0]?.id ?? null);
+        if (!options?.allowUnsaved && hasUnsavedChangesRef.current) {
+          setRemoteUpdatePending(true);
+          return;
         }
-      })
-      .catch((err) => {
-        if (!active) return;
+        applyDetail(detail);
+        setLoadError(null);
+      } catch (err) {
         if (isApiClientError(err)) {
           setLoadError(err.message);
         } else {
-          setLoadError("Failed to load forms.");
+          setLoadError("Failed to load form.");
         }
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+      } finally {
+        if (shouldSetLoading) setIsLoading(false);
+      }
+    },
+    [applyDetail, formId]
+  );
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  useEffect(() => {
+    if (!formId) return;
+    const cached = getCachedFormDetail(formId);
+    if (cached) {
+      applyDetail(cached);
+      setLoadError(null);
+      setIsLoading(false);
+    }
+    refreshForm({ setLoading: !cached }).catch(() => undefined);
+  }, [applyDetail, formId, refreshForm]);
+
+  useEffect(() => {
+    if (!formId) return undefined;
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.formDetail(formId)) return;
+      refreshForm({ setLoading: false }).catch(() => undefined);
+    });
+  }, [formId, refreshForm]);
 
   const handleAddField = (item: FieldLibraryItem) => {
     const baseName = item.id;
@@ -212,8 +264,9 @@ export function FormBuilderPage() {
       },
     };
     setFields((prev) => [...prev, newField]);
-    setSelectedFieldId(newField.id);
-    setDirty(true);
+    setSelectedTarget({ type: "field", id: newField.id });
+    setLeftTab("fields");
+    setUnsavedChanges(true);
   };
 
   const handleRemoveField = (id: string) => {
@@ -222,15 +275,17 @@ export function FormBuilderPage() {
         .filter((field) => field.id !== id)
         .map((field, index) => ({ ...field, orderIndex: index }))
     );
-    setSelectedFieldId((prev) => (prev === id ? null : prev));
-    setDirty(true);
+    setSelectedTarget((prev) =>
+      prev?.type === "field" && prev.id === id ? { type: "form" } : prev
+    );
+    setUnsavedChanges(true);
   };
 
   const handleFieldChange = (fieldId: string, updates: Partial<FormFieldState>) => {
     setFields((prev) =>
       prev.map((field) => (field.id === fieldId ? { ...field, ...updates } : field))
     );
-    setDirty(true);
+    setUnsavedChanges(true);
   };
 
   const handleFieldSettingsChange = (
@@ -244,7 +299,7 @@ export function FormBuilderPage() {
           : field
       )
     );
-    setDirty(true);
+    setUnsavedChanges(true);
   };
 
   const handleDuplicate = (fieldId: string) => {
@@ -264,8 +319,8 @@ export function FormBuilderPage() {
       orderIndex: fields.length,
     };
     setFields((prev) => [...prev, copy]);
-    setSelectedFieldId(copy.id);
-    setDirty(true);
+    setSelectedTarget({ type: "field", id: copy.id });
+    setUnsavedChanges(true);
   };
 
   const handleSave = async () => {
@@ -283,12 +338,17 @@ export function FormBuilderPage() {
         orderIndex: index,
         settings: field.settings,
       }));
-      await updateFormFields(activeForm.id, payload);
-      const refreshed = await listFormFields(activeForm.id);
-      const mapped = refreshed.map(toFieldState);
-      setFields(mapped);
-      setSelectedFieldId(mapped[0]?.id ?? null);
-      setDirty(false);
+      const [updatedForm, refreshedFields] = await Promise.all([
+        updateForm(activeForm.id, {
+          name: meta.name,
+          description: meta.description,
+          status: meta.status,
+        }),
+        updateFormFields(activeForm.id, payload),
+      ]);
+      const updated = updatedForm ?? activeForm;
+      const mapped = refreshedFields.map(toFieldState);
+      applyDetail({ form: updated, fields: mapped });
       setSuccess("Form saved.");
     } catch (err) {
       if (isApiClientError(err)) {
@@ -302,79 +362,145 @@ export function FormBuilderPage() {
   };
 
   const isBusy = isLoading || isSaving;
+  const formTitle = meta.name || activeForm?.name || "Form";
+  const formDescription = meta.description || activeForm?.description || "";
 
   return (
-    <AdminShell
+    <EditorShell
       activeHref="/admin/forms"
-      showSearch={false}
-      contentClassName="p-0 overflow-hidden"
-      breadcrumbs={
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon-sm" aria-label="Go back">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-foreground">
-              {activeForm?.name ?? "Forms"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {activeForm?.status ? `Status: ${activeForm.status}` : "Loading form"}
-            </span>
-          </div>
-        </div>
+      leftPanel={
+        <Tabs
+          value={leftTab}
+          onValueChange={setLeftTab}
+          className="flex h-full flex-col"
+        >
+          <TabsList variant="line" className="border-b border-border px-4 pt-4">
+            <TabsTrigger value="fields">Fields</TabsTrigger>
+            <TabsTrigger value="library">Library</TabsTrigger>
+          </TabsList>
+          <TabsContent value="fields" className="flex-1">
+            <FieldListPanel
+              fields={fieldListItems}
+              selectedId={selectedFieldId}
+              onSelect={(id) => setSelectedTarget({ type: "field", id })}
+              onAdd={() => setLeftTab("library")}
+            />
+          </TabsContent>
+          <TabsContent value="library" className="flex-1">
+            <FieldLibrary items={fieldLibraryItems} onAddField={handleAddField} />
+          </TabsContent>
+        </Tabs>
       }
-      topbarActions={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
-            <Eye className="h-4 w-4" />
-            Preview
-          </Button>
-          <Button size="sm" className="gap-2" disabled={isBusy || !dirty} onClick={handleSave}>
-            <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save Form"}
-          </Button>
-        </div>
-      }
-    >
-      <div className="flex h-full min-h-[calc(100vh-4rem)]">
-        <aside className="hidden min-h-0 w-72 shrink-0 overflow-hidden border-r bg-background lg:block">
-          <FieldLibrary
-            items={fieldLibraryItems}
-            onAddField={handleAddField}
+      rightPanel={
+        selectedTarget?.type === "form" ? (
+          <FormSettingsPanel
+            name={meta.name}
+            description={meta.description}
+            status={meta.status}
+            onNameChange={(value) => {
+              setMeta((prev) => ({ ...prev, name: value }));
+              setUnsavedChanges(true);
+            }}
+            onDescriptionChange={(value) => {
+              setMeta((prev) => ({ ...prev, description: value }));
+              setUnsavedChanges(true);
+            }}
+            onStatusChange={(value) => {
+              setMeta((prev) => ({ ...prev, status: value }));
+              setUnsavedChanges(true);
+            }}
           />
-        </aside>
-        <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-muted/20">
-          <div className="h-full">
-            {isLoading ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading form builder...
-              </div>
-            ) : loadError ? (
-              <div className="p-6">
-                <Alert variant="destructive">
-                  <AlertTitle>Unable to load forms</AlertTitle>
-                  <AlertDescription>{loadError}</AlertDescription>
-                </Alert>
-              </div>
-            ) : (
-              <FormCanvas
-                selectedFieldId={selectedFieldId}
-                fields={fields}
-                onSelectField={setSelectedFieldId}
-                onRemoveField={handleRemoveField}
-              />
-            )}
-          </div>
-        </section>
-        <aside className="hidden min-h-0 w-80 shrink-0 overflow-hidden border-l bg-background lg:block">
+        ) : (
           <FieldSettingsPanel
             field={selectedField}
             onChange={handleFieldChange}
             onSettingsChange={handleFieldSettingsChange}
             onDuplicate={handleDuplicate}
           />
-        </aside>
+        )
+      }
+      rightPanelClassName="p-0"
+      breadcrumbs={
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Content</span>
+          <span>/</span>
+          <span>Forms</span>
+          <span>/</span>
+          <span className="text-foreground">{formTitle}</span>
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+            {meta.status}
+          </span>
+          {hasUnsavedChanges ? (
+            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700">
+              Unsaved changes
+            </span>
+          ) : null}
+        </div>
+      }
+      topbarActions={
+        <Button
+          size="sm"
+          className="gap-2"
+          disabled={isBusy || !hasUnsavedChanges}
+          onClick={handleSave}
+        >
+          <Save className="h-4 w-4" />
+          {isSaving ? "Saving..." : "Save form"}
+        </Button>
+      }
+    >
+      <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur lg:hidden">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
+          <Button variant="outline" size="sm" onClick={() => setMobileFieldsOpen(true)}>
+            Fields
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMobileSettingsOpen(true)}
+          >
+            Details
+          </Button>
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col gap-6 px-6 py-6">
+        {loadError ? (
+          <Alert variant="destructive">
+            <AlertTitle>Unable to load form</AlertTitle>
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        ) : null}
+        {remoteUpdatePending ? (
+          <Alert>
+            <AlertTitle>Updated in another tab</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>New changes are available. Refresh to load the latest version.</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshForm({ allowUnsaved: true })}
+              >
+                Refresh
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {isLoading ? (
+          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+            Loading form builder...
+          </div>
+        ) : (
+          <FormCanvas
+            formTitle={formTitle}
+            formDescription={formDescription}
+            formSelected={selectedTarget?.type === "form"}
+            selectedFieldId={selectedFieldId}
+            fields={fields}
+            onSelectField={(id) => setSelectedTarget({ type: "field", id })}
+            onSelectForm={() => setSelectedTarget({ type: "form" })}
+            onRemoveField={handleRemoveField}
+          />
+        )}
       </div>
       {success ? (
         <div className="pointer-events-none fixed bottom-6 right-6 rounded-md border bg-background px-4 py-2 text-xs text-muted-foreground shadow">
@@ -386,6 +512,82 @@ export function FormBuilderPage() {
           {saveError}
         </div>
       ) : null}
-    </AdminShell>
+      <Sheet open={mobileFieldsOpen} onOpenChange={setMobileFieldsOpen}>
+        <SheetContent side="left" className="w-80 p-0">
+          <SheetTitle className="sr-only">Fields</SheetTitle>
+          <SheetDescription className="sr-only">
+            Browse form fields and add new ones.
+          </SheetDescription>
+          <div className="flex h-full flex-col overflow-y-auto">
+            <Tabs
+              value={leftTab}
+              onValueChange={setLeftTab}
+              className="flex h-full flex-col"
+            >
+              <TabsList variant="line" className="border-b border-border px-4 pt-4">
+                <TabsTrigger value="fields">Fields</TabsTrigger>
+                <TabsTrigger value="library">Library</TabsTrigger>
+              </TabsList>
+              <TabsContent value="fields" className="flex-1">
+                <FieldListPanel
+                  fields={fieldListItems}
+                  selectedId={selectedFieldId}
+                  onSelect={(id) => {
+                    setSelectedTarget({ type: "field", id });
+                    setMobileFieldsOpen(false);
+                  }}
+                  onAdd={() => setLeftTab("library")}
+                />
+              </TabsContent>
+              <TabsContent value="library" className="flex-1">
+                <FieldLibrary
+                  items={fieldLibraryItems}
+                  onAddField={(item) => {
+                    handleAddField(item);
+                    setMobileFieldsOpen(false);
+                  }}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </SheetContent>
+      </Sheet>
+      <Sheet open={mobileSettingsOpen} onOpenChange={setMobileSettingsOpen}>
+        <SheetContent side="right" className="w-80 p-0">
+          <SheetTitle className="sr-only">Form settings</SheetTitle>
+          <SheetDescription className="sr-only">
+            Update form settings or field details.
+          </SheetDescription>
+          <div className="flex h-full flex-col overflow-y-auto">
+            {selectedTarget?.type === "form" ? (
+              <FormSettingsPanel
+                name={meta.name}
+                description={meta.description}
+                status={meta.status}
+                onNameChange={(value) => {
+                  setMeta((prev) => ({ ...prev, name: value }));
+                  setUnsavedChanges(true);
+                }}
+                onDescriptionChange={(value) => {
+                  setMeta((prev) => ({ ...prev, description: value }));
+                  setUnsavedChanges(true);
+                }}
+                onStatusChange={(value) => {
+                  setMeta((prev) => ({ ...prev, status: value }));
+                  setUnsavedChanges(true);
+                }}
+              />
+            ) : (
+              <FieldSettingsPanel
+                field={selectedField}
+                onChange={handleFieldChange}
+                onSettingsChange={handleFieldSettingsChange}
+                onDuplicate={handleDuplicate}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </EditorShell>
   );
 }

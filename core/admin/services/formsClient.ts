@@ -1,4 +1,7 @@
 import { apiRequest } from "./apiClient";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
+import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
+import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
 
 export type FormStatus = "draft" | "published" | "archived";
 
@@ -20,6 +23,11 @@ export type FormField = {
   required: boolean;
   settings: Record<string, unknown>;
   orderIndex: number;
+};
+
+export type FormDetail = {
+  form: FormRecord;
+  fields: FormField[];
 };
 
 export type FormSubmission = {
@@ -56,16 +64,108 @@ export type FormFieldInput = {
   settings?: Record<string, unknown>;
 };
 
+let cachedForms: FormRecord[] | null = null;
+let cachedFormsPromise: Promise<FormRecord[]> | null = null;
+
+const isFormList = (value: unknown): value is FormRecord[] => Array.isArray(value);
+
+const isFormDetail = (value: unknown): value is FormDetail =>
+  Boolean(value && typeof value === "object" && "form" in value && "fields" in value);
+
+const readFormsCache = () =>
+  readLocalCache(cacheKeys.formsList, cacheTtlMs.list, isFormList);
+
+const readFormDetailCache = (id: string) =>
+  readLocalCache(cacheKeys.formDetail(id), cacheTtlMs.detail, isFormDetail);
+
+const writeFormDetailCache = (detail: FormDetail) => {
+  writeLocalCache(cacheKeys.formDetail(detail.form.id), detail);
+};
+
+const primeFormsCacheInternal = (items: FormRecord[]) => {
+  cachedForms = items;
+  cachedFormsPromise = null;
+  writeLocalCache(cacheKeys.formsList, items);
+};
+
+const upsertCachedFormSummary = (form: FormRecord) => {
+  const current = cachedForms ?? readFormsCache() ?? [];
+  const index = current.findIndex((item) => item.id === form.id);
+  const next = [...current];
+  if (index === -1) {
+    next.unshift(form);
+  } else {
+    next[index] = { ...next[index], ...form };
+  }
+  primeFormsCacheInternal(next);
+};
+
+const upsertCachedFormDetail = (detail: FormDetail) => {
+  upsertCachedFormSummary(detail.form);
+  writeFormDetailCache(detail);
+};
+
+const removeCachedForm = (id: string) => {
+  const current = cachedForms ?? readFormsCache();
+  if (!current) return;
+  primeFormsCacheInternal(current.filter((item) => item.id !== id));
+  clearLocalCache(cacheKeys.formDetail(id));
+};
+
+export const getCachedForms = () => {
+  if (cachedForms) return cachedForms;
+  const cached = readFormsCache();
+  if (cached) cachedForms = cached;
+  return cachedForms;
+};
+
+export const getCachedFormDetail = (id: string) => readFormDetailCache(id);
+
+export const clearFormsCache = () => {
+  cachedForms = null;
+  cachedFormsPromise = null;
+  clearLocalCache(cacheKeys.formsList);
+};
+
 export async function listForms() {
   return apiRequest<FormRecord[]>("/forms", { method: "GET" });
+}
+
+export async function listFormsCached(options?: { force?: boolean }) {
+  if (!options?.force) {
+    const cached = getCachedForms();
+    if (cached) return cached;
+    if (cachedFormsPromise) return cachedFormsPromise;
+  }
+  const request = listForms();
+  cachedFormsPromise = request;
+  const items = await request;
+  primeFormsCacheInternal(items);
+  return items;
 }
 
 export async function getForm(id: string) {
   return apiRequest<FormRecord>(`/forms/${id}`, { method: "GET" });
 }
 
+export async function getFormDetail(id: string) {
+  const [form, fields] = await Promise.all([getForm(id), listFormFields(id)]);
+  if (!form) return null;
+  return { form, fields } as FormDetail;
+}
+
+export async function getFormDetailCached(id: string, options?: { force?: boolean }) {
+  if (!options?.force) {
+    const cached = readFormDetailCache(id);
+    if (cached) return cached;
+  }
+  const detail = await getFormDetail(id);
+  if (detail) upsertCachedFormDetail(detail);
+  return detail;
+}
+
 export async function createForm(input: FormCreateInput) {
-  return apiRequest<FormRecord>(
+  const created = await apiRequest<FormRecord>(
     "/forms",
     {
       method: "POST",
@@ -74,10 +174,17 @@ export async function createForm(input: FormCreateInput) {
     },
     { withCsrf: true }
   );
+  if (created) {
+    upsertCachedFormSummary(created);
+    writeFormDetailCache({ form: created, fields: [] });
+    broadcastCacheEvent({ key: cacheKeys.formsList, action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.formDetail(created.id), action: "update" });
+  }
+  return created;
 }
 
 export async function updateForm(id: string, input: FormUpdateInput) {
-  return apiRequest<FormRecord>(
+  const updated = await apiRequest<FormRecord>(
     `/forms/${id}`,
     {
       method: "PATCH",
@@ -86,16 +193,32 @@ export async function updateForm(id: string, input: FormUpdateInput) {
     },
     { withCsrf: true }
   );
+  if (updated) {
+    upsertCachedFormSummary(updated);
+    const detail = readFormDetailCache(id);
+    if (detail) {
+      writeFormDetailCache({ ...detail, form: { ...detail.form, ...updated } });
+    }
+    broadcastCacheEvent({ key: cacheKeys.formsList, action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.formDetail(updated.id), action: "update" });
+  }
+  return updated;
 }
 
 export async function deleteForm(id: string) {
-  return apiRequest<{ ok: boolean }>(
+  const result = await apiRequest<{ ok: boolean }>(
     `/forms/${id}`,
     {
       method: "DELETE",
     },
     { withCsrf: true }
   );
+  if (result?.ok) {
+    removeCachedForm(id);
+    broadcastCacheEvent({ key: cacheKeys.formsList, action: "invalidate" });
+    broadcastCacheEvent({ key: cacheKeys.formDetail(id), action: "invalidate" });
+  }
+  return result;
 }
 
 export async function listFormFields(formId: string) {
@@ -103,7 +226,7 @@ export async function listFormFields(formId: string) {
 }
 
 export async function updateFormFields(formId: string, fields: FormFieldInput[]) {
-  return apiRequest<FormField[]>(
+  const result = await apiRequest<FormField[]>(
     `/forms/${formId}/fields`,
     {
       method: "PUT",
@@ -112,6 +235,13 @@ export async function updateFormFields(formId: string, fields: FormFieldInput[])
     },
     { withCsrf: true }
   );
+  const detail = readFormDetailCache(formId);
+  if (detail && result) {
+    writeFormDetailCache({ ...detail, fields: result });
+  }
+  broadcastCacheEvent({ key: cacheKeys.formsList, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.formDetail(formId), action: "update" });
+  return result;
 }
 
 export async function listFormSubmissions(formId: string) {

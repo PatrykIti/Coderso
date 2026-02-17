@@ -46,8 +46,13 @@ import {
   normalizeEntryTeaserData,
   type EntryTeaserData,
 } from "../widgets/core/entryTeaser";
+import {
+  normalizeFormEmbedData,
+  type FormEmbedData,
+} from "../widgets/core/formEmbed";
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
+import { resolveFormRuntimeData } from "../services/forms/formRuntimeResolver";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 
@@ -208,6 +213,23 @@ const hydrateRuntimeBlock = async (
       preview: options.preview,
       contentRoutes: options.contentRoutes,
     });
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        resolved,
+      },
+    };
+  }
+  if (block.type === "form-embed") {
+    const normalizedData = normalizeFormEmbedData(
+      ensureRecord(block.data) as FormEmbedData
+    );
+    const resolved = normalizedData.formId
+      ? await resolveFormRuntimeData(normalizedData.formId, {
+          preview: options.preview,
+        })
+      : { error: "form_missing" };
     nextBlock = {
       ...block,
       data: {

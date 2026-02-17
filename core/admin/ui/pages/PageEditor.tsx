@@ -434,6 +434,18 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     setSelectedId(finalized.id);
   };
 
+  const handleAddForm = (form: { id: string; name: string }) => {
+    const nextBlock = buildNewBlock("form-embed");
+    const nextData = {
+      ...(nextBlock.data as Record<string, unknown>),
+      formId: form.id,
+      title: form.name,
+    };
+    const finalized = { ...nextBlock, data: nextData };
+    updateBlocks([...blocks, finalized]);
+    setSelectedId(finalized.id);
+  };
+
   const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
     const nextBlock = buildNewBlock(type);
     updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
@@ -578,7 +590,7 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   return (
     <EditorShell
       activeHref="/admin/pages"
-      leftPanel={<LibraryPanel onAddWidget={handleAddBlock} onAddTemplate={handleAddTemplateSection} />}
+      leftPanel={<LibraryPanel onAddWidget={handleAddBlock} onAddTemplate={handleAddTemplateSection} onAddForm={handleAddForm} />}
       rightPanel={
         <BlockSettings
           block={selectedBlock}
@@ -783,6 +795,10 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               }}
               onAddTemplate={(template) => {
                 handleAddTemplateSection(template);
+                setMobileLibraryOpen(false);
+              }}
+              onAddForm={(form) => {
+                handleAddForm(form);
                 setMobileLibraryOpen(false);
               }}
             />

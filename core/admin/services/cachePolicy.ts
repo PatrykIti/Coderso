@@ -15,6 +15,8 @@ export const cacheKeys = {
   contentTypeDetail: (id: string) => `contentTypes:detail:${id}`,
   menusList: "menus:list",
   menuDetail: (id: string) => `menus:detail:${id}`,
+  formsList: "forms:list",
+  formDetail: (id: string) => `forms:detail:${id}`,
   widgetCatalogList: "widgetCatalog:list",
   widgetTemplateCategoriesList: "widgetTemplateCategories:list",
   widgetTemplatesList: "widgetTemplates:list",

@@ -1,10 +1,15 @@
 import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
-import { FormBuilderPage } from "../../../core/admin/ui/forms/FormBuilderPage";
+import { FormListPage } from "../../../core/admin/ui/forms/FormListPage";
+import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 
-test("FormBuilderPage renders skeleton", () => {
-  const html = renderToString(<FormBuilderPage />);
+test("FormListPage renders list skeleton", () => {
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/forms">
+      <FormListPage />
+    </AdminRouterProvider>
+  );
   expect(html).toContain("Forms");
-  expect(html).toContain("Loading form builder");
+  expect(html).toContain("New form");
 });

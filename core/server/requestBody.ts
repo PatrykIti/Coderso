@@ -6,6 +6,9 @@ const isJsonRequest = (contentType: string) =>
 const isMultipartRequest = (contentType: string) =>
   contentType.includes("multipart/form-data");
 
+const isUrlEncodedRequest = (contentType: string) =>
+  contentType.includes("application/x-www-form-urlencoded");
+
 async function parseJson(req: Request) {
   try {
     return await req.json();
@@ -27,6 +30,20 @@ async function parseForm(req: Request) {
   }
 }
 
+async function parseUrlEncoded(req: Request) {
+  try {
+    const text = await req.text();
+    const params = new URLSearchParams(text);
+    const payload: Record<string, unknown> = {};
+    for (const [key, value] of params.entries()) {
+      payload[key] = value;
+    }
+    return payload;
+  } catch {
+    throw new ApiError("invalid_form", "Invalid form data", 400);
+  }
+}
+
 export async function parseRequestBody(req: Request) {
   if (req.method === "GET" || req.method === "DELETE") return undefined;
 
@@ -36,6 +53,9 @@ export async function parseRequestBody(req: Request) {
   }
   if (isMultipartRequest(contentType)) {
     return parseForm(req);
+  }
+  if (isUrlEncodedRequest(contentType)) {
+    return parseUrlEncoded(req);
   }
   return undefined;
 }

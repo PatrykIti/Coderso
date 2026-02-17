@@ -45,6 +45,23 @@ export type FormsRouteDeps = {
 
 type SubmissionBody = { data: Record<string, unknown>; captchaToken?: string };
 
+const normalizeSubmissionBody = (body: unknown): SubmissionBody => {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { data: {} };
+  }
+
+  const payload = body as Record<string, unknown>;
+  if ("data" in payload && typeof payload.data === "object" && payload.data !== null) {
+    return payload as SubmissionBody;
+  }
+
+  const { captchaToken, ...rest } = payload;
+  return {
+    data: rest,
+    ...(captchaToken !== undefined ? { captchaToken: captchaToken as string } : {}),
+  };
+};
+
 export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
   const { requirePermission, validate } = deps;
 
@@ -94,8 +111,9 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
   );
 
   router.post("/forms/:id/submissions", async (ctx) => {
-    validate(formSubmissionSchema, ctx.body);
-    const body = ctx.body as SubmissionBody;
+    const normalized = normalizeSubmissionBody(ctx.body);
+    validate(formSubmissionSchema, normalized);
+    const body = normalized as SubmissionBody;
     const securitySettings = await getSecuritySettings();
     await enforceBotProtection({
       token: body.captchaToken,

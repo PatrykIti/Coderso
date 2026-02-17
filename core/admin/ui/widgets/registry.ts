@@ -70,6 +70,9 @@ import {
   NewsletterAdvancedEditor,
   NewsletterVisualEditor,
   NewsletterWizardEditor,
+  FormEmbedAdvancedEditor,
+  FormEmbedVisualEditor,
+  FormEmbedWizardEditor,
   PricingPlansAdvancedEditor,
   PricingPlansVisualEditor,
   PricingPlansWizardEditor,
@@ -192,6 +195,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: CompareTimelineWizardEditor,
       visual: CompareTimelineVisualEditor,
       advanced: CompareTimelineAdvancedEditor,
+    },
+    formEmbed: {
+      wizard: FormEmbedWizardEditor,
+      visual: FormEmbedVisualEditor,
+      advanced: FormEmbedAdvancedEditor,
     },
     newsletter: {
       wizard: NewsletterWizardEditor,
