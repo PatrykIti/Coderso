@@ -29,13 +29,7 @@ import {
   fieldsFromSchema,
   type ContentSchema,
 } from "./schemaMapping";
-
-const resolveContentTypeId = (pathname: string) => {
-  const parts = pathname.split("/").filter(Boolean);
-  const index = parts.findIndex((segment) => segment === "content-types");
-  if (index === -1) return null;
-  return parts[index + 1] ?? null;
-};
+import { resolveContentTypeIdFromPath } from "./pathResolvers";
 
 const iconForType = (type: string) => {
   switch (type) {
@@ -71,7 +65,7 @@ export function SchemaBuilderPage() {
   const { navigate } = useAdminRouter();
   const [typeId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    return resolveContentTypeId(window.location.pathname);
+    return resolveContentTypeIdFromPath(window.location.pathname);
   });
   const [contentType, setContentType] = useState<ContentTypeSummary | null>(null);
   const [fields, setFields] = useState(() => fieldsFromSchema(buildSchemaFromFields([])));

@@ -149,22 +149,34 @@ const resolveFields = (value?: FormEmbedFields): Required<FormEmbedFields> => {
   };
 };
 
-const isBorderWidth = (value: string): value is FormEmbedStyle["borderWidth"] =>
+const isBorderWidthValue = (
+  value: string
+): value is NonNullable<FormEmbedStyle["borderWidth"]> =>
   value === "0" || value === "1" || value === "2";
 
-const isRadius = (value: string): value is FormEmbedStyle["radius"] =>
+const isRadius = (
+  value: string
+): value is NonNullable<FormEmbedStyle["radius"]> =>
   value === "sm" || value === "md" || value === "lg";
 
-const isInputSize = (value: string): value is FormEmbedStyle["inputSize"] =>
+const isInputSize = (
+  value: string
+): value is NonNullable<FormEmbedStyle["inputSize"]> =>
   value === "sm" || value === "md" || value === "lg";
 
-const isAlignment = (value: string): value is FormEmbedLayout["alignment"] =>
+const isAlignment = (
+  value: string
+): value is NonNullable<FormEmbedLayout["alignment"]> =>
   value === "start" || value === "center" || value === "end";
 
-const isWidth = (value: string): value is FormEmbedLayout["width"] =>
+const isWidth = (
+  value: string
+): value is NonNullable<FormEmbedLayout["width"]> =>
   value === "sm" || value === "md" || value === "lg" || value === "xl";
 
-const isSpacing = (value: string): value is FormEmbedLayout["spacing"] =>
+const isSpacing = (
+  value: string
+): value is NonNullable<FormEmbedLayout["spacing"]> =>
   value === "sm" || value === "md" || value === "lg" || value === "xl";
 
 export const formEmbedSchema = {
@@ -248,7 +260,7 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     background: resolveNonEmptyString(style.background, "transparent"),
     surface: resolveNonEmptyString(style.surface, "var(--color-bg)"),
     borderColor: resolveNonEmptyString(style.borderColor, "var(--color-border)"),
-    borderWidth: isBorderWidth(style.borderWidth) ? style.borderWidth : "1",
+    borderWidth: isBorderWidthValue(style.borderWidth) ? style.borderWidth : "1",
     radius: isRadius(style.radius) ? style.radius : "md",
     inputSize: isInputSize(style.inputSize) ? style.inputSize : "md",
   };

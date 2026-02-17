@@ -1,5 +1,6 @@
 import { getForm, listFormFields, toFieldRecord } from "./formsService";
 import { createFormSubmissionNonce } from "./submissionNonce";
+import { normalizeSubmissionAccess } from "./submissionAccess";
 
 export type FormRuntimeResolution = {
   formId: string;
@@ -13,6 +14,9 @@ export type FormRuntimeResolution = {
   fields: ReturnType<typeof toFieldRecord>[];
   error?: string;
 };
+
+export const resolveFormSubmissionAccess = (value: unknown) =>
+  normalizeSubmissionAccess(value, "public");
 
 export async function resolveFormRuntimeData(
   formId: string,
@@ -35,6 +39,7 @@ export async function resolveFormRuntimeData(
   }
 
   if (!options.preview && form.status !== "published") {
+    const submissionAccess = resolveFormSubmissionAccess(form.submissionAccess);
     return {
       formId,
       formName: form.name,
@@ -42,15 +47,16 @@ export async function resolveFormRuntimeData(
       status: form.status,
       successMessage: form.successMessage ?? null,
       successRedirectUrl: form.successRedirectUrl ?? null,
-      submissionAccess: form.submissionAccess ?? "public",
+      submissionAccess,
       submissionNonce:
-        form.submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
+        submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
       fields: [],
       error: "form_unpublished",
     };
   }
 
   const fields = await listFormFields(formId);
+  const submissionAccess = resolveFormSubmissionAccess(form.submissionAccess);
   return {
     formId,
     formName: form.name,
@@ -58,9 +64,9 @@ export async function resolveFormRuntimeData(
     status: form.status,
     successMessage: form.successMessage ?? null,
     successRedirectUrl: form.successRedirectUrl ?? null,
-    submissionAccess: form.submissionAccess ?? "public",
+    submissionAccess,
     submissionNonce:
-      form.submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
+      submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
     fields: fields.map((field) => toFieldRecord(field)),
   };
 }

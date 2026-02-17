@@ -65,6 +65,7 @@ export type CoreWidgetEditors = {
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
+  formEmbed: EditorBundle<FormEmbedData>;
   contact: EditorBundle<ContactData>;
   navigation: EditorBundle<NavigationData>;
   footer: EditorBundle<FooterData>;

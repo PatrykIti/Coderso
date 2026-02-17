@@ -330,7 +330,9 @@ const normalizeSecret = (value: string) => {
   return trimmed;
 };
 
-const resolveSizeFromBytes = (value: number | null | undefined) => {
+const resolveSizeFromBytes = (
+  value: number | null | undefined
+): { value: string; unit: StorageSizeUnit } => {
   if (!value || value <= 0) {
     return { value: "", unit: DEFAULT_SIZE_UNIT };
   }
@@ -340,7 +342,7 @@ const resolveSizeFromBytes = (value: number | null | undefined) => {
       return { value: String(value / multiplier), unit };
     }
   }
-  const fallbackUnit = value >= 1024 ** 2 ? "MB" : "KB";
+  const fallbackUnit: StorageSizeUnit = value >= 1024 ** 2 ? "MB" : "KB";
   const multiplier = STORAGE_SIZE_UNITS.find((entry) => entry.value === fallbackUnit)?.multiplier ?? 1;
   const rounded = Math.round((value / multiplier) * 100) / 100;
   return { value: String(rounded), unit: fallbackUnit };

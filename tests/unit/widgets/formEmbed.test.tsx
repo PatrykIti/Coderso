@@ -36,6 +36,29 @@ test("form embed normalization resolves layout defaults", () => {
   expect(normalized.fields?.showLabels).toBe(true);
 });
 
+test("form embed normalization sanitizes invalid enum values", () => {
+  const normalized = normalizeFormEmbedData({
+    layout: {
+      alignment: "invalid" as never,
+      width: "invalid" as never,
+      spacing: "invalid" as never,
+      buttonAlignment: "invalid" as never,
+    },
+    style: {
+      borderWidth: "invalid" as never,
+      radius: "invalid" as never,
+      inputSize: "invalid" as never,
+    },
+  });
+  expect(normalized.layout?.alignment).toBe("start");
+  expect(normalized.layout?.width).toBe("md");
+  expect(normalized.layout?.spacing).toBe("md");
+  expect(normalized.layout?.buttonAlignment).toBe("start");
+  expect(normalized.style?.borderWidth).toBe("1");
+  expect(normalized.style?.radius).toBe("md");
+  expect(normalized.style?.inputSize).toBe("md");
+});
+
 test("form embed falls back to resolved success message", () => {
   const html = renderToString(
     <FormEmbedBlock

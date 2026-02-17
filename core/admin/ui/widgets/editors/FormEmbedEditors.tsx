@@ -15,6 +15,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   normalizeFormEmbedData,
   type FormEmbedData,
+  type FormEmbedLayout,
+  type FormEmbedStyle,
 } from "../../../../widgets/core/formEmbed";
 import type { WidgetEditorProps } from "../../../../widgets/types";
 import { useForms } from "@/ui/forms/hooks/useForms";
@@ -56,6 +58,36 @@ const inputSizeOptions = [
   { id: "md", label: "Medium" },
   { id: "lg", label: "Large" },
 ] as const;
+
+type AlignmentValue = NonNullable<FormEmbedLayout["alignment"]>;
+type WidthValue = NonNullable<FormEmbedLayout["width"]>;
+type SpacingValue = NonNullable<FormEmbedLayout["spacing"]>;
+type ButtonAlignmentValue = NonNullable<FormEmbedLayout["buttonAlignment"]>;
+type BorderWidthValue = NonNullable<FormEmbedStyle["borderWidth"]>;
+type RadiusValue = NonNullable<FormEmbedStyle["radius"]>;
+type InputSizeValue = NonNullable<FormEmbedStyle["inputSize"]>;
+
+const isAlignmentValue = (value: string): value is AlignmentValue =>
+  alignmentOptions.some((option) => option.id === value);
+
+const isWidthValue = (value: string): value is WidthValue =>
+  widthOptions.some((option) => option.id === value);
+
+const isSpacingValue = (value: string): value is SpacingValue =>
+  spacingOptions.some((option) => option.id === value);
+
+const isButtonAlignmentValue = (
+  value: string
+): value is ButtonAlignmentValue => isAlignmentValue(value);
+
+const isBorderWidthValue = (value: string): value is BorderWidthValue =>
+  borderWidthOptions.some((option) => option.id === value);
+
+const isRadiusValue = (value: string): value is RadiusValue =>
+  radiusOptions.some((option) => option.id === value);
+
+const isInputSizeValue = (value: string): value is InputSizeValue =>
+  inputSizeOptions.some((option) => option.id === value);
 
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
 
@@ -321,7 +353,10 @@ function LayoutSection({
         </label>
         <Select
           value={normalized.layout?.alignment ?? "start"}
-          onValueChange={(alignment) => updateLayout(value, onChange, { alignment })}
+          onValueChange={(alignment) => {
+            if (!isAlignmentValue(alignment)) return;
+            updateLayout(value, onChange, { alignment });
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Alignment" />
@@ -341,7 +376,10 @@ function LayoutSection({
         </label>
         <Select
           value={normalized.layout?.width ?? "md"}
-          onValueChange={(width) => updateLayout(value, onChange, { width })}
+          onValueChange={(width) => {
+            if (!isWidthValue(width)) return;
+            updateLayout(value, onChange, { width });
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Width" />
@@ -361,7 +399,10 @@ function LayoutSection({
         </label>
         <Select
           value={normalized.layout?.spacing ?? "md"}
-          onValueChange={(spacing) => updateLayout(value, onChange, { spacing })}
+          onValueChange={(spacing) => {
+            if (!isSpacingValue(spacing)) return;
+            updateLayout(value, onChange, { spacing });
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Spacing" />
@@ -381,9 +422,10 @@ function LayoutSection({
         </label>
         <Select
           value={normalized.layout?.buttonAlignment ?? "start"}
-          onValueChange={(buttonAlignment) =>
-            updateLayout(value, onChange, { buttonAlignment })
-          }
+          onValueChange={(buttonAlignment) => {
+            if (!isButtonAlignmentValue(buttonAlignment)) return;
+            updateLayout(value, onChange, { buttonAlignment });
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Button alignment" />
@@ -478,7 +520,10 @@ function StyleSection({
         </label>
         <Select
           value={normalized.style?.borderWidth ?? "1"}
-          onValueChange={(borderWidth) => updateStyle(value, onChange, { borderWidth })}
+          onValueChange={(borderWidth) => {
+            if (!isBorderWidthValue(borderWidth)) return;
+            updateStyle(value, onChange, { borderWidth });
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Border width" />
@@ -498,7 +543,10 @@ function StyleSection({
         </label>
         <Select
           value={normalized.style?.radius ?? "md"}
-          onValueChange={(radius) => updateStyle(value, onChange, { radius })}
+          onValueChange={(radius) => {
+            if (!isRadiusValue(radius)) return;
+            updateStyle(value, onChange, { radius });
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Radius" />
@@ -518,7 +566,10 @@ function StyleSection({
         </label>
         <Select
           value={normalized.style?.inputSize ?? "md"}
-          onValueChange={(inputSize) => updateStyle(value, onChange, { inputSize })}
+          onValueChange={(inputSize) => {
+            if (!isInputSizeValue(inputSize)) return;
+            updateStyle(value, onChange, { inputSize });
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Input size" />

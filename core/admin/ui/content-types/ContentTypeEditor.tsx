@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
+  type ContentSchema,
   getCachedContentTypes,
   getContentTypeCached,
   listContentTypesCached,
@@ -36,6 +37,7 @@ import {
   buildSchemaFromFields,
   fieldsFromSchema,
 } from "./schemaMapping";
+import { resolveContentTypeIdFromPath } from "./pathResolvers";
 
 const defaultFields: ContentField[] = [
   {
@@ -54,17 +56,10 @@ const defaultFields: ContentField[] = [
   },
 ];
 
-const resolveContentTypeId = (pathname: string) => {
-  const parts = pathname.split("/").filter(Boolean);
-  const index = parts.findIndex((segment) => segment === "content-types");
-  if (index === -1) return null;
-  return parts[index + 1] ?? null;
-};
-
 export function ContentTypeEditor() {
   const [typeId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
-    return resolveContentTypeId(window.location.pathname);
+    return resolveContentTypeIdFromPath(window.location.pathname);
   });
   const [name, setName] = useState("" as string);
   const [slug, setSlug] = useState("" as string);
@@ -94,7 +89,7 @@ export function ContentTypeEditor() {
   });
   const [isTaxonomySaving, setIsTaxonomySaving] = useState(false);
 
-  const applyContentType = useCallback((result: { name: string; slug: string; schema: unknown }) => {
+  const applyContentType = useCallback((result: { name: string; slug: string; schema: ContentSchema }) => {
     setName(result.name);
     setSlug(result.slug);
     const mappedFields = fieldsFromSchema(result.schema);

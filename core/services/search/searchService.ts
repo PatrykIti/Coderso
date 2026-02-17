@@ -129,7 +129,9 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
   ];
   if (emailHash) {
     userConditions.push(eq(users.emailHash, emailHash));
-    userConditions.push(eq(users.email, emailQuery));
+    if (emailQuery) {
+      userConditions.push(eq(users.email, emailQuery));
+    }
   }
 
   const userRows = await db
