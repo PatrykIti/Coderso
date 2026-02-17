@@ -446,7 +446,7 @@ export function MenuEditorPage() {
       setPages(initialPages);
     }
     refreshMenus({ force: true, reloadActive: true }).catch(() => undefined);
-  }, [refreshMenus]);
+  }, [initialMenus, initialPages, refreshMenus]);
 
   useEffect(() => {
     if (!activeMenuId) return;

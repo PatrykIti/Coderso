@@ -13,9 +13,9 @@ type MenuItemRowProps = {
   isDragTarget?: boolean;
   onEdit?: (item: MenuItemDisplay) => void;
   onDelete?: (item: MenuItemDisplay) => void;
-  onSelect?: (item: MenuItemDisplay) => void;
+  onSelect?: (item: MenuItemDisplay, eventTimeStamp: number) => void;
   onDragStart?: (item: MenuItemDisplay, event: DragEvent<HTMLElement>) => void;
-  onDragEnd?: () => void;
+  onDragEnd?: (event: DragEvent<HTMLElement>) => void;
   onDrop?: (item: MenuItemDisplay, event: DragEvent<HTMLDivElement>) => void;
   onDragOver?: (item: MenuItemDisplay, event: DragEvent<HTMLDivElement>) => void;
 };
@@ -55,11 +55,11 @@ export function MenuItemRow({
         type="button"
         className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left cursor-grab active:cursor-grabbing"
         draggable
-        onClick={() => onSelect?.(item)}
+        onClick={(event) => onSelect?.(item, event.timeStamp)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            onSelect?.(item);
+            onSelect?.(item, event.timeStamp);
           }
         }}
         onDragStart={(event) => {
@@ -67,7 +67,7 @@ export function MenuItemRow({
           event.dataTransfer.effectAllowed = "move";
           onDragStart?.(item, event);
         }}
-        onDragEnd={() => onDragEnd?.()}
+        onDragEnd={(event) => onDragEnd?.(event)}
       >
         <div
           className="pointer-events-none flex items-center justify-center rounded-md border bg-muted/40 p-2 text-muted-foreground"

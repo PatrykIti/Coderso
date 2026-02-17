@@ -93,18 +93,21 @@ export function AdminShell({
   const resolvedActiveHref = activeHref
     ? resolveAdminHref(adminBasePath, activeHref)
     : activeHref;
-
-  useEffect(() => {
-    setNavGroupState((prev) => ({
+  const resolvedNavGroupState = useMemo(
+    () => ({
       ...navGroupDefaults,
-      ...prev,
-    }));
-  }, [navGroupDefaults]);
+      ...navGroupState,
+    }),
+    [navGroupDefaults, navGroupState]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    window.localStorage.setItem(NAV_GROUP_STATE_KEY, JSON.stringify(navGroupState));
-  }, [navGroupState]);
+    window.localStorage.setItem(
+      NAV_GROUP_STATE_KEY,
+      JSON.stringify(resolvedNavGroupState)
+    );
+  }, [resolvedNavGroupState]);
 
   return (
     <div
@@ -117,7 +120,7 @@ export function AdminShell({
         sections={resolvedSections}
         footerItems={resolvedFooter}
         activeHref={resolvedActiveHref}
-        groupState={navGroupState}
+        groupState={resolvedNavGroupState}
         onGroupToggle={(groupId, nextExpanded) =>
           setNavGroupState((prev) => ({
             ...prev,
@@ -168,7 +171,7 @@ export function AdminShell({
             footerItems={resolvedFooter}
             activeHref={resolvedActiveHref}
             variant="mobile"
-            groupState={navGroupState}
+            groupState={resolvedNavGroupState}
             onGroupToggle={(groupId, nextExpanded) =>
               setNavGroupState((prev) => ({
                 ...prev,

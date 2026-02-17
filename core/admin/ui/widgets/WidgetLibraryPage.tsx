@@ -333,7 +333,14 @@ export function WidgetLibraryPage() {
   );
 
   useEffect(() => {
-    refreshPages({ force: true, background: true }).catch(() => undefined);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      refreshPages({ force: true, background: true }).catch(() => undefined);
+    });
+    return () => {
+      active = false;
+    };
   }, [refreshPages]);
 
   useEffect(() => {
@@ -407,11 +414,25 @@ export function WidgetLibraryPage() {
   };
 
   useEffect(() => {
-    refreshCatalog({ force: true, background: true }).catch(() => undefined);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      refreshCatalog({ force: true, background: true }).catch(() => undefined);
+    });
+    return () => {
+      active = false;
+    };
   }, [refreshCatalog]);
 
   useEffect(() => {
-    refreshCategories({ force: true, background: true }).catch(() => undefined);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      refreshCategories({ force: true, background: true }).catch(() => undefined);
+    });
+    return () => {
+      active = false;
+    };
   }, [refreshCategories]);
 
   useEffect(() => {

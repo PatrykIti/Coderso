@@ -82,12 +82,6 @@ export function MediaLibraryPage() {
   );
 
   useEffect(() => {
-    const cached = initialCached;
-    if (cached) {
-      setItems(cached.map(toMediaItem));
-      setIsLoading(false);
-      hasHydratedRef.current = true;
-    }
     refresh({ force: true }).catch(() => undefined);
   }, [refresh]);
 

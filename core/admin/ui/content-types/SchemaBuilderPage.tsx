@@ -67,17 +67,27 @@ export function SchemaBuilderPage() {
     if (typeof window === "undefined") return null;
     return resolveContentTypeIdFromPath(window.location.pathname);
   });
-  const [contentType, setContentType] = useState<ContentTypeSummary | null>(null);
-  const [fields, setFields] = useState(() => fieldsFromSchema(buildSchemaFromFields([])));
-  const [schema, setSchema] = useState<ContentSchema>(buildSchemaFromFields([]));
-  const [list, setList] = useState<ContentTypeSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialCachedList = getCachedContentTypes();
+  const initialCachedType =
+    typeId && initialCachedList
+      ? initialCachedList.find((item) => item.id === typeId) ?? null
+      : null;
+  const initialFields = initialCachedType
+    ? fieldsFromSchema(initialCachedType.schema)
+    : fieldsFromSchema(buildSchemaFromFields([]));
+  const [contentType, setContentType] = useState<ContentTypeSummary | null>(
+    initialCachedType
+  );
+  const [fields, setFields] = useState(initialFields);
+  const [schema, setSchema] = useState<ContentSchema>(
+    buildSchemaFromFields(initialFields)
+  );
+  const [list, setList] = useState<ContentTypeSummary[]>(initialCachedList ?? []);
+  const [isLoading, setIsLoading] = useState(() => !initialCachedType);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
-    const cached = getCachedContentTypes();
-    if (cached) setList(cached);
     listContentTypesCached({ force: true })
       .then((types) => {
         if (active) setList(types);
@@ -91,15 +101,6 @@ export function SchemaBuilderPage() {
   useEffect(() => {
     if (!typeId) return;
     let active = true;
-    const cached = getCachedContentTypes()?.find((item) => item.id === typeId);
-    if (cached) {
-      setContentType(cached);
-      const mappedFields = fieldsFromSchema(cached.schema);
-      setFields(mappedFields);
-      setSchema(buildSchemaFromFields(mappedFields));
-      setError(null);
-      setIsLoading(false);
-    }
     getContentTypeCached(typeId, { force: true })
       .then((result) => {
         if (!active || !result) return;

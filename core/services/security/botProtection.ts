@@ -79,7 +79,7 @@ export async function enforceBotProtection(params: {
       method: "POST",
       body: payload,
     });
-  } catch (error) {
+  } catch {
     throw new ApiError(
       "bot_protection_unavailable",
       "Bot protection service unavailable",

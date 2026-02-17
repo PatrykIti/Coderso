@@ -118,14 +118,6 @@ export function ThemesPage() {
   );
 
   useEffect(() => {
-    const cachedTemplates = initialCachedTemplates;
-    const cachedProfiles = initialCachedProfiles;
-    if (cachedTemplates || cachedProfiles) {
-      setTemplates(cachedTemplates ?? []);
-      setProfiles(cachedProfiles ?? []);
-      setIsLoading(false);
-      hasHydratedRef.current = true;
-    }
     refresh({ force: true }).catch(() => undefined);
   }, [refresh]);
 

@@ -21,8 +21,9 @@ import { countSchemaFields } from "./schemaMapping";
 
 export function ContentTypeList() {
   const basePath = resolveAdminBasePath();
-  const [types, setTypes] = useState<ContentTypeSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialCached = getCachedContentTypes();
+  const [types, setTypes] = useState<ContentTypeSummary[]>(() => initialCached ?? []);
+  const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -38,11 +39,6 @@ export function ContentTypeList() {
 
   useEffect(() => {
     let active = true;
-    const cached = getCachedContentTypes();
-    if (cached) {
-      setTypes(cached);
-      setIsLoading(false);
-    }
     listContentTypesCached({ force: true })
       .then((result) => {
         if (!active) return;

@@ -39,7 +39,7 @@ export const authResetSchema = {
     email: {
       type: "string",
       minLength: 3,
-      pattern: "^[^\s@]+@[^\s@]+\.[^\s@]+$",
+      pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
     },
     captchaToken: { type: "string", minLength: 1 },
   },

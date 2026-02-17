@@ -117,14 +117,6 @@ const upsertCachedAdminThemeProfile = (item: AdminThemeProfile) => {
   primeAdminThemeProfilesCacheInternal(next);
 };
 
-const removeCachedAdminThemeProfile = (id: string) => {
-  const current = cachedAdminThemeProfiles ?? readAdminThemeProfilesCache();
-  if (!current) return;
-  primeAdminThemeProfilesCacheInternal(
-    current.filter((profile) => profile.id !== id)
-  );
-};
-
 const setActiveAdminThemeProfile = (id: string) => {
   const current = cachedAdminThemeProfiles ?? readAdminThemeProfilesCache();
   if (!current) return;

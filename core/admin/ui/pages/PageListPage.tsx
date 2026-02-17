@@ -90,12 +90,6 @@ export function PageListPage() {
   );
 
   useEffect(() => {
-    const cached = initialCached;
-    if (cached) {
-      setItems(cached);
-      setIsLoading(false);
-      hasHydratedRef.current = true;
-    }
     refresh({ force: true }).catch(() => undefined);
   }, [refresh]);
 

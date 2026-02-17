@@ -1,5 +1,5 @@
 import type { DragEvent, ReactElement } from "react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import type { MenuItemDisplay } from "@/ui/menus/types";
 import { MenuItemRow } from "@/ui/menus/MenuItemRow";
@@ -22,14 +22,14 @@ const renderTree = (
   dragId: string | null,
   hoverId: string | null,
   hoverIntent: MenuDropIntent,
-  onSelect: (item: MenuItemDisplay) => void,
+  onSelect: (item: MenuItemDisplay, eventTimeStamp: number) => void,
   onEdit: (item: MenuItemDisplay) => void,
   onDelete: (item: MenuItemDisplay) => void,
   onMove: (dragId: string, targetId: string, intent: MenuDropIntent) => void,
   setDragId: (value: string | null) => void,
   setHoverId: (value: string | null) => void,
   setHoverIntent: (value: MenuDropIntent) => void,
-  markDrag: () => void
+  markDrag: (eventTimeStamp: number) => void
 ): ReactElement[] =>
   items.flatMap((item): ReactElement[] => [
     <MenuItemRow
@@ -41,12 +41,12 @@ const renderTree = (
       onSelect={onSelect}
       onEdit={onEdit}
       onDelete={onDelete}
-      onDragStart={(dragItem) => {
-        markDrag();
+      onDragStart={(dragItem, event) => {
+        markDrag(event.timeStamp);
         setDragId(dragItem.id);
       }}
-      onDragEnd={() => {
-        markDrag();
+      onDragEnd={(event) => {
+        markDrag(event.timeStamp);
         setDragId(null);
         setHoverId(null);
         setHoverIntent("sibling");
@@ -56,9 +56,9 @@ const renderTree = (
         setHoverId(hovered.id);
         setHoverIntent(resolveDropIntent(event));
       }}
-      onDrop={(target) => {
+      onDrop={(target, event) => {
         if (!dragId || dragId === target.id) return;
-        markDrag();
+        markDrag(event.timeStamp);
         onMove(dragId, target.id, hoverIntent);
         setDragId(null);
         setHoverId(null);
@@ -107,15 +107,15 @@ export function MenuTree({
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [hoverIntent, setHoverIntent] = useState<MenuDropIntent>("sibling");
-  const suppressClickUntilRef = useRef(0);
+  const [suppressClickUntil, setSuppressClickUntil] = useState(0);
   const [rootDrop, setRootDrop] = useState<"start" | "end" | null>(null);
 
-  const markDrag = () => {
-    suppressClickUntilRef.current = Date.now() + CLICK_SUPPRESS_MS;
+  const markDrag = (eventTimeStamp: number) => {
+    setSuppressClickUntil(eventTimeStamp + CLICK_SUPPRESS_MS);
   };
 
-  const handleSelect = (item: MenuItemDisplay) => {
-    if (Date.now() < suppressClickUntilRef.current) return;
+  const handleSelect = (item: MenuItemDisplay, eventTimeStamp: number) => {
+    if (eventTimeStamp < suppressClickUntil) return;
     onSelect(item);
   };
 
@@ -128,7 +128,7 @@ export function MenuTree({
   const handleRootDrop = (event: DragEvent<HTMLDivElement>, position: "start" | "end") => {
     if (!dragId) return;
     event.preventDefault();
-    markDrag();
+    markDrag(event.timeStamp);
     onMoveToRoot(dragId, position);
     setDragId(null);
     setHoverId(null);

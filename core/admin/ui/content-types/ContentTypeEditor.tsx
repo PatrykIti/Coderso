@@ -157,7 +157,7 @@ export function ContentTypeEditor() {
     return () => {
       active = false;
     };
-  }, [refreshContentType, typeId]);
+  }, [applyContentType, refreshContentType, typeId]);
 
   useEffect(() => {
     if (!typeId) return;
