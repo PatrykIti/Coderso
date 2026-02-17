@@ -29,6 +29,11 @@ export const apiKeyScopeOptions: ApiKeyScopeOption[] = [
     description: "Upload, edit, and delete media assets.",
   },
   {
+    id: "forms.submit",
+    label: "Forms Submit",
+    description: "Submit internal forms via API key.",
+  },
+  {
     id: "settings.read",
     label: "Settings Read",
     description: "View configuration details and audit logs.",

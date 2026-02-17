@@ -236,6 +236,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-038-04 | Forms UI Wiring | Medium | Medium | UI -> API |
 | TASK-038-05 | Forms List and Editor Split | High | Large | list + /forms/:id editor |
 | TASK-038-06 | Form Embed Widget + Page Editor Tab | Medium | Large | form widget + page editor integration |
+| TASK-038-07 | Form Submission Access Modes | Medium | Medium | per-form public vs internal submissions |
 | TASK-039 | API Keys Core and UI | Medium | Medium | keys + scopes |
 | TASK-039-01 | API Keys DB and Service | Medium | Medium | api_keys table |
 | TASK-039-02 | API Keys API Routes | Medium | Medium | /settings/api-keys |

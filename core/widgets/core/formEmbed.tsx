@@ -45,6 +45,7 @@ export type FormEmbedResolvedData = {
   status?: string;
   successMessage?: string | null;
   successRedirectUrl?: string | null;
+  submissionAccess?: "public" | "internal";
   fields?: ResolvedFormField[];
   error?: string;
 };

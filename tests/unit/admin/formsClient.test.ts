@@ -72,6 +72,7 @@ test("createForm uses CSRF and posts payload", async () => {
       status: "draft",
       successMessage: "Thanks!",
       successRedirectUrl: "/thank-you",
+      submissionAccess: "internal",
     });
 
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
@@ -82,6 +83,7 @@ test("createForm uses CSRF and posts payload", async () => {
     expect(body.name).toBe("Contact form");
     expect(body.successMessage).toBe("Thanks!");
     expect(body.successRedirectUrl).toBe("/thank-you");
+    expect(body.submissionAccess).toBe("internal");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -110,6 +112,7 @@ test("listFormsCached reads from local storage", async () => {
         description: null,
         successMessage: null,
         successRedirectUrl: null,
+        submissionAccess: "public",
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
       },
@@ -156,6 +159,7 @@ test("getFormDetailCached reads from local storage", async () => {
         description: "Help desk",
         successMessage: null,
         successRedirectUrl: null,
+        submissionAccess: "public",
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
       },

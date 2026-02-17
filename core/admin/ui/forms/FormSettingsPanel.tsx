@@ -17,11 +17,13 @@ type FormSettingsPanelProps = {
   name: string;
   description: string;
   status: FormStatus;
+  submissionAccess: "public" | "internal";
   successMessage: string;
   successRedirectUrl: string;
   onNameChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onStatusChange: (value: FormStatus) => void;
+  onSubmissionAccessChange: (value: "public" | "internal") => void;
   onSuccessMessageChange: (value: string) => void;
   onSuccessRedirectUrlChange: (value: string) => void;
 };
@@ -30,11 +32,13 @@ export function FormSettingsPanel({
   name,
   description,
   status,
+  submissionAccess,
   successMessage,
   successRedirectUrl,
   onNameChange,
   onDescriptionChange,
   onStatusChange,
+  onSubmissionAccessChange,
   onSuccessMessageChange,
   onSuccessRedirectUrlChange,
 }: FormSettingsPanelProps) {
@@ -84,6 +88,27 @@ export function FormSettingsPanel({
                 <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Submission access
+            </label>
+            <Select
+              value={submissionAccess}
+              onValueChange={(value) => onSubmissionAccessChange(value as "public" | "internal")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select access" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">Public (recommended)</SelectItem>
+                <SelectItem value="internal">Internal (auth or API key)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Public forms use reCAPTCHA when enabled. Internal forms require an authenticated
+              admin session or an API key.
+            </p>
           </div>
           <div className="space-y-3 pt-2">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">

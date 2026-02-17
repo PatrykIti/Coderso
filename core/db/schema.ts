@@ -540,6 +540,7 @@ export const ipAllowlist = pgTable(
     description: text("description"),
     successMessage: text("success_message"),
     successRedirectUrl: text("success_redirect_url"),
+    submissionAccess: text("submission_access").notNull().default("public"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({
@@ -855,6 +856,7 @@ export const forms = pgTable(
     description: text("description"),
     successMessage: text("success_message"),
     successRedirectUrl: text("success_redirect_url"),
+    submissionAccess: text("submission_access").notNull().default("public"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

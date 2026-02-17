@@ -163,7 +163,7 @@ Zakres CMS, model danych, auth i security opisane sa w:
 ## Forms (v1)
 
 - Definicje formularzy sa w tabeli `forms`, pola w `form_fields`.
-- `forms` przechowuje fallback submission (success message + redirect URL).
+- `forms` przechowuje fallback submission (success message + redirect URL) oraz `submission_access` (public/internal).
 - Submissions trafiaja do `form_submissions` (payload JSONB, ip, userAgent).
 - Admin UI buduje formularze w `/forms` i zapisuje pola przez `/forms/:id/fields`.
 - Publiczny submit odbywa sie przez `POST /forms/:id/submissions`.

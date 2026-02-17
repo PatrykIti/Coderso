@@ -15,7 +15,8 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - Token pobierany z `GET /admin/api/auth/csrf`.
   - UI dodaje `X-CSRF-Token` do mutacji.
 - Bot protection (reCAPTCHA v3):
-  - `POST /auth/login`, `POST /auth/reset`, `POST /forms/:id/submissions`.
+  - `POST /auth/login`, `POST /auth/reset`, `POST /forms/:id/submissions` (public forms only).
+  - Internal forms (`submission_access=internal`) require admin session or API key and skip captcha by default.
   - Score thresholds per action (login/reset/public_write).
   - Moze byc wlaczone w dev (opcja `enforceOnLocalhost`).
 - Security headers:

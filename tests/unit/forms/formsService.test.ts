@@ -46,19 +46,23 @@ testIfDb("create/update/delete form", async () => {
     name,
     successMessage: "Thanks for reaching out.",
     successRedirectUrl: "/thank-you",
+    submissionAccess: "internal",
   });
   expect(form?.name).toBe(name);
   expect(form?.successMessage).toBe("Thanks for reaching out.");
   expect(form?.successRedirectUrl).toBe("/thank-you");
+  expect(form?.submissionAccess).toBe("internal");
 
   const updated = await updateForm(form.id, {
     name: `${name} Updated`,
     successMessage: "Got it!",
     successRedirectUrl: null,
+    submissionAccess: "public",
   });
   expect(updated?.name).toBe(`${name} Updated`);
   expect(updated?.successMessage).toBe("Got it!");
   expect(updated?.successRedirectUrl).toBeNull();
+  expect(updated?.submissionAccess).toBe("public");
 
   const deleted = await deleteForm(form.id);
   expect(deleted?.id).toBe(form.id);

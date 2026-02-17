@@ -8,9 +8,15 @@ import {
   updateForm,
 } from "../../services/forms/formsService";
 import {
+  evaluateSubmissionAccess,
+  normalizeSubmissionAccess,
+} from "../../services/forms/submissionAccess";
+import {
   listSubmissions,
   submitForm,
 } from "../../services/forms/submissionService";
+import { ApiError } from "../errorHandler";
+import { authenticateApiKey } from "../../services/security/apiKeyAuth";
 import { enforceBotProtection } from "../../services/security/botProtection";
 import { getSecuritySettings } from "../../services/settings/securitySettings";
 import {
@@ -24,6 +30,8 @@ export type RouteContext = {
   params: Record<string, string>;
   query: Record<string, string | undefined>;
   body: unknown;
+  headers?: Record<string, string | undefined>;
+  user?: { id: string; email?: string; name?: string | null };
   ip?: string;
   userAgent?: string;
 };
@@ -114,13 +122,42 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
     const normalized = normalizeSubmissionBody(ctx.body);
     validate(formSubmissionSchema, normalized);
     const body = normalized as SubmissionBody;
-    const securitySettings = await getSecuritySettings();
-    await enforceBotProtection({
-      token: body.captchaToken,
-      action: "public_write",
-      ip: ctx.ip,
-      settings: securitySettings.botProtection,
+
+    const form = await getForm(ctx.params.id);
+    if (!form) throw new Error("form_not_found");
+
+    const accessMode = normalizeSubmissionAccess(form.submissionAccess, "public");
+    const apiKey =
+      accessMode === "internal"
+        ? await authenticateApiKey(ctx.headers?.authorization ?? null)
+        : null;
+    const access = evaluateSubmissionAccess({
+      mode: accessMode,
+      isAuthenticated: Boolean(ctx.user),
+      apiKeyScopes: apiKey?.scopes,
     });
+
+    if (!access.allow) {
+      if (access.reason === "forbidden") {
+        throw new ApiError("forbidden", "Forbidden", 403);
+      }
+      throw new ApiError("auth_required", "Not authenticated", 401);
+    }
+
+    if (accessMode === "internal" && ctx.user) {
+      await requirePermission("forms:write")(ctx);
+    }
+
+    if (access.requireCaptcha) {
+      const securitySettings = await getSecuritySettings();
+      await enforceBotProtection({
+        token: body.captchaToken,
+        action: "public_write",
+        ip: ctx.ip,
+        settings: securitySettings.botProtection,
+      });
+    }
+
     return submitForm(ctx.params.id, body.data, {
       ip: ctx.ip,
       userAgent: ctx.userAgent,

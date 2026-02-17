@@ -98,6 +98,7 @@ type FormMetaState = {
   name: string;
   description: string;
   status: FormStatus;
+  submissionAccess: "public" | "internal";
   successMessage: string;
   successRedirectUrl: string;
 };
@@ -132,6 +133,7 @@ const toFormMeta = (form: FormRecord): FormMetaState => ({
   name: form.name ?? "",
   description: form.description ?? "",
   status: form.status ?? "draft",
+  submissionAccess: form.submissionAccess ?? "public",
   successMessage: form.successMessage ?? "",
   successRedirectUrl: form.successRedirectUrl ?? "",
 });
@@ -146,6 +148,7 @@ export function FormBuilderPage() {
     name: "",
     description: "",
     status: "draft",
+    submissionAccess: "public",
     successMessage: "",
     successRedirectUrl: "",
   });
@@ -349,6 +352,7 @@ export function FormBuilderPage() {
           name: meta.name,
           description: meta.description,
           status: meta.status,
+          submissionAccess: meta.submissionAccess,
           successMessage: meta.successMessage,
           successRedirectUrl: meta.successRedirectUrl,
         }),
@@ -405,6 +409,7 @@ export function FormBuilderPage() {
             name={meta.name}
             description={meta.description}
             status={meta.status}
+            submissionAccess={meta.submissionAccess}
             successMessage={meta.successMessage}
             successRedirectUrl={meta.successRedirectUrl}
             onNameChange={(value) => {
@@ -417,6 +422,10 @@ export function FormBuilderPage() {
             }}
             onStatusChange={(value) => {
               setMeta((prev) => ({ ...prev, status: value }));
+              setUnsavedChanges(true);
+            }}
+            onSubmissionAccessChange={(value) => {
+              setMeta((prev) => ({ ...prev, submissionAccess: value }));
               setUnsavedChanges(true);
             }}
             onSuccessMessageChange={(value) => {
@@ -582,6 +591,7 @@ export function FormBuilderPage() {
                 name={meta.name}
                 description={meta.description}
                 status={meta.status}
+                submissionAccess={meta.submissionAccess}
                 successMessage={meta.successMessage}
                 successRedirectUrl={meta.successRedirectUrl}
                 onNameChange={(value) => {
@@ -594,6 +604,10 @@ export function FormBuilderPage() {
                 }}
                 onStatusChange={(value) => {
                   setMeta((prev) => ({ ...prev, status: value }));
+                  setUnsavedChanges(true);
+                }}
+                onSubmissionAccessChange={(value) => {
+                  setMeta((prev) => ({ ...prev, submissionAccess: value }));
                   setUnsavedChanges(true);
                 }}
                 onSuccessMessageChange={(value) => {

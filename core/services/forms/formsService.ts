@@ -3,6 +3,10 @@ import { asc, desc, eq } from "drizzle-orm";
 import { db } from "../../db/client";
 import { formFields, forms } from "../../db/schema";
 import {
+  normalizeSubmissionAccess,
+  type SubmissionAccessMode,
+} from "./submissionAccess";
+import {
   deriveFormSlug,
   normalizeFormFields,
   type FormFieldInput,
@@ -18,6 +22,7 @@ export type FormCreateInput = {
   description?: string | null;
   successMessage?: string | null;
   successRedirectUrl?: string | null;
+  submissionAccess?: SubmissionAccessMode;
 };
 
 export type FormUpdateInput = {
@@ -27,6 +32,7 @@ export type FormUpdateInput = {
   description?: string | null;
   successMessage?: string | null;
   successRedirectUrl?: string | null;
+  submissionAccess?: SubmissionAccessMode;
 };
 
 const allowedStatuses = new Set<FormStatus>(["draft", "published", "archived"]);
@@ -83,6 +89,7 @@ export async function createForm(input: FormCreateInput) {
   const description = normalizeDescription(input.description);
   const successMessage = normalizeSuccessMessage(input.successMessage);
   const successRedirectUrl = normalizeSuccessRedirectUrl(input.successRedirectUrl);
+  const submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
 
   const existing = await db.select({ id: forms.id }).from(forms).where(eq(forms.slug, slug));
   if (existing.length > 0) throw new Error("form_slug_exists");
@@ -97,6 +104,7 @@ export async function createForm(input: FormCreateInput) {
       description,
       successMessage,
       successRedirectUrl,
+      submissionAccess,
       createdAt: now,
       updatedAt: now,
     })
@@ -144,6 +152,10 @@ export async function updateForm(id: string, input: FormUpdateInput) {
 
   if (input.successRedirectUrl !== undefined) {
     update.successRedirectUrl = normalizeSuccessRedirectUrl(input.successRedirectUrl);
+  }
+
+  if (input.submissionAccess !== undefined) {
+    update.submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
   }
 
   const [row] = await db

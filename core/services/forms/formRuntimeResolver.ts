@@ -7,6 +7,7 @@ export type FormRuntimeResolution = {
   status: string;
   successMessage: string | null;
   successRedirectUrl: string | null;
+  submissionAccess: "public" | "internal";
   fields: ReturnType<typeof toFieldRecord>[];
   error?: string;
 };
@@ -24,6 +25,7 @@ export async function resolveFormRuntimeData(
       status: "missing",
       successMessage: null,
       successRedirectUrl: null,
+      submissionAccess: "public",
       fields: [],
       error: "form_not_found",
     };
@@ -37,6 +39,7 @@ export async function resolveFormRuntimeData(
       status: form.status,
       successMessage: form.successMessage ?? null,
       successRedirectUrl: form.successRedirectUrl ?? null,
+      submissionAccess: form.submissionAccess ?? "public",
       fields: [],
       error: "form_unpublished",
     };
@@ -50,6 +53,7 @@ export async function resolveFormRuntimeData(
     status: form.status,
     successMessage: form.successMessage ?? null,
     successRedirectUrl: form.successRedirectUrl ?? null,
+    submissionAccess: form.submissionAccess ?? "public",
     fields: fields.map((field) => toFieldRecord(field)),
   };
 }

@@ -262,3 +262,4 @@ Project Change Log.
 *Details of changes are in the linked files.*
 | 227 | 2026-02-17 | Forms editor split and embed widget | Admin/UI |
 | 228 | 2026-02-17 | Forms submission fallback settings | CMS/Forms |
+| 229 | 2026-02-17 | Forms submission access modes | Core/Security |

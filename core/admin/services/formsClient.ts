@@ -13,6 +13,7 @@ export type FormRecord = {
   description: string | null;
   successMessage: string | null;
   successRedirectUrl: string | null;
+  submissionAccess: "public" | "internal";
   createdAt: string;
   updatedAt: string;
 };
@@ -49,6 +50,7 @@ export type FormCreateInput = {
   description?: string | null;
   successMessage?: string | null;
   successRedirectUrl?: string | null;
+  submissionAccess?: "public" | "internal";
 };
 
 export type FormUpdateInput = {
@@ -58,6 +60,7 @@ export type FormUpdateInput = {
   description?: string | null;
   successMessage?: string | null;
   successRedirectUrl?: string | null;
+  submissionAccess?: "public" | "internal";
 };
 
 export type FormFieldInput = {

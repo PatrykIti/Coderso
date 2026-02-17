@@ -182,6 +182,8 @@ function FormSelection({
 }) {
   const { items: forms, isLoading } = useForms();
   const normalized = normalizeValue(value);
+  const selectedForm = forms.find((form) => form.id === normalized.formId) ?? null;
+  const isInternal = selectedForm?.submissionAccess === "internal";
 
   return (
     <EditorSection title="Form selection" description="Pick the saved form to embed.">
@@ -210,11 +212,20 @@ function FormSelection({
                 <Badge variant={form.status === "published" ? "default" : "outline"}>
                   {form.status}
                 </Badge>
+                {form.submissionAccess === "internal" ? (
+                  <Badge variant="outline">Internal</Badge>
+                ) : null}
               </div>
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
+      {isInternal ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+          Internal submissions require an authenticated admin session or an API key with the
+          <span className="font-semibold"> forms.submit </span>scope. Avoid embedding this form on public pages.
+        </div>
+      ) : null}
     </EditorSection>
   );
 }

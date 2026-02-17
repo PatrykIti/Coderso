@@ -1597,13 +1597,15 @@ Permissions: `forms:read`, `forms:write`
   "status": "draft",
   "description": "Customer support form",
   "successMessage": "Thanks for reaching out!",
-  "successRedirectUrl": "/thank-you"
+  "successRedirectUrl": "/thank-you",
+  "submissionAccess": "public"
 }
 ```
 
 Opcjonalne pola:
 - `successMessage`: fallback dla sukcesu submission (uzywane, gdy widget nie ma override).
 - `successRedirectUrl`: po sukcesie przekierowuje na podany URL.
+- `submissionAccess`: `public` (default) lub `internal` (wymaga sesji admina lub API key).
 
 `PUT /forms/:id/fields`
 
