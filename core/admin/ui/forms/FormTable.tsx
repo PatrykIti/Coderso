@@ -86,16 +86,16 @@ export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTablePr
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
-            <TableHead className="min-w-[14rem] pl-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <TableHead className="min-w-[14rem] pl-6 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Form name
             </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
+            <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
               Status
             </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
+            <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
               Last updated
             </TableHead>
-            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <TableHead className="w-12 pr-6 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Actions
             </TableHead>
           </TableRow>
@@ -105,7 +105,7 @@ export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTablePr
             <TableRow>
               <TableCell
                 colSpan={4}
-                className="py-10 text-center text-sm text-muted-foreground"
+                className="px-6 py-12 text-center text-sm text-muted-foreground"
               >
                 {emptyMessage ?? "No forms yet. Create your first form to get started."}
               </TableCell>
@@ -113,7 +113,7 @@ export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTablePr
           ) : null}
           {items.map((form) => (
             <TableRow key={form.id}>
-              <TableCell className="py-6 pl-4">
+              <TableCell className="py-6 pl-6">
                 <div className="flex flex-col">
                   <AdminLink
                     href={`/forms/${encodeURIComponent(form.id)}`}
@@ -139,7 +139,7 @@ export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTablePr
                   </div>
                 </div>
               </TableCell>
-              <TableCell className="hidden py-6 md:table-cell">
+              <TableCell className="hidden px-4 py-6 md:table-cell">
                 <Badge
                   variant="outline"
                   className={statusStyles[form.status] ?? statusStyles.draft}
@@ -147,10 +147,10 @@ export function FormTable({ items, emptyMessage, onEdit, onDelete }: FormTablePr
                   {statusLabels[form.status] ?? form.status}
                 </Badge>
               </TableCell>
-              <TableCell className="hidden py-6 text-sm text-muted-foreground lg:table-cell">
+              <TableCell className="hidden px-4 py-6 text-sm text-muted-foreground lg:table-cell">
                 {formatDate(form.updatedAt)}
               </TableCell>
-              <TableCell className="w-12 py-6 pr-4 text-right">
+              <TableCell className="w-12 py-6 pr-6 text-right">
                 <FormRowActions formId={form.id} onEdit={onEdit} onDelete={onDelete} />
               </TableCell>
             </TableRow>
