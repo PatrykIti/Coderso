@@ -31,6 +31,17 @@ export function toErrorResponse(error: unknown): ApiErrorResponse {
     };
   }
 
+  const isDev = process.env.NODE_ENV !== "production";
+  if (isDev && error instanceof Error) {
+    return {
+      error: {
+        code: "internal_error",
+        message: error.message || "Unexpected error",
+        details: error.stack ? { stack: error.stack } : undefined,
+      },
+    };
+  }
+
   return {
     error: {
       code: "internal_error",

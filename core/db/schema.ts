@@ -538,9 +538,6 @@ export const ipAllowlist = pgTable(
     cidr: text("cidr").notNull().unique(),
     label: text("label"),
     description: text("description"),
-    successMessage: text("success_message"),
-    successRedirectUrl: text("success_redirect_url"),
-    submissionAccess: text("submission_access").notNull().default("public"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({
