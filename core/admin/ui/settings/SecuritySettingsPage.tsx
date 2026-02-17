@@ -346,7 +346,7 @@ type RateLimitPreset = {
   };
 };
 
-const RATE_LIMIT_PRESETS: RateLimitPreset[] = [
+export const RATE_LIMIT_PRESETS: RateLimitPreset[] = [
   {
     id: "wordpress",
     label: "WordPress-like",
@@ -378,15 +378,15 @@ const RATE_LIMIT_PRESETS: RateLimitPreset[] = [
   {
     id: "relaxed",
     label: "Relaxed",
-    description: "High throughput or internal staging use.",
-    enabled: false,
+    description: "Higher limits for heavy admin workflows while keeping protections on.",
+    enabled: true,
     buckets: {
-      auth: { windowSeconds: "60", maxRequests: "10" },
-      admin_read: { windowSeconds: "60", maxRequests: "600" },
-      admin_write: { windowSeconds: "60", maxRequests: "120" },
-      public_read: { windowSeconds: "60", maxRequests: "300" },
-      public_write: { windowSeconds: "60", maxRequests: "30" },
-      assistant: { windowSeconds: "60", maxRequests: "30" },
+      auth: { windowSeconds: "60", maxRequests: "20" },
+      admin_read: { windowSeconds: "60", maxRequests: "3000" },
+      admin_write: { windowSeconds: "60", maxRequests: "600" },
+      public_read: { windowSeconds: "60", maxRequests: "600" },
+      public_write: { windowSeconds: "60", maxRequests: "90" },
+      assistant: { windowSeconds: "60", maxRequests: "90" },
     },
   },
 ];

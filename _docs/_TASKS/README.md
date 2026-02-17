@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 41 tasks
-- **In Progress:** 0 tasks
-- **Done:** 311 tasks
+- **To Do:** 35 tasks
+- **In Progress:** 1 task
+- **Done:** 316 tasks
 
 ---
 
@@ -38,12 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-01 | Coderso Information Architecture and Naming | High | Medium | Naming contract and module boundaries |
-| TASK-054-02 | Coderso Sidebar Navigation and Permissions | High | Medium | Collapsible nav + RBAC visibility |
-| TASK-054-03 | Coderso Routes and Backward Compatibility | High | Medium | Canonical coderso paths + legacy aliases |
-| TASK-054-04 | Coderso Module Shell and Responsive Behavior | Medium | Medium | Desktop/mobile shell consistency |
-| TASK-054-05 | Coderso Docs and Regression Tests | Medium | Medium | Navigation docs + tests |
 | TASK-054-06 | Coderso Module Catalog and Tiers | High | Medium | Full module registry + release tiers |
 | TASK-054-07 | Coderso Dynamic Data and Listing Suite | High | Large | Query/listing templates and dynamic cards |
 | TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted filters + scoped search |
@@ -86,6 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 
 ---
 
@@ -93,6 +88,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-05 | Coderso Docs and Regression Tests | Medium | Medium | Navigation docs + tests |
+| TASK-054-04 | Coderso Module Shell and Responsive Behavior | Medium | Medium | Desktop/mobile shell consistency |
+| TASK-054-03 | Coderso Routes and Backward Compatibility | High | Medium | Canonical coderso paths + legacy aliases |
+| TASK-054-02 | Coderso Sidebar Navigation and Permissions | High | Medium | Collapsible nav + RBAC visibility |
+| TASK-054-01 | Coderso Information Architecture and Naming | High | Medium | Naming contract and module boundaries |
 | TASK-053-08 | Admin SPA Navigation and Prefetch | High | Large | SPA route transitions + optional hover/focus prefetch |
 | TASK-053-08-01 | Admin Router Core | High | Medium | History-based admin router context |
 | TASK-053-08-02 | Admin Links and Redirects | High | Medium | Internal `AdminLink` + hard-redirect exceptions |

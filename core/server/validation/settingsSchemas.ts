@@ -247,5 +247,14 @@ export const securitySettingsSchema = {
         singleSession: { type: "boolean" },
       },
     },
+    loginAlerts: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        enabled: { type: "boolean" },
+        notifyOnNewDevice: { type: "boolean" },
+        notifyOnNewLocation: { type: "boolean" },
+      },
+    },
   },
 };
