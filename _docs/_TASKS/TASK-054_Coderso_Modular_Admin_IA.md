@@ -14,11 +14,14 @@ Introduce `Coderso` as an umbrella section in admin sidebar, with expandable mod
 
 This task defines IA, naming, routing, responsive behavior, and backward compatibility so the UX stays user-friendly for non-technical users while preserving existing deep links.
 
+The target is a WordPress-like, low-code experience similar in breadth to Crocoblock's JetPlugins stack, but implemented natively in Nextless architecture.
+
 ## Goals
 - Add a single sidebar root node: `Coderso`.
 - Keep feature names explicit and friendly inside the group.
 - Preserve existing URLs and shortcuts through redirects/aliases.
 - Keep behavior consistent on desktop and mobile.
+- Define a scalable module catalog so users can build complete business websites without custom code.
 
 ## Non-Goals
 - Rebuild all module internals in this task.
@@ -31,6 +34,7 @@ This task defines IA, naming, routing, responsive behavior, and backward compati
 3. Redirect compatibility for old paths and bookmarks.
 4. Responsive behavior for expanded/collapsed navigation.
 5. Documentation and regression test coverage.
+6. Module roadmap parity with major Crocoblock capabilities (data, listing, filters, booking, forms, commerce, engagement).
 
 ---
 
@@ -40,6 +44,14 @@ This task defines IA, naming, routing, responsive behavior, and backward compati
 - `TASK-054-03_Coderso_Routes_and_Backward_Compatibility.md`
 - `TASK-054-04_Coderso_Module_Shell_and_Responsive_Behavior.md`
 - `TASK-054-05_Coderso_Docs_and_Regression_Tests.md`
+- `TASK-054-06_Coderso_Module_Catalog_and_Tiers.md`
+- `TASK-054-07_Coderso_Dynamic_Data_and_Listing_Suite.md`
+- `TASK-054-08_Coderso_Filters_and_Search_Suite.md`
+- `TASK-054-09_Coderso_Forms_and_Automation_Suite.md`
+- `TASK-054-10_Coderso_Booking_and_Appointment_Suite.md`
+- `TASK-054-11_Coderso_Commerce_Suite.md`
+- `TASK-054-12_Coderso_Menu_Popup_Reviews_Engagement_Suite.md`
+- `TASK-054-13_Coderso_Solution_Kits_and_AI_Wizard.md`
 
 ---
 
@@ -49,6 +61,7 @@ This task defines IA, naming, routing, responsive behavior, and backward compati
 3. Mobile navigation and desktop behavior remain consistent.
 4. Search/navigation labels are understandable for non-technical users.
 5. Unit tests cover nav state, active item, redirects, and permission gates.
+6. Module catalog and implementation order are defined for full-site builds (including service businesses such as automotive workshops).
 
 ---
 

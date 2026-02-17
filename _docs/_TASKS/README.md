@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 25 tasks
+- **To Do:** 33 tasks
 - **In Progress:** 0 tasks
 - **Done:** 311 tasks
 
@@ -44,6 +44,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-03 | Coderso Routes and Backward Compatibility | High | Medium | Canonical coderso paths + legacy aliases |
 | TASK-054-04 | Coderso Module Shell and Responsive Behavior | Medium | Medium | Desktop/mobile shell consistency |
 | TASK-054-05 | Coderso Docs and Regression Tests | Medium | Medium | Navigation docs + tests |
+| TASK-054-06 | Coderso Module Catalog and Tiers | High | Medium | Full module registry + release tiers |
+| TASK-054-07 | Coderso Dynamic Data and Listing Suite | High | Large | Query/listing templates and dynamic cards |
+| TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted filters + scoped search |
+| TASK-054-09 | Coderso Forms and Automation Suite | High | Large | Form actions, automation, action logs |
+| TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Services/resources/schedules/reservations |
+| TASK-054-11 | Coderso Commerce Suite | Medium | Large | Product templates, compare, wishlist, tables |
+| TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
+| TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
 | TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts flow on top of content engine |
 | TASK-055-01 | Posts Domain Model and API Contract | High | Medium | `post` type abstraction + API aliases |
 | TASK-055-02 | Posts List Screen (WordPress-Like Table) | High | Medium | Pages-like editorial list UX |
