@@ -36,7 +36,8 @@ import {
   type WidgetTemplateStatus,
 } from "@/services/widgetTemplatesClient";
 import {
-  listWidgetTemplateCategories,
+  getCachedWidgetTemplateCategories,
+  listWidgetTemplateCategoriesCached,
   type WidgetTemplateCategory,
 } from "@/services/widgetTemplateCategoriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
@@ -171,6 +172,7 @@ export function WidgetTemplateEditorPage() {
   const isNew = !templateId || templateId === "new";
 
   const widgets = useMemo(() => listRegisteredWidgets(), []);
+  const initialCategories = getCachedWidgetTemplateCategories();
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -186,7 +188,7 @@ export function WidgetTemplateEditorPage() {
   >("all");
   const [templateCategories, setTemplateCategories] = useState<
     WidgetTemplateCategory[]
-  >([]);
+  >(() => initialCategories ?? []);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -477,21 +479,36 @@ export function WidgetTemplateEditorPage() {
     });
   }, [templateId]);
 
+  const refreshCategories = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const force = options?.force ?? false;
+      const background = options?.background ?? Boolean(initialCategories);
+      if (!background) {
+        setCategoriesError(null);
+      }
+      try {
+        const result = await listWidgetTemplateCategoriesCached({ force });
+        setTemplateCategories(result);
+        setCategoriesError(null);
+      } catch {
+        if (!background) {
+          setCategoriesError("Failed to load categories.");
+        }
+      }
+    },
+    [initialCategories]
+  );
+
   useEffect(() => {
-    let active = true;
-    listWidgetTemplateCategories()
-      .then((result) => {
-        if (!active) return;
-        setTemplateCategories(result.items);
-      })
-      .catch(() => {
-        if (!active) return;
-        setCategoriesError("Failed to load categories.");
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    refreshCategories({ force: true, background: true }).catch(() => undefined);
+  }, [refreshCategories]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.widgetTemplateCategoriesList) return;
+      refreshCategories({ force: true, background: true }).catch(() => undefined);
+    });
+  }, [refreshCategories]);
 
   useEffect(() => {
     if (category || templateCategories.length === 0) return;

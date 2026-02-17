@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Columns,
@@ -21,9 +21,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { getPageCached, listPagesCached, updatePage, type PageSummary } from "@/services/pagesClient";
+import { cacheKeys } from "@/services/cachePolicy";
+import { getCachedPages, getPageCached, listPagesCached, updatePage, type PageSummary } from "@/services/pagesClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
-import { listWidgetCatalog, type WidgetCatalogItem } from "@/services/widgetsClient";
+import { getCachedWidgetCatalog, listWidgetCatalogCached, type WidgetCatalogItem } from "@/services/widgetsClient";
 import {
   createWidgetTemplate,
   getWidgetTemplateCached,
@@ -32,7 +33,8 @@ import {
 import {
   createWidgetTemplateCategory,
   deleteWidgetTemplateCategory,
-  listWidgetTemplateCategories,
+  getCachedWidgetTemplateCategories,
+  listWidgetTemplateCategoriesCached,
   updateWidgetTemplateCategory,
   type WidgetTemplateCategory,
 } from "@/services/widgetTemplateCategoriesClient";
@@ -41,6 +43,7 @@ import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
   getWidgetSlotKind,
   isSlotIdMatchingDefinition,
@@ -232,6 +235,14 @@ function renderPreview(kind: WidgetPreview) {
 }
 
 export function WidgetLibraryPage() {
+  const initialCatalog = getCachedWidgetCatalog();
+  const initialCategories = getCachedWidgetTemplateCategories();
+  const initialPages = getCachedPages();
+  const hasHydratedRef = useRef({
+    catalog: Boolean(initialCatalog),
+    categories: Boolean(initialCategories),
+    pages: Boolean(initialPages),
+  });
   const [query, setQuery] = useState("");
   const [view, setView] = useState<WidgetView>("grid");
   const [activeScope, setActiveScope] = useState<LibraryScope>("all-items");
@@ -239,10 +250,10 @@ export function WidgetLibraryPage() {
     useState<WidgetCategoryFilter>("all");
   const [templateCategory, setTemplateCategory] =
     useState<TemplateCategoryFilter>("all");
-  const [catalogItems, setCatalogItems] = useState<WidgetCatalogItem[]>([]);
+  const [catalogItems, setCatalogItems] = useState<WidgetCatalogItem[]>(() => initialCatalog ?? []);
   const [templateCategories, setTemplateCategories] = useState<
     WidgetTemplateCategory[]
-  >([]);
+  >(() => initialCategories ?? []);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [favoritesError, setFavoritesError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -255,7 +266,7 @@ export function WidgetLibraryPage() {
   const [insertWidget, setInsertWidget] = useState<WidgetWithPreview | null>(
     null
   );
-  const [pages, setPages] = useState<PageSummary[]>([]);
+  const [pages, setPages] = useState<PageSummary[]>(() => initialPages ?? []);
   const [pagesError, setPagesError] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
@@ -297,21 +308,30 @@ export function WidgetLibraryPage() {
     }));
   }, [catalogItems, favoriteIds]);
 
-  useEffect(() => {
-    let active = true;
-    listPagesCached({ force: true })
-      .then((result) => {
-        if (!active) return;
+  const refreshPages = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const force = options?.force ?? false;
+      const background = options?.background ?? hasHydratedRef.current.pages;
+      if (!background) {
+        setPagesError(null);
+      }
+      try {
+        const result = await listPagesCached({ force });
         setPages(result);
-      })
-      .catch(() => {
-        if (!active) return;
-        setPagesError("Failed to load pages.");
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+        setPagesError(null);
+        hasHydratedRef.current.pages = true;
+      } catch {
+        if (!background) {
+          setPagesError("Failed to load pages.");
+        }
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    refreshPages({ force: true, background: true }).catch(() => undefined);
+  }, [refreshPages]);
 
   useEffect(() => {
     let active = true;
@@ -333,60 +353,77 @@ export function WidgetLibraryPage() {
     };
   }, []);
 
+  const refreshCatalog = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const force = options?.force ?? false;
+      const background = options?.background ?? hasHydratedRef.current.catalog;
+      if (!background) {
+        setCatalogError(null);
+      }
+      try {
+        const result = await listWidgetCatalogCached({ force });
+        setCatalogItems(result);
+        setCatalogError(null);
+        hasHydratedRef.current.catalog = true;
+      } catch {
+        if (!background) {
+          setCatalogError("Failed to load widget catalog.");
+        }
+      }
+    },
+    []
+  );
+
+  const refreshCategories = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const force = options?.force ?? false;
+      const background = options?.background ?? hasHydratedRef.current.categories;
+      if (!background) {
+        setCategoriesError(null);
+      }
+      try {
+        const result = await listWidgetTemplateCategoriesCached({ force });
+        setTemplateCategories(result);
+        setCategoriesError(null);
+        hasHydratedRef.current.categories = true;
+      } catch {
+        if (!background) {
+          setCategoriesError("Failed to load categories.");
+        }
+      }
+    },
+    []
+  );
+
   const reloadCatalog = async () => {
-    try {
-      const result = await listWidgetCatalog();
-      setCatalogItems(result.items);
-      setCatalogError(null);
-    } catch {
-      setCatalogError("Failed to load widget catalog.");
-    }
+    await refreshCatalog({ force: true, background: false });
   };
 
   const reloadCategories = async () => {
-    try {
-      const result = await listWidgetTemplateCategories();
-      setTemplateCategories(result.items);
-      setCategoriesError(null);
-    } catch {
-      setCategoriesError("Failed to load categories.");
-    }
+    await refreshCategories({ force: true, background: false });
   };
 
   useEffect(() => {
-    let active = true;
-    listWidgetCatalog()
-      .then((result) => {
-        if (!active) return;
-        setCatalogItems(result.items);
-        setCatalogError(null);
-      })
-      .catch(() => {
-        if (!active) return;
-        setCatalogError("Failed to load widget catalog.");
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    refreshCatalog({ force: true, background: true }).catch(() => undefined);
+  }, [refreshCatalog]);
 
   useEffect(() => {
-    let active = true;
-    listWidgetTemplateCategories()
-      .then((result) => {
-        if (!active) return;
-        setTemplateCategories(result.items);
-        setCategoriesError(null);
-      })
-      .catch(() => {
-        if (!active) return;
-        setCategoriesError("Failed to load categories.");
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    refreshCategories({ force: true, background: true }).catch(() => undefined);
+  }, [refreshCategories]);
 
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key === cacheKeys.widgetCatalogList) {
+        refreshCatalog({ force: true, background: true }).catch(() => undefined);
+      }
+      if (event.key === cacheKeys.widgetTemplateCategoriesList) {
+        refreshCategories({ force: true, background: true }).catch(() => undefined);
+      }
+      if (event.key === cacheKeys.pagesList) {
+        refreshPages({ force: true, background: true }).catch(() => undefined);
+      }
+    });
+  }, [refreshCatalog, refreshCategories, refreshPages]);
   const widgetCategoryCounts = useMemo(() => {
     const counts: Record<WidgetCategoryId, number> = {
       layout: 0,

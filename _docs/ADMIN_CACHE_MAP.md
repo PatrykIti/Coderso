@@ -32,7 +32,7 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 ## Widget Templates
 - Template editor
   - UI: `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx`
-  - Cached APIs: `getWidgetTemplateCached`
+  - Cached APIs: `getWidgetTemplateCached`, `listWidgetTemplateCategoriesCached`, `getCachedWidgetTemplateCategories`
 - Templates list hook
   - UI: `core/admin/ui/widgets/hooks/useWidgetTemplates.ts`
   - Cached APIs: `listWidgetTemplatesCached`, `getCachedWidgetTemplates`
@@ -41,7 +41,8 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cached APIs: `getWidgetTemplateCached`, `getPageCached`
 - Widget library
   - UI: `core/admin/ui/widgets/WidgetLibraryPage.tsx`
-  - Cached APIs: `listPagesCached`, `getPageCached`, `getWidgetTemplateCached`
+  - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listWidgetTemplateCategoriesCached`, `getCachedWidgetTemplateCategories`, `listPagesCached`, `getCachedPages`, `getPageCached`
+
 
 ## Media
 - Media library

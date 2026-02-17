@@ -1,6 +1,7 @@
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
+import { clearWidgetCatalogCache } from "@/services/widgetsClient";
 import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
 import type { WidgetTemplateSettings } from "../../services/widgets/widgetTemplateSettings";
 
@@ -55,6 +56,11 @@ const readWidgetTemplateDetailCache = (id: string) =>
 
 const writeWidgetTemplateDetailCache = (item: WidgetTemplate) => {
   writeLocalCache(cacheKeys.widgetTemplateDetail(item.id), item);
+};
+
+const notifyWidgetCatalogUpdate = (action: "update" | "invalidate") => {
+  clearWidgetCatalogCache();
+  broadcastCacheEvent({ key: cacheKeys.widgetCatalogList, action });
 };
 
 const primeWidgetTemplatesCacheInternal = (items: WidgetTemplate[]) => {
@@ -169,6 +175,7 @@ export async function createWidgetTemplate(payload: WidgetTemplateCreate) {
       key: cacheKeys.widgetTemplateDetail(created.id),
       action: "update",
     });
+    notifyWidgetCatalogUpdate("update");
   }
   return created;
 }
@@ -193,6 +200,7 @@ export async function updateWidgetTemplate(
       key: cacheKeys.widgetTemplateDetail(updated.id),
       action: "update",
     });
+    notifyWidgetCatalogUpdate("update");
   }
   return updated;
 }
@@ -210,6 +218,7 @@ export async function deleteWidgetTemplate(id: string) {
       key: cacheKeys.widgetTemplateDetail(id),
       action: "invalidate",
     });
+    notifyWidgetCatalogUpdate("invalidate");
   }
   return result;
 }

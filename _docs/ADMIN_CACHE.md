@@ -31,6 +31,8 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `contentTypes:detail:<id>`
 - `menus:list`
 - `menus:detail:<id>`
+- `widgetCatalog:list`
+- `widgetTemplateCategories:list`
 - `widgetTemplates:list`
 - `widgetTemplates:detail:<id>`
 - `media:list`

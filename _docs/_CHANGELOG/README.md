@@ -252,6 +252,8 @@ Project Change Log.
 | 222 | 2026-02-16 | Settings UI polish + content type editor fix | Admin/UI |
 | 223 | 2026-02-16 | Menu editor cache + drag nesting | Admin/UI |
 | 204 | 2026-02-15 | Security hardening and settings UX | Core/Security |
+| 224 | 2026-02-17 | Widget library cache hydration | Admin/UI |
+
 
 ---
 *Details of changes are in the linked files.*

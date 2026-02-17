@@ -1,18 +1,38 @@
 import { expect, test } from "bun:test";
 
 import {
+  clearWidgetTemplateCategoriesCache,
   createWidgetTemplateCategory,
   deleteWidgetTemplateCategory,
   listWidgetTemplateCategories,
+  listWidgetTemplateCategoriesCached,
   updateWidgetTemplateCategory,
 } from "../../../core/admin/services/widgetTemplateCategoriesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
+
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+const resetCaches = () => {
+  clearWidgetTemplateCategoriesCache();
+};
 
 test("listWidgetTemplateCategories hits /widget-template-categories", async () => {
   const originalFetch = globalThis.fetch;
@@ -30,6 +50,40 @@ test("listWidgetTemplateCategories hits /widget-template-categories", async () =
     expect(calls[0]?.init?.method).toBe("GET");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("listWidgetTemplateCategoriesCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const storage = createLocalStorage();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ items: [] });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCaches();
+    const cached = [{ id: "cat1", name: "Footer" }];
+    storage.setItem(
+      cacheKeys.widgetTemplateCategoriesList,
+      JSON.stringify({ value: cached, savedAt: Date.now() })
+    );
+
+    const result = await listWidgetTemplateCategoriesCached();
+    expect(result).toEqual(cached);
+    expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches();
   }
 });
 
