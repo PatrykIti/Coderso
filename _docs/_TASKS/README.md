@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 35 tasks
+- **To Do:** 34 tasks
 - **In Progress:** 1 task
-- **Done:** 316 tasks
+- **Done:** 317 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-06 | Coderso Module Catalog and Tiers | High | Medium | Full module registry + release tiers |
 | TASK-054-07 | Coderso Dynamic Data and Listing Suite | High | Large | Query/listing templates and dynamic cards |
 | TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted filters + scoped search |
 | TASK-054-09 | Coderso Forms and Automation Suite | High | Large | Form actions, automation, action logs |
@@ -88,6 +87,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-06 | Coderso Module Catalog and Tiers | High | Medium | Full module registry + release tiers |
 | TASK-054-05 | Coderso Docs and Regression Tests | Medium | Medium | Navigation docs + tests |
 | TASK-054-04 | Coderso Module Shell and Responsive Behavior | Medium | Medium | Desktop/mobile shell consistency |
 | TASK-054-03 | Coderso Routes and Backward Compatibility | High | Medium | Canonical coderso paths + legacy aliases |

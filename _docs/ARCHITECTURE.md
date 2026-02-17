@@ -48,12 +48,18 @@ przez `setup.completed=true`.
 ## Coderso admin IA (TASK-054)
 
 - W admin sidebar jest jeden nadrzedny modul: `Coderso`.
-- Moduly v1:
+- Domyslne moduly v1 (widoczne w sidebar):
   - `Engine` (`/admin/coderso/engine`) - content model builder (content types + schema).
   - `Entries` (`/admin/coderso/entries`) - wpisy rekordow typow z Engine.
   - `Widgets` (`/admin/coderso/widgets`) - biblioteka widgetow i template editor.
   - `Forms` (`/admin/coderso/forms`) - lista i edytor formularzy.
   - `Posts` (`/admin/coderso/posts`) - dedykowany workflow edytorski (TASK-055).
+- Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
+  jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`
+  i opisany w `_docs/CODERSO_MODULES.md`.
+- Sidebar Coderso jest budowany z rejestru przez
+  `buildDefaultNavSections(flags)` + `buildCodersoNavItems(flags)`,
+  co pozwala wlaczac przyszle moduly przez feature flags bez przepisywania menu.
 - Legacy sciezki admina sa wspierane przez aliasy i normalizowane do canonical routes
   (np. `/admin/content-types` -> `/admin/coderso/engine`).
 - Alias dziala rowniez dla nested routes (np. `/admin/content-types/:id/schema`).

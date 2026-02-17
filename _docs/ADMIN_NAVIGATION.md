@@ -6,12 +6,16 @@ internal screens. This reduces loading flashes and keeps cached data warm.
 
 ## Coderso IA (TASK-054)
 - Sidebar now includes a single expandable group: `Coderso`.
-- Coderso modules (v1):
+- Coderso modules are sourced from registry: `core/admin/ui/navigation/codersoModules.ts`.
+- Default (enabled) Coderso modules:
   - `Engine` -> `/admin/coderso/engine`
   - `Entries` -> `/admin/coderso/entries`
   - `Widgets` -> `/admin/coderso/widgets`
   - `Forms` -> `/admin/coderso/forms`
   - `Posts` -> `/admin/coderso/posts` (placeholder until TASK-055)
+- Tiered catalog (v1-v3) is documented in `_docs/CODERSO_MODULES.md`.
+- Sidebar can expose future modules through feature flags passed to
+  `buildDefaultNavSections(flags)` (`CodersoFeatureFlags`).
 - Group collapse state is persisted in local storage (`nextless.admin.navGroupState`).
 - On mobile, selecting a Coderso child route closes the drawer automatically.
 

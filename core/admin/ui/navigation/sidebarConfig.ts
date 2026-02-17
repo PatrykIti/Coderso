@@ -3,9 +3,6 @@ import {
   Activity,
   ArrowLeftRight,
   BarChart3,
-  Blocks,
-  ClipboardList,
-  Database,
   FileText,
   HardDrive,
   Image,
@@ -20,8 +17,13 @@ import {
   Shuffle,
   Store,
   Users,
-  Layers,
+  Blocks,
 } from "lucide-react";
+
+import {
+  buildCodersoNavItems,
+  type CodersoFeatureFlags,
+} from "@/ui/navigation/codersoModules";
 
 export type NavItem = {
   label: string;
@@ -46,7 +48,9 @@ export type NavSection = {
   groups?: NavGroup[];
 };
 
-export const defaultNavSections: NavSection[] = [
+export const buildDefaultNavSections = (
+  codersoFeatureFlags: CodersoFeatureFlags = {}
+): NavSection[] => [
   {
     title: "Main",
     items: [
@@ -61,32 +65,17 @@ export const defaultNavSections: NavSection[] = [
         label: "Coderso",
         icon: Blocks,
         defaultExpanded: true,
-        items: [
-          { label: "Engine", href: "/admin/coderso/engine", icon: Database },
-          { label: "Entries", href: "/admin/coderso/entries", icon: Layers },
-          { label: "Widgets", href: "/admin/coderso/widgets", icon: Blocks },
-          { label: "Forms", href: "/admin/coderso/forms", icon: ClipboardList },
-          {
-            label: "Posts",
-            href: "/admin/coderso/posts",
-            icon: FileText,
-            badge: "Soon",
-          },
-        ],
+        items: buildCodersoNavItems(codersoFeatureFlags),
       },
     ],
   },
   {
     title: "Store",
-    items: [
-      { label: "Plugin Store", href: "/admin/store", icon: Store },
-    ],
+    items: [{ label: "Plugin Store", href: "/admin/store", icon: Store }],
   },
   {
     title: "Visual",
-    items: [
-      { label: "Admin UI Theme", href: "/admin/themes", icon: Palette },
-    ],
+    items: [{ label: "Admin UI Theme", href: "/admin/themes", icon: Palette }],
   },
   {
     title: "Tools",
@@ -95,7 +84,11 @@ export const defaultNavSections: NavSection[] = [
       { label: "SEO Manager", href: "/admin/seo", icon: ShieldCheck },
       { label: "Analytics", href: "/admin/analytics", icon: BarChart3 },
       { label: "Backups", href: "/admin/backups", icon: HardDrive },
-      { label: "Import / Export", href: "/admin/tools/import-export", icon: ArrowLeftRight },
+      {
+        label: "Import / Export",
+        href: "/admin/tools/import-export",
+        icon: ArrowLeftRight,
+      },
       { label: "Redirects", href: "/admin/redirects", icon: Shuffle },
     ],
   },
@@ -110,6 +103,8 @@ export const defaultNavSections: NavSection[] = [
     ],
   },
 ];
+
+export const defaultNavSections: NavSection[] = buildDefaultNavSections();
 
 export const defaultFooterItems: NavItem[] = [
   { label: "Docs", href: "https://nextless.dev/docs", icon: FileText },

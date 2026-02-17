@@ -1,64 +1,66 @@
-# Coderso Modules Map (WordPress-like, Composite-first)
+# Coderso Modules Catalog
 
-## Purpose
-Single source of truth for Coderso module architecture, coverage targets, and implementation phases.
+Source of truth for Coderso module scope, tiering, and navigation rollout.
 
-## Reference Parity (Crocoblock families)
-- Dynamic data/listings: JetEngine, JetGridBuilder
-- Filters/search: JetSmartFilters, JetSearch
-- Forms/automation: JetFormBuilder
-- Booking/appointments: JetBooking, JetAppointment
-- UI engagement: JetMenu, JetPopup, JetReviews
-- Commerce: JetWooBuilder + related Woo tools
+## Registry Contract
+- Runtime registry lives in `core/admin/ui/navigation/codersoModules.ts`.
+- Every module defines:
+  - `id`, `label`, `tier`, `ownerArea`, `lifecycle`
+  - `description`, `dependencies`
+  - optional `nav` config (`href`, `icon`, `defaultEnabled`, `badge`)
+- Sidebar group `Coderso` is generated from registry via `buildCodersoNavItems(flags)`.
 
-## Coderso Principle
-- Default UX for non-technical users:
-  1. Solution Kits
-  2. Composite widgets
-  3. Atomic widgets only in advanced mode
+## Tier Overview
 
-## Module Catalog
+### v1 Core Builder
+| Module | Owner | Lifecycle | Default Nav |
+|---|---|---|---|
+| Engine | content | stable | Yes |
+| Entries | content | stable | Yes |
+| Widgets | design | stable | Yes |
+| Templates | design | stable | No (managed inside Widgets flows) |
+| Forms | forms | stable | Yes |
+| Posts | content | planned | Yes (`Soon`) |
 
-### Core Builder (Foundation)
-- Engine
-- Entries
-- Posts
-- Widgets
-- Templates
-- Forms
+### v2 Business Builder
+| Module | Owner | Lifecycle | Default Nav |
+|---|---|---|---|
+| Listings | operations | planned | No |
+| Filters | operations | planned | No |
+| Search | operations | planned | No |
+| Booking | operations | planned | No |
+| Appointments | operations | planned | No |
+| Reviews | operations | planned | No |
 
-### Business Builder
-- Listings
-- Filters
-- Search
-- Booking
-- Appointments
-- Reviews
+### v3 Growth Builder
+| Module | Owner | Lifecycle | Default Nav |
+|---|---|---|---|
+| Commerce | growth | planned | No |
+| Popups | marketing | planned | No |
+| Mega Menu | design | planned | No |
+| Portal | platform | planned | No |
+| Multilingual | platform | planned | No |
+| Solution Kits | growth | planned | No |
 
-### Growth Builder
-- Commerce
-- Popups
-- Mega Menu
-- Portal/Membership
-- Multilingual/i18n
-- AI Builder Wizard
+## Navigation Rollout Rules
+1. `defaultEnabled=true` modules appear in sidebar by default.
+2. `defaultEnabled=false` modules are hidden unless enabled by feature flags.
+3. Feature flags are passed as `CodersoFeatureFlags` to `buildDefaultNavSections(flags)`.
+4. Planned modules should keep badge `Soon` when exposed before full delivery.
 
-## Coverage Matrix (High level)
-- Company website + blog: Core Builder only
-- Service business lead gen: Core Builder + Forms + Listings + Filters
-- Appointment websites: + Booking/Appointments
-- Directory website: + Listings + Filters + Search + Reviews
-- Small commerce: + Commerce + Filters + Reviews
-- Client portal website: + Portal/Membership + Forms + Listings
-- Multilingual company website: + Multilingual/i18n + localized templates/posts
+## Feature Flag Example
 
-## Readiness Gates
-A module can be marked stable only if:
-- Composite pack minimum is met
-- Security baseline is green
-- Performance budget is green
-- Docs and migration notes are complete
+```ts
+import { buildDefaultNavSections } from "@/ui/navigation/sidebarConfig";
 
-## Links to Tasks
-- `TASK-054-06`..`TASK-054-21`
-- `TASK-055` posts workflow
+const sections = buildDefaultNavSections({
+  listings: true,
+  filters: true,
+  search: true,
+});
+```
+
+## Dependency Notes
+- Listings/Filters/Search depend on Engine + Entries foundation.
+- Booking/Appointments/Reviews depend on Forms + Listings.
+- Growth modules depend on v2 data/query modules and kits/templates contracts.

@@ -265,3 +265,4 @@ Project Change Log.
 | 229 | 2026-02-17 | Forms submission access modes | Core/Security |
 | 230 | 2026-02-17 | Forms submission nonce guard | Core/Security |
 | 231 | 2026-02-17 | Coderso admin IA and routing foundation | Admin/UI |
+| 232 | 2026-02-17 | Coderso module catalog and tiers | Admin/UI |
