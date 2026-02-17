@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import type { NavItem, NavSection } from "@/ui/navigation/sidebarConfig";
 
 const defaultBrand = (
@@ -56,9 +57,10 @@ export function SidebarNav({
                 const Icon = item.icon;
                 const isActive = activeHref === item.href;
                 return (
-                  <a
+                  <AdminLink
                     key={item.href}
                     href={item.href}
+                    prefetch
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
                       isActive &&
@@ -72,7 +74,7 @@ export function SidebarNav({
                         {item.badge}
                       </Badge>
                     ) : null}
-                  </a>
+                  </AdminLink>
                 );
               })}
             </div>
@@ -84,14 +86,15 @@ export function SidebarNav({
           {footerItems.map((item) => {
             const Icon = item.icon;
             return (
-              <a
+              <AdminLink
                 key={item.href}
                 href={item.href}
+                prefetch
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]"
               >
                 <Icon className="h-4 w-4" />
                 {item.label}
-              </a>
+              </AdminLink>
             );
           })}
         </div>

@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import {
   Table,
   TableBody,
@@ -76,13 +77,13 @@ export function ContentTypeTable({
                 <TableRow key={type.id}>
                   <TableCell className="pl-4 py-4">
                     <div className="space-y-1">
-                      <a
+                      <AdminLink
                         href={editHref}
                         className="text-sm font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                         aria-label={`Edit content type: ${type.name}`}
                       >
                         {type.name}
-                      </a>
+                      </AdminLink>
                       <p className="text-xs text-muted-foreground">
                         {type.fieldCount} fields
                       </p>
@@ -101,7 +102,7 @@ export function ContentTypeTable({
                   </TableCell>
                   <TableCell className="py-4 pr-4 text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <a href={editHref}>Edit</a>
+                      <AdminLink href={editHref}>Edit</AdminLink>
                     </Button>
                   </TableCell>
                 </TableRow>

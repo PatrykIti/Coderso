@@ -254,6 +254,8 @@ Project Change Log.
 | 204 | 2026-02-15 | Security hardening and settings UX | Core/Security |
 | 224 | 2026-02-17 | Widget library cache hydration | Admin/UI |
 
+| 225 | 2026-02-17 | Admin SPA navigation + prefetch | Admin/UI |
+
 
 ---
 *Details of changes are in the linked files.*

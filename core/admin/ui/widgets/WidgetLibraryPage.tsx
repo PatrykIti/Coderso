@@ -39,8 +39,10 @@ import {
   type WidgetTemplateCategory,
 } from "@/services/widgetTemplateCategoriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -272,6 +274,7 @@ export function WidgetLibraryPage() {
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [insertError, setInsertError] = useState<string | null>(null);
   const adminBasePath = useAdminBasePath();
+  const { navigate } = useAdminRouter();
   const templateCreateHref = resolveAdminHref(adminBasePath, "/admin/widgets/templates/new");
   const templateEditHref = (id: string) =>
     resolveAdminHref(adminBasePath, `/admin/widgets/templates/${id}`);
@@ -693,12 +696,12 @@ export function WidgetLibraryPage() {
       category: payload.category,
       blocks: payload.blocks,
     });
-    window.location.assign(templateEditHref(created.id));
+    navigate(templateEditHref(created.id));
   };
 
   const handleEditTemplate = (widget: WidgetWithPreview | null) => {
     if (!widget || widget.source !== "template") return;
-    window.location.assign(templateEditHref(widget.id));
+    navigate(templateEditHref(widget.id));
   };
 
   const favoriteWidgets = useMemo(
@@ -930,10 +933,10 @@ export function WidgetLibraryPage() {
               <div className="flex items-center gap-2">
                 {showTemplateAction ? (
                   <Button size="sm" variant="outline" className="gap-2" asChild>
-                    <a href={templateCreateHref}>
+                    <AdminLink href={templateCreateHref}>
                       <Plus className="h-4 w-4" />
                       New Template
-                    </a>
+                    </AdminLink>
                   </Button>
                 ) : null}
                 {showWidgetAction ? (

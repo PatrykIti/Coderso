@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { listRecentSearches } from "@/services/searchClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
 import {
   SearchResults,
@@ -45,6 +46,7 @@ function filterGroups(groups: SearchGroup[], value: ContentFilter) {
 
 export function SearchPage() {
   const [query, setQuery] = useState("");
+  const { navigate } = useAdminRouter();
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentError, setRecentError] = useState<string | null>(null);
@@ -95,10 +97,9 @@ export function SearchPage() {
   );
 
   const handleSelect = (item: SearchGroup["items"][number]) => {
-    if (typeof window === "undefined") return;
     const destination = resolveSearchDestination(item);
     if (destination) {
-      window.location.assign(destination);
+      navigate(destination);
     }
   };
 

@@ -22,7 +22,7 @@ import {
 } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
-import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { PageFilters } from "./PageFilters";
@@ -48,7 +48,7 @@ export function filterPages(
 }
 
 export function PageListPage() {
-  const basePath = resolveAdminBasePath();
+  const { navigate } = useAdminRouter();
   const initialCached = getCachedPages();
   const [items, setItems] = useState<PageSummary[]>(() => initialCached ?? []);
   const [createOpen, setCreateOpen] = useState(false);
@@ -153,10 +153,8 @@ export function PageListPage() {
         template: payload.template,
         data: { blocks: [], settings: { template: payload.template } },
       });
-      if (payload.openAfterCreate && typeof window !== "undefined") {
-        window.location.assign(
-          withAdminBasePath(basePath, `/pages/${encodeURIComponent(page.id)}`)
-        );
+      if (payload.openAfterCreate) {
+        navigate(`/pages/${encodeURIComponent(page.id)}`);
         return;
       }
       await refresh({ force: true, background: true });
@@ -173,11 +171,7 @@ export function PageListPage() {
   };
 
   const handleEdit = (id: string) => {
-    if (typeof window !== "undefined") {
-      window.location.assign(
-        withAdminBasePath(basePath, `/pages/${encodeURIComponent(id)}`)
-      );
-    }
+    navigate(`/pages/${encodeURIComponent(id)}`);
   };
 
   const handlePreview = async (id: string) => {
@@ -228,11 +222,7 @@ export function PageListPage() {
     setError(null);
     try {
       const clone = await duplicatePage(id);
-      if (typeof window !== "undefined") {
-        window.location.assign(
-          withAdminBasePath(basePath, `/pages/${encodeURIComponent(clone.id)}`)
-        );
-      }
+      navigate(`/pages/${encodeURIComponent(clone.id)}`);
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);

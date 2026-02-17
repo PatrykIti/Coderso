@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
 import { SearchResults, type SearchItem } from "./SearchResults";
 import { resolveSearchDestination } from "./searchNavigation";
@@ -10,6 +11,7 @@ import { useSearchResults } from "./useSearchResults";
 
 export function SearchBar() {
   const [query, setQuery] = useState("");
+  const { navigate } = useAdminRouter();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const { normalizedQuery, shouldSearch, groups, loading, error } =
@@ -23,11 +25,9 @@ export function SearchBar() {
     totalItems > 0 ? Math.min(activeIndex, totalItems - 1) : 0;
 
   const handleSelect = (item: SearchItem) => {
-    if (typeof window !== "undefined") {
-      const destination = resolveSearchDestination(item);
-      if (destination) {
-        window.location.assign(destination);
-      }
+    const destination = resolveSearchDestination(item);
+    if (destination) {
+      navigate(destination);
     }
     setQuery("");
     setActiveIndex(0);

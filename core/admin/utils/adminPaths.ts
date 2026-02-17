@@ -1,7 +1,8 @@
 export const DEFAULT_ADMIN_PATH = "/admin";
 
 const normalizePath = (input: string) => {
-  const base = input.split("?")[0] ?? input;
+  const withoutHash = input.split("#")[0] ?? input;
+  const base = withoutHash.split("?")[0] ?? withoutHash;
   if (base.length > 1 && base.endsWith("/")) return base.slice(0, -1);
   return base;
 };

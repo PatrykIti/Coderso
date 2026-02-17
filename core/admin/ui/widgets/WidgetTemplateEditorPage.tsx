@@ -41,6 +41,7 @@ import {
   type WidgetTemplateCategory,
 } from "@/services/widgetTemplateCategoriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
@@ -165,6 +166,7 @@ const resolveTemplateId = (pathname: string) => {
 
 export function WidgetTemplateEditorPage() {
   const adminBasePath = useAdminBasePath();
+  const { navigate } = useAdminRouter();
   const [templateId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return resolveTemplateId(window.location.pathname);
@@ -536,9 +538,7 @@ export function WidgetTemplateEditorPage() {
           blocks,
           settings: templateSettings,
         });
-        window.location.assign(
-          resolveAdminHref(adminBasePath, `/admin/widgets/templates/${created.id}`)
-        );
+        navigate(resolveAdminHref(adminBasePath, `/admin/widgets/templates/${created.id}`));
         return;
       }
       if (!templateId) return;
@@ -563,7 +563,7 @@ export function WidgetTemplateEditorPage() {
 
   const handleDiscard = () => {
     if (isNew) {
-      window.location.assign(resolveAdminHref(adminBasePath, "/admin/widgets"));
+      navigate(resolveAdminHref(adminBasePath, "/admin/widgets"));
       return;
     }
     void loadTemplate();

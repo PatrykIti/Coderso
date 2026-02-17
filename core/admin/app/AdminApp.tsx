@@ -72,11 +72,13 @@ import { DEFAULT_ADMIN_THEME_TOKENS } from "../../services/adminThemes/tokenType
 import { mergeAdminThemeTokens } from "../../services/adminThemes/tokenUtils";
 import { assertAdminThemeTokens } from "../../services/adminThemes/tokenValidation";
 import {
+  DEFAULT_ADMIN_PATH,
   resolveAdminBasePath,
   stripAdminBasePath,
   withAdminBasePath,
 } from "@/utils/adminPaths";
 import { AdminBasePathProvider } from "@/ui/contexts/AdminBasePathContext";
+import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
 const publicRoutes = new Set([
   "/login",
@@ -92,7 +94,8 @@ type RouteMatch = {
 };
 
 const normalizePath = (input: string) => {
-  const base = input.split("?")[0] ?? input;
+  const withoutHash = input.split("#")[0] ?? input;
+  const base = withoutHash.split("?")[0] ?? withoutHash;
   if (base.length > 1 && base.endsWith("/")) return base.slice(0, -1);
   return base;
 };
@@ -349,12 +352,17 @@ const buildAssistantSettingsUpdate = (
 });
 
 type AdminAppProps = {
-  path: string;
+  path?: string;
 };
 
 export function AdminApp({ path }: AdminAppProps) {
-  const normalizedPath = normalizePath(path);
-  const adminBasePath = resolveAdminBasePath(path);
+  const router = useOptionalAdminRouter();
+  const resolvedPath =
+    router?.path ??
+    path ??
+    (typeof window !== "undefined" ? window.location.pathname : DEFAULT_ADMIN_PATH);
+  const normalizedPath = normalizePath(resolvedPath);
+  const adminBasePath = resolveAdminBasePath(resolvedPath);
   const relativePath = stripAdminBasePath(normalizedPath, adminBasePath);
   const isAdminPath =
     normalizedPath === adminBasePath || normalizedPath.startsWith(`${adminBasePath}/`);

@@ -2,9 +2,14 @@ import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import { AdminApp, shouldShowSetupWizard } from "../../../core/admin/app/AdminApp";
+import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 
 test("AdminApp renders theme tokens during loading state", () => {
-  const html = renderToString(<AdminApp path="/admin/pages" />);
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/pages">
+      <AdminApp path="/admin/pages" />
+    </AdminRouterProvider>
+  );
   expect(html).toContain("nextless-theme-tokens");
   expect(html).toContain("Loading...");
 });

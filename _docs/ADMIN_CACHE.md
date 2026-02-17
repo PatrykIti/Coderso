@@ -37,6 +37,13 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `widgetTemplates:detail:<id>`
 - `media:list`
 
+## Prefetch
+- Sidebar navigation can trigger optional prefetch on hover/focus.
+- Prefetch only hits cached list endpoints (safe, no editor state).
+- Prefetch uses cache TTL + throttling to avoid repeated requests.
+- Implemented via `AdminLink` + `prefetchAdminRoute`.
+
+
 ## Cross-tab Sync
 `core/admin/utils/cacheBus.ts` broadcasts cache events:
 - Primary: `BroadcastChannel`.

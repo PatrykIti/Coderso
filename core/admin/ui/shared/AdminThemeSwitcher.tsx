@@ -2,6 +2,7 @@ import { Palette } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,7 +96,7 @@ export function AdminThemeSwitcher() {
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <a href={withAdminBasePath(basePath, "/themes")}>Manage themes</a>
+          <AdminLink href={withAdminBasePath(basePath, "/themes")}>Manage themes</AdminLink>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

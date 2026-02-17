@@ -81,3 +81,14 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Relation field suggestions
   - UI: `core/admin/ui/entries/FieldRenderer.tsx`
   - Cached APIs: `listEntriesCached`
+
+
+## Prefetch Routes
+- `/pages` -> `listPagesCached`
+- `/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
+- `/content-types` -> `listContentTypesCached`
+- `/entries` -> `listContentTypesCached`
+- `/menus` -> `listMenusCached`
+- `/media` -> `listMediaCached`
+- `/themes` -> `listPagesCached`, `listContentTypesCached`
+
