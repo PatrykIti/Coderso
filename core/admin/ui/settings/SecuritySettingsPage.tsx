@@ -368,11 +368,11 @@ export const RATE_LIMIT_PRESETS: RateLimitPreset[] = [
     enabled: true,
     buckets: {
       auth: { windowSeconds: "60", maxRequests: "5" },
-      admin_read: { windowSeconds: "60", maxRequests: "300" },
-      admin_write: { windowSeconds: "60", maxRequests: "60" },
-      public_read: { windowSeconds: "60", maxRequests: "150" },
-      public_write: { windowSeconds: "60", maxRequests: "15" },
-      assistant: { windowSeconds: "60", maxRequests: "15" },
+      admin_read: { windowSeconds: "60", maxRequests: "180" },
+      admin_write: { windowSeconds: "60", maxRequests: "45" },
+      public_read: { windowSeconds: "60", maxRequests: "120" },
+      public_write: { windowSeconds: "60", maxRequests: "10" },
+      assistant: { windowSeconds: "60", maxRequests: "10" },
     },
   },
   {
