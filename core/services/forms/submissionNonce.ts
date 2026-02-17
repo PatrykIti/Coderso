@@ -1,0 +1,81 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+import { ApiError } from "../../server/errorHandler";
+
+const DEFAULT_TTL_MINUTES = 10;
+const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
+
+const resolveSecret = () => {
+  const secret = process.env.FORM_SUBMIT_NONCE_SECRET?.trim();
+  if (!secret) {
+    throw new ApiError(
+      "form_nonce_secret_missing",
+      "Form submission nonce secret is missing",
+      500
+    );
+  }
+  return secret;
+};
+
+const resolveTtlMs = () => {
+  const raw = process.env.FORM_SUBMIT_NONCE_TTL_MINUTES;
+  if (!raw) return DEFAULT_TTL_MINUTES * 60 * 1000;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return DEFAULT_TTL_MINUTES * 60 * 1000;
+  }
+  return parsed * 60 * 1000;
+};
+
+const signPayload = (secret: string, payload: string) =>
+  createHmac("sha256", secret).update(payload).digest("hex");
+
+export function createFormSubmissionNonce(formId: string, now = Date.now()) {
+  const secret = resolveSecret();
+  const timestamp = Math.floor(now);
+  const payload = `${formId}.${timestamp}`;
+  const signature = signPayload(secret, payload);
+  return `${timestamp}.${signature}`;
+}
+
+export function assertFormSubmissionNonce(
+  formId: string,
+  nonce: string | null | undefined,
+  now = Date.now()
+) {
+  if (!nonce) {
+    throw new ApiError("form_nonce_required", "Form submission nonce is required", 400);
+  }
+
+  const [timestampRaw, signature] = nonce.split(".");
+  if (!timestampRaw || !signature) {
+    throw new ApiError("form_nonce_invalid", "Form submission nonce is invalid", 400);
+  }
+
+  const timestamp = Number(timestampRaw);
+  if (!Number.isFinite(timestamp)) {
+    throw new ApiError("form_nonce_invalid", "Form submission nonce is invalid", 400);
+  }
+
+  if (timestamp > now + MAX_FUTURE_SKEW_MS) {
+    throw new ApiError("form_nonce_invalid", "Form submission nonce is invalid", 400);
+  }
+
+  const ttlMs = resolveTtlMs();
+  if (now - timestamp > ttlMs) {
+    throw new ApiError("form_nonce_expired", "Form submission nonce expired", 403);
+  }
+
+  const secret = resolveSecret();
+  const payload = `${formId}.${timestamp}`;
+  const expected = signPayload(secret, payload);
+
+  const expectedBuf = Buffer.from(expected, "utf8");
+  const signatureBuf = Buffer.from(signature, "utf8");
+  const sameLength = expectedBuf.length === signatureBuf.length;
+  const matches = sameLength && timingSafeEqual(expectedBuf, signatureBuf);
+
+  if (!matches) {
+    throw new ApiError("form_nonce_invalid", "Form submission nonce is invalid", 403);
+  }
+}

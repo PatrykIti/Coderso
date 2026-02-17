@@ -46,6 +46,7 @@ export type FormEmbedResolvedData = {
   successMessage?: string | null;
   successRedirectUrl?: string | null;
   submissionAccess?: "public" | "internal";
+  submissionNonce?: string | null;
   fields?: ResolvedFormField[];
   error?: string;
 };
@@ -490,6 +491,13 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
               action={formAction}
               data-form-id={normalizedData.formId}
             >
+              {resolved?.submissionNonce ? (
+                <input
+                  type="hidden"
+                  name="__nl_form_nonce"
+                  value={resolved.submissionNonce}
+                />
+              ) : null}
               {fields.map((field) => (
                 <div key={field.id}>
                   {renderFieldControl(field, {

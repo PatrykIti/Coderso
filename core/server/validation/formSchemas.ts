@@ -50,6 +50,7 @@ export const formSubmissionSchema = {
   properties: {
     data: { type: "object" },
     captchaToken: { type: "string", minLength: 1 },
+    formNonce: { type: "string", minLength: 1 },
   },
   additionalProperties: false,
 };

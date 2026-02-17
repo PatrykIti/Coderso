@@ -62,6 +62,33 @@ test("form embed falls back to resolved success message", () => {
   expect(html).toContain("We received your request.");
 });
 
+test("form embed renders submission nonce when resolved", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Support",
+          submissionNonce: "nonce-value",
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('name="__nl_form_nonce"');
+  expect(html).toContain('value="nonce-value"');
+});
+
 test("form embed validator accepts schema", () => {
   clearWidgets();
   const widget = createFormEmbedWidget({

@@ -16,6 +16,7 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - UI dodaje `X-CSRF-Token` do mutacji.
 - Bot protection (reCAPTCHA v3):
   - `POST /auth/login`, `POST /auth/reset`, `POST /forms/:id/submissions` (public forms only).
+  - Publiczny submit formularza wymaga dodatkowo HMAC nonce (`__nl_form_nonce`) z `FORM_SUBMIT_NONCE_SECRET` (TTL domyslnie 10 minut).
   - Internal forms (`submission_access=internal`) require admin session or API key and skip captcha by default.
   - Score thresholds per action (login/reset/public_write).
   - Moze byc wlaczone w dev (opcja `enforceOnLocalhost`).

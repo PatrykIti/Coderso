@@ -11,6 +11,7 @@ import {
   evaluateSubmissionAccess,
   normalizeSubmissionAccess,
 } from "../../services/forms/submissionAccess";
+import { assertFormSubmissionNonce } from "../../services/forms/submissionNonce";
 import {
   listSubmissions,
   submitForm,
@@ -51,7 +52,11 @@ export type FormsRouteDeps = {
   validate: (schema: unknown, payload: unknown) => void;
 };
 
-type SubmissionBody = { data: Record<string, unknown>; captchaToken?: string };
+type SubmissionBody = {
+  data: Record<string, unknown>;
+  captchaToken?: string;
+  formNonce?: string;
+};
 
 const normalizeSubmissionBody = (body: unknown): SubmissionBody => {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -59,14 +64,27 @@ const normalizeSubmissionBody = (body: unknown): SubmissionBody => {
   }
 
   const payload = body as Record<string, unknown>;
+  const resolveToken = (value: unknown) =>
+    typeof value === "string" && value.trim().length > 0 ? value : undefined;
+
   if ("data" in payload && typeof payload.data === "object" && payload.data !== null) {
-    return payload as SubmissionBody;
+    const captchaToken = resolveToken(payload.captchaToken);
+    const formNonce = resolveToken(payload.formNonce);
+    return {
+      data: payload.data as Record<string, unknown>,
+      ...(captchaToken ? { captchaToken } : {}),
+      ...(formNonce ? { formNonce } : {}),
+    };
   }
 
-  const { captchaToken, ...rest } = payload;
+  const { captchaToken, formNonce, __nl_form_nonce, ...rest } = payload;
+  const resolvedCaptcha = resolveToken(captchaToken);
+  const resolvedFormNonce = resolveToken(formNonce) ?? resolveToken(__nl_form_nonce);
+
   return {
     data: rest,
-    ...(captchaToken !== undefined ? { captchaToken: captchaToken as string } : {}),
+    ...(resolvedCaptcha ? { captchaToken: resolvedCaptcha } : {}),
+    ...(resolvedFormNonce ? { formNonce: resolvedFormNonce } : {}),
   };
 };
 
@@ -149,6 +167,7 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
     }
 
     if (access.requireCaptcha) {
+      assertFormSubmissionNonce(form.id, body.formNonce);
       const securitySettings = await getSecuritySettings();
       await enforceBotProtection({
         token: body.captchaToken,

@@ -1,4 +1,5 @@
 import { getForm, listFormFields, toFieldRecord } from "./formsService";
+import { createFormSubmissionNonce } from "./submissionNonce";
 
 export type FormRuntimeResolution = {
   formId: string;
@@ -8,6 +9,7 @@ export type FormRuntimeResolution = {
   successMessage: string | null;
   successRedirectUrl: string | null;
   submissionAccess: "public" | "internal";
+  submissionNonce?: string | null;
   fields: ReturnType<typeof toFieldRecord>[];
   error?: string;
 };
@@ -26,6 +28,7 @@ export async function resolveFormRuntimeData(
       successMessage: null,
       successRedirectUrl: null,
       submissionAccess: "public",
+      submissionNonce: null,
       fields: [],
       error: "form_not_found",
     };
@@ -40,6 +43,8 @@ export async function resolveFormRuntimeData(
       successMessage: form.successMessage ?? null,
       successRedirectUrl: form.successRedirectUrl ?? null,
       submissionAccess: form.submissionAccess ?? "public",
+      submissionNonce:
+        form.submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
       fields: [],
       error: "form_unpublished",
     };
@@ -54,6 +59,8 @@ export async function resolveFormRuntimeData(
     successMessage: form.successMessage ?? null,
     successRedirectUrl: form.successRedirectUrl ?? null,
     submissionAccess: form.submissionAccess ?? "public",
+    submissionNonce:
+      form.submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
     fields: fields.map((field) => toFieldRecord(field)),
   };
 }

@@ -1631,13 +1631,15 @@ Opcjonalne pola:
     "full_name": "Patryk",
     "email": "patryk@example.com"
   },
-  "captchaToken": "optional"
+  "captchaToken": "optional",
+  "formNonce": "optional"
 }
 ```
 
 Uwagi:
 - Payload submission jest walidowany na podstawie definicji pol.
 - Publiczny submit podlega rate limitowi; CSRF obowiazuje dla sesji admina.
+- Publiczny submit wymaga `formNonce` (HMAC nonce). W HTML formach jest renderowany jako hidden `__nl_form_nonce`.
 
 ---
 
