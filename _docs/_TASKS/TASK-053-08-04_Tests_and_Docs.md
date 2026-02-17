@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-053-08-01..03  
-**Status:** Planned  
+**Status:** Done (2026-02-17)  
 
 ---
 
@@ -30,4 +30,3 @@
   - add prefetch mapping table
 - `_docs/_CHANGELOG/*.md`
   - new entry: Admin SPA navigation + prefetch
-

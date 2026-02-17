@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Core/Platform  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-053-08  
-**Status:** Planned  
+**Status:** Done (2026-02-17)  
 
 ---
 
@@ -65,4 +65,3 @@ const normalizedPath = normalizePath(path);
 ## Acceptance Criteria
 - `AdminApp` reacts to `history.pushState` + `popstate` without reload.
 - `AdminApp` uses context `path` instead of prop for route matching.
-

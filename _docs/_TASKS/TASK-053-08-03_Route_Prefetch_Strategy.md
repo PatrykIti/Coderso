@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-053-08-01  
-**Status:** Planned  
+**Status:** Done (2026-02-17)  
 
 ---
 
@@ -50,4 +50,3 @@ function prefetch(href) {
 - Hovering sidebar item triggers prefetch without blocking UI.
 - Prefetch does not override unsaved state (list endpoints only).
 - Prefetch remains optional and safe.
-

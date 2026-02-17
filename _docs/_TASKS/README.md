@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 12 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 0 tasks
-- **Done:** 306 tasks
+- **Done:** 311 tasks
 
 ---
 
@@ -38,6 +38,19 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
+| TASK-054-01 | Coderso Information Architecture and Naming | High | Medium | Naming contract and module boundaries |
+| TASK-054-02 | Coderso Sidebar Navigation and Permissions | High | Medium | Collapsible nav + RBAC visibility |
+| TASK-054-03 | Coderso Routes and Backward Compatibility | High | Medium | Canonical coderso paths + legacy aliases |
+| TASK-054-04 | Coderso Module Shell and Responsive Behavior | Medium | Medium | Desktop/mobile shell consistency |
+| TASK-054-05 | Coderso Docs and Regression Tests | Medium | Medium | Navigation docs + tests |
+| TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts flow on top of content engine |
+| TASK-055-01 | Posts Domain Model and API Contract | High | Medium | `post` type abstraction + API aliases |
+| TASK-055-02 | Posts List Screen (WordPress-Like Table) | High | Medium | Pages-like editorial list UX |
+| TASK-055-03 | Post Editor Workflow and Metadata Panels | High | Large | Draft/publish/editor metadata workflow |
+| TASK-055-04 | Posts Widget/Template Binding and Query Controls | High | Medium | Widget source preset + query controls |
+| TASK-055-05 | Posts Public Routes and Rendering | High | Medium | List/detail runtime routes + templates |
+| TASK-055-06 | Posts Tests, Migrations, and Documentation | Medium | Medium | QA, idempotent bootstrap, docs |
 | TASK-020-11 | Security Hardening + Settings UX | High | Large | Auth/public/admin protection & UX presets |
 | TASK-020-11-01 | Rate Limit Buckets + Keying | High | Medium | New buckets + keying strategy |
 | TASK-020-11-02 | Auth Hardening + Bot Protection | High | Medium | Login throttling + CAPTCHA |
@@ -64,6 +77,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-053-08 | Admin SPA Navigation and Prefetch | High | Large | SPA route transitions + optional hover/focus prefetch |
+| TASK-053-08-01 | Admin Router Core | High | Medium | History-based admin router context |
+| TASK-053-08-02 | Admin Links and Redirects | High | Medium | Internal `AdminLink` + hard-redirect exceptions |
+| TASK-053-08-03 | Route Prefetch Strategy | Medium | Medium | Optional list prefetch on intent |
+| TASK-053-08-04 | Tests and Docs | Medium | Medium | Router/link/prefetch tests + docs updates |
 | TASK-053-07 | Admin Cache Layer | High | Large | WordPress-like cache with cross-tab refresh |
 | TASK-053-01 | Page Builder Templates Mode | High | Large | Templates tab + template sections |
 | TASK-053-05 | Runtime Preview FOUC Reduction | Medium | Medium | CSS preload + preview hide |

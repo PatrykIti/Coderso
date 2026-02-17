@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-053-08-01  
-**Status:** Planned  
+**Status:** Done (2026-02-17)  
 
 ---
 
@@ -56,4 +56,3 @@ export function AdminLink({ href, onClick, prefetch, ...props }) {
 - Sidebar navigation is SPA (no hard reload).
 - Primary actions (Edit, Create, Templates) use `navigate()` where applicable.
 - Auth routes remain hard reload (login/reset).
-
