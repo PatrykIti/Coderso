@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 33 tasks
+- **To Do:** 41 tasks
 - **In Progress:** 0 tasks
 - **Done:** 311 tasks
 
@@ -52,6 +52,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-11 | Coderso Commerce Suite | Medium | Large | Product templates, compare, wishlist, tables |
 | TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
 | TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
+| TASK-054-14 | Coderso Composite-First Widget Strategy | High | Large | Kits -> Composite -> Atomic delivery model |
+| TASK-054-15 | Coderso Plugin Contract and Package Manifest | High | Large | Safe plugin module/widget manifest contract |
+| TASK-054-16 | Coderso Module Widget Pack Matrix | High | Medium | Minimum composite packs per module |
+| TASK-054-17 | Coderso Presets, Templates, and Kits Contract | High | Large | Idempotent kit installer + manifest |
+| TASK-054-18 | Coderso AI Assistant Guided Builder Workflow | High | Large | Guided setup and explainable execution |
+| TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Mandatory release gates for modules |
+| TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
+| TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts flow on top of content engine |
 | TASK-055-01 | Posts Domain Model and API Contract | High | Medium | `post` type abstraction + API aliases |
 | TASK-055-02 | Posts List Screen (WordPress-Like Table) | High | Medium | Pages-like editorial list UX |

@@ -35,6 +35,7 @@ The target is a WordPress-like, low-code experience similar in breadth to Crocob
 4. Responsive behavior for expanded/collapsed navigation.
 5. Documentation and regression test coverage.
 6. Module roadmap parity with major Crocoblock capabilities (data, listing, filters, booking, forms, commerce, engagement).
+7. Preserve current Admin UI visual system and runtime theme controls for all new Coderso screens.
 
 ---
 
@@ -52,6 +53,14 @@ The target is a WordPress-like, low-code experience similar in breadth to Crocob
 - `TASK-054-11_Coderso_Commerce_Suite.md`
 - `TASK-054-12_Coderso_Menu_Popup_Reviews_Engagement_Suite.md`
 - `TASK-054-13_Coderso_Solution_Kits_and_AI_Wizard.md`
+- `TASK-054-14_Coderso_Composite_First_Widget_Strategy.md`
+- `TASK-054-15_Coderso_Plugin_Contract_and_Package_Manifest.md`
+- `TASK-054-16_Coderso_Module_Widget_Pack_Matrix.md`
+- `TASK-054-17_Coderso_Presets_Templates_and_Kits_Contract.md`
+- `TASK-054-18_Coderso_AI_Assistant_Guided_Builder_Workflow.md`
+- `TASK-054-19_Coderso_QA_Performance_and_Security_Gates.md`
+- `TASK-054-20_Coderso_Membership_and_Client_Portal_Suite.md`
+- `TASK-054-21_Coderso_Multilingual_and_i18n_Suite.md`
 
 ---
 
@@ -62,6 +71,9 @@ The target is a WordPress-like, low-code experience similar in breadth to Crocob
 4. Search/navigation labels are understandable for non-technical users.
 5. Unit tests cover nav state, active item, redirects, and permission gates.
 6. Module catalog and implementation order are defined for full-site builds (including service businesses such as automotive workshops).
+7. Delivery model is defined as `Kits -> Composite widgets -> Atomic widgets (advanced)` with clear UX modes.
+8. All Coderso pages remain fully compatible with existing `Admin UI Themes` (tokens, templates, visual settings).
+9. Every subtask includes unit tests for core logic and UI state transitions.
 
 ---
 
@@ -69,6 +81,7 @@ The target is a WordPress-like, low-code experience similar in breadth to Crocob
 - Unit tests for nav tree rendering and active-state matching.
 - Unit tests for legacy route redirects.
 - E2E smoke: open each Coderso module from sidebar on desktop and mobile widths.
+- For each `TASK-054-XX` implementation: add detailed unit tests for service logic, validation rules, and critical UI states.
 
 ## Documentation Updates Required
 - `_docs/ADMIN_NAVIGATION.md`

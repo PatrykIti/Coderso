@@ -26,7 +26,7 @@ Define the full Coderso module catalog and release tiers so users can build comp
 ## Catalog (v1-v3)
 - **v1 Core Builder:** Engine, Entries, Widgets, Templates, Forms, Posts
 - **v2 Business Builder:** Listings, Filters, Search, Booking, Appointments, Reviews
-- **v3 Growth Builder:** Commerce, Popups, Mega Menu, Portal/Membership, Solution Kits + AI setup
+- **v3 Growth Builder:** Commerce, Popups, Mega Menu, Portal/Membership, Multilingual/i18n, Solution Kits + AI setup
 
 ## Pseudocode
 ```ts
@@ -38,6 +38,8 @@ export const CODERSO_MODULE_REGISTRY = [
   { id: "filters", tier: "v2", stable: false },
   { id: "booking", tier: "v2", stable: false },
   { id: "commerce", tier: "v3", stable: false },
+  { id: "membership-portal", tier: "v3", stable: false },
+  { id: "i18n", tier: "v3", stable: false },
   { id: "ai-kit-wizard", tier: "v3", stable: false },
 ];
 ```
