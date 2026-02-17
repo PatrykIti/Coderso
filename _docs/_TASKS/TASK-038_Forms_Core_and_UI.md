@@ -26,6 +26,8 @@ Implement the backend for forms (definitions, fields, submissions) and wire the 
 - `TASK-038-02_Forms_Service_and_Validation.md`
 - `TASK-038-03_Forms_API_Routes.md`
 - `TASK-038-04_Forms_UI_Wiring.md`
+- `TASK-038-05_Forms_List_and_Editor_Split.md`
+- `TASK-038-06_Form_Embed_Widget_and_Page_Editor_Tab.md`
 
 ## Documentation Updates Required
 
