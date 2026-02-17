@@ -16,6 +16,8 @@ export type FormCreateInput = {
   slug?: string | null;
   status?: FormStatus;
   description?: string | null;
+  successMessage?: string | null;
+  successRedirectUrl?: string | null;
 };
 
 export type FormUpdateInput = {
@@ -23,6 +25,8 @@ export type FormUpdateInput = {
   slug?: string | null;
   status?: FormStatus;
   description?: string | null;
+  successMessage?: string | null;
+  successRedirectUrl?: string | null;
 };
 
 const allowedStatuses = new Set<FormStatus>(["draft", "published", "archived"]);
@@ -34,6 +38,20 @@ const normalizeName = (value: unknown) => {
 };
 
 const normalizeDescription = (value: unknown) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") throw new Error("form_invalid");
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeSuccessMessage = (value: unknown) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") throw new Error("form_invalid");
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+const normalizeSuccessRedirectUrl = (value: unknown) => {
   if (value === null || value === undefined) return null;
   if (typeof value !== "string") throw new Error("form_invalid");
   const trimmed = value.trim();
@@ -63,6 +81,8 @@ export async function createForm(input: FormCreateInput) {
   const slug = deriveFormSlug(name, input.slug ?? null);
   const status = normalizeStatus(input.status, "draft");
   const description = normalizeDescription(input.description);
+  const successMessage = normalizeSuccessMessage(input.successMessage);
+  const successRedirectUrl = normalizeSuccessRedirectUrl(input.successRedirectUrl);
 
   const existing = await db.select({ id: forms.id }).from(forms).where(eq(forms.slug, slug));
   if (existing.length > 0) throw new Error("form_slug_exists");
@@ -75,6 +95,8 @@ export async function createForm(input: FormCreateInput) {
       slug,
       status,
       description,
+      successMessage,
+      successRedirectUrl,
       createdAt: now,
       updatedAt: now,
     })
@@ -114,6 +136,14 @@ export async function updateForm(id: string, input: FormUpdateInput) {
 
   if (input.description !== undefined) {
     update.description = normalizeDescription(input.description);
+  }
+
+  if (input.successMessage !== undefined) {
+    update.successMessage = normalizeSuccessMessage(input.successMessage);
+  }
+
+  if (input.successRedirectUrl !== undefined) {
+    update.successRedirectUrl = normalizeSuccessRedirectUrl(input.successRedirectUrl);
   }
 
   const [row] = await db

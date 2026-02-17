@@ -287,7 +287,7 @@ function ContentSection({
               successMessage: event.target.value,
             }))
           }
-          placeholder="Leave blank to hide"
+          placeholder="Leave blank to use form fallback"
         />
       </div>
     </EditorSection>

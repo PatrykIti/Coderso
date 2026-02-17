@@ -538,6 +538,8 @@ export const ipAllowlist = pgTable(
     cidr: text("cidr").notNull().unique(),
     label: text("label"),
     description: text("description"),
+    successMessage: text("success_message"),
+    successRedirectUrl: text("success_redirect_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (t) => ({
@@ -851,6 +853,8 @@ export const forms = pgTable(
     slug: text("slug").notNull(),
     status: text("status").notNull().default("draft"),
     description: text("description"),
+    successMessage: text("success_message"),
+    successRedirectUrl: text("success_redirect_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

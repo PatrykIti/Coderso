@@ -11,6 +11,8 @@ export type FormRecord = {
   slug: string;
   status: FormStatus;
   description: string | null;
+  successMessage: string | null;
+  successRedirectUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -45,6 +47,8 @@ export type FormCreateInput = {
   slug?: string | null;
   status?: FormStatus;
   description?: string | null;
+  successMessage?: string | null;
+  successRedirectUrl?: string | null;
 };
 
 export type FormUpdateInput = {
@@ -52,6 +56,8 @@ export type FormUpdateInput = {
   slug?: string | null;
   status?: FormStatus;
   description?: string | null;
+  successMessage?: string | null;
+  successRedirectUrl?: string | null;
 };
 
 export type FormFieldInput = {

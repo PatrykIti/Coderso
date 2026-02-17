@@ -36,6 +36,32 @@ test("form embed normalization resolves layout defaults", () => {
   expect(normalized.fields?.showLabels).toBe(true);
 });
 
+test("form embed falls back to resolved success message", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Support",
+          successMessage: "We received your request.",
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain("We received your request.");
+});
+
 test("form embed validator accepts schema", () => {
   clearWidgets();
   const widget = createFormEmbedWidget({

@@ -6,6 +6,8 @@ export const formCreateSchema = {
     slug: { type: "string" },
     status: { type: "string" },
     description: { type: ["string", "null"] },
+    successMessage: { type: ["string", "null"] },
+    successRedirectUrl: { type: ["string", "null"] },
   },
   additionalProperties: false,
 };
@@ -17,6 +19,8 @@ export const formUpdateSchema = {
     slug: { type: "string" },
     status: { type: "string" },
     description: { type: ["string", "null"] },
+    successMessage: { type: ["string", "null"] },
+    successRedirectUrl: { type: ["string", "null"] },
   },
   additionalProperties: false,
 };

@@ -17,18 +17,26 @@ type FormSettingsPanelProps = {
   name: string;
   description: string;
   status: FormStatus;
+  successMessage: string;
+  successRedirectUrl: string;
   onNameChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onStatusChange: (value: FormStatus) => void;
+  onSuccessMessageChange: (value: string) => void;
+  onSuccessRedirectUrlChange: (value: string) => void;
 };
 
 export function FormSettingsPanel({
   name,
   description,
   status,
+  successMessage,
+  successRedirectUrl,
   onNameChange,
   onDescriptionChange,
   onStatusChange,
+  onSuccessMessageChange,
+  onSuccessRedirectUrlChange,
 }: FormSettingsPanelProps) {
   return (
     <div className="flex h-full flex-col">
@@ -76,6 +84,38 @@ export function FormSettingsPanel({
                 <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-3 pt-2">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Submission success
+            </p>
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Success message
+              </label>
+              <Textarea
+                rows={2}
+                value={successMessage}
+                onChange={(event) => onSuccessMessageChange(event.target.value)}
+                placeholder="Shown after submit when using inline success"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank to fall back to the widget defaults.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Redirect URL
+              </label>
+              <Input
+                value={successRedirectUrl}
+                onChange={(event) => onSuccessRedirectUrlChange(event.target.value)}
+                placeholder="/thank-you"
+              />
+              <p className="text-xs text-muted-foreground">
+                If set, submissions redirect here after success.
+              </p>
+            </div>
           </div>
         </div>
       </ScrollArea>

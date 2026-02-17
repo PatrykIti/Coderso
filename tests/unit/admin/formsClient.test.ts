@@ -67,7 +67,12 @@ test("createForm uses CSRF and posts payload", async () => {
 
   try {
     resetCsrfToken();
-    await createForm({ name: "Contact form", status: "draft" });
+    await createForm({
+      name: "Contact form",
+      status: "draft",
+      successMessage: "Thanks!",
+      successRedirectUrl: "/thank-you",
+    });
 
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/forms");
@@ -75,6 +80,8 @@ test("createForm uses CSRF and posts payload", async () => {
     expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
     const body = JSON.parse(calls[1]?.init?.body as string);
     expect(body.name).toBe("Contact form");
+    expect(body.successMessage).toBe("Thanks!");
+    expect(body.successRedirectUrl).toBe("/thank-you");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -101,6 +108,8 @@ test("listFormsCached reads from local storage", async () => {
         slug: "contact",
         status: "draft" as const,
         description: null,
+        successMessage: null,
+        successRedirectUrl: null,
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
       },
@@ -145,6 +154,8 @@ test("getFormDetailCached reads from local storage", async () => {
         slug: "support",
         status: "draft" as const,
         description: "Help desk",
+        successMessage: null,
+        successRedirectUrl: null,
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
       },

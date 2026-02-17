@@ -246,6 +246,13 @@
       "when": 1771191111874,
       "tag": "0034_user_email_encryption",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1771342226145,
+      "tag": "0035_form_submission_fallbacks",
+      "breakpoints": true
     }
   ]
 }

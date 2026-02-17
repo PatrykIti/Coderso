@@ -98,6 +98,8 @@ type FormMetaState = {
   name: string;
   description: string;
   status: FormStatus;
+  successMessage: string;
+  successRedirectUrl: string;
 };
 
 const resolveFormId = (pathname: string) => {
@@ -130,6 +132,8 @@ const toFormMeta = (form: FormRecord): FormMetaState => ({
   name: form.name ?? "",
   description: form.description ?? "",
   status: form.status ?? "draft",
+  successMessage: form.successMessage ?? "",
+  successRedirectUrl: form.successRedirectUrl ?? "",
 });
 
 export function FormBuilderPage() {
@@ -142,6 +146,8 @@ export function FormBuilderPage() {
     name: "",
     description: "",
     status: "draft",
+    successMessage: "",
+    successRedirectUrl: "",
   });
   const [fields, setFields] = useState<FormFieldState[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<SelectedTarget>({ type: "form" });
@@ -343,6 +349,8 @@ export function FormBuilderPage() {
           name: meta.name,
           description: meta.description,
           status: meta.status,
+          successMessage: meta.successMessage,
+          successRedirectUrl: meta.successRedirectUrl,
         }),
         updateFormFields(activeForm.id, payload),
       ]);
@@ -397,6 +405,8 @@ export function FormBuilderPage() {
             name={meta.name}
             description={meta.description}
             status={meta.status}
+            successMessage={meta.successMessage}
+            successRedirectUrl={meta.successRedirectUrl}
             onNameChange={(value) => {
               setMeta((prev) => ({ ...prev, name: value }));
               setUnsavedChanges(true);
@@ -407,6 +417,14 @@ export function FormBuilderPage() {
             }}
             onStatusChange={(value) => {
               setMeta((prev) => ({ ...prev, status: value }));
+              setUnsavedChanges(true);
+            }}
+            onSuccessMessageChange={(value) => {
+              setMeta((prev) => ({ ...prev, successMessage: value }));
+              setUnsavedChanges(true);
+            }}
+            onSuccessRedirectUrlChange={(value) => {
+              setMeta((prev) => ({ ...prev, successRedirectUrl: value }));
               setUnsavedChanges(true);
             }}
           />
@@ -564,6 +582,8 @@ export function FormBuilderPage() {
                 name={meta.name}
                 description={meta.description}
                 status={meta.status}
+                successMessage={meta.successMessage}
+                successRedirectUrl={meta.successRedirectUrl}
                 onNameChange={(value) => {
                   setMeta((prev) => ({ ...prev, name: value }));
                   setUnsavedChanges(true);
@@ -574,6 +594,14 @@ export function FormBuilderPage() {
                 }}
                 onStatusChange={(value) => {
                   setMeta((prev) => ({ ...prev, status: value }));
+                  setUnsavedChanges(true);
+                }}
+                onSuccessMessageChange={(value) => {
+                  setMeta((prev) => ({ ...prev, successMessage: value }));
+                  setUnsavedChanges(true);
+                }}
+                onSuccessRedirectUrlChange={(value) => {
+                  setMeta((prev) => ({ ...prev, successRedirectUrl: value }));
                   setUnsavedChanges(true);
                 }}
               />

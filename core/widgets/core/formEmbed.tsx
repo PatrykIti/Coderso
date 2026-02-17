@@ -43,6 +43,8 @@ export type FormEmbedResolvedData = {
   formName?: string;
   description?: string | null;
   status?: string;
+  successMessage?: string | null;
+  successRedirectUrl?: string | null;
   fields?: ResolvedFormField[];
   error?: string;
 };
@@ -249,6 +251,11 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     inputSize: isInputSize(style.inputSize) ? style.inputSize : "md",
   };
 
+  const resolvedSuccessMessage =
+    data.successMessage !== undefined
+      ? data.successMessage
+      : data.resolved?.successMessage ?? undefined;
+
   return {
     ...data,
     formId: resolveOptionalString(data.formId),
@@ -256,7 +263,7 @@ export function normalizeFormEmbedData(data: FormEmbedData): FormEmbedData {
     description: resolveOptionalString(data.description),
     submitLabel: resolveNonEmptyString(data.submitLabel, formEmbedDefaults.submitLabel!),
     successMessage: resolveString(
-      data.successMessage,
+      resolvedSuccessMessage,
       formEmbedDefaults.successMessage ?? ""
     ),
     layout: normalizedLayout,
