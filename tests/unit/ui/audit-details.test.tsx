@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { AuditDetailsDrawer } from "../../../core/admin/ui/audit/AuditDetailsDrawer";
 import type { AuditLog } from "../../../core/admin/ui/audit/types";
@@ -30,7 +30,7 @@ const sampleLog: AuditLog = {
 };
 
 test("AuditDetailsDrawer renders drawer content", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AuditDetailsDrawer
       log={sampleLog}
       open

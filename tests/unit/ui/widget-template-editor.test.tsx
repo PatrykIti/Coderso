@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import {
@@ -203,7 +203,7 @@ import {
 } from "../../../core/widgets/core/divider";
 
 test("WidgetTemplateEditorPage renders canvas placeholder", () => {
-  const html = renderToString(<WidgetTemplateEditorPage />);
+  const html = renderAdminUi(<WidgetTemplateEditorPage />);
 
   expect(html).toContain("Build your template");
   expect(html).toContain("Save Template");
@@ -227,7 +227,7 @@ test("widget template block settings render navigation visual sections", () => {
     advanced: NavigationAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -256,7 +256,7 @@ test("widget template block settings render footer visual sections", () => {
     advanced: FooterAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -285,7 +285,7 @@ test("widget template block settings render timeline visual sections", () => {
     advanced: TimelineAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -315,7 +315,7 @@ test("widget template block settings render compare timeline visual sections", (
     advanced: CompareTimelineAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -345,7 +345,7 @@ test("widget template block settings render newsletter visual sections", () => {
     advanced: NewsletterAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -376,7 +376,7 @@ test("widget template block settings render feature grid visual sections", () =>
     advanced: FeatureGridAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -406,7 +406,7 @@ test("widget template block settings render section visual sections", () => {
     advanced: SectionAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -435,7 +435,7 @@ test("widget template block settings render grid columns visual sections", () =>
     advanced: GridColumnsAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -468,7 +468,7 @@ test("widget template block settings render stack visual sections", () => {
     advanced: StackAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -500,7 +500,7 @@ test("widget template block settings render split layout visual sections", () =>
     advanced: SplitLayoutAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -533,7 +533,7 @@ test("widget template block settings render spacer visual sections", () => {
     advanced: SpacerAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -562,7 +562,7 @@ test("widget template block settings render divider visual sections", () => {
     advanced: DividerAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -591,7 +591,7 @@ test("widget template block settings render testimonials visual sections", () =>
     advanced: TestimonialsAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -621,7 +621,7 @@ test("widget template block settings render pricing plans visual sections", () =
     advanced: PricingPlansAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -651,7 +651,7 @@ test("widget template block settings render faq accordion visual sections", () =
     advanced: FaqAccordionAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -681,7 +681,7 @@ test("widget template block settings render cta banner visual sections", () => {
     advanced: CtaBannerAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -711,7 +711,7 @@ test("widget template block settings render logo cloud visual sections", () => {
     advanced: LogoCloudAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -741,7 +741,7 @@ test("widget template block settings render gallery mosaic visual sections", () 
     advanced: GalleryMosaicAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -771,7 +771,7 @@ test("widget template block settings render stats kpi visual sections", () => {
     advanced: StatsKpiAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -802,7 +802,7 @@ test("widget template block settings render team visual sections", () => {
     advanced: TeamAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -833,7 +833,7 @@ test("widget template block settings render rich text section visual sections", 
     advanced: RichTextSectionAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{
@@ -865,7 +865,7 @@ test("widget template block settings render contact visual sections", () => {
     advanced: ContactAdvancedEditor,
   });
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       widget={widget}
       block={{

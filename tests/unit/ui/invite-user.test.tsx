@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import type { RoleSummary } from "../../../core/admin/ui/roles/types";
 import { InviteUserDialog } from "../../../core/admin/ui/users/InviteUserDialog";
@@ -14,7 +14,7 @@ const roles: RoleSummary[] = [
 ];
 
 test("InviteUserDialog renders form fields and preview", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <InviteUserDialog open roles={roles} onOpenChange={() => undefined} />
   );
 

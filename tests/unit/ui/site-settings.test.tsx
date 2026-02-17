@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { SiteSettingsPage } from "../../../core/admin/ui/site/SiteSettingsPage";
 
 test("SiteSettingsPage renders section navigation and actions", () => {
-  const html = renderToString(<SiteSettingsPage />);
+  const html = renderAdminUi(<SiteSettingsPage />);
 
   expect(html).toContain("Site Settings");
   expect(html).toContain("Base URLs");

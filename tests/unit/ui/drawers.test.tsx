@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 import { Monitor } from "lucide-react";
 
 import { PageCreateDrawer } from "../../../core/admin/ui/pages/PageCreateDrawer";
@@ -87,7 +87,7 @@ const templates = [
 ];
 
 test("PageCreateDrawer renders title", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <PageCreateDrawer
       open
       onOpenChange={() => undefined}
@@ -102,7 +102,7 @@ test("PageCreateDrawer renders title", () => {
 });
 
 test("EntryCreateDrawer renders title", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <EntryCreateDrawer
       open
       onOpenChange={() => undefined}
@@ -114,7 +114,7 @@ test("EntryCreateDrawer renders title", () => {
 });
 
 test("ContentTypeCreateDrawer renders title", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <ContentTypeCreateDrawer open onOpenChange={() => undefined} />
   );
 
@@ -122,7 +122,7 @@ test("ContentTypeCreateDrawer renders title", () => {
 });
 
 test("AccessLogDetailsDrawer renders log info", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AccessLogDetailsDrawer log={accessLog} open onOpenChange={() => undefined} />
   );
 
@@ -131,7 +131,7 @@ test("AccessLogDetailsDrawer renders log info", () => {
 });
 
 test("WidgetDetailsDrawer renders widget name", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <WidgetDetailsDrawer
       widget={widget}
       open
@@ -144,7 +144,7 @@ test("WidgetDetailsDrawer renders widget name", () => {
 });
 
 test("ThemeProfileDrawer renders profile name", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <ThemeProfileDrawer
       open
       onOpenChange={() => undefined}
@@ -158,7 +158,7 @@ test("ThemeProfileDrawer renders profile name", () => {
 });
 
 test("IntegrationDrawer renders integration", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <IntegrationDrawer
       open
       onOpenChange={() => undefined}
@@ -186,7 +186,7 @@ test("IntegrationDrawer renders integration", () => {
 });
 
 test("EmailLogsDrawer renders delivery logs", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <EmailLogsDrawer open onOpenChange={() => undefined} />
   );
 

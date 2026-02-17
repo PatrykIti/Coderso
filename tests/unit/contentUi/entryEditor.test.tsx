@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { EntryEditor } from "../../../core/admin/ui/entries/EntryEditor";
 
 test("EntryEditor renders schema-based fields", () => {
-  const html = renderToString(<EntryEditor />);
+  const html = renderAdminUi(<EntryEditor />);
 
   expect(html).toContain("Edit Content");
   expect(html).toContain("Runtime preview");

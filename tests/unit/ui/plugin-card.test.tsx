@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 import { Rocket } from "lucide-react";
 
 import { PluginCard } from "../../../core/admin/ui/store/PluginCard";
@@ -20,7 +20,7 @@ const plugin: PluginSummary = {
 };
 
 test("PluginCard renders status and action", () => {
-  const html = renderToString(<PluginCard plugin={plugin} />);
+  const html = renderAdminUi(<PluginCard plugin={plugin} />);
 
   expect(html).toContain("SEO Booster");
   expect(html).toContain("Verified");

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { PageRowActions } from "../../../core/admin/ui/pages/PageRowActions";
 
 test("PageRowActions renders menu trigger", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <PageRowActions
       status="draft"
       onEdit={() => undefined}

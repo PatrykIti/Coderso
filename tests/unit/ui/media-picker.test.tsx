@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { MediaPicker } from "../../../core/admin/ui/media/MediaPicker";
 
 test("MediaPicker renders browse button", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <MediaPicker value={null} onChange={() => undefined} />
   );
 
@@ -12,7 +12,7 @@ test("MediaPicker renders browse button", () => {
 });
 
 test("MediaPicker shows loading state for selected media until assets are resolved", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <MediaPicker value="asset-1" onChange={() => undefined} />
   );
 

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { MediaLibraryPage } from "../../../core/admin/ui/media/MediaLibraryPage";
 import { MediaDetailsDrawer } from "../../../core/admin/ui/media/MediaDetailsDrawer";
@@ -15,8 +15,8 @@ test("MediaLibraryPage renders upload and details drawer", () => {
     mimeType: "image/jpeg",
     createdAt: "2026-01-28T10:00:00Z",
   };
-  const html = renderToString(<MediaLibraryPage />);
-  const drawer = renderToString(
+  const html = renderAdminUi(<MediaLibraryPage />);
+  const drawer = renderAdminUi(
     <MediaDetailsDrawer
       item={item}
       open

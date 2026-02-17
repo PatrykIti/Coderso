@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { GeneralSettingsPage } from "../../../core/admin/ui/settings/GeneralSettingsPage";
 
 test("GeneralSettingsPage renders general settings cards", () => {
-  const html = renderToString(<GeneralSettingsPage />);
+  const html = renderAdminUi(<GeneralSettingsPage />);
 
   expect(html).toContain("Site Identity");
   expect(html).toContain("Branding");

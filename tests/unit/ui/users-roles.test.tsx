@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { UsersRolesPage } from "../../../core/admin/ui/users/UsersRolesPage";
 
 test("UsersRolesPage renders table and drawer", () => {
-  const html = renderToString(<UsersRolesPage />);
+  const html = renderAdminUi(<UsersRolesPage />);
 
   expect(html).toContain("Users &amp; Roles");
   expect(html).toContain("Invite User");

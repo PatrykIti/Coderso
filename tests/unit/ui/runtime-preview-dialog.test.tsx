@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { RuntimePreviewDialog } from "../../../core/admin/ui/preview/RuntimePreviewDialog";
 
 test("RuntimePreviewDialog allows scripts in iframe sandbox", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <RuntimePreviewDialog
       open
       onOpenChange={() => undefined}

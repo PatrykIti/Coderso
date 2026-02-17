@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { FieldRenderer } from "../../../core/admin/ui/entries/FieldRenderer";
 
 test("FieldRenderer renders relation search input", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <FieldRenderer
       field={{
         id: "field-rel",

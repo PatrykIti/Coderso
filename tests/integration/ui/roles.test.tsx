@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { UsersRolesPage } from "../../../core/admin/ui/users/UsersRolesPage";
 
 test("Roles UI respects read-only permissions", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <UsersRolesPage permissions={["users:read", "roles:read"]} />
   );
 

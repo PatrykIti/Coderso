@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { WizardPanel } from "../../../core/admin/ui/pages/builder/WizardPanel";
 import type { Block } from "../../../core/admin/ui/pages/builder/types";
@@ -42,7 +42,7 @@ const block: Block = {
 };
 
 test("WizardPanel renders widget editor", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <WizardPanel widget={widget} block={block} onChange={() => {}} onComplete={() => {}} />
   );
   expect(html).toContain("Wizard editor variant");

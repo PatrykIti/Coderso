@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { AssistantAvatar } from "../../../core/admin/ui/assistant/AssistantAvatar";
 
 test("AssistantAvatar does not render when disabled", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AssistantAvatar enabled={false} assetUrl={null} state="idle" />
   );
 
@@ -12,7 +12,7 @@ test("AssistantAvatar does not render when disabled", () => {
 });
 
 test("AssistantAvatar renders placeholder fallback", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AssistantAvatar enabled assetUrl={null} state="idle" />
   );
 
@@ -22,7 +22,7 @@ test("AssistantAvatar renders placeholder fallback", () => {
 });
 
 test("AssistantAvatar renders image mode for image assets", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AssistantAvatar enabled assetUrl="https://cdn.example.com/avatar.png" state="answer" />
   );
 
@@ -32,7 +32,7 @@ test("AssistantAvatar renders image mode for image assets", () => {
 });
 
 test("AssistantAvatar renders glb fallback copy for 3D assets", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AssistantAvatar enabled assetUrl="https://cdn.example.com/assistant.glb" state="thinking" />
   );
 

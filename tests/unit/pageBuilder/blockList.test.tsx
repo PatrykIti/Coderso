@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { BlockList } from "../../../core/admin/ui/pages/builder/BlockList";
 import {
@@ -107,7 +107,7 @@ test("reorderBlocksAtPath reorders nested children", () => {
 });
 
 test("BlockList renders widget labels", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockList
       blocks={[blockA, blockB]}
       selectedId={"a"}

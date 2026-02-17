@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { AuthShell } from "../../../core/admin/ui/layouts/AuthShell";
 
 test("AuthShell renders brand and content", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AuthShell brand={<div>Brand</div>}>
       <div>Content</div>
     </AuthShell>

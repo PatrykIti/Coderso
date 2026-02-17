@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { MenuItemForm } from "../../../core/admin/ui/menus/MenuItemForm";
 
 test("MenuItemForm renders required fields", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <MenuItemForm
       value={{
         id: "item-1",

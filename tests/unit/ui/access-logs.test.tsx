@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { AccessLogsPage } from "../../../core/admin/ui/security/AccessLogsPage";
 
 test("AccessLogsPage renders filters and table", () => {
-  const html = renderToString(<AccessLogsPage />);
+  const html = renderAdminUi(<AccessLogsPage />);
 
   expect(html).toContain("Access Logs");
   expect(html).toContain("Export CSV");

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { PluginDetailsPage } from "../../../core/admin/ui/store/PluginDetailsPage";
 
 test("PluginDetailsPage renders tabs and details", () => {
-  const html = renderToString(<PluginDetailsPage />);
+  const html = renderAdminUi(<PluginDetailsPage />);
 
   expect(html).toContain("SEO Optimizer");
   expect(html).toContain("Auto-update");

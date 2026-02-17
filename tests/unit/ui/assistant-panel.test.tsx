@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { AssistantEmptyState } from "../../../core/admin/ui/assistant/AssistantEmptyState";
 import { AssistantMessage } from "../../../core/admin/ui/assistant/AssistantMessage";
@@ -7,13 +7,13 @@ import { AssistantModeSwitch } from "../../../core/admin/ui/assistant/AssistantM
 import { AssistantPanel } from "../../../core/admin/ui/assistant/AssistantPanel";
 
 test("AssistantPanel renders loading trigger in SSR", () => {
-  const html = renderToString(<AssistantPanel />);
+  const html = renderAdminUi(<AssistantPanel />);
 
   expect(html).toContain("Assistant");
 });
 
 test("AssistantModeSwitch renders mode selector", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AssistantModeSwitch
       value="docs-only"
       llmAvailable={false}
@@ -26,7 +26,7 @@ test("AssistantModeSwitch renders mode selector", () => {
 });
 
 test("AssistantEmptyState renders starter prompts", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AssistantEmptyState onPromptSelect={() => undefined} />
   );
 
@@ -35,7 +35,7 @@ test("AssistantEmptyState renders starter prompts", () => {
 });
 
 test("AssistantMessage renders assistant metadata and sources", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <AssistantMessage
       role="assistant"
       text="Use General Settings > Assistant card."

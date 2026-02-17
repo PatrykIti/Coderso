@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { FieldEditor } from "../../../core/admin/ui/content-types/FieldEditor";
 
 test("FieldEditor renders relation target selector", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <FieldEditor
       field={{
         id: "field-related",

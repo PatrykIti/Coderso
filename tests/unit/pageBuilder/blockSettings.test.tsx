@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import { heroDefaults, createHeroWidget, type HeroData } from "../../../core/widgets/core/hero";
@@ -42,7 +42,7 @@ const heroBlock: Block = {
 };
 
 test("BlockSettings clarifies empty slot availability", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings block={heroBlock} widget={heroWidget} onChange={() => undefined} />
   );
 
@@ -52,7 +52,7 @@ test("BlockSettings clarifies empty slot availability", () => {
 });
 
 test("BlockSettings shows repeatable slot controls", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <BlockSettings
       block={{
         id: "section-1",

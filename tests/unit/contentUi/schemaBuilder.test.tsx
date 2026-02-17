@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import {
   SchemaBuilder,
@@ -36,7 +36,7 @@ test("validateFieldName enforces kebab-case and uniqueness", () => {
 });
 
 test("SchemaBuilder renders field editor", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <SchemaBuilder
       fields={fields}
       selectedId={fields[0]?.id ?? null}

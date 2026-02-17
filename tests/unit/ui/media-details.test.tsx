@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { MediaDetailsDrawer } from "../../../core/admin/ui/media/MediaDetailsDrawer";
 import type { MediaItem } from "../../../core/admin/ui/media/types";
@@ -20,7 +20,7 @@ const sampleItem: MediaItem = {
 };
 
 test("MediaDetailsDrawer renders preview and metadata sections", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <MediaDetailsDrawer
       item={sampleItem}
       open

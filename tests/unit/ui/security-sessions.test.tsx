@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { SessionsPage } from "../../../core/admin/ui/settings/SessionsPage";
 
 test("SessionsPage renders sessions table", () => {
-  const html = renderToString(<SessionsPage />);
+  const html = renderAdminUi(<SessionsPage />);
 
   expect(html).toContain("Where you&#x27;re signed in");
   expect(html).toContain("Device/OS");

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { SettingsSidebar } from "../../../core/admin/ui/settings/SettingsSidebar";
 
 test("SettingsSidebar renders settings navigation items", () => {
-  const html = renderToString(<SettingsSidebar activeId="security" />);
+  const html = renderAdminUi(<SettingsSidebar activeId="security" />);
 
   expect(html).toContain("General");
   expect(html).toContain("/admin/settings/general");

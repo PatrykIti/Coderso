@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import {
   useWidgetTemplates,
@@ -52,7 +52,7 @@ test("useWidgetTemplates returns cached items when primed", () => {
     JSON.stringify({ value: cached, savedAt: Date.now() })
   );
 
-  const html = renderToString(<TemplateCount />);
+  const html = renderAdminUi(<TemplateCount />);
   expect(html).toContain("count:1");
 
   if (originalLocal === undefined) {
@@ -87,7 +87,7 @@ test("useWidgetTemplates reads from local cache", () => {
       JSON.stringify({ value: cached, savedAt: Date.now() })
     );
 
-    const html = renderToString(<TemplateCount />);
+    const html = renderAdminUi(<TemplateCount />);
     expect(html).toContain("count:1");
   } finally {
     if (originalLocal === undefined) {

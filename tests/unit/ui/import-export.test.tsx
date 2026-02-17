@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { ImportExportPage } from "../../../core/admin/ui/import-export/ImportExportPage";
 
 test("ImportExportPage renders export cards and import dropzone", () => {
-  const html = renderToString(<ImportExportPage />);
+  const html = renderAdminUi(<ImportExportPage />);
 
   expect(html).toContain("Export Data");
   expect(html).toContain("Import Data");

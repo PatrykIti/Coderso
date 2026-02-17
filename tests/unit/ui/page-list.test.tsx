@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { PageListPage } from "../../../core/admin/ui/pages/PageListPage";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 test("PageListPage renders header and table", () => {
-  const html = renderToString(<PageListPage />);
+  const html = renderAdminUi(<PageListPage />);
 
   expect(html).toContain("Pages");
   expect(html).toContain("Create New Page");
@@ -48,7 +48,7 @@ test("PageListPage renders cached pages without loading", () => {
       })
     );
 
-    const html = renderToString(<PageListPage />);
+    const html = renderAdminUi(<PageListPage />);
     expect(html).toContain("Cached Page");
     expect(html).not.toContain("Loading pages");
   } finally {

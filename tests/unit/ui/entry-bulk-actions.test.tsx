@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { EntryBulkActionsBar } from "../../../core/admin/ui/entries/EntryBulkActionsBar";
 
 test("EntryBulkActionsBar renders selection count and actions", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <EntryBulkActionsBar
       selectedCount={3}
       action=""

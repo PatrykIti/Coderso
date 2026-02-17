@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { EntryMetadataPanel } from "../../../core/admin/ui/entries/EntryMetadataPanel";
 
 test("EntryMetadataPanel renders author and taxonomy selections", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <EntryMetadataPanel
       status="draft"
       onStatusChange={() => undefined}

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { GeneralSettingsPage } from "../../../core/admin/ui/settings/GeneralSettingsPage";
 import { SettingsPage } from "../../../core/admin/ui/settings/SettingsPage";
@@ -7,7 +7,7 @@ import { SettingsPage } from "../../../core/admin/ui/settings/SettingsPage";
 const noop = () => undefined;
 
 test("SettingsPage renders tokens editor and actions", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <SettingsPage
       values={{ siteName: "Nextless", siteLocale: "en" }}
       tokens={{}}
@@ -21,7 +21,7 @@ test("SettingsPage renders tokens editor and actions", () => {
 });
 
 test("GeneralSettingsPage renders form actions", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <GeneralSettingsPage
       values={{ siteName: "Nextless", siteLocale: "en" }}
       onSave={noop}
@@ -29,7 +29,7 @@ test("GeneralSettingsPage renders form actions", () => {
   );
 
   expect(html).toContain("General Settings");
-  expect(html).toContain("Assistant");
-  expect(html).toContain("Public Site URL");
+  expect(html).toContain("Site Identity");
+  expect(html).toContain("Manage site identity and branding");
   expect(html).toContain("Save changes");
 });

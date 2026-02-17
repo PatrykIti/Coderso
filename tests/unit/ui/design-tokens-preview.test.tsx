@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { DesignTokensPreview } from "../../../core/admin/ui/settings/DesignTokensPreview";
 
 test("DesignTokensPreview renders tabs", () => {
-  const html = renderToString(<DesignTokensPreview />);
+  const html = renderAdminUi(<DesignTokensPreview />);
 
   expect(html).toContain("All Components");
   expect(html).toContain("Typography");

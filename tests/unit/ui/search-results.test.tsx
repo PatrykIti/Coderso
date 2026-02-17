@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import {
   SearchResults,
@@ -13,7 +13,7 @@ test("SearchResults highlights active item", () => {
     { id: "entry-1", type: "entry", title: "Launch announcement" },
   ];
   const groups = groupResults(items);
-  const html = renderToString(
+  const html = renderAdminUi(
     <SearchResults query="home" groups={groups} activeIndex={1} />
   );
 

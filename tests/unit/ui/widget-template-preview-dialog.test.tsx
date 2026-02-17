@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { WidgetTemplatePreviewDialog } from "../../../core/admin/ui/widgets/WidgetTemplatePreviewDialog";
 
 test("WidgetTemplatePreviewDialog allows scripts in iframe sandbox", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <WidgetTemplatePreviewDialog
       open
       onOpenChange={() => undefined}

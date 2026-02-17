@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { SetupWizard } from "../../../core/admin/ui/setup/SetupWizard";
 
 const noopSubmit = async () => undefined;
 
 test("SetupWizard renders first-run setup shell", () => {
-  const html = renderToString(<SetupWizard onSubmit={noopSubmit} />);
+  const html = renderAdminUi(<SetupWizard onSubmit={noopSubmit} />);
 
   expect(html).toContain("First-run setup");
   expect(html).toContain("Site Identity");
@@ -16,7 +16,7 @@ test("SetupWizard renders first-run setup shell", () => {
 });
 
 test("SetupWizard renders error state", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <SetupWizard onSubmit={noopSubmit} error="Failed to complete setup." />
   );
 

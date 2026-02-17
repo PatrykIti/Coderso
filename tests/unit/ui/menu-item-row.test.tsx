@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { MenuItemRow } from "../../../core/admin/ui/menus/MenuItemRow";
 
@@ -16,7 +16,7 @@ const item = {
 };
 
 test("MenuItemRow includes drag affordance class", () => {
-  const html = renderToString(<MenuItemRow item={item} />);
+  const html = renderAdminUi(<MenuItemRow item={item} />);
   expect(html).toContain("cursor-grab");
   expect(html).toContain("select-none");
 });

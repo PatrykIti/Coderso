@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { PageEditor } from "../../../core/admin/ui/pages/PageEditor";
 
 test("PageEditor renders builder UI", () => {
-  const html = renderToString(<PageEditor />);
+  const html = renderAdminUi(<PageEditor />);
 
   expect(html).toContain("Save draft");
   expect(html).toContain("Publish");

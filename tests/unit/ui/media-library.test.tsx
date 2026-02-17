@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { MediaLibraryPage } from "../../../core/admin/ui/media/MediaLibraryPage";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
 test("MediaLibraryPage renders toolbar and grid", () => {
-  const html = renderToString(<MediaLibraryPage />);
+  const html = renderAdminUi(<MediaLibraryPage />);
 
   expect(html).toContain("Media Library");
   expect(html).toContain("Upload New");
@@ -51,7 +51,7 @@ test("MediaLibraryPage renders cached media without loading", () => {
       })
     );
 
-    const html = renderToString(<MediaLibraryPage />);
+    const html = renderAdminUi(<MediaLibraryPage />);
     expect(html).toContain("Media Library");
     expect(html).not.toContain("Loading assets");
   } finally {

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { BackupsPage } from "../../../core/admin/ui/backups/BackupsPage";
 
 test("BackupsPage renders schedule and table", () => {
-  const html = renderToString(<BackupsPage />);
+  const html = renderAdminUi(<BackupsPage />);
 
   expect(html).toContain("Backup Schedule");
   expect(html).toContain("Recent Backups");

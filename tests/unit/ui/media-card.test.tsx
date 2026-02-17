@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { MediaCard } from "../../../core/admin/ui/media/MediaCard";
 
@@ -13,7 +13,7 @@ test("MediaCard renders file name", () => {
     mimeType: "image/jpeg",
     createdAt: "2026-01-20T10:00:00Z",
   };
-  const html = renderToString(
+  const html = renderAdminUi(
     <MediaCard item={item} />
   );
 

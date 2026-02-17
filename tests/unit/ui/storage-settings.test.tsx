@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { StorageSettingsPage } from "../../../core/admin/ui/settings/StorageSettingsPage";
 
 test("StorageSettingsPage renders provider cards and config panel", () => {
-  const html = renderToString(<StorageSettingsPage />);
+  const html = renderAdminUi(<StorageSettingsPage />);
 
   expect(html).toContain("Storage Settings");
   expect(html).toContain("Local Storage");

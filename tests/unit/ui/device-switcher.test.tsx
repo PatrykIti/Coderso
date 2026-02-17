@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { DeviceSwitcher } from "../../../core/admin/ui/pages/DeviceSwitcher";
 
 test("DeviceSwitcher renders device buttons", () => {
-  const html = renderToString(<DeviceSwitcher />);
+  const html = renderAdminUi(<DeviceSwitcher />);
 
   expect(html).toContain("Desktop");
   expect(html).toContain("Tablet");

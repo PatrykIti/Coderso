@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { SeoManagerPage } from "../../../core/admin/ui/seo/SeoManagerPage";
 import { SeoDrawer } from "../../../core/admin/ui/seo/SeoDrawer";
 import type { SeoItem } from "../../../core/admin/ui/seo/SeoTable";
 
 test("SeoManagerPage renders table and drawer", () => {
-  const html = renderToString(<SeoManagerPage />);
+  const html = renderAdminUi(<SeoManagerPage />);
   const item: SeoItem = {
     id: "seo-home",
     title: "Homepage",
@@ -22,7 +22,7 @@ test("SeoManagerPage renders table and drawer", () => {
     analysisStatus: "passed",
     analysisNotes: [],
   };
-  const drawer = renderToString(
+  const drawer = renderAdminUi(
     <SeoDrawer
       item={item}
       open

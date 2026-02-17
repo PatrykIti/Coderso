@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { WebhooksPage } from "../../../core/admin/ui/settings/WebhooksPage";
 import { WebhookDrawer } from "../../../core/admin/ui/settings/WebhookDrawer";
 
 test("WebhooksPage renders table and drawer content", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <>
       <WebhooksPage />
       <WebhookDrawer

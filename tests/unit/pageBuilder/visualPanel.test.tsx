@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { VisualPanel } from "../../../core/admin/ui/pages/builder/VisualPanel";
 import {
@@ -93,7 +93,7 @@ function createWidget(
 }
 
 test("VisualPanel keeps generic variant controls by default", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <VisualPanel
       widget={createWidget()}
       block={baseBlock}
@@ -107,7 +107,7 @@ test("VisualPanel keeps generic variant controls by default", () => {
 });
 
 test("VisualPanel hides generic variant controls when widget owns visual variants", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <VisualPanel
       widget={createWidget({ visualOwnsVariantSelection: true })}
       block={baseBlock}
@@ -136,7 +136,7 @@ test("VisualPanel uses navigation editor variant controls", () => {
     },
   };
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <VisualPanel
       widget={widget}
       block={block}
@@ -166,7 +166,7 @@ test("VisualPanel uses footer editor variant controls", () => {
     },
   };
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <VisualPanel
       widget={widget}
       block={block}
@@ -194,7 +194,7 @@ test("VisualPanel uses timeline editor variant controls", () => {
     },
   };
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <VisualPanel
       widget={widget}
       block={block}
@@ -223,7 +223,7 @@ test("VisualPanel uses compare timeline editor variant controls", () => {
     },
   };
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <VisualPanel
       widget={widget}
       block={block}
@@ -252,7 +252,7 @@ test("VisualPanel uses newsletter editor variant controls", () => {
     },
   };
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <VisualPanel
       widget={widget}
       block={block}
@@ -281,7 +281,7 @@ test("VisualPanel uses contact editor variant controls", () => {
     },
   };
 
-  const html = renderToString(
+  const html = renderAdminUi(
     <VisualPanel
       widget={widget}
       block={block}

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { AnalyticsPage } from "../../../core/admin/ui/analytics/AnalyticsPage";
 
 test("AnalyticsPage renders KPIs and charts", () => {
-  const html = renderToString(<AnalyticsPage />);
+  const html = renderAdminUi(<AnalyticsPage />);
 
   expect(html).toContain("Analytics Overview");
   expect(html).toContain("Loading analytics...");

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ComponentProps } from "react";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { PageSettingsDrawer } from "../../../core/admin/ui/pages/PageSettingsDrawer";
 import { normalizePageLayoutSettings } from "../../../core/services/pages/layoutSettings";
@@ -24,7 +24,7 @@ const baseSettings = {
 const renderDrawer = (
   overrides: Partial<ComponentProps<typeof PageSettingsDrawer>> = {}
 ) =>
-  renderToString(
+  renderAdminUi(
     <PageSettingsDrawer
       open
       onOpenChange={() => undefined}

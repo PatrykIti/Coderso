@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { DesignTokensEditor } from "../../../core/admin/ui/settings/DesignTokensEditor";
 
 test("DesignTokensEditor renders editor shell", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <DesignTokensEditor
       value={{ colors: { primary: "#1392ec" } }}
       onChange={() => {}}
@@ -17,7 +17,7 @@ test("DesignTokensEditor renders editor shell", () => {
 });
 
 test("DesignTokensEditor shows error state for invalid JSON", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <DesignTokensEditor
       value={{}}
       initialDraft="{ invalid"

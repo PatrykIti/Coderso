@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { SeoAuditDialog } from "../../../core/admin/ui/seo/SeoAuditDialog";
 import { ExportDialog } from "../../../core/admin/ui/shared/ExportDialog";
@@ -10,7 +10,7 @@ import { WidgetInsertDialog } from "../../../core/admin/ui/widgets/WidgetInsertD
 import { IntegrationRequestDialog } from "../../../core/admin/ui/settings/IntegrationRequestDialog";
 
 test("SeoAuditDialog renders audit options", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <SeoAuditDialog open onOpenChange={() => undefined} onRun={() => undefined} />
   );
 
@@ -18,7 +18,7 @@ test("SeoAuditDialog renders audit options", () => {
 });
 
 test("ExportDialog renders fields", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <ExportDialog
       open
       onOpenChange={() => undefined}
@@ -34,7 +34,7 @@ test("ExportDialog renders fields", () => {
 });
 
 test("BackupNowDialog renders options", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <BackupNowDialog open onOpenChange={() => undefined} />
   );
 
@@ -42,7 +42,7 @@ test("BackupNowDialog renders options", () => {
 });
 
 test("ThemeExportDialog renders title", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <ThemeExportDialog open onOpenChange={() => undefined} />
   );
 
@@ -50,7 +50,7 @@ test("ThemeExportDialog renders title", () => {
 });
 
 test("WidgetCreateDialog renders title", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <WidgetCreateDialog
       open
       onOpenChange={() => undefined}
@@ -62,7 +62,7 @@ test("WidgetCreateDialog renders title", () => {
 });
 
 test("WidgetInsertDialog renders title", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <WidgetInsertDialog open onOpenChange={() => undefined} pages={[]} />
   );
 
@@ -70,7 +70,7 @@ test("WidgetInsertDialog renders title", () => {
 });
 
 test("IntegrationRequestDialog renders title", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <IntegrationRequestDialog open onOpenChange={() => undefined} />
   );
 

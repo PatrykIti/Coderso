@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { RedirectDrawer } from "../../../core/admin/ui/redirects/RedirectDrawer";
 import { RedirectsTable, type RedirectRow } from "../../../core/admin/ui/redirects/RedirectsTable";
@@ -15,7 +15,7 @@ test("Redirects UI renders table and drawer", () => {
       lastHit: "Now",
     },
   ];
-  const html = renderToString(
+  const html = renderAdminUi(
     <>
       <RedirectsTable items={rows} isLoading={false} isSaving={false} />
       <RedirectDrawer

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { AssistantSettingsPage } from "../../../core/admin/ui/settings/AssistantSettingsPage";
 
 test("AssistantSettingsPage renders assistant settings", () => {
-  const html = renderToString(<AssistantSettingsPage />);
+  const html = renderAdminUi(<AssistantSettingsPage />);
 
   expect(html).toContain("Assistant Settings");
   expect(html).toContain("Assistant");

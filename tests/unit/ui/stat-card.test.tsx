@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { StatCard } from "../../../core/admin/ui/dashboard/StatCard";
 
 test("StatCard renders label and value", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <StatCard label="Visitors" value="1,000" delta="+5%" />
   );
 

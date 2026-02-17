@@ -1,11 +1,11 @@
 import { expect, test } from "bun:test";
-import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 import { Type } from "lucide-react";
 
 import { FieldCard } from "../../../core/admin/ui/content-types/FieldCard";
 
 test("FieldCard renders field details", () => {
-  const html = renderToString(
+  const html = renderAdminUi(
     <FieldCard
       name="Title"
       typeLabel="String"
