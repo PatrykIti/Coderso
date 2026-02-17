@@ -78,6 +78,7 @@ export function ThemesPage() {
   const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [templateQuery, setTemplateQuery] = useState("");
   const hasHydratedRef = useRef(hasInitialCache);
 
   const dispatchThemeUpdated = () => {
@@ -148,6 +149,17 @@ export function ThemesPage() {
       tokenCount: countTokens(template.tokens),
     }));
   }, [templates]);
+
+  const filteredTemplateCards = useMemo(() => {
+    const normalized = templateQuery.trim().toLowerCase();
+    if (!normalized) return templateCards;
+    return templateCards.filter((template) => {
+      return (
+        template.name.toLowerCase().includes(normalized) ||
+        template.description.toLowerCase().includes(normalized)
+      );
+    });
+  }, [templateCards, templateQuery]);
 
   const profileCards = useMemo(() => {
     return profiles.map((profile) => {
@@ -223,26 +235,35 @@ export function ThemesPage() {
               <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="relative w-full max-w-sm">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search templates..." className="pl-9" />
+                  <Input
+                    placeholder="Search templates..."
+                    className="pl-9"
+                    value={templateQuery}
+                    onChange={(event) => setTemplateQuery(event.target.value)}
+                  />
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {templates.length} templates
+                  {templateQuery.trim()
+                    ? `${filteredTemplateCards.length} of ${templateCards.length} templates`
+                    : `${templateCards.length} templates`}
                 </div>
               </div>
             </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {templateCards.map((template) => (
+            {filteredTemplateCards.map((template) => (
               <ThemeTemplateCard
                 key={template.id}
                 template={template}
                 onEdit={() => openEditTemplate(template)}
               />
             ))}
-            {!isLoading && templateCards.length === 0 ? (
+            {!isLoading && filteredTemplateCards.length === 0 ? (
               <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                No theme templates yet. Create your first template to unlock profiles.
+                {templateQuery.trim()
+                  ? "No templates match your search."
+                  : "No theme templates yet. Create your first template to unlock profiles."}
               </div>
             ) : null}
           </div>
