@@ -45,6 +45,23 @@ Po pierwszym logowaniu admin otrzymuje prosty Setup Wizard, aby ustawic:
 Wizard zapisuje dane do settings (DB) i oznacza konfiguracje jako zakonczona
 przez `setup.completed=true`.
 
+## Coderso admin IA (TASK-054)
+
+- W admin sidebar jest jeden nadrzedny modul: `Coderso`.
+- Moduly v1:
+  - `Engine` (`/admin/coderso/engine`) - content model builder (content types + schema).
+  - `Entries` (`/admin/coderso/entries`) - wpisy rekordow typow z Engine.
+  - `Widgets` (`/admin/coderso/widgets`) - biblioteka widgetow i template editor.
+  - `Forms` (`/admin/coderso/forms`) - lista i edytor formularzy.
+  - `Posts` (`/admin/coderso/posts`) - dedykowany workflow edytorski (TASK-055).
+- Legacy sciezki admina sa wspierane przez aliasy i normalizowane do canonical routes
+  (np. `/admin/content-types` -> `/admin/coderso/engine`).
+- Alias dziala rowniez dla nested routes (np. `/admin/content-types/:id/schema`).
+- Logika canonicalizacji jest centralna w `core/admin/utils/adminPaths.ts` i jest wspolna dla:
+  - renderowania linkow admin (`resolveAdminHref`),
+  - route matchingu (`resolveAdminRoutePath`),
+  - prefetch (`core/admin/utils/adminPrefetch.ts`).
+
 ## Assistant Doc Navigator (Phase A + A2)
 
 Aktualny fundament asystenta (bez LLM) sklada sie z warstw:

@@ -1,7 +1,11 @@
+import { ChevronDown } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import type { NavItem, NavSection } from "@/ui/navigation/sidebarConfig";
+import { isAdminHrefActive } from "@/utils/adminPaths";
 
 const defaultBrand = (
   <div className="flex items-center gap-3 px-2">
@@ -24,6 +28,10 @@ type SidebarNavProps = {
   brand?: React.ReactNode;
   variant?: "desktop" | "mobile";
   className?: string;
+  canAccess?: (permission?: string) => boolean;
+  groupState?: Record<string, boolean>;
+  onGroupToggle?: (groupId: string, nextExpanded: boolean) => void;
+  onNavigate?: () => void;
 };
 
 export function SidebarNav({
@@ -33,7 +41,37 @@ export function SidebarNav({
   brand = defaultBrand,
   variant = "desktop",
   className,
+  canAccess,
+  groupState,
+  onGroupToggle,
+  onNavigate,
 }: SidebarNavProps) {
+  const adminBasePath = useAdminBasePath();
+  const canAccessPermission = (permission?: string) => {
+    if (!permission) return true;
+    return canAccess ? canAccess(permission) : true;
+  };
+
+  const visibleSections = sections
+    .map((section) => {
+      const visibleItems = (section.items ?? []).filter((item) =>
+        canAccessPermission(item.permission)
+      );
+      const visibleGroups = (section.groups ?? [])
+        .filter((group) => canAccessPermission(group.permission))
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => canAccessPermission(item.permission)),
+        }))
+        .filter((group) => group.items.length > 0);
+      return {
+        ...section,
+        items: visibleItems,
+        groups: visibleGroups,
+      };
+    })
+    .filter((section) => section.items.length > 0 || section.groups.length > 0);
+
   const baseClasses =
     variant === "mobile"
       ? "flex h-full w-72 flex-col bg-[var(--admin-sidebar-bg)]"
@@ -47,7 +85,7 @@ export function SidebarNav({
     >
       <div className="p-6 pb-4">{brand}</div>
       <nav className="flex-1 overflow-y-auto px-4 pb-6">
-        {sections.map((section) => (
+        {visibleSections.map((section) => (
           <div key={section.title} className="mb-6">
             <p className="px-3 text-xs font-semibold uppercase tracking-wider text-[var(--admin-sidebar-text)]/70">
               {section.title}
@@ -55,12 +93,19 @@ export function SidebarNav({
             <div className="mt-2 space-y-1">
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = activeHref === item.href;
+                const isActive = isAdminHrefActive(
+                  adminBasePath,
+                  item.href,
+                  activeHref
+                );
                 return (
                   <AdminLink
                     key={item.href}
                     href={item.href}
                     prefetch
+                    onClick={() => {
+                      if (variant === "mobile") onNavigate?.();
+                    }}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
                       isActive &&
@@ -77,6 +122,73 @@ export function SidebarNav({
                   </AdminLink>
                 );
               })}
+              {section.groups.map((group) => {
+                const GroupIcon = group.icon ?? group.items[0]?.icon;
+                const isGroupActive = group.items.some((item) =>
+                  isAdminHrefActive(adminBasePath, item.href, activeHref)
+                );
+                const expanded =
+                  groupState?.[group.id] ?? group.defaultExpanded ?? true;
+                return (
+                  <div key={group.id} className="rounded-lg border border-transparent">
+                    <button
+                      type="button"
+                      onClick={() => onGroupToggle?.(group.id, !expanded)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
+                        isGroupActive &&
+                          "bg-[var(--admin-sidebar-active-bg)] text-[var(--admin-sidebar-active-text)] hover:bg-[var(--admin-sidebar-active-bg)] hover:text-[var(--admin-sidebar-active-text)]"
+                      )}
+                      aria-expanded={expanded}
+                      aria-controls={`nav-group-${group.id}`}
+                    >
+                      {GroupIcon ? <GroupIcon className="h-4 w-4" /> : null}
+                      <span className="flex-1 truncate text-left">{group.label}</span>
+                      <ChevronDown
+                        className={cn("h-4 w-4 transition-transform", expanded && "rotate-180")}
+                      />
+                    </button>
+                    {expanded ? (
+                      <div
+                        id={`nav-group-${group.id}`}
+                        className="mt-1 space-y-1 border-l border-[var(--admin-base-border)]/70 pl-3"
+                      >
+                        {group.items.map((item) => {
+                          const Icon = item.icon;
+                          const isItemActive = isAdminHrefActive(
+                            adminBasePath,
+                            item.href,
+                            activeHref
+                          );
+                          return (
+                            <AdminLink
+                              key={item.href}
+                              href={item.href}
+                              prefetch
+                              onClick={() => {
+                                if (variant === "mobile") onNavigate?.();
+                              }}
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
+                                isItemActive &&
+                                  "bg-[var(--admin-sidebar-active-bg)] text-[var(--admin-sidebar-active-text)] hover:bg-[var(--admin-sidebar-active-bg)] hover:text-[var(--admin-sidebar-active-text)]"
+                              )}
+                            >
+                              <Icon className="h-4 w-4" />
+                              <span className="flex-1 truncate">{item.label}</span>
+                              {item.badge ? (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {item.badge}
+                                </Badge>
+                              ) : null}
+                            </AdminLink>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -90,6 +202,9 @@ export function SidebarNav({
                 key={item.href}
                 href={item.href}
                 prefetch
+                onClick={() => {
+                  if (variant === "mobile") onNavigate?.();
+                }}
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]"
               >
                 <Icon className="h-4 w-4" />

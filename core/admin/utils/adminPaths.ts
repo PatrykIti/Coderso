@@ -41,10 +41,75 @@ export const isExternalHref = (href: string) =>
   href.startsWith("https://") ||
   href.startsWith("mailto:");
 
-export const resolveAdminHref = (basePath: string, href: string) => {
+const splitPathSuffix = (href: string) => {
+  const hashIndex = href.indexOf("#");
+  const queryIndex = href.indexOf("?");
+  let splitIndex = -1;
+  if (hashIndex >= 0 && queryIndex >= 0) {
+    splitIndex = Math.min(hashIndex, queryIndex);
+  } else if (hashIndex >= 0) {
+    splitIndex = hashIndex;
+  } else if (queryIndex >= 0) {
+    splitIndex = queryIndex;
+  }
+  if (splitIndex < 0) {
+    return { path: href, suffix: "" };
+  }
+  return {
+    path: href.slice(0, splitIndex),
+    suffix: href.slice(splitIndex),
+  };
+};
+
+const aliasPrefixes: Array<{ from: string; to: string }> = [
+  { from: "/content-types", to: "/coderso/engine" },
+  { from: "/entries", to: "/coderso/entries" },
+  { from: "/content", to: "/coderso/entries" },
+  { from: "/widgets", to: "/coderso/widgets" },
+  { from: "/forms", to: "/coderso/forms" },
+  { from: "/posts", to: "/coderso/posts" },
+];
+
+export const resolveAdminRoutePath = (path: string) => {
+  const normalized = normalizePath(path.startsWith("/") ? path : `/${path}`);
+  for (const alias of aliasPrefixes) {
+    if (normalized === alias.from) return alias.to;
+    if (normalized.startsWith(`${alias.from}/`)) {
+      return `${alias.to}${normalized.slice(alias.from.length)}`;
+    }
+  }
+  return normalized;
+};
+
+const toCanonicalAdminHref = (basePath: string, href: string) => {
   if (isExternalHref(href)) return href;
-  if (href.startsWith(basePath)) return href;
-  return withAdminBasePath(basePath, href);
+  const { path, suffix } = splitPathSuffix(href);
+  const absolutePath = withAdminBasePath(basePath, path || "/");
+  const relativePath = stripAdminBasePath(absolutePath, basePath);
+  const canonicalPath = resolveAdminRoutePath(relativePath);
+  return `${withAdminBasePath(basePath, canonicalPath)}${suffix}`;
+};
+
+export const resolveAdminHref = (basePath: string, href: string) =>
+  toCanonicalAdminHref(basePath, href);
+
+const normalizeComparableHref = (href: string) => normalizePath(splitPathSuffix(href).path);
+
+export const isAdminHrefActive = (
+  basePath: string,
+  itemHref: string,
+  activeHref?: string
+) => {
+  if (!activeHref) return false;
+  const itemResolved = normalizeComparableHref(
+    toCanonicalAdminHref(basePath, itemHref)
+  );
+  const activeResolved = normalizeComparableHref(
+    toCanonicalAdminHref(basePath, activeHref)
+  );
+  if (itemResolved === activeResolved) return true;
+  if (itemResolved === basePath) return false;
+  return activeResolved.startsWith(`${itemResolved}/`);
 };
 
 export const mapNavItems = <T extends { href: string }>(items: T[], basePath: string) =>
@@ -53,11 +118,22 @@ export const mapNavItems = <T extends { href: string }>(items: T[], basePath: st
     href: resolveAdminHref(basePath, item.href),
   }));
 
-export const mapNavSections = <T extends { items: { href: string }[] }>(
+export const mapNavSections = <
+  T extends {
+    items?: { href: string }[];
+    groups?: { items: { href: string }[] }[];
+  },
+>(
   sections: T[],
   basePath: string
 ) =>
   sections.map((section) => ({
     ...section,
-    items: mapNavItems(section.items, basePath),
+    items: section.items ? mapNavItems(section.items, basePath) : section.items,
+    groups: section.groups
+      ? section.groups.map((group) => ({
+          ...group,
+          items: mapNavItems(group.items, basePath),
+        }))
+      : section.groups,
   }));

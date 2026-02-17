@@ -74,6 +74,7 @@ import { mergeAdminThemeTokens } from "../../services/adminThemes/tokenUtils";
 import { assertAdminThemeTokens } from "../../services/adminThemes/tokenValidation";
 import {
   DEFAULT_ADMIN_PATH,
+  resolveAdminRoutePath,
   resolveAdminBasePath,
   stripAdminBasePath,
   withAdminBasePath,
@@ -162,6 +163,15 @@ const NotFound = () => (
 const Loading = () => (
   <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
     Loading...
+  </div>
+);
+
+const CodersoPostsPlaceholder = () => (
+  <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-border bg-card p-8 text-card-foreground shadow-sm">
+    <h1 className="text-xl font-semibold">Posts module is coming next</h1>
+    <p className="text-sm text-muted-foreground">
+      Use Pages and Entries for now. The dedicated Posts workflow lands in TASK-055.
+    </p>
   </div>
 );
 
@@ -365,9 +375,10 @@ export function AdminApp({ path }: AdminAppProps) {
   const normalizedPath = normalizePath(resolvedPath);
   const adminBasePath = resolveAdminBasePath(resolvedPath);
   const relativePath = stripAdminBasePath(normalizedPath, adminBasePath);
+  const canonicalRelativePath = resolveAdminRoutePath(relativePath);
   const isAdminPath =
     normalizedPath === adminBasePath || normalizedPath.startsWith(`${adminBasePath}/`);
-  const isPublic = publicRoutes.has(relativePath);
+  const isPublic = publicRoutes.has(canonicalRelativePath);
   const isProtected = isAdminPath && !isPublic;
 
   const [authState, setAuthState] = useState<
@@ -509,13 +520,14 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/seo", element: <SeoManagerPage /> },
       { pattern: "/redirects", element: <RedirectsPage /> },
       { pattern: "/tools/import-export", element: <ImportExportPage /> },
-      { pattern: "/forms", element: <FormListPage /> },
-      { pattern: "/forms/:id", element: <FormBuilderPage /> },
-      { pattern: "/content-types", element: <ContentTypeList /> },
-      { pattern: "/content-types/:id", element: <ContentTypeEditor /> },
-      { pattern: "/content-types/:id/schema", element: <SchemaBuilderPage /> },
-      { pattern: "/entries", element: <EntryList /> },
-      { pattern: "/entries/:type/:id", element: <EntryEditor /> },
+      { pattern: "/coderso/forms", element: <FormListPage /> },
+      { pattern: "/coderso/forms/:id", element: <FormBuilderPage /> },
+      { pattern: "/coderso/engine", element: <ContentTypeList /> },
+      { pattern: "/coderso/engine/:id", element: <ContentTypeEditor /> },
+      { pattern: "/coderso/engine/:id/schema", element: <SchemaBuilderPage /> },
+      { pattern: "/coderso/entries", element: <EntryList /> },
+      { pattern: "/coderso/entries/:type/:id", element: <EntryEditor /> },
+      { pattern: "/coderso/posts", element: <CodersoPostsPlaceholder /> },
       { pattern: "/pages", element: <PageListPage /> },
       { pattern: "/pages/:id", element: <PageEditor /> },
       { pattern: "/preview", element: <PagePreview /> },
@@ -524,8 +536,8 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/users", element: <UsersRolesPage /> },
       { pattern: "/roles", element: <PermissionsMatrixPage /> },
       { pattern: "/themes", element: <ThemesPage /> },
-      { pattern: "/widgets", element: <WidgetLibraryPage /> },
-      { pattern: "/widgets/templates/:id", element: <WidgetTemplateEditorPage /> },
+      { pattern: "/coderso/widgets", element: <WidgetLibraryPage /> },
+      { pattern: "/coderso/widgets/templates/:id", element: <WidgetTemplateEditorPage /> },
       {
         pattern: "/settings",
         element: (
@@ -576,8 +588,14 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/store/plugins/:id", element: <PluginDetailsPage /> },
     ];
 
-    return resolveRoute(relativePath, routes);
-  }, [relativePath, saveAssistantSettings, saveGeneralSettings, settingsSaving, settingsState]);
+    return resolveRoute(canonicalRelativePath, routes);
+  }, [
+    canonicalRelativePath,
+    saveAssistantSettings,
+    saveGeneralSettings,
+    settingsSaving,
+    settingsState,
+  ]);
 
   const refreshSettings = useCallback(() => {
     setSettingsState((prev) => ({
@@ -687,17 +705,45 @@ export function AdminApp({ path }: AdminAppProps) {
     return () => {
       active = false;
     };
-  }, [isPublic, normalizedPath]);
+  }, [canonicalRelativePath, isPublic, normalizedPath]);
+
+  useEffect(() => {
+    if (!isAdminPath) return;
+    if (relativePath === canonicalRelativePath) return;
+    const canonicalHref = withAdminBasePath(adminBasePath, canonicalRelativePath);
+    if (router) {
+      router.replace(canonicalHref);
+      return;
+    }
+    if (typeof window === "undefined") return;
+    window.history.replaceState({}, "", canonicalHref);
+  }, [
+    adminBasePath,
+    canonicalRelativePath,
+    isAdminPath,
+    relativePath,
+    router,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (authState === "unauthenticated" && isProtected) {
       window.location.assign(withAdminBasePath(adminBasePath, "/login"));
     }
-    if (authState === "authenticated" && isPublic && relativePath !== "/preview") {
+    if (
+      authState === "authenticated" &&
+      isPublic &&
+      canonicalRelativePath !== "/preview"
+    ) {
       window.location.assign(withAdminBasePath(adminBasePath, "/"));
     }
-  }, [adminBasePath, authState, isProtected, isPublic, relativePath]);
+  }, [
+    adminBasePath,
+    authState,
+    canonicalRelativePath,
+    isProtected,
+    isPublic,
+  ]);
 
   const showSetupWizard = shouldShowSetupWizard({
     isProtected,

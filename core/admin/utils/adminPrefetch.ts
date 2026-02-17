@@ -12,6 +12,7 @@ import { listWidgetTemplatesCached } from "@/services/widgetTemplatesClient";
 import { listWidgetCatalogCached } from "@/services/widgetsClient";
 import {
   isExternalHref,
+  resolveAdminRoutePath,
   resolveAdminBasePath,
   stripAdminBasePath,
 } from "@/utils/adminPaths";
@@ -51,7 +52,7 @@ export const createAdminPrefetcher = (
     if (isExternalHref(href)) return;
 
     const resolvedBase = basePath ?? resolveAdminBasePath(href);
-    const path = stripAdminBasePath(href, resolvedBase);
+    const path = resolveAdminRoutePath(stripAdminBasePath(href, resolvedBase));
     const entry = entries.find((item) => path.startsWith(item.match));
     if (!entry) return;
 
@@ -79,7 +80,7 @@ const defaultEntries: AdminPrefetchEntry[] = [
     run: () => listPagesCached({ force: true }),
   },
   {
-    match: "/widgets",
+    match: "/coderso/widgets",
     run: () =>
       Promise.all([
         listWidgetCatalogCached({ force: true }),
@@ -88,15 +89,15 @@ const defaultEntries: AdminPrefetchEntry[] = [
       ]),
   },
   {
-    match: "/content-types",
+    match: "/coderso/engine",
     run: () => listContentTypesCached({ force: true }),
   },
   {
-    match: "/entries",
+    match: "/coderso/entries",
     run: () => listContentTypesCached({ force: true }),
   },
   {
-    match: "/forms",
+    match: "/coderso/forms",
     run: () => listFormsCached({ force: true }),
   },
   {

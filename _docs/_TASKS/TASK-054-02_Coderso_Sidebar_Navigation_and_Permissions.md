@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Security/RBAC  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-01  
-**Status:** To Do
+**Status:** Done
 
 ---
 

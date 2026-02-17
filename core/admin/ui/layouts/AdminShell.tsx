@@ -1,5 +1,5 @@
 import { Menu } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,18 @@ import { TopBar } from "@/ui/shared/TopBar";
 import { AssistantPanel } from "@/ui/assistant/AssistantPanel";
 import { mapNavItems, mapNavSections, resolveAdminHref } from "@/utils/adminPaths";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
+
+const NAV_GROUP_STATE_KEY = "nextless.admin.navGroupState";
+
+const collectDefaultGroupState = (sections: NavSection[]) => {
+  const defaults: Record<string, boolean> = {};
+  for (const section of sections) {
+    for (const group of section.groups ?? []) {
+      defaults[group.id] = group.defaultExpanded ?? true;
+    }
+  }
+  return defaults;
+};
 
 type AdminShellProps = {
   children: React.ReactNode;
@@ -51,6 +63,24 @@ export function AdminShell({
 }: AdminShellProps) {
   const [navOpen, setNavOpen] = useState(false);
   const adminBasePath = useAdminBasePath();
+  const navGroupDefaults = useMemo(
+    () => collectDefaultGroupState(navSections),
+    [navSections]
+  );
+  const [navGroupState, setNavGroupState] = useState<Record<string, boolean>>(() => {
+    if (typeof window === "undefined") return navGroupDefaults;
+    const stored = window.localStorage.getItem(NAV_GROUP_STATE_KEY);
+    if (!stored) return navGroupDefaults;
+    try {
+      const parsed = JSON.parse(stored) as Record<string, boolean>;
+      return {
+        ...navGroupDefaults,
+        ...parsed,
+      };
+    } catch {
+      return navGroupDefaults;
+    }
+  });
 
   const resolvedSections = useMemo(
     () => mapNavSections(navSections, adminBasePath),
@@ -64,6 +94,18 @@ export function AdminShell({
     ? resolveAdminHref(adminBasePath, activeHref)
     : activeHref;
 
+  useEffect(() => {
+    setNavGroupState((prev) => ({
+      ...navGroupDefaults,
+      ...prev,
+    }));
+  }, [navGroupDefaults]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(NAV_GROUP_STATE_KEY, JSON.stringify(navGroupState));
+  }, [navGroupState]);
+
   return (
     <div
       className={cn(
@@ -75,6 +117,13 @@ export function AdminShell({
         sections={resolvedSections}
         footerItems={resolvedFooter}
         activeHref={resolvedActiveHref}
+        groupState={navGroupState}
+        onGroupToggle={(groupId, nextExpanded) =>
+          setNavGroupState((prev) => ({
+            ...prev,
+            [groupId]: nextExpanded,
+          }))
+        }
       />
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <TopBar
@@ -119,6 +168,14 @@ export function AdminShell({
             footerItems={resolvedFooter}
             activeHref={resolvedActiveHref}
             variant="mobile"
+            groupState={navGroupState}
+            onGroupToggle={(groupId, nextExpanded) =>
+              setNavGroupState((prev) => ({
+                ...prev,
+                [groupId]: nextExpanded,
+              }))
+            }
+            onNavigate={() => setNavOpen(false)}
           />
         </SheetContent>
       </Sheet>

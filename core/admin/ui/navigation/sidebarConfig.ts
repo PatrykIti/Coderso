@@ -28,11 +28,22 @@ export type NavItem = {
   href: string;
   icon: LucideIcon;
   badge?: string;
+  permission?: string;
+};
+
+export type NavGroup = {
+  id: string;
+  label: string;
+  icon?: LucideIcon;
+  items: NavItem[];
+  defaultExpanded?: boolean;
+  permission?: string;
 };
 
 export type NavSection = {
   title: string;
-  items: NavItem[];
+  items?: NavItem[];
+  groups?: NavGroup[];
 };
 
 export const defaultNavSections: NavSection[] = [
@@ -41,12 +52,28 @@ export const defaultNavSections: NavSection[] = [
     items: [
       { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { label: "Pages", href: "/admin/pages", icon: FileText },
-      { label: "Content", href: "/admin/entries", icon: Layers },
-      { label: "Content Types", href: "/admin/content-types", icon: Database },
       { label: "Menus", href: "/admin/menus", icon: List },
       { label: "Media", href: "/admin/media", icon: Image },
-      { label: "Widgets", href: "/admin/widgets", icon: Blocks },
-      { label: "Forms", href: "/admin/forms", icon: ClipboardList },
+    ],
+    groups: [
+      {
+        id: "coderso",
+        label: "Coderso",
+        icon: Blocks,
+        defaultExpanded: true,
+        items: [
+          { label: "Engine", href: "/admin/coderso/engine", icon: Database },
+          { label: "Entries", href: "/admin/coderso/entries", icon: Layers },
+          { label: "Widgets", href: "/admin/coderso/widgets", icon: Blocks },
+          { label: "Forms", href: "/admin/coderso/forms", icon: ClipboardList },
+          {
+            label: "Posts",
+            href: "/admin/coderso/posts",
+            icon: FileText,
+            badge: "Soon",
+          },
+        ],
+      },
     ],
   },
   {

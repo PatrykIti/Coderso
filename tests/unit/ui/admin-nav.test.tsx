@@ -1,20 +1,34 @@
 import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
+import { AdminBasePathProvider } from "../../../core/admin/ui/contexts/AdminBasePathContext";
+import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { defaultNavSections } from "../../../core/admin/ui/navigation/sidebarConfig";
 import { SidebarNav } from "../../../core/admin/ui/shared/SidebarNav";
+import { mapNavSections } from "../../../core/admin/utils/adminPaths";
 
 test("SidebarNav renders primary navigation links", () => {
-  const html = renderToString(<SidebarNav sections={defaultNavSections} />);
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/coderso/entries">
+      <AdminBasePathProvider value="/admin">
+        <SidebarNav
+          sections={mapNavSections(defaultNavSections, "/admin")}
+          activeHref="/admin/coderso/entries"
+          groupState={{ coderso: true }}
+        />
+      </AdminBasePathProvider>
+    </AdminRouterProvider>
+  );
 
   expect(html).toContain("Dashboard");
   expect(html).toContain("/admin/pages");
-  expect(html).toContain("/admin/entries");
-  expect(html).toContain("/admin/content-types");
+  expect(html).toContain("Coderso");
+  expect(html).toContain("/admin/coderso/entries");
+  expect(html).toContain("/admin/coderso/engine");
   expect(html).toContain("/admin/media");
   expect(html).toContain("/admin/menus");
-  expect(html).toContain("/admin/widgets");
-  expect(html).toContain("/admin/forms");
+  expect(html).toContain("/admin/coderso/widgets");
+  expect(html).toContain("/admin/coderso/forms");
   expect(html).toContain("/admin/store");
   expect(html).toContain("/admin/themes");
   expect(html).toContain("/admin/search");

@@ -18,7 +18,7 @@ const row = {
 
 test("ContentTypeTable renders name as edit link", () => {
   const html = renderToString(
-    <AdminRouterProvider initialPath="/admin/content-types">
+    <AdminRouterProvider initialPath="/admin/coderso/engine">
       <AdminBasePathProvider value="/admin">
         <ContentTypeTable rows={[row]} basePath="/admin" />
       </AdminBasePathProvider>
@@ -26,5 +26,5 @@ test("ContentTypeTable renders name as edit link", () => {
   );
 
   expect(html).toContain("Edit content type: Blog");
-  expect(html).toContain("/admin/content-types/type-1");
+  expect(html).toContain("/admin/coderso/engine/type-1");
 });

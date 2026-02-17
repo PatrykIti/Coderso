@@ -79,3 +79,26 @@ test("prefetcher ignores unmatched or external routes", async () => {
     expect(calls).toBe(0);
   });
 });
+
+test("prefetcher resolves legacy paths through coderso aliases", async () => {
+  await withWindow(async () => {
+    let calls = 0;
+    const entries: AdminPrefetchEntry[] = [
+      {
+        match: "/coderso/widgets",
+        run: () => {
+          calls += 1;
+        },
+      },
+    ];
+
+    const prefetch = createAdminPrefetcher(entries, {
+      schedule: (callback) => callback(),
+      now: () => 0,
+    });
+
+    prefetch("/admin/widgets", "/admin");
+    await flushAsync();
+    expect(calls).toBe(1);
+  });
+});

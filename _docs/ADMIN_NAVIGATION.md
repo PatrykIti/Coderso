@@ -4,6 +4,28 @@
 The admin panel uses a lightweight SPA router to avoid full page reloads between
 internal screens. This reduces loading flashes and keeps cached data warm.
 
+## Coderso IA (TASK-054)
+- Sidebar now includes a single expandable group: `Coderso`.
+- Coderso modules (v1):
+  - `Engine` -> `/admin/coderso/engine`
+  - `Entries` -> `/admin/coderso/entries`
+  - `Widgets` -> `/admin/coderso/widgets`
+  - `Forms` -> `/admin/coderso/forms`
+  - `Posts` -> `/admin/coderso/posts` (placeholder until TASK-055)
+- Group collapse state is persisted in local storage (`nextless.admin.navGroupState`).
+- On mobile, selecting a Coderso child route closes the drawer automatically.
+
+## Route Aliases (Backward Compatibility)
+Legacy bookmarks are still accepted and normalized to canonical Coderso paths:
+- `/admin/content-types` -> `/admin/coderso/engine`
+- `/admin/content` and `/admin/entries` -> `/admin/coderso/entries`
+- `/admin/widgets` -> `/admin/coderso/widgets`
+- `/admin/forms` -> `/admin/coderso/forms`
+- `/admin/posts` -> `/admin/coderso/posts`
+
+Nested routes are normalized with the same prefix mapping
+(e.g. `/admin/content-types/:id` -> `/admin/coderso/engine/:id`).
+
 ## What Is SPA vs Full Reload
 ### SPA (client-side)
 - All `/admin/*` routes in the authenticated UI.

@@ -2,15 +2,21 @@ import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import { AdminShell } from "../../../core/admin/ui/layouts/AdminShell";
-
+import { AdminBasePathProvider } from "../../../core/admin/ui/contexts/AdminBasePathContext";
+import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 
 test("AdminShell renders navigation", () => {
   const html = renderToString(
-    <AdminShell>
-      <div>Content</div>
-    </AdminShell>
+    <AdminRouterProvider initialPath="/admin/coderso/entries">
+      <AdminBasePathProvider value="/admin">
+        <AdminShell activeHref="/admin/coderso/entries">
+          <div>Content</div>
+        </AdminShell>
+      </AdminBasePathProvider>
+    </AdminRouterProvider>
   );
 
   expect(html).toContain("Dashboard");
+  expect(html).toContain("Coderso");
   expect(html).toContain("Content");
 });
