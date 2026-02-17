@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import {
   Table,
   TableBody,
@@ -53,6 +54,7 @@ type EntryTableProps = {
   onToggleEntry?: (id: string) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  entryTypeSlug?: string | null;
 };
 
 const formatUpdatedAt = (value?: string | null) => {
@@ -111,6 +113,7 @@ export function EntryTable({
   onToggleEntry,
   onEdit,
   onDelete,
+  entryTypeSlug,
 }: EntryTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
@@ -165,7 +168,16 @@ export function EntryTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col">
-                    {onEdit ? (
+                    {entryTypeSlug ? (
+                      <AdminLink
+                        href={`/entries/${encodeURIComponent(entryTypeSlug)}/${encodeURIComponent(entry.id)}`}
+                        prefetch
+                        className="text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                        aria-label={`Edit entry: ${entry.title}`}
+                      >
+                        {entry.title}
+                      </AdminLink>
+                    ) : onEdit ? (
                       <button
                         type="button"
                         className="text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"

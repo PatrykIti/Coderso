@@ -36,6 +36,8 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `widgetTemplates:list`
 - `widgetTemplates:detail:<id>`
 - `media:list`
+- `adminThemeTemplates:list`
+- `adminThemeProfiles:list`
 
 ## Prefetch
 - Sidebar navigation can trigger optional prefetch on hover/focus.

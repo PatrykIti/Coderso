@@ -11,7 +11,7 @@ import { useSearchResults } from "./useSearchResults";
 
 export function SearchBar() {
   const [query, setQuery] = useState("");
-  const { navigate } = useAdminRouter();
+  const { navigate, prefetch } = useAdminRouter();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const { normalizedQuery, shouldSearch, groups, loading, error } =
@@ -23,6 +23,13 @@ export function SearchBar() {
 
   const highlightIndex =
     totalItems > 0 ? Math.min(activeIndex, totalItems - 1) : 0;
+
+  const handlePrefetch = (item: SearchItem) => {
+    const destination = resolveSearchDestination(item);
+    if (destination) {
+      prefetch(destination);
+    }
+  };
 
   const handleSelect = (item: SearchItem) => {
     const destination = resolveSearchDestination(item);
@@ -80,6 +87,7 @@ export function SearchBar() {
             groups={groups}
             activeIndex={highlightIndex}
             onSelect={handleSelect}
+            onPrefetch={handlePrefetch}
           />
         )}
       </div>

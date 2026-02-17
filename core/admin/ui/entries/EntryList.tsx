@@ -493,6 +493,7 @@ export function EntryList() {
               <EntryGrid
                 entries={filteredEntries}
                 onEdit={handleEditEntry}
+                entryTypeSlug={activeSlug}
                 emptyMessage={
                   entries.length > 0
                     ? "No entries match your current filters."
@@ -503,6 +504,7 @@ export function EntryList() {
               <EntryTable
                 entries={filteredEntries}
                 onEdit={handleEditEntry}
+                entryTypeSlug={activeSlug}
                 onDelete={handleDeleteEntry}
                 selectedIds={selectedIds}
                 isAllSelected={isAllSelected}

@@ -69,6 +69,7 @@ type SearchResultsProps = {
   groups: SearchGroup[];
   activeIndex?: number;
   onSelect?: (item: SearchItem) => void;
+  onPrefetch?: (item: SearchItem) => void;
   onViewAll?: (type: SearchItemType) => void;
   variant?: "dropdown" | "page";
 };
@@ -97,13 +98,16 @@ function highlight(text: string, query: string) {
 function renderMediaCard(
   item: SearchItem,
   query: string,
-  onSelect?: (item: SearchItem) => void
+  onSelect?: (item: SearchItem) => void,
+  onPrefetch?: (item: SearchItem) => void
 ) {
   return (
     <button
       key={item.id}
       type="button"
       className="text-left"
+      onMouseEnter={() => onPrefetch?.(item)}
+      onFocus={() => onPrefetch?.(item)}
       onClick={() => onSelect?.(item)}
     >
       <Card className="overflow-hidden border-muted/60 p-0 transition hover:border-primary/30">
@@ -133,7 +137,8 @@ function renderMediaCard(
 function renderListCard(
   item: SearchItem,
   query: string,
-  onSelect?: (item: SearchItem) => void
+  onSelect?: (item: SearchItem) => void,
+  onPrefetch?: (item: SearchItem) => void
 ) {
   const { icon: Icon, className } = typeStyles[item.type];
   return (
@@ -141,6 +146,8 @@ function renderListCard(
       key={item.id}
       type="button"
       className="text-left"
+      onMouseEnter={() => onPrefetch?.(item)}
+      onFocus={() => onPrefetch?.(item)}
       onClick={() => onSelect?.(item)}
     >
       <Card className="gap-0 border-muted/60 py-4 shadow-sm transition hover:border-primary/30 hover:bg-muted/30">
@@ -177,13 +184,16 @@ function renderListCard(
 function renderUserCard(
   item: SearchItem,
   query: string,
-  onSelect?: (item: SearchItem) => void
+  onSelect?: (item: SearchItem) => void,
+  onPrefetch?: (item: SearchItem) => void
 ) {
   return (
     <button
       key={item.id}
       type="button"
       className="text-left"
+      onMouseEnter={() => onPrefetch?.(item)}
+      onFocus={() => onPrefetch?.(item)}
       onClick={() => onSelect?.(item)}
     >
       <Card className="gap-0 border-muted/60 py-3 shadow-sm transition hover:border-primary/30 hover:bg-muted/30">
@@ -212,6 +222,7 @@ export function SearchResults({
   groups,
   activeIndex = 0,
   onSelect,
+  onPrefetch,
   onViewAll,
   variant = "dropdown",
 }: SearchResultsProps) {
@@ -250,19 +261,19 @@ export function SearchResults({
             {group.type === "media" ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {group.items.map((item) =>
-                  renderMediaCard(item, query, onSelect)
+                  renderMediaCard(item, query, onSelect, onPrefetch)
                 )}
               </div>
             ) : group.type === "user" ? (
               <div className="grid gap-3 sm:grid-cols-2">
                 {group.items.map((item) =>
-                  renderUserCard(item, query, onSelect)
+                  renderUserCard(item, query, onSelect, onPrefetch)
                 )}
               </div>
             ) : (
               <div className="grid gap-3">
                 {group.items.map((item) =>
-                  renderListCard(item, query, onSelect)
+                  renderListCard(item, query, onSelect, onPrefetch)
                 )}
               </div>
             )}
@@ -304,6 +315,8 @@ export function SearchResults({
                   onMouseDown={(event) => {
                     event.preventDefault();
                   }}
+                  onMouseEnter={() => onPrefetch?.(item)}
+                  onFocus={() => onPrefetch?.(item)}
                   onClick={() => onSelect?.(item)}
                 >
                   <div>

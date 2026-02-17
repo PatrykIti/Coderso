@@ -46,7 +46,7 @@ function filterGroups(groups: SearchGroup[], value: ContentFilter) {
 
 export function SearchPage() {
   const [query, setQuery] = useState("");
-  const { navigate } = useAdminRouter();
+  const { navigate, prefetch } = useAdminRouter();
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [recentError, setRecentError] = useState<string | null>(null);
@@ -96,6 +96,13 @@ export function SearchPage() {
     [filteredItems]
   );
 
+  const handlePrefetch = (item: SearchGroup["items"][number]) => {
+    const destination = resolveSearchDestination(item);
+    if (destination) {
+      prefetch(destination);
+    }
+  };
+
   const handleSelect = (item: SearchGroup["items"][number]) => {
     const destination = resolveSearchDestination(item);
     if (destination) {
@@ -133,6 +140,7 @@ export function SearchPage() {
         query={normalizedQuery}
         groups={filterGroups(filteredGroups, filter)}
         onSelect={handleSelect}
+        onPrefetch={handlePrefetch}
         onViewAll={(type) => setContentFilter(type)}
       />
     );

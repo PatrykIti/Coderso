@@ -79,6 +79,7 @@ export function ContentTypeTable({
                     <div className="space-y-1">
                       <AdminLink
                         href={editHref}
+                        prefetch
                         className="text-sm font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                         aria-label={`Edit content type: ${type.name}`}
                       >
@@ -102,7 +103,7 @@ export function ContentTypeTable({
                   </TableCell>
                   <TableCell className="py-4 pr-4 text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <AdminLink href={editHref}>Edit</AdminLink>
+                      <AdminLink href={editHref} prefetch>Edit</AdminLink>
                     </Button>
                   </TableCell>
                 </TableRow>

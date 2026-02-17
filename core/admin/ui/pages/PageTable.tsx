@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { AdminLink } from "@/ui/shared/AdminLink";
 
 import { PageRowActions } from "./PageRowActions";
 import type { PageSummary } from "@/services/pagesClient";
@@ -112,14 +113,14 @@ export function PageTable({
               </TableCell>
               <TableCell>
                 <div className="flex flex-col">
-                  <button
-                    type="button"
+                  <AdminLink
+                    href={`/pages/${encodeURIComponent(page.id)}`}
+                    prefetch
                     className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                    onClick={() => onEdit(page.id)}
                     aria-label={`Edit page: ${page.title}`}
                   >
                     {page.title}
-                  </button>
+                  </AdminLink>
                   <span className="text-xs text-muted-foreground break-all">
                     {page.slug}
                   </span>

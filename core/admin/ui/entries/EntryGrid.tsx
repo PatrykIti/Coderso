@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { AdminLink } from "@/ui/shared/AdminLink";
 
 import type { EntrySummary } from "@/services/entriesClient";
 
@@ -32,10 +33,11 @@ const formatDate = (value: string) => {
 type EntryGridProps = {
   entries: EntrySummary[];
   onEdit: (id: string) => void;
+  entryTypeSlug?: string | null;
   emptyMessage?: string;
 };
 
-export function EntryGrid({ entries, onEdit, emptyMessage }: EntryGridProps) {
+export function EntryGrid({ entries, onEdit, entryTypeSlug, emptyMessage }: EntryGridProps) {
   if (entries.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
@@ -46,13 +48,8 @@ export function EntryGrid({ entries, onEdit, emptyMessage }: EntryGridProps) {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {entries.map((entry) => (
-        <button
-          key={entry.id}
-          type="button"
-          className="text-left"
-          onClick={() => onEdit(entry.id)}
-        >
+      {entries.map((entry) => {
+        const card = (
           <Card className="gap-3 border-border/60 p-4 shadow-sm transition hover:border-primary/40 hover:bg-muted/30">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-1">
@@ -70,8 +67,28 @@ export function EntryGrid({ entries, onEdit, emptyMessage }: EntryGridProps) {
               Updated {formatDate(entry.updatedAt)}
             </div>
           </Card>
-        </button>
-      ))}
+        );
+
+        return entryTypeSlug ? (
+          <AdminLink
+            key={entry.id}
+            href={`/entries/${encodeURIComponent(entryTypeSlug)}/${encodeURIComponent(entry.id)}`}
+            prefetch
+            className="text-left"
+          >
+            {card}
+          </AdminLink>
+        ) : (
+          <button
+            key={entry.id}
+            type="button"
+            className="text-left"
+            onClick={() => onEdit(entry.id)}
+          >
+            {card}
+          </button>
+        );
+      })}
     </div>
   );
 }

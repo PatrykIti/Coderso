@@ -1,16 +1,19 @@
 import { Download, Plus, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { isApiClientError } from "@/services/apiClient";
+import { cacheKeys } from "@/services/cachePolicy";
 import {
   activateAdminThemeProfile,
   createAdminThemeProfile,
   createAdminThemeTemplate,
-  listAdminThemeProfiles,
-  listAdminThemeTemplates,
+  getCachedAdminThemeProfiles,
+  getCachedAdminThemeTemplates,
+  listAdminThemeProfilesCached,
+  listAdminThemeTemplatesCached,
   updateAdminThemeProfile,
   updateAdminThemeTemplate,
   type AdminThemeProfile,
@@ -20,6 +23,7 @@ import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../services/adminThemes/tokenT
 import { mergeAdminThemeTokens } from "../../../services/adminThemes/tokenUtils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { ThemeExportDialog } from "./ThemeExportDialog";
 import { ThemeProfileCard, type AdminThemeProfileCard } from "./ThemeProfileCard";
@@ -61,41 +65,80 @@ export function ThemesPage() {
   const [editingProfile, setEditingProfile] = useState<AdminThemeProfileCard | null>(
     null
   );
-  const [templates, setTemplates] = useState<AdminThemeTemplate[]>([]);
-  const [profiles, setProfiles] = useState<AdminThemeProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialCachedTemplates = getCachedAdminThemeTemplates();
+  const initialCachedProfiles = getCachedAdminThemeProfiles();
+  const hasInitialCache =
+    initialCachedTemplates !== null || initialCachedProfiles !== null;
+  const [templates, setTemplates] = useState<AdminThemeTemplate[]>(
+    () => initialCachedTemplates ?? []
+  );
+  const [profiles, setProfiles] = useState<AdminThemeProfile[]>(
+    () => initialCachedProfiles ?? []
+  );
+  const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasHydratedRef = useRef(hasInitialCache);
 
   const dispatchThemeUpdated = () => {
     if (typeof window === "undefined") return;
     window.dispatchEvent(new CustomEvent("theme:updated"));
   };
 
-  const loadData = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const [templatesResult, profilesResult] = await Promise.all([
-        listAdminThemeTemplates(),
-        listAdminThemeProfiles(),
-      ]);
-      setTemplates(templatesResult.items);
-      setProfiles(profilesResult.items);
-    } catch (err) {
-      if (isApiClientError(err)) {
-        setError(err.message);
-      } else {
-        setError("Failed to load admin themes.");
+  const refresh = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      const force = options?.force ?? false;
+      const background = options?.background ?? hasHydratedRef.current;
+      if (!background) {
+        setIsLoading(true);
       }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setError(null);
+      try {
+        const [templatesResult, profilesResult] = await Promise.all([
+          listAdminThemeTemplatesCached({ force }),
+          listAdminThemeProfilesCached({ force }),
+        ]);
+        setTemplates(templatesResult);
+        setProfiles(profilesResult);
+        hasHydratedRef.current = true;
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load admin themes.");
+        }
+      } finally {
+        if (!background) {
+          setIsLoading(false);
+        }
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    void loadData();
-  }, []);
+    const cachedTemplates = initialCachedTemplates;
+    const cachedProfiles = initialCachedProfiles;
+    if (cachedTemplates || cachedProfiles) {
+      setTemplates(cachedTemplates ?? []);
+      setProfiles(cachedProfiles ?? []);
+      setIsLoading(false);
+      hasHydratedRef.current = true;
+    }
+    refresh({ force: true }).catch(() => undefined);
+  }, [refresh]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (
+        event.key !== cacheKeys.adminThemeTemplatesList &&
+        event.key !== cacheKeys.adminThemeProfilesList
+      ) {
+        return;
+      }
+      refresh({ force: true, background: true }).catch(() => undefined);
+    });
+  }, [refresh]);
 
   const templateCards = useMemo(() => {
     return templates.map((template) => ({
@@ -235,7 +278,7 @@ export function ThemesPage() {
                 onActivate={() => {
                   setIsSaving(true);
                   activateAdminThemeProfile(profile.id)
-                    .then(() => loadData())
+                    .then(() => refresh({ force: true, background: true }))
                     .then(() => dispatchThemeUpdated())
                     .catch((err) => {
                       if (isApiClientError(err)) {
@@ -279,7 +322,7 @@ export function ThemesPage() {
             } else {
               await createAdminThemeTemplate({ name, description, tokens });
             }
-            await loadData();
+            await refresh({ force: true, background: true });
             dispatchThemeUpdated();
             setTemplateDrawerOpen(false);
             setEditingTemplate(null);
@@ -319,7 +362,7 @@ export function ThemesPage() {
                 isActive: shouldActivate,
               });
             }
-            await loadData();
+            await refresh({ force: true, background: true });
             dispatchThemeUpdated();
             setProfileDrawerOpen(false);
             setEditingProfile(null);

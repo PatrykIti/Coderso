@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
 import { ContentTypeTable } from "../../../core/admin/ui/content-types/ContentTypeTable";
+import { AdminBasePathProvider } from "../../../core/admin/ui/contexts/AdminBasePathContext";
+import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 
 const row = {
   id: "type-1",
@@ -16,7 +18,11 @@ const row = {
 
 test("ContentTypeTable renders name as edit link", () => {
   const html = renderToString(
-    <ContentTypeTable rows={[row]} basePath="/admin" />
+    <AdminRouterProvider initialPath="/admin/content-types">
+      <AdminBasePathProvider value="/admin">
+        <ContentTypeTable rows={[row]} basePath="/admin" />
+      </AdminBasePathProvider>
+    </AdminRouterProvider>
   );
 
   expect(html).toContain("Edit content type: Blog");

@@ -255,6 +255,7 @@ Project Change Log.
 | 224 | 2026-02-17 | Widget library cache hydration | Admin/UI |
 
 | 225 | 2026-02-17 | Admin SPA navigation + prefetch | Admin/UI |
+| 226 | 2026-02-17 | Admin UI theme cache hydration | Admin/UI |
 
 
 ---

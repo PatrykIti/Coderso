@@ -2,6 +2,10 @@ import { listContentTypesCached } from "@/services/contentTypesClient";
 import { listMenusCached } from "@/services/menusClient";
 import { listMediaCached } from "@/services/mediaClient";
 import { listPagesCached } from "@/services/pagesClient";
+import {
+  listAdminThemeProfilesCached,
+  listAdminThemeTemplatesCached,
+} from "@/services/adminThemeClient";
 import { listWidgetTemplateCategoriesCached } from "@/services/widgetTemplateCategoriesClient";
 import { listWidgetTemplatesCached } from "@/services/widgetTemplatesClient";
 import { listWidgetCatalogCached } from "@/services/widgetsClient";
@@ -102,8 +106,8 @@ const defaultEntries: AdminPrefetchEntry[] = [
     match: "/themes",
     run: () =>
       Promise.all([
-        listPagesCached({ force: true }),
-        listContentTypesCached({ force: true }),
+        listAdminThemeTemplatesCached({ force: true }),
+        listAdminThemeProfilesCached({ force: true }),
       ]),
   },
 ];

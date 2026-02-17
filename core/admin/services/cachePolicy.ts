@@ -20,6 +20,8 @@ export const cacheKeys = {
   widgetTemplatesList: "widgetTemplates:list",
   widgetTemplateDetail: (id: string) => `widgetTemplates:detail:${id}`,
   mediaList: "media:list",
+  adminThemeTemplatesList: "adminThemeTemplates:list",
+  adminThemeProfilesList: "adminThemeProfiles:list",
 };
 
 export const getCacheTtlMs = () => DEFAULT_TTL_MS;
