@@ -22,6 +22,7 @@ import { registerSessionAdminRoutes } from "./sessionAdminRoutes";
 import { registerAccessLogRoutes } from "./accessLogRoutes";
 import { registerIpAllowlistRoutes } from "./ipAllowlistRoutes";
 import { registerFormsRoutes } from "./formsRoutes";
+import { registerFormActionsRoutes } from "./formActionsRoutes";
 import { registerApiKeysRoutes } from "./apiKeysRoutes";
 import { registerWebhooksRoutes } from "./webhooksRoutes";
 import { registerEmailSettingsRoutes } from "./emailSettingsRoutes";
@@ -33,6 +34,7 @@ import { registerWidgetTemplateCategoryRoutes } from "./widgetTemplateCategoryRo
 import { registerTaxonomyRoutes } from "./taxonomyRoutes";
 import { registerAssistantRoutes } from "./assistantRoutes";
 import { registerListingsRoutes } from "./listingsRoutes";
+import { registerFilterRoutes } from "./filterRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -63,6 +65,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerAccessLogRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerIpAllowlistRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerFormsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerFormActionsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerApiKeysRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerWebhooksRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerEmailSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
@@ -84,6 +90,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerListingsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerFilterRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

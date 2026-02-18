@@ -119,6 +119,16 @@ export {
   EntryTeaserVisualEditor,
   EntryTeaserWizardEditor,
 } from "./EntryTeaserEditors";
+export {
+  ListingFiltersAdvancedEditor,
+  ListingFiltersVisualEditor,
+  ListingFiltersWizardEditor,
+} from "./ListingFiltersEditors";
+export {
+  SearchBoxAdvancedEditor,
+  SearchBoxVisualEditor,
+  SearchBoxWizardEditor,
+} from "./SearchBoxEditors";
 
 export {
   TemplateSectionAdvancedEditor,

@@ -1,0 +1,41 @@
+export const listingFilterPreviewSchema = {
+  type: "object",
+  required: ["listingQueryId"],
+  properties: {
+    listingQueryId: {
+      type: "string",
+      minLength: 1,
+      maxLength: 64,
+    },
+    queryString: {
+      type: "string",
+      minLength: 0,
+      maxLength: 4000,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const publicSearchRequestSchema = {
+  type: "object",
+  required: ["q"],
+  properties: {
+    q: {
+      type: "string",
+      minLength: 1,
+      maxLength: 160,
+    },
+    limit: {
+      type: "integer",
+      minimum: 1,
+      maximum: 50,
+    },
+    sources: {
+      type: "string",
+      minLength: 1,
+      maxLength: 120,
+      pattern: "^[a-zA-Z,\\s-]+$",
+    },
+  },
+  additionalProperties: false,
+} as const;

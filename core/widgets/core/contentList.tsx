@@ -78,6 +78,11 @@ export type ContentListData = {
     listingQueryId?: string;
     listingTemplateId?: string;
     resolvedAt?: string;
+    runtime?: {
+      rejectedTokens?: string[];
+      searchQuery?: string;
+      page?: number;
+    };
     error?: string;
   };
 };
@@ -187,6 +192,18 @@ export const contentListSchema = {
         listingQueryId: { type: "string" },
         listingTemplateId: { type: "string" },
         resolvedAt: { type: "string" },
+        runtime: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            rejectedTokens: {
+              type: "array",
+              items: { type: "string" },
+            },
+            searchQuery: { type: "string" },
+            page: { type: "number" },
+          },
+        },
         error: { type: "string" },
       },
     },
@@ -468,6 +485,22 @@ export function normalizeContentListData(data: ContentListData): ContentListData
       listingQueryId: resolveString(data.resolved?.listingQueryId, ""),
       listingTemplateId: resolveString(data.resolved?.listingTemplateId, ""),
       resolvedAt: resolveString(data.resolved?.resolvedAt, ""),
+      runtime: {
+        rejectedTokens: Array.isArray(data.resolved?.runtime?.rejectedTokens)
+          ? data.resolved?.runtime?.rejectedTokens
+              .filter((entry): entry is string => typeof entry === "string")
+              .map((entry) => entry.trim())
+              .filter(Boolean)
+          : [],
+        searchQuery: resolveOptionalString(data.resolved?.runtime?.searchQuery),
+        page: (() => {
+          const runtimePage = data.resolved?.runtime?.page;
+          if (typeof runtimePage !== "number" || !Number.isFinite(runtimePage)) {
+            return undefined;
+          }
+          return Math.max(1, Math.floor(runtimePage));
+        })(),
+      },
       error: resolveOptionalString(data.resolved?.error),
     },
   };
@@ -581,9 +614,11 @@ function ContentListItemCard({
 export function ContentListBlock({
   data,
   variant,
+  blockId,
 }: {
   data: ContentListData;
   variant: string;
+  blockId?: string;
 }) {
   const normalized = normalizeContentListData(data);
   const resolvedVariant = resolveContentListVariant(variant);
@@ -624,6 +659,9 @@ export function ContentListBlock({
       data-content-list-items={String(resolvedItems.length)}
       data-content-list-status-scope={source.statusScope ?? "published"}
       data-content-list-state={state}
+      data-listing-widget="content-list"
+      data-listing-block-id={blockId ?? ""}
+      data-listing-query-id={sourceMode === "listing" ? source.listingQueryId ?? "" : ""}
     >
       {errorText ? (
         <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">

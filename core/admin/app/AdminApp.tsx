@@ -25,10 +25,13 @@ import { SchemaBuilderPage } from "@/ui/content-types/SchemaBuilderPage";
 import { EntryEditor } from "@/ui/entries/EntryEditor";
 import { EntryList } from "@/ui/entries/EntryList";
 import { FormBuilderPage } from "@/ui/forms/FormBuilderPage";
+import { FormActionLogsPage } from "@/ui/forms/FormActionLogsPage";
 import { FormListPage } from "@/ui/forms/FormListPage";
 import { ImportExportPage } from "@/ui/import-export/ImportExportPage";
 import { ListingEditorPage } from "@/ui/listings/ListingEditorPage";
+import { ListingFiltersPage } from "@/ui/listings/ListingFiltersPage";
 import { ListingListPage } from "@/ui/listings/ListingListPage";
+import { ListingSearchPage } from "@/ui/listings/ListingSearchPage";
 import { PageListPage } from "@/ui/pages/PageListPage";
 import { PageEditor } from "@/ui/pages/PageEditor";
 import { MediaLibraryPage } from "@/ui/media/MediaLibraryPage";
@@ -523,6 +526,7 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/redirects", element: <RedirectsPage /> },
       { pattern: "/tools/import-export", element: <ImportExportPage /> },
       { pattern: "/coderso/forms", element: <FormListPage /> },
+      { pattern: "/coderso/forms/:id/action-runs", element: <FormActionLogsPage /> },
       { pattern: "/coderso/forms/:id", element: <FormBuilderPage /> },
       { pattern: "/coderso/engine", element: <ContentTypeList /> },
       { pattern: "/coderso/engine/:id", element: <ContentTypeEditor /> },
@@ -532,6 +536,8 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/coderso/posts", element: <CodersoPostsPlaceholder /> },
       { pattern: "/coderso/listings", element: <ListingListPage /> },
       { pattern: "/coderso/listings/:id", element: <ListingEditorPage /> },
+      { pattern: "/coderso/filters", element: <ListingFiltersPage /> },
+      { pattern: "/coderso/search", element: <ListingSearchPage /> },
       { pattern: "/pages", element: <PageListPage /> },
       { pattern: "/pages/:id", element: <PageEditor /> },
       { pattern: "/preview", element: <PagePreview /> },

@@ -50,11 +50,26 @@ import {
   normalizeFormEmbedData,
   type FormEmbedData,
 } from "../widgets/core/formEmbed";
+import {
+  normalizeListingFiltersData,
+  type ListingFiltersData,
+} from "../widgets/core/listingFilters";
+import {
+  normalizeSearchBoxData,
+  type SearchBoxData,
+} from "../widgets/core/searchBox";
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
 import { resolveFormRuntimeData } from "../services/forms/formRuntimeResolver";
+import {
+  resolveListingFiltersRuntimeData,
+  resolveListingSearchRuntimeState,
+} from "../services/search/listingRuntimeService";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { getSecuritySettings } from "../services/settings/securitySettings";
+import { searchPublicIndex } from "../services/search/searchIndexService";
+import { publicSearchRequestSchema } from "./validation/filterSchemas";
+import { validate } from "./validation/schemaValidator";
 
 export type PublicPageData = {
   title: string;
@@ -185,7 +200,12 @@ const ensureRecord = (value: unknown): Record<string, unknown> => {
 
 const hydrateRuntimeBlock = async (
   block: WidgetBlock,
-  options: { preview: boolean; contentRoutes: ContentRouteSetting[]; templateStack?: string[] }
+  options: {
+    preview: boolean;
+    contentRoutes: ContentRouteSetting[];
+    templateStack?: string[];
+    runtimeSearchParams?: URLSearchParams;
+  }
 ): Promise<WidgetBlock> => {
   let nextBlock: WidgetBlock = block;
 
@@ -196,12 +216,67 @@ const hydrateRuntimeBlock = async (
     const resolved = await resolveContentListRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
+      runtimeSearchParams: options.runtimeSearchParams,
     });
     nextBlock = {
       ...block,
       data: {
         ...normalizedData,
         resolved,
+      },
+    };
+  }
+  if (block.type === "listing-filters") {
+    const normalizedData = normalizeListingFiltersData(
+      ensureRecord(block.data) as ListingFiltersData
+    );
+    const resolved = await resolveListingFiltersRuntimeData(
+      {
+        listingQueryId: normalizedData.listingQueryId,
+        facets: normalizedData.facets,
+        preview: options.preview,
+        runtimeSearchParams: options.runtimeSearchParams,
+      }
+    );
+
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        resolved: {
+          listingQueryId: resolved.listingQueryId,
+          metrics: resolved.metrics,
+          searchQuery: resolved.searchQuery,
+          rejectedTokens: resolved.rejectedTokens,
+          ...(resolved.error ? { error: resolved.error } : {}),
+        },
+      },
+    };
+  }
+  if (block.type === "search-box") {
+    const normalizedData = normalizeSearchBoxData(
+      ensureRecord(block.data) as SearchBoxData
+    );
+    const listingQueryId =
+      normalizedData.mode === "listing"
+        ? normalizedData.listingQueryId?.trim() ?? ""
+        : "";
+    const runtimeState = listingQueryId
+      ? resolveListingSearchRuntimeState(
+          listingQueryId,
+          options.runtimeSearchParams
+        )
+      : { rejectedTokens: [] as string[] };
+
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        resolved: {
+          ...(normalizedData.resolved ?? {}),
+          ...(listingQueryId ? { query: runtimeState.searchQuery } : {}),
+          rejectedTokens: runtimeState.rejectedTokens,
+        },
       },
     };
   }
@@ -212,6 +287,7 @@ const hydrateRuntimeBlock = async (
     const resolved = await resolveEntryTeaserRuntimeData(normalizedData, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
+      runtimeSearchParams: options.runtimeSearchParams,
     });
     nextBlock = {
       ...block,
@@ -307,15 +383,31 @@ const hydrateRuntimeBlock = async (
 
 const hydrateRuntimeBlocks = async (
   blocks: WidgetBlock[],
-  options: { preview: boolean; contentRoutes: ContentRouteSetting[]; templateStack?: string[] }
+  options: {
+    preview: boolean;
+    contentRoutes: ContentRouteSetting[];
+    templateStack?: string[];
+    runtimeSearchParams?: URLSearchParams;
+  }
 ) => Promise.all(blocks.map((block) => hydrateRuntimeBlock(block, options)));
 
 const buildHtmlResponse = (html: string) =>
   new Response(html, { headers: { "Content-Type": "text/html" } });
 
+const jsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+
 const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
-  options?: { preview?: boolean; previewDevice?: DeviceTarget; themeName?: string }
+  options?: {
+    preview?: boolean;
+    previewDevice?: DeviceTarget;
+    themeName?: string;
+    runtimeSearchParams?: URLSearchParams;
+  }
 ) => {
   ensureRuntimeWidgetsRegistered();
 
@@ -333,6 +425,7 @@ const renderPublicPageHtmlInternal = async (
   const blocks = await hydrateRuntimeBlocks(toBlocks(sourceData), {
     preview: options?.preview ?? false,
     contentRoutes,
+    runtimeSearchParams: options?.runtimeSearchParams,
   });
 
   return renderPublicPageRuntimeHtml({
@@ -495,6 +588,39 @@ export async function handlePublicRequest(req: Request) {
     },
     security.rateLimit
   );
+  if (url.pathname === "/api/search") {
+    const query = url.searchParams.get("q") ?? "";
+    const limitRaw = url.searchParams.get("limit");
+    const sources = url.searchParams.get("sources") ?? undefined;
+    const requestPayload = {
+      q: query,
+      ...(limitRaw ? { limit: Number(limitRaw) } : {}),
+      ...(sources ? { sources } : {}),
+    };
+
+    try {
+      validate(publicSearchRequestSchema, requestPayload);
+    } catch {
+      return jsonResponse(
+        {
+          error: {
+            code: "validation_error",
+            message: "Invalid search request",
+          },
+        },
+        400
+      );
+    }
+
+    const result = await searchPublicIndex(query, {
+      ...(limitRaw ? { limit: Number(limitRaw) } : {}),
+      ...(sources ? { sources } : {}),
+      contentRoutes: ((await getSetting("site.contentRoutes")) as ContentRouteSetting[]) ?? [],
+    });
+
+    return jsonResponse(result);
+  }
+
   if (isSiteAsset(url.pathname)) {
     return serveSiteAsset(url.pathname);
   }
@@ -516,6 +642,7 @@ export async function handlePublicRequest(req: Request) {
       const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
         preview: true,
         previewDevice,
+        runtimeSearchParams: url.searchParams,
       });
       return buildHtmlResponse(html);
     }
@@ -554,9 +681,11 @@ export async function handlePublicRequest(req: Request) {
   const cacheProfileId = activeProfile?.id ?? "default";
   const themeName = activeProfile?.themeName ?? "default";
   configureSiteCache(cacheTtlSeconds);
+  const hasQueryParams = url.searchParams.toString().length > 0;
+  const shouldUseCache = cacheTtlSeconds > 0 && !hasQueryParams;
 
   const cacheKey = buildSiteCacheKey(cacheProfileId, slugPath);
-  if (cacheTtlSeconds > 0) {
+  if (shouldUseCache) {
     const cachedHtml = getSiteCacheEntry(cacheKey);
     if (cachedHtml) {
       return buildHtmlResponse(cachedHtml);
@@ -571,7 +700,7 @@ export async function handlePublicRequest(req: Request) {
         themeName,
       });
       if (!html) return new Response("Not Found", { status: 404 });
-      if (cacheTtlSeconds > 0) {
+      if (shouldUseCache) {
         setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
       }
       return buildHtmlResponse(html);
@@ -580,7 +709,7 @@ export async function handlePublicRequest(req: Request) {
     if (!slug) return new Response("Not Found", { status: 404 });
     const html = await renderEntryDetailHtml(match.type, slug, { themeName });
     if (!html) return new Response("Not Found", { status: 404 });
-    if (cacheTtlSeconds > 0) {
+    if (shouldUseCache) {
       setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
     }
     return buildHtmlResponse(html);
@@ -590,8 +719,11 @@ export async function handlePublicRequest(req: Request) {
   if (page.status !== "published" || !page.publishedData) {
     return new Response("Not Found", { status: 404 });
   }
-  const html = await renderPublicPageHtmlInternal(page as PublicPageData, { themeName });
-  if (cacheTtlSeconds > 0) {
+  const html = await renderPublicPageHtmlInternal(page as PublicPageData, {
+    themeName,
+    runtimeSearchParams: url.searchParams,
+  });
+  if (shouldUseCache) {
     setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
   }
   return buildHtmlResponse(html);

@@ -430,9 +430,11 @@ const buildMetaLine = (item: EntryTeaserRuntimeItem) => {
 export function EntryTeaserBlock({
   data,
   variant,
+  blockId,
 }: {
   data: EntryTeaserData;
   variant: string;
+  blockId?: string;
 }) {
   const normalized = normalizeEntryTeaserData(data);
   const resolvedVariant = resolveEntryTeaserVariant(variant);
@@ -493,6 +495,11 @@ export function EntryTeaserBlock({
           : source.contentTypeId ?? ""
       }
       data-entry-teaser-state={state}
+      data-listing-widget="entry-teaser"
+      data-listing-block-id={blockId ?? ""}
+      data-listing-query-id={
+        sourceDataMode === "listing" ? normalized.source?.listingQueryId ?? "" : ""
+      }
     >
       {errorText ? (
         <div className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">

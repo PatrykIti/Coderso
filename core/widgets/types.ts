@@ -55,6 +55,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
     slots?: Record<string, WidgetBlock[]>;
     previewDevice?: DeviceTarget;
     pageDefaults?: WidgetLayoutDefaults;
+    blockId?: string;
   }>;
 };
 

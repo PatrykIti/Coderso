@@ -14,6 +14,10 @@ import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion"
 import { createGalleryMosaicWidget, type GalleryMosaicData } from "./galleryMosaic";
 import { createGridColumnsWidget, type GridColumnsData } from "./gridColumns";
 import { createHeroWidget, type HeroData } from "./hero";
+import {
+  createListingFiltersWidget,
+  type ListingFiltersData,
+} from "./listingFilters";
 import { createLogoCloudWidget, type LogoCloudData } from "./logoCloud";
 import { createNavigationWidget, type NavigationData } from "./navigation";
 import { createNewsletterWidget, type NewsletterData } from "./newsletter";
@@ -23,6 +27,7 @@ import {
   type RichTextSectionData,
 } from "./richTextSection";
 import { createSectionWidget, type SectionData } from "./section";
+import { createSearchBoxWidget, type SearchBoxData } from "./searchBox";
 import { createSplitLayoutWidget, type SplitLayoutData } from "./splitLayout";
 import { createSpacerWidget, type SpacerData } from "./spacer";
 import { createStackWidget, type StackData } from "./stack";
@@ -62,6 +67,8 @@ export type CoreWidgetEditors = {
   richTextSection: EditorBundle<RichTextSectionData>;
   contentList: EditorBundle<ContentListData>;
   entryTeaser: EditorBundle<EntryTeaserData>;
+  listingFilters: EditorBundle<ListingFiltersData>;
+  searchBox: EditorBundle<SearchBoxData>;
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
@@ -95,6 +102,8 @@ export function createCoreWidgetDefinitions(
     createRichTextSectionWidget(editors.richTextSection),
     createContentListWidget(editors.contentList),
     createEntryTeaserWidget(editors.entryTeaser),
+    createListingFiltersWidget(editors.listingFilters),
+    createSearchBoxWidget(editors.searchBox),
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),

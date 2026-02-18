@@ -26,8 +26,8 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 | Module | Owner | Lifecycle | Default Nav |
 |---|---|---|---|
 | Listings | operations | preview | Yes (`Beta`) |
-| Filters | operations | planned | No |
-| Search | operations | planned | No |
+| Filters | operations | preview | Yes (`Beta`) |
+| Search | operations | preview | Yes (`Beta`) |
 | Booking | operations | planned | No |
 | Appointments | operations | planned | No |
 | Reviews | operations | planned | No |
@@ -74,4 +74,13 @@ const sections = buildDefaultNavSections({
 - 054-07-06 done: Runtime integration for `contentList` and `entryTeaser` with new `legacy|listing` source mode + listing query/template binding.
 - 054-07-07 done: Conditional visibility + dynamic binding (`eq/neq/in/contains/exists/gt/gte/lt/lte`) with runtime-safe row evaluation and template binding editor UX.
 - 054-07-08 done: QA matrix closed (unit/integration/runtime back-compat), API/architecture docs finalized.
-- Next milestone: 054-08 Filters and Search suite.
+- 054-08 done: Filters/Search suite delivered:
+  - `listing-filters` + `search-box` widgets (SSR/runtime URL sync),
+  - `/admin/api/filters/preview` + `/api/search`,
+  - Coderso Filters/Search pages and nav exposure (`Beta`),
+  - full tests for filter engine/search index/runtime/widget layers.
+- 054-09 in progress: Forms automation foundation delivered:
+  - action contract + runner (`email`, `webhook`, `entry_sync`, `redirect`, `success_message`),
+  - action/log tables (`form_actions`, `form_action_runs`) + retry path,
+  - forms API: `/forms/:id/actions`, `/forms/:id/action-runs`, `/forms/action-runs/:runId/retry`,
+  - form editor `Automation` panel + dedicated action logs screen.

@@ -3,7 +3,13 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { formFields, forms, formSubmissions } from "../../../core/db/schema";
+import {
+  formActionRuns,
+  formActions,
+  formFields,
+  forms,
+  formSubmissions,
+} from "../../../core/db/schema";
 import {
   createForm,
   deleteForm,
@@ -27,6 +33,8 @@ async function canConnect() {
 
 const cleanup = async () => {
   if (!hasDb) return;
+  await db.delete(formActionRuns);
+  await db.delete(formActions);
   await db.delete(formSubmissions);
   await db.delete(formFields);
   await db.delete(forms);

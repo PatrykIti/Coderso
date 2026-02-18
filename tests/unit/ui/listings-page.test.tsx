@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { ListingEditorPage } from "../../../core/admin/ui/listings/ListingEditorPage";
+import { ListingFiltersPage } from "../../../core/admin/ui/listings/ListingFiltersPage";
 import { ListingListPage } from "../../../core/admin/ui/listings/ListingListPage";
+import { ListingSearchPage } from "../../../core/admin/ui/listings/ListingSearchPage";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 const createLocalStorage = () => {
@@ -88,4 +90,24 @@ test("ListingEditorPage renders query builder panels in create mode", () => {
   expect(html).toContain("Fields and Template");
   expect(html).toContain("Live Preview");
   expect(html).toContain("Save query");
+});
+
+test("ListingFiltersPage renders preview shell", () => {
+  const html = renderAdminUi(<ListingFiltersPage />, {
+    path: "/admin/coderso/filters",
+  });
+
+  expect(html).toContain("Filters");
+  expect(html).toContain("Run preview");
+  expect(html).toContain("Runtime query string");
+});
+
+test("ListingSearchPage renders public search preview shell", () => {
+  const html = renderAdminUi(<ListingSearchPage />, {
+    path: "/admin/coderso/search",
+  });
+
+  expect(html).toContain("Search");
+  expect(html).toContain("Run preview");
+  expect(html).toContain("global public search");
 });

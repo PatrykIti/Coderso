@@ -663,6 +663,53 @@ Back-compat:
 Public runtime safety:
 - dla source `entries/posts` runtime wymusza `includeDrafts=false` poza preview.
 
+## Coderso Filters & Search (v2 beta)
+
+Filters preview (internal API, session/RBAC):
+- `POST /filters/preview`
+- Permission: `content:read`
+
+Request:
+
+```json
+{
+  "listingQueryId": "query-id",
+  "queryString": "lq.query-id.status.in=published&lq.query-id.__q=release"
+}
+```
+
+Response (summary):
+
+```json
+{
+  "listingQueryId": "query-id",
+  "total": 12,
+  "limit": 10,
+  "offset": 0,
+  "rows": [],
+  "rejectedTokens": [],
+  "appliedFilters": [],
+  "appliedSort": [],
+  "page": 1,
+  "searchQuery": "release"
+}
+```
+
+Public search endpoint:
+- `GET /api/search?q=<query>&limit=<1..50>&sources=pages,entries,posts`
+- brak auth (public read), podlega public rate-limit bucket.
+
+`sources`:
+- `pages`
+- `entries`
+- `posts`
+
+Runtime URL token contract (listing widgets):
+- `lq.<listingQueryId>.__q`
+- `lq.<listingQueryId>.__sort`
+- `lq.<listingQueryId>.__page`
+- `lq.<listingQueryId>.<field>.<operator>`
+
 ---
 
 ## Widgets
@@ -1703,6 +1750,10 @@ Permissions: `forms:read`, `forms:write`
 - `PUT /forms/:id/fields`
 - `GET /forms/:id/submissions`
 - `POST /forms/:id/submissions` (public submit)
+- `GET /forms/:id/actions`
+- `PUT /forms/:id/actions`
+- `GET /forms/:id/action-runs`
+- `POST /forms/action-runs/:runId/retry`
 
 `POST /forms`
 
@@ -1752,10 +1803,85 @@ Opcjonalne pola:
 }
 ```
 
+Przyklad odpowiedzi:
+
+```json
+{
+  "id": "submission-id",
+  "formId": "form-id",
+  "payload": {
+    "full_name": "Patryk",
+    "email": "patryk@example.com"
+  },
+  "status": "new",
+  "createdAt": "2026-02-18T10:00:00.000Z",
+  "runtime": {
+    "successMessage": "Thanks for your submission.",
+    "redirectUrl": "/thank-you"
+  }
+}
+```
+
+`PUT /forms/:id/actions`
+
+```json
+[
+  {
+    "type": "success_message",
+    "label": "Success message override",
+    "enabled": true,
+    "continueOnError": true,
+    "condition": {
+      "operator": "always"
+    },
+    "config": {
+      "message": "Thanks {{submission.full_name}}!"
+    },
+    "orderIndex": 0
+  },
+  {
+    "type": "webhook",
+    "label": "CRM webhook",
+    "enabled": true,
+    "continueOnError": true,
+    "condition": {
+      "operator": "exists",
+      "field": "email"
+    },
+    "config": {
+      "url": "https://example.com/webhook",
+      "method": "POST",
+      "headers": {
+        "X-Source": "nextless"
+      },
+      "timeoutMs": 8000,
+      "includeSubmission": true
+    },
+    "orderIndex": 1
+  }
+]
+```
+
+Wspierane `type`:
+- `email`
+- `webhook`
+- `entry_sync`
+- `redirect`
+- `success_message`
+
+Wspierane operatory warunkow (`condition.operator`):
+- `always`
+- `equals`
+- `not_equals`
+- `exists`
+- `not_exists`
+
 Uwagi:
 - Payload submission jest walidowany na podstawie definicji pol.
 - Publiczny submit podlega rate limitowi; CSRF obowiazuje dla sesji admina.
 - Publiczny submit wymaga `formNonce` (HMAC nonce). W HTML formach jest renderowany jako hidden `__nl_form_nonce`.
+- Akcje formularza wykonywane sa sekwencyjnie po zapisie submission.
+- Retry endpoint (`POST /forms/action-runs/:runId/retry`) dziala tylko dla runow w statusie `failed`.
 
 ---
 

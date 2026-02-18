@@ -274,3 +274,5 @@ Project Change Log.
 | 238 | 2026-02-18 | Coderso runtime widget listings integration | CMS/Widgets |
 | 239 | 2026-02-18 | Coderso listing visibility and dynamic binding | CMS/Widgets |
 | 240 | 2026-02-18 | Coderso listings QA and documentation closure | QA/Docs |
+| 241 | 2026-02-18 | Coderso filters and search suite | CMS/Search |
+| 242 | 2026-02-18 | Coderso forms automation foundation | CMS/Forms |

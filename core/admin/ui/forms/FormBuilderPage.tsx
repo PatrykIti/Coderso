@@ -21,21 +21,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
+  listContentTypesCached,
+  type ContentTypeSummary,
+} from "@/services/contentTypesClient";
+import {
+  getCachedFormActions,
   getCachedFormDetail,
   getFormDetailCached,
+  listFormActionsCached,
   updateForm,
+  updateFormActions,
   updateFormFields,
   type FormDetail,
+  type FormAction,
+  type FormActionInput,
   type FormField as ApiFormField,
   type FormFieldInput,
   type FormRecord,
   type FormStatus,
 } from "@/services/formsClient";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { FieldLibrary, type FieldLibraryItem } from "./FieldLibrary";
 import { FieldListPanel, type FormFieldListItem } from "./FieldListPanel";
+import { FormActionsPanel } from "./FormActionsPanel";
 import { FieldSettingsPanel, type FieldSettings } from "./FieldSettingsPanel";
 import { FormCanvas } from "./FormCanvas";
 import { FormSettingsPanel } from "./FormSettingsPanel";
@@ -138,7 +149,19 @@ const toFormMeta = (form: FormRecord): FormMetaState => ({
   successRedirectUrl: form.successRedirectUrl ?? "",
 });
 
+const toFormActionInput = (action: FormAction): FormActionInput => ({
+  id: action.id,
+  type: action.type,
+  label: action.label,
+  enabled: action.enabled,
+  continueOnError: action.continueOnError,
+  condition: action.condition,
+  config: action.config,
+  orderIndex: action.orderIndex,
+});
+
 export function FormBuilderPage() {
+  const { navigate } = useAdminRouter();
   const [formId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return resolveFormId(window.location.pathname);
@@ -152,6 +175,11 @@ export function FormBuilderPage() {
     successMessage: "",
     successRedirectUrl: "",
   });
+  const [formActions, setFormActions] = useState<FormActionInput[]>([]);
+  const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
+  const [inspectorTab, setInspectorTab] = useState<"settings" | "automation">(
+    "settings"
+  );
   const [fields, setFields] = useState<FormFieldState[]>([]);
   const [selectedTarget, setSelectedTarget] = useState<SelectedTarget>({ type: "form" });
   const [leftTab, setLeftTab] = useState("fields");
@@ -203,6 +231,22 @@ export function FormBuilderPage() {
     setRemoteUpdatePending(false);
   }, []);
 
+  const refreshActions = useCallback(
+    async (options?: { setDirty?: boolean }) => {
+      if (!formId) return;
+      const actions = await listFormActionsCached(formId, { force: true });
+      setFormActions(actions.map(toFormActionInput));
+      if (options?.setDirty === false) return;
+      setUnsavedChanges(true);
+    },
+    [formId]
+  );
+
+  const refreshContentTypes = useCallback(async () => {
+    const list = await listContentTypesCached({ force: true });
+    setContentTypes(list);
+  }, []);
+
   const refreshForm = useCallback(
     async (options?: { allowUnsaved?: boolean; setLoading?: boolean }) => {
       if (!formId) return;
@@ -236,21 +280,31 @@ export function FormBuilderPage() {
   useEffect(() => {
     if (!formId) return;
     const cached = getCachedFormDetail(formId);
+    const cachedActions = getCachedFormActions(formId);
     if (cached) {
       applyDetail(cached);
       setLoadError(null);
       setIsLoading(false);
     }
+    if (cachedActions) {
+      setFormActions(cachedActions.map(toFormActionInput));
+    }
+    refreshActions({ setDirty: false }).catch(() => undefined);
+    refreshContentTypes().catch(() => undefined);
     refreshForm({ setLoading: !cached }).catch(() => undefined);
-  }, [applyDetail, formId, refreshForm]);
+  }, [applyDetail, formId, refreshActions, refreshContentTypes, refreshForm]);
 
   useEffect(() => {
     if (!formId) return undefined;
     return subscribeCacheEvents((event) => {
-      if (event.key !== cacheKeys.formDetail(formId)) return;
-      refreshForm({ setLoading: false }).catch(() => undefined);
+      if (event.key === cacheKeys.formDetail(formId)) {
+        refreshForm({ setLoading: false }).catch(() => undefined);
+      }
+      if (event.key === cacheKeys.formActions(formId)) {
+        refreshActions({ setDirty: false }).catch(() => undefined);
+      }
     });
-  }, [formId, refreshForm]);
+  }, [formId, refreshActions, refreshForm]);
 
   const handleAddField = (item: FieldLibraryItem) => {
     const baseName = item.id;
@@ -347,7 +401,11 @@ export function FormBuilderPage() {
         orderIndex: index,
         settings: field.settings,
       }));
-      const [updatedForm, refreshedFields] = await Promise.all([
+      const actionsPayload: FormActionInput[] = formActions.map((action, index) => ({
+        ...action,
+        orderIndex: index,
+      }));
+      const [updatedForm, refreshedFields, refreshedActions] = await Promise.all([
         updateForm(activeForm.id, {
           name: meta.name,
           description: meta.description,
@@ -357,10 +415,12 @@ export function FormBuilderPage() {
           successRedirectUrl: meta.successRedirectUrl,
         }),
         updateFormFields(activeForm.id, payload),
+        updateFormActions(activeForm.id, actionsPayload),
       ]);
       const updated = updatedForm ?? activeForm;
       const mapped = refreshedFields.map(toFieldState);
       applyDetail({ form: updated, fields: mapped });
+      setFormActions(refreshedActions.map(toFormActionInput));
       setSuccess("Form saved.");
     } catch (err) {
       if (isApiClientError(err)) {
@@ -376,6 +436,59 @@ export function FormBuilderPage() {
   const isBusy = isLoading || isSaving;
   const formTitle = meta.name || activeForm?.name || "Form";
   const formDescription = meta.description || activeForm?.description || "";
+
+  const setMetaField = <K extends keyof FormMetaState>(
+    field: K,
+    value: FormMetaState[K]
+  ) => {
+    setMeta((prev) => ({ ...prev, [field]: value }));
+    setUnsavedChanges(true);
+  };
+
+  const openActionLogs = () => {
+    if (!formId) return;
+    navigate(`/forms/${encodeURIComponent(formId)}/action-runs`);
+  };
+
+  const renderFormInspector = () => (
+    <Tabs
+      value={inspectorTab}
+      onValueChange={(value) => setInspectorTab(value as "settings" | "automation")}
+      className="flex h-full flex-col"
+    >
+      <TabsList variant="line" className="border-b border-border px-4 pt-4">
+        <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsTrigger value="automation">Automation</TabsTrigger>
+      </TabsList>
+      <TabsContent value="settings" className="min-h-0 flex-1">
+        <FormSettingsPanel
+          name={meta.name}
+          description={meta.description}
+          status={meta.status}
+          submissionAccess={meta.submissionAccess}
+          successMessage={meta.successMessage}
+          successRedirectUrl={meta.successRedirectUrl}
+          onNameChange={(value) => setMetaField("name", value)}
+          onDescriptionChange={(value) => setMetaField("description", value)}
+          onStatusChange={(value) => setMetaField("status", value)}
+          onSubmissionAccessChange={(value) => setMetaField("submissionAccess", value)}
+          onSuccessMessageChange={(value) => setMetaField("successMessage", value)}
+          onSuccessRedirectUrlChange={(value) => setMetaField("successRedirectUrl", value)}
+        />
+      </TabsContent>
+      <TabsContent value="automation" className="min-h-0 flex-1">
+        <FormActionsPanel
+          actions={formActions}
+          contentTypes={contentTypes}
+          onChange={(actions) => {
+            setFormActions(actions);
+            setUnsavedChanges(true);
+          }}
+          onOpenLogs={openActionLogs}
+        />
+      </TabsContent>
+    </Tabs>
+  );
 
   return (
     <EditorShell
@@ -405,38 +518,7 @@ export function FormBuilderPage() {
       }
       rightPanel={
         selectedTarget?.type === "form" ? (
-          <FormSettingsPanel
-            name={meta.name}
-            description={meta.description}
-            status={meta.status}
-            submissionAccess={meta.submissionAccess}
-            successMessage={meta.successMessage}
-            successRedirectUrl={meta.successRedirectUrl}
-            onNameChange={(value) => {
-              setMeta((prev) => ({ ...prev, name: value }));
-              setUnsavedChanges(true);
-            }}
-            onDescriptionChange={(value) => {
-              setMeta((prev) => ({ ...prev, description: value }));
-              setUnsavedChanges(true);
-            }}
-            onStatusChange={(value) => {
-              setMeta((prev) => ({ ...prev, status: value }));
-              setUnsavedChanges(true);
-            }}
-            onSubmissionAccessChange={(value) => {
-              setMeta((prev) => ({ ...prev, submissionAccess: value }));
-              setUnsavedChanges(true);
-            }}
-            onSuccessMessageChange={(value) => {
-              setMeta((prev) => ({ ...prev, successMessage: value }));
-              setUnsavedChanges(true);
-            }}
-            onSuccessRedirectUrlChange={(value) => {
-              setMeta((prev) => ({ ...prev, successRedirectUrl: value }));
-              setUnsavedChanges(true);
-            }}
-          />
+          renderFormInspector()
         ) : (
           <FieldSettingsPanel
             field={selectedField}
@@ -465,15 +547,20 @@ export function FormBuilderPage() {
         </div>
       }
       topbarActions={
-        <Button
-          size="sm"
-          className="gap-2"
-          disabled={isBusy || !hasUnsavedChanges}
-          onClick={handleSave}
-        >
-          <Save className="h-4 w-4" />
-          {isSaving ? "Saving..." : "Save form"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={openActionLogs}>
+            Action logs
+          </Button>
+          <Button
+            size="sm"
+            className="gap-2"
+            disabled={isBusy || !hasUnsavedChanges}
+            onClick={handleSave}
+          >
+            <Save className="h-4 w-4" />
+            {isSaving ? "Saving..." : "Save form"}
+          </Button>
+        </div>
       }
     >
       <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur lg:hidden">
@@ -587,38 +674,7 @@ export function FormBuilderPage() {
           </SheetDescription>
           <div className="flex h-full flex-col overflow-y-auto">
             {selectedTarget?.type === "form" ? (
-              <FormSettingsPanel
-                name={meta.name}
-                description={meta.description}
-                status={meta.status}
-                submissionAccess={meta.submissionAccess}
-                successMessage={meta.successMessage}
-                successRedirectUrl={meta.successRedirectUrl}
-                onNameChange={(value) => {
-                  setMeta((prev) => ({ ...prev, name: value }));
-                  setUnsavedChanges(true);
-                }}
-                onDescriptionChange={(value) => {
-                  setMeta((prev) => ({ ...prev, description: value }));
-                  setUnsavedChanges(true);
-                }}
-                onStatusChange={(value) => {
-                  setMeta((prev) => ({ ...prev, status: value }));
-                  setUnsavedChanges(true);
-                }}
-                onSubmissionAccessChange={(value) => {
-                  setMeta((prev) => ({ ...prev, submissionAccess: value }));
-                  setUnsavedChanges(true);
-                }}
-                onSuccessMessageChange={(value) => {
-                  setMeta((prev) => ({ ...prev, successMessage: value }));
-                  setUnsavedChanges(true);
-                }}
-                onSuccessRedirectUrlChange={(value) => {
-                  setMeta((prev) => ({ ...prev, successRedirectUrl: value }));
-                  setUnsavedChanges(true);
-                }}
-              />
+              renderFormInspector()
             ) : (
               <FieldSettingsPanel
                 field={selectedField}

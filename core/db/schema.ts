@@ -922,6 +922,29 @@ export const formFields = pgTable(
   })
 );
 
+export const formActions = pgTable(
+  "form_actions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    label: text("label").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    continueOnError: boolean("continue_on_error").notNull().default(true),
+    condition: jsonb("condition").notNull(),
+    config: jsonb("config").notNull(),
+    orderIndex: integer("order_index").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    formIdx: index("form_actions_form_idx").on(t.formId),
+    orderIdx: index("form_actions_order_idx").on(t.formId, t.orderIndex),
+  })
+);
+
 export const formSubmissions = pgTable(
   "form_submissions",
   {
@@ -939,5 +962,44 @@ export const formSubmissions = pgTable(
     formIdx: index("form_submissions_form_idx").on(t.formId),
     createdIdx: index("form_submissions_created_idx").on(t.createdAt),
     statusIdx: index("form_submissions_status_idx").on(t.status),
+  })
+);
+
+export const formActionRuns = pgTable(
+  "form_action_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    formId: uuid("form_id")
+      .notNull()
+      .references(() => forms.id, { onDelete: "restrict" }),
+    submissionId: uuid("submission_id").references(() => formSubmissions.id, {
+      onDelete: "set null",
+    }),
+    actionId: uuid("action_id").references(() => formActions.id, {
+      onDelete: "set null",
+    }),
+    actionType: text("action_type").notNull(),
+    actionLabel: text("action_label").notNull(),
+    status: text("status").notNull(),
+    attempt: integer("attempt").notNull().default(1),
+    trigger: text("trigger").notNull().default("submission"),
+    errorCode: text("error_code"),
+    errorMessage: text("error_message"),
+    requestPayload: jsonb("request_payload"),
+    responsePayload: jsonb("response_payload"),
+    actionCondition: jsonb("action_condition").notNull(),
+    actionConfig: jsonb("action_config").notNull(),
+    submissionPayload: jsonb("submission_payload").notNull(),
+    retryOfId: uuid("retry_of_id").references((): AnyPgColumn => formActionRuns.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    formIdx: index("form_action_runs_form_idx").on(t.formId),
+    submissionIdx: index("form_action_runs_submission_idx").on(t.submissionId),
+    actionIdx: index("form_action_runs_action_idx").on(t.actionId),
+    statusIdx: index("form_action_runs_status_idx").on(t.status),
+    createdIdx: index("form_action_runs_created_idx").on(t.createdAt),
   })
 );

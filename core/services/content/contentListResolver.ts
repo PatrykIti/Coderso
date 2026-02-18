@@ -17,6 +17,10 @@ import {
   type ListingQuery,
 } from "./queryBuilderService";
 import {
+  parseListingRuntimeOverrides,
+  resolveListingRuntimeOverrides,
+} from "../search/filterEngine";
+import {
   contentListDefaults,
   normalizeContentListData,
   normalizeContentListLimit,
@@ -728,6 +732,7 @@ export async function resolveListingContentListRuntimeData(
   options: {
     preview: boolean;
     contentRoutes: ContentRouteSetting[];
+    runtimeSearchParams?: URLSearchParams;
   },
   deps: Partial<ContentListListingRuntimeDeps> = {}
 ) {
@@ -782,8 +787,12 @@ export async function resolveListingContentListRuntimeData(
     };
   }
 
-  const query = normalizeListingQueryForRuntime(listingQuery.query, options.preview);
-  const execution = await runtimeDeps.executeListing(query);
+  const baseQuery = normalizeListingQueryForRuntime(listingQuery.query, options.preview);
+  const runtimeDraft = options.runtimeSearchParams
+    ? parseListingRuntimeOverrides(options.runtimeSearchParams, listingQueryId)
+    : parseListingRuntimeOverrides(new URLSearchParams(), listingQueryId);
+  const runtime = resolveListingRuntimeOverrides(baseQuery, runtimeDraft);
+  const execution = await runtimeDeps.executeListing(runtime.query);
   const routeMeta = await resolveListingRouteMeta(
     listingQuery.query,
     options.contentRoutes,
@@ -806,6 +815,11 @@ export async function resolveListingContentListRuntimeData(
     listingQueryId,
     listingTemplateId,
     resolvedAt: new Date().toISOString(),
+    runtime: {
+      rejectedTokens: runtime.rejectedTokens,
+      searchQuery: runtime.searchQuery,
+      page: runtime.page,
+    },
   };
 }
 
@@ -814,6 +828,7 @@ export async function resolveContentListRuntimeData(
   options: {
     preview: boolean;
     contentRoutes: ContentRouteSetting[];
+    runtimeSearchParams?: URLSearchParams;
   },
   deps: Partial<ContentListListingRuntimeDeps> = {}
 ) {

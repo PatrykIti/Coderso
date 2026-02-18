@@ -3,7 +3,13 @@ import { sql } from "drizzle-orm";
 import { eq } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { formFields, forms, formSubmissions } from "../../../core/db/schema";
+import {
+  formActionRuns,
+  formActions,
+  formFields,
+  forms,
+  formSubmissions,
+} from "../../../core/db/schema";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -19,6 +25,8 @@ async function canConnect() {
 
 const cleanup = async () => {
   if (!hasDb) return;
+  await db.delete(formActionRuns);
+  await db.delete(formActions);
   await db.delete(formSubmissions);
   await db.delete(formFields);
   await db.delete(forms);

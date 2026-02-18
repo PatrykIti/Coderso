@@ -113,6 +113,14 @@ const defaultEntries: AdminPrefetchEntry[] = [
       ]),
   },
   {
+    match: "/coderso/filters",
+    run: () => listListingQueriesCached({ force: true }),
+  },
+  {
+    match: "/coderso/search",
+    run: () => listListingQueriesCached({ force: true }),
+  },
+  {
     match: "/menus",
     run: () => listMenusCached({ force: true }),
   },

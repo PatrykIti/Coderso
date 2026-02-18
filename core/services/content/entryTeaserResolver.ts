@@ -86,6 +86,7 @@ export async function resolveEntryTeaserRuntimeData(
   options: {
     preview: boolean;
     contentRoutes: ContentRouteSetting[];
+    runtimeSearchParams?: URLSearchParams;
   },
   deps: Parameters<typeof resolveListingContentListRuntimeData>[2] = {}
 ): Promise<{

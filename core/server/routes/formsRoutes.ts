@@ -16,6 +16,7 @@ import {
   listSubmissions,
   submitForm,
 } from "../../services/forms/submissionService";
+import { runFormAutomation } from "../../services/forms/formAutomationRunner";
 import { ApiError } from "../errorHandler";
 import { authenticateApiKey } from "../../services/security/apiKeyAuth";
 import { enforceBotProtection } from "../../services/security/botProtection";
@@ -177,9 +178,33 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
       });
     }
 
-    return submitForm(ctx.params.id, body.data, {
+    const submission = await submitForm(ctx.params.id, body.data, {
       ip: ctx.ip,
       userAgent: ctx.userAgent,
     });
+    if (!submission) {
+      throw new ApiError("form_submission_failed", "Submission failed", 500);
+    }
+
+    let automationResult: Awaited<ReturnType<typeof runFormAutomation>> | null = null;
+    try {
+      automationResult = await runFormAutomation({
+        formId: form.id,
+        submissionId: submission.id,
+        submissionPayload: body.data,
+        submittedAt: submission.createdAt,
+      });
+    } catch {
+      // Submission persistence must not fail when action pipeline has unexpected runtime issues.
+      automationResult = null;
+    }
+
+    return {
+      ...submission,
+      runtime: {
+        successMessage: automationResult?.successMessage ?? form.successMessage ?? null,
+        redirectUrl: automationResult?.redirectUrl ?? form.successRedirectUrl ?? null,
+      },
+    };
   });
 }

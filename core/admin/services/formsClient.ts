@@ -73,13 +73,85 @@ export type FormFieldInput = {
   settings?: Record<string, unknown>;
 };
 
+export type FormActionType =
+  | "email"
+  | "webhook"
+  | "entry_sync"
+  | "redirect"
+  | "success_message";
+
+export type FormActionCondition =
+  | { operator: "always" }
+  | { operator: "equals" | "not_equals"; field: string; value: string | number | boolean | null }
+  | { operator: "exists" | "not_exists"; field: string };
+
+export type FormAction = {
+  id: string;
+  formId: string;
+  type: FormActionType;
+  label: string;
+  enabled: boolean;
+  continueOnError: boolean;
+  condition: FormActionCondition;
+  config: Record<string, unknown>;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FormActionInput = {
+  id?: string;
+  type: FormActionType;
+  label?: string;
+  enabled?: boolean;
+  continueOnError?: boolean;
+  condition?: FormActionCondition;
+  config: Record<string, unknown>;
+  orderIndex?: number;
+};
+
+export type FormActionRunStatus = "success" | "failed" | "skipped";
+
+export type FormActionRun = {
+  id: string;
+  formId: string;
+  submissionId: string | null;
+  actionId: string | null;
+  actionType: FormActionType;
+  actionLabel: string;
+  status: FormActionRunStatus;
+  attempt: number;
+  trigger: "submission" | "retry";
+  errorCode: string | null;
+  errorMessage: string | null;
+  requestPayload: Record<string, unknown> | null;
+  responsePayload: Record<string, unknown> | null;
+  actionCondition: FormActionCondition;
+  actionConfig: Record<string, unknown>;
+  submissionPayload: Record<string, unknown>;
+  retryOfId: string | null;
+  createdAt: string;
+};
+
+export type FormSubmissionRuntime = {
+  successMessage: string | null;
+  redirectUrl: string | null;
+};
+
+export type FormSubmissionResponse = FormSubmission & {
+  runtime?: FormSubmissionRuntime;
+};
+
 let cachedForms: FormRecord[] | null = null;
 let cachedFormsPromise: Promise<FormRecord[]> | null = null;
+const cachedFormActionsPromises = new Map<string, Promise<FormAction[]>>();
 
 const isFormList = (value: unknown): value is FormRecord[] => Array.isArray(value);
 
 const isFormDetail = (value: unknown): value is FormDetail =>
   Boolean(value && typeof value === "object" && "form" in value && "fields" in value);
+
+const isFormActionList = (value: unknown): value is FormAction[] => Array.isArray(value);
 
 const readFormsCache = () =>
   readLocalCache(cacheKeys.formsList, cacheTtlMs.list, isFormList);
@@ -87,8 +159,15 @@ const readFormsCache = () =>
 const readFormDetailCache = (id: string) =>
   readLocalCache(cacheKeys.formDetail(id), cacheTtlMs.detail, isFormDetail);
 
+const readFormActionsCache = (id: string) =>
+  readLocalCache(cacheKeys.formActions(id), cacheTtlMs.detail, isFormActionList);
+
 const writeFormDetailCache = (detail: FormDetail) => {
   writeLocalCache(cacheKeys.formDetail(detail.form.id), detail);
+};
+
+const writeFormActionsCache = (formId: string, actions: FormAction[]) => {
+  writeLocalCache(cacheKeys.formActions(formId), actions);
 };
 
 const primeFormsCacheInternal = (items: FormRecord[]) => {
@@ -119,6 +198,9 @@ const removeCachedForm = (id: string) => {
   if (!current) return;
   primeFormsCacheInternal(current.filter((item) => item.id !== id));
   clearLocalCache(cacheKeys.formDetail(id));
+  clearLocalCache(cacheKeys.formActions(id));
+  clearLocalCache(cacheKeys.formActionRuns(id));
+  cachedFormActionsPromises.delete(id);
 };
 
 export const getCachedForms = () => {
@@ -129,6 +211,7 @@ export const getCachedForms = () => {
 };
 
 export const getCachedFormDetail = (id: string) => readFormDetailCache(id);
+export const getCachedFormActions = (id: string) => readFormActionsCache(id);
 
 export const clearFormsCache = () => {
   cachedForms = null;
@@ -260,7 +343,7 @@ export async function listFormSubmissions(formId: string) {
 }
 
 export async function submitForm(formId: string, data: Record<string, unknown>) {
-  return apiRequest<FormSubmission>(
+  return apiRequest<FormSubmissionResponse>(
     `/forms/${formId}/submissions`,
     {
       method: "POST",
@@ -269,4 +352,89 @@ export async function submitForm(formId: string, data: Record<string, unknown>) 
     },
     { withCsrf: true }
   );
+}
+
+export async function listFormActions(formId: string) {
+  return apiRequest<FormAction[]>(`/forms/${formId}/actions`, {
+    method: "GET",
+  });
+}
+
+export async function listFormActionsCached(
+  formId: string,
+  options?: { force?: boolean }
+) {
+  if (!options?.force) {
+    const cached = readFormActionsCache(formId);
+    if (cached) return cached;
+    const inFlight = cachedFormActionsPromises.get(formId);
+    if (inFlight) return inFlight;
+  }
+
+  const request = listFormActions(formId);
+  cachedFormActionsPromises.set(formId, request);
+  try {
+    const actions = await request;
+    writeFormActionsCache(formId, actions);
+    return actions;
+  } finally {
+    cachedFormActionsPromises.delete(formId);
+  }
+}
+
+export async function updateFormActions(formId: string, actions: FormActionInput[]) {
+  const result = await apiRequest<FormAction[]>(
+    `/forms/${formId}/actions`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(actions),
+    },
+    { withCsrf: true }
+  );
+  writeFormActionsCache(formId, result);
+  broadcastCacheEvent({ key: cacheKeys.formActions(formId), action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.formActionRuns(formId), action: "invalidate" });
+  return result;
+}
+
+export async function listFormActionRuns(
+  formId: string,
+  options?: { status?: FormActionRunStatus; limit?: number }
+) {
+  const query = new URLSearchParams();
+  if (options?.status) query.set("status", options.status);
+  if (typeof options?.limit === "number") query.set("limit", String(options.limit));
+  const queryString = query.toString();
+  const route = queryString
+    ? `/forms/${formId}/action-runs?${queryString}`
+    : `/forms/${formId}/action-runs`;
+
+  const result = await apiRequest<FormActionRun[]>(route, { method: "GET" });
+  writeLocalCache(cacheKeys.formActionRuns(formId), result);
+  return result;
+}
+
+export async function retryFormActionRun(runId: string) {
+  const result = await apiRequest<{
+    run: FormActionRun;
+    result: {
+      successMessage: string | null;
+      redirectUrl: string | null;
+      runs: FormActionRun[];
+    };
+  }>(
+    `/forms/action-runs/${runId}/retry`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    },
+    { withCsrf: true }
+  );
+  const formId = result?.run?.formId;
+  if (formId) {
+    broadcastCacheEvent({ key: cacheKeys.formActionRuns(formId), action: "update" });
+  }
+  return result;
 }

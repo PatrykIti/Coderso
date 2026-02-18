@@ -24,7 +24,10 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cached APIs: `listFormsCached`, `getCachedForms`
 - Form editor
   - UI: `core/admin/ui/forms/FormBuilderPage.tsx`
-  - Cached APIs: `getFormDetailCached`, `getCachedFormDetail`
+  - Cached APIs: `getFormDetailCached`, `getCachedFormDetail`, `listFormActionsCached`, `getCachedFormActions`, `listContentTypesCached`
+- Form action logs
+  - UI: `core/admin/ui/forms/FormActionLogsPage.tsx`
+  - Cached APIs: `listFormActionRuns` (`forms:action-runs:<id>` storage cache key)
 
 ## Listings
 - Listings list + templates tab

@@ -2,7 +2,13 @@ import { afterAll, beforeEach, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { formFields, forms, formSubmissions } from "../../../core/db/schema";
+import {
+  formActionRuns,
+  formActions,
+  formFields,
+  forms,
+  formSubmissions,
+} from "../../../core/db/schema";
 import { createForm, setFormFields } from "../../../core/services/forms/formsService";
 import { submitForm } from "../../../core/services/forms/submissionService";
 
@@ -20,6 +26,8 @@ async function canConnect() {
 
 const cleanup = async () => {
   if (!hasDb) return;
+  await db.delete(formActionRuns);
+  await db.delete(formActions);
   await db.delete(formSubmissions);
   await db.delete(formFields);
   await db.delete(forms);

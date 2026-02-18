@@ -188,8 +188,15 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Definicje formularzy sa w tabeli `forms`, pola w `form_fields`.
 - `forms` przechowuje fallback submission (success message + redirect URL) oraz `submission_access` (public/internal).
 - Submissions trafiaja do `form_submissions` (payload JSONB, ip, userAgent).
+- Automatyzacje formularza sa trzymane w `form_actions` (ordered pipeline per form).
+- Historia wykonania akcji jest trzymana w `form_action_runs` (success/failed/skipped + retry link).
 - Admin UI buduje formularze w `/forms` i zapisuje pola przez `/forms/:id/fields`.
+- Admin UI zarzadza pipeline przez `/forms/:id/actions` i logami przez `/forms/:id/action-runs`.
 - Publiczny submit odbywa sie przez `POST /forms/:id/submissions`.
+- Runner `formAutomationRunner` wykonuje akcje po zapisie submission:
+  - `email`, `webhook`, `entry_sync`, `redirect`, `success_message`,
+  - warunki `always|equals|not_equals|exists|not_exists`,
+  - retry failed runs przez `POST /forms/action-runs/:runId/retry`.
 
 ## Coderso Listings engine (v1 beta)
 
@@ -211,6 +218,18 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Security:
   - endpoints Listings sa internal (`content:read/write`), bez public write API,
   - public runtime dla entries/posts wymusza `includeDrafts=false` poza preview.
+
+## Coderso Filters & Search (v2 beta)
+
+- Filtry runtime bazuja na URL-tokenach `lq.<queryId>.*` i sa parsowane przez `filterEngine`.
+- `listing-filters` i `search-box` dzialaja SSR-first:
+  - serwer hydratuje stan filtrowania i metryki facetow,
+  - klient synchronizuje URL i robi partial HTML refresh listing blockow.
+- API:
+  - internal preview: `POST /admin/api/filters/preview` (RBAC),
+  - public search: `GET /api/search` (published-only index dla pages/entries/posts).
+- Cache policy:
+  - odpowiedzi HTML z query parametrami sa pomijane przez page cache, aby uniknac stale filtrowanych widokow.
 
 ## Backups (v1)
 

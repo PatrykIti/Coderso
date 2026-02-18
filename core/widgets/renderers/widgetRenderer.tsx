@@ -196,6 +196,7 @@ export function WidgetRenderer({
           slots={slots}
           previewDevice={previewDevice}
           pageDefaults={pageDefaults}
+          blockId={normalized.id}
         />
         {!hasSlotDefinitions && legacyChildren.length ? (
           <div className="mt-6 flex flex-col gap-6">

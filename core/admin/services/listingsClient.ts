@@ -125,6 +125,19 @@ export type ListingPreviewResult = {
   rows: Record<string, unknown>[];
 };
 
+export type ListingFiltersPreviewResult = {
+  listingQueryId: string;
+  total: number;
+  limit: number;
+  offset: number;
+  rows: Record<string, unknown>[];
+  rejectedTokens: string[];
+  appliedFilters: ListingFilter[];
+  appliedSort: ListingSort[];
+  page: number | null;
+  searchQuery: string | null;
+};
+
 let cachedQueries: ListingQueryRecord[] | null = null;
 let cachedQueriesPromise: Promise<ListingQueryRecord[]> | null = null;
 let cachedTemplates: ListingTemplateRecord[] | null = null;
@@ -380,6 +393,21 @@ export async function previewListingQuery(query: ListingQueryPayload) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(query),
+    },
+    { withCsrf: true }
+  );
+}
+
+export async function previewListingFilters(input: {
+  listingQueryId: string;
+  queryString?: string;
+}) {
+  return apiRequest<ListingFiltersPreviewResult>(
+    "/filters/preview",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
     },
     { withCsrf: true }
   );

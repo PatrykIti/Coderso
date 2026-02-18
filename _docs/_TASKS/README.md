@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 33 tasks
+- **To Do:** 32 tasks
 - **In Progress:** 2 tasks
-- **Done:** 326 tasks
+- **Done:** 327 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-09 | Coderso Forms and Automation Suite | High | Large | Form actions, automation, action logs |
 | TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Services/resources/schedules/reservations |
 | TASK-054-11 | Coderso Commerce Suite | Medium | Large | Product templates, compare, wishlist, tables |
 | TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
@@ -79,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted filters + scoped search |
+| TASK-054-09 | Coderso Forms and Automation Suite | High | Large | Form actions, automation, action logs |
 
 ---
 
@@ -87,6 +86,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted runtime filters + scoped public search + widgets/UI/API |
 | TASK-054-07-08 | Coderso Listings QA, Tests, and Documentation | High | Medium | Regression matrix + docs/contracts + changelog |
 | TASK-054-07 | Coderso Dynamic Data and Listing Suite | High | Large | Query/listing templates/runtime integration with QA closure |
 | TASK-054-07-07 | Coderso Conditional Visibility and Dynamic Field Binding | Medium | Medium | Row-based visibility ops + template binding editor + runtime hide/show |
