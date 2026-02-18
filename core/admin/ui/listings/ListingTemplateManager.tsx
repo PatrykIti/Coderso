@@ -41,11 +41,13 @@ import {
   createListingTemplate,
   deleteListingTemplate,
   updateListingTemplate,
+  type ListingTemplateConfig,
   type ListingTemplateLayout,
 } from "@/services/listingsClient";
 
 import { listingLayoutOptions } from "./defaults";
 import { useListingTemplates } from "./hooks/useListingTemplates";
+import { BindingEditor } from "./components/BindingEditor";
 
 const formatDate = (value: string) => {
   try {
@@ -65,7 +67,36 @@ type TemplateFormState = {
   slug: string;
   description: string;
   layout: ListingTemplateLayout;
+  config: ListingTemplateConfig;
 };
+
+const defaultTemplateConfig = (): ListingTemplateConfig => ({
+  fields: [],
+  itemActions: [],
+  emptyState: {
+    title: "No items found",
+    description: null,
+    ctaLabel: null,
+    ctaHref: null,
+  },
+  style: {
+    columns: 3,
+    gap: "md",
+    cardVariant: "default",
+  },
+});
+
+const cloneTemplateConfig = (config: ListingTemplateConfig): ListingTemplateConfig => ({
+  fields: config.fields.map((field) => ({
+    ...field,
+    conditions: Array.isArray(field.conditions)
+      ? field.conditions.map((condition) => ({ ...condition }))
+      : [],
+  })),
+  itemActions: config.itemActions.map((item) => ({ ...item })),
+  emptyState: { ...config.emptyState },
+  style: { ...config.style },
+});
 
 const emptyTemplateForm = (): TemplateFormState => ({
   id: null,
@@ -73,6 +104,7 @@ const emptyTemplateForm = (): TemplateFormState => ({
   slug: "",
   description: "",
   layout: "grid",
+  config: defaultTemplateConfig(),
 });
 
 export function ListingTemplateManager() {
@@ -103,6 +135,7 @@ export function ListingTemplateManager() {
       slug: current.slug,
       description: current.description ?? "",
       layout: current.layout,
+      config: cloneTemplateConfig(current.config ?? defaultTemplateConfig()),
     });
     setDialogOpen(true);
   };
@@ -130,6 +163,7 @@ export function ListingTemplateManager() {
           slug: form.slug || null,
           description: form.description || null,
           layout: form.layout,
+          config: form.config,
         });
       } else {
         await createListingTemplate({
@@ -137,6 +171,7 @@ export function ListingTemplateManager() {
           slug: form.slug || null,
           description: form.description || null,
           layout: form.layout,
+          config: form.config,
         });
       }
       await refresh(true);
@@ -255,7 +290,7 @@ export function ListingTemplateManager() {
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {form.id ? "Edit listing template" : "New listing template"}
@@ -320,6 +355,19 @@ export function ListingTemplateManager() {
                 placeholder="Optional description for your team"
               />
             </label>
+
+            <BindingEditor
+              value={form.config.fields}
+              onChange={(fields) =>
+                setForm((prev) => ({
+                  ...prev,
+                  config: {
+                    ...prev.config,
+                    fields,
+                  },
+                }))
+              }
+            />
           </div>
 
           <DialogFooter>

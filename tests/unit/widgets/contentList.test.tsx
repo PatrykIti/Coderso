@@ -383,3 +383,107 @@ test("content list listing mode resolves rows from saved query", async () => {
   expect(resolved.listingQueryId).toBe("listing-query-1");
   expect(resolved.listingTemplateId).toBe("listing-template-1");
 });
+
+test("content list listing bindings can hide blocks via conditions", async () => {
+  const resolved = await resolveContentListRuntimeData(
+    {
+      ...contentListDefaults,
+      source: {
+        ...contentListDefaults.source,
+        mode: "listing",
+        listingQueryId: "listing-query-2",
+        listingTemplateId: "listing-template-2",
+      },
+    },
+    {
+      preview: false,
+      contentRoutes: [{ type: "articles", listPath: "/articles", detailPath: "/articles/:slug", enabled: true }],
+    },
+    {
+      getListingQueryById: async () => ({
+        id: "listing-query-2",
+        name: "Services",
+        description: null,
+        query: {
+          source: "entries",
+          sourceConfig: {
+            contentTypeId: "type-1",
+          },
+          filters: [],
+          sort: [{ field: "id", dir: "asc" }],
+          pagination: { limit: 12, offset: 0 },
+          fields: ["id", "title", "slug", "status", "summary"],
+        },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+      }),
+      getListingTemplateById: async () => ({
+        id: "listing-template-2",
+        name: "Cards with rules",
+        slug: "cards-rules",
+        description: null,
+        layout: "grid",
+        config: {
+          fields: [
+            {
+              key: "excerpt",
+              source: "summary",
+              label: null,
+              fallback: null,
+              format: "text",
+              conditions: [
+                { id: "excerpt-draft-only", field: "status", op: "eq", value: "draft" },
+              ],
+            },
+            {
+              key: "href",
+              source: "slug",
+              label: null,
+              fallback: null,
+              format: "text",
+              conditions: [{ id: "href-draft-only", field: "status", op: "eq", value: "draft" }],
+            },
+          ],
+          itemActions: [],
+          emptyState: {
+            title: "No items",
+            description: null,
+            ctaLabel: null,
+            ctaHref: null,
+          },
+          style: {
+            columns: 3,
+            gap: "md",
+            cardVariant: "default",
+          },
+        },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+      }),
+      executeListing: async () => ({
+        source: "entries",
+        total: 1,
+        limit: 12,
+        offset: 0,
+        rows: [
+          {
+            id: "entry-1",
+            title: "Oil service",
+            slug: "oil-service",
+            status: "published",
+            summary: "Keep your engine protected",
+          },
+        ],
+      }),
+      getContentTypeById: async () => ({
+        id: "type-1",
+        slug: "articles",
+      }),
+      getContentTypeBySlug: async () => null,
+    }
+  );
+
+  expect(resolved.items[0]?.title).toBe("Oil service");
+  expect(resolved.items[0]?.excerpt).toBeUndefined();
+  expect(resolved.items[0]?.href).toBeUndefined();
+});

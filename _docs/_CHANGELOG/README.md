@@ -272,3 +272,4 @@ Project Change Log.
 | 236 | 2026-02-18 | Coderso listings API and routes | Core/API |
 | 237 | 2026-02-18 | Coderso listings admin UI | Admin/UI |
 | 238 | 2026-02-18 | Coderso runtime widget listings integration | CMS/Widgets |
+| 239 | 2026-02-18 | Coderso listing visibility and dynamic binding | CMS/Widgets |

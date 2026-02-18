@@ -8,6 +8,27 @@ export type ListingFieldFormat = "text" | "date" | "badge" | "currency";
 export type ListingActionKind = "view" | "edit" | "custom";
 export type ListingGapScale = "xs" | "sm" | "md" | "lg" | "xl";
 export type ListingCardVariant = "default" | "compact" | "minimal";
+export type ListingTemplateConditionOperator =
+  | "eq"
+  | "neq"
+  | "in"
+  | "contains"
+  | "exists"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte";
+export type ListingTemplateConditionPrimitive = string | number | boolean | null;
+export type ListingTemplateConditionValue =
+  | ListingTemplateConditionPrimitive
+  | ListingTemplateConditionPrimitive[];
+
+export type ListingTemplateCondition = {
+  id: string;
+  field: string;
+  op: ListingTemplateConditionOperator;
+  value?: ListingTemplateConditionValue;
+};
 
 export type ListingTemplateFieldBinding = {
   key: string;
@@ -15,6 +36,7 @@ export type ListingTemplateFieldBinding = {
   label: string | null;
   fallback: string | null;
   format: ListingFieldFormat;
+  conditions: ListingTemplateCondition[];
 };
 
 export type ListingTemplateItemAction = {
@@ -88,6 +110,17 @@ const fieldFormats = new Set<ListingFieldFormat>([
 const actionKinds = new Set<ListingActionKind>(["view", "edit", "custom"]);
 const gapScale = new Set<ListingGapScale>(["xs", "sm", "md", "lg", "xl"]);
 const cardVariants = new Set<ListingCardVariant>(["default", "compact", "minimal"]);
+const conditionOperators = new Set<ListingTemplateConditionOperator>([
+  "eq",
+  "neq",
+  "in",
+  "contains",
+  "exists",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+]);
 const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
 
 const defaultConfig = (): ListingTemplateConfig => ({
@@ -145,6 +178,94 @@ const normalizeHref = (value: unknown) => {
   throw new Error("listing_template_config_invalid");
 };
 
+const isPrimitiveConditionValue = (
+  value: unknown
+): value is ListingTemplateConditionPrimitive =>
+  typeof value === "string" ||
+  typeof value === "number" ||
+  typeof value === "boolean" ||
+  value === null;
+
+const normalizeConditionPrimitive = (value: unknown): ListingTemplateConditionPrimitive => {
+  if (!isPrimitiveConditionValue(value)) {
+    throw new Error("listing_template_config_invalid");
+  }
+  if (typeof value === "string") {
+    return value.trim();
+  }
+  return value;
+};
+
+const normalizeConditionValue = (
+  op: ListingTemplateConditionOperator,
+  value: unknown
+): ListingTemplateConditionValue | undefined => {
+  if (op === "exists") {
+    if (value === undefined) return true;
+    if (typeof value === "boolean") return value;
+    throw new Error("listing_template_config_invalid");
+  }
+
+  if (op === "in") {
+    if (!Array.isArray(value) || value.length === 0) {
+      throw new Error("listing_template_config_invalid");
+    }
+    return value.map((item) => normalizeConditionPrimitive(item));
+  }
+
+  if (op === "contains") {
+    if (Array.isArray(value)) {
+      if (value.length === 0) throw new Error("listing_template_config_invalid");
+      return value.map((item) => normalizeConditionPrimitive(item));
+    }
+    if (value === undefined) throw new Error("listing_template_config_invalid");
+    return normalizeConditionPrimitive(value);
+  }
+
+  if (value === undefined) {
+    throw new Error("listing_template_config_invalid");
+  }
+  if (Array.isArray(value)) {
+    throw new Error("listing_template_config_invalid");
+  }
+  return normalizeConditionPrimitive(value);
+};
+
+const normalizeConditions = (value: unknown): ListingTemplateCondition[] => {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value) || value.length > 20) {
+    throw new Error("listing_template_config_invalid");
+  }
+
+  const normalized = value.map((item, index) => {
+    if (!isRecord(item)) throw new Error("listing_template_config_invalid");
+    const field = normalizeFieldPath(item.field);
+    const opRaw = normalizeText(item.op);
+    if (!opRaw || !conditionOperators.has(opRaw as ListingTemplateConditionOperator)) {
+      throw new Error("listing_template_config_invalid");
+    }
+    const op = opRaw as ListingTemplateConditionOperator;
+    const id = slugify(normalizeText(item.id) ?? `${field}-${op}`) || `condition-${index + 1}`;
+
+    return {
+      id,
+      field,
+      op,
+      value: normalizeConditionValue(op, item.value),
+    };
+  });
+
+  const ids = new Set<string>();
+  normalized.forEach((condition) => {
+    if (ids.has(condition.id)) {
+      throw new Error("listing_template_config_invalid");
+    }
+    ids.add(condition.id);
+  });
+
+  return normalized;
+};
+
 const normalizeFields = (value: unknown) => {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value) || value.length > 40) {
@@ -165,6 +286,7 @@ const normalizeFields = (value: unknown) => {
       label: normalizeNullableText(item.label),
       fallback: normalizeNullableText(item.fallback),
       format: formatRaw as ListingFieldFormat,
+      conditions: normalizeConditions(item.conditions),
     };
   });
 

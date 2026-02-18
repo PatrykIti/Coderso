@@ -51,6 +51,7 @@ Deliver dynamic data/listing capabilities (JetEngine/JetGrid-like) on top of Nex
 - 2026-02-18: `054-07-04` completed (listings API routes, saved queries persistence, preview endpoint wiring).
 - 2026-02-18: `054-07-05` completed (Listings admin UI: query table/editor/template manager, routing, cache/prefetch, nav exposure as beta).
 - 2026-02-18: `054-07-06` completed (`contentList` + `entryTeaser` listing source mode, runtime query/template wiring, backward-compatible legacy path).
+- 2026-02-18: `054-07-07` completed (row-based visibility conditions + dynamic binding resolver + template BindingEditor UI + runtime hide/show wiring).
 
 ## Files to Change (Target)
 - `core/services/content/queryBuilderService.ts` (new)

@@ -19,6 +19,23 @@ export type ListingFilterOperator =
   | "exists";
 export type ListingSortDirection = "asc" | "desc";
 export type ListingTemplateLayout = "grid" | "list" | "table" | "calendar" | "map";
+export type ListingTemplateConditionOperator =
+  | "eq"
+  | "neq"
+  | "in"
+  | "contains"
+  | "exists"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte";
+
+export type ListingTemplateCondition = {
+  id: string;
+  field: string;
+  op: ListingTemplateConditionOperator;
+  value?: unknown;
+};
 
 export type ListingFilter = {
   field: string;
@@ -62,6 +79,7 @@ export type ListingTemplateField = {
   label: string | null;
   fallback: string | null;
   format: "text" | "date" | "badge" | "currency";
+  conditions: ListingTemplateCondition[];
 };
 
 export type ListingTemplateAction = {

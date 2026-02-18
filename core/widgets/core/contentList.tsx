@@ -526,12 +526,12 @@ function ContentListItemCard({
   };
   const metaLine = buildMetaLine(item);
   const title = item.title ?? "Untitled";
-  const href = item.href && item.href.trim().length > 0 ? item.href : "#";
+  const href = item.href && item.href.trim().length > 0 ? item.href : undefined;
   const excerpt = (item.excerpt ?? "").trim();
   const showImage = fields.showImage && item.imageSrc;
   const showExcerpt = fields.showExcerpt && excerpt.length > 0;
   const showMeta = fields.showMeta && metaLine.length > 0;
-  const showCta = fields.showCta;
+  const showCta = fields.showCta && Boolean(href);
 
   return (
     <article
@@ -552,9 +552,13 @@ function ContentListItemCard({
       ) : null}
       <div className="space-y-2">
         <h3 className={variant === "compact" ? "text-base font-semibold" : "text-lg font-semibold"}>
-          <a href={href} className="hover:underline">
-            {title}
-          </a>
+          {href ? (
+            <a href={href} className="hover:underline">
+              {title}
+            </a>
+          ) : (
+            title
+          )}
         </h3>
         {showMeta ? <p className="text-xs opacity-75">{metaLine}</p> : null}
         {showExcerpt ? (

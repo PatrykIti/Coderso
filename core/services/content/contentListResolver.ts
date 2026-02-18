@@ -8,6 +8,11 @@ import {
   type ListingTemplateRecord,
 } from "./listingTemplatesService";
 import {
+  findListingBindingState,
+  resolveListingBindingIndex,
+  type ListingRuntimeBindingState,
+} from "./listingRuntimeResolver";
+import {
   executeListingQuery,
   type ListingQuery,
 } from "./queryBuilderService";
@@ -338,42 +343,42 @@ const toStringList = (value: unknown): string[] => {
   return [];
 };
 
-const resolveTemplateFieldByKeys = (
-  template: ListingTemplateRecord | null,
-  keys: string[]
-) => {
-  if (!template) return null;
-  const lookup = new Set(keys.map((key) => key.toLowerCase()));
-  return (
-    template.config.fields.find((field) =>
-      lookup.has(field.key.trim().toLowerCase())
-    ) ?? null
-  );
+type TemplateFieldResolutionState = {
+  matched: boolean;
+  visible: boolean;
+  value: unknown;
 };
 
-const resolveTemplateFieldValue = (
-  row: Record<string, unknown>,
-  template: ListingTemplateRecord | null,
+const resolveTemplateFieldState = (
+  bindingIndex: Record<string, ListingRuntimeBindingState>,
   keys: string[]
-) => {
-  const binding = resolveTemplateFieldByKeys(template, keys);
-  if (!binding) return undefined;
-  const value = readPathValue(row, binding.source);
-  if (value === undefined || value === null || value === "") {
-    return binding.fallback ?? undefined;
+): TemplateFieldResolutionState => {
+  const binding = findListingBindingState(bindingIndex, keys);
+  if (!binding) {
+    return {
+      matched: false,
+      visible: true,
+      value: undefined,
+    };
   }
-  return value;
+  return {
+    matched: true,
+    visible: binding.visible,
+    value: binding.value,
+  };
 };
 
 const resolveStringFromTemplateOrPaths = (
   row: Record<string, unknown>,
-  template: ListingTemplateRecord | null,
+  bindingIndex: Record<string, ListingRuntimeBindingState>,
   templateKeys: string[],
   fallbackPaths: string[]
 ) => {
-  const templateValue = resolveTemplateFieldValue(row, template, templateKeys);
-  const fromTemplate = toDisplayString(templateValue);
-  if (fromTemplate) return fromTemplate;
+  const templateFieldState = resolveTemplateFieldState(bindingIndex, templateKeys);
+  if (templateFieldState.matched) {
+    if (!templateFieldState.visible) return undefined;
+    return toDisplayString(templateFieldState.value);
+  }
   for (const path of fallbackPaths) {
     const fromRow = toDisplayString(readPathValue(row, path));
     if (fromRow) return fromRow;
@@ -383,27 +388,33 @@ const resolveStringFromTemplateOrPaths = (
 
 const resolveTagsFromTemplateOrPaths = (
   row: Record<string, unknown>,
-  template: ListingTemplateRecord | null
+  bindingIndex: Record<string, ListingRuntimeBindingState>
 ) => {
-  const fromTemplate = toStringList(
-    resolveTemplateFieldValue(row, template, ["tags", "categories"])
-  );
-  if (fromTemplate.length > 0) return fromTemplate;
+  const templateFieldState = resolveTemplateFieldState(bindingIndex, [
+    "tags",
+    "categories",
+  ]);
+  if (templateFieldState.matched) {
+    if (!templateFieldState.visible) return [];
+    return toStringList(templateFieldState.value);
+  }
   return toStringList(readPathValue(row, "tags"));
 };
 
 const resolveImageCandidateFromListingRow = (
   row: Record<string, unknown>,
-  template: ListingTemplateRecord | null
+  bindingIndex: Record<string, ListingRuntimeBindingState>
 ) => {
-  const templateImage = resolveTemplateFieldValue(row, template, [
+  const templateFieldState = resolveTemplateFieldState(bindingIndex, [
     "image",
     "imageSrc",
     "cover",
     "thumbnail",
   ]);
-  const fromTemplate = readMediaCandidate(templateImage);
-  if (fromTemplate) return fromTemplate;
+  if (templateFieldState.matched) {
+    if (!templateFieldState.visible) return null;
+    return readMediaCandidate(templateFieldState.value);
+  }
 
   const candidates: unknown[] = [
     readPathValue(row, "imageSrc"),
@@ -605,53 +616,81 @@ export async function mapListingRowsToContentListItems(
 
   return Promise.all(
     rows.map(async (row, index) => {
+      const bindingIndex = resolveListingBindingIndex(
+        row,
+        options.template?.config.fields
+      );
+
       const id = resolveStringFromTemplateOrPaths(
         row,
-        options.template ?? null,
+        bindingIndex,
         ["id"],
         ["id"]
       );
       const slug = resolveStringFromTemplateOrPaths(
         row,
-        options.template ?? null,
+        bindingIndex,
         ["slug"],
         ["slug"]
       );
       const title = resolveStringFromTemplateOrPaths(
         row,
-        options.template ?? null,
+        bindingIndex,
         ["title", "name", "headline"],
         ["title", "name", "data.title", "data.name"]
       );
       const excerpt = resolveStringFromTemplateOrPaths(
         row,
-        options.template ?? null,
+        bindingIndex,
         ["excerpt", "summary", "description"],
         ["excerpt", "summary", "description", "data.excerpt", "data.summary", "data.description"]
       );
       const authorName = resolveStringFromTemplateOrPaths(
         row,
-        options.template ?? null,
+        bindingIndex,
         ["author", "authorName"],
         ["author.name", "authorName", "name"]
       );
       const status = resolveStringFromTemplateOrPaths(
         row,
-        options.template ?? null,
+        bindingIndex,
         ["status"],
         ["status"]
       );
+      const publishedAtBinding = resolveTemplateFieldState(bindingIndex, [
+        "publishedAt",
+        "date",
+      ]);
       const publishedAt =
-        toIsoDateString(
-          resolveTemplateFieldValue(row, options.template ?? null, ["publishedAt", "date"])
-        ) ??
-        toIsoDateString(readPathValue(row, "publishedAt")) ??
-        toIsoDateString(readPathValue(row, "updatedAt")) ??
-        toIsoDateString(readPathValue(row, "createdAt"));
+        publishedAtBinding.matched
+          ? publishedAtBinding.visible
+            ? toIsoDateString(publishedAtBinding.value)
+            : undefined
+          : toIsoDateString(readPathValue(row, "publishedAt")) ??
+            toIsoDateString(readPathValue(row, "updatedAt")) ??
+            toIsoDateString(readPathValue(row, "createdAt"));
 
-      const templateHref = resolveTemplateActionHref(row, options.template ?? null);
+      const hrefBinding = resolveTemplateFieldState(bindingIndex, ["href", "url"]);
+      const hrefFromBindingRaw =
+        hrefBinding.matched && hrefBinding.visible
+          ? toDisplayString(hrefBinding.value)
+          : undefined;
+      const hrefFromBinding =
+        hrefFromBindingRaw !== undefined
+          ? sanitizeHref(hrefFromBindingRaw)
+          : undefined;
+      const templateHref =
+        !hrefBinding.matched && hrefFromBinding === undefined
+          ? resolveTemplateActionHref(row, options.template ?? null)
+          : undefined;
+      const hrefFromRowRaw =
+        !hrefBinding.matched && hrefFromBinding === undefined
+          ? resolveStringFromTemplateOrPaths(row, bindingIndex, ["href", "url"], ["href", "url"])
+          : undefined;
+      const hrefFromRow =
+        hrefFromRowRaw !== undefined ? sanitizeHref(hrefFromRowRaw) : undefined;
       const detailHref =
-        options.detailPathPattern && (slug || id)
+        !hrefBinding.matched && options.detailPathPattern && (slug || id)
           ? sanitizeHref(
               buildDetailHref(
                 options.detailPathPattern,
@@ -660,19 +699,10 @@ export async function mapListingRowsToContentListItems(
               )
             )
           : undefined;
-      const href =
-        templateHref ??
-        resolveStringFromTemplateOrPaths(
-          row,
-          options.template ?? null,
-          ["href", "url"],
-          ["href", "url"]
-        ) ??
-        detailHref ??
-        "#";
+      const href = hrefFromBinding ?? templateHref ?? hrefFromRow ?? detailHref;
 
       const imageCandidate = options.showImage
-        ? resolveImageCandidateFromListingRow(row, options.template ?? null)
+        ? resolveImageCandidateFromListingRow(row, bindingIndex)
         : null;
       const resolvedImage = await resolveItemImage(imageCandidate, mediaCache);
 
@@ -684,7 +714,7 @@ export async function mapListingRowsToContentListItems(
         excerpt,
         imageSrc: resolvedImage.src,
         imageAlt: resolvedImage.alt,
-        tags: resolveTagsFromTemplateOrPaths(row, options.template ?? null),
+        tags: resolveTagsFromTemplateOrPaths(row, bindingIndex),
         authorName,
         publishedAt,
         status,

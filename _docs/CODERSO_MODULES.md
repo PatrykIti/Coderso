@@ -72,4 +72,5 @@ const sections = buildDefaultNavSections({
 - 054-07-04 done: Listings API routes + saved query persistence (`listing_queries`) + preview wiring.
 - 054-07-05 done: Admin UI query builder + template manager + Coderso navigation/routing/prefetch exposure (`Beta`).
 - 054-07-06 done: Runtime integration for `contentList` and `entryTeaser` with new `legacy|listing` source mode + listing query/template binding.
-- Next milestone: 054-07-07 conditional visibility and dynamic field binding.
+- 054-07-07 done: Conditional visibility + dynamic binding (`eq/neq/in/contains/exists/gt/gte/lt/lte`) with runtime-safe row evaluation and template binding editor UX.
+- Next milestone: 054-07-08 listings QA matrix + docs/contracts finalization.

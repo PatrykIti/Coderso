@@ -76,6 +76,38 @@ test("normalizeListingTemplateConfig rejects unsafe field paths", () => {
   ).toThrow("listing_template_config_invalid");
 });
 
+test("normalizeListingTemplateConfig normalizes field conditions", () => {
+  const config = normalizeListingTemplateConfig({
+    fields: [
+      {
+        key: "excerpt",
+        source: "data.summary",
+        format: "text",
+        conditions: [{ field: "status", op: "eq", value: "published" }],
+      },
+    ],
+  });
+
+  expect(config.fields[0]?.conditions).toHaveLength(1);
+  expect(config.fields[0]?.conditions[0]?.op).toBe("eq");
+  expect(config.fields[0]?.conditions[0]?.field).toBe("status");
+});
+
+test("normalizeListingTemplateConfig rejects invalid condition payload", () => {
+  expect(() =>
+    normalizeListingTemplateConfig({
+      fields: [
+        {
+          key: "excerpt",
+          source: "data.summary",
+          format: "text",
+          conditions: [{ field: "status", op: "in", value: "published" }],
+        },
+      ],
+    })
+  ).toThrow("listing_template_config_invalid");
+});
+
 test("normalizeListingTemplateConfig rejects custom actions without href", () => {
   expect(() =>
     normalizeListingTemplateConfig({
