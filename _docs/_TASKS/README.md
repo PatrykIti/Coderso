@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 32 tasks
-- **In Progress:** 1 tasks
+- **To Do:** 31 tasks
+- **In Progress:** 2 tasks
 - **Done:** 328 tasks
 
 ---
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Services/resources/schedules/reservations |
 | TASK-054-11 | Coderso Commerce Suite | Medium | Large | Product templates, compare, wishlist, tables |
 | TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
 | TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
@@ -78,6 +77,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
+| TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Domain+API foundation in progress |
 
 ---
 
