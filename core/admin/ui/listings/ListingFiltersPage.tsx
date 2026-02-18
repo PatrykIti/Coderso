@@ -28,6 +28,24 @@ type QueryExample = {
   query: string;
 };
 
+export const extractListingQueryIdFromQueryString = (value: string): string | null => {
+  const normalized = value.startsWith("?") ? value.slice(1) : value;
+  const params = new URLSearchParams(normalized);
+  let resolvedId: string | null = null;
+  for (const key of params.keys()) {
+    const match = key.match(/^lq\.([^.]+)\./);
+    if (!match) continue;
+    const candidate = match[1] ?? null;
+    if (!candidate) continue;
+    if (!resolvedId) {
+      resolvedId = candidate;
+      continue;
+    }
+    if (resolvedId !== candidate) return null;
+  }
+  return resolvedId;
+};
+
 export function ListingFiltersPage() {
   const { items, isLoading, error } = useListingQueries();
   const [selectedListingQueryId, setSelectedListingQueryId] = useState<string>("");
@@ -55,7 +73,7 @@ export function ListingFiltersPage() {
     () =>
       selectedListingQueryId
         ? `lq.${selectedListingQueryId}`
-        : "lq.<listingQueryId>",
+        : "lq.sample-query-id",
     [selectedListingQueryId]
   );
 
@@ -102,14 +120,24 @@ export function ListingFiltersPage() {
   );
 
   const runPreview = async () => {
-    if (!selectedListingQueryId) return;
+    const inferredListingQueryId = extractListingQueryIdFromQueryString(queryString);
+    const resolvedListingQueryId = selectedListingQueryId || inferredListingQueryId;
+    if (!resolvedListingQueryId) {
+      setPreviewError(
+        "Select a listing query first, or provide tokens like lq.<listingQueryId>.<field>.<operator> in query string."
+      );
+      return;
+    }
     setIsPreviewLoading(true);
     setPreviewError(null);
     try {
       const result = await previewListingFilters({
-        listingQueryId: selectedListingQueryId,
+        listingQueryId: resolvedListingQueryId,
         queryString,
       });
+      if (!selectedListingQueryId && inferredListingQueryId) {
+        setSelectedListingQueryId(inferredListingQueryId);
+      }
       setPreview(result);
     } catch (error) {
       const message =
@@ -192,7 +220,7 @@ export function ListingFiltersPage() {
             <Button
               type="button"
               onClick={runPreview}
-              disabled={!selectedListingQueryId || isPreviewLoading}
+              disabled={isPreviewLoading}
             >
               {isPreviewLoading ? "Previewing..." : "Run preview"}
             </Button>
@@ -260,7 +288,6 @@ export function ListingFiltersPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => setQueryString(example.query)}
-                          disabled={!selectedListingQueryId}
                         >
                           Use example
                         </Button>
@@ -274,7 +301,8 @@ export function ListingFiltersPage() {
                 </div>
                 {!selectedListingQueryId ? (
                   <p className="text-xs text-muted-foreground">
-                    Select a listing query first to apply examples directly.
+                    Select a listing query to run preview, or keep token format with
+                    <code> lq.&lt;listingQueryId&gt;...</code> in query string.
                   </p>
                 ) : null}
               </div>
