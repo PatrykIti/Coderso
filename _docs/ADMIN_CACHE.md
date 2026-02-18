@@ -33,6 +33,10 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `menus:detail:<id>`
 - `forms:list`
 - `forms:detail:<id>`
+- `listings:queries:list`
+- `listings:queries:detail:<id>`
+- `listings:templates:list`
+- `listings:templates:detail:<id>`
 - `widgetCatalog:list`
 - `widgetTemplateCategories:list`
 - `widgetTemplates:list`

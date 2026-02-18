@@ -11,6 +11,7 @@ test("legacy admin paths resolve to canonical coderso routes", () => {
   expect(resolveAdminRoutePath("/widgets/templates/template-1")).toBe(
     "/coderso/widgets/templates/template-1"
   );
+  expect(resolveAdminRoutePath("/listings")).toBe("/coderso/listings");
 });
 
 test("route alias resolution is idempotent", () => {

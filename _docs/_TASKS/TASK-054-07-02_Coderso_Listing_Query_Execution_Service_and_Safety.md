@@ -5,7 +5,7 @@
 **Category:** Core/CMS + Security  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-07-01  
-**Status:** To Do
+**Status:** Done (2026-02-18)
 
 ---
 
@@ -13,9 +13,10 @@
 Implement source adapters and execution engine for listing queries with deterministic sorting/filtering and server-side safeguards.
 
 ## Files to Change
-- `core/services/content/queryBuilderService.ts` (new)
+- `core/services/content/queryBuilderService.ts`
 - `core/services/content/listingSources.ts` (new)
-- `tests/unit/content/queryBuilderService.test.ts` (new)
+- `tests/unit/content/queryBuilderService.test.ts`
+- `tests/unit/content/listingSources.test.ts` (new)
 
 ## Source Adapters
 - `entries`: content entries with content type scoping.
@@ -44,3 +45,4 @@ async function executeListingQuery(input: ListingQuery) {
 1. Same query input returns deterministic order.
 2. Unsupported fields/operators are blocked before execution.
 3. Source adapters return normalized row contract.
+4. Execution path is covered by unit tests (`buildListingExecutionPlan`, `executeListingQuery`, source allowlists).

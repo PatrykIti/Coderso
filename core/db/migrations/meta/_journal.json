@@ -260,6 +260,20 @@
       "when": 1771343824709,
       "tag": "0036_forms_submission_access",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1771398490195,
+      "tag": "0037_listing_templates",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1771398742520,
+      "tag": "0038_listing_queries",
+      "breakpoints": true
     }
   ]
 }

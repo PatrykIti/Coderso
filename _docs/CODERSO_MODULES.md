@@ -25,7 +25,7 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 ### v2 Business Builder
 | Module | Owner | Lifecycle | Default Nav |
 |---|---|---|---|
-| Listings | operations | planned | No |
+| Listings | operations | preview | Yes (`Beta`) |
 | Filters | operations | planned | No |
 | Search | operations | planned | No |
 | Booking | operations | planned | No |
@@ -64,3 +64,11 @@ const sections = buildDefaultNavSections({
 - Listings/Filters/Search depend on Engine + Entries foundation.
 - Booking/Appointments/Reviews depend on Forms + Listings.
 - Growth modules depend on v2 data/query modules and kits/templates contracts.
+
+## Listings Progress (TASK-054-07)
+- 054-07-01 done: query contract + parser validation in `core/server/validation/listingSchemas.ts` and `core/services/content/queryBuilderService.ts`.
+- 054-07-02 done: source adapters (`entries/posts/users/taxonomies`) and allowlisted execution plan with deterministic filter/sort/pagination.
+- 054-07-03 done: `listing_templates` DB model + migration + normalized template CRUD service.
+- 054-07-04 done: Listings API routes + saved query persistence (`listing_queries`) + preview wiring.
+- 054-07-05 done: Admin UI query builder + template manager + Coderso navigation/routing/prefetch exposure (`Beta`).
+- Next milestone: 054-07-06 runtime widget integration (`contentList`, `entryTeaser`).

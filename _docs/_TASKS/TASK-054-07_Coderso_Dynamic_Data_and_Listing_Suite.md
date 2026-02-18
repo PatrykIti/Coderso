@@ -44,6 +44,13 @@ Deliver dynamic data/listing capabilities (JetEngine/JetGrid-like) on top of Nex
 - `TASK-054-07-07_Coderso_Conditional_Visibility_and_Dynamic_Field_Binding.md`
 - `TASK-054-07-08_Coderso_Listings_QA_Tests_and_Documentation.md`
 
+## Progress
+- 2026-02-18: `054-07-01` completed (query contract, semantic parser validation, unit tests).
+- 2026-02-18: `054-07-02` completed (source adapters, allowlisted execution plan, deterministic filter/sort/pagination).
+- 2026-02-18: `054-07-03` completed (listing templates model, migration, normalized CRUD service).
+- 2026-02-18: `054-07-04` completed (listings API routes, saved queries persistence, preview endpoint wiring).
+- 2026-02-18: `054-07-05` completed (Listings admin UI: query table/editor/template manager, routing, cache/prefetch, nav exposure as beta).
+
 ## Files to Change (Target)
 - `core/services/content/queryBuilderService.ts` (new)
 - `core/services/content/listingTemplatesService.ts` (new)

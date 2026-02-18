@@ -102,3 +102,26 @@ test("prefetcher resolves legacy paths through coderso aliases", async () => {
     expect(calls).toBe(1);
   });
 });
+
+test("prefetcher resolves listings legacy alias", async () => {
+  await withWindow(async () => {
+    let calls = 0;
+    const entries: AdminPrefetchEntry[] = [
+      {
+        match: "/coderso/listings",
+        run: () => {
+          calls += 1;
+        },
+      },
+    ];
+
+    const prefetch = createAdminPrefetcher(entries, {
+      schedule: (callback) => callback(),
+      now: () => 0,
+    });
+
+    prefetch("/admin/listings", "/admin");
+    await flushAsync();
+    expect(calls).toBe(1);
+  });
+});

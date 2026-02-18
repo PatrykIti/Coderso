@@ -26,6 +26,14 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/forms/FormBuilderPage.tsx`
   - Cached APIs: `getFormDetailCached`, `getCachedFormDetail`
 
+## Listings
+- Listings list + templates tab
+  - UI: `core/admin/ui/listings/ListingListPage.tsx`
+  - Cached APIs: `listListingQueriesCached`, `getCachedListingQueries`, `listListingTemplatesCached`, `getCachedListingTemplates`
+- Listings editor
+  - UI: `core/admin/ui/listings/ListingEditorPage.tsx`
+  - Cached APIs: `getListingQueryCached`, `listListingTemplatesCached`, `listContentTypesCached`
+
 ## Content Types
 - Content types list
   - UI: `core/admin/ui/content-types/ContentTypeList.tsx`
@@ -96,10 +104,11 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 
 ## Prefetch Routes
 - `/pages` -> `listPagesCached`
-- `/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
-- `/content-types` -> `listContentTypesCached`
-- `/entries` -> `listContentTypesCached`
+- `/coderso/widgets` -> `listWidgetCatalogCached`, `listWidgetTemplateCategoriesCached`, `listWidgetTemplatesCached`
+- `/coderso/engine` -> `listContentTypesCached`
+- `/coderso/entries` -> `listContentTypesCached`
+- `/coderso/forms` -> `listFormsCached`
+- `/coderso/listings` -> `listListingQueriesCached`, `listListingTemplatesCached`
 - `/menus` -> `listMenusCached`
 - `/media` -> `listMediaCached`
 - `/themes` -> `listAdminThemeTemplatesCached`, `listAdminThemeProfilesCached`
-

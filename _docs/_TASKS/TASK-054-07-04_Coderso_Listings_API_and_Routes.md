@@ -5,7 +5,7 @@
 **Category:** Core/API + Admin  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-07-01, TASK-054-07-02, TASK-054-07-03  
-**Status:** To Do
+**Status:** Done (2026-02-18)
 
 ---
 
@@ -16,7 +16,14 @@ Expose Listings API for admin query builder and runtime preview.
 - `core/server/routes/listingsRoutes.ts` (new)
 - `core/server/routes/index.ts`
 - `core/server/validation/listingSchemas.ts`
+- `core/services/content/listingQueriesService.ts` (new)
+- `core/services/content/listingTemplatesService.ts`
+- `core/db/schema.ts`
+- `core/db/migrations/0038_listing_queries.sql` (new)
+- `core/db/migrations/meta/_journal.json`
+- `core/db/migrations/meta/0038_snapshot.json` (new)
 - `tests/integration/routes/listings.test.ts` (new)
+- `tests/unit/content/listingQueriesService.test.ts` (new)
 
 ## Routes
 - `GET /listings/queries` (saved queries)
@@ -41,3 +48,4 @@ router.post("/listings/queries/preview", requirePermission("content:read"), asyn
 1. Routes are permission-protected and schema-validated.
 2. Preview endpoint returns deterministic list payload.
 3. Integration tests cover success + validation failures.
+4. Saved listing queries have dedicated persistence model (`listing_queries`) with CRUD service.

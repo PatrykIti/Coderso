@@ -27,6 +27,8 @@ import { EntryList } from "@/ui/entries/EntryList";
 import { FormBuilderPage } from "@/ui/forms/FormBuilderPage";
 import { FormListPage } from "@/ui/forms/FormListPage";
 import { ImportExportPage } from "@/ui/import-export/ImportExportPage";
+import { ListingEditorPage } from "@/ui/listings/ListingEditorPage";
+import { ListingListPage } from "@/ui/listings/ListingListPage";
 import { PageListPage } from "@/ui/pages/PageListPage";
 import { PageEditor } from "@/ui/pages/PageEditor";
 import { MediaLibraryPage } from "@/ui/media/MediaLibraryPage";
@@ -528,6 +530,8 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/coderso/entries", element: <EntryList /> },
       { pattern: "/coderso/entries/:type/:id", element: <EntryEditor /> },
       { pattern: "/coderso/posts", element: <CodersoPostsPlaceholder /> },
+      { pattern: "/coderso/listings", element: <ListingListPage /> },
+      { pattern: "/coderso/listings/:id", element: <ListingEditorPage /> },
       { pattern: "/pages", element: <PageListPage /> },
       { pattern: "/pages/:id", element: <PageEditor /> },
       { pattern: "/preview", element: <PagePreview /> },

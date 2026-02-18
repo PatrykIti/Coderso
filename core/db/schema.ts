@@ -257,6 +257,41 @@ export const widgetTemplates = pgTable(
   })
 );
 
+export const listingTemplates = pgTable(
+  "listing_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    layout: text("layout").notNull().default("grid"),
+    config: jsonb("config").notNull().default({}),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("listing_templates_slug_idx").on(t.slug),
+    layoutIdx: index("listing_templates_layout_idx").on(t.layout),
+    updatedAtIdx: index("listing_templates_updated_at_idx").on(t.updatedAt),
+  })
+);
+
+export const listingQueries = pgTable(
+  "listing_queries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    description: text("description"),
+    query: jsonb("query").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    nameIdx: index("listing_queries_name_idx").on(t.name),
+    updatedAtIdx: index("listing_queries_updated_at_idx").on(t.updatedAt),
+  })
+);
+
 export const widgetTemplateRevisions = pgTable(
   "widget_template_revisions",
   {

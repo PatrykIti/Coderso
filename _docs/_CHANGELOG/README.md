@@ -266,3 +266,8 @@ Project Change Log.
 | 230 | 2026-02-17 | Forms submission nonce guard | Core/Security |
 | 231 | 2026-02-17 | Coderso admin IA and routing foundation | Admin/UI |
 | 232 | 2026-02-17 | Coderso module catalog and tiers | Admin/UI |
+| 233 | 2026-02-18 | Coderso listings query contract and validation | CMS/Content |
+| 234 | 2026-02-18 | Coderso listings execution engine | CMS/Content |
+| 235 | 2026-02-18 | Coderso listing templates model and service | CMS/Content |
+| 236 | 2026-02-18 | Coderso listings API and routes | Core/API |
+| 237 | 2026-02-18 | Coderso listings admin UI | Admin/UI |

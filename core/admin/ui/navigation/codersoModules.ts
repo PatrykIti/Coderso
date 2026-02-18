@@ -167,14 +167,14 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     label: "Listings",
     tier: "v2",
     ownerArea: "operations",
-    lifecycle: "planned",
+    lifecycle: "preview",
     description: "Dynamic listing pages and repeatable cards from content queries.",
     dependencies: ["engine", "entries"],
     nav: {
       href: "/admin/coderso/listings",
       icon: LayoutGrid,
-      defaultEnabled: false,
-      badge: "Soon",
+      defaultEnabled: true,
+      badge: "Beta",
     },
   },
   {

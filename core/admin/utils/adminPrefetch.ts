@@ -4,6 +4,10 @@ import { listMediaCached } from "@/services/mediaClient";
 import { listPagesCached } from "@/services/pagesClient";
 import { listFormsCached } from "@/services/formsClient";
 import {
+  listListingQueriesCached,
+  listListingTemplatesCached,
+} from "@/services/listingsClient";
+import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
 } from "@/services/adminThemeClient";
@@ -99,6 +103,14 @@ const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/coderso/forms",
     run: () => listFormsCached({ force: true }),
+  },
+  {
+    match: "/coderso/listings",
+    run: () =>
+      Promise.all([
+        listListingQueriesCached({ force: true }),
+        listListingTemplatesCached({ force: true }),
+      ]),
   },
   {
     match: "/menus",
