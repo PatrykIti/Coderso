@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 33 tasks
-- **In Progress:** 1 task
+- **In Progress:** 2 tasks
 - **Done:** 326 tasks
 
 ---
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted filters + scoped search |
 | TASK-054-09 | Coderso Forms and Automation Suite | High | Large | Form actions, automation, action logs |
 | TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Services/resources/schedules/reservations |
 | TASK-054-11 | Coderso Commerce Suite | Medium | Large | Product templates, compare, wishlist, tables |
@@ -59,6 +58,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-055-04 | Posts Widget/Template Binding and Query Controls | High | Medium | Widget source preset + query controls |
 | TASK-055-05 | Posts Public Routes and Rendering | High | Medium | List/detail runtime routes + templates |
 | TASK-055-06 | Posts Tests, Migrations, and Documentation | Medium | Medium | QA, idempotent bootstrap, docs |
+| TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
 | TASK-020-11 | Security Hardening + Settings UX | High | Large | Auth/public/admin protection & UX presets |
 | TASK-020-11-01 | Rate Limit Buckets + Keying | High | Medium | New buckets + keying strategy |
 | TASK-020-11-02 | Auth Hardening + Bot Protection | High | Medium | Login throttling + CAPTCHA |
@@ -79,6 +79,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
+| TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted filters + scoped search |
 
 ---
 

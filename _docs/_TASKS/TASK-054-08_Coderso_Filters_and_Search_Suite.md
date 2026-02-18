@@ -5,7 +5,7 @@
 **Category:** CMS/Search + Admin/UI + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-07  
-**Status:** To Do
+**Status:** In Progress (2026-02-18)
 
 ---
 
