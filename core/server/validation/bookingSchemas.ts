@@ -156,7 +156,7 @@ export const bookingReservationStatusSchema = {
 
 export const bookingPublicSlotQuerySchema = {
   type: "object",
-  required: ["serviceId", "resourceId", "date", "runtimeToken"],
+  required: ["serviceId", "resourceId", "date"],
   properties: {
     serviceId: { type: "string", pattern: uuidPattern },
     resourceId: { type: "string", pattern: uuidPattern },
@@ -176,7 +176,6 @@ export const bookingPublicReservationSchema = {
     "startsAt",
     "endsAt",
     "customerName",
-    "formNonce",
   ],
   properties: {
     serviceId: { type: "string", pattern: uuidPattern },

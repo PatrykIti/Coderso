@@ -63,6 +63,7 @@ const storageKeys = [
   "storage.publicBaseUrl",
   "storage.maxSizeBytes",
   "storage.allowedMime",
+  "storage.delivery.accessMode",
   "storage.s3.bucket",
   "storage.s3.region",
   "storage.s3.accessKey",

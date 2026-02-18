@@ -21,6 +21,12 @@ import {
   bookingServiceResources,
   bookingServices,
 } from "../../db/schema";
+import {
+  applyBookingAccessModeToSettings,
+  bookingAccessDefaults,
+  resolveBookingAccessModeFromSettings,
+  type BookingAccessMode,
+} from "./bookingAccess";
 
 export type BookingResourceType = "staff" | "bay" | "tool" | "vehicle" | "other";
 export type BookingResourceStatus = "active" | "inactive";
@@ -178,6 +184,23 @@ const normalizeNullableText = (value: unknown) => {
   if (value === undefined || value === null) return null;
   const normalized = normalizeText(value);
   return normalized ?? null;
+};
+
+const normalizeServiceSettings = (
+  value: unknown,
+  fallbackAccessMode: BookingAccessMode = bookingAccessDefaults.mode
+): Record<string, unknown> => {
+  if (value !== undefined && (typeof value !== "object" || value === null || Array.isArray(value))) {
+    throw new Error("booking_service_settings_invalid");
+  }
+
+  const base =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+
+  const accessMode = resolveBookingAccessModeFromSettings(base, fallbackAccessMode);
+  return applyBookingAccessModeToSettings(base, accessMode);
 };
 
 const parseIsoDateTime = (value: unknown, errorCode: string) => {
@@ -465,10 +488,7 @@ export async function createBookingService(input: BookingServiceInput) {
       ? null
       : normalizePositiveInteger(input.priceCents, "booking_service_price_cents", 0, 0, 1_000_000_000);
   const currency = normalizeNullableText(input.currency);
-  const settings =
-    input.settings && typeof input.settings === "object" && !Array.isArray(input.settings)
-      ? input.settings
-      : {};
+  const settings = normalizeServiceSettings(input.settings, bookingAccessDefaults.mode);
 
   const existing = await db
     .select({ id: bookingServices.id })
@@ -580,10 +600,11 @@ export async function updateBookingService(id: string, input: Partial<BookingSer
   }
 
   if (input.settings !== undefined) {
-    if (typeof input.settings !== "object" || input.settings === null || Array.isArray(input.settings)) {
-      throw new Error("booking_service_settings_invalid");
-    }
-    update.settings = input.settings;
+    const existingAccessMode = resolveBookingAccessModeFromSettings(
+      existing.settings,
+      bookingAccessDefaults.mode
+    );
+    update.settings = normalizeServiceSettings(input.settings, existingAccessMode);
   }
 
   const [updated] = await db

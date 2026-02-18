@@ -750,15 +750,19 @@ Reservations / Slots:
 - `POST /booking/reservations`
 - `PATCH /booking/reservations/:id/status`
 
-Public runtime API (no admin auth):
+Public runtime API:
 - `GET /api/booking/slots?serviceId=&resourceId=&date=&runtimeToken=&timezone=&intervalMinutes=`
 - `POST /api/booking/reservations`
 
-Public slots hardening:
-- `runtimeToken` jest wymagany i podpisany HMAC tokenem runtime (TTL z nonce settings).
-- token jest hydratuwany przez SSR resolver booking widgets.
+Service-level runtime access (`booking_services.settings.submissionAccess`):
+- `public` (default):
+  - slots wymagaja `runtimeToken`,
+  - reservations wymagaja `formNonce` i (opcjonalnie) `captchaToken` zgodnie z Security Settings.
+- `internal`:
+  - slots/reservations wymagaja sesji admina **lub** API key z zakresem `booking.submit`,
+  - nonce/captcha nie sa wymagane.
 
-Public reservation payload (summary):
+Payload runtime reservations (summary):
 
 ```json
 {
@@ -774,7 +778,7 @@ Public reservation payload (summary):
   "metadata": {
     "flowId": "booking-flow"
   },
-  "formNonce": "<nonce>",
+  "formNonce": "<required in public mode>",
   "captchaToken": "<optional-recaptcha-token>"
 }
 ```
@@ -879,6 +883,10 @@ Permissions: `media:read`, `media:write`
 - `PATCH /media/:id`
 - `DELETE /media/:id`
 
+Runtime asset delivery:
+- `GET /media/*` (public site runtime URL)
+- zachowanie zalezy od `settings.storage.delivery.accessMode`.
+
 Upload payload (multipart):
 
 - `file`: binary
@@ -954,6 +962,9 @@ Przyklad payload:
   "publicBaseUrl": "https://cdn.example.com",
   "maxSizeBytes": 10485760,
   "allowedMime": "image/*,application/pdf",
+  "delivery": {
+    "accessMode": "public"
+  },
   "s3": {
     "bucket": "media-bucket",
     "region": "eu-central-1",
@@ -963,6 +974,10 @@ Przyklad payload:
   }
 }
 ```
+
+`delivery.accessMode`:
+- `public` (default) - media runtime URLs (`/media/*`) dostępne bez auth,
+- `internal` - `/media/*` wymaga sesji admina lub API key scope `media.read`.
 - `GET /content/:type/entries/:id`
 - `PATCH /content/:type/entries/:id`
 - `PATCH /content/:type/entries/:id/metadata`

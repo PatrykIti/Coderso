@@ -33,7 +33,11 @@ import type {
   BookingServiceStatus,
 } from "@/services/bookingClient";
 
-import { SERVICE_STATUS_OPTIONS, type ServiceFormState } from "../bookingTypes";
+import {
+  SERVICE_STATUS_OPTIONS,
+  SERVICE_SUBMISSION_ACCESS_OPTIONS,
+  type ServiceFormState,
+} from "../bookingTypes";
 
 type BookingServicesTabProps = {
   services: BookingServiceRecord[];
@@ -102,13 +106,14 @@ export function BookingServicesTab({
                     <TableHead>Buffers</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Access</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {services.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
                         No services yet.
                       </TableCell>
                     </TableRow>
@@ -129,6 +134,19 @@ export function BookingServicesTab({
                         <TableCell>
                           <Badge variant={item.status === "active" ? "default" : "secondary"}>
                             {item.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              (item.settings?.submissionAccess as string | undefined) === "internal"
+                                ? "secondary"
+                                : "default"
+                            }
+                          >
+                            {(item.settings?.submissionAccess as string | undefined) === "internal"
+                              ? "internal"
+                              : "public"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -208,15 +226,39 @@ export function BookingServicesTab({
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Duration (minutes)</label>
-                <Input
-                  type="number"
-                  min={5}
-                  max={1440}
-                  value={serviceForm.durationMinutes}
-                  onChange={(event) => onServiceFormChange({ durationMinutes: event.target.value })}
-                />
+                <label className="text-sm font-medium">Runtime access</label>
+                <Select
+                  value={serviceForm.submissionAccess}
+                  onValueChange={(value: "public" | "internal") =>
+                    onServiceFormChange({ submissionAccess: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose access" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SERVICE_SUBMISSION_ACCESS_OPTIONS.map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {item === "public" ? "Public (nonce + bot checks)" : "Internal (session or API key)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Duration (minutes)</label>
+              <Input
+                type="number"
+                min={5}
+                max={1440}
+                value={serviceForm.durationMinutes}
+                onChange={(event) => onServiceFormChange({ durationMinutes: event.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Public mode requires runtime token/nonce protection. Internal mode requires authenticated
+                session or API key.
+              </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">

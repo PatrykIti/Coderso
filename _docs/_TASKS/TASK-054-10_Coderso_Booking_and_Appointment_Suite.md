@@ -56,6 +56,8 @@ Provide full booking and appointments features (JetBooking + JetAppointment pari
 - `TASK-054-10-05`: Admin UI for resources/services/schedules/reservations
 - `TASK-054-10-06`: Runtime widgets (`booking-calendar`, `appointment-form`)
 - `TASK-054-10-07`: QA/tests/docs/changelog closure
+- `TASK-054-10-08`: Booking runtime access modes (`public`/`internal`)
+- `TASK-054-10-09`: Media delivery access modes (`public`/`internal`)
 
 ## Implementation Order
 1. Contract + migration + service primitives.
@@ -137,3 +139,13 @@ await createReservation({ requestedSlot, customerData });
 3. Conflict prevention and timezone handling are test-covered.
 4. No 500 for known domain errors (mapped API codes for UX-safe responses).
 5. Reservation flow is deterministic under repeated preview requests.
+
+## Progress Update (2026-02-18, Access Modes)
+- Completed `TASK-054-10-08`:
+  - booking service-level runtime access mode (`public` / `internal`),
+  - internal runtime access via session or API key scope `booking.submit`,
+  - public mode keeps nonce/token/captcha protections.
+- Completed `TASK-054-10-09`:
+  - storage setting `delivery.accessMode` for media runtime,
+  - `/media/*` runtime gate for internal mode (session or `media.read` API key),
+  - storage settings UI and tests/docs coverage.

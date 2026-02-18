@@ -5,7 +5,7 @@
 **Category:** Settings Model + UX  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-005-09  
-**Status:** In Progress
+**Status:** Done (2026-02-18)
 
 ---
 

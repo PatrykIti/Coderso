@@ -6,6 +6,7 @@ import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storag
 export type BookingResourceType = "staff" | "bay" | "tool" | "vehicle" | "other";
 export type BookingResourceStatus = "active" | "inactive";
 export type BookingServiceStatus = "active" | "inactive";
+export type BookingSubmissionAccessMode = "public" | "internal";
 export type BookingReservationStatus =
   | "pending"
   | "confirmed"
@@ -156,6 +157,30 @@ export type BookingReservationInput = {
   customerPhone?: string | null;
   notes?: string | null;
   metadata?: Record<string, unknown>;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+export const resolveBookingSubmissionAccess = (
+  settings: unknown,
+  fallback: BookingSubmissionAccessMode = "public"
+): BookingSubmissionAccessMode => {
+  if (!isRecord(settings)) return fallback;
+  const value = settings.submissionAccess;
+  if (value === "public" || value === "internal") return value;
+  return fallback;
+};
+
+export const withBookingSubmissionAccess = (
+  settings: unknown,
+  mode: BookingSubmissionAccessMode
+): Record<string, unknown> => {
+  const base = isRecord(settings) ? settings : {};
+  return {
+    ...base,
+    submissionAccess: mode,
+  };
 };
 
 let cachedResources: BookingResourceRecord[] | null = null;

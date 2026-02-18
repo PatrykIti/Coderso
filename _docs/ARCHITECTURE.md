@@ -253,10 +253,10 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - rezerwacja przechodzi przez status lifecycle (`pending|confirmed|cancelled|completed|no_show`).
 - Security:
   - endpoints `/admin/api/booking/*` sa internal i wymagaja `booking:read` / `booking:write`,
-  - runtime public API:
-    - `GET /api/booking/slots` (public read, wymaga podpisanego `runtimeToken`),
-    - `POST /api/booking/reservations` (public write),
-  - public write dla rezerwacji wymusza nonce + optional reCAPTCHA policy (`public_write` action),
+  - runtime API zachowuje stale publiczne endpointy (`/api/booking/slots`, `/api/booking/reservations`),
+  - access mode jest per-service (`booking_services.settings.submissionAccess`):
+    - `public`: slots wymagaja `runtimeToken`, reservations wymagaja nonce (+ optional reCAPTCHA `public_write`),
+    - `internal`: slots/reservations wymagaja sesji admina lub API key scope `booking.submit`, bez nonce/captcha,
   - bledy domenowe sa mapowane do stabilnych kodow API (bez 500 dla znanych przypadkow).
 - Admin UI:
   - ekran `/admin/coderso/booking` grupuje operacje domenowe w zakladkach:
@@ -270,6 +270,17 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `booking-calendar` publikuje selected slot event po `flowId`,
   - `appointment-form` konsumuje selected slot po `flowId` i tworzy rezerwacje przez public API,
   - resolver runtime (`resolveBookingRuntimeData`) hydratuje active services/resources + submission nonce.
+
+
+## Media delivery access
+
+- Storage settings rozszerzono o `delivery.accessMode`:
+  - `public` (default)
+  - `internal`
+- Runtime `GET /media/*` jest bramkowany przez ten tryb:
+  - `public`: obecne zachowanie (public delivery),
+  - `internal`: wymagana sesja admina (z `media:read`) lub API key scope `media.read`.
+- Dotyczy to runtime delivery assetow; admin CRUD media pozostaje na `/admin/api/media*` i RBAC.
 
 ## Backups (v1)
 

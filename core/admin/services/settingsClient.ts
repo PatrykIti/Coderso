@@ -53,6 +53,9 @@ export type StorageSettingsResponse = {
   publicBaseUrl: string | null;
   maxSizeBytes: number | null;
   allowedMime: string | null;
+  delivery: {
+    accessMode: "public" | "internal";
+  };
   s3: {
     bucket: string | null;
     region: string | null;
@@ -74,6 +77,9 @@ export type StorageSettingsUpdate = {
   publicBaseUrl?: string | null;
   maxSizeBytes?: number | null;
   allowedMime?: string | string[] | null;
+  delivery?: {
+    accessMode?: "public" | "internal";
+  };
   s3?: {
     bucket?: string | null;
     region?: string | null;

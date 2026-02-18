@@ -5,7 +5,7 @@
 **Category:** Booking Domain + Admin UX  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-10-05, TASK-054-10-06  
-**Status:** In Progress
+**Status:** Done (2026-02-18)
 
 ---
 

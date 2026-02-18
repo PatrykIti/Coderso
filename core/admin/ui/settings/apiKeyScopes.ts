@@ -34,6 +34,11 @@ export const apiKeyScopeOptions: ApiKeyScopeOption[] = [
     description: "Submit internal forms via API key.",
   },
   {
+    id: "booking.submit",
+    label: "Booking Submit",
+    description: "Submit and query internal booking runtime endpoints.",
+  },
+  {
     id: "settings.read",
     label: "Settings Read",
     description: "View configuration details and audit logs.",

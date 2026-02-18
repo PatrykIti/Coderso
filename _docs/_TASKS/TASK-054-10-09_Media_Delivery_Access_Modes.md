@@ -5,7 +5,7 @@
 **Category:** Media / Storage / Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-005-09, TASK-038-07, TASK-020-11-03  
-**Status:** In Progress
+**Status:** Done (2026-02-18)
 
 ---
 
@@ -45,3 +45,11 @@ Add configurable media delivery access mode:
    - API key with `media.read` scope.
 4. Public mode preserves current behavior.
 5. Coverage added for settings normalization and runtime gate outcomes.
+
+## Delivered
+- Extended storage settings contract with `delivery.accessMode` (`public` / `internal`).
+- Added Delivery Access controls in Settings -> Storage UI.
+- Hardened `/media/*` runtime:
+  - internal mode requires authenticated session or API key scope (`media.read`),
+  - public mode preserves existing behavior.
+- Added media access unit tests and integration test scaffold for DB-backed runtime gate checks.

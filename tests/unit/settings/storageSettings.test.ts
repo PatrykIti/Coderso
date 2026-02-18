@@ -32,6 +32,7 @@ const storageKeys = [
   "storage.publicBaseUrl",
   "storage.maxSizeBytes",
   "storage.allowedMime",
+  "storage.delivery.accessMode",
   "storage.s3.bucket",
   "storage.s3.region",
   "storage.s3.accessKey",
@@ -64,6 +65,7 @@ testIfDb("setStorageSettings encrypts secrets and returns masked values", async 
     publicBaseUrl: "https://cdn.example.com",
     maxSizeBytes: 2048,
     allowedMime: "image/*",
+    delivery: { accessMode: "internal" },
     s3: {
       bucket: "media-bucket",
       region: "us-east-1",
@@ -74,12 +76,14 @@ testIfDb("setStorageSettings encrypts secrets and returns masked values", async 
 
   const publicSettings = await getStorageSettings();
   expect(publicSettings.driver).toBe("s3");
+  expect(publicSettings.delivery.accessMode).toBe("internal");
   expect(publicSettings.s3.accessKey.configured).toBe(true);
   expect(publicSettings.s3.secretKey.configured).toBe(true);
 
   const internalSettings = await getStorageSettingsInternal();
   expect(internalSettings.s3.accessKey).toBe("AKIA_TEST");
   expect(internalSettings.s3.secretKey).toBe("SECRET_TEST");
+  expect(internalSettings.delivery.accessMode).toBe("internal");
 
   const record = await getStorageSettingRecord("storage.s3.accessKey");
   expect(record).not.toBeNull();

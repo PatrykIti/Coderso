@@ -281,3 +281,5 @@ Project Change Log.
 | 245 | 2026-02-18 | Coderso Booking foundation (domain + API) | CMS/Booking |
 | 246 | 2026-02-18 | Coderso Booking admin UI | Admin/UI |
 | 247 | 2026-02-18 | Coderso Booking runtime widgets and public API | CMS/Booking |
+| 248 | 2026-02-18 | Booking and media access modes | Core/Security |
+

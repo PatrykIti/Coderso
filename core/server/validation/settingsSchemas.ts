@@ -43,6 +43,13 @@ export const storageSettingsSchema = {
         { type: "array", items: { type: "string" } },
       ],
     },
+    delivery: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        accessMode: { enum: ["public", "internal"] },
+      },
+    },
     s3: {
       type: "object",
       additionalProperties: false,

@@ -7,6 +7,11 @@ import {
   encryptSecret,
   isEncryptedSecret,
 } from "../security/secretStore";
+import {
+  mediaAccessDefaults,
+  normalizeMediaDeliveryAccessMode,
+  type MediaDeliveryAccessMode,
+} from "../media/mediaAccess";
 
 export type StorageDriver = "local" | "s3" | "azure";
 
@@ -16,6 +21,9 @@ export type StorageSettingsPublic = {
   publicBaseUrl: string | null;
   maxSizeBytes: number | null;
   allowedMime: string | null;
+  delivery: {
+    accessMode: MediaDeliveryAccessMode;
+  };
   s3: {
     bucket: string | null;
     region: string | null;
@@ -37,6 +45,9 @@ export type StorageSettingsInternal = {
   publicBaseUrl: string | null;
   maxSizeBytes: number | null;
   allowedMime: string[];
+  delivery: {
+    accessMode: MediaDeliveryAccessMode;
+  };
   s3: {
     bucket: string | null;
     region: string | null;
@@ -58,6 +69,9 @@ export type StorageSettingsUpdate = {
   publicBaseUrl?: string | null;
   maxSizeBytes?: number | null;
   allowedMime?: string | string[] | null;
+  delivery?: {
+    accessMode?: MediaDeliveryAccessMode;
+  };
   s3?: {
     bucket?: string | null;
     region?: string | null;
@@ -79,6 +93,7 @@ const STORAGE_KEYS = {
   publicBaseUrl: "storage.publicBaseUrl",
   maxSizeBytes: "storage.maxSizeBytes",
   allowedMime: "storage.allowedMime",
+  deliveryAccessMode: "storage.delivery.accessMode",
   s3Bucket: "storage.s3.bucket",
   s3Region: "storage.s3.region",
   s3AccessKey: "storage.s3.accessKey",
@@ -135,6 +150,12 @@ const normalizeAllowedMime = (value: unknown) => {
   }
   if (typeof value === "string") return value;
   throw new Error("storage_settings_invalid");
+};
+
+const normalizeDeliveryAccessMode = (value: unknown) => {
+  if (value === undefined) return undefined;
+  if (value === null) throw new Error("storage_settings_invalid");
+  return normalizeMediaDeliveryAccessMode(value, mediaAccessDefaults.mode);
 };
 
 const normalizeSecret = (value: unknown) => {
@@ -264,6 +285,12 @@ export async function getStorageSettings(): Promise<StorageSettingsPublic> {
       map.get(STORAGE_KEYS.allowedMime)?.value,
       process.env.MEDIA_ALLOWED_MIME
     ),
+    delivery: {
+      accessMode: normalizeMediaDeliveryAccessMode(
+        map.get(STORAGE_KEYS.deliveryAccessMode)?.value,
+        mediaAccessDefaults.mode
+      ),
+    },
     s3: {
       bucket: getStringValue(map.get(STORAGE_KEYS.s3Bucket)?.value),
       region: getStringValue(map.get(STORAGE_KEYS.s3Region)?.value),
@@ -354,6 +381,12 @@ export async function getStorageSettingsInternal(): Promise<StorageSettingsInter
     publicBaseUrl,
     maxSizeBytes,
     allowedMime,
+    delivery: {
+      accessMode: normalizeMediaDeliveryAccessMode(
+        map.get(STORAGE_KEYS.deliveryAccessMode)?.value,
+        mediaAccessDefaults.mode
+      ),
+    },
     s3: s3Config,
     azure: azureConfig,
   };
@@ -375,6 +408,7 @@ export async function setStorageSettings(payload: StorageSettingsUpdate) {
   const publicBaseUrl = normalizeString(payload.publicBaseUrl);
   const maxSizeBytes = normalizeNumber(payload.maxSizeBytes);
   const allowedMime = normalizeAllowedMime(payload.allowedMime);
+  const deliveryAccessMode = normalizeDeliveryAccessMode(payload.delivery?.accessMode);
 
   const s3Bucket = normalizeString(payload.s3?.bucket);
   const s3Region = normalizeString(payload.s3?.region);
@@ -404,6 +438,7 @@ export async function setStorageSettings(payload: StorageSettingsUpdate) {
   queueValue(STORAGE_KEYS.publicBaseUrl, publicBaseUrl);
   queueValue(STORAGE_KEYS.maxSizeBytes, maxSizeBytes);
   queueValue(STORAGE_KEYS.allowedMime, allowedMime);
+  queueValue(STORAGE_KEYS.deliveryAccessMode, deliveryAccessMode);
 
   queueValue(STORAGE_KEYS.s3Bucket, s3Bucket);
   queueValue(STORAGE_KEYS.s3Region, s3Region);

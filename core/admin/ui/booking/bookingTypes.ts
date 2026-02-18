@@ -3,6 +3,7 @@ import type {
   BookingResourceStatus,
   BookingResourceType,
   BookingServiceStatus,
+  BookingSubmissionAccessMode,
 } from "@/services/bookingClient";
 
 export type FeedbackState = {
@@ -30,6 +31,7 @@ export type ServiceFormState = {
   bufferAfterMinutes: string;
   priceCents: string;
   currency: string;
+  submissionAccess: BookingSubmissionAccessMode;
 };
 
 export type ScheduleDraftState = {
@@ -86,6 +88,10 @@ export const RESOURCE_TYPE_OPTIONS: BookingResourceType[] = [
 ];
 export const RESOURCE_STATUS_OPTIONS: BookingResourceStatus[] = ["active", "inactive"];
 export const SERVICE_STATUS_OPTIONS: BookingServiceStatus[] = ["active", "inactive"];
+export const SERVICE_SUBMISSION_ACCESS_OPTIONS: BookingSubmissionAccessMode[] = [
+  "public",
+  "internal",
+];
 export const RESERVATION_STATUS_OPTIONS: BookingReservationStatus[] = [
   "pending",
   "confirmed",
@@ -113,6 +119,7 @@ export const defaultServiceFormState = (): ServiceFormState => ({
   bufferAfterMinutes: "0",
   priceCents: "",
   currency: "",
+  submissionAccess: "public",
 });
 
 export const defaultScheduleDraftState = (): ScheduleDraftState => ({

@@ -1,5 +1,7 @@
 import { ApiError, toErrorResponse } from "./errorHandler";
 import { checkRateLimit } from "./middleware/rateLimit";
+import { attachUserFromSession } from "./middleware/auth";
+import { requirePermission } from "./middleware/rbac";
 import { parseRequestBody } from "./requestBody";
 import type { SecuritySettings } from "../services/settings/securitySettings";
 import { validate } from "./validation/schemaValidator";
@@ -19,6 +21,11 @@ import {
 import { enforceBotProtection } from "../services/security/botProtection";
 import { assertBookingSubmissionNonce } from "../services/booking/bookingSubmissionNonce";
 import { assertBookingSlotsToken } from "../services/booking/bookingSlotsToken";
+import {
+  evaluateBookingAccess,
+  resolveBookingAccessModeFromSettings,
+} from "../services/booking/bookingAccess";
+import { authenticateApiKey } from "../services/security/apiKeyAuth";
 import { mapBookingError } from "./routes/bookingRoutes";
 
 export type PublicBookingApiContext = {
@@ -53,20 +60,20 @@ const parsePositiveInt = (value: string | null) => {
 };
 
 type BookingPublicSlotsQuery = BookingSlotPreviewInput & {
-  runtimeToken: string;
+  runtimeToken?: string;
 };
 
 const normalizeSlotsQuery = (url: URL): BookingPublicSlotsQuery => ({
   serviceId: url.searchParams.get("serviceId") ?? "",
   resourceId: url.searchParams.get("resourceId") ?? "",
   date: url.searchParams.get("date") ?? "",
-  runtimeToken: url.searchParams.get("runtimeToken") ?? "",
+  runtimeToken: url.searchParams.get("runtimeToken") ?? undefined,
   timezone: url.searchParams.get("timezone") ?? undefined,
   intervalMinutes: parsePositiveInt(url.searchParams.get("intervalMinutes")),
 });
 
 type PublicReservationBody = BookingReservationInput & {
-  formNonce: string;
+  formNonce?: string;
   captchaToken?: string;
 };
 
@@ -81,14 +88,13 @@ const normalizeReservationBody = (body: unknown): PublicReservationBody => {
       startsAt: "",
       endsAt: "",
       customerName: "",
-      formNonce: "",
     };
   }
 
   const payload = body as Record<string, unknown>;
 
   const formNonce =
-    readText(payload.formNonce) ?? readText(payload.__nl_booking_nonce) ?? "";
+    readText(payload.formNonce) ?? readText(payload.__nl_booking_nonce) ?? undefined;
 
   return {
     serviceId: readText(payload.serviceId) ?? "",
@@ -121,6 +127,80 @@ const ensureSlotRequestAllowed = async (input: BookingSlotPreviewInput) => {
   const allowedResources = await listBookingServiceResources(service.id);
   const isAllowed = allowedResources.some((item) => item.resourceId === resource.id);
   if (!isAllowed) throw new Error("booking_service_resource_not_allowed");
+
+  return { service, resource };
+};
+
+const parseCookies = (header: string | null) => {
+  if (!header) return {} as Record<string, string>;
+  const cookies: Record<string, string> = {};
+  for (const entry of header.split(";")) {
+    const chunk = entry.trim();
+    if (!chunk) continue;
+    const splitIndex = chunk.indexOf("=");
+    if (splitIndex <= 0) continue;
+    const key = chunk.slice(0, splitIndex).trim();
+    const value = chunk.slice(splitIndex + 1).trim();
+    cookies[key] = decodeURIComponent(value);
+  }
+  return cookies;
+};
+
+const buildHeadersRecord = (req: Request) => {
+  const headers: Record<string, string | undefined> = {};
+  req.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  return headers;
+};
+
+const resolveSessionUser = async (req: Request) => {
+  const authContext: {
+    headers?: Record<string, string | undefined>;
+    cookies?: Record<string, string | undefined>;
+    user?: { id: string; email?: string; name?: string | null };
+  } = {
+    headers: buildHeadersRecord(req),
+    cookies: parseCookies(req.headers.get("cookie")),
+  };
+  await attachUserFromSession(authContext);
+  return authContext.user;
+};
+
+const enforceBookingRuntimeAccess = async (params: {
+  mode: "public" | "internal";
+  user?: { id: string; email?: string; name?: string | null };
+  authorizationHeader?: string | null;
+  requiredPermission: "booking:read" | "booking:write";
+}) => {
+  const apiKey = params.user
+    ? null
+    : await authenticateApiKey(params.authorizationHeader ?? null);
+  const access = evaluateBookingAccess({
+    mode: params.mode,
+    isAuthenticated: Boolean(params.user),
+    apiKeyScopes: apiKey?.scopes,
+  });
+
+  if (!access.allow) {
+    if (access.reason === "forbidden") {
+      throw new ApiError("forbidden", "Forbidden", 403);
+    }
+    throw new ApiError("auth_required", "Not authenticated", 401);
+  }
+
+  if (params.user) {
+    try {
+      await requirePermission(params.requiredPermission)({ user: params.user });
+    } catch (error) {
+      if (error instanceof Error && error.message === "auth_required") {
+        throw new ApiError("auth_required", "Not authenticated", 401);
+      }
+      throw new ApiError("forbidden", "Forbidden", 403);
+    }
+  }
+
+  return access;
 };
 
 export async function handlePublicBookingApi(
@@ -130,6 +210,9 @@ export async function handlePublicBookingApi(
   const { url, ip, userAgent, security } = ctx;
 
   if (!url.pathname.startsWith("/api/booking")) return null;
+
+  const sessionUser = await resolveSessionUser(req);
+  const authorizationHeader = req.headers.get("authorization");
 
   if (req.method === "GET" && url.pathname === "/api/booking/slots") {
     checkRateLimit(
@@ -144,9 +227,21 @@ export async function handlePublicBookingApi(
     try {
       const input = normalizeSlotsQuery(url);
       validate(bookingPublicSlotQuerySchema, input);
-      assertBookingSlotsToken(input.runtimeToken);
-      const { runtimeToken: _runtimeToken, ...previewInput } = input;
-      await ensureSlotRequestAllowed(previewInput);
+      const { runtimeToken, ...previewInput } = input;
+      const { service } = await ensureSlotRequestAllowed(previewInput);
+
+      const accessMode = resolveBookingAccessModeFromSettings(service.settings, "public");
+      const access = await enforceBookingRuntimeAccess({
+        mode: accessMode,
+        user: sessionUser,
+        authorizationHeader,
+        requiredPermission: "booking:read",
+      });
+
+      if (access.requireCaptcha) {
+        assertBookingSlotsToken(runtimeToken);
+      }
+
       const items = await previewBookingSlots(previewInput);
       return jsonResponse({ items });
     } catch (error) {
@@ -169,13 +264,26 @@ export async function handlePublicBookingApi(
       const body = normalizeReservationBody(raw);
       validate(bookingPublicReservationSchema, body);
 
-      assertBookingSubmissionNonce(body.formNonce);
-      await enforceBotProtection({
-        token: body.captchaToken,
-        action: "public_write",
-        ip,
-        settings: security.botProtection,
+      const service = await getBookingService(body.serviceId);
+      if (!service) throw new Error("booking_service_not_found");
+
+      const accessMode = resolveBookingAccessModeFromSettings(service.settings, "public");
+      const access = await enforceBookingRuntimeAccess({
+        mode: accessMode,
+        user: sessionUser,
+        authorizationHeader,
+        requiredPermission: "booking:write",
       });
+
+      if (access.requireCaptcha) {
+        assertBookingSubmissionNonce(body.formNonce);
+        await enforceBotProtection({
+          token: body.captchaToken,
+          action: "public_write",
+          ip,
+          settings: security.botProtection,
+        });
+      }
 
       const created = await createBookingReservation({
         serviceId: body.serviceId,

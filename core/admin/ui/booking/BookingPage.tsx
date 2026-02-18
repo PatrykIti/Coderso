@@ -17,6 +17,8 @@ import {
   getCachedBookingReservations,
   getCachedBookingResources,
   getCachedBookingServices,
+  resolveBookingSubmissionAccess,
+  withBookingSubmissionAccess,
   listBookingBlackoutsCached,
   listBookingReservationsCached,
   listBookingResourcesCached,
@@ -515,6 +517,10 @@ export function BookingPage() {
     setSaving(true);
     setFeedback(null);
     try {
+      const existingServiceSettings = editingServiceId
+        ? servicesById.get(editingServiceId)?.settings
+        : undefined;
+
       const payload = {
         name: serviceForm.name.trim(),
         slug: normalizeOptionalText(serviceForm.slug),
@@ -539,6 +545,10 @@ export function BookingPage() {
         ),
         priceCents: parseOptionalNumber(serviceForm.priceCents, "Price", 0, 1_000_000_000),
         currency: normalizeOptionalText(serviceForm.currency),
+        settings: withBookingSubmissionAccess(
+          existingServiceSettings,
+          serviceForm.submissionAccess
+        ),
       };
       if (!payload.name) throw new Error("Service name is required.");
 
@@ -580,6 +590,7 @@ export function BookingPage() {
       bufferAfterMinutes: String(item.bufferAfterMinutes),
       priceCents: item.priceCents != null ? String(item.priceCents) : "",
       currency: item.currency ?? "",
+      submissionAccess: resolveBookingSubmissionAccess(item.settings, "public"),
     });
   };
 

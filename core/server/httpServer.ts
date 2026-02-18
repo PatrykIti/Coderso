@@ -17,6 +17,8 @@ import { validate } from "./validation/schemaValidator";
 import { getMediaStorageAdapter } from "../services/media/storage";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 import { getStorageSettingsInternal } from "../services/settings/storageSettings";
+import { authenticateApiKey } from "../services/security/apiKeyAuth";
+import { evaluateMediaAccess } from "../services/media/mediaAccess";
 import { initializeDocsIndexOnBootIfEnabled } from "../services/assistant/docsIndexService";
 import { ensureThemesLoaded } from "../themes/registry";
 import { handlePublicRequest } from "./publicSite";
@@ -409,9 +411,61 @@ const handleMedia = async (req: Request) => {
   );
 
   const config = await getStorageSettingsInternal();
+
+  if (config.delivery.accessMode === "internal") {
+    const headersObj: Record<string, string | undefined> = {};
+    req.headers.forEach((value, key) => {
+      headersObj[key] = value;
+    });
+
+    const authContext: {
+      user?: { id: string };
+      cookies?: Record<string, string | undefined>;
+      headers?: Record<string, string | undefined>;
+    } = {
+      headers: headersObj,
+      cookies: parseCookies(req.headers.get("cookie")),
+    };
+
+    await attachUserFromSession(authContext);
+    const apiKey = authContext.user
+      ? null
+      : await authenticateApiKey(req.headers.get("authorization"));
+    const access = evaluateMediaAccess({
+      mode: "internal",
+      isAuthenticated: Boolean(authContext.user),
+      apiKeyScopes: apiKey?.scopes,
+    });
+
+    if (!access.allow) {
+      if (access.reason === "forbidden") {
+        return new Response("Forbidden", { status: 403 });
+      }
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    if (authContext.user) {
+      try {
+        await requirePermission("media:read")({ user: authContext.user });
+      } catch {
+        return new Response("Forbidden", { status: 403 });
+      }
+    }
+  }
+
   if (config.driver !== "local") {
     const adapter = await getMediaStorageAdapter();
-    return Response.redirect(adapter.getPublicUrl(key), 302);
+    if (config.delivery.accessMode === "public") {
+      return Response.redirect(adapter.getPublicUrl(key), 302);
+    }
+    try {
+      const stream = await adapter.get(key);
+      return new Response(stream as unknown as BodyInit, {
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    } catch {
+      return new Response("Not Found", { status: 404 });
+    }
   }
 
   const baseDir = path.resolve(config.localDir ?? "/data/media");

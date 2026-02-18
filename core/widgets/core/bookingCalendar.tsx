@@ -25,6 +25,7 @@ export type BookingCalendarResolvedService = {
   currency: string | null;
   status?: "active" | "inactive";
   resourceIds: string[];
+  submissionAccess?: "public" | "internal";
 };
 
 export type BookingCalendarData = {
@@ -163,6 +164,9 @@ const normalizeResolvedServices = (
         priceCents,
         currency: optionalText(item?.currency ?? undefined) ?? null,
         resourceIds,
+        ...(item?.submissionAccess === "public" || item?.submissionAccess === "internal"
+          ? { submissionAccess: item.submissionAccess }
+          : {}),
         ...(item?.status === "active" || item?.status === "inactive"
           ? { status: item.status }
           : {}),
@@ -210,6 +214,7 @@ export const bookingCalendarSchema = {
               priceCents: { type: ["number", "null"] },
               currency: { type: ["string", "null"] },
               status: { enum: ["active", "inactive"] },
+              submissionAccess: { enum: ["public", "internal"] },
               resourceIds: {
                 type: "array",
                 items: { type: "string" },

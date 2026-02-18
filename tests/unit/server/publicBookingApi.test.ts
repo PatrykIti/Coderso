@@ -1,9 +1,10 @@
 import { afterAll, beforeEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import {
+  apiKeys,
   bookingBlackouts,
   bookings,
   bookingResources,
@@ -21,6 +22,7 @@ import {
 } from "../../../core/services/booking/bookingService";
 import { createBookingSubmissionNonce } from "../../../core/services/booking/bookingSubmissionNonce";
 import { createBookingSlotsToken } from "../../../core/services/booking/bookingSlotsToken";
+import { createApiKey } from "../../../core/services/security/apiKeysService";
 import {
   SECURITY_SETTINGS_DEFAULTS,
   type SecuritySettings,
@@ -30,6 +32,7 @@ const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
 
 const originalNonceSecret = process.env.FORM_SUBMIT_NONCE_SECRET;
+const createdApiKeyIds: string[] = [];
 
 async function canConnect() {
   try {
@@ -48,6 +51,10 @@ const cleanup = async () => {
   await db.delete(bookingServiceResources);
   await db.delete(bookingServices);
   await db.delete(bookingResources);
+  if (createdApiKeyIds.length > 0) {
+    await db.delete(apiKeys).where(inArray(apiKeys.id, [...new Set(createdApiKeyIds)]));
+    createdApiKeyIds.length = 0;
+  }
 };
 
 const toDateString = (date: Date) => {
@@ -186,7 +193,250 @@ testIfDb("public booking slots endpoint requires runtime token", async () => {
   expect(response).not.toBeNull();
   expect(response?.status).toBe(400);
   const payload = (await response?.json()) as { error: { code: string } };
-  expect(payload.error.code).toBe("validation_error");
+  expect(payload.error.code).toBe("form_nonce_required");
+});
+
+testIfDb("internal booking slots endpoint requires auth or API key", async () => {
+  const resource = await createBookingResource({
+    name: `Private bay ${randomUUID()}`,
+    type: "bay",
+    timezone: "UTC",
+    capacity: 1,
+  });
+  const service = await createBookingService({
+    name: `Members slot ${randomUUID()}`,
+    durationMinutes: 30,
+    settings: {
+      submissionAccess: "internal",
+    },
+  });
+
+  await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
+
+  const day = new Date(Date.UTC(2030, 0, 22, 0, 0, 0));
+  const date = toDateString(day);
+
+  await setBookingSchedules(resource.id, [
+    {
+      dayOfWeek: day.getUTCDay(),
+      startMinute: 9 * 60,
+      endMinute: 11 * 60,
+      timezone: "UTC",
+    },
+  ]);
+
+  const url = new URL("http://localhost/api/booking/slots");
+  url.searchParams.set("serviceId", service.id);
+  url.searchParams.set("resourceId", resource.id);
+  url.searchParams.set("date", date);
+
+  const response = await handlePublicBookingApi(new Request(url.toString()), {
+    url,
+    security: getSecurity(),
+    ip: "127.0.0.1",
+    userAgent: "test",
+  });
+
+  expect(response).not.toBeNull();
+  expect(response?.status).toBe(401);
+  const payload = (await response?.json()) as { error: { code: string } };
+  expect(payload.error.code).toBe("auth_required");
+});
+
+testIfDb("internal booking slots endpoint allows API key with booking.submit", async () => {
+  const resource = await createBookingResource({
+    name: `Private bay ${randomUUID()}`,
+    type: "bay",
+    timezone: "UTC",
+    capacity: 1,
+  });
+  const service = await createBookingService({
+    name: `Members slot ${randomUUID()}`,
+    durationMinutes: 30,
+    settings: {
+      submissionAccess: "internal",
+    },
+  });
+
+  await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
+
+  const day = new Date(Date.UTC(2030, 0, 23, 0, 0, 0));
+  const date = toDateString(day);
+
+  await setBookingSchedules(resource.id, [
+    {
+      dayOfWeek: day.getUTCDay(),
+      startMinute: 9 * 60,
+      endMinute: 11 * 60,
+      timezone: "UTC",
+    },
+  ]);
+
+  const apiKey = await createApiKey({
+    name: `Booking key ${Date.now()}`,
+    scopes: ["booking.submit"],
+  });
+  createdApiKeyIds.push(apiKey.apiKey.id);
+
+  const url = new URL("http://localhost/api/booking/slots");
+  url.searchParams.set("serviceId", service.id);
+  url.searchParams.set("resourceId", resource.id);
+  url.searchParams.set("date", date);
+
+  const response = await handlePublicBookingApi(
+    new Request(url.toString(), {
+      headers: {
+        authorization: `Bearer ${apiKey.secret}`,
+      },
+    }),
+    {
+      url,
+      security: getSecurity(),
+      ip: "127.0.0.1",
+      userAgent: "test",
+    }
+  );
+
+  expect(response).not.toBeNull();
+  expect(response?.status).toBe(200);
+});
+
+testIfDb("internal booking reservation endpoint requires auth or API key", async () => {
+  const resource = await createBookingResource({
+    name: `Private tech ${randomUUID()}`,
+    type: "staff",
+    timezone: "UTC",
+    capacity: 1,
+  });
+  const service = await createBookingService({
+    name: `Private repair ${randomUUID()}`,
+    durationMinutes: 60,
+    settings: {
+      submissionAccess: "internal",
+    },
+  });
+
+  await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
+
+  const day = new Date(Date.UTC(2030, 0, 24, 0, 0, 0));
+  const date = toDateString(day);
+  await setBookingSchedules(resource.id, [
+    {
+      dayOfWeek: day.getUTCDay(),
+      startMinute: 8 * 60,
+      endMinute: 10 * 60,
+      timezone: "UTC",
+    },
+  ]);
+
+  const slots = await previewBookingSlots({
+    serviceId: service.id,
+    resourceId: resource.id,
+    date,
+    timezone: "UTC",
+    intervalMinutes: 60,
+  });
+
+  const url = new URL("http://localhost/api/booking/reservations");
+  const response = await handlePublicBookingApi(
+    new Request(url.toString(), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        serviceId: service.id,
+        resourceId: resource.id,
+        startsAt: slots[0]!.startsAt,
+        endsAt: slots[0]!.endsAt,
+        timezone: "UTC",
+        customerName: "Member",
+      }),
+    }),
+    {
+      url,
+      security: getSecurity(),
+      ip: "127.0.0.1",
+      userAgent: "test",
+    }
+  );
+
+  expect(response).not.toBeNull();
+  expect(response?.status).toBe(401);
+  const payload = (await response?.json()) as { error: { code: string } };
+  expect(payload.error.code).toBe("auth_required");
+});
+
+testIfDb("internal booking reservation endpoint allows API key without nonce", async () => {
+  const resource = await createBookingResource({
+    name: `Private tech ${randomUUID()}`,
+    type: "staff",
+    timezone: "UTC",
+    capacity: 1,
+  });
+  const service = await createBookingService({
+    name: `Private repair ${randomUUID()}`,
+    durationMinutes: 60,
+    settings: {
+      submissionAccess: "internal",
+    },
+  });
+
+  await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
+
+  const day = new Date(Date.UTC(2030, 0, 25, 0, 0, 0));
+  const date = toDateString(day);
+  await setBookingSchedules(resource.id, [
+    {
+      dayOfWeek: day.getUTCDay(),
+      startMinute: 8 * 60,
+      endMinute: 10 * 60,
+      timezone: "UTC",
+    },
+  ]);
+
+  const slots = await previewBookingSlots({
+    serviceId: service.id,
+    resourceId: resource.id,
+    date,
+    timezone: "UTC",
+    intervalMinutes: 60,
+  });
+
+  const apiKey = await createApiKey({
+    name: `Booking key ${Date.now()}`,
+    scopes: ["booking.submit"],
+  });
+  createdApiKeyIds.push(apiKey.apiKey.id);
+
+  const url = new URL("http://localhost/api/booking/reservations");
+  const response = await handlePublicBookingApi(
+    new Request(url.toString(), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey.secret}`,
+      },
+      body: JSON.stringify({
+        serviceId: service.id,
+        resourceId: resource.id,
+        startsAt: slots[0]!.startsAt,
+        endsAt: slots[0]!.endsAt,
+        timezone: "UTC",
+        customerName: "Member",
+        customerEmail: "member@example.com",
+      }),
+    }),
+    {
+      url,
+      security: getSecurity(),
+      ip: "127.0.0.1",
+      userAgent: "test",
+    }
+  );
+
+  expect(response).not.toBeNull();
+  expect(response?.status).toBe(200);
+  const payload = (await response?.json()) as { id: string };
+  expect(payload.id).toBeTruthy();
 });
 
 testIfDb("public booking reservation endpoint rejects invalid nonce", async () => {

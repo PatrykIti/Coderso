@@ -5,6 +5,7 @@ import {
 } from "./bookingService";
 import { createBookingSubmissionNonce } from "./bookingSubmissionNonce";
 import { createBookingSlotsToken } from "./bookingSlotsToken";
+import { resolveBookingAccessModeFromSettings } from "./bookingAccess";
 
 export type BookingRuntimeResource = {
   id: string;
@@ -26,6 +27,7 @@ export type BookingRuntimeService = {
   currency: string | null;
   status: "active" | "inactive";
   resourceIds: string[];
+  submissionAccess: "public" | "internal";
 };
 
 export type BookingRuntimeResolution = {
@@ -81,6 +83,7 @@ export async function resolveBookingRuntimeData(options: { preview: boolean }) {
       currency: service.currency,
       status: service.status === "inactive" ? "inactive" : "active",
       resourceIds: resourceMap.get(service.id) ?? [],
+      submissionAccess: resolveBookingAccessModeFromSettings(service.settings, "public"),
     }))
     .filter((service) => options.preview || service.resourceIds.length > 0);
 
@@ -104,18 +107,24 @@ export async function resolveBookingRuntimeData(options: { preview: boolean }) {
   let submissionNonce: string | null = null;
   let slotsToken: string | null = null;
   const errorFlags: string[] = [];
-  try {
-    submissionNonce = createBookingSubmissionNonce();
-  } catch {
-    submissionNonce = null;
-    errorFlags.push("booking_nonce_unavailable");
+  const hasPublicService = runtimeServices.some((service) => service.submissionAccess === "public");
+
+  if (hasPublicService) {
+    try {
+      submissionNonce = createBookingSubmissionNonce();
+    } catch {
+      submissionNonce = null;
+      errorFlags.push("booking_nonce_unavailable");
+    }
   }
 
-  try {
-    slotsToken = createBookingSlotsToken();
-  } catch {
-    slotsToken = null;
-    errorFlags.push("booking_slots_token_unavailable");
+  if (runtimeServices.length > 0) {
+    try {
+      slotsToken = createBookingSlotsToken();
+    } catch {
+      slotsToken = null;
+      errorFlags.push("booking_slots_token_unavailable");
+    }
   }
 
   return {

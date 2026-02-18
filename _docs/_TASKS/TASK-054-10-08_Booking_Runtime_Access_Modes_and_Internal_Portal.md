@@ -5,7 +5,7 @@
 **Category:** Booking / Security / Runtime API  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-10-06, TASK-038-07, TASK-020-11-03  
-**Status:** In Progress
+**Status:** Done (2026-02-18)
 
 ---
 
@@ -52,3 +52,11 @@ Add WordPress-like access control for booking runtime submissions:
    - nonce/captcha are not required.
 4. Admin UI clearly explains behavior and allows mode changes per service.
 5. Unit/integration tests cover both modes and authorization outcomes.
+
+## Delivered
+- Added booking access mode contract (`public` / `internal`) with normalization/evaluation helpers.
+- Added per-service access mode in Booking Services editor and persisted it in service `settings`.
+- Enforced runtime API access:
+  - public mode => slots token + reservation nonce + optional bot protection,
+  - internal mode => authenticated session or API key scope (`booking.submit`).
+- Added tests for booking access rules and updated booking runtime API tests.

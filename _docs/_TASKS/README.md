@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 31 tasks
 - **In Progress:** 2 tasks
-- **Done:** 335 tasks
+- **Done:** 343 tasks
 
 ---
 
@@ -86,6 +86,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-10-09-03 | Media Access Tests and Docs | Medium | Medium | Coverage + docs/changelog closure for media delivery access |
+| TASK-054-10-09-02 | Media Runtime Access Enforcement | High | Medium | `/media/*` gate requires session or `media.read` API key in internal mode |
+| TASK-054-10-09-01 | Storage Settings Delivery Access Model and UI | High | Medium | `delivery.accessMode` in model/API/UI |
+| TASK-054-10-09 | Media Delivery Access Modes | High | Medium | Global media runtime access mode for public/internal delivery |
+| TASK-054-10-08-03 | Booking Access Mode Tests and Docs | Medium | Medium | Booking access tests + docs/changelog closure |
+| TASK-054-10-08-02 | Booking Public API Access Enforcement | High | Medium | Service-level runtime access checks for slots/reservations |
+| TASK-054-10-08-01 | Booking Access Mode Model and Admin UI | High | Medium | Per-service submission access in booking settings/UI |
+| TASK-054-10-08 | Booking Runtime Access Modes and Internal Portal | High | Medium | `public` vs `internal` booking runtime behavior |
 | TASK-054-10-06-04 | Booking Runtime Widgets QA and Docs | Medium | Medium | Widgets/runtime API tests + architecture/API docs + changelog |
 | TASK-054-10-06-03 | Appointment Form Widget + Runtime Script | High | Large | Shared `flowId` runtime sync + booking submit UX |
 | TASK-054-10-06-02 | Booking Calendar Widget | High | Medium | Runtime slot picker widget + editors |

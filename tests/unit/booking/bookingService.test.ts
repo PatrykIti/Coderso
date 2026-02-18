@@ -20,6 +20,7 @@ import {
   setBookingSchedules,
   setBookingServiceResources,
   updateBookingReservationStatus,
+  updateBookingService,
 } from "../../../core/services/booking/bookingService";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
@@ -75,6 +76,7 @@ testIfDb("booking resource/service setup and slot preview", async () => {
     bufferAfterMinutes: 0,
   });
   expect(service).toBeTruthy();
+  expect((service.settings as Record<string, unknown>).submissionAccess).toBe("public");
 
   await setBookingServiceResources(service.id, [{ resourceId: resource.id }]);
 
@@ -174,6 +176,32 @@ testIfDb("booking reservation blocks overlapping slots", async () => {
 
   const cancelled = await updateBookingReservationStatus(reservation.id, "cancelled");
   expect(cancelled?.status).toBe("cancelled");
+});
+
+testIfDb("booking service submission access can be set to internal", async () => {
+  const service = await createBookingService({
+    name: `Private booking ${randomUUID()}`,
+    durationMinutes: 45,
+    settings: {
+      submissionAccess: "internal",
+      audience: "members",
+    },
+  });
+
+  expect(service).toBeTruthy();
+  expect((service.settings as Record<string, unknown>).submissionAccess).toBe("internal");
+  expect((service.settings as Record<string, unknown>).audience).toBe("members");
+
+  const updated = await updateBookingService(service.id, {
+    settings: {
+      submissionAccess: "public",
+      audience: "public",
+    },
+  });
+
+  expect(updated).not.toBeNull();
+  expect((updated?.settings as Record<string, unknown>).submissionAccess).toBe("public");
+  expect((updated?.settings as Record<string, unknown>).audience).toBe("public");
 });
 
 testIfDb("blackout windows block slot preview", async () => {
