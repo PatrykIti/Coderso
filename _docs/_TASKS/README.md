@@ -28,8 +28,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 34 tasks
-- **In Progress:** 1 task
+- **To Do:** 41 tasks
+- **In Progress:** 2 tasks
 - **Done:** 317 tasks
 
 ---
@@ -38,7 +38,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-07 | Coderso Dynamic Data and Listing Suite | High | Large | Query/listing templates and dynamic cards |
+| TASK-054-07-01 | Coderso Listing Query Contract and Validation | High | Medium | Strict query schema, operators, and limits |
+| TASK-054-07-02 | Coderso Listing Query Execution Service and Safety | High | Large | Source adapters + deterministic execution |
+| TASK-054-07-03 | Coderso Listing Templates Model and Service | High | Medium | Reusable template storage and validation |
+| TASK-054-07-04 | Coderso Listings API and Routes | High | Medium | Admin listings endpoints + preview |
+| TASK-054-07-05 | Coderso Listings Admin UI Query Builder and Template Manager | High | Large | Full listings UI flow |
+| TASK-054-07-06 | Coderso Runtime Widget Integration for Listings | High | Large | contentList/entryTeaser listing mode |
+| TASK-054-07-07 | Coderso Conditional Visibility and Dynamic Field Binding | Medium | Medium | Row-based conditions + bindings |
+| TASK-054-07-08 | Coderso Listings QA, Tests, and Documentation | High | Medium | Regression matrix + docs + changelog |
 | TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted filters + scoped search |
 | TASK-054-09 | Coderso Forms and Automation Suite | High | Large | Form actions, automation, action logs |
 | TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Services/resources/schedules/reservations |
@@ -80,6 +87,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
+| TASK-054-07 | Coderso Dynamic Data and Listing Suite | High | Large | Query/listing templates and dynamic cards |
 
 ---
 
