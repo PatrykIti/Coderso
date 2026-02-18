@@ -20,6 +20,8 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { useListingQueries } from "./hooks/useListingQueries";
 
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
+const LISTING_QUERY_ID_PATTERN =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
 
 type QueryExample = {
   id: string;
@@ -70,11 +72,12 @@ export function ListingFiltersPage() {
   }, [items, selectedListingQueryId]);
 
   const runtimeTokenPrefix = useMemo(
-    () =>
-      selectedListingQueryId
-        ? `lq.${selectedListingQueryId}`
-        : "lq.sample-query-id",
-    [selectedListingQueryId]
+    () => {
+      const fallbackQueryId = items[0]?.id ?? "<listingQueryId>";
+      const queryId = selectedListingQueryId || fallbackQueryId;
+      return `lq.${queryId}`;
+    },
+    [items, selectedListingQueryId]
   );
 
   const queryExamples = useMemo<QueryExample[]>(
@@ -125,6 +128,12 @@ export function ListingFiltersPage() {
     if (!resolvedListingQueryId) {
       setPreviewError(
         "Select a listing query first, or provide tokens like lq.<listingQueryId>.<field>.<operator> in query string."
+      );
+      return;
+    }
+    if (!LISTING_QUERY_ID_PATTERN.test(resolvedListingQueryId)) {
+      setPreviewError(
+        "Listing query id in runtime tokens has invalid format. Use an existing query from Coderso -> Listings."
       );
       return;
     }

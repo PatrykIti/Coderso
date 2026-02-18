@@ -111,4 +111,6 @@ test("ListingSearchPage renders public search preview shell", () => {
   expect(html).toContain("Search");
   expect(html).toContain("Run preview");
   expect(html).toContain("global public search");
+  expect(html).toContain("What this preview searches");
+  expect(html).toContain("Not indexed yet");
 });
