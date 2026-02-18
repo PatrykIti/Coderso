@@ -18,8 +18,15 @@ import {
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { listEntriesCached, type EntrySummary } from "@/services/entriesClient";
+import {
+  listListingQueriesCached,
+  listListingTemplatesCached,
+  type ListingQueryRecord,
+  type ListingTemplateRecord,
+} from "@/services/listingsClient";
 
 import {
+  type EntryTeaserDataSourceMode,
   normalizeEntryTeaserData,
   resolveEntryTeaserVariant,
   type EntryTeaserCtaHrefMode,
@@ -59,6 +66,11 @@ const sourceModeOptions: Array<{ id: EntryTeaserSourceMode; label: string }> = [
   { id: "manual", label: "Manual entry" },
 ];
 
+const dataSourceModeOptions: Array<{ id: EntryTeaserDataSourceMode; label: string }> = [
+  { id: "legacy", label: "Legacy content type source" },
+  { id: "listing", label: "Listings query source" },
+];
+
 const hrefModeOptions: Array<{ id: EntryTeaserCtaHrefMode; label: string }> = [
   { id: "auto", label: "Auto entry URL" },
   { id: "custom", label: "Custom URL" },
@@ -79,6 +91,8 @@ const spacingOptions: Array<{ id: EntryTeaserSpacing; label: string }> = [
 
 const NO_CONTENT_TYPE_VALUE = "__no_content_type__";
 const NO_ENTRY_VALUE = "__no_entry__";
+const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
+const NO_LISTING_TEMPLATE_VALUE = "__no_listing_template__";
 
 function EditorSection({
   title,
@@ -177,6 +191,48 @@ function useContentTypeEntries(types: ContentTypeSummary[]) {
   };
 }
 
+function useListingOptions() {
+  const [queries, setQueries] = useState<ListingQueryRecord[]>([]);
+  const [templates, setTemplates] = useState<ListingTemplateRecord[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      listListingQueriesCached({ force: true }),
+      listListingTemplatesCached({ force: true }),
+    ])
+      .then(([nextQueries, nextTemplates]) => {
+        if (!active) return;
+        setQueries(nextQueries);
+        setTemplates(nextTemplates);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load listings options.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return {
+    queries,
+    templates,
+    loading,
+    error,
+  };
+}
+
 function normalizeValue(value: EntryTeaserData): EntryTeaserData {
   return normalizeEntryTeaserData(value);
 }
@@ -207,6 +263,23 @@ function updateSource(
     source: {
       ...current.source,
       ...patch,
+    },
+  }));
+}
+
+function updateSourceDataMode(
+  value: EntryTeaserData,
+  onChange: (next: EntryTeaserData) => void,
+  mode: EntryTeaserDataSourceMode
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    source: {
+      ...current.source,
+      mode,
+      ...(mode === "listing"
+        ? { contentTypeId: "", entryId: "" }
+        : { listingQueryId: "", listingTemplateId: "" }),
     },
   }));
 }
@@ -270,11 +343,13 @@ function updateFallback(
 function SourcePickerFields({
   value,
   onChange,
+  dataSourceMode,
   sourceMode,
   compact,
 }: {
   value: EntryTeaserData;
   onChange: (next: EntryTeaserData) => void;
+  dataSourceMode: EntryTeaserDataSourceMode;
   sourceMode: EntryTeaserSourceMode;
   compact?: boolean;
 }) {
@@ -284,6 +359,8 @@ function SourcePickerFields({
   const normalized = normalizeValue(value);
   const selectedTypeId = normalized.source?.contentTypeId ?? "";
   const selectedEntryId = normalized.source?.entryId ?? "";
+  const selectedListingQueryId = normalized.source?.listingQueryId ?? "";
+  const selectedListingTemplateId = normalized.source?.listingTemplateId ?? "";
 
   useEffect(() => {
     let active = true;
@@ -311,6 +388,12 @@ function SourcePickerFields({
 
   const { ensureEntriesLoaded, getEntriesForTypeId, entryLoadError } =
     useContentTypeEntries(types);
+  const {
+    queries,
+    templates,
+    loading: isLoadingListings,
+    error: listingsError,
+  } = useListingOptions();
 
   const selectedType = types.find((entry) => entry.id === selectedTypeId);
   const selectedTypeSlug = selectedType?.slug ?? "";
@@ -336,9 +419,90 @@ function SourcePickerFields({
       ? "No entry selected"
       : entries.find((entry) => entry.id === selectedEntryValue)?.title ??
         "Selected entry";
+  const selectedListingQueryValue =
+    selectedListingQueryId.trim().length > 0
+      ? selectedListingQueryId
+      : NO_LISTING_QUERY_VALUE;
+  const selectedListingTemplateValue =
+    selectedListingTemplateId.trim().length > 0
+      ? selectedListingTemplateId
+      : NO_LISTING_TEMPLATE_VALUE;
+  const selectedListingQueryLabel =
+    selectedListingQueryValue === NO_LISTING_QUERY_VALUE
+      ? "No listing query selected"
+      : queries.find((item) => item.id === selectedListingQueryValue)?.name ??
+        "Selected listing query";
+  const selectedListingTemplateLabel =
+    selectedListingTemplateValue === NO_LISTING_TEMPLATE_VALUE
+      ? "No template selected (optional)"
+      : templates.find((item) => item.id === selectedListingTemplateValue)?.name ??
+        "Selected listing template";
 
   return (
     <div className="space-y-3">
+      {dataSourceMode === "listing" ? (
+        <>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Listing query</p>
+            <Select
+              value={selectedListingQueryValue}
+              onValueChange={(next) =>
+                updateSource(value, onChange, {
+                  listingQueryId: next === NO_LISTING_QUERY_VALUE ? "" : next,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select listing query">
+                  {selectedListingQueryLabel}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_LISTING_QUERY_VALUE}>
+                  No listing query selected
+                </SelectItem>
+                {queries.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Listing template</p>
+            <Select
+              value={selectedListingTemplateValue}
+              onValueChange={(next) =>
+                updateSource(value, onChange, {
+                  listingTemplateId: next === NO_LISTING_TEMPLATE_VALUE ? "" : next,
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select listing template">
+                  {selectedListingTemplateLabel}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_LISTING_TEMPLATE_VALUE}>
+                  No template selected (optional)
+                </SelectItem>
+                {templates.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {isLoadingListings ? (
+            <p className="text-xs text-muted-foreground">Loading listings options...</p>
+          ) : null}
+          {listingsError ? <p className="text-xs text-destructive">{listingsError}</p> : null}
+        </>
+      ) : (
+        <>
       <div className="space-y-2">
         <p className="text-sm font-medium">Content type</p>
         <Select
@@ -401,6 +565,8 @@ function SourcePickerFields({
           {entryLoadError ? <p className="text-xs text-destructive">{entryLoadError}</p> : null}
         </div>
       ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -412,12 +578,34 @@ export function EntryTeaserWizardEditor({
   onVariantChange,
 }: WidgetEditorProps<EntryTeaserData>) {
   const normalized = normalizeValue(value);
+  const dataSourceMode = normalized.source?.mode ?? "legacy";
   const sourceMode = normalized.sourceMode ?? "latest";
   const resolvedVariant = resolveEntryTeaserVariant(variant);
 
   return (
     <div className="space-y-4">
       <EditorSection title="Source mode" description="Choose where teaser content comes from.">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Data source mode</p>
+          <Select
+            value={dataSourceMode}
+            onValueChange={(next) =>
+              updateSourceDataMode(value, onChange, next as EntryTeaserDataSourceMode)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select data source mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {dataSourceModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {dataSourceMode === "legacy" ? (
         <div className="space-y-2">
           <p className="text-sm font-medium">Mode</p>
           <Select
@@ -445,9 +633,11 @@ export function EntryTeaserWizardEditor({
             </SelectContent>
           </Select>
         </div>
+        ) : null}
         <SourcePickerFields
           value={value}
           onChange={onChange}
+          dataSourceMode={dataSourceMode}
           sourceMode={sourceMode}
           compact
         />
@@ -481,6 +671,7 @@ export function EntryTeaserVisualEditor({
   onVariantChange,
 }: WidgetEditorProps<EntryTeaserData>) {
   const normalized = normalizeValue(value);
+  const dataSourceMode = normalized.source?.mode ?? "legacy";
   const sourceMode = normalized.sourceMode ?? "latest";
   const resolvedVariant = resolveEntryTeaserVariant(variant);
 
@@ -491,6 +682,27 @@ export function EntryTeaserVisualEditor({
       </EditorSection>
 
       <EditorSection title="Source configuration" description="Choose source mode and content.">
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Data source mode</p>
+          <Select
+            value={dataSourceMode}
+            onValueChange={(next) =>
+              updateSourceDataMode(value, onChange, next as EntryTeaserDataSourceMode)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select data source mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {dataSourceModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {dataSourceMode === "legacy" ? (
         <div className="space-y-2">
           <p className="text-sm font-medium">Source mode</p>
           <Select
@@ -518,7 +730,13 @@ export function EntryTeaserVisualEditor({
             </SelectContent>
           </Select>
         </div>
-        <SourcePickerFields value={value} onChange={onChange} sourceMode={sourceMode} />
+        ) : null}
+        <SourcePickerFields
+          value={value}
+          onChange={onChange}
+          dataSourceMode={dataSourceMode}
+          sourceMode={sourceMode}
+        />
       </EditorSection>
 
       <EditorSection
@@ -634,9 +852,44 @@ export function EntryTeaserAdvancedEditor({
   onChange,
 }: WidgetEditorProps<EntryTeaserData>) {
   const normalized = normalizeValue(value);
+  const dataSourceMode = normalized.source?.mode ?? "legacy";
+  const sourceMode = normalized.sourceMode ?? "latest";
 
   return (
     <div className="space-y-4">
+      <EditorSection
+        title="Source wiring"
+        description="Technical source controls for legacy vs listings mode."
+      >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Data source mode</p>
+          <Select
+            value={dataSourceMode}
+            onValueChange={(next) =>
+              updateSourceDataMode(value, onChange, next as EntryTeaserDataSourceMode)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select data source mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {dataSourceModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <SourcePickerFields
+          value={value}
+          onChange={onChange}
+          dataSourceMode={dataSourceMode}
+          sourceMode={sourceMode}
+          compact
+        />
+      </EditorSection>
+
       <EditorSection title="Style tokens" description="Direct style tokens for teaser surface.">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">

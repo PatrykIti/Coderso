@@ -71,4 +71,5 @@ const sections = buildDefaultNavSections({
 - 054-07-03 done: `listing_templates` DB model + migration + normalized template CRUD service.
 - 054-07-04 done: Listings API routes + saved query persistence (`listing_queries`) + preview wiring.
 - 054-07-05 done: Admin UI query builder + template manager + Coderso navigation/routing/prefetch exposure (`Beta`).
-- Next milestone: 054-07-06 runtime widget integration (`contentList`, `entryTeaser`).
+- 054-07-06 done: Runtime integration for `contentList` and `entryTeaser` with new `legacy|listing` source mode + listing query/template binding.
+- Next milestone: 054-07-07 conditional visibility and dynamic field binding.

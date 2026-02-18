@@ -271,3 +271,4 @@ Project Change Log.
 | 235 | 2026-02-18 | Coderso listing templates model and service | CMS/Content |
 | 236 | 2026-02-18 | Coderso listings API and routes | Core/API |
 | 237 | 2026-02-18 | Coderso listings admin UI | Admin/UI |
+| 238 | 2026-02-18 | Coderso runtime widget listings integration | CMS/Widgets |

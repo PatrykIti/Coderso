@@ -16,6 +16,7 @@ export type ContentListSort =
   | "updated-asc"
   | "title-asc"
   | "title-desc";
+export type ContentListSourceMode = "legacy" | "listing";
 export type ContentListColumns = "1" | "2" | "3";
 export type ContentListGap = "sm" | "md" | "lg";
 export type ContentListCardStyle = "outlined" | "elevated" | "minimal";
@@ -36,6 +37,9 @@ export type ContentListRuntimeItem = {
 
 export type ContentListData = {
   source?: {
+    mode?: ContentListSourceMode;
+    listingQueryId?: string;
+    listingTemplateId?: string;
     contentTypeId?: string;
     statusScope?: ContentListStatusScope;
     limit?: number;
@@ -71,6 +75,8 @@ export type ContentListData = {
     total?: number;
     sourceTypeId?: string;
     sourceTypeSlug?: string;
+    listingQueryId?: string;
+    listingTemplateId?: string;
     resolvedAt?: string;
     error?: string;
   };
@@ -87,6 +93,9 @@ export const contentListSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        mode: { enum: ["legacy", "listing"] },
+        listingQueryId: { type: "string" },
+        listingTemplateId: { type: "string" },
         contentTypeId: { type: "string" },
         statusScope: {
           enum: ["published", "all", "draft", "scheduled", "archived"],
@@ -175,6 +184,8 @@ export const contentListSchema = {
         total: { type: "number" },
         sourceTypeId: { type: "string" },
         sourceTypeSlug: { type: "string" },
+        listingQueryId: { type: "string" },
+        listingTemplateId: { type: "string" },
         resolvedAt: { type: "string" },
         error: { type: "string" },
       },
@@ -184,6 +195,9 @@ export const contentListSchema = {
 
 export const contentListDefaults: ContentListData = {
   source: {
+    mode: "legacy",
+    listingQueryId: "",
+    listingTemplateId: "",
     contentTypeId: "",
     statusScope: "published",
     limit: 6,
@@ -275,6 +289,16 @@ const resolveContentListSort = (value: string | undefined): ContentListSort => {
     return value;
   }
   return "published-desc";
+};
+
+const resolveContentListSourceMode = (
+  mode: string | undefined,
+  listingQueryId: string | undefined
+): ContentListSourceMode => {
+  if (mode === "listing") return "listing";
+  if (mode === "legacy") return "legacy";
+  if ((listingQueryId ?? "").trim().length > 0) return "listing";
+  return "legacy";
 };
 
 const resolveContentListColumns = (
@@ -369,6 +393,12 @@ export function normalizeContentListData(data: ContentListData): ContentListData
   return {
     ...data,
     source: {
+      mode: resolveContentListSourceMode(
+        data.source?.mode,
+        data.source?.listingQueryId
+      ),
+      listingQueryId: resolveString(data.source?.listingQueryId, ""),
+      listingTemplateId: resolveString(data.source?.listingTemplateId, ""),
       contentTypeId: resolveString(data.source?.contentTypeId, sourceDefaults.contentTypeId ?? ""),
       statusScope: resolveContentListStatusScope(data.source?.statusScope),
       limit: normalizeContentListLimit(data.source?.limit ?? sourceDefaults.limit ?? 6),
@@ -435,6 +465,8 @@ export function normalizeContentListData(data: ContentListData): ContentListData
           : 0,
       sourceTypeId: resolveString(data.resolved?.sourceTypeId, ""),
       sourceTypeSlug: resolveString(data.resolved?.sourceTypeSlug, ""),
+      listingQueryId: resolveString(data.resolved?.listingQueryId, ""),
+      listingTemplateId: resolveString(data.resolved?.listingTemplateId, ""),
       resolvedAt: resolveString(data.resolved?.resolvedAt, ""),
       error: resolveOptionalString(data.resolved?.error),
     },
@@ -555,7 +587,11 @@ export function ContentListBlock({
   const fields = normalized.fields ?? contentListDefaults.fields!;
   const style = normalized.style ?? contentListDefaults.style!;
   const resolvedItems = normalizeContentListRuntimeItems(normalized.resolved?.items);
-  const hasSource = (source.contentTypeId ?? "").trim().length > 0;
+  const sourceMode = source.mode ?? "legacy";
+  const hasSource =
+    sourceMode === "listing"
+      ? (source.listingQueryId ?? "").trim().length > 0
+      : (source.contentTypeId ?? "").trim().length > 0;
   const hasItems = resolvedItems.length > 0;
   const state = !hasSource ? "missing-source" : hasItems ? "ready" : "empty";
   const errorText = normalized.resolved?.error;
@@ -575,7 +611,12 @@ export function ContentListBlock({
     <section
       className="mx-auto w-full max-w-6xl px-4 py-8"
       data-content-list-variant={resolvedVariant}
-      data-content-list-source={source.contentTypeId ?? ""}
+      data-content-list-source-mode={sourceMode}
+      data-content-list-source={
+        sourceMode === "listing"
+          ? source.listingQueryId ?? ""
+          : source.contentTypeId ?? ""
+      }
       data-content-list-items={String(resolvedItems.length)}
       data-content-list-status-scope={source.statusScope ?? "published"}
       data-content-list-state={state}
@@ -587,7 +628,9 @@ export function ContentListBlock({
       ) : null}
       {!hasSource ? (
         <div className="rounded-lg border border-dashed border-[var(--color-border)] px-4 py-8 text-sm text-[var(--color-text)]/80">
-          Choose a content type in widget settings to render entries here.
+          {sourceMode === "listing"
+            ? "Choose a listing query in widget settings to render items here."
+            : "Choose a content type in widget settings to render entries here."}
         </div>
       ) : hasItems ? (
         <div className={wrapperClassName}>

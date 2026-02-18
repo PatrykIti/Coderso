@@ -14,6 +14,7 @@ import {
   normalizeEntryTeaserData,
   type EntryTeaserData,
 } from "../../../core/widgets/core/entryTeaser";
+import { resolveEntryTeaserRuntimeData } from "../../../core/services/content/entryTeaserResolver";
 import { clearWidgets, registerWidget } from "../../../core/widgets/registry";
 import { normalizeWidgetBlock } from "../../../core/widgets/validator";
 import type { WidgetEditorProps } from "../../../core/widgets/types";
@@ -26,6 +27,29 @@ test("entry teaser renders source placeholder without content type", () => {
   );
 
   expect(html).toContain("Select content type");
+  expect(html).toContain('data-entry-teaser-state="missing-source"');
+});
+
+test("entry teaser renders listing placeholder when listing query is missing", () => {
+  const html = renderToString(
+    <EntryTeaserBlock
+      data={normalizeEntryTeaserData({
+        ...entryTeaserDefaults,
+        source: {
+          ...entryTeaserDefaults.source,
+          mode: "listing",
+          listingQueryId: "",
+          listingTemplateId: "",
+          contentTypeId: "",
+          entryId: "",
+        },
+      })}
+      variant="horizontal"
+    />
+  );
+
+  expect(html).toContain("Select listing query");
+  expect(html).toContain('data-entry-teaser-data-source-mode="listing"');
   expect(html).toContain('data-entry-teaser-state="missing-source"');
 });
 
@@ -175,4 +199,95 @@ test("entry teaser normalization keeps deterministic fallback defaults", () => {
   expect(normalized.fallback?.fallbackToLatest).toBe(true);
   expect(normalized.cta?.hrefMode).toBe("custom");
   expect(normalized.style?.radius).toBe("lg");
+});
+
+test("entry teaser listing mode resolves first listing item", async () => {
+  const resolved = await resolveEntryTeaserRuntimeData(
+    {
+      ...entryTeaserDefaults,
+      source: {
+        ...entryTeaserDefaults.source,
+        mode: "listing",
+        listingQueryId: "listing-query-1",
+        listingTemplateId: "listing-template-1",
+      },
+    },
+    {
+      preview: true,
+      contentRoutes: [],
+    },
+    {
+      getListingQueryById: async () => ({
+        id: "listing-query-1",
+        name: "Top entries",
+        description: null,
+        query: {
+          source: "entries",
+          sourceConfig: {
+            contentTypeId: "type-1",
+          },
+          filters: [],
+          sort: [{ field: "id", dir: "asc" }],
+          pagination: { limit: 12, offset: 0 },
+          fields: ["id", "title", "slug"],
+        },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+      }),
+      getListingTemplateById: async () => ({
+        id: "listing-template-1",
+        name: "Cards",
+        slug: "cards",
+        description: null,
+        layout: "grid",
+        config: {
+          fields: [],
+          itemActions: [],
+          emptyState: {
+            title: "No items",
+            description: null,
+            ctaLabel: null,
+            ctaHref: null,
+          },
+          style: {
+            columns: 3,
+            gap: "md",
+            cardVariant: "default",
+          },
+        },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+      }),
+      executeListing: async () => ({
+        source: "entries",
+        total: 2,
+        limit: 12,
+        offset: 0,
+        rows: [
+          {
+            id: "entry-1",
+            title: "Engine diagnostics",
+            slug: "engine-diagnostics",
+            status: "published",
+          },
+          {
+            id: "entry-2",
+            title: "Bodywork",
+            slug: "bodywork",
+            status: "published",
+          },
+        ],
+      }),
+      getContentTypeById: async () => ({
+        id: "type-1",
+        slug: "entries",
+      }),
+      getContentTypeBySlug: async () => null,
+    }
+  );
+
+  expect(resolved.item?.title).toBe("Engine diagnostics");
+  expect(resolved.item?.id).toBe("entry-1");
+  expect(resolved.sourceTypeSlug).toBe("entries");
+  expect(resolved.listingQueryId).toBe("listing-query-1");
 });

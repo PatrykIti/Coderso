@@ -4,6 +4,7 @@ import type { WidgetDefinition, WidgetEditorProps } from "../types";
 
 export type EntryTeaserVariantId = "horizontal" | "vertical" | "minimal";
 export type EntryTeaserSourceMode = "manual" | "latest" | "featured";
+export type EntryTeaserDataSourceMode = "legacy" | "listing";
 export type EntryTeaserCtaHrefMode = "auto" | "custom";
 export type EntryTeaserRadius = "sm" | "md" | "lg" | "xl";
 export type EntryTeaserSpacing = "sm" | "md" | "lg";
@@ -25,6 +26,9 @@ export type EntryTeaserRuntimeItem = {
 export type EntryTeaserData = {
   sourceMode?: EntryTeaserSourceMode;
   source?: {
+    mode?: EntryTeaserDataSourceMode;
+    listingQueryId?: string;
+    listingTemplateId?: string;
     contentTypeId?: string;
     entryId?: string;
   };
@@ -55,6 +59,8 @@ export type EntryTeaserData = {
     sourceTypeId?: string;
     sourceTypeSlug?: string;
     resolvedAt?: string;
+    listingQueryId?: string;
+    listingTemplateId?: string;
     error?: string;
   };
 };
@@ -68,6 +74,9 @@ export const entryTeaserSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
+        mode: { enum: ["legacy", "listing"] },
+        listingQueryId: { type: "string" },
+        listingTemplateId: { type: "string" },
         contentTypeId: { type: "string" },
         entryId: { type: "string" },
       },
@@ -142,6 +151,8 @@ export const entryTeaserSchema = {
         sourceTypeId: { type: "string" },
         sourceTypeSlug: { type: "string" },
         resolvedAt: { type: "string" },
+        listingQueryId: { type: "string" },
+        listingTemplateId: { type: "string" },
         error: { type: "string" },
       },
     },
@@ -151,6 +162,9 @@ export const entryTeaserSchema = {
 export const entryTeaserDefaults: EntryTeaserData = {
   sourceMode: "latest",
   source: {
+    mode: "legacy",
+    listingQueryId: "",
+    listingTemplateId: "",
     contentTypeId: "",
     entryId: "",
   },
@@ -263,6 +277,16 @@ const resolveEntryTeaserSpacing = (
   return "md";
 };
 
+const resolveEntryTeaserDataSourceMode = (
+  mode: string | undefined,
+  listingQueryId: string | undefined
+): EntryTeaserDataSourceMode => {
+  if (mode === "listing") return "listing";
+  if (mode === "legacy") return "legacy";
+  if ((listingQueryId ?? "").trim().length > 0) return "listing";
+  return "legacy";
+};
+
 const normalizeRuntimeItem = (
   item: EntryTeaserRuntimeItem | null | undefined
 ): EntryTeaserRuntimeItem | null => {
@@ -324,6 +348,12 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
     ...data,
     sourceMode: resolveEntryTeaserSourceMode(data.sourceMode),
     source: {
+      mode: resolveEntryTeaserDataSourceMode(
+        data.source?.mode,
+        data.source?.listingQueryId
+      ),
+      listingQueryId: resolveString(data.source?.listingQueryId, ""),
+      listingTemplateId: resolveString(data.source?.listingTemplateId, ""),
       contentTypeId: resolveString(data.source?.contentTypeId, sourceDefaults.contentTypeId ?? ""),
       entryId: resolveString(data.source?.entryId, sourceDefaults.entryId ?? ""),
     },
@@ -373,6 +403,8 @@ export function normalizeEntryTeaserData(data: EntryTeaserData): EntryTeaserData
       sourceTypeId: resolveString(data.resolved?.sourceTypeId, ""),
       sourceTypeSlug: resolveString(data.resolved?.sourceTypeSlug, ""),
       resolvedAt: resolveString(data.resolved?.resolvedAt, ""),
+      listingQueryId: resolveString(data.resolved?.listingQueryId, ""),
+      listingTemplateId: resolveString(data.resolved?.listingTemplateId, ""),
       error: resolveOptionalString(data.resolved?.error),
     },
   };
@@ -405,12 +437,16 @@ export function EntryTeaserBlock({
   const normalized = normalizeEntryTeaserData(data);
   const resolvedVariant = resolveEntryTeaserVariant(variant);
   const source = normalized.source ?? entryTeaserDefaults.source!;
+  const sourceDataMode = source.mode ?? "legacy";
   const sourceMode = normalized.sourceMode ?? "latest";
   const fields = normalized.fields ?? entryTeaserDefaults.fields!;
   const cta = normalized.cta ?? entryTeaserDefaults.cta!;
   const style = normalized.style ?? entryTeaserDefaults.style!;
   const item = normalizeRuntimeItem(normalized.resolved?.item ?? null);
-  const hasSource = (source.contentTypeId ?? "").trim().length > 0;
+  const hasSource =
+    sourceDataMode === "listing"
+      ? (source.listingQueryId ?? "").trim().length > 0
+      : (source.contentTypeId ?? "").trim().length > 0;
   const state = !hasSource ? "missing-source" : item ? "ready" : "empty";
   const errorText = normalized.resolved?.error;
   const href =
@@ -449,8 +485,13 @@ export function EntryTeaserBlock({
       )}
       style={surfaceStyle}
       data-entry-teaser-variant={resolvedVariant}
+      data-entry-teaser-data-source-mode={sourceDataMode}
       data-entry-teaser-source-mode={sourceMode}
-      data-entry-teaser-source={source.contentTypeId ?? ""}
+      data-entry-teaser-source={
+        sourceDataMode === "listing"
+          ? source.listingQueryId ?? ""
+          : source.contentTypeId ?? ""
+      }
       data-entry-teaser-state={state}
     >
       {errorText ? (
@@ -461,7 +502,9 @@ export function EntryTeaserBlock({
 
       {!hasSource ? (
         <div className="rounded-md border border-dashed border-[var(--color-border)] px-4 py-8 text-sm text-[var(--color-text)]/80">
-          Select content type to resolve teaser source.
+          {sourceDataMode === "listing"
+            ? "Select listing query to resolve teaser source."
+            : "Select content type to resolve teaser source."}
         </div>
       ) : item ? (
         <article className={wrapperClassName} data-entry-teaser-status={item.status ?? "unknown"}>

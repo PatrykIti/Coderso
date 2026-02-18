@@ -1,11 +1,21 @@
 import { getMediaById } from "../media/mediaService";
 import type { ContentRouteSetting } from "../settings/settingsService";
 import { listEntries } from "./entryService";
-import { getContentType } from "./typeService";
+import { getContentType, getContentTypeBySlug } from "./typeService";
+import { getListingQuery } from "./listingQueriesService";
+import {
+  getListingTemplate,
+  type ListingTemplateRecord,
+} from "./listingTemplatesService";
+import {
+  executeListingQuery,
+  type ListingQuery,
+} from "./queryBuilderService";
 import {
   contentListDefaults,
   normalizeContentListData,
   normalizeContentListLimit,
+  type ContentListSourceMode,
   type ContentListData,
   type ContentListRuntimeItem,
 } from "../../widgets/core/contentList";
@@ -15,6 +25,28 @@ export type ContentListResolverEntry = ListEntriesRow;
 
 const featuredTagToken = "featured";
 const excerptMaxLength = 220;
+const postsTypeSlugs = ["post", "posts"] as const;
+
+type ContentTypeSnapshot = {
+  id: string;
+  slug: string;
+};
+
+type ContentListListingRuntimeDeps = {
+  getListingQueryById: typeof getListingQuery;
+  getListingTemplateById: typeof getListingTemplate;
+  executeListing: typeof executeListingQuery;
+  getContentTypeById: typeof getContentType;
+  getContentTypeBySlug: typeof getContentTypeBySlug;
+};
+
+const defaultListingRuntimeDeps: ContentListListingRuntimeDeps = {
+  getListingQueryById: getListingQuery,
+  getListingTemplateById: getListingTemplate,
+  executeListing: executeListingQuery,
+  getContentTypeById: getContentType,
+  getContentTypeBySlug,
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -259,6 +291,233 @@ const resolveDetailPathPattern = (
   return route?.detailPath ?? `/${typeSlug}/:slug`;
 };
 
+const readPathValue = (row: Record<string, unknown>, path: string): unknown => {
+  const segments = path.split(".");
+  let current: unknown = row;
+  for (const segment of segments) {
+    if (!isRecord(current)) return undefined;
+    current = current[segment];
+  }
+  return current;
+};
+
+const toDisplayString = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return undefined;
+};
+
+const toIsoDateString = (value: unknown): string | undefined => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+  }
+  if (typeof value === "string") {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString();
+  }
+  return undefined;
+};
+
+const toStringList = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => toDisplayString(item))
+      .filter((item): item is string => Boolean(item));
+  }
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+  }
+  return [];
+};
+
+const resolveTemplateFieldByKeys = (
+  template: ListingTemplateRecord | null,
+  keys: string[]
+) => {
+  if (!template) return null;
+  const lookup = new Set(keys.map((key) => key.toLowerCase()));
+  return (
+    template.config.fields.find((field) =>
+      lookup.has(field.key.trim().toLowerCase())
+    ) ?? null
+  );
+};
+
+const resolveTemplateFieldValue = (
+  row: Record<string, unknown>,
+  template: ListingTemplateRecord | null,
+  keys: string[]
+) => {
+  const binding = resolveTemplateFieldByKeys(template, keys);
+  if (!binding) return undefined;
+  const value = readPathValue(row, binding.source);
+  if (value === undefined || value === null || value === "") {
+    return binding.fallback ?? undefined;
+  }
+  return value;
+};
+
+const resolveStringFromTemplateOrPaths = (
+  row: Record<string, unknown>,
+  template: ListingTemplateRecord | null,
+  templateKeys: string[],
+  fallbackPaths: string[]
+) => {
+  const templateValue = resolveTemplateFieldValue(row, template, templateKeys);
+  const fromTemplate = toDisplayString(templateValue);
+  if (fromTemplate) return fromTemplate;
+  for (const path of fallbackPaths) {
+    const fromRow = toDisplayString(readPathValue(row, path));
+    if (fromRow) return fromRow;
+  }
+  return undefined;
+};
+
+const resolveTagsFromTemplateOrPaths = (
+  row: Record<string, unknown>,
+  template: ListingTemplateRecord | null
+) => {
+  const fromTemplate = toStringList(
+    resolveTemplateFieldValue(row, template, ["tags", "categories"])
+  );
+  if (fromTemplate.length > 0) return fromTemplate;
+  return toStringList(readPathValue(row, "tags"));
+};
+
+const resolveImageCandidateFromListingRow = (
+  row: Record<string, unknown>,
+  template: ListingTemplateRecord | null
+) => {
+  const templateImage = resolveTemplateFieldValue(row, template, [
+    "image",
+    "imageSrc",
+    "cover",
+    "thumbnail",
+  ]);
+  const fromTemplate = readMediaCandidate(templateImage);
+  if (fromTemplate) return fromTemplate;
+
+  const candidates: unknown[] = [
+    readPathValue(row, "imageSrc"),
+    readPathValue(row, "image"),
+    readPathValue(row, "coverImage"),
+    readPathValue(row, "featuredImage"),
+    readPathValue(row, "data.image"),
+    readPathValue(row, "data.coverImage"),
+    readPathValue(row, "data.featuredImage"),
+  ];
+  for (const candidate of candidates) {
+    const resolved = readMediaCandidate(candidate);
+    if (resolved) return resolved;
+  }
+  return null;
+};
+
+const interpolateTemplateHref = (
+  template: string,
+  row: Record<string, unknown>
+) =>
+  template.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, path: string) => {
+    const value = readPathValue(row, path);
+    return toDisplayString(value) ?? "";
+  });
+
+const resolveTemplateActionHref = (
+  row: Record<string, unknown>,
+  template: ListingTemplateRecord | null
+) => {
+  if (!template) return undefined;
+  const action =
+    template.config.itemActions.find((item) => item.kind === "view") ??
+    template.config.itemActions.find((item) => item.kind === "custom");
+  if (!action?.href) return undefined;
+  return sanitizeHref(interpolateTemplateHref(action.href, row));
+};
+
+const resolvePostsType = async (
+  deps: ContentListListingRuntimeDeps
+): Promise<ContentTypeSnapshot | null> => {
+  for (const slug of postsTypeSlugs) {
+    const type = await deps.getContentTypeBySlug(slug);
+    if (type) {
+      return { id: type.id, slug: type.slug };
+    }
+  }
+  return null;
+};
+
+const resolveListingRouteMeta = async (
+  query: ListingQuery,
+  contentRoutes: ContentRouteSetting[],
+  deps: ContentListListingRuntimeDeps
+) => {
+  if (query.source === "entries") {
+    const typeId = query.sourceConfig.contentTypeId?.trim();
+    if (!typeId) {
+      return {
+        sourceTypeId: "",
+        sourceTypeSlug: "",
+        detailPathPattern: undefined,
+      };
+    }
+    const contentType = await deps.getContentTypeById(typeId);
+    if (!contentType) {
+      return {
+        sourceTypeId: typeId,
+        sourceTypeSlug: "",
+        detailPathPattern: undefined,
+      };
+    }
+    return {
+      sourceTypeId: contentType.id,
+      sourceTypeSlug: contentType.slug,
+      detailPathPattern: resolveDetailPathPattern(contentRoutes, contentType.slug),
+    };
+  }
+
+  if (query.source === "posts") {
+    const postType = await resolvePostsType(deps);
+    if (!postType) {
+      return {
+        sourceTypeId: "",
+        sourceTypeSlug: "",
+        detailPathPattern: undefined,
+      };
+    }
+    return {
+      sourceTypeId: postType.id,
+      sourceTypeSlug: postType.slug,
+      detailPathPattern: resolveDetailPathPattern(contentRoutes, postType.slug),
+    };
+  }
+
+  return {
+    sourceTypeId: query.source,
+    sourceTypeSlug: query.source,
+    detailPathPattern: undefined,
+  };
+};
+
+const normalizeListingQueryForRuntime = (query: ListingQuery, preview: boolean): ListingQuery => {
+  if (preview) return query;
+  if (query.source !== "entries" && query.source !== "posts") return query;
+  return {
+    ...query,
+    sourceConfig: {
+      ...query.sourceConfig,
+      includeDrafts: false,
+    },
+  };
+};
+
 async function resolveItemImage(
   candidate: MediaCandidate | null,
   cache: Map<string, { url: string; alt?: string } | null>
@@ -334,15 +593,208 @@ export async function mapEntriesToContentListItems(
   );
 }
 
+export async function mapListingRowsToContentListItems(
+  rows: Record<string, unknown>[],
+  options: {
+    detailPathPattern?: string;
+    showImage: boolean;
+    template?: ListingTemplateRecord | null;
+  }
+): Promise<ContentListRuntimeItem[]> {
+  const mediaCache = new Map<string, { url: string; alt?: string } | null>();
+
+  return Promise.all(
+    rows.map(async (row, index) => {
+      const id = resolveStringFromTemplateOrPaths(
+        row,
+        options.template ?? null,
+        ["id"],
+        ["id"]
+      );
+      const slug = resolveStringFromTemplateOrPaths(
+        row,
+        options.template ?? null,
+        ["slug"],
+        ["slug"]
+      );
+      const title = resolveStringFromTemplateOrPaths(
+        row,
+        options.template ?? null,
+        ["title", "name", "headline"],
+        ["title", "name", "data.title", "data.name"]
+      );
+      const excerpt = resolveStringFromTemplateOrPaths(
+        row,
+        options.template ?? null,
+        ["excerpt", "summary", "description"],
+        ["excerpt", "summary", "description", "data.excerpt", "data.summary", "data.description"]
+      );
+      const authorName = resolveStringFromTemplateOrPaths(
+        row,
+        options.template ?? null,
+        ["author", "authorName"],
+        ["author.name", "authorName", "name"]
+      );
+      const status = resolveStringFromTemplateOrPaths(
+        row,
+        options.template ?? null,
+        ["status"],
+        ["status"]
+      );
+      const publishedAt =
+        toIsoDateString(
+          resolveTemplateFieldValue(row, options.template ?? null, ["publishedAt", "date"])
+        ) ??
+        toIsoDateString(readPathValue(row, "publishedAt")) ??
+        toIsoDateString(readPathValue(row, "updatedAt")) ??
+        toIsoDateString(readPathValue(row, "createdAt"));
+
+      const templateHref = resolveTemplateActionHref(row, options.template ?? null);
+      const detailHref =
+        options.detailPathPattern && (slug || id)
+          ? sanitizeHref(
+              buildDetailHref(
+                options.detailPathPattern,
+                slug ?? id ?? `item-${index + 1}`,
+                id ?? slug ?? `item-${index + 1}`
+              )
+            )
+          : undefined;
+      const href =
+        templateHref ??
+        resolveStringFromTemplateOrPaths(
+          row,
+          options.template ?? null,
+          ["href", "url"],
+          ["href", "url"]
+        ) ??
+        detailHref ??
+        "#";
+
+      const imageCandidate = options.showImage
+        ? resolveImageCandidateFromListingRow(row, options.template ?? null)
+        : null;
+      const resolvedImage = await resolveItemImage(imageCandidate, mediaCache);
+
+      return {
+        id: id ?? `listing-item-${index + 1}`,
+        title: title ?? `Item ${index + 1}`,
+        slug,
+        href,
+        excerpt,
+        imageSrc: resolvedImage.src,
+        imageAlt: resolvedImage.alt,
+        tags: resolveTagsFromTemplateOrPaths(row, options.template ?? null),
+        authorName,
+        publishedAt,
+        status,
+      };
+    })
+  );
+}
+
+export async function resolveListingContentListRuntimeData(
+  input: ContentListData,
+  options: {
+    preview: boolean;
+    contentRoutes: ContentRouteSetting[];
+  },
+  deps: Partial<ContentListListingRuntimeDeps> = {}
+) {
+  const runtimeDeps: ContentListListingRuntimeDeps = {
+    ...defaultListingRuntimeDeps,
+    ...deps,
+  };
+  const normalized = normalizeContentListData(input);
+  const source = normalized.source ?? contentListDefaults.source!;
+  const listingQueryId = source.listingQueryId?.trim() ?? "";
+  const listingTemplateId = source.listingTemplateId?.trim() ?? "";
+
+  if (!listingQueryId) {
+    return {
+      items: [],
+      total: 0,
+      sourceTypeId: "",
+      sourceTypeSlug: "",
+      listingQueryId: "",
+      listingTemplateId: listingTemplateId,
+      resolvedAt: new Date().toISOString(),
+    };
+  }
+
+  const listingQuery = await runtimeDeps.getListingQueryById(listingQueryId);
+  if (!listingQuery) {
+    return {
+      items: [],
+      total: 0,
+      sourceTypeId: "",
+      sourceTypeSlug: "",
+      listingQueryId,
+      listingTemplateId,
+      resolvedAt: new Date().toISOString(),
+      error: "Selected listing query no longer exists.",
+    };
+  }
+
+  const listingTemplate = listingTemplateId
+    ? await runtimeDeps.getListingTemplateById(listingTemplateId)
+    : null;
+  if (listingTemplateId && !listingTemplate) {
+    return {
+      items: [],
+      total: 0,
+      sourceTypeId: "",
+      sourceTypeSlug: "",
+      listingQueryId,
+      listingTemplateId,
+      resolvedAt: new Date().toISOString(),
+      error: "Selected listing template no longer exists.",
+    };
+  }
+
+  const query = normalizeListingQueryForRuntime(listingQuery.query, options.preview);
+  const execution = await runtimeDeps.executeListing(query);
+  const routeMeta = await resolveListingRouteMeta(
+    listingQuery.query,
+    options.contentRoutes,
+    runtimeDeps
+  );
+  const items = await mapListingRowsToContentListItems(
+    execution.rows as Record<string, unknown>[],
+    {
+      detailPathPattern: routeMeta.detailPathPattern,
+      showImage: Boolean(normalized.fields?.showImage),
+      template: listingTemplate,
+    }
+  );
+
+  return {
+    items,
+    total: execution.total,
+    sourceTypeId: routeMeta.sourceTypeId,
+    sourceTypeSlug: routeMeta.sourceTypeSlug,
+    listingQueryId,
+    listingTemplateId,
+    resolvedAt: new Date().toISOString(),
+  };
+}
+
 export async function resolveContentListRuntimeData(
   input: ContentListData,
   options: {
     preview: boolean;
     contentRoutes: ContentRouteSetting[];
-  }
+  },
+  deps: Partial<ContentListListingRuntimeDeps> = {}
 ) {
   const normalized = normalizeContentListData(input);
   const source = normalized.source ?? contentListDefaults.source!;
+  const sourceMode: ContentListSourceMode = source.mode ?? "legacy";
+
+  if (sourceMode === "listing") {
+    return resolveListingContentListRuntimeData(input, options, deps);
+  }
+
   const contentTypeId = source.contentTypeId?.trim();
 
   if (!contentTypeId) {

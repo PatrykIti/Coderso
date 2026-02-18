@@ -17,11 +17,18 @@ import {
   listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
+import {
+  listListingQueriesCached,
+  listListingTemplatesCached,
+  type ListingQueryRecord,
+  type ListingTemplateRecord,
+} from "@/services/listingsClient";
 
 import {
   contentListDefaults,
   normalizeContentListData,
   normalizeContentListLimit,
+  type ContentListSourceMode,
   resolveContentListVariant,
   type ContentListCardStyle,
   type ContentListData,
@@ -52,6 +59,11 @@ const variantOptions: Array<{
     label: "Compact",
     description: "Dense layout for sidebars and short collections.",
   },
+];
+
+const sourceModeOptions: Array<{ id: ContentListSourceMode; label: string }> = [
+  { id: "legacy", label: "Legacy content type source" },
+  { id: "listing", label: "Listings query source" },
 ];
 
 const statusScopeOptions: Array<{ id: ContentListStatusScope; label: string }> = [
@@ -90,6 +102,8 @@ const cardStyleOptions: Array<{ id: ContentListCardStyle; label: string }> = [
 ];
 
 const NO_CONTENT_TYPE_VALUE = "__no_content_type__";
+const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
+const NO_LISTING_TEMPLATE_VALUE = "__no_listing_template__";
 
 function EditorSection({
   title,
@@ -215,6 +229,136 @@ function ContentTypeSelect({
   );
 }
 
+function useListingOptions() {
+  const [queries, setQueries] = useState<ListingQueryRecord[]>([]);
+  const [templates, setTemplates] = useState<ListingTemplateRecord[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      listListingQueriesCached({ force: true }),
+      listListingTemplatesCached({ force: true }),
+    ])
+      .then(([nextQueries, nextTemplates]) => {
+        if (!active) return;
+        setQueries(nextQueries);
+        setTemplates(nextTemplates);
+      })
+      .catch((err) => {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setError(err.message);
+        } else {
+          setError("Failed to load listings options.");
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return {
+    queries,
+    templates,
+    loading,
+    error,
+  };
+}
+
+function ListingSourceSelect({
+  queryId,
+  templateId,
+  onQueryChange,
+  onTemplateChange,
+}: {
+  queryId: string;
+  templateId: string;
+  onQueryChange: (next: string) => void;
+  onTemplateChange: (next: string) => void;
+}) {
+  const { queries, templates, loading, error } = useListingOptions();
+  const querySelectValue =
+    queryId.trim().length > 0 ? queryId : NO_LISTING_QUERY_VALUE;
+  const templateSelectValue =
+    templateId.trim().length > 0 ? templateId : NO_LISTING_TEMPLATE_VALUE;
+  const selectedQueryName =
+    querySelectValue === NO_LISTING_QUERY_VALUE
+      ? "No listing query selected"
+      : queries.find((item) => item.id === querySelectValue)?.name ??
+        "Selected listing query";
+  const selectedTemplateName =
+    templateSelectValue === NO_LISTING_TEMPLATE_VALUE
+      ? "No template selected (optional)"
+      : templates.find((item) => item.id === templateSelectValue)?.name ??
+        "Selected listing template";
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Listing query</p>
+        <Select
+          value={querySelectValue}
+          onValueChange={(next) =>
+            onQueryChange(next === NO_LISTING_QUERY_VALUE ? "" : next)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select listing query">
+              {selectedQueryName}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_LISTING_QUERY_VALUE}>
+              No listing query selected
+            </SelectItem>
+            {queries.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Listing template</p>
+        <Select
+          value={templateSelectValue}
+          onValueChange={(next) =>
+            onTemplateChange(next === NO_LISTING_TEMPLATE_VALUE ? "" : next)
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select listing template">
+              {selectedTemplateName}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NO_LISTING_TEMPLATE_VALUE}>
+              No template selected (optional)
+            </SelectItem>
+            {templates.map((item) => (
+              <SelectItem key={item.id} value={item.id}>
+                {item.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {loading ? (
+        <p className="text-xs text-muted-foreground">Loading listings options...</p>
+      ) : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+    </div>
+  );
+}
+
 function normalizeValue(value: ContentListData): ContentListData {
   return normalizeContentListData(value);
 }
@@ -245,6 +389,23 @@ function updateSource(
     source: {
       ...current.source,
       ...patch,
+    },
+  }));
+}
+
+function updateSourceMode(
+  value: ContentListData,
+  onChange: (next: ContentListData) => void,
+  mode: ContentListSourceMode
+) {
+  updateValue(value, onChange, (current) => ({
+    ...current,
+    source: {
+      ...current.source,
+      mode,
+      ...(mode === "listing"
+        ? { contentTypeId: "" }
+        : { listingQueryId: "", listingTemplateId: "" }),
     },
   }));
 }
@@ -313,6 +474,7 @@ export function ContentListWizardEditor({
 }: WidgetEditorProps<ContentListData>) {
   const resolved = normalizeValue(value);
   const resolvedVariant = resolveContentListVariant(variant);
+  const sourceMode = resolved.source?.mode ?? "legacy";
 
   return (
     <div className="space-y-4">
@@ -320,10 +482,43 @@ export function ContentListWizardEditor({
         title="Source setup"
         description="Select data source and quick listing defaults."
       >
-        <ContentTypeSelect
-          value={resolved.source?.contentTypeId ?? ""}
-          onChange={(next) => updateSource(value, onChange, { contentTypeId: next })}
-        />
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Source mode</p>
+          <Select
+            value={sourceMode}
+            onValueChange={(next) =>
+              updateSourceMode(value, onChange, next as ContentListSourceMode)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select source mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {sourceModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {sourceMode === "listing" ? (
+          <ListingSourceSelect
+            queryId={resolved.source?.listingQueryId ?? ""}
+            templateId={resolved.source?.listingTemplateId ?? ""}
+            onQueryChange={(next) =>
+              updateSource(value, onChange, { listingQueryId: next })
+            }
+            onTemplateChange={(next) =>
+              updateSource(value, onChange, { listingTemplateId: next })
+            }
+          />
+        ) : (
+          <ContentTypeSelect
+            value={resolved.source?.contentTypeId ?? ""}
+            onChange={(next) => updateSource(value, onChange, { contentTypeId: next })}
+          />
+        )}
         <div className="space-y-2">
           <p className="text-sm font-medium">Item limit</p>
           <Input
@@ -372,6 +567,7 @@ export function ContentListVisualEditor({
 }: WidgetEditorProps<ContentListData>) {
   const resolved = normalizeValue(value);
   const resolvedVariant = resolveContentListVariant(variant);
+  const sourceMode = resolved.source?.mode ?? "legacy";
 
   return (
     <div className="space-y-4">
@@ -446,62 +642,97 @@ export function ContentListVisualEditor({
         title="Source and filters"
         description="Configure data source and basic filtering behavior."
       >
-        <ContentTypeSelect
-          value={resolved.source?.contentTypeId ?? ""}
-          onChange={(next) => updateSource(value, onChange, { contentTypeId: next })}
-        />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Status scope</p>
-            <Select
-              value={resolved.source?.statusScope ?? "published"}
-              onValueChange={(next) =>
-                updateSource(value, onChange, { statusScope: next as ContentListStatusScope })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Status scope" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusScopeOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Sort</p>
-            <Select
-              value={resolved.source?.sort ?? "published-desc"}
-              onValueChange={(next) =>
-                updateSource(value, onChange, { sort: next as ContentListSort })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sort order" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((option) => (
-                  <SelectItem key={option.id} value={option.id}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
         <div className="space-y-2">
-          <p className="text-sm font-medium">Taxonomy/tag filter</p>
-          <Input
-            value={resolved.filters?.taxonomy ?? ""}
-            onChange={(event) =>
-              updateFilters(value, onChange, { taxonomy: event.target.value })
+          <p className="text-sm font-medium">Source mode</p>
+          <Select
+            value={sourceMode}
+            onValueChange={(next) =>
+              updateSourceMode(value, onChange, next as ContentListSourceMode)
             }
-            placeholder="e.g. featured or case-study"
-          />
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select source mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {sourceModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+        {sourceMode === "listing" ? (
+          <ListingSourceSelect
+            queryId={resolved.source?.listingQueryId ?? ""}
+            templateId={resolved.source?.listingTemplateId ?? ""}
+            onQueryChange={(next) =>
+              updateSource(value, onChange, { listingQueryId: next })
+            }
+            onTemplateChange={(next) =>
+              updateSource(value, onChange, { listingTemplateId: next })
+            }
+          />
+        ) : (
+          <>
+            <ContentTypeSelect
+              value={resolved.source?.contentTypeId ?? ""}
+              onChange={(next) => updateSource(value, onChange, { contentTypeId: next })}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Status scope</p>
+                <Select
+                  value={resolved.source?.statusScope ?? "published"}
+                  onValueChange={(next) =>
+                    updateSource(value, onChange, { statusScope: next as ContentListStatusScope })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status scope" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusScopeOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Sort</p>
+                <Select
+                  value={resolved.source?.sort ?? "published-desc"}
+                  onValueChange={(next) =>
+                    updateSource(value, onChange, { sort: next as ContentListSort })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sort order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sortOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Taxonomy/tag filter</p>
+              <Input
+                value={resolved.filters?.taxonomy ?? ""}
+                onChange={(event) =>
+                  updateFilters(value, onChange, { taxonomy: event.target.value })
+                }
+                placeholder="e.g. featured or case-study"
+              />
+            </div>
+          </>
+        )}
       </EditorSection>
 
       <EditorSection
@@ -582,6 +813,7 @@ export function ContentListAdvancedEditor({
   onChange,
 }: WidgetEditorProps<ContentListData>) {
   const resolved = normalizeValue(value);
+  const sourceMode = resolved.source?.mode ?? "legacy";
 
   return (
     <div className="space-y-4">
@@ -589,6 +821,38 @@ export function ContentListAdvancedEditor({
         title="Query controls"
         description="Technical filtering and ordering options for runtime resolution."
       >
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Source mode</p>
+          <Select
+            value={sourceMode}
+            onValueChange={(next) =>
+              updateSourceMode(value, onChange, next as ContentListSourceMode)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select source mode" />
+            </SelectTrigger>
+            <SelectContent>
+              {sourceModeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {sourceMode === "listing" ? (
+          <ListingSourceSelect
+            queryId={resolved.source?.listingQueryId ?? ""}
+            templateId={resolved.source?.listingTemplateId ?? ""}
+            onQueryChange={(next) =>
+              updateSource(value, onChange, { listingQueryId: next })
+            }
+            onTemplateChange={(next) =>
+              updateSource(value, onChange, { listingTemplateId: next })
+            }
+          />
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
             <p className="text-sm font-medium">Item limit</p>
@@ -612,6 +876,7 @@ export function ContentListAdvancedEditor({
                 updateFilters(value, onChange, { authorId: event.target.value })
               }
               placeholder="Optional author UUID"
+              disabled={sourceMode === "listing"}
             />
           </div>
         </div>
@@ -623,6 +888,7 @@ export function ContentListAdvancedEditor({
               updateFilters(value, onChange, { searchQuery: event.target.value })
             }
             placeholder="Title, excerpt, tags"
+            disabled={sourceMode === "listing"}
           />
         </div>
         <label className="flex items-center justify-between rounded-md border border-border/70 px-3 py-2">
@@ -632,8 +898,14 @@ export function ContentListAdvancedEditor({
             onCheckedChange={(checked) =>
               updateFilters(value, onChange, { featuredOnly: checked })
             }
+            disabled={sourceMode === "listing"}
           />
         </label>
+        {sourceMode === "listing" ? (
+          <p className="text-xs text-muted-foreground">
+            Listing mode uses filters and sorting from the selected Listings query.
+          </p>
+        ) : null}
       </EditorSection>
 
       <EditorSection

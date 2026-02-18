@@ -3,6 +3,7 @@ import { listEntries } from "./entryService";
 import { getContentType } from "./typeService";
 import {
   mapEntriesToContentListItems,
+  resolveListingContentListRuntimeData,
   type ContentListResolverEntry,
 } from "./contentListResolver";
 import {
@@ -10,6 +11,7 @@ import {
   type EntryTeaserData,
   type EntryTeaserRuntimeItem,
 } from "../../widgets/core/entryTeaser";
+import { contentListDefaults, type ContentListData } from "../../widgets/core/contentList";
 
 const featuredTagToken = "featured";
 
@@ -84,15 +86,51 @@ export async function resolveEntryTeaserRuntimeData(
   options: {
     preview: boolean;
     contentRoutes: ContentRouteSetting[];
-  }
+  },
+  deps: Parameters<typeof resolveListingContentListRuntimeData>[2] = {}
 ): Promise<{
   item: EntryTeaserRuntimeItem | null;
   sourceTypeId: string;
   sourceTypeSlug: string;
   resolvedAt: string;
+  listingQueryId?: string;
+  listingTemplateId?: string;
   error?: string;
 }> {
   const normalized = normalizeEntryTeaserData(input);
+  const sourceDataMode = normalized.source?.mode ?? "legacy";
+
+  if (sourceDataMode === "listing") {
+    const listingPayload: ContentListData = {
+      ...contentListDefaults,
+      source: {
+        ...contentListDefaults.source,
+        mode: "listing",
+        listingQueryId: normalized.source?.listingQueryId ?? "",
+        listingTemplateId: normalized.source?.listingTemplateId ?? "",
+        contentTypeId: "",
+      },
+      fields: {
+        ...contentListDefaults.fields,
+        showImage: Boolean(normalized.fields?.showImage),
+      },
+    };
+    const listingResolved = await resolveListingContentListRuntimeData(
+      listingPayload,
+      options,
+      deps
+    );
+    return {
+      item: listingResolved.items[0] ?? null,
+      sourceTypeId: listingResolved.sourceTypeId,
+      sourceTypeSlug: listingResolved.sourceTypeSlug,
+      listingQueryId: listingResolved.listingQueryId,
+      listingTemplateId: listingResolved.listingTemplateId,
+      resolvedAt: listingResolved.resolvedAt,
+      ...(listingResolved.error ? { error: listingResolved.error } : {}),
+    };
+  }
+
   const contentTypeId = normalized.source?.contentTypeId?.trim();
 
   if (!contentTypeId) {

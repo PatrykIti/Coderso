@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 36 tasks
+- **To Do:** 35 tasks
 - **In Progress:** 2 tasks
-- **Done:** 322 tasks
+- **Done:** 323 tasks
 
 ---
 
@@ -38,7 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-07-06 | Coderso Runtime Widget Integration for Listings | High | Large | contentList/entryTeaser listing mode |
 | TASK-054-07-07 | Coderso Conditional Visibility and Dynamic Field Binding | Medium | Medium | Row-based conditions + bindings |
 | TASK-054-07-08 | Coderso Listings QA, Tests, and Documentation | High | Medium | Regression matrix + docs + changelog |
 | TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted filters + scoped search |
@@ -90,6 +89,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-07-06 | Coderso Runtime Widget Integration for Listings | High | Large | `contentList` + `entryTeaser` listing mode with query/template runtime binding |
 | TASK-054-07-05 | Coderso Listings Admin UI Query Builder and Template Manager | High | Large | Listings table/editor/template manager + coderso nav beta exposure |
 | TASK-054-07-04 | Coderso Listings API and Routes | High | Medium | Listings queries/templates routes + preview + persistence |
 | TASK-054-07-03 | Coderso Listing Templates Model and Service | High | Medium | listing_templates DB model + normalized CRUD/config validation |
