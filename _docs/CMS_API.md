@@ -715,6 +715,46 @@ Runtime URL token contract (listing widgets):
 - `lq.<listingQueryId>.__page`
 - `lq.<listingQueryId>.<field>.<operator>`
 
+## Coderso Booking (v1 foundation)
+
+Permissions: `booking:read`, `booking:write`
+
+Resources:
+- `GET /booking/resources`
+- `POST /booking/resources`
+- `GET /booking/resources/:id`
+- `PATCH /booking/resources/:id`
+- `DELETE /booking/resources/:id`
+
+Services:
+- `GET /booking/services`
+- `POST /booking/services`
+- `GET /booking/services/:id`
+- `PATCH /booking/services/:id`
+- `DELETE /booking/services/:id`
+- `GET /booking/services/:id/resources`
+- `PUT /booking/services/:id/resources`
+
+Schedules / Blackouts:
+- `GET /booking/resources/:id/schedules`
+- `PUT /booking/resources/:id/schedules`
+- `GET /booking/blackouts?resourceId=<optional>`
+- `POST /booking/blackouts`
+- `DELETE /booking/blackouts/:id`
+
+Reservations / Slots:
+- `POST /booking/slots/preview`
+- `GET /booking/reservations?resourceId=&serviceId=&status=&from=&to=`
+- `POST /booking/reservations`
+- `PATCH /booking/reservations/:id/status`
+
+Selected error codes:
+- `booking_resource_not_found`
+- `booking_service_not_found`
+- `booking_slot_unavailable`
+- `booking_blackout_conflict`
+- `booking_service_resource_not_allowed`
+
 ---
 
 ## Widgets

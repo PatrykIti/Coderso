@@ -35,6 +35,7 @@ import { registerTaxonomyRoutes } from "./taxonomyRoutes";
 import { registerAssistantRoutes } from "./assistantRoutes";
 import { registerListingsRoutes } from "./listingsRoutes";
 import { registerFilterRoutes } from "./filterRoutes";
+import { registerBookingRoutes } from "./bookingRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -94,6 +95,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerFilterRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerBookingRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

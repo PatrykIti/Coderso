@@ -65,6 +65,22 @@ Provide full booking and appointments features (JetBooking + JetAppointment pari
 5. Runtime widgets and end-to-end booking path.
 6. Full regression matrix and docs.
 
+## Progress Update (2026-02-18)
+- Completed in this slice:
+  - `TASK-054-10-01`: booking validation contract (`bookingSchemas`) with UUID/date-time-safe payload checks.
+  - `TASK-054-10-02`: DB foundation (`booking_resources`, `booking_services`, `booking_service_resources`, `booking_schedules`, `booking_blackouts`, `bookings`) + migration `0041_booking_foundation.sql`.
+  - `TASK-054-10-03`: booking service layer with:
+    - resources/services CRUD,
+    - service-resource and schedule setup,
+    - blackout windows,
+    - slot preview with reservation/blackout conflict filtering,
+    - reservation creation and status transitions.
+  - `TASK-054-10-04`: internal admin API routes `/booking/*` + RBAC (`booking:read`, `booking:write`) + deterministic error mapping.
+- Pending:
+  - Admin UI screens (`TASK-054-10-05`),
+  - runtime booking widgets (`TASK-054-10-06`),
+  - final QA/docs closure (`TASK-054-10-07`).
+
 ## Files to Change
 - `core/db/schema.ts` (booking tables)
 - `core/services/booking/*` (new)

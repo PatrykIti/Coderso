@@ -238,6 +238,23 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Cache policy:
   - odpowiedzi HTML z query parametrami sa pomijane przez page cache, aby uniknac stale filtrowanych widokow.
 
+## Coderso Booking (v1 foundation)
+
+- Booking domain (internal admin API + RBAC) opiera sie o tabele:
+  - `booking_resources`,
+  - `booking_services`,
+  - `booking_service_resources`,
+  - `booking_schedules`,
+  - `booking_blackouts`,
+  - `bookings`.
+- Core flow:
+  - admin definiuje zasoby, uslugi, mapowania i tygodniowe okna dostepnosci,
+  - slot preview wylicza kandydaty i odrzuca kolizje (aktywne rezerwacje + blackouts),
+  - rezerwacja przechodzi przez status lifecycle (`pending|confirmed|cancelled|completed|no_show`).
+- Security:
+  - endpoints `/admin/api/booking/*` sa internal i wymagaja `booking:read` / `booking:write`,
+  - bledy domenowe sa mapowane do stabilnych kodow API (bez 500 dla znanych przypadkow).
+
 ## Backups (v1)
 
 - Backupy w v1 to **metadata-only** zapisane w tabeli `backups`.

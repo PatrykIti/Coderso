@@ -86,3 +86,7 @@ const sections = buildDefaultNavSections({
   - form editor `Automation` panel + dedicated action logs screen,
   - form settings model (`forms.settings`) for multi-step, save-progress, presets, retry policy,
   - runtime form embed inline submit + multi-step navigation + local progress restore.
+- 054-10 in progress: Booking foundation delivered (domain + API):
+  - DB model/migration: resources, services, schedules, blackouts, reservations,
+  - internal API: `/booking/*` with RBAC (`booking:read`, `booking:write`),
+  - slot preview filters conflicts against reservations and blackout windows.

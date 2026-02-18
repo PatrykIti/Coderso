@@ -97,6 +97,22 @@ const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: "booking",
+    label: "Booking",
+    permissions: [
+      {
+        id: "booking:read",
+        label: "View booking",
+        description: "Read booking resources, services, schedules, and reservations",
+      },
+      {
+        id: "booking:write",
+        label: "Manage booking",
+        description: "Create and update booking configuration and reservations",
+      },
+    ],
+  },
+  {
     id: "themes",
     label: "Themes",
     permissions: [

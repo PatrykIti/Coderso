@@ -278,3 +278,4 @@ Project Change Log.
 | 242 | 2026-02-18 | Coderso forms automation foundation | CMS/Forms |
 | 243 | 2026-02-18 | Coderso forms runtime presets, multi-step UX, and retry policy | CMS/Forms |
 | 244 | 2026-02-18 | Coderso search preview route fix and filters query guide | Admin/UI |
+| 245 | 2026-02-18 | Coderso Booking foundation (domain + API) | CMS/Booking |

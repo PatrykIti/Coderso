@@ -288,6 +288,13 @@
       "when": 1771424797168,
       "tag": "0040_forms_runtime_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1771440702347,
+      "tag": "0041_booking_foundation",
+      "breakpoints": true
     }
   ]
 }
