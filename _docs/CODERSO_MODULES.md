@@ -28,7 +28,7 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 | Listings | operations | preview | Yes (`Beta`) |
 | Filters | operations | preview | Yes (`Beta`) |
 | Search | operations | preview | Yes (`Beta`) |
-| Booking | operations | planned | No |
+| Booking | operations | preview | Yes (`Beta`) |
 | Appointments | operations | planned | No |
 | Reviews | operations | planned | No |
 
@@ -90,3 +90,7 @@ const sections = buildDefaultNavSections({
   - DB model/migration: resources, services, schedules, blackouts, reservations,
   - internal API: `/booking/*` with RBAC (`booking:read`, `booking:write`),
   - slot preview filters conflicts against reservations and blackout windows.
+- 054-10-05 done: Booking Admin UI delivered:
+  - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
+  - Coderso sidebar Booking module enabled as `Beta`,
+  - admin cache + route prefetch support for booking section.

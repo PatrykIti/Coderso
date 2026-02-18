@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 31 tasks
+- **To Do:** 33 tasks
 - **In Progress:** 2 tasks
-- **Done:** 328 tasks
+- **Done:** 330 tasks
 
 ---
 
@@ -49,6 +49,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Mandatory release gates for modules |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
+| TASK-054-10-06 | Booking Runtime Widgets | High | Large | `booking-calendar` + `appointment-form` runtime flow |
+| TASK-054-10-07 | Booking QA, Docs, and Closure | Medium | Medium | Regression matrix + docs/changelog closure |
 | TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts flow on top of content engine |
 | TASK-055-01 | Posts Domain Model and API Contract | High | Medium | `post` type abstraction + API aliases |
 | TASK-055-02 | Posts List Screen (WordPress-Like Table) | High | Medium | Pages-like editorial list UX |
@@ -85,6 +87,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-10-05-01 | Booking Admin UI Modularization | High | Medium | Split booking page into tabs + shared helpers/types |
+| TASK-054-10-05 | Booking Admin UI | High | Large | Coderso booking screen with resources/services/availability/reservations/slot preview |
 | TASK-054-09 | Coderso Forms and Automation Suite | High | Large | Form actions, automation logs, multi-step runtime, presets, progress save |
 | TASK-054-08 | Coderso Filters and Search Suite | High | Large | Faceted runtime filters + scoped public search + widgets/UI/API |
 | TASK-054-07-08 | Coderso Listings QA, Tests, and Documentation | High | Medium | Regression matrix + docs/contracts + changelog |

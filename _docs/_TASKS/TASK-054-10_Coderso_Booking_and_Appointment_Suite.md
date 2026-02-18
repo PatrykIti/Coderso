@@ -77,9 +77,19 @@ Provide full booking and appointments features (JetBooking + JetAppointment pari
     - reservation creation and status transitions.
   - `TASK-054-10-04`: internal admin API routes `/booking/*` + RBAC (`booking:read`, `booking:write`) + deterministic error mapping.
 - Pending:
-  - Admin UI screens (`TASK-054-10-05`),
   - runtime booking widgets (`TASK-054-10-06`),
   - final QA/docs closure (`TASK-054-10-07`).
+
+## Progress Update (2026-02-18, Booking Admin UI)
+- Completed `TASK-054-10-05`:
+  - added `/admin/coderso/booking` admin screen with tabs:
+    - resources CRUD,
+    - services CRUD,
+    - availability (schedules + blackouts),
+    - reservations (create + status transitions),
+    - slot preview.
+  - enabled Coderso Booking navigation as `Beta` (preview lifecycle).
+  - added booking admin client tests and UI rendering test coverage.
 
 ## Files to Change
 - `core/db/schema.ts` (booking tables)

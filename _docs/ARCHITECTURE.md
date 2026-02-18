@@ -254,6 +254,14 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Security:
   - endpoints `/admin/api/booking/*` sa internal i wymagaja `booking:read` / `booking:write`,
   - bledy domenowe sa mapowane do stabilnych kodow API (bez 500 dla znanych przypadkow).
+- Admin UI:
+  - ekran `/admin/coderso/booking` grupuje operacje domenowe w zakladkach:
+    - `Resources`
+    - `Services`
+    - `Availability`
+    - `Reservations`
+    - `Slot Preview`
+  - lokalna warstwa cache/prefetch (`bookingClient` + `adminPrefetch`) utrzymuje WordPress-like responsiveness przy przechodzeniu miedzy ekranami.
 
 ## Backups (v1)
 

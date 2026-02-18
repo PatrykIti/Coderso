@@ -4,6 +4,12 @@ import { listMediaCached } from "@/services/mediaClient";
 import { listPagesCached } from "@/services/pagesClient";
 import { listFormsCached } from "@/services/formsClient";
 import {
+  listBookingBlackoutsCached,
+  listBookingReservationsCached,
+  listBookingResourcesCached,
+  listBookingServicesCached,
+} from "@/services/bookingClient";
+import {
   listListingQueriesCached,
   listListingTemplatesCached,
 } from "@/services/listingsClient";
@@ -119,6 +125,16 @@ const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/coderso/search",
     run: () => listListingQueriesCached({ force: true }),
+  },
+  {
+    match: "/coderso/booking",
+    run: () =>
+      Promise.all([
+        listBookingResourcesCached({ force: true }),
+        listBookingServicesCached({ force: true }),
+        listBookingReservationsCached({ force: true }),
+        listBookingBlackoutsCached({ force: true }),
+      ]),
   },
   {
     match: "/menus",

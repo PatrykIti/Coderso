@@ -212,14 +212,14 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     label: "Booking",
     tier: "v2",
     ownerArea: "operations",
-    lifecycle: "planned",
+    lifecycle: "preview",
     description: "Booking calendars for resources, services, and capacities.",
     dependencies: ["forms", "listings"],
     nav: {
       href: "/admin/coderso/booking",
       icon: Calendar,
-      defaultEnabled: false,
-      badge: "Soon",
+      defaultEnabled: true,
+      badge: "Beta",
     },
   },
   {

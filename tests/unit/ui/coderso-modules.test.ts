@@ -32,14 +32,17 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
     "Listings",
     "Filters",
     "Search",
+    "Booking",
   ]);
   expect(items.find((item) => item.label === "Posts")?.badge).toBe("Soon");
   expect(items.find((item) => item.label === "Listings")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Filters")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Search")?.badge).toBe("Beta");
+  expect(items.find((item) => item.label === "Booking")?.badge).toBe("Beta");
   expect(items.some((item) => item.href === "/admin/coderso/listings")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/filters")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/search")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/coderso/booking")).toBe(true);
 });
 
 test("buildCodersoNavItems supports feature-flagged modules", () => {
