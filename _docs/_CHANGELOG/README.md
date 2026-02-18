@@ -273,3 +273,4 @@ Project Change Log.
 | 237 | 2026-02-18 | Coderso listings admin UI | Admin/UI |
 | 238 | 2026-02-18 | Coderso runtime widget listings integration | CMS/Widgets |
 | 239 | 2026-02-18 | Coderso listing visibility and dynamic binding | CMS/Widgets |
+| 240 | 2026-02-18 | Coderso listings QA and documentation closure | QA/Docs |

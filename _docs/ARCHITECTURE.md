@@ -191,6 +191,27 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Admin UI buduje formularze w `/forms` i zapisuje pola przez `/forms/:id/fields`.
 - Publiczny submit odbywa sie przez `POST /forms/:id/submissions`.
 
+## Coderso Listings engine (v1 beta)
+
+- Listings to warstwa query + template do budowy dynamicznych list bez custom kodu.
+- Admin API (internal, session/RBAC) udostepnia:
+  - `/listings/queries/*` (saved query presets + preview),
+  - `/listings/templates/*` (reusable output contracts).
+- Query contract jest deklaratywny i walidowany (`listingSchemas`, `queryBuilderService`):
+  - source: `entries | posts | users | taxonomies`,
+  - allowlisted filters/sort/fields,
+  - hard caps dla limit/offset/filter budget.
+- Template contract (`listingTemplatesService`) jest data-only:
+  - `fields`, `itemActions`, `emptyState`, `style`,
+  - warunki widocznosci `conditions` per field binding.
+- Runtime widgets (`content-list`, `entry-teaser`) konsumują tylko resolved payload:
+  - `source.mode=legacy` (dotychczasowy content-type flow),
+  - `source.mode=listing` (listing query/template flow),
+  - back-compat: brak `mode` + `listingQueryId` => tryb listing.
+- Security:
+  - endpoints Listings sa internal (`content:read/write`), bez public write API,
+  - public runtime dla entries/posts wymusza `includeDrafts=false` poza preview.
+
 ## Backups (v1)
 
 - Backupy w v1 to **metadata-only** zapisane w tabeli `backups`.

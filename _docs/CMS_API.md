@@ -549,6 +549,122 @@ Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhos
 
 ---
 
+## Coderso Listings (v1 beta)
+
+Permissions: `content:read`, `content:write`
+
+Saved queries:
+- `GET /listings/queries`
+- `GET /listings/queries/:id`
+- `POST /listings/queries`
+- `PATCH /listings/queries/:id`
+- `DELETE /listings/queries/:id`
+- `POST /listings/queries/preview`
+
+Templates:
+- `GET /listings/templates`
+- `GET /listings/templates/:id`
+- `POST /listings/templates`
+- `PATCH /listings/templates/:id`
+- `DELETE /listings/templates/:id`
+
+### Listing query payload (summary)
+
+```json
+{
+  "name": "Homepage services",
+  "description": "Cards for front page",
+  "query": {
+    "source": "entries",
+    "sourceConfig": {
+      "contentTypeId": "service",
+      "includeDrafts": false
+    },
+    "filters": [
+      { "field": "status", "op": "eq", "value": "published" }
+    ],
+    "sort": [
+      { "field": "publishedAt", "dir": "desc" }
+    ],
+    "pagination": { "limit": 12, "offset": 0 },
+    "fields": ["id", "slug", "title", "status", "data.summary"]
+  }
+}
+```
+
+Allowed query operators:
+- `eq`, `neq`, `in`, `nin`, `contains`, `startsWith`, `gt`, `gte`, `lt`, `lte`, `between`, `exists`
+
+Supported sources:
+- `entries`, `posts`, `users`, `taxonomies`
+
+### Listing template payload (summary)
+
+```json
+{
+  "name": "Service cards",
+  "slug": "service-cards",
+  "layout": "grid",
+  "config": {
+    "fields": [
+      {
+        "key": "title",
+        "source": "title",
+        "format": "text",
+        "conditions": []
+      },
+      {
+        "key": "excerpt",
+        "source": "data.summary",
+        "format": "text",
+        "fallback": "No summary",
+        "conditions": [
+          { "id": "show-excerpt", "field": "status", "op": "eq", "value": "published" }
+        ]
+      }
+    ],
+    "itemActions": [
+      { "id": "view", "label": "View", "kind": "view", "href": "/services/{{slug}}", "opensInNewTab": false }
+    ],
+    "emptyState": {
+      "title": "No items found",
+      "description": null,
+      "ctaLabel": null,
+      "ctaHref": null
+    },
+    "style": {
+      "columns": 3,
+      "gap": "md",
+      "cardVariant": "default"
+    }
+  }
+}
+```
+
+Allowed field condition operators:
+- `eq`, `neq`, `in`, `contains`, `exists`, `gt`, `gte`, `lt`, `lte`
+
+Error codes (selected):
+- `listing_query_not_found`
+- `listing_template_not_found`
+- `listing_template_slug_exists`
+- `listing_template_layout_invalid`
+- `listing_template_config_invalid`
+
+### Runtime widget integration
+
+`content-list` i `entry-teaser` wspieraja:
+- `source.mode = "legacy"` (dotychczasowe content-type flow)
+- `source.mode = "listing"` (`listingQueryId` + opcjonalny `listingTemplateId`)
+
+Back-compat:
+- jesli `source.mode` nie istnieje, ale `listingQueryId` jest ustawione, runtime traktuje widget jako `listing`.
+
+Public runtime safety:
+- dla source `entries/posts` runtime wymusza `includeDrafts=false` poza preview.
+
+---
+
 ## Widgets
 
 Permissions: `widgets:read`, `widgets:write`

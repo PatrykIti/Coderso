@@ -201,6 +201,25 @@ test("entry teaser normalization keeps deterministic fallback defaults", () => {
   expect(normalized.style?.radius).toBe("lg");
 });
 
+test("entry teaser keeps backward compatibility for source.mode", () => {
+  const listingCompatible = normalizeEntryTeaserData({
+    source: {
+      listingQueryId: "listing-query-legacy",
+      contentTypeId: "blog-type-id",
+      entryId: "",
+    },
+  });
+  expect(listingCompatible.source?.mode).toBe("listing");
+
+  const legacyCompatible = normalizeEntryTeaserData({
+    source: {
+      contentTypeId: "blog-type-id",
+      entryId: "",
+    },
+  });
+  expect(legacyCompatible.source?.mode).toBe("legacy");
+});
+
 test("entry teaser listing mode resolves first listing item", async () => {
   const resolved = await resolveEntryTeaserRuntimeData(
     {

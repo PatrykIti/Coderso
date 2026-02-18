@@ -5,7 +5,7 @@
 **Category:** CMS/Content + Runtime + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-06, TASK-055-01  
-**Status:** In Progress (2026-02-18)
+**Status:** Done (2026-02-18)
 
 ---
 
@@ -52,6 +52,7 @@ Deliver dynamic data/listing capabilities (JetEngine/JetGrid-like) on top of Nex
 - 2026-02-18: `054-07-05` completed (Listings admin UI: query table/editor/template manager, routing, cache/prefetch, nav exposure as beta).
 - 2026-02-18: `054-07-06` completed (`contentList` + `entryTeaser` listing source mode, runtime query/template wiring, backward-compatible legacy path).
 - 2026-02-18: `054-07-07` completed (row-based visibility conditions + dynamic binding resolver + template BindingEditor UI + runtime hide/show wiring).
+- 2026-02-18: `054-07-08` completed (QA matrix closure, regression/back-compat tests, CMS API + architecture docs finalization).
 
 ## Files to Change (Target)
 - `core/services/content/queryBuilderService.ts` (new)

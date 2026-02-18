@@ -128,6 +128,23 @@ test("content list normalizes limit and model defaults", () => {
   expect(normalized.fields?.showImage).toBe(true);
 });
 
+test("content list keeps backward compatibility for source.mode", () => {
+  const listingCompatible = normalizeContentListData({
+    source: {
+      listingQueryId: "listing-query-legacy",
+      contentTypeId: "type-1",
+    },
+  });
+  expect(listingCompatible.source?.mode).toBe("listing");
+
+  const legacyCompatible = normalizeContentListData({
+    source: {
+      contentTypeId: "type-1",
+    },
+  });
+  expect(legacyCompatible.source?.mode).toBe("legacy");
+});
+
 test("content list validator accepts resolved payload and exposes visual variant ownership", () => {
   clearWidgets();
   const widget = createContentListWidget({
