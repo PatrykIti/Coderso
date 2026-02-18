@@ -6,6 +6,11 @@ import {
 } from "../content/entryService";
 import { createTransport } from "../email/emailProvider";
 import { getEmailSettingsInternal } from "../email/emailSettingsService";
+import { getForm } from "./formsService";
+import {
+  normalizeFormSettings,
+  type FormAutomationRetrySettings,
+} from "./formSettings";
 import {
   matchesFormActionCondition,
   type FormActionConfig,
@@ -32,6 +37,7 @@ export type RunFormAutomationInput = {
   submissionId?: string | null;
   submissionPayload: Record<string, unknown>;
   submittedAt?: Date;
+  settings?: unknown;
 };
 
 export type FormAutomationResult = {
@@ -52,6 +58,7 @@ type RunnerDeps = {
   createRun: typeof createFormActionRun;
   resolveNextAttempt: typeof resolveNextActionAttempt;
   getRunById: typeof getFormActionRun;
+  getFormById: typeof getForm;
   fetchFn: typeof fetch;
 };
 
@@ -60,6 +67,7 @@ const runnerDeps: RunnerDeps = {
   createRun: createFormActionRun,
   resolveNextAttempt: resolveNextActionAttempt,
   getRunById: getFormActionRun,
+  getFormById: getForm,
   fetchFn: fetch,
 };
 
@@ -120,6 +128,20 @@ const parseTemplateJson = (value: string) => {
     }
   }
   return null;
+};
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const resolveRetryDelayMs = (
+  retry: FormAutomationRetrySettings,
+  attemptNumber: number
+) => {
+  const factor = Math.max(0, attemptNumber - 1);
+  const delay = retry.baseDelayMs * 2 ** factor;
+  return Math.min(retry.maxDelayMs, delay);
 };
 
 const executeEmailAction = async (
@@ -369,6 +391,7 @@ const runOneAction = async (
   input: RunFormAutomationInput,
   context: FormActionTemplateContext,
   deps: RunnerDeps,
+  retrySettings: FormAutomationRetrySettings,
   options?: {
     trigger?: "submission" | "retry";
     retryOfId?: string | null;
@@ -406,7 +429,7 @@ const runOneAction = async (
     });
 
     return {
-      run,
+      runs: [run],
       outcome: {
         successMessage: null,
         redirectUrl: null,
@@ -414,59 +437,101 @@ const runOneAction = async (
     };
   }
 
-  try {
-    const execution = await executeAction(action, context, deps);
-    const run = await deps.createRun({
-      formId: input.formId,
-      submissionId: input.submissionId,
-      actionId: action.id,
-      actionType: action.type,
-      actionLabel: action.label,
-      status: "success",
-      attempt,
-      trigger: options?.trigger ?? "submission",
-      actionCondition: action.condition,
-      actionConfig: action.config,
-      submissionPayload,
-      requestPayload: execution.requestPayload ?? null,
-      responsePayload: execution.responsePayload ?? null,
-      retryOfId: options?.retryOfId ?? null,
-    });
+  const maxAttempts = retrySettings.enabled
+    ? Math.max(1, retrySettings.maxAttempts)
+    : 1;
+  const runs: FormActionRunRecord[] = [];
+  let attemptCounter = attempt;
 
-    return {
-      run,
-      outcome: {
-        successMessage: execution.successMessage ?? null,
-        redirectUrl: execution.redirectUrl ?? null,
-      },
-    };
-  } catch (error) {
-    const run = await deps.createRun({
-      formId: input.formId,
-      submissionId: input.submissionId,
-      actionId: action.id,
-      actionType: action.type,
-      actionLabel: action.label,
-      status: "failed",
-      attempt,
-      trigger: options?.trigger ?? "submission",
-      actionCondition: action.condition,
-      actionConfig: action.config,
-      submissionPayload,
-      errorCode: resolveActionErrorCode(error),
-      errorMessage: toErrorMessage(error),
-      retryOfId: options?.retryOfId ?? null,
-    });
+  for (let executionIndex = 0; executionIndex < maxAttempts; executionIndex += 1) {
+    if (executionIndex > 0) {
+      attemptCounter = await deps.resolveNextAttempt({
+        formId: input.formId,
+        submissionId: input.submissionId,
+        actionId: action.id,
+      });
+    }
 
-    return {
-      run,
-      outcome: {
-        successMessage: null,
-        redirectUrl: null,
-      },
-      error,
-    };
+    try {
+      const execution = await executeAction(action, context, deps);
+      const successRun = await deps.createRun({
+        formId: input.formId,
+        submissionId: input.submissionId,
+        actionId: action.id,
+        actionType: action.type,
+        actionLabel: action.label,
+        status: "success",
+        attempt: attemptCounter,
+        trigger: options?.trigger ?? "submission",
+        actionCondition: action.condition,
+        actionConfig: action.config,
+        submissionPayload,
+        requestPayload: execution.requestPayload ?? null,
+        responsePayload: execution.responsePayload ?? null,
+        retryOfId: options?.retryOfId ?? null,
+      });
+      runs.push(successRun);
+
+      return {
+        runs,
+        outcome: {
+          successMessage: execution.successMessage ?? null,
+          redirectUrl: execution.redirectUrl ?? null,
+        },
+      };
+    } catch (error) {
+      const hasMoreAttempts = executionIndex + 1 < maxAttempts;
+      const retryDelayMs = hasMoreAttempts
+        ? resolveRetryDelayMs(retrySettings, executionIndex + 1)
+        : null;
+      const failedRun = await deps.createRun({
+        formId: input.formId,
+        submissionId: input.submissionId,
+        actionId: action.id,
+        actionType: action.type,
+        actionLabel: action.label,
+        status: "failed",
+        attempt: attemptCounter,
+        trigger: options?.trigger ?? "submission",
+        actionCondition: action.condition,
+        actionConfig: action.config,
+        submissionPayload,
+        errorCode: resolveActionErrorCode(error),
+        errorMessage: toErrorMessage(error),
+        responsePayload:
+          hasMoreAttempts && retryDelayMs !== null
+            ? {
+                retryScheduled: true,
+                retryDelayMs,
+              }
+            : null,
+        retryOfId: options?.retryOfId ?? null,
+      });
+      runs.push(failedRun);
+
+      if (hasMoreAttempts && retryDelayMs !== null) {
+        await sleep(retryDelayMs);
+        continue;
+      }
+
+      return {
+        runs,
+        outcome: {
+          successMessage: null,
+          redirectUrl: null,
+        },
+        error,
+      };
+    }
   }
+
+  return {
+    runs,
+    outcome: {
+      successMessage: null,
+      redirectUrl: null,
+    },
+  };
 };
 
 const mergeResult = (
@@ -502,10 +567,18 @@ export async function runFormAutomation(
   }
 
   const context = toTemplateContext(input, input.submissionId ?? null);
+  const normalizedSettings = normalizeFormSettings(input.settings);
+  const retrySettings = normalizedSettings.automationRetry;
 
   for (const action of actions) {
-    const execution = await runOneAction(action, input, context, resolvedDeps);
-    result.runs.push(execution.run);
+    const execution = await runOneAction(
+      action,
+      input,
+      context,
+      resolvedDeps,
+      retrySettings
+    );
+    result.runs.push(...execution.runs);
     mergeResult(result, execution.outcome);
 
     if (execution.error && !action.continueOnError) {
@@ -545,21 +618,34 @@ export async function retryFormAutomationRun(
     submittedAt: sourceRun.createdAt,
   };
   const context = toTemplateContext(input, sourceRun.submissionId ?? null);
+  const form = await resolvedDeps.getFormById(sourceRun.formId);
+  const retrySettings = normalizeFormSettings(form?.settings).automationRetry;
 
-  const execution = await runOneAction(action, input, context, resolvedDeps, {
-    trigger: "retry",
-    retryOfId: sourceRun.id,
-    forceRun: true,
-  });
+  const execution = await runOneAction(
+    action,
+    input,
+    context,
+    resolvedDeps,
+    retrySettings,
+    {
+      trigger: "retry",
+      retryOfId: sourceRun.id,
+      forceRun: true,
+    }
+  );
+  const run = execution.runs[execution.runs.length - 1];
+  if (!run) {
+    throw new Error("form_action_retry_failed");
+  }
 
   const result: FormAutomationResult = {
     successMessage: execution.outcome.successMessage,
     redirectUrl: execution.outcome.redirectUrl,
-    runs: [execution.run],
+    runs: execution.runs,
   };
 
   return {
-    run: execution.run,
+    run,
     result,
   };
 }

@@ -100,6 +100,7 @@ test("ListingFiltersPage renders preview shell", () => {
   expect(html).toContain("Filters");
   expect(html).toContain("Run preview");
   expect(html).toContain("Runtime query string");
+  expect(html).toContain("Show examples");
 });
 
 test("ListingSearchPage renders public search preview shell", () => {

@@ -21,6 +21,13 @@ import { useListingQueries } from "./hooks/useListingQueries";
 
 const NO_LISTING_QUERY_VALUE = "__no_listing_query__";
 
+type QueryExample = {
+  id: string;
+  label: string;
+  description: string;
+  query: string;
+};
+
 export function ListingFiltersPage() {
   const { items, isLoading, error } = useListingQueries();
   const [selectedListingQueryId, setSelectedListingQueryId] = useState<string>("");
@@ -28,6 +35,7 @@ export function ListingFiltersPage() {
   const [preview, setPreview] = useState<ListingFiltersPreviewResult | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [showExamples, setShowExamples] = useState(false);
 
   useEffect(() => {
     if (selectedListingQueryId) return;
@@ -42,6 +50,56 @@ export function ListingFiltersPage() {
       "Selected listing query"
     );
   }, [items, selectedListingQueryId]);
+
+  const runtimeTokenPrefix = useMemo(
+    () =>
+      selectedListingQueryId
+        ? `lq.${selectedListingQueryId}`
+        : "lq.<listingQueryId>",
+    [selectedListingQueryId]
+  );
+
+  const queryExamples = useMemo<QueryExample[]>(
+    () => [
+      {
+        id: "search",
+        label: "Text search",
+        description: "Find rows matching the global text token.",
+        query: `${runtimeTokenPrefix}.__q=about`,
+      },
+      {
+        id: "sort",
+        label: "Sort newest",
+        description: "Sort by updated date descending.",
+        query: `${runtimeTokenPrefix}.__sort=updatedAt:desc`,
+      },
+      {
+        id: "page",
+        label: "Second page",
+        description: "Paginate to page 2 while keeping default filters.",
+        query: `${runtimeTokenPrefix}.__page=2`,
+      },
+      {
+        id: "eq",
+        label: "Exact match filter",
+        description: "Filter rows where status equals published.",
+        query: `${runtimeTokenPrefix}.status.eq=published`,
+      },
+      {
+        id: "in",
+        label: "Multi-value filter",
+        description: "Filter rows where category is one of selected values.",
+        query: `${runtimeTokenPrefix}.category.in=service,repair`,
+      },
+      {
+        id: "combined",
+        label: "Combined query",
+        description: "Combine search, sort and filter in one runtime query string.",
+        query: `${runtimeTokenPrefix}.__q=about&${runtimeTokenPrefix}.__sort=updatedAt:desc&${runtimeTokenPrefix}.status.eq=published`,
+      },
+    ],
+    [runtimeTokenPrefix]
+  );
 
   const runPreview = async () => {
     if (!selectedListingQueryId) return;
@@ -145,6 +203,83 @@ export function ListingFiltersPage() {
             <code>lq.&lt;queryId&gt;.__sort</code>, or
             <code> lq.&lt;queryId&gt;.&lt;field&gt;.&lt;operator&gt;</code>.
           </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowExamples((value) => !value)}
+            >
+              {showExamples ? "Hide examples" : "Show examples"}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Quick help for token format and ready-to-run sample queries.
+            </p>
+          </div>
+          {showExamples ? (
+            <section className="space-y-4 rounded-xl border border-border/70 bg-background/70 p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">How runtime query string works</p>
+                <p className="text-xs text-muted-foreground">
+                  Prefix every token with <code>{runtimeTokenPrefix}</code>. Token groups:
+                </p>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs">
+                    <p className="font-medium text-foreground">Search and paging</p>
+                    <p>
+                      <code>.__q</code>, <code>.__sort</code>, <code>.__page</code>
+                    </p>
+                  </div>
+                  <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs">
+                    <p className="font-medium text-foreground">Field filters</p>
+                    <p>
+                      <code>.&lt;field&gt;.&lt;operator&gt;=value</code>
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Operators: <code>eq</code>, <code>neq</code>, <code>in</code>,{" "}
+                  <code>nin</code>, <code>contains</code>, <code>startsWith</code>,{" "}
+                  <code>gt</code>, <code>gte</code>, <code>lt</code>, <code>lte</code>,{" "}
+                  <code>between</code>, <code>exists</code>.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Example queries</p>
+                <div className="space-y-2">
+                  {queryExamples.map((example) => (
+                    <article
+                      key={example.id}
+                      className="rounded-md border border-border/70 bg-muted/10 p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-sm font-medium">{example.label}</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setQueryString(example.query)}
+                          disabled={!selectedListingQueryId}
+                        >
+                          Use example
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{example.description}</p>
+                      <code className="mt-2 block break-all rounded bg-background px-2 py-1 text-xs">
+                        {example.query}
+                      </code>
+                    </article>
+                  ))}
+                </div>
+                {!selectedListingQueryId ? (
+                  <p className="text-xs text-muted-foreground">
+                    Select a listing query first to apply examples directly.
+                  </p>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
         </section>
 
         {previewError ? (

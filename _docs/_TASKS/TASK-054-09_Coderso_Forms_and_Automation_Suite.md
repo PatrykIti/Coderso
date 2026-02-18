@@ -5,7 +5,7 @@
 **Category:** CMS/Forms + Integrations + Security  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-038, TASK-038-07, TASK-054-06  
-**Status:** In Progress (2026-02-18)
+**Status:** Done (2026-02-18)
 
 ---
 
@@ -49,15 +49,23 @@ The suite must preserve current security defaults for public submissions (nonce 
 5. Full test matrix + docs/changelog.
 
 ## Progress Update (2026-02-18)
-- Completed in this iteration:
-  - contract + migration (`form_actions`, `form_action_runs`),
+- Completed scope:
+  - action contract + migration (`form_actions`, `form_action_runs`),
   - automation runner + retry flow + route wiring,
   - admin `Automation` panel and `Action logs` screen,
-  - unit/integration/UI tests + docs/changelog updates.
-- Remaining for full task closure:
-  - multi-step + save-progress UX,
-  - form presets for common flows,
-  - advanced async delivery/retry policies (queue worker mode).
+  - form settings contract (`forms.settings`) for:
+    - `layoutMode` (`single` / `multi_step`),
+    - `saveProgress`,
+    - `stepTitles`,
+    - `preset`,
+    - `automationRetry` policy (`enabled`, `maxAttempts`, backoff delays),
+  - form presets (`contact`, `lead_capture`, `service_intake`) with apply flow in Form Builder,
+  - runtime form embed upgrades:
+    - multi-step navigation,
+    - inline submit handling,
+    - local progress persistence (opt-in),
+    - runtime fallback message/redirect handling,
+  - full lint/types/test pass and documentation/changelog updates.
 
 ## Files to Create
 - `core/services/forms/formActionsContract.ts`

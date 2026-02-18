@@ -186,17 +186,24 @@ Zakres CMS, model danych, auth i security opisane sa w:
 ## Forms (v1)
 
 - Definicje formularzy sa w tabeli `forms`, pola w `form_fields`.
-- `forms` przechowuje fallback submission (success message + redirect URL) oraz `submission_access` (public/internal).
+- `forms` przechowuje:
+  - fallback submission (success message + redirect URL),
+  - `submission_access` (public/internal),
+  - `settings` (layout mode, save-progress, step titles, preset, automation retry policy).
 - Submissions trafiaja do `form_submissions` (payload JSONB, ip, userAgent).
 - Automatyzacje formularza sa trzymane w `form_actions` (ordered pipeline per form).
 - Historia wykonania akcji jest trzymana w `form_action_runs` (success/failed/skipped + retry link).
 - Admin UI buduje formularze w `/forms` i zapisuje pola przez `/forms/:id/fields`.
 - Admin UI zarzadza pipeline przez `/forms/:id/actions` i logami przez `/forms/:id/action-runs`.
-- Publiczny submit odbywa sie przez `POST /forms/:id/submissions`.
+- Publiczny submit odbywa sie przez `POST /forms/:id/submissions` (nonce + opcjonalna reCAPTCHA, zaleznie od Security Settings).
 - Runner `formAutomationRunner` wykonuje akcje po zapisie submission:
   - `email`, `webhook`, `entry_sync`, `redirect`, `success_message`,
   - warunki `always|equals|not_equals|exists|not_exists`,
-  - retry failed runs przez `POST /forms/action-runs/:runId/retry`.
+  - auto-retry per formularz (exponential backoff) + retry failed runs przez `POST /forms/action-runs/:runId/retry`.
+- Runtime widget `form-embed` wspiera:
+  - inline submit (bez przejscia na surowy JSON),
+  - multi-step flow na podstawie `forms.settings` + `field.settings.step`,
+  - local progress save/restore (opt-in przez `saveProgress`).
 
 ## Coderso Listings engine (v1 beta)
 

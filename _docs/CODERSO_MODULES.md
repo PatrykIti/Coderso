@@ -79,8 +79,10 @@ const sections = buildDefaultNavSections({
   - `/admin/api/filters/preview` + `/api/search`,
   - Coderso Filters/Search pages and nav exposure (`Beta`),
   - full tests for filter engine/search index/runtime/widget layers.
-- 054-09 in progress: Forms automation foundation delivered:
+- 054-09 done: Forms automation + runtime UX delivered:
   - action contract + runner (`email`, `webhook`, `entry_sync`, `redirect`, `success_message`),
   - action/log tables (`form_actions`, `form_action_runs`) + retry path,
   - forms API: `/forms/:id/actions`, `/forms/:id/action-runs`, `/forms/action-runs/:runId/retry`,
-  - form editor `Automation` panel + dedicated action logs screen.
+  - form editor `Automation` panel + dedicated action logs screen,
+  - form settings model (`forms.settings`) for multi-step, save-progress, presets, retry policy,
+  - runtime form embed inline submit + multi-step navigation + local progress restore.

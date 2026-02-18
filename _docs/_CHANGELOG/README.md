@@ -276,3 +276,5 @@ Project Change Log.
 | 240 | 2026-02-18 | Coderso listings QA and documentation closure | QA/Docs |
 | 241 | 2026-02-18 | Coderso filters and search suite | CMS/Search |
 | 242 | 2026-02-18 | Coderso forms automation foundation | CMS/Forms |
+| 243 | 2026-02-18 | Coderso forms runtime presets, multi-step UX, and retry policy | CMS/Forms |
+| 244 | 2026-02-18 | Coderso search preview route fix and filters query guide | Admin/UI |

@@ -1,5 +1,6 @@
 import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import { getFormRuntimeClientScript } from "./formRuntimeScript";
 
 export type FormEmbedVariantId = "standard";
 
@@ -36,6 +37,7 @@ export type ResolvedFormField = {
     options?: string[];
     defaultValue?: string | boolean;
     pattern?: string;
+    step?: number;
   };
 };
 
@@ -47,6 +49,11 @@ export type FormEmbedResolvedData = {
   successRedirectUrl?: string | null;
   submissionAccess?: "public" | "internal";
   submissionNonce?: string | null;
+  settings?: {
+    layoutMode?: "single" | "multi_step";
+    saveProgress?: boolean;
+    stepTitles?: string[];
+  };
   fields?: ResolvedFormField[];
   error?: string;
 };
@@ -306,6 +313,24 @@ const resolveDescription = (
   return data.description ?? resolved?.description ?? "";
 };
 
+const normalizeRuntimeStep = (value: unknown) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 1;
+  return Math.max(1, Math.round(value));
+};
+
+const groupFieldsByStep = (fields: ResolvedFormField[]) => {
+  const groups = new Map<number, ResolvedFormField[]>();
+  for (const field of fields) {
+    const step = normalizeRuntimeStep(field.settings?.step);
+    const current = groups.get(step) ?? [];
+    current.push(field);
+    groups.set(step, current);
+  }
+  return Array.from(groups.entries())
+    .sort((left, right) => left[0] - right[0])
+    .map(([step, stepFields]) => ({ step, fields: stepFields }));
+};
+
 function renderFieldControl(field: ResolvedFormField, options: {
   showLabels: boolean;
   showRequiredIndicator: boolean;
@@ -442,6 +467,12 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   const style = resolveStyle(normalizedData.style);
   const fieldsConfig = resolveFields(normalizedData.fields);
   const fields = Array.isArray(resolved?.fields) ? resolved?.fields : [];
+  const runtimeLayoutMode = resolved?.settings?.layoutMode === "multi_step" ? "multi_step" : "single";
+  const stepGroups = groupFieldsByStep(fields);
+  const runtimeStepTitles = Array.isArray(resolved?.settings?.stepTitles)
+    ? resolved?.settings?.stepTitles
+    : [];
+  const saveProgressEnabled = resolved?.settings?.saveProgress === true;
 
   const sectionStyle: CSSProperties = {
     backgroundColor: style.background,
@@ -460,6 +491,7 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   const showDescription = description.trim().length > 0;
   const showSuccessMessage = (normalizedData.successMessage ?? "").trim().length > 0;
   const formAction = buildFormAction(normalizedData.formId);
+  const hasMultipleSteps = runtimeLayoutMode === "multi_step" && stepGroups.length > 1;
 
   return (
     <section
@@ -502,6 +534,10 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
               method="post"
               action={formAction}
               data-form-id={normalizedData.formId}
+              data-nextless-form-runtime="1"
+              data-form-layout-mode={runtimeLayoutMode}
+              data-form-save-progress={saveProgressEnabled ? "1" : "0"}
+              data-form-success-message={normalizedData.successMessage ?? ""}
             >
               {resolved?.submissionNonce ? (
                 <input
@@ -510,21 +546,77 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                   value={resolved.submissionNonce}
                 />
               ) : null}
-              {fields.map((field) => (
-                <div key={field.id}>
-                  {renderFieldControl(field, {
-                    showLabels: fieldsConfig.showLabels,
-                    showRequiredIndicator: fieldsConfig.showRequiredIndicator,
-                    inputClassName,
-                    borderClassName,
-                    radiusClassName,
-                    borderColor: style.borderColor,
-                  })}
+              {runtimeLayoutMode === "multi_step" ? (
+                <div className="space-y-4">
+                  {stepGroups.map((group, index) => (
+                    <div
+                      key={`step-${group.step}`}
+                      data-nextless-form-step="1"
+                      data-step-index={group.step}
+                      className={joinClasses("space-y-4", index === 0 ? undefined : "hidden")}
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/60">
+                        {runtimeStepTitles[group.step - 1]?.trim() || `Step ${group.step}`}
+                      </p>
+                      {group.fields.map((field) => (
+                        <div key={field.id}>
+                          {renderFieldControl(field, {
+                            showLabels: fieldsConfig.showLabels,
+                            showRequiredIndicator: fieldsConfig.showRequiredIndicator,
+                            inputClassName,
+                            borderClassName,
+                            radiusClassName,
+                            borderColor: style.borderColor,
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                fields.map((field) => (
+                  <div key={field.id}>
+                    {renderFieldControl(field, {
+                      showLabels: fieldsConfig.showLabels,
+                      showRequiredIndicator: fieldsConfig.showRequiredIndicator,
+                      inputClassName,
+                      borderClassName,
+                      radiusClassName,
+                      borderColor: style.borderColor,
+                    })}
+                  </div>
+                ))
+              )}
               <div className={joinClasses("flex", buttonAlignClassMap[layout.buttonAlignment])}>
+                {hasMultipleSteps ? (
+                  <button
+                    type="button"
+                    data-form-nav="back"
+                    hidden
+                    className={joinClasses(
+                      "rounded-md border border-[var(--color-border)] px-4 py-2 text-sm font-medium text-[var(--color-text)]",
+                      radiusClassName
+                    )}
+                  >
+                    Back
+                  </button>
+                ) : null}
+                {hasMultipleSteps ? (
+                  <button
+                    type="button"
+                    data-form-nav="next"
+                    className={joinClasses(
+                      "rounded-md bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-bg)]",
+                      radiusClassName
+                    )}
+                  >
+                    Next
+                  </button>
+                ) : null}
                 <button
                   type="submit"
+                  data-form-submit="1"
+                  hidden={hasMultipleSteps}
                   className={joinClasses(
                     "rounded-md bg-[var(--color-primary)] px-5 py-2 text-sm font-semibold text-[var(--color-bg)]",
                     radiusClassName
@@ -533,13 +625,25 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                   {normalizedData.submitLabel}
                 </button>
               </div>
-              {showSuccessMessage ? (
-                <p className="text-xs text-[var(--color-text)]/65" data-form-embed-success="true">
-                  {normalizedData.successMessage}
-                </p>
-              ) : null}
+              <p
+                className="hidden text-xs text-[var(--color-text)]/65"
+                data-form-embed-success="true"
+              >
+                {showSuccessMessage ? normalizedData.successMessage : ""}
+              </p>
+              <p
+                className="hidden text-xs text-rose-600"
+                data-form-embed-error="true"
+              >
+                Unable to submit the form. Please try again.
+              </p>
             </form>
           )}
+          {fields.length > 0 ? (
+            <script
+              dangerouslySetInnerHTML={{ __html: getFormRuntimeClientScript() }}
+            />
+          ) : null}
         </div>
       </div>
     </section>

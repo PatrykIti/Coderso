@@ -3,10 +3,12 @@ import {
   normalizeSearchQuery,
   searchAll,
 } from "../../services/search/searchService";
+import { searchPublicIndex } from "../../services/search/searchIndexService";
 import {
   listRecentSearches,
   recordSearch,
 } from "../../services/search/searchHistoryService";
+import { getSetting, type ContentRouteSetting } from "../../services/settings/settingsService";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -62,6 +64,23 @@ export function registerSearchRoutes(router: Router, deps: SearchRouteDeps) {
       if (!ctx.user?.id) return { items: [] };
       const items = await listRecentSearches(ctx.user.id, 10);
       return { items };
+    }
+  );
+
+  router.get(
+    "/search/public-preview",
+    requirePermission("content:read"),
+    async (ctx) => {
+      const query = ctx.query.q ?? "";
+      const limit = parseLimit(ctx.query.limit);
+      const sources = ctx.query.sources ?? undefined;
+      const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
+
+      return searchPublicIndex(query, {
+        ...(limit !== undefined ? { limit } : {}),
+        ...(sources ? { sources } : {}),
+        contentRoutes,
+      });
     }
   );
 }

@@ -2,6 +2,11 @@ import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import {
+  getDefaultFormSettings,
+  normalizeFormSettings,
+  type FormPresetId as SharedFormPresetId,
+} from "../../services/forms/formSettings";
 
 export type FormStatus = "draft" | "published" | "archived";
 
@@ -14,8 +19,28 @@ export type FormRecord = {
   successMessage: string | null;
   successRedirectUrl: string | null;
   submissionAccess: "public" | "internal";
+  settings: FormSettings;
   createdAt: string;
   updatedAt: string;
+};
+
+export type FormLayoutMode = "single" | "multi_step";
+
+export type FormAutomationRetrySettings = {
+  enabled: boolean;
+  maxAttempts: number;
+  baseDelayMs: number;
+  maxDelayMs: number;
+};
+
+export type FormPresetId = SharedFormPresetId;
+
+export type FormSettings = {
+  layoutMode: FormLayoutMode;
+  saveProgress: boolean;
+  stepTitles: string[];
+  preset: FormPresetId;
+  automationRetry: FormAutomationRetrySettings;
 };
 
 export type FormField = {
@@ -51,6 +76,7 @@ export type FormCreateInput = {
   successMessage?: string | null;
   successRedirectUrl?: string | null;
   submissionAccess?: "public" | "internal";
+  settings?: FormSettings;
 };
 
 export type FormUpdateInput = {
@@ -61,6 +87,7 @@ export type FormUpdateInput = {
   successMessage?: string | null;
   successRedirectUrl?: string | null;
   submissionAccess?: "public" | "internal";
+  settings?: FormSettings;
 };
 
 export type FormFieldInput = {
@@ -176,21 +203,35 @@ const primeFormsCacheInternal = (items: FormRecord[]) => {
   writeLocalCache(cacheKeys.formsList, items);
 };
 
+const normalizeFormRecord = (record: FormRecord): FormRecord => ({
+  ...record,
+  settings: normalizeFormSettings((record as { settings?: unknown }).settings),
+});
+
+const normalizeFormList = (items: FormRecord[]) => items.map(normalizeFormRecord);
+
+const normalizeFormDetail = (detail: FormDetail): FormDetail => ({
+  ...detail,
+  form: normalizeFormRecord(detail.form),
+});
+
 const upsertCachedFormSummary = (form: FormRecord) => {
+  const normalizedForm = normalizeFormRecord(form);
   const current = cachedForms ?? readFormsCache() ?? [];
-  const index = current.findIndex((item) => item.id === form.id);
+  const index = current.findIndex((item) => item.id === normalizedForm.id);
   const next = [...current];
   if (index === -1) {
-    next.unshift(form);
+    next.unshift(normalizedForm);
   } else {
-    next[index] = { ...next[index], ...form };
+    next[index] = { ...next[index], ...normalizedForm };
   }
   primeFormsCacheInternal(next);
 };
 
 const upsertCachedFormDetail = (detail: FormDetail) => {
-  upsertCachedFormSummary(detail.form);
-  writeFormDetailCache(detail);
+  const normalizedDetail = normalizeFormDetail(detail);
+  upsertCachedFormSummary(normalizedDetail.form);
+  writeFormDetailCache(normalizedDetail);
 };
 
 const removeCachedForm = (id: string) => {
@@ -207,10 +248,13 @@ export const getCachedForms = () => {
   if (cachedForms) return cachedForms;
   const cached = readFormsCache();
   if (cached) cachedForms = cached;
-  return cachedForms;
+  return cachedForms ? normalizeFormList(cachedForms) : null;
 };
 
-export const getCachedFormDetail = (id: string) => readFormDetailCache(id);
+export const getCachedFormDetail = (id: string) => {
+  const detail = readFormDetailCache(id);
+  return detail ? normalizeFormDetail(detail) : null;
+};
 export const getCachedFormActions = (id: string) => readFormActionsCache(id);
 
 export const clearFormsCache = () => {
@@ -226,24 +270,25 @@ export async function listForms() {
 export async function listFormsCached(options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedForms();
-    if (cached) return cached;
+    if (cached) return normalizeFormList(cached);
     if (cachedFormsPromise) return cachedFormsPromise;
   }
   const request = listForms();
   cachedFormsPromise = request;
-  const items = await request;
+  const items = normalizeFormList(await request);
   primeFormsCacheInternal(items);
   return items;
 }
 
 export async function getForm(id: string) {
-  return apiRequest<FormRecord>(`/forms/${id}`, { method: "GET" });
+  const form = await apiRequest<FormRecord>(`/forms/${id}`, { method: "GET" });
+  return normalizeFormRecord(form);
 }
 
 export async function getFormDetail(id: string) {
   const [form, fields] = await Promise.all([getForm(id), listFormFields(id)]);
   if (!form) return null;
-  return { form, fields } as FormDetail;
+  return normalizeFormDetail({ form, fields } as FormDetail);
 }
 
 export async function getFormDetailCached(id: string, options?: { force?: boolean }) {
@@ -257,42 +302,57 @@ export async function getFormDetailCached(id: string, options?: { force?: boolea
 }
 
 export async function createForm(input: FormCreateInput) {
+  const payload = {
+    ...input,
+    settings: normalizeFormSettings(input.settings ?? getDefaultFormSettings()),
+  };
   const created = await apiRequest<FormRecord>(
     "/forms",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify(payload),
     },
     { withCsrf: true }
   );
   if (created) {
-    upsertCachedFormSummary(created);
-    writeFormDetailCache({ form: created, fields: [] });
+    const normalizedCreated = normalizeFormRecord(created);
+    upsertCachedFormSummary(normalizedCreated);
+    writeFormDetailCache({ form: normalizedCreated, fields: [] });
     broadcastCacheEvent({ key: cacheKeys.formsList, action: "update" });
-    broadcastCacheEvent({ key: cacheKeys.formDetail(created.id), action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.formDetail(normalizedCreated.id), action: "update" });
+    return normalizedCreated;
   }
   return created;
 }
 
 export async function updateForm(id: string, input: FormUpdateInput) {
+  const payload = {
+    ...input,
+    ...(input.settings ? { settings: normalizeFormSettings(input.settings) } : {}),
+  };
   const updated = await apiRequest<FormRecord>(
     `/forms/${id}`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify(payload),
     },
     { withCsrf: true }
   );
   if (updated) {
-    upsertCachedFormSummary(updated);
+    const normalizedUpdated = normalizeFormRecord(updated);
+    upsertCachedFormSummary(normalizedUpdated);
     const detail = readFormDetailCache(id);
     if (detail) {
-      writeFormDetailCache({ ...detail, form: { ...detail.form, ...updated } });
+      writeFormDetailCache({
+        ...detail,
+        form: normalizeFormRecord({ ...detail.form, ...normalizedUpdated }),
+      });
     }
     broadcastCacheEvent({ key: cacheKeys.formsList, action: "update" });
-    broadcastCacheEvent({ key: cacheKeys.formDetail(updated.id), action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.formDetail(normalizedUpdated.id), action: "update" });
+    return normalizedUpdated;
   }
   return updated;
 }

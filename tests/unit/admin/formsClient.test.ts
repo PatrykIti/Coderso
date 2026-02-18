@@ -87,6 +87,7 @@ test("createForm uses CSRF and posts payload", async () => {
     expect(body.successMessage).toBe("Thanks!");
     expect(body.successRedirectUrl).toBe("/thank-you");
     expect(body.submissionAccess).toBe("internal");
+    expect(body.settings.layoutMode).toBe("single");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -116,6 +117,18 @@ test("listFormsCached reads from local storage", async () => {
         successMessage: null,
         successRedirectUrl: null,
         submissionAccess: "public",
+        settings: {
+          layoutMode: "single",
+          saveProgress: false,
+          stepTitles: [],
+          preset: "custom",
+          automationRetry: {
+            enabled: false,
+            maxAttempts: 1,
+            baseDelayMs: 300,
+            maxDelayMs: 2000,
+          },
+        },
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
       },
@@ -163,6 +176,18 @@ test("getFormDetailCached reads from local storage", async () => {
         successMessage: null,
         successRedirectUrl: null,
         submissionAccess: "public",
+        settings: {
+          layoutMode: "single",
+          saveProgress: false,
+          stepTitles: [],
+          preset: "custom",
+          automationRetry: {
+            enabled: false,
+            maxAttempts: 1,
+            baseDelayMs: 300,
+            maxDelayMs: 2000,
+          },
+        },
         createdAt: "2026-02-14T00:00:00.000Z",
         updatedAt: "2026-02-14T00:00:00.000Z",
       },

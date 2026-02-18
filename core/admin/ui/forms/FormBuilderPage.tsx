@@ -35,14 +35,27 @@ import {
   type FormDetail,
   type FormAction,
   type FormActionInput,
+  type FormAutomationRetrySettings,
   type FormField as ApiFormField,
   type FormFieldInput,
+  type FormPresetId,
   type FormRecord,
+  type FormSettings,
   type FormStatus,
 } from "@/services/formsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import {
+  getDefaultFormSettings,
+  normalizeFormSettings,
+  normalizeFormStep,
+} from "../../../services/forms/formSettings";
+import {
+  clonePresetFields,
+  getFormPresetDefinition,
+  listFormPresets,
+} from "../../../services/forms/formPresets";
 
 import { FieldLibrary, type FieldLibraryItem } from "./FieldLibrary";
 import { FieldListPanel, type FormFieldListItem } from "./FieldListPanel";
@@ -112,6 +125,7 @@ type FormMetaState = {
   submissionAccess: "public" | "internal";
   successMessage: string;
   successRedirectUrl: string;
+  settings: FormSettings;
 };
 
 const resolveFormId = (pathname: string) => {
@@ -137,6 +151,7 @@ const toFieldState = (field: ApiFormField): FormFieldState => ({
   orderIndex: field.orderIndex,
   settings: {
     ...(field.settings ?? {}),
+    step: normalizeFormStep((field.settings ?? {}).step),
   },
 });
 
@@ -147,6 +162,7 @@ const toFormMeta = (form: FormRecord): FormMetaState => ({
   submissionAccess: form.submissionAccess ?? "public",
   successMessage: form.successMessage ?? "",
   successRedirectUrl: form.successRedirectUrl ?? "",
+  settings: normalizeFormSettings(form.settings),
 });
 
 const toFormActionInput = (action: FormAction): FormActionInput => ({
@@ -159,6 +175,23 @@ const toFormActionInput = (action: FormAction): FormActionInput => ({
   config: action.config,
   orderIndex: action.orderIndex,
 });
+
+const formPresetOptions = [
+  {
+    id: "custom" as FormPresetId,
+    label: "Custom",
+    description: "Keep your current custom structure.",
+  },
+  ...listFormPresets(),
+];
+
+const resolveStepCount = (fields: FormFieldState[]) => {
+  if (fields.length === 0) return 1;
+  return fields.reduce((max, field) => {
+    const step = normalizeFormStep(field.settings.step);
+    return step > max ? step : max;
+  }, 1);
+};
 
 export function FormBuilderPage() {
   const { navigate } = useAdminRouter();
@@ -174,6 +207,7 @@ export function FormBuilderPage() {
     submissionAccess: "public",
     successMessage: "",
     successRedirectUrl: "",
+    settings: getDefaultFormSettings(),
   });
   const [formActions, setFormActions] = useState<FormActionInput[]>([]);
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
@@ -215,6 +249,10 @@ export function FormBuilderPage() {
         required: field.required,
       })),
     [fields]
+  );
+  const stepCount = useMemo(
+    () => Math.max(resolveStepCount(fields), meta.settings.stepTitles.length, 1),
+    [fields, meta.settings.stepTitles.length]
   );
 
   const applyDetail = useCallback((detail: FormDetail) => {
@@ -324,6 +362,7 @@ export function FormBuilderPage() {
       orderIndex: fields.length,
       settings: {
         placeholder: item.type === "textarea" ? "Type your response..." : "",
+        step: 1,
       },
     };
     setFields((prev) => [...prev, newField]);
@@ -358,7 +397,16 @@ export function FormBuilderPage() {
     setFields((prev) =>
       prev.map((field) =>
         field.id === fieldId
-          ? { ...field, settings: { ...field.settings, ...updates } }
+          ? {
+              ...field,
+              settings: {
+                ...field.settings,
+                ...updates,
+                step: normalizeFormStep(
+                  updates.step ?? field.settings.step ?? 1
+                ),
+              },
+            }
           : field
       )
     );
@@ -413,6 +461,7 @@ export function FormBuilderPage() {
           submissionAccess: meta.submissionAccess,
           successMessage: meta.successMessage,
           successRedirectUrl: meta.successRedirectUrl,
+          settings: meta.settings,
         }),
         updateFormFields(activeForm.id, payload),
         updateFormActions(activeForm.id, actionsPayload),
@@ -445,6 +494,97 @@ export function FormBuilderPage() {
     setUnsavedChanges(true);
   };
 
+  const setFormSettings = (updates: Partial<FormSettings>) => {
+    setMeta((prev) => ({
+      ...prev,
+      settings: normalizeFormSettings({
+        ...prev.settings,
+        ...updates,
+      }),
+    }));
+    setUnsavedChanges(true);
+  };
+
+  const setAutomationRetry = (updates: Partial<FormAutomationRetrySettings>) => {
+    setMeta((prev) => ({
+      ...prev,
+      settings: normalizeFormSettings({
+        ...prev.settings,
+        automationRetry: {
+          ...prev.settings.automationRetry,
+          ...updates,
+        },
+      }),
+    }));
+    setUnsavedChanges(true);
+  };
+
+  const setStepTitles = (titles: string[]) => {
+    setMeta((prev) => ({
+      ...prev,
+      settings: normalizeFormSettings({
+        ...prev.settings,
+        stepTitles: titles,
+      }),
+    }));
+    setUnsavedChanges(true);
+  };
+
+  const applyPreset = (presetId: FormPresetId) => {
+    if (presetId === "custom") return;
+    const preset = getFormPresetDefinition(presetId);
+    if (!preset) return;
+
+    const shouldReplace = fields.length > 0;
+    if (shouldReplace) {
+      const confirmed = window.confirm(
+        "Apply preset will replace current fields. Continue?"
+      );
+      if (!confirmed) return;
+    }
+
+    const existingNames = new Set<string>();
+    const nextFields: FormFieldState[] = clonePresetFields(preset.fields).map((field, index) => {
+      const baseName = field.name ?? `field_${index + 1}`;
+      let name = baseName;
+      let suffix = 1;
+      while (existingNames.has(name)) {
+        name = `${baseName}_${suffix}`;
+        suffix += 1;
+      }
+      existingNames.add(name);
+
+      return {
+        id: createLocalId(),
+        label: field.label,
+        type: field.type,
+        name,
+        required: Boolean(field.required),
+        orderIndex: index,
+        settings: {
+          ...(field.settings ?? {}),
+          step: normalizeFormStep(field.settings?.step),
+        },
+      };
+    });
+
+    setFields(nextFields);
+    setSelectedTarget(nextFields.length > 0 ? { type: "field", id: nextFields[0].id } : { type: "form" });
+    setMeta((prev) => ({
+      ...prev,
+      successMessage:
+        prev.successMessage.trim().length > 0 ? prev.successMessage : preset.successMessage,
+      settings: normalizeFormSettings({
+        ...prev.settings,
+        preset: preset.id,
+        layoutMode: preset.layoutMode,
+        saveProgress: preset.saveProgress,
+        stepTitles: preset.stepTitles,
+      }),
+    }));
+    setUnsavedChanges(true);
+  };
+
   const openActionLogs = () => {
     if (!formId) return;
     navigate(`/forms/${encodeURIComponent(formId)}/action-runs`);
@@ -468,12 +608,19 @@ export function FormBuilderPage() {
           submissionAccess={meta.submissionAccess}
           successMessage={meta.successMessage}
           successRedirectUrl={meta.successRedirectUrl}
+          settings={meta.settings}
+          presetOptions={formPresetOptions}
+          stepCount={stepCount}
           onNameChange={(value) => setMetaField("name", value)}
           onDescriptionChange={(value) => setMetaField("description", value)}
           onStatusChange={(value) => setMetaField("status", value)}
           onSubmissionAccessChange={(value) => setMetaField("submissionAccess", value)}
           onSuccessMessageChange={(value) => setMetaField("successMessage", value)}
           onSuccessRedirectUrlChange={(value) => setMetaField("successRedirectUrl", value)}
+          onSettingsChange={setFormSettings}
+          onAutomationRetryChange={setAutomationRetry}
+          onStepTitlesChange={setStepTitles}
+          onApplyPreset={applyPreset}
         />
       </TabsContent>
       <TabsContent value="automation" className="min-h-0 flex-1">
@@ -607,6 +754,8 @@ export function FormBuilderPage() {
           <FormCanvas
             formTitle={formTitle}
             formDescription={formDescription}
+            layoutMode={meta.settings.layoutMode}
+            stepTitles={meta.settings.stepTitles}
             formSelected={selectedTarget?.type === "form"}
             selectedFieldId={selectedFieldId}
             fields={fields}

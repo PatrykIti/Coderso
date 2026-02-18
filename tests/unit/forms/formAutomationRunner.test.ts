@@ -176,6 +176,65 @@ test("runFormAutomation stops when action fails and continueOnError is false", a
   expect(result.runs[0]?.status).toBe("failed");
 });
 
+test("runFormAutomation retries failed action when retry policy is enabled", async () => {
+  const logs: CreateFormActionRunInput[] = [];
+  let fetchCalls = 0;
+  let attemptCounter = 0;
+
+  const result = await runFormAutomation(
+    {
+      formId: "form-1",
+      submissionId: "submission-1",
+      submissionPayload: { name: "Patryk" },
+      settings: {
+        automationRetry: {
+          enabled: true,
+          maxAttempts: 2,
+          baseDelayMs: 1,
+          maxDelayMs: 1,
+        },
+      },
+    },
+    {
+      listActions: async () => [
+        createAction({
+          id: "webhook",
+          type: "webhook",
+          label: "Webhook",
+          config: {
+            url: "https://example.com/hook",
+            method: "POST",
+            headers: {},
+            includeSubmission: true,
+            timeoutMs: 1000,
+          },
+        }),
+      ],
+      resolveNextAttempt: async () => {
+        attemptCounter += 1;
+        return attemptCounter;
+      },
+      createRun: async (input) => {
+        logs.push(input);
+        return createRunRecord(input, logs.length - 1);
+      },
+      fetchFn: async () => {
+        fetchCalls += 1;
+        if (fetchCalls === 1) {
+          return new Response("failed", { status: 500 });
+        }
+        return new Response("ok", { status: 200 });
+      },
+    }
+  );
+
+  expect(result.runs).toHaveLength(2);
+  expect(result.runs[0]?.status).toBe("failed");
+  expect(result.runs[1]?.status).toBe("success");
+  expect(result.runs[1]?.attempt).toBe(2);
+  expect(logs[0]?.responsePayload).toEqual({ retryScheduled: true, retryDelayMs: 50 });
+});
+
 test("retryFormAutomationRun reruns failed action snapshot", async () => {
   const runInputs: CreateFormActionRunInput[] = [];
 
@@ -200,6 +259,7 @@ test("retryFormAutomationRun reruns failed action snapshot", async () => {
 
   const retry = await retryFormAutomationRun("run-1", {
     getRunById: async () => sourceRun,
+    getFormById: async () => null,
     resolveNextAttempt: async () => 2,
     createRun: async (input) => {
       runInputs.push(input);

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { normalizeFormStep } from "./formSettings";
 
 export type FormFieldType =
   | "text"
@@ -15,6 +16,7 @@ export type FormFieldSettings = {
   options?: string[];
   defaultValue?: string | boolean;
   pattern?: string;
+  step?: number;
 };
 
 export type FormFieldInput = {
@@ -114,6 +116,10 @@ const normalizeSettings = (
     } else {
       throw new Error("form_field_invalid");
     }
+  }
+
+  if (settings.step !== undefined) {
+    normalized.step = normalizeFormStep(settings.step);
   }
 
   if (type === "select") {

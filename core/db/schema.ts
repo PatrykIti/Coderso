@@ -889,6 +889,7 @@ export const forms = pgTable(
     successMessage: text("success_message"),
     successRedirectUrl: text("success_redirect_url"),
     submissionAccess: text("submission_access").notNull().default("public"),
+    settings: jsonb("settings").notNull().default({}),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

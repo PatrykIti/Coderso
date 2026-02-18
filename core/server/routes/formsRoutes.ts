@@ -17,6 +17,7 @@ import {
   submitForm,
 } from "../../services/forms/submissionService";
 import { runFormAutomation } from "../../services/forms/formAutomationRunner";
+import { normalizeFormSettings } from "../../services/forms/formSettings";
 import { ApiError } from "../errorHandler";
 import { authenticateApiKey } from "../../services/security/apiKeyAuth";
 import { enforceBotProtection } from "../../services/security/botProtection";
@@ -193,6 +194,7 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
         submissionId: submission.id,
         submissionPayload: body.data,
         submittedAt: submission.createdAt,
+        settings: normalizeFormSettings(form.settings),
       });
     } catch {
       // Submission persistence must not fail when action pipeline has unexpected runtime issues.

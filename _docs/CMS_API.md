@@ -669,6 +669,11 @@ Filters preview (internal API, session/RBAC):
 - `POST /filters/preview`
 - Permission: `content:read`
 
+Public search preview (internal API for admin tooling):
+- `GET /search/public-preview?q=<query>&limit=<1..50>&sources=pages,entries,posts`
+- Permission: `content:read`
+- Zwraca ten sam kontrakt co publiczne `GET /api/search`, ale przez internal router (`/admin/api/...`).
+
 Request:
 
 ```json
@@ -1765,7 +1770,19 @@ Permissions: `forms:read`, `forms:write`
   "description": "Customer support form",
   "successMessage": "Thanks for reaching out!",
   "successRedirectUrl": "/thank-you",
-  "submissionAccess": "public"
+  "submissionAccess": "public",
+  "settings": {
+    "layoutMode": "single",
+    "saveProgress": false,
+    "stepTitles": [],
+    "preset": "custom",
+    "automationRetry": {
+      "enabled": false,
+      "maxAttempts": 1,
+      "baseDelayMs": 300,
+      "maxDelayMs": 2000
+    }
+  }
 }
 ```
 
@@ -1773,6 +1790,11 @@ Opcjonalne pola:
 - `successMessage`: fallback dla sukcesu submission (uzywane, gdy widget nie ma override).
 - `successRedirectUrl`: po sukcesie przekierowuje na podany URL.
 - `submissionAccess`: `public` (default) lub `internal` (wymaga sesji admina lub API key).
+- `settings.layoutMode`: `single` lub `multi_step`.
+- `settings.saveProgress`: runtime zapisuje postep do `localStorage`.
+- `settings.stepTitles`: nazwy krokow dla multi-step.
+- `settings.preset`: `custom|contact|lead_capture|service_intake`.
+- `settings.automationRetry`: polityka auto-retry dla akcji automatyzacji.
 
 `PUT /forms/:id/fields`
 
@@ -1785,7 +1807,10 @@ Opcjonalne pola:
     "name": "full_name",
     "required": true,
     "orderIndex": 0,
-    "settings": { "placeholder": "John Doe" }
+    "settings": {
+      "placeholder": "John Doe",
+      "step": 1
+    }
   }
 ]
 ```
@@ -1802,6 +1827,10 @@ Opcjonalne pola:
   "formNonce": "optional"
 }
 ```
+
+Uwaga:
+- runtime widget `form-embed` wysyla JSON do `POST /forms/:id/submissions` i obsluguje `runtime.successMessage` / `runtime.redirectUrl` inline.
+- bez JS endpoint nadal przyjmuje payload form-urlencoded (mapowany do `data`).
 
 Przyklad odpowiedzi:
 

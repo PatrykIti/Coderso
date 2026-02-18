@@ -37,7 +37,13 @@ test("registerSearchRoutes wires endpoints", () => {
 
   const paths = routes.map((route) => `${route.method} ${route.path}`);
 
-  expect(paths).toEqual(expect.arrayContaining(["GET /search", "GET /search/recent"]));
+  expect(paths).toEqual(
+    expect.arrayContaining([
+      "GET /search",
+      "GET /search/recent",
+      "GET /search/public-preview",
+    ])
+  );
 });
 
 test("search route enforces minimum query length", async () => {

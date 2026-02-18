@@ -4,24 +4,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  previewPublicSearch,
+  type PublicSearchPreviewResult,
+  type PublicSearchSource,
+} from "@/services/listingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
-
-type PublicSearchItem = {
-  id: string;
-  source: "pages" | "entries" | "posts";
-  title: string;
-  slug: string;
-  href: string;
-  updatedAt: string;
-  typeSlug?: string;
-};
-
-type PublicSearchResponse = {
-  query: string;
-  sources: Array<"pages" | "entries" | "posts">;
-  items: PublicSearchItem[];
-};
 
 export function ListingSearchPage() {
   const [query, setQuery] = useState("");
@@ -31,10 +20,10 @@ export function ListingSearchPage() {
   const [usePosts, setUsePosts] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [payload, setPayload] = useState<PublicSearchResponse | null>(null);
+  const [payload, setPayload] = useState<PublicSearchPreviewResult | null>(null);
 
   const selectedSources = useMemo(() => {
-    const sources: Array<"pages" | "entries" | "posts"> = [];
+    const sources: PublicSearchSource[] = [];
     if (usePages) sources.push("pages");
     if (useEntries) sources.push("entries");
     if (usePosts) sources.push("posts");
@@ -45,25 +34,14 @@ export function ListingSearchPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const targetUrl = new URL("/api/search", window.location.origin);
-      targetUrl.searchParams.set("q", query);
       const limitValue = Number(limit);
-      if (Number.isFinite(limitValue) && limitValue > 0) {
-        targetUrl.searchParams.set("limit", String(Math.floor(limitValue)));
-      }
-      if (selectedSources.length > 0) {
-        targetUrl.searchParams.set("sources", selectedSources.join(","));
-      }
-
-      const response = await fetch(targetUrl.toString(), {
-        headers: {
-          Accept: "application/json",
-        },
+      const result = await previewPublicSearch({
+        q: query,
+        ...(Number.isFinite(limitValue) && limitValue > 0
+          ? { limit: Math.floor(limitValue) }
+          : {}),
+        ...(selectedSources.length > 0 ? { sources: selectedSources } : {}),
       });
-      if (!response.ok) {
-        throw new Error(`Search request failed with ${response.status}`);
-      }
-      const result = (await response.json()) as PublicSearchResponse;
       setPayload(result);
     } catch (error) {
       const message =

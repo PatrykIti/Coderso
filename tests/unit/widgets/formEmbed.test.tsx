@@ -112,6 +112,74 @@ test("form embed renders submission nonce when resolved", () => {
   expect(html).toContain('value="nonce-value"');
 });
 
+test("form embed renders multi-step runtime structure", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Intake",
+          settings: {
+            layoutMode: "multi_step",
+            saveProgress: true,
+            stepTitles: ["Contact", "Details"],
+          },
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+              settings: { step: 1 },
+            },
+            {
+              id: "field-2",
+              type: "textarea",
+              label: "Issue",
+              name: "issue",
+              required: true,
+              settings: { step: 2 },
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain('data-form-layout-mode="multi_step"');
+  expect(html).toContain('data-form-save-progress="1"');
+  expect(html).toContain('data-nextless-form-step="1"');
+  expect(html).toContain("Contact");
+  expect(html).toContain("Details");
+});
+
+test("form embed injects runtime script when fields exist", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Support",
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain("__nextlessFormRuntimeClient");
+});
+
 test("form embed validator accepts schema", () => {
   clearWidgets();
   const widget = createFormEmbedWidget({

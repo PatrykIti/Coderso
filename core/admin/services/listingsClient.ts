@@ -4,6 +4,7 @@ import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
 
 export type ListingSource = "entries" | "posts" | "users" | "taxonomies";
+export type PublicSearchSource = "pages" | "entries" | "posts";
 export type ListingFilterOperator =
   | "eq"
   | "neq"
@@ -136,6 +137,22 @@ export type ListingFiltersPreviewResult = {
   appliedSort: ListingSort[];
   page: number | null;
   searchQuery: string | null;
+};
+
+export type PublicSearchPreviewItem = {
+  id: string;
+  source: PublicSearchSource;
+  title: string;
+  slug: string;
+  href: string;
+  updatedAt: string;
+  typeSlug?: string;
+};
+
+export type PublicSearchPreviewResult = {
+  query: string;
+  sources: PublicSearchSource[];
+  items: PublicSearchPreviewItem[];
 };
 
 let cachedQueries: ListingQueryRecord[] | null = null;
@@ -411,6 +428,26 @@ export async function previewListingFilters(input: {
     },
     { withCsrf: true }
   );
+}
+
+export async function previewPublicSearch(input: {
+  q: string;
+  limit?: number;
+  sources?: PublicSearchSource[];
+}) {
+  const params = new URLSearchParams();
+  params.set("q", input.q);
+  if (typeof input.limit === "number" && Number.isFinite(input.limit) && input.limit > 0) {
+    params.set("limit", String(Math.floor(input.limit)));
+  }
+  if (Array.isArray(input.sources) && input.sources.length > 0) {
+    params.set("sources", input.sources.join(","));
+  }
+  const query = params.toString();
+  const route = query ? `/search/public-preview?${query}` : "/search/public-preview";
+  return apiRequest<PublicSearchPreviewResult>(route, {
+    method: "GET",
+  });
 }
 
 export async function listListingTemplates() {

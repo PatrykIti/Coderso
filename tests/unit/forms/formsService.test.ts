@@ -55,22 +55,48 @@ testIfDb("create/update/delete form", async () => {
     successMessage: "Thanks for reaching out.",
     successRedirectUrl: "/thank-you",
     submissionAccess: "internal",
+    settings: {
+      layoutMode: "multi_step",
+      saveProgress: true,
+      stepTitles: ["Contact", "Details"],
+      preset: "service_intake",
+      automationRetry: {
+        enabled: true,
+        maxAttempts: 3,
+        baseDelayMs: 200,
+        maxDelayMs: 1200,
+      },
+    },
   });
   expect(form?.name).toBe(name);
   expect(form?.successMessage).toBe("Thanks for reaching out.");
   expect(form?.successRedirectUrl).toBe("/thank-you");
   expect(form?.submissionAccess).toBe("internal");
+  expect((form?.settings as { layoutMode?: string })?.layoutMode).toBe("multi_step");
 
   const updated = await updateForm(form.id, {
     name: `${name} Updated`,
     successMessage: "Got it!",
     successRedirectUrl: null,
     submissionAccess: "public",
+    settings: {
+      layoutMode: "single",
+      saveProgress: false,
+      stepTitles: [],
+      preset: "custom",
+      automationRetry: {
+        enabled: false,
+        maxAttempts: 1,
+        baseDelayMs: 300,
+        maxDelayMs: 2000,
+      },
+    },
   });
   expect(updated?.name).toBe(`${name} Updated`);
   expect(updated?.successMessage).toBe("Got it!");
   expect(updated?.successRedirectUrl).toBeNull();
   expect(updated?.submissionAccess).toBe("public");
+  expect((updated?.settings as { layoutMode?: string })?.layoutMode).toBe("single");
 
   const deleted = await deleteForm(form.id);
   expect(deleted?.id).toBe(form.id);

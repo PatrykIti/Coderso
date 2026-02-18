@@ -21,6 +21,7 @@ export type FieldSettings = {
     options?: string[];
     defaultValue?: boolean | string;
     pattern?: string;
+    step?: number;
   };
 };
 
@@ -173,6 +174,25 @@ export function FieldSettingsPanel({
               <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                 Validation Rules
               </label>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Step number
+                </label>
+                <Input
+                  inputMode="numeric"
+                  value={String(field.settings.step ?? 1)}
+                  onChange={(event) => {
+                    const parsed = Number.parseInt(event.target.value, 10);
+                    const step = Number.isFinite(parsed)
+                      ? Math.max(1, Math.min(10, parsed))
+                      : 1;
+                    onSettingsChange(field.id, { step });
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Use this to group fields in multi-step forms.
+                </p>
+              </div>
               <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">Required Field</p>

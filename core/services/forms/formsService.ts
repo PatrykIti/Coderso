@@ -12,6 +12,7 @@ import {
   type FormFieldInput,
   type NormalizedFormField,
 } from "./validation";
+import { normalizeFormSettings } from "./formSettings";
 
 export type FormStatus = "draft" | "published" | "archived";
 
@@ -23,6 +24,7 @@ export type FormCreateInput = {
   successMessage?: string | null;
   successRedirectUrl?: string | null;
   submissionAccess?: SubmissionAccessMode;
+  settings?: unknown;
 };
 
 export type FormUpdateInput = {
@@ -33,6 +35,7 @@ export type FormUpdateInput = {
   successMessage?: string | null;
   successRedirectUrl?: string | null;
   submissionAccess?: SubmissionAccessMode;
+  settings?: unknown;
 };
 
 const allowedStatuses = new Set<FormStatus>(["draft", "published", "archived"]);
@@ -90,6 +93,7 @@ export async function createForm(input: FormCreateInput) {
   const successMessage = normalizeSuccessMessage(input.successMessage);
   const successRedirectUrl = normalizeSuccessRedirectUrl(input.successRedirectUrl);
   const submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
+  const settings = normalizeFormSettings(input.settings);
 
   const existing = await db.select({ id: forms.id }).from(forms).where(eq(forms.slug, slug));
   if (existing.length > 0) throw new Error("form_slug_exists");
@@ -105,6 +109,7 @@ export async function createForm(input: FormCreateInput) {
       successMessage,
       successRedirectUrl,
       submissionAccess,
+      settings,
       createdAt: now,
       updatedAt: now,
     })
@@ -156,6 +161,10 @@ export async function updateForm(id: string, input: FormUpdateInput) {
 
   if (input.submissionAccess !== undefined) {
     update.submissionAccess = normalizeSubmissionAccess(input.submissionAccess, "public");
+  }
+
+  if (input.settings !== undefined) {
+    update.settings = normalizeFormSettings(input.settings);
   }
 
   const [row] = await db

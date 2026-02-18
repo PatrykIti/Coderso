@@ -1,6 +1,7 @@
 import { getForm, listFormFields, toFieldRecord } from "./formsService";
 import { createFormSubmissionNonce } from "./submissionNonce";
 import { normalizeSubmissionAccess } from "./submissionAccess";
+import { getDefaultFormSettings, normalizeFormSettings } from "./formSettings";
 
 export type FormRuntimeResolution = {
   formId: string;
@@ -9,6 +10,7 @@ export type FormRuntimeResolution = {
   status: string;
   successMessage: string | null;
   successRedirectUrl: string | null;
+  settings: ReturnType<typeof getDefaultFormSettings>;
   submissionAccess: "public" | "internal";
   submissionNonce?: string | null;
   fields: ReturnType<typeof toFieldRecord>[];
@@ -31,6 +33,7 @@ export async function resolveFormRuntimeData(
       status: "missing",
       successMessage: null,
       successRedirectUrl: null,
+      settings: getDefaultFormSettings(),
       submissionAccess: "public",
       submissionNonce: null,
       fields: [],
@@ -40,6 +43,7 @@ export async function resolveFormRuntimeData(
 
   if (!options.preview && form.status !== "published") {
     const submissionAccess = resolveFormSubmissionAccess(form.submissionAccess);
+    const settings = normalizeFormSettings(form.settings);
     return {
       formId,
       formName: form.name,
@@ -47,6 +51,7 @@ export async function resolveFormRuntimeData(
       status: form.status,
       successMessage: form.successMessage ?? null,
       successRedirectUrl: form.successRedirectUrl ?? null,
+      settings,
       submissionAccess,
       submissionNonce:
         submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
@@ -57,6 +62,7 @@ export async function resolveFormRuntimeData(
 
   const fields = await listFormFields(formId);
   const submissionAccess = resolveFormSubmissionAccess(form.submissionAccess);
+  const settings = normalizeFormSettings(form.settings);
   return {
     formId,
     formName: form.name,
@@ -64,6 +70,7 @@ export async function resolveFormRuntimeData(
     status: form.status,
     successMessage: form.successMessage ?? null,
     successRedirectUrl: form.successRedirectUrl ?? null,
+    settings,
     submissionAccess,
     submissionNonce:
       submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,

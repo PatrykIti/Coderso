@@ -9,6 +9,7 @@ export const formCreateSchema = {
     successMessage: { type: ["string", "null"] },
     successRedirectUrl: { type: ["string", "null"] },
     submissionAccess: { enum: ["public", "internal"] },
+    settings: { type: "object" },
   },
   additionalProperties: false,
 };
@@ -23,6 +24,7 @@ export const formUpdateSchema = {
     successMessage: { type: ["string", "null"] },
     successRedirectUrl: { type: ["string", "null"] },
     submissionAccess: { enum: ["public", "internal"] },
+    settings: { type: "object" },
   },
   additionalProperties: false,
 };

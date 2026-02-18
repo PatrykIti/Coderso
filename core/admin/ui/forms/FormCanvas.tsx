@@ -110,6 +110,8 @@ function FieldPreview({
 type FormCanvasProps = {
   formTitle: string;
   formDescription?: string;
+  layoutMode?: "single" | "multi_step";
+  stepTitles?: string[];
   formSelected: boolean;
   selectedFieldId: string | null;
   fields: Array<{
@@ -121,6 +123,7 @@ type FormCanvasProps = {
       placeholder?: string;
       helper?: string;
       defaultValue?: string | boolean;
+      step?: number;
     };
   }>;
   onSelectField: (id: string) => void;
@@ -131,6 +134,8 @@ type FormCanvasProps = {
 export function FormCanvas({
   formTitle,
   formDescription,
+  layoutMode = "single",
+  stepTitles = [],
   formSelected,
   selectedFieldId,
   fields,
@@ -139,6 +144,49 @@ export function FormCanvas({
   onRemoveField,
 }: FormCanvasProps) {
   const hasFields = fields.length > 0;
+  const groupedFields = fields.reduce(
+    (acc, field) => {
+      const rawStep = field.settings.step;
+      const step = Number.isFinite(rawStep) ? Math.max(1, Number(rawStep)) : 1;
+      if (!acc[step]) {
+        acc[step] = [];
+      }
+      acc[step].push(field);
+      return acc;
+    },
+    {} as Record<number, FormCanvasProps["fields"]>
+  );
+  const sortedSteps = Object.keys(groupedFields)
+    .map((value) => Number(value))
+    .sort((left, right) => left - right);
+
+  const renderField = (field: FormCanvasProps["fields"][number]) => {
+    const kind =
+      field.type === "checkbox"
+        ? "checkbox"
+        : field.type === "select"
+          ? "select"
+          : "text";
+    const multiline = field.type === "textarea";
+    const value =
+      typeof field.settings.defaultValue === "string"
+        ? field.settings.defaultValue
+        : undefined;
+    return (
+      <FieldPreview
+        key={field.id}
+        id={field.id}
+        label={field.label}
+        placeholder={field.settings.placeholder}
+        value={value}
+        selected={selectedFieldId === field.id}
+        multiline={multiline}
+        kind={kind}
+        onSelect={onSelectField}
+        onRemove={onRemoveField}
+      />
+    );
+  };
 
   return (
     <ScrollArea className="h-full">
@@ -164,33 +212,20 @@ export function FormCanvas({
             </div>
             <div className="space-y-4">
               {hasFields ? (
-                fields.map((field) => {
-                  const kind =
-                    field.type === "checkbox"
-                      ? "checkbox"
-                      : field.type === "select"
-                      ? "select"
-                      : "text";
-                  const multiline = field.type === "textarea";
-                  const value =
-                    typeof field.settings.defaultValue === "string"
-                      ? field.settings.defaultValue
-                      : undefined;
-                  return (
-                    <FieldPreview
-                      key={field.id}
-                      id={field.id}
-                      label={field.label}
-                      placeholder={field.settings.placeholder}
-                      value={value}
-                      selected={selectedFieldId === field.id}
-                      multiline={multiline}
-                      kind={kind}
-                      onSelect={onSelectField}
-                      onRemove={onRemoveField}
-                    />
-                  );
-                })
+                layoutMode === "multi_step" ? (
+                  sortedSteps.map((step) => (
+                    <div key={`step-${step}`} className="space-y-3 rounded-xl border bg-muted/10 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                        {stepTitles[step - 1]?.trim() || `Step ${step}`}
+                      </p>
+                      <div className="space-y-3">
+                        {(groupedFields[step] ?? []).map((field) => renderField(field))}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  fields.map((field) => renderField(field))
+                )
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 py-10 text-center text-muted-foreground">
                   <CirclePlus className="mb-2 h-6 w-6" />
