@@ -101,6 +101,8 @@ test("ListingFiltersPage renders preview shell", () => {
   expect(html).toContain("Run preview");
   expect(html).toContain("Runtime query string");
   expect(html).toContain("Show examples");
+  expect(html).toContain("Runtime tokens use listing query ID");
+  expect(html).toContain("How this works");
 });
 
 test("ListingSearchPage renders public search preview shell", () => {

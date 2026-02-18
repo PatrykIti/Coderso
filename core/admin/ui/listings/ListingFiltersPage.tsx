@@ -177,6 +177,18 @@ export function ListingFiltersPage() {
           description="Preview runtime filter behavior for listing widgets and URL tokens."
         />
 
+        <section className="rounded-xl border border-border/70 bg-card/50 p-4 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">How this works</p>
+          <p className="mt-1">
+            First define data logic in <code>Coderso → Listings</code> (source, filters,
+            sorting, pagination). Then use this Filters screen to test runtime URL tokens for
+            that listing query.
+          </p>
+          <p className="mt-1">
+            Widgets and templates use the same listing query, so data logic stays in one place.
+          </p>
+        </section>
+
         {error ? (
           <Alert variant="destructive">
             <AlertTitle>Unable to load listing queries</AlertTitle>
@@ -217,6 +229,14 @@ export function ListingFiltersPage() {
                   Loading listing queries...
                 </p>
               ) : null}
+              {selectedListingQueryId ? (
+                <p className="text-xs text-muted-foreground">
+                  Query ID: <code>{selectedListingQueryId}</code>
+                </p>
+              ) : null}
+              <p className="text-xs text-muted-foreground">
+                Runtime tokens use listing query ID (UUID), not query name.
+              </p>
             </div>
             <div className="space-y-2">
               <p className="text-sm font-medium">Runtime query string</p>

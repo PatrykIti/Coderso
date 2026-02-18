@@ -72,6 +72,18 @@ export function ListingSearchPage() {
           description="Preview global public search behavior used by search-box widgets."
         />
 
+        <section className="rounded-xl border border-border/70 bg-card/50 p-4 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">What this preview searches</p>
+          <p className="mt-1">
+            Indexed now: <code>pages.title</code>, <code>pages.slug</code>,
+            <code> entries.title</code>, <code>entries.slug</code>, and
+            <code> entries.data.title</code>.
+          </p>
+          <p className="mt-1">
+            Not indexed yet: full widget/page body content rendered on frontend.
+          </p>
+        </section>
+
         <section className="space-y-4 rounded-xl border border-border/70 bg-card/50 p-4">
           <div className="grid gap-3 md:grid-cols-[2fr_120px_auto] md:items-end">
             <div className="space-y-2">
@@ -108,18 +120,6 @@ export function ListingSearchPage() {
               <span>Posts</span>
               <Switch checked={usePosts} onCheckedChange={setUsePosts} />
             </label>
-          </div>
-
-          <div className="rounded-md border border-border/70 bg-background/60 p-3 text-xs text-muted-foreground">
-            <p className="font-medium text-foreground">What this preview searches</p>
-            <p className="mt-1">
-              Indexed now: <code>pages.title</code>, <code>pages.slug</code>,
-              <code> entries.title</code>, <code>entries.slug</code>, and
-              <code> entries.data.title</code>.
-            </p>
-            <p className="mt-1">
-              Not indexed yet: full widget/page body content rendered on frontend.
-            </p>
           </div>
         </section>
 
