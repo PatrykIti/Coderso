@@ -140,3 +140,13 @@ export {
   FormEmbedVisualEditor,
   FormEmbedWizardEditor,
 } from "./FormEmbedEditors";
+export {
+  BookingCalendarAdvancedEditor,
+  BookingCalendarVisualEditor,
+  BookingCalendarWizardEditor,
+} from "./BookingCalendarEditors";
+export {
+  AppointmentFormAdvancedEditor,
+  AppointmentFormVisualEditor,
+  AppointmentFormWizardEditor,
+} from "./AppointmentFormEditors";

@@ -51,6 +51,14 @@ import {
   type FormEmbedData,
 } from "../widgets/core/formEmbed";
 import {
+  normalizeBookingCalendarData,
+  type BookingCalendarData,
+} from "../widgets/core/bookingCalendar";
+import {
+  normalizeAppointmentFormData,
+  type AppointmentFormData,
+} from "../widgets/core/appointmentForm";
+import {
   normalizeListingFiltersData,
   type ListingFiltersData,
 } from "../widgets/core/listingFilters";
@@ -61,6 +69,7 @@ import {
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
 import { resolveFormRuntimeData } from "../services/forms/formRuntimeResolver";
+import { resolveBookingRuntimeData } from "../services/booking/bookingRuntimeResolver";
 import {
   resolveListingFiltersRuntimeData,
   resolveListingSearchRuntimeState,
@@ -70,6 +79,7 @@ import { getSecuritySettings } from "../services/settings/securitySettings";
 import { searchPublicIndex } from "../services/search/searchIndexService";
 import { publicSearchRequestSchema } from "./validation/filterSchemas";
 import { validate } from "./validation/schemaValidator";
+import { handlePublicBookingApi } from "./publicBookingApi";
 
 export type PublicPageData = {
   title: string;
@@ -198,6 +208,10 @@ const ensureRecord = (value: unknown): Record<string, unknown> => {
   return value as Record<string, unknown>;
 };
 
+type RuntimeHydrationCache = {
+  booking?: Awaited<ReturnType<typeof resolveBookingRuntimeData>>;
+};
+
 const hydrateRuntimeBlock = async (
   block: WidgetBlock,
   options: {
@@ -205,6 +219,7 @@ const hydrateRuntimeBlock = async (
     contentRoutes: ContentRouteSetting[];
     templateStack?: string[];
     runtimeSearchParams?: URLSearchParams;
+    runtimeCache: RuntimeHydrationCache;
   }
 ): Promise<WidgetBlock> => {
   let nextBlock: WidgetBlock = block;
@@ -314,6 +329,48 @@ const hydrateRuntimeBlock = async (
       },
     };
   }
+  if (block.type === "booking-calendar") {
+    const normalizedData = normalizeBookingCalendarData(
+      ensureRecord(block.data) as BookingCalendarData
+    );
+    const resolved =
+      options.runtimeCache.booking ??
+      (await resolveBookingRuntimeData({ preview: options.preview }));
+    options.runtimeCache.booking = resolved;
+
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        resolved: {
+          services: resolved.services,
+          resources: resolved.resources,
+          slotsToken: resolved.slotsToken,
+          ...(resolved.error ? { error: resolved.error } : {}),
+        },
+      },
+    };
+  }
+  if (block.type === "appointment-form") {
+    const normalizedData = normalizeAppointmentFormData(
+      ensureRecord(block.data) as AppointmentFormData
+    );
+    const resolved =
+      options.runtimeCache.booking ??
+      (await resolveBookingRuntimeData({ preview: options.preview }));
+    options.runtimeCache.booking = resolved;
+
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        resolved: {
+          submissionNonce: resolved.submissionNonce,
+          ...(resolved.error ? { error: resolved.error } : {}),
+        },
+      },
+    };
+  }
   if (block.type === "navigation") {
     const data = ensureRecord(block.data);
     const resolved = await resolveNavigationRuntimeData(data);
@@ -388,6 +445,7 @@ const hydrateRuntimeBlocks = async (
     contentRoutes: ContentRouteSetting[];
     templateStack?: string[];
     runtimeSearchParams?: URLSearchParams;
+    runtimeCache: RuntimeHydrationCache;
   }
 ) => Promise.all(blocks.map((block) => hydrateRuntimeBlock(block, options)));
 
@@ -426,6 +484,7 @@ const renderPublicPageHtmlInternal = async (
     preview: options?.preview ?? false,
     contentRoutes,
     runtimeSearchParams: options?.runtimeSearchParams,
+    runtimeCache: {},
   });
 
   return renderPublicPageRuntimeHtml({
@@ -476,6 +535,7 @@ const renderWidgetTemplatePreviewHtml = async (
   const blocks = await hydrateRuntimeBlocks(template.blocks, {
     preview: true,
     contentRoutes,
+    runtimeCache: {},
   });
   return renderPublicPageHtml({
     title: template.name,
@@ -580,11 +640,22 @@ const renderEntryDetailHtml = async (
 export async function handlePublicRequest(req: Request) {
   const url = new URL(req.url);
   const security = await getSecuritySettings();
+  const ip = resolveIp(req);
+  const userAgent = req.headers.get("user-agent") ?? undefined;
+
+  const bookingApiResponse = await handlePublicBookingApi(req, {
+    url,
+    ip,
+    userAgent,
+    security,
+  });
+  if (bookingApiResponse) return bookingApiResponse;
+
   checkRateLimit(
     "public_read",
     {
-      ip: resolveIp(req),
-      userAgent: req.headers.get("user-agent") ?? undefined,
+      ip,
+      userAgent,
     },
     security.rateLimit
   );

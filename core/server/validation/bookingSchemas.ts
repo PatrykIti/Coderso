@@ -153,3 +153,44 @@ export const bookingReservationStatusSchema = {
   },
   additionalProperties: false,
 } as const;
+
+export const bookingPublicSlotQuerySchema = {
+  type: "object",
+  required: ["serviceId", "resourceId", "date", "runtimeToken"],
+  properties: {
+    serviceId: { type: "string", pattern: uuidPattern },
+    resourceId: { type: "string", pattern: uuidPattern },
+    date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+    runtimeToken: { type: "string", minLength: 1, maxLength: 1024 },
+    timezone: { type: "string", minLength: 1, maxLength: 120 },
+    intervalMinutes: { type: "integer", minimum: 5, maximum: 180 },
+  },
+  additionalProperties: false,
+} as const;
+
+export const bookingPublicReservationSchema = {
+  type: "object",
+  required: [
+    "serviceId",
+    "resourceId",
+    "startsAt",
+    "endsAt",
+    "customerName",
+    "formNonce",
+  ],
+  properties: {
+    serviceId: { type: "string", pattern: uuidPattern },
+    resourceId: { type: "string", pattern: uuidPattern },
+    startsAt: { type: "string", pattern: dateTimePattern },
+    endsAt: { type: "string", pattern: dateTimePattern },
+    timezone: { type: "string", minLength: 1, maxLength: 120 },
+    customerName: { type: "string", minLength: 1, maxLength: 200 },
+    customerEmail: { type: ["string", "null"], maxLength: 320 },
+    customerPhone: { type: ["string", "null"], maxLength: 64 },
+    notes: { type: ["string", "null"], maxLength: 2000 },
+    metadata: { type: "object" },
+    captchaToken: { type: "string", minLength: 1, maxLength: 4096 },
+    formNonce: { type: "string", minLength: 1, maxLength: 1024 },
+  },
+  additionalProperties: false,
+} as const;

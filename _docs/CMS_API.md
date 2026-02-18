@@ -715,9 +715,11 @@ Runtime URL token contract (listing widgets):
 - `lq.<listingQueryId>.__page`
 - `lq.<listingQueryId>.<field>.<operator>`
 
-## Coderso Booking (v1 foundation)
+## Coderso Booking (v1 foundation + runtime widgets)
 
 Permissions: `booking:read`, `booking:write`
+
+Internal admin API (`/admin/api/*`, RBAC required):
 
 Resources:
 - `GET /booking/resources`
@@ -747,6 +749,44 @@ Reservations / Slots:
 - `GET /booking/reservations?resourceId=&serviceId=&status=&from=&to=`
 - `POST /booking/reservations`
 - `PATCH /booking/reservations/:id/status`
+
+Public runtime API (no admin auth):
+- `GET /api/booking/slots?serviceId=&resourceId=&date=&runtimeToken=&timezone=&intervalMinutes=`
+- `POST /api/booking/reservations`
+
+Public slots hardening:
+- `runtimeToken` jest wymagany i podpisany HMAC tokenem runtime (TTL z nonce settings).
+- token jest hydratuwany przez SSR resolver booking widgets.
+
+Public reservation payload (summary):
+
+```json
+{
+  "serviceId": "uuid",
+  "resourceId": "uuid",
+  "startsAt": "2030-01-20T09:00:00.000Z",
+  "endsAt": "2030-01-20T09:30:00.000Z",
+  "timezone": "UTC",
+  "customerName": "Jane Doe",
+  "customerEmail": "jane@example.com",
+  "customerPhone": null,
+  "notes": null,
+  "metadata": {
+    "flowId": "booking-flow"
+  },
+  "formNonce": "<nonce>",
+  "captchaToken": "<optional-recaptcha-token>"
+}
+```
+
+Runtime widgets:
+- `booking-calendar`:
+  - renderuje service/resource/date selector + sloty,
+  - publikuje selected slot event po `flowId`.
+- `appointment-form`:
+  - nasluchuje selected slot po `flowId`,
+  - wysyla payload do `POST /api/booking/reservations`,
+  - obsluguje `runtime.successMessage`.
 
 Selected error codes:
 - `booking_resource_not_found`

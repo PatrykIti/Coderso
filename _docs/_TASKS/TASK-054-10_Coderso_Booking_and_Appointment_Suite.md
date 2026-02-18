@@ -77,7 +77,6 @@ Provide full booking and appointments features (JetBooking + JetAppointment pari
     - reservation creation and status transitions.
   - `TASK-054-10-04`: internal admin API routes `/booking/*` + RBAC (`booking:read`, `booking:write`) + deterministic error mapping.
 - Pending:
-  - runtime booking widgets (`TASK-054-10-06`),
   - final QA/docs closure (`TASK-054-10-07`).
 
 ## Progress Update (2026-02-18, Booking Admin UI)
@@ -90,6 +89,18 @@ Provide full booking and appointments features (JetBooking + JetAppointment pari
     - slot preview.
   - enabled Coderso Booking navigation as `Beta` (preview lifecycle).
   - added booking admin client tests and UI rendering test coverage.
+
+## Progress Update (2026-02-18, Booking Runtime Widgets)
+- Completed `TASK-054-10-06`:
+  - added core runtime widgets:
+    - `booking-calendar`
+    - `appointment-form`
+  - added shared booking runtime client script (`flowId`-based slot/form synchronization),
+  - added public booking runtime API:
+    - `GET /api/booking/slots`
+    - `POST /api/booking/reservations`
+  - added runtime booking resolver and submission nonce integration,
+  - added widget/editor/runtime API tests.
 
 ## Files to Change
 - `core/db/schema.ts` (booking tables)

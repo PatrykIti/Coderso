@@ -41,6 +41,8 @@ export function ensureRuntimeWidgetsRegistered() {
     timeline: noopEditors,
     compareTimeline: noopEditors,
     newsletter: noopEditors,
+    bookingCalendar: noopEditors,
+    appointmentForm: noopEditors,
     formEmbed: noopEditors,
     contact: noopEditors,
     navigation: noopEditors,

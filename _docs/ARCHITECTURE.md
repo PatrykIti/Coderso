@@ -253,6 +253,10 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - rezerwacja przechodzi przez status lifecycle (`pending|confirmed|cancelled|completed|no_show`).
 - Security:
   - endpoints `/admin/api/booking/*` sa internal i wymagaja `booking:read` / `booking:write`,
+  - runtime public API:
+    - `GET /api/booking/slots` (public read, wymaga podpisanego `runtimeToken`),
+    - `POST /api/booking/reservations` (public write),
+  - public write dla rezerwacji wymusza nonce + optional reCAPTCHA policy (`public_write` action),
   - bledy domenowe sa mapowane do stabilnych kodow API (bez 500 dla znanych przypadkow).
 - Admin UI:
   - ekran `/admin/coderso/booking` grupuje operacje domenowe w zakladkach:
@@ -262,6 +266,10 @@ Zakres CMS, model danych, auth i security opisane sa w:
     - `Reservations`
     - `Slot Preview`
   - lokalna warstwa cache/prefetch (`bookingClient` + `adminPrefetch`) utrzymuje WordPress-like responsiveness przy przechodzeniu miedzy ekranami.
+- Runtime widgets:
+  - `booking-calendar` publikuje selected slot event po `flowId`,
+  - `appointment-form` konsumuje selected slot po `flowId` i tworzy rezerwacje przez public API,
+  - resolver runtime (`resolveBookingRuntimeData`) hydratuje active services/resources + submission nonce.
 
 ## Backups (v1)
 

@@ -7,6 +7,10 @@ import { createContactWidget, type ContactData } from "./contact";
 import { createCtaBannerWidget, type CtaBannerData } from "./ctaBanner";
 import { createDividerWidget, type DividerData } from "./divider";
 import { createEntryTeaserWidget, type EntryTeaserData } from "./entryTeaser";
+import {
+  createAppointmentFormWidget,
+  type AppointmentFormData,
+} from "./appointmentForm";
 import { createFeatureGridWidget, type FeatureGridData } from "./featureGrid";
 import { createFooterWidget, type FooterData } from "./footer";
 import { createFormEmbedWidget, type FormEmbedData } from "./formEmbed";
@@ -14,6 +18,10 @@ import { createFaqAccordionWidget, type FaqAccordionData } from "./faqAccordion"
 import { createGalleryMosaicWidget, type GalleryMosaicData } from "./galleryMosaic";
 import { createGridColumnsWidget, type GridColumnsData } from "./gridColumns";
 import { createHeroWidget, type HeroData } from "./hero";
+import {
+  createBookingCalendarWidget,
+  type BookingCalendarData,
+} from "./bookingCalendar";
 import {
   createListingFiltersWidget,
   type ListingFiltersData,
@@ -72,6 +80,8 @@ export type CoreWidgetEditors = {
   timeline: EditorBundle<TimelineData>;
   compareTimeline: EditorBundle<CompareTimelineData>;
   newsletter: EditorBundle<NewsletterData>;
+  bookingCalendar: EditorBundle<BookingCalendarData>;
+  appointmentForm: EditorBundle<AppointmentFormData>;
   formEmbed: EditorBundle<FormEmbedData>;
   contact: EditorBundle<ContactData>;
   navigation: EditorBundle<NavigationData>;
@@ -107,6 +117,8 @@ export function createCoreWidgetDefinitions(
     createTimelineWidget(editors.timeline),
     createCompareTimelineWidget(editors.compareTimeline),
     createNewsletterWidget(editors.newsletter),
+    createBookingCalendarWidget(editors.bookingCalendar),
+    createAppointmentFormWidget(editors.appointmentForm),
     createFormEmbedWidget(editors.formEmbed),
     createContactWidget(editors.contact),
     createNavigationWidget(editors.navigation),

@@ -59,7 +59,7 @@ export type Router = {
   delete: (path: string, ...handlers: BookingRouteHandler[]) => void;
 };
 
-const mapBookingError = (error: unknown) => {
+export const mapBookingError = (error: unknown) => {
   if (!(error instanceof Error)) return null;
   switch (error.message) {
     case "booking_resource_not_found":
