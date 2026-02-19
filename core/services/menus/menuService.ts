@@ -26,6 +26,7 @@ export type MenuItemInput = {
   pageId?: string | null;
   parentId?: string | null;
   orderIndex?: number;
+  settings?: unknown;
 };
 
 export type MenuWithItems = {
@@ -37,6 +38,43 @@ function normalizeString(value: unknown) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeMenuItemSettings(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const source = value as Record<string, unknown>;
+  const settings: Record<string, unknown> = {};
+
+  if (source.visibility === "all" || source.visibility === "logged_in" || source.visibility === "logged_out") {
+    settings.visibility = source.visibility;
+  }
+
+  if (source.badge && typeof source.badge === "object" && !Array.isArray(source.badge)) {
+    const badge = source.badge as Record<string, unknown>;
+    const label = typeof badge.label === "string" ? badge.label.trim() : "";
+    const tone = typeof badge.tone === "string" ? badge.tone.trim() : "";
+    if (label) {
+      settings.badge = {
+        label,
+        tone: tone || "default",
+      };
+    }
+  }
+
+  const description = typeof source.description === "string" ? source.description.trim() : "";
+  if (description) {
+    settings.description = description;
+  }
+
+  const icon = typeof source.icon === "string" ? source.icon.trim() : "";
+  if (icon) {
+    settings.icon = icon;
+  }
+
+  return settings;
 }
 
 function normalizeMenuItems(items: MenuItemInput[]): MenuItemRecord[] {
@@ -74,6 +112,7 @@ function normalizeMenuItems(items: MenuItemInput[]): MenuItemRecord[] {
       pageId,
       parentId,
       orderIndex,
+      settings: normalizeMenuItemSettings(item.settings),
     };
   });
 
@@ -153,6 +192,10 @@ export async function listMenuItems(menuId: string) {
     pageId: row.pageId ?? null,
     parentId: row.parentId ?? null,
     orderIndex: row.orderIndex,
+    settings:
+      row.settings && typeof row.settings === "object" && !Array.isArray(row.settings)
+        ? (row.settings as Record<string, unknown>)
+        : {},
   }));
 
   return buildMenuTree(records);
@@ -224,6 +267,10 @@ export async function replaceMenuItems(menuId: string, items: MenuItemInput[]) {
     pageId: row.pageId ?? null,
     parentId: row.parentId ?? null,
     orderIndex: row.orderIndex,
+    settings:
+      row.settings && typeof row.settings === "object" && !Array.isArray(row.settings)
+        ? (row.settings as Record<string, unknown>)
+        : {},
   }));
 
   return buildMenuTree(records);

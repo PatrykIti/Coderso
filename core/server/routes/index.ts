@@ -37,6 +37,8 @@ import { registerListingsRoutes } from "./listingsRoutes";
 import { registerFilterRoutes } from "./filterRoutes";
 import { registerBookingRoutes } from "./bookingRoutes";
 import { registerCommerceRoutes } from "./commerceRoutes";
+import { registerPopupsRoutes } from "./popupsRoutes";
+import { registerReviewsRoutes } from "./reviewsRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -100,6 +102,14 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerBookingRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerPopupsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerReviewsRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

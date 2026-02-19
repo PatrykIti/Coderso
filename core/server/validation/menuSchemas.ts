@@ -33,6 +33,7 @@ export const menuItemsSchema = {
           pageId: { type: "string" },
           parentId: { type: ["string", "null"] },
           orderIndex: { type: "number" },
+          settings: { type: "object" },
         },
         additionalProperties: false,
       },

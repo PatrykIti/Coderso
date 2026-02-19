@@ -291,3 +291,6 @@ Project Change Log.
 | 255 | 2026-02-19 | Commerce runtime widgets (gallery, compare, table) | CMS/Widgets |
 | 256 | 2026-02-19 | Commerce checkout/cart adapter contract | CMS/Commerce |
 | 257 | 2026-02-19 | Commerce suite QA, docs, and closure | QA/Docs |
+| 258 | 2026-02-19 | Engagement domain DB foundation | CMS/Engagement |
+| 259 | 2026-02-19 | Engagement services and validation | CMS/Engagement |
+| 260 | 2026-02-19 | Engagement API routes and RBAC | Core/API |

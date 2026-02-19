@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 29 tasks
-- **In Progress:** 1 task
-- **Done:** 357 tasks
+- **To Do:** 27 tasks
+- **In Progress:** 2 tasks
+- **Done:** 360 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
 | TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
 | TASK-054-14 | Coderso Composite-First Widget Strategy | High | Large | Kits -> Composite -> Atomic delivery model |
 | TASK-054-15 | Coderso Plugin Contract and Package Manifest | High | Large | Safe plugin module/widget manifest contract |
@@ -77,6 +76,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
+| TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
 
 ---
 
@@ -84,6 +84,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-12-03 | Popup and Reviews API Routes and RBAC | High | Medium | Internal `/popups` + `/reviews` routes, RBAC scopes, and error mapping tests |
+| TASK-054-12-02 | Popup and Reviews Services and Validation | High | Medium | popup/review domain services + mega-menu settings normalization |
+| TASK-054-12-01 | Engagement Domain and DB Schema | High | Medium | menu metadata + popups/reviews tables + migration 0043 |
 | TASK-054-11 | Coderso Commerce Suite | Medium | Large | Product templates, compare, wishlist, tables |
 | TASK-054-11-08 | Commerce QA, Docs, and Changelog Closure | Medium | Medium | Regression matrix + docs/changelog closure |
 | TASK-054-11-07 | Checkout/Cart Adapter Contract | Medium | Medium | Pluggable checkout adapter contract with registry + plugin hook bridge |

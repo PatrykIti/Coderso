@@ -47,3 +47,17 @@ const reviews = await listReviews({ entityType, entityId, status: "approved" });
 - `TASK-054-12-04`: Admin UI for popups and reviews modules
 - `TASK-054-12-05`: Mega menu UX extensions + utility widgets presets
 - `TASK-054-12-06`: QA matrix, docs, and changelog closure
+
+## Progress Update (2026-02-19)
+- Completed `TASK-054-12-01`:
+  - added engagement DB foundation (`menu_items.settings`, `popups`, `reviews`),
+  - generated migration 0043 + snapshot + journal update,
+  - added DB schema test coverage for engagement tables.
+- Completed `TASK-054-12-02`:
+  - implemented popup/review domain contracts with normalization/validation services,
+  - added popup/review CRUD + lifecycle service layer,
+  - extended menu item normalization to persist mega-menu metadata settings.
+- Completed `TASK-054-12-03`:
+  - added internal admin API routes for popup/review CRUD and moderation status changes,
+  - added popup/review route validation contracts and stable domain error mapping,
+  - registered routes in the global router and extended permission catalog with popup/review RBAC scopes.

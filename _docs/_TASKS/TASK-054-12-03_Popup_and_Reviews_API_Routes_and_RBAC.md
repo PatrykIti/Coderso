@@ -5,7 +5,7 @@
 **Category:** API/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-12-02  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -47,3 +47,17 @@ router.patch("/reviews/:id/status", requirePermission("reviews:write"), moderate
 1. New routes are internal-only and permission-guarded.
 2. Domain errors map to stable API responses.
 3. Route wiring tests pass.
+
+## Completion Notes (2026-02-19)
+- Added internal admin route modules:
+  - `GET/POST/PATCH/DELETE /popups*`
+  - `GET/POST/PATCH/DELETE /reviews*`
+- Registered modules in `registerAllRoutes`.
+- Added popup/review validation schemas for list/create/update/status payloads.
+- Extended RBAC permission catalog with:
+  - `popups:read`, `popups:write`,
+  - `reviews:read`, `reviews:write`.
+- Added route/error-mapping coverage:
+  - `tests/integration/routes/popupsRoutes.test.ts`
+  - `tests/integration/routes/reviewsRoutes.test.ts`
+  - `tests/unit/admin/permissionsCatalog.test.ts`

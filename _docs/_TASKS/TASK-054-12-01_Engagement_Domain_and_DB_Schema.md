@@ -5,7 +5,7 @@
 **Category:** DB/Domain  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-11  
-**Status:** In Progress (2026-02-19)
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -49,3 +49,15 @@ review.status in ["pending", "approved", "rejected", "spam"];
 1. Schema supports all planned engagement fields without lossy transforms.
 2. Migration artifacts are complete and deterministic.
 3. DB tests confirm inserts/constraints for popup/review/menu metadata tables.
+
+## Delivered
+- Extended menu item model with metadata settings:
+  - `core/db/schema.ts` (`menu_items.settings`)
+- Added popup and review tables:
+  - `core/db/schema.ts` (`popups`, `reviews`)
+- Generated migration artifacts:
+  - `core/db/migrations/0043_parched_omega_sentinel.sql`
+  - `core/db/migrations/meta/0043_snapshot.json`
+  - `core/db/migrations/meta/_journal.json`
+- Added DB-backed engagement schema tests:
+  - `tests/unit/engagement/schema.test.ts`

@@ -97,6 +97,38 @@ const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: "popups",
+    label: "Popups",
+    permissions: [
+      {
+        id: "popups:read",
+        label: "View popups",
+        description: "Read popup campaigns and targeting rules",
+      },
+      {
+        id: "popups:write",
+        label: "Manage popups",
+        description: "Create, update, and delete popup campaigns",
+      },
+    ],
+  },
+  {
+    id: "reviews",
+    label: "Reviews",
+    permissions: [
+      {
+        id: "reviews:read",
+        label: "View reviews",
+        description: "Read customer reviews and moderation queue",
+      },
+      {
+        id: "reviews:write",
+        label: "Manage reviews",
+        description: "Moderate, edit, and delete reviews",
+      },
+    ],
+  },
+  {
     id: "booking",
     label: "Booking",
     permissions: [

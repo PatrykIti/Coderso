@@ -5,6 +5,7 @@ export type MenuItemRecord = {
   pageId: string | null;
   parentId: string | null;
   orderIndex: number;
+  settings?: Record<string, unknown>;
 };
 
 export type MenuItemNode = MenuItemRecord & { children: MenuItemNode[] };

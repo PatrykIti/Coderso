@@ -5,7 +5,7 @@
 **Category:** Services  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-12-01  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -37,3 +37,23 @@ if (status !== "approved") publishedAt = null;
 1. Services enforce deterministic status transitions and input normalization.
 2. Invalid trigger/review payloads return stable domain errors.
 3. Unit tests cover lifecycle and validation edge cases.
+
+## Delivered
+- Added popup domain contract/services:
+  - `core/services/popups/popupTypes.ts`
+  - `core/services/popups/popupValidation.ts`
+  - `core/services/popups/popupService.ts`
+- Added review domain contract/services:
+  - `core/services/reviews/reviewTypes.ts`
+  - `core/services/reviews/reviewValidation.ts`
+  - `core/services/reviews/reviewService.ts`
+- Added mega-menu metadata normalization in menu domain:
+  - `core/services/menus/menuService.ts`
+  - `core/services/menus/treeBuilder.ts`
+  - `core/server/validation/menuSchemas.ts`
+  - `core/admin/services/menusClient.ts`
+- Added tests:
+  - `tests/unit/engagement/popupValidation.test.ts`
+  - `tests/unit/engagement/reviewValidation.test.ts`
+  - `tests/unit/engagement/popupService.test.ts`
+  - `tests/unit/engagement/reviewService.test.ts`
