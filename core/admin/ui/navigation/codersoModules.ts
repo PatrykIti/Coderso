@@ -335,14 +335,15 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     label: "Solution Kits",
     tier: "v3",
     ownerArea: "growth",
-    lifecycle: "planned",
+    lifecycle: "preview",
     description: "Template kits with AI-assisted setup and guided defaults.",
     dependencies: ["templates", "widgets", "entries"],
     nav: {
       href: "/admin/coderso/solution-kits",
       icon: Sparkles,
-      defaultEnabled: false,
-      badge: "Soon",
+      defaultEnabled: true,
+      badge: "Beta",
+      permission: "solution-kits:read",
     },
   },
 ];

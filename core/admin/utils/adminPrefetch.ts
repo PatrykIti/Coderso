@@ -19,6 +19,7 @@ import {
 } from "@/services/commerceClient";
 import { listPopupsCached } from "@/services/popupsClient";
 import { listReviewsCached } from "@/services/reviewsClient";
+import { listSolutionKitsCached } from "@/services/solutionKitsClient";
 import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
@@ -157,6 +158,10 @@ const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/coderso/reviews",
     run: () => listReviewsCached({ force: true }),
+  },
+  {
+    match: "/coderso/solution-kits",
+    run: () => listSolutionKitsCached({ force: true }),
   },
   {
     match: "/menus",

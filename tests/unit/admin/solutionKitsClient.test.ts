@@ -1,0 +1,125 @@
+import { expect, test } from "bun:test";
+
+import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import {
+  clearSolutionKitsCache,
+  listSolutionKits,
+  listSolutionKitsCached,
+  previewSolutionKitPlan,
+} from "../../../core/admin/services/solutionKitsClient";
+
+const jsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+
+const createLocalStorage = () => {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+  };
+};
+
+test("listSolutionKits hits GET /solution-kits", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  clearSolutionKitsCache();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ items: [] });
+  };
+
+  try {
+    await listSolutionKits();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/solution-kits");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearSolutionKitsCache();
+  }
+});
+
+test("listSolutionKitsCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  clearSolutionKitsCache();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ items: [] });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    storage.setItem(
+      cacheKeys.solutionKitsList,
+      JSON.stringify({
+        value: [
+          {
+            id: "automotive-workshop",
+            title: "Automotive Workshop",
+            shortDescription: "Cached",
+            recommendedModules: ["booking"],
+            features: ["Feature"],
+          },
+        ],
+        savedAt: Date.now(),
+      })
+    );
+
+    const items = await listSolutionKitsCached();
+    expect(items).toHaveLength(1);
+    expect(items[0]?.id).toBe("automotive-workshop");
+    expect(calls).toHaveLength(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    clearSolutionKitsCache();
+  }
+});
+
+test("previewSolutionKitPlan posts planner payload", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      recommendedKitId: "automotive-workshop",
+      confidence: 88,
+      recommendations: [],
+      steps: [],
+      settingsPatch: {},
+      notes: [],
+    });
+  };
+
+  try {
+    await previewSolutionKitPlan({
+      businessType: "automotive_workshop",
+      goals: ["online_booking"],
+      locale: "en",
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/solution-kits/plan");
+    expect(calls[0]?.init?.method).toBe("POST");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

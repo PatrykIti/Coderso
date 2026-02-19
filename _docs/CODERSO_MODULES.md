@@ -40,7 +40,7 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 | Mega Menu | design | planned | No |
 | Portal | platform | planned | No |
 | Multilingual | platform | planned | No |
-| Solution Kits | growth | planned | No |
+| Solution Kits | growth | preview | Yes (`Beta`) |
 
 Note:
 - Mega Menu remains a planned standalone module, but base metadata controls are already available in the existing Menus editor and runtime navigation contract.
@@ -103,6 +103,10 @@ const sections = buildDefaultNavSections({
   - mega-menu metadata contract in menu editor (`visibility`, `badge`, `description`, `icon`),
   - navigation runtime `items[].meta` mapping from menu metadata,
   - utility widgets for engagement layouts (`tabs`, `accordion`, `toggle-block`).
+- 054-13-01 done: Solution Kits foundation delivered:
+  - deterministic kit catalog with five starter verticals,
+  - planner engine (`/solution-kits/plan`) with transparent steps and settings patch preview,
+  - Coderso navigation/module activation for `Solution Kits` (`Beta`) with internal RBAC route surface.
 - 054-10-05 done: Booking Admin UI delivered:
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,

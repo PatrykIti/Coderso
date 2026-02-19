@@ -5,7 +5,7 @@
 **Category:** Domain/Assistant  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-12, TASK-101  
-**Status:** In Progress (2026-02-19)
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -54,3 +54,30 @@ return {
 - `_docs/CODERSO_MODULES.md` (status modułu Solution Kits)
 - `_docs/CMS_API.md` (kontrakt planera po tasku API)
 
+## Completion Notes (2026-02-19)
+- Added typed solution-kits domain contracts and catalog for five starter verticals:
+  - `automotive-workshop`, `medical-clinic`, `beauty-salon`, `services-directory`, `small-ecommerce`.
+- Implemented deterministic planner engine:
+  - `core/services/assistant/siteBuilderPlanner.ts`
+  - output includes transparent `steps`, scoring `recommendations`, and `settingsPatch`.
+- Added solution kits service facade:
+  - `core/services/kits/solutionKitsService.ts`
+- Added validation and internal routes:
+  - `core/server/validation/solutionKitSchemas.ts`
+  - `core/server/routes/solutionKitsRoutes.ts`
+  - route registration in `core/server/routes/index.ts`.
+- Added RBAC permissions:
+  - `solution-kits:read`
+  - `solution-kits:write`
+- Added admin client + page foundation with cache/prefetch integration:
+  - `core/admin/services/solutionKitsClient.ts`
+  - `core/admin/ui/kits/*`
+  - route wiring in `core/admin/app/AdminApp.tsx`
+  - cache and prefetch wiring in `core/admin/services/cachePolicy.ts` and `core/admin/utils/adminPrefetch.ts`.
+- Added/updated test coverage:
+  - `tests/unit/assistant/siteBuilderPlanner.test.ts`
+  - `tests/unit/kits/solutionKitsService.test.ts`
+  - `tests/integration/routes/solutionKitsRoutes.test.ts`
+  - `tests/unit/admin/solutionKitsClient.test.ts`
+  - `tests/unit/ui/solution-kits-page.test.tsx`
+  - plus updated nav/permissions/path/prefetch tests.

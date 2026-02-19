@@ -36,6 +36,7 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
     "Reviews",
     "Commerce",
     "Popups",
+    "Solution Kits",
   ]);
   expect(items.find((item) => item.label === "Posts")?.badge).toBe("Soon");
   expect(items.find((item) => item.label === "Listings")?.badge).toBe("Beta");
@@ -45,6 +46,9 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
   expect(items.find((item) => item.label === "Reviews")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Commerce")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Popups")?.badge).toBe("Beta");
+  expect(items.find((item) => item.label === "Solution Kits")?.badge).toBe(
+    "Beta"
+  );
   expect(items.some((item) => item.href === "/admin/coderso/listings")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/filters")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/search")).toBe(true);
@@ -52,6 +56,9 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
   expect(items.some((item) => item.href === "/admin/coderso/reviews")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/commerce")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/popups")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/coderso/solution-kits")).toBe(
+    true
+  );
 });
 
 test("buildCodersoNavItems supports feature-flagged modules", () => {

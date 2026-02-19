@@ -39,6 +39,7 @@ import { registerBookingRoutes } from "./bookingRoutes";
 import { registerCommerceRoutes } from "./commerceRoutes";
 import { registerPopupsRoutes } from "./popupsRoutes";
 import { registerReviewsRoutes } from "./reviewsRoutes";
+import { registerSolutionKitsRoutes } from "./solutionKitsRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -110,6 +111,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerReviewsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerSolutionKitsRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

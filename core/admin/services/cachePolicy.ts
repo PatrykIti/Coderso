@@ -29,6 +29,8 @@ export const cacheKeys = {
   popupDetail: (id: string) => `popups:detail:${id}`,
   reviewsList: "reviews:list",
   reviewDetail: (id: string) => `reviews:detail:${id}`,
+  solutionKitsList: "solutionKits:list",
+  solutionKitDetail: (id: string) => `solutionKits:detail:${id}`,
   listingQueriesList: "listings:queries:list",
   listingQueryDetail: (id: string) => `listings:queries:detail:${id}`,
   listingTemplatesList: "listings:templates:list",

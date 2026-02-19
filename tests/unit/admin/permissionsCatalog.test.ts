@@ -5,7 +5,7 @@ import {
   listPermissions,
 } from "../../../core/services/admin/permissionsCatalog";
 
-test("permissions catalog includes popups and reviews permissions", () => {
+test("permissions catalog includes coderso module permissions", () => {
   const ids = listPermissionIds();
 
   expect(ids).toEqual(
@@ -14,6 +14,8 @@ test("permissions catalog includes popups and reviews permissions", () => {
       "popups:write",
       "reviews:read",
       "reviews:write",
+      "solution-kits:read",
+      "solution-kits:write",
     ])
   );
 });

@@ -161,6 +161,22 @@ const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: "solution-kits",
+    label: "Solution Kits",
+    permissions: [
+      {
+        id: "solution-kits:read",
+        label: "View solution kits",
+        description: "Browse available kits and generated setup plans",
+      },
+      {
+        id: "solution-kits:write",
+        label: "Manage solution kits",
+        description: "Apply, rollback, and manage guided kit setup flows",
+      },
+    ],
+  },
+  {
     id: "themes",
     label: "Themes",
     permissions: [

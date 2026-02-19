@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 30 tasks
-- **In Progress:** 3 tasks
-- **Done:** 364 tasks
+- **In Progress:** 2 tasks
+- **Done:** 365 tasks
 
 ---
 
@@ -82,7 +82,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
-| TASK-054-13-01 | Solution Kits Domain, Catalog, and Planner | High | Medium | Deterministic kit catalog + recommendation planner |
 
 ---
 
@@ -90,6 +89,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-13-01 | Solution Kits Domain, Catalog, and Planner | High | Medium | Typed catalog + planner + internal routes + admin foundation |
 | TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu metadata + popups/reviews modules + utility widgets + QA/docs closure |
 | TASK-054-12-06 | Engagement QA, Docs, and Closure | Medium | Medium | Full QA matrix + docs sync + changelog/kanban closure |
 | TASK-054-12-05 | Mega Menu Extensions and Utility Widgets | Medium | Medium | Menu metadata UX/runtime + tabs/accordion/toggle-block widgets |

@@ -217,3 +217,26 @@ test("prefetcher resolves popups legacy alias", async () => {
     expect(calls).toBe(1);
   });
 });
+
+test("prefetcher resolves solution kits legacy alias", async () => {
+  await withWindow(async () => {
+    let calls = 0;
+    const entries: AdminPrefetchEntry[] = [
+      {
+        match: "/coderso/solution-kits",
+        run: () => {
+          calls += 1;
+        },
+      },
+    ];
+
+    const prefetch = createAdminPrefetcher(entries, {
+      schedule: (callback) => callback(),
+      now: () => 0,
+    });
+
+    prefetch("/admin/solution-kits", "/admin");
+    await flushAsync();
+    expect(calls).toBe(1);
+  });
+});

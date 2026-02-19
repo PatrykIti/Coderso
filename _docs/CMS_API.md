@@ -1079,6 +1079,37 @@ Notes:
 
 ---
 
+## Coderso Solution Kits (v3 preview foundation)
+
+Permissions:
+- `solution-kits:read` (list/detail/plan preview)
+- `solution-kits:write` (reserved for apply/rollback in next steps)
+
+Internal admin API (`/admin/api/*`, RBAC required):
+- `GET /solution-kits`
+- `GET /solution-kits/:id`
+- `POST /solution-kits/plan`
+
+Plan request payload (summary):
+
+```json
+{
+  "businessType": "automotive_workshop",
+  "goals": ["online_booking", "lead_generation"],
+  "locale": "pl",
+  "region": "PL",
+  "siteName": "AutoFix Warsaw",
+  "preferredKitId": "automotive-workshop"
+}
+```
+
+Plan response highlights:
+- deterministic `recommendedKitId` + `confidence`,
+- transparent `steps[]` list,
+- `settingsPatch` preview (no side effects in this endpoint).
+
+---
+
 ## Content types and entries
 
 Permissions: `content:read`, `content:write`, `content:publish`
