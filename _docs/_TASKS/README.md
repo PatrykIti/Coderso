@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 30 tasks
+- **To Do:** 29 tasks
 - **In Progress:** 2 tasks
-- **Done:** 365 tasks
+- **Done:** 366 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-13-02 | Solution Kits Install Engine, Idempotency, and Rollback | High | Large | Install run log + rollback-safe apply |
 | TASK-054-13-03 | Solution Kits Internal API and RBAC | High | Medium | Internal endpoints + permissions + error mapping |
 | TASK-054-13-04 | Solution Kits Admin UI, Cache, and Prefetch | High | Medium | `/coderso/solution-kits` screen + cache/prefetch |
 | TASK-054-13-05 | AI Site Wizard Guided Flow | High | Large | Step-by-step planner review and execute |
@@ -89,6 +88,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-13-02 | Solution Kits Install Engine, Idempotency, and Rollback | High | Large | Install run DB model + idempotent apply/rollback service + audit trace |
 | TASK-054-13-01 | Solution Kits Domain, Catalog, and Planner | High | Medium | Typed catalog + planner + internal routes + admin foundation |
 | TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu metadata + popups/reviews modules + utility widgets + QA/docs closure |
 | TASK-054-12-06 | Engagement QA, Docs, and Closure | Medium | Medium | Full QA matrix + docs sync + changelog/kanban closure |

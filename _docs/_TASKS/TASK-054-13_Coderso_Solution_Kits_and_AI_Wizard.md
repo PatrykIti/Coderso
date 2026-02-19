@@ -67,3 +67,8 @@ await applyKit({
   - added internal routes (`/solution-kits`, `/solution-kits/:id`, `/solution-kits/plan`) with RBAC,
   - delivered admin foundation page `/admin/coderso/solution-kits` with cache/prefetch wiring,
   - enabled `Solution Kits` module in Coderso navigation as `Beta`.
+- Completed `TASK-054-13-02`:
+  - added install run/item DB model + migration (`0044_solution_kits_installs`),
+  - implemented idempotent apply engine with `dry_run`/`apply` and per-resource trace,
+  - implemented best-effort rollback flow using operation snapshots,
+  - added audit events for apply/rollback execution outcomes.

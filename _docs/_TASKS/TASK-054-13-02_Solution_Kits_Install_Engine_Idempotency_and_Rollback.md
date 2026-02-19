@@ -5,7 +5,7 @@
 **Category:** Domain/DB  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-13-01  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -49,3 +49,20 @@ await finalizeRun(run.id, "success");
 - `_docs/DATA_MODEL.md` (nowe tabele)
 - `_docs/CMS_API.md` (status run/install item shape)
 
+## Completion Notes
+- Added install-run persistence tables:
+  - `solution_kit_install_runs`,
+  - `solution_kit_install_items`.
+- Added migration artifacts:
+  - `core/db/migrations/0044_solution_kits_installs.sql`,
+  - `core/db/migrations/meta/0044_snapshot.json`,
+  - `core/db/migrations/meta/_journal.json` update.
+- Implemented `core/services/kits/solutionKitsInstallService.ts`:
+  - `applySolutionKitInstall` with `dry_run` and `apply`,
+  - idempotent upsert flow for content types/forms/pages/menus,
+  - per-resource operation log + rollback hints,
+  - `rollbackSolutionKitInstall` (best-effort restore/delete),
+  - audit events for apply/rollback.
+- Added tests:
+  - `tests/unit/kits/schema.test.ts`,
+  - `tests/unit/kits/installService.test.ts`.

@@ -193,6 +193,41 @@ Zasady:
 - created_at
 - created_by (fk users, nullable)
 
+## Coderso Solution Kits Install Runs
+
+`solution_kit_install_runs`
+- id (uuid, pk)
+- kit_id
+- mode (`dry_run|apply|rollback`)
+- status (`running|success|failed`)
+- actor_id (fk users, nullable)
+- rollback_of_run_id (fk solution_kit_install_runs, nullable)
+- options (jsonb)
+- summary (jsonb)
+- error (nullable)
+- created_at
+- updated_at
+- finished_at (nullable)
+
+`solution_kit_install_items`
+- id (uuid, pk)
+- run_id (fk solution_kit_install_runs, cascade delete)
+- position (int)
+- resource_type (`content_type|form|page|menu`)
+- resource_key (slug/location key)
+- operation (`create|update|noop|delete|restore`)
+- status (`planned|success|failed|skipped`)
+- before_snapshot (jsonb, nullable)
+- after_snapshot (jsonb, nullable)
+- rollback_action (jsonb, nullable)
+- error (nullable)
+- created_at
+- updated_at
+
+Note:
+- Install traceability jest per-run i per-resource.
+- `before_snapshot`/`after_snapshot` wspieraja rollback best-effort oraz audyt.
+
 ## Themes
 
 Theme'y sa dostarczane z `/themes` (foldery na dysku). W bazie trzymamy tylko

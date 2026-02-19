@@ -1057,6 +1057,77 @@ export const formActionRuns = pgTable(
   })
 );
 
+export const solutionKitInstallRuns = pgTable(
+  "solution_kit_install_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    kitId: text("kit_id").notNull(),
+    mode: text("mode").notNull().default("apply"),
+    status: text("status").notNull().default("running"),
+    actorId: uuid("actor_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    rollbackOfRunId: uuid("rollback_of_run_id").references(
+      (): AnyPgColumn => solutionKitInstallRuns.id,
+      { onDelete: "set null" }
+    ),
+    options: jsonb("options").notNull().default({}),
+    summary: jsonb("summary").notNull().default({}),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    finishedAt: timestamp("finished_at"),
+  },
+  (t) => ({
+    kitIdx: index("solution_kit_install_runs_kit_idx").on(t.kitId),
+    statusIdx: index("solution_kit_install_runs_status_idx").on(t.status),
+    createdAtIdx: index("solution_kit_install_runs_created_at_idx").on(
+      t.createdAt
+    ),
+    rollbackIdx: index("solution_kit_install_runs_rollback_idx").on(
+      t.rollbackOfRunId
+    ),
+  })
+);
+
+export const solutionKitInstallItems = pgTable(
+  "solution_kit_install_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => solutionKitInstallRuns.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    resourceType: text("resource_type").notNull(),
+    resourceKey: text("resource_key").notNull(),
+    operation: text("operation").notNull(),
+    status: text("status").notNull().default("planned"),
+    beforeSnapshot: jsonb("before_snapshot"),
+    afterSnapshot: jsonb("after_snapshot"),
+    rollbackAction: jsonb("rollback_action"),
+    error: text("error"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    runIdx: index("solution_kit_install_items_run_idx").on(t.runId),
+    resourceIdx: index("solution_kit_install_items_resource_idx").on(
+      t.resourceType,
+      t.resourceKey
+    ),
+    statusIdx: index("solution_kit_install_items_status_idx").on(t.status),
+    runPositionIdx: uniqueIndex("solution_kit_install_items_run_position_idx").on(
+      t.runId,
+      t.position
+    ),
+    runResourceIdx: uniqueIndex("solution_kit_install_items_run_resource_idx").on(
+      t.runId,
+      t.resourceType,
+      t.resourceKey
+    ),
+  })
+);
+
 export const bookingResources = pgTable(
   "booking_resources",
   {

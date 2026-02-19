@@ -8,6 +8,13 @@ import {
   type SolutionKitId,
   type SolutionKitSummary,
 } from "./solutionKitTypes";
+import {
+  applySolutionKitInstall,
+  getSolutionKitInstallRun,
+  listSolutionKitInstallItems,
+  listSolutionKitInstallRuns,
+  rollbackSolutionKitInstall,
+} from "./solutionKitsInstallService";
 
 export const listSolutionKits = (): SolutionKitSummary[] =>
   listSolutionKitsCatalog().map((kit) => ({
@@ -22,3 +29,11 @@ export const getSolutionKit = (id: SolutionKitId) => getSolutionKitFromCatalog(i
 
 export const previewSolutionKitPlan = (input: SiteBuilderPlanInput) =>
   buildSiteBuilderPlan(input);
+
+export {
+  applySolutionKitInstall,
+  rollbackSolutionKitInstall,
+  listSolutionKitInstallRuns,
+  getSolutionKitInstallRun,
+  listSolutionKitInstallItems,
+};

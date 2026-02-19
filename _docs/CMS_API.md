@@ -1108,6 +1108,27 @@ Plan response highlights:
 - transparent `steps[]` list,
 - `settingsPatch` preview (no side effects in this endpoint).
 
+Install engine foundation (DB contract used by next API step):
+- `solution_kit_install_runs` stores one run per `dry_run` / `apply` / `rollback`,
+- `solution_kit_install_items` stores per-resource operation trace (`content_type|form|page|menu`),
+- idempotency keying uses resource keys (`slug` / `location`) and records rollback hints.
+
+Run shape (summary):
+- `id`, `kitId`, `mode`, `status`,
+- `actorId`, `rollbackOfRunId`,
+- `options`, `summary`, `error`,
+- `createdAt`, `updatedAt`, `finishedAt`.
+
+Item shape (summary):
+- `id`, `runId`, `position`,
+- `resourceType`, `resourceKey`,
+- `operation`, `status`,
+- `beforeSnapshot`, `afterSnapshot`, `rollbackAction`,
+- `error`, `createdAt`, `updatedAt`.
+
+Note:
+- Apply/rollback internal endpoints (`solution-kits:write`) are delivered in the next subtask (`TASK-054-13-03`).
+
 ---
 
 ## Content types and entries

@@ -328,6 +328,11 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - wejscie: profil biznesu + cele + locale (+ opcjonalny preferred kit),
   - wyjscie: `recommendedKitId`, `confidence`, `steps[]`, `settingsPatch`, `notes`,
   - wynik jest deterministiczny dla identycznego inputu.
+- Install engine foundation (service + DB):
+  - `solution_kit_install_runs` trzyma execution context (`dry_run|apply|rollback`, status, summary),
+  - `solution_kit_install_items` trzyma per-resource trace (operation + snapshots + rollback_action),
+  - apply jest idempotentny po kluczach zasobow (`slug` / `location`) i moze dzialac partial-safe,
+  - rollback jest best-effort i odtwarza snapshoty dla `update` oraz usuwa zasoby `create`.
 
 
 ## Media delivery access

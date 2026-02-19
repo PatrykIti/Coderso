@@ -298,3 +298,4 @@ Project Change Log.
 | 262 | 2026-02-19 | Engagement mega menu metadata and utility widgets | CMS/Widgets |
 | 263 | 2026-02-19 | Engagement suite QA, docs, and closure | QA/Docs |
 | 264 | 2026-02-19 | Solution kits foundation: catalog, planner, and admin surface | Admin/UI |
+| 265 | 2026-02-19 | Solution kits install engine, idempotency, and rollback | CMS/Kits |
