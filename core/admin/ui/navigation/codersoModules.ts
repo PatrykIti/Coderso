@@ -257,14 +257,15 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     label: "Commerce",
     tier: "v3",
     ownerArea: "growth",
-    lifecycle: "planned",
+    lifecycle: "preview",
     description: "Product experiences, checkout integrations, and catalog UI blocks.",
     dependencies: ["listings", "filters"],
     nav: {
       href: "/admin/coderso/commerce",
       icon: ShoppingCart,
-      defaultEnabled: false,
-      badge: "Soon",
+      defaultEnabled: true,
+      badge: "Beta",
+      permission: "commerce:read",
     },
   },
   {

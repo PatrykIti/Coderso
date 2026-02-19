@@ -150,3 +150,18 @@ export {
   AppointmentFormVisualEditor,
   AppointmentFormWizardEditor,
 } from "./AppointmentFormEditors";
+export {
+  ProductGalleryAdvancedEditor,
+  ProductGalleryVisualEditor,
+  ProductGalleryWizardEditor,
+} from "./ProductGalleryEditors";
+export {
+  ProductCompareAdvancedEditor,
+  ProductCompareVisualEditor,
+  ProductCompareWizardEditor,
+} from "./ProductCompareEditors";
+export {
+  ProductTableAdvancedEditor,
+  ProductTableVisualEditor,
+  ProductTableWizardEditor,
+} from "./ProductTableEditors";

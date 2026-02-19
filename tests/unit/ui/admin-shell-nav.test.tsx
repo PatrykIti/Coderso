@@ -42,6 +42,7 @@ test("SidebarNav renders Coderso group with canonical child links", () => {
   expect(html).toContain("/admin/coderso/entries");
   expect(html).toContain("/admin/coderso/widgets");
   expect(html).toContain("/admin/coderso/forms");
+  expect(html).toContain("/admin/coderso/commerce");
 });
 
 test("SidebarNav hides Coderso group when all children are unauthorized", () => {

@@ -148,3 +148,26 @@ test("prefetcher resolves booking legacy alias", async () => {
     expect(calls).toBe(1);
   });
 });
+
+test("prefetcher resolves commerce legacy alias", async () => {
+  await withWindow(async () => {
+    let calls = 0;
+    const entries: AdminPrefetchEntry[] = [
+      {
+        match: "/coderso/commerce",
+        run: () => {
+          calls += 1;
+        },
+      },
+    ];
+
+    const prefetch = createAdminPrefetcher(entries, {
+      schedule: (callback) => callback(),
+      now: () => 0,
+    });
+
+    prefetch("/admin/commerce", "/admin");
+    await flushAsync();
+    expect(calls).toBe(1);
+  });
+});

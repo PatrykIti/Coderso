@@ -29,6 +29,12 @@ import {
 } from "../services/content/entryService";
 import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
 import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
+import {
+  hydrateProductCompareRuntimeData,
+  hydrateProductGalleryRuntimeData,
+  hydrateProductTableRuntimeData,
+  type CommerceRuntimeCache,
+} from "../services/commerce/commerceWidgetRuntime";
 import { getWidgetTemplatePreviewModel } from "../services/widgets/widgetTemplatePreviewService";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
@@ -46,6 +52,9 @@ import {
   normalizeEntryTeaserData,
   type EntryTeaserData,
 } from "../widgets/core/entryTeaser";
+import { type ProductGalleryData } from "../widgets/core/productGallery";
+import { type ProductCompareData } from "../widgets/core/productCompare";
+import { type ProductTableData } from "../widgets/core/productTable";
 import {
   normalizeFormEmbedData,
   type FormEmbedData,
@@ -210,6 +219,7 @@ const ensureRecord = (value: unknown): Record<string, unknown> => {
 
 type RuntimeHydrationCache = {
   booking?: Awaited<ReturnType<typeof resolveBookingRuntimeData>>;
+  commerce?: CommerceRuntimeCache;
 };
 
 const hydrateRuntimeBlock = async (
@@ -310,6 +320,51 @@ const hydrateRuntimeBlock = async (
         ...normalizedData,
         resolved,
       },
+    };
+  }
+  if (block.type === "product-gallery") {
+    const commerceCache = options.runtimeCache.commerce ?? (new Map() as CommerceRuntimeCache);
+    options.runtimeCache.commerce = commerceCache;
+    const resolvedData = await hydrateProductGalleryRuntimeData(
+      ensureRecord(block.data) as ProductGalleryData,
+      {
+        preview: options.preview,
+        cache: commerceCache,
+      }
+    );
+    nextBlock = {
+      ...block,
+      data: resolvedData,
+    };
+  }
+  if (block.type === "product-compare") {
+    const commerceCache = options.runtimeCache.commerce ?? (new Map() as CommerceRuntimeCache);
+    options.runtimeCache.commerce = commerceCache;
+    const resolvedData = await hydrateProductCompareRuntimeData(
+      ensureRecord(block.data) as ProductCompareData,
+      {
+        preview: options.preview,
+        cache: commerceCache,
+      }
+    );
+    nextBlock = {
+      ...block,
+      data: resolvedData,
+    };
+  }
+  if (block.type === "product-table") {
+    const commerceCache = options.runtimeCache.commerce ?? (new Map() as CommerceRuntimeCache);
+    options.runtimeCache.commerce = commerceCache;
+    const resolvedData = await hydrateProductTableRuntimeData(
+      ensureRecord(block.data) as ProductTableData,
+      {
+        preview: options.preview,
+        cache: commerceCache,
+      }
+    );
+    nextBlock = {
+      ...block,
+      data: resolvedData,
     };
   }
   if (block.type === "form-embed") {

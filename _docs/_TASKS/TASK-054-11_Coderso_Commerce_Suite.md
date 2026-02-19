@@ -94,3 +94,11 @@ return renderProductTemplate(templateId, { products });
   - added internal `/commerce/*` admin API routes with RBAC guards,
   - added error mapping for domain/query codes to stable API responses,
   - registered new permissions (`commerce:read`, `commerce:write`) and route coverage tests.
+- Completed `TASK-054-11-05`:
+  - delivered Coderso Commerce list/editor admin UX with cache + prefetch integration,
+  - added modular editor panels and mobile panel toggles,
+  - wired Coderso commerce routes/navigation and added UI/client coverage tests.
+- Completed `TASK-054-11-06`:
+  - added `product-gallery`, `product-compare`, `product-table` widget models/renderers/editors,
+  - wired SSR hydration via shared runtime helpers into public site rendering,
+  - added widget/runtime registry + hydration test coverage.

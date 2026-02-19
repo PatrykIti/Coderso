@@ -287,3 +287,5 @@ Project Change Log.
 | 251 | 2026-02-19 | Commerce domain contract and schemas | CMS/Commerce |
 | 252 | 2026-02-19 | Commerce DB and service/query engine | CMS/Commerce |
 | 253 | 2026-02-19 | Commerce admin API routes and RBAC | Core/API |
+| 254 | 2026-02-19 | Commerce admin UI catalog and editor | Admin/UI |
+| 255 | 2026-02-19 | Commerce runtime widgets (gallery, compare, table) | CMS/Widgets |

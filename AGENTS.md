@@ -18,6 +18,7 @@ Follow these rules when working in this repo:
   - related tests,
   - relevant docs/contracts (`_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`, etc.).
 - If a task is not broken down enough, create physical subtask files in `_docs/_TASKS/` first (with scope, files to change, pseudocode, tests, and docs/changelog plan) before implementation.
+- For any task/subtask that touches API routes, include an explicit **Security Contract** subsection: endpoint visibility (`internal` vs `public`), auth model, rate-limit bucket, and anti-abuse controls (`nonce` + signature/HMAC for public write; optional reCAPTCHA policy; `session` or `API key scope` for internal mode when applicable).
 - Implement in dependency order to avoid unnecessary refactors and rework.
 - Do not silently downgrade scope to MVP if full scope was agreed.
 

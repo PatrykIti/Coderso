@@ -3,6 +3,9 @@ import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { getWidget, registerWidget } from "../registry";
 import { createCompareTimelineWidget, type CompareTimelineData } from "./compareTimeline";
 import { createContentListWidget, type ContentListData } from "./contentList";
+import { createProductGalleryWidget, type ProductGalleryData } from "./productGallery";
+import { createProductCompareWidget, type ProductCompareData } from "./productCompare";
+import { createProductTableWidget, type ProductTableData } from "./productTable";
 import { createContactWidget, type ContactData } from "./contact";
 import { createCtaBannerWidget, type CtaBannerData } from "./ctaBanner";
 import { createDividerWidget, type DividerData } from "./divider";
@@ -75,6 +78,9 @@ export type CoreWidgetEditors = {
   richTextSection: EditorBundle<RichTextSectionData>;
   contentList: EditorBundle<ContentListData>;
   entryTeaser: EditorBundle<EntryTeaserData>;
+  productGallery: EditorBundle<ProductGalleryData>;
+  productCompare: EditorBundle<ProductCompareData>;
+  productTable: EditorBundle<ProductTableData>;
   listingFilters: EditorBundle<ListingFiltersData>;
   searchBox: EditorBundle<SearchBoxData>;
   timeline: EditorBundle<TimelineData>;
@@ -112,6 +118,9 @@ export function createCoreWidgetDefinitions(
     createRichTextSectionWidget(editors.richTextSection),
     createContentListWidget(editors.contentList),
     createEntryTeaserWidget(editors.entryTeaser),
+    createProductGalleryWidget(editors.productGallery),
+    createProductCompareWidget(editors.productCompare),
+    createProductTableWidget(editors.productTable),
     createListingFiltersWidget(editors.listingFilters),
     createSearchBoxWidget(editors.searchBox),
     createTimelineWidget(editors.timeline),

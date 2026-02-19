@@ -56,6 +56,10 @@ test("resolveAdminRoutePath aliases legacy paths to coderso", () => {
   expect(resolveAdminRoutePath("/booking/resources")).toBe(
     "/coderso/booking/resources"
   );
+  expect(resolveAdminRoutePath("/commerce")).toBe("/coderso/commerce");
+  expect(resolveAdminRoutePath("/commerce/product-1")).toBe(
+    "/coderso/commerce/product-1"
+  );
   expect(resolveAdminRoutePath("/coderso/widgets")).toBe("/coderso/widgets");
 });
 
@@ -71,6 +75,7 @@ test("resolveAdminHref canonicalizes admin links", () => {
   );
   expect(resolveAdminHref("/admin", "/listings")).toBe("/admin/coderso/listings");
   expect(resolveAdminHref("/admin", "/booking")).toBe("/admin/coderso/booking");
+  expect(resolveAdminHref("/admin", "/commerce")).toBe("/admin/coderso/commerce");
 });
 
 test("isAdminHrefActive checks canonical and nested matches", () => {

@@ -70,6 +70,7 @@ const aliasPrefixes: Array<{ from: string; to: string }> = [
   { from: "/posts", to: "/coderso/posts" },
   { from: "/listings", to: "/coderso/listings" },
   { from: "/booking", to: "/coderso/booking" },
+  { from: "/commerce", to: "/coderso/commerce" },
 ];
 
 export const resolveAdminRoutePath = (path: string) => {

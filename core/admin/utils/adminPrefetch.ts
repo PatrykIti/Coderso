@@ -14,6 +14,10 @@ import {
   listListingTemplatesCached,
 } from "@/services/listingsClient";
 import {
+  listCommerceCollectionsCached,
+  listCommerceProductsCached,
+} from "@/services/commerceClient";
+import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
 } from "@/services/adminThemeClient";
@@ -134,6 +138,14 @@ const defaultEntries: AdminPrefetchEntry[] = [
         listBookingServicesCached({ force: true }),
         listBookingReservationsCached({ force: true }),
         listBookingBlackoutsCached({ force: true }),
+      ]),
+  },
+  {
+    match: "/coderso/commerce",
+    run: () =>
+      Promise.all([
+        listCommerceProductsCached({ force: true }),
+        listCommerceCollectionsCached({ force: true }),
       ]),
   },
   {

@@ -16,6 +16,7 @@ Task board for project work. Keep task files and this board in sync.
   - `# FileName: TASK-XXX_Short_Title.md`
 - Required fields: Priority, Category, Estimated Effort, Dependencies, Status.
 - Required sections: Overview, Sub-Tasks, Testing Requirements, Documentation Updates Required.
+- For API-related tasks/subtasks add mandatory section: `Security Contract` (visibility: `internal/public`, auth path, rate-limit bucket, nonce/signature/HMAC expectations, optional reCAPTCHA, internal mode via session/API key where applicable).
 - Optional sections: Architecture, Implementation Order, New Files to Create.
 - Detail level: match `EXAMPLE_TASK.md` (explicit files/paths, example code or payloads, testing checklist with unit tests, and planned docs/changelog).
 
@@ -28,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 33 tasks
+- **To Do:** 31 tasks
 - **In Progress:** 2 tasks
-- **Done:** 349 tasks
+- **Done:** 351 tasks
 
 ---
 
@@ -38,8 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-11-05 | Commerce Admin UI Catalog and Editor | High | Large | Product list/editor UX with cache/prefetch patterns |
-| TASK-054-11-06 | Commerce Runtime Widgets (Gallery/Compare/Table) | High | Large | Runtime product widgets + resolver integration |
 | TASK-054-11-07 | Checkout/Cart Adapter Contract | Medium | Medium | Pluggable checkout adapter interface for providers/plugins |
 | TASK-054-11-08 | Commerce QA, Docs, and Changelog Closure | Medium | Medium | Regression matrix + docs/changelog closure |
 | TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
@@ -88,6 +87,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-11-06 | Commerce Runtime Widgets (Gallery/Compare/Table) | High | Large | Runtime product widgets + resolver integration |
+| TASK-054-11-05 | Commerce Admin UI Catalog and Editor | High | Large | Product list/editor UX with cache/prefetch patterns |
 | TASK-054-11-04 | Commerce Admin API Routes and RBAC | High | Medium | Internal `/commerce/*` routes + RBAC + error mapping tests |
 | TASK-054-11-03 | Commerce Service and Query Engine | High | Large | Product/collection services + deterministic query engine + runtime payload resolver |
 | TASK-054-11-02 | Commerce DB Schema and Migrations | High | Medium | `commerce_*` tables + migration metadata + DB constraint tests |
