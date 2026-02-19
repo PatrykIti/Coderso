@@ -37,6 +37,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - UI: `core/admin/ui/listings/ListingEditorPage.tsx`
   - Cached APIs: `getListingQueryCached`, `listListingTemplatesCached`, `listContentTypesCached`
 
+## Engagement
+- Popups list
+  - UI: `core/admin/ui/popups/PopupsListPage.tsx`
+  - Cached APIs: `listPopupsCached`, `getCachedPopups`
+- Popup editor
+  - UI: `core/admin/ui/popups/PopupEditorPage.tsx`
+  - Cached APIs: `getPopupCached`, `getCachedPopup`
+- Reviews moderation
+  - UI: `core/admin/ui/reviews/ReviewsModerationPage.tsx`
+  - Cached APIs: `listReviewsCached`, `getCachedReviews`
+
 ## Content Types
 - Content types list
   - UI: `core/admin/ui/content-types/ContentTypeList.tsx`
@@ -112,6 +123,12 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - `/coderso/entries` -> `listContentTypesCached`
 - `/coderso/forms` -> `listFormsCached`
 - `/coderso/listings` -> `listListingQueriesCached`, `listListingTemplatesCached`
+- `/coderso/filters` -> `listListingQueriesCached`
+- `/coderso/search` -> `listListingQueriesCached`
+- `/coderso/booking` -> `listBookingResourcesCached`, `listBookingServicesCached`, `listBookingReservationsCached`, `listBookingBlackoutsCached`
+- `/coderso/reviews` -> `listReviewsCached`
+- `/coderso/commerce` -> `listCommerceProductsCached`, `listCommerceCollectionsCached`
+- `/coderso/popups` -> `listPopupsCached`
 - `/menus` -> `listMenusCached`
 - `/media` -> `listMediaCached`
 - `/themes` -> `listAdminThemeTemplatesCached`, `listAdminThemeProfilesCached`

@@ -35,6 +35,9 @@ import { ListingSearchPage } from "@/ui/listings/ListingSearchPage";
 import { BookingPage } from "@/ui/booking/BookingPage";
 import { CommerceEditorPage } from "@/ui/commerce/CommerceEditorPage";
 import { CommerceListPage } from "@/ui/commerce/CommerceListPage";
+import { PopupEditorPage } from "@/ui/popups/PopupEditorPage";
+import { PopupsListPage } from "@/ui/popups/PopupsListPage";
+import { ReviewsModerationPage } from "@/ui/reviews/ReviewsModerationPage";
 import { PageListPage } from "@/ui/pages/PageListPage";
 import { PageEditor } from "@/ui/pages/PageEditor";
 import { MediaLibraryPage } from "@/ui/media/MediaLibraryPage";
@@ -542,8 +545,11 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/coderso/filters", element: <ListingFiltersPage /> },
       { pattern: "/coderso/search", element: <ListingSearchPage /> },
       { pattern: "/coderso/booking", element: <BookingPage /> },
+      { pattern: "/coderso/reviews", element: <ReviewsModerationPage /> },
       { pattern: "/coderso/commerce", element: <CommerceListPage /> },
       { pattern: "/coderso/commerce/:id", element: <CommerceEditorPage /> },
+      { pattern: "/coderso/popups", element: <PopupsListPage /> },
+      { pattern: "/coderso/popups/:id", element: <PopupEditorPage /> },
       { pattern: "/pages", element: <PageListPage /> },
       { pattern: "/pages/:id", element: <PageEditor /> },
       { pattern: "/preview", element: <PagePreview /> },

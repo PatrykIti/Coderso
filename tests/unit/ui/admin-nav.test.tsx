@@ -30,6 +30,7 @@ test("SidebarNav renders primary navigation links", () => {
   expect(html).toContain("/admin/coderso/widgets");
   expect(html).toContain("/admin/coderso/forms");
   expect(html).toContain("/admin/coderso/listings");
+  expect(html).toContain("/admin/coderso/reviews");
   expect(html).toContain("/admin/store");
   expect(html).toContain("/admin/themes");
   expect(html).toContain("/admin/search");
@@ -43,4 +44,5 @@ test("SidebarNav renders primary navigation links", () => {
   expect(html).toContain("/admin/audit");
   expect(html).toContain("/admin/access-logs");
   expect(html).toContain("/admin/settings");
+  expect(html).toContain("/admin/coderso/popups");
 });

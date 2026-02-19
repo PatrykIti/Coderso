@@ -294,3 +294,4 @@ Project Change Log.
 | 258 | 2026-02-19 | Engagement domain DB foundation | CMS/Engagement |
 | 259 | 2026-02-19 | Engagement services and validation | CMS/Engagement |
 | 260 | 2026-02-19 | Engagement API routes and RBAC | Core/API |
+| 261 | 2026-02-19 | Engagement admin UI for popups and reviews | Admin/UI |

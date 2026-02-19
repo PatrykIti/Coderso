@@ -61,3 +61,7 @@ const reviews = await listReviews({ entityType, entityId, status: "approved" });
   - added internal admin API routes for popup/review CRUD and moderation status changes,
   - added popup/review route validation contracts and stable domain error mapping,
   - registered routes in the global router and extended permission catalog with popup/review RBAC scopes.
+- Completed `TASK-054-12-04`:
+  - delivered Coderso popups/reviews admin screens (list/editor/moderation),
+  - wired cache + prefetch + route aliases for popup/review surfaces,
+  - enabled popups/reviews in Coderso navigation with permission-aware visibility.
