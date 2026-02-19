@@ -294,6 +294,26 @@ Zakres CMS, model danych, auth i security opisane sa w:
     - `commerce:checkout:adapters`,
   - niepoprawne payloady pluginow sa ignorowane, fallback core pozostaje aktywny.
 
+## Coderso Engagement (v3 preview)
+
+- Engagement domain obejmuje:
+  - mega-menu metadata na `menu_items.settings`,
+  - popup lifecycle (`popups`),
+  - review lifecycle (`reviews`).
+- Internal admin API (`/admin/api/*`) udostepnia:
+  - `/popups` CRUD + `PATCH /popups/:id/status`,
+  - `/reviews` CRUD + `PATCH /reviews/:id/status`.
+- Security contract:
+  - endpointy popups/reviews sa internal-only i wymagaja RBAC (`popups:*`, `reviews:*`),
+  - w v1 brak publicznych endpointow `/api/popups` i `/api/reviews`.
+- Navigation/runtime contract:
+  - menu metadata jest normalizowana server-side i mapowana do `navigation.items[].meta`,
+  - shape `meta` jest deterministyczny (`visibility`, `badge`, `description`, `icon`).
+- Utility widgets dla engagement flows:
+  - `tabs`,
+  - `accordion`,
+  - `toggle-block`.
+
 
 ## Media delivery access
 

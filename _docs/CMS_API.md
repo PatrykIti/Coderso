@@ -888,6 +888,11 @@ Permissions: `widgets:read`, `widgets:write`
 - `GET /widgets/templates/:id/revisions` (alias: `GET /widget-templates/:id/revisions`)
 - `POST /widgets/templates/:id/revisions/:revisionId/restore`
 
+Core catalog includes utility widgets for engagement layouts:
+- `tabs`
+- `accordion`
+- `toggle-block`
+
 Template create/update payload (summary):
 
 ```json
@@ -997,12 +1002,80 @@ Update menu items payload:
 ```json
 {
   "items": [
-    { "id": "1", "label": "Home", "href": "/", "orderIndex": 0, "parentId": null },
-    { "id": "2", "label": "About", "href": "/about", "orderIndex": 1, "parentId": null },
-    { "id": "3", "label": "Team", "pageId": "page-uuid", "parentId": "2" }
+    {
+      "id": "1",
+      "label": "Home",
+      "href": "/",
+      "orderIndex": 0,
+      "parentId": null,
+      "settings": {
+        "visibility": "all"
+      }
+    },
+    {
+      "id": "2",
+      "label": "About",
+      "href": "/about",
+      "orderIndex": 1,
+      "parentId": null,
+      "settings": {
+        "badge": { "label": "New", "tone": "accent" },
+        "description": "Company overview",
+        "icon": "sparkles"
+      }
+    },
+    {
+      "id": "3",
+      "label": "Team",
+      "pageId": "page-uuid",
+      "parentId": "2",
+      "settings": {
+        "visibility": "logged_in"
+      }
+    }
   ]
 }
 ```
+
+`items[].settings` (optional, normalized server-side):
+- `visibility`: `all | logged_in | logged_out`
+- `badge`: `{ label: string, tone?: default|accent|success|warning|danger }`
+- `description`: string
+- `icon`: string
+
+---
+
+## Coderso Engagement (v3 preview)
+
+Permissions:
+- Popups: `popups:read`, `popups:write`
+- Reviews: `reviews:read`, `reviews:write`
+
+Internal admin API (`/admin/api/*`, RBAC required):
+
+Popups:
+- `GET /popups`
+- `GET /popups/:id`
+- `POST /popups`
+- `PATCH /popups/:id`
+- `PATCH /popups/:id/status`
+- `DELETE /popups/:id`
+
+Reviews:
+- `GET /reviews`
+- `GET /reviews/:id`
+- `POST /reviews`
+- `PATCH /reviews/:id`
+- `PATCH /reviews/:id/status`
+- `DELETE /reviews/:id`
+
+Notes:
+- v1 engagement routes are internal-only (no public `/api/popups` / `/api/reviews` routes).
+- Menu metadata (`menu_items.settings`) is exposed to navigation runtime as deterministic `items[].meta`:
+  - `meta.visibility`: `all | logged_in | logged_out`
+  - `meta.badge`: `{ label: string, tone: default|accent|success|warning|danger } | null`
+  - `meta.description`: `string | null`
+  - `meta.icon`: `string | null`
 
 ---
 

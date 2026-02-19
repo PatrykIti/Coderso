@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-12-01..05  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -28,3 +28,23 @@ Close engagement suite with test matrix completion and docs/changelog synchroniz
 1. Engagement chain tests are green.
 2. API/architecture docs match implementation.
 3. Kanban and changelog are complete.
+
+## Completion Notes (2026-02-19)
+- QA matrix executed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `set -a && source .env && set +a && bun test`
+- Verification result:
+  - `1148 pass`, `131 skip`, `0 fail` (`1279` files run).
+- Documentation synchronized:
+  - `_docs/CMS_API.md`:
+    - menu metadata payload contract (`items[].settings`),
+    - engagement API section (`/popups`, `/reviews`),
+    - utility widgets catalog note (`tabs`, `accordion`, `toggle-block`),
+    - navigation runtime `items[].meta` shape.
+  - `_docs/ARCHITECTURE.md`:
+    - engagement runtime/API/security contract section.
+  - `_docs/CODERSO_MODULES.md`:
+    - lifecycle/nav matrix updated for `Reviews` and `Popups`,
+    - module progress notes extended with engagement closure.
+- Task board + changelog updated for full `054-12` closure.

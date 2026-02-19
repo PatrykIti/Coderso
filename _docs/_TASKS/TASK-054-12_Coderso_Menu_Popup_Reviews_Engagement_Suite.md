@@ -5,7 +5,7 @@
 **Category:** CMS/UX + Marketing  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-06, TASK-054-07  
-**Status:** In Progress (2026-02-19)
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -69,3 +69,7 @@ const reviews = await listReviews({ entityType, entityId, status: "approved" });
   - delivered mega-menu metadata editing (visibility/badge/description/icon) with strict validation and persistence,
   - mapped deterministic menu metadata into navigation runtime items,
   - added utility widgets (`tabs`, `accordion`, `toggle-block`) with runtime renderers and Wizard/Visual/Advanced editors.
+- Completed `TASK-054-12-06`:
+  - executed QA closure matrix (`lint`, `lint:types`, full `bun test`),
+  - synchronized API/architecture/module docs with final engagement contracts,
+  - finalized changelog + kanban closure for the full `054-12` suite.

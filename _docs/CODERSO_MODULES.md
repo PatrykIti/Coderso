@@ -30,17 +30,20 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 | Search | operations | preview | Yes (`Beta`) |
 | Booking | operations | preview | Yes (`Beta`) |
 | Appointments | operations | planned | No |
-| Reviews | operations | planned | No |
+| Reviews | operations | preview | Yes (`Beta`) |
 
 ### v3 Growth Builder
 | Module | Owner | Lifecycle | Default Nav |
 |---|---|---|---|
 | Commerce | growth | preview | Yes (`Beta`) |
-| Popups | marketing | planned | No |
+| Popups | marketing | preview | Yes (`Beta`) |
 | Mega Menu | design | planned | No |
 | Portal | platform | planned | No |
 | Multilingual | platform | planned | No |
 | Solution Kits | growth | planned | No |
+
+Note:
+- Mega Menu remains a planned standalone module, but base metadata controls are already available in the existing Menus editor and runtime navigation contract.
 
 ## Navigation Rollout Rules
 1. `defaultEnabled=true` modules appear in sidebar by default.
@@ -95,6 +98,11 @@ const sections = buildDefaultNavSections({
   - Coderso Commerce list/editor UI with cache/prefetch,
   - runtime widgets (`product-gallery`, `product-compare`, `product-table`) with SSR hydration,
   - checkout/cart adapter registry with plugin extension hook (`commerce:checkout:adapters`).
+- 054-12 done: Engagement suite delivered:
+  - popups and reviews modules (domain + API + admin UI),
+  - mega-menu metadata contract in menu editor (`visibility`, `badge`, `description`, `icon`),
+  - navigation runtime `items[].meta` mapping from menu metadata,
+  - utility widgets for engagement layouts (`tabs`, `accordion`, `toggle-block`).
 - 054-10-05 done: Booking Admin UI delivered:
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,
