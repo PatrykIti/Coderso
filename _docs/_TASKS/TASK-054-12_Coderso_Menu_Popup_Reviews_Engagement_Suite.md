@@ -5,7 +5,7 @@
 **Category:** CMS/UX + Marketing  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-06, TASK-054-07  
-**Status:** To Do
+**Status:** In Progress (2026-02-19)
 
 ---
 
@@ -39,3 +39,11 @@ const reviews = await listReviews({ entityType, entityId, status: "approved" });
 1. Non-technical users can build menus/popups/reviews without coding.
 2. Popup frequency and consent-safe behavior are configurable.
 3. Review moderation and publishing flow are test-covered.
+
+## Sub-Tasks
+- `TASK-054-12-01`: Engagement domain and DB schema (menus metadata + popups + reviews)
+- `TASK-054-12-02`: Popup and reviews services + validation contract
+- `TASK-054-12-03`: Popup and reviews API routes + RBAC
+- `TASK-054-12-04`: Admin UI for popups and reviews modules
+- `TASK-054-12-05`: Mega menu UX extensions + utility widgets presets
+- `TASK-054-12-06`: QA matrix, docs, and changelog closure
