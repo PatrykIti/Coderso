@@ -5,7 +5,7 @@
 **Category:** Domain/Validation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-07-01, TASK-054-11  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -43,3 +43,14 @@ type CommerceProduct = {
 1. Schemas reject unsafe/invalid payloads with stable error codes.
 2. Core product/query types are reusable by API and widget runtime.
 3. Unit coverage exists for positive/negative schema paths.
+
+## Delivered
+- Added core commerce domain types:
+  - `core/services/commerce/commerceTypes.ts`
+- Added normalization and validation helpers:
+  - `core/services/commerce/commerceValidation.ts`
+- Added commerce payload schemas:
+  - `core/server/validation/commerceSchemas.ts`
+- Added unit coverage:
+  - `tests/unit/commerce/commerceValidation.test.ts`
+  - `tests/unit/validation/commerceSchemas.test.ts`

@@ -284,3 +284,4 @@ Project Change Log.
 | 248 | 2026-02-18 | Booking and media access modes | Core/Security |
 | 249 | 2026-02-19 | Media delivery settings UX relocation | Admin/UI |
 | 250 | 2026-02-19 | Booking suite QA and docs closure | QA/Docs |
+| 251 | 2026-02-19 | Commerce domain contract and schemas | CMS/Commerce |
