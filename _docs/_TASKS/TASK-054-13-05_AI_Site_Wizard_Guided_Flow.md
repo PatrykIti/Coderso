@@ -5,7 +5,7 @@
 **Category:** Assistant/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-13-03, TASK-054-13-04  
-**Status:** To Do
+**Status:** In Progress (2026-02-19)
 
 ---
 
@@ -24,6 +24,12 @@ Dostarczyć guided wizard krok-po-kroku (nietechniczny UX), który buduje plan, 
 2. Edycja kroków planu przed apply.
 3. Postęp i status instalacji (run timeline).
 4. Akcje: rerun, rollback, clone as draft.
+
+## Sub-Tasks
+- `TASK-054-13-05-01`: Wizard apply contract + planner step selection
+- `TASK-054-13-05-02`: `AiSiteWizard` step flow + review editor
+- `TASK-054-13-05-03`: Execute timeline + rerun/rollback/clone-as-draft UX
+- `TASK-054-13-05-04`: Tests, docs, changelog, and board sync
 
 ## Files
 - `core/admin/ui/setup/AiSiteWizard.tsx` (new)
@@ -47,4 +53,3 @@ trackRunStatus(run.id);
 ## Documentation Updates Required
 - `_docs/ASSISTANT_GUIDE.md` (wizard flow)
 - `_docs/CMS_API.md` (run/status payload)
-
