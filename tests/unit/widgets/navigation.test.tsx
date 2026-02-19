@@ -257,11 +257,38 @@ test("navigation maps selected menu nodes to widget items", () => {
   const mapped = mapMenuNodesToNavigationItems(nodes);
 
   expect(mapped).toEqual([
-    { label: "Home", href: "/", children: undefined },
+    {
+      label: "Home",
+      href: "/",
+      meta: {
+        visibility: "all",
+        badge: null,
+        description: null,
+        icon: null,
+      },
+      children: undefined,
+    },
     {
       label: "Products",
       href: "/products",
-      children: [{ label: "CMS", href: "/products/cms" }],
+      meta: {
+        visibility: "all",
+        badge: null,
+        description: null,
+        icon: null,
+      },
+      children: [
+        {
+          label: "CMS",
+          href: "/products/cms",
+          meta: {
+            visibility: "all",
+            badge: null,
+            description: null,
+            icon: null,
+          },
+        },
+      ],
     },
   ]);
 });

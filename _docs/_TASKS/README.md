@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 27 tasks
 - **In Progress:** 2 tasks
-- **Done:** 361 tasks
+- **Done:** 362 tasks
 
 ---
 
@@ -84,6 +84,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-12-05 | Mega Menu Extensions and Utility Widgets | Medium | Medium | Menu metadata UX/runtime + tabs/accordion/toggle-block widgets |
 | TASK-054-12-04 | Admin UI for Popups and Reviews Modules | High | Medium | Popups list/editor + reviews moderation UI with cache/prefetch/nav wiring |
 | TASK-054-12-03 | Popup and Reviews API Routes and RBAC | High | Medium | Internal `/popups` + `/reviews` routes, RBAC scopes, and error mapping tests |
 | TASK-054-12-02 | Popup and Reviews Services and Validation | High | Medium | popup/review domain services + mega-menu settings normalization |

@@ -11,7 +11,18 @@ test("resolveNavigationRuntimeData keeps manual items when at least one is provi
   });
 
   expect(resolved.linksSource).toBe("manual");
-  expect(resolved.items).toEqual([{ label: "One", href: "/one" }]);
+  expect(resolved.items).toEqual([
+    {
+      label: "One",
+      href: "/one",
+      meta: {
+        visibility: "all",
+        badge: null,
+        description: null,
+        icon: null,
+      },
+    },
+  ]);
 });
 
 test("resolveNavigationRuntimeData falls back to defaults when manual items are empty", async () => {
@@ -21,7 +32,10 @@ test("resolveNavigationRuntimeData falls back to defaults when manual items are 
   });
 
   expect(resolved.linksSource).toBe("manual");
-  expect(resolved.items).toEqual(navigationDefaults.items);
+  expect(resolved.items.map((item) => ({ label: item.label, href: item.href }))).toEqual(
+    navigationDefaults.items
+  );
+  expect(resolved.items.every((item) => item.meta?.visibility === "all")).toBeTrue();
 });
 
 test("resolveNavigationRuntimeData resolves pages index when at least 2 pages match", async () => {
@@ -70,7 +84,10 @@ test("resolveNavigationRuntimeData falls back to manual links when pages index i
   );
 
   expect(resolved.linksSource).toBe("manual");
-  expect(resolved.items).toEqual(navigationDefaults.items);
+  expect(resolved.items.map((item) => ({ label: item.label, href: item.href }))).toEqual(
+    navigationDefaults.items
+  );
+  expect(resolved.items.every((item) => item.meta?.visibility === "all")).toBeTrue();
 });
 
 test("resolveNavigationRuntimeData resolves menu source and maps pageId to slug", async () => {
@@ -107,8 +124,28 @@ test("resolveNavigationRuntimeData resolves menu source and maps pageId to slug"
 
   expect(resolved.linksSource).toBe("menu");
   expect(resolved.items).toEqual([
-    { label: "Home", href: "/", children: undefined },
-    { label: "About", href: "/about", children: undefined },
+    {
+      label: "Home",
+      href: "/",
+      meta: {
+        visibility: "all",
+        badge: null,
+        description: null,
+        icon: null,
+      },
+      children: undefined,
+    },
+    {
+      label: "About",
+      href: "/about",
+      meta: {
+        visibility: "all",
+        badge: null,
+        description: null,
+        icon: null,
+      },
+      children: undefined,
+    },
   ]);
 });
 
@@ -136,7 +173,56 @@ test("resolveNavigationRuntimeData keeps menu source when only one item exists",
   );
 
   expect(resolved.linksSource).toBe("menu");
-  expect(resolved.items).toEqual([{ label: "Home", href: "/", children: undefined }]);
+  expect(resolved.items).toEqual([
+    {
+      label: "Home",
+      href: "/",
+      meta: {
+        visibility: "all",
+        badge: null,
+        description: null,
+        icon: null,
+      },
+      children: undefined,
+    },
+  ]);
+});
+
+test("resolveNavigationRuntimeData maps menu metadata to deterministic item meta", async () => {
+  const nodes: MenuItemNode[] = [
+    {
+      id: "item-1",
+      label: "Pricing",
+      href: "/pricing",
+      pageId: null,
+      parentId: null,
+      orderIndex: 0,
+      settings: {
+        visibility: "logged_out",
+        badge: { label: "New", tone: "accent" },
+        description: "Special offer",
+        icon: "sparkles",
+      },
+      children: [],
+    },
+  ];
+
+  const resolved = await resolveNavigationRuntimeData(
+    { linksSource: "menu", menuKey: "menu-1", items: navigationDefaults.items },
+    undefined,
+    {
+      getMenuWithItems: async () =>
+        ({ menu: { id: "menu-1" }, items: nodes } as any),
+      getPageSlugsByIds: async () => new Map(),
+    }
+  );
+
+  expect(resolved.items[0]?.meta).toEqual({
+    visibility: "logged_out",
+    badge: { label: "New", tone: "accent" },
+    description: "Special offer",
+    icon: "sparkles",
+  });
 });
 
 test("resolveNavigationRuntimeData falls back to menu location when menuKey is missing", async () => {

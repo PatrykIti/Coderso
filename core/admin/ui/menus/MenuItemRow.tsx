@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { MenuItemDisplay } from "@/ui/menus/types";
+import { normalizeMenuItemSettings } from "../../../services/menus/menuItemSettings";
 
 type MenuItemRowProps = {
   item: MenuItemDisplay;
@@ -34,6 +35,20 @@ export function MenuItemRow({
   onDragOver,
 }: MenuItemRowProps) {
   const label = item.label || "Untitled";
+  const settings = normalizeMenuItemSettings(item.settings);
+  const hasMetadataBadge = Boolean(settings.badge);
+  const hasRestrictedVisibility =
+    Boolean(settings.visibility) && settings.visibility !== "all";
+  const toneClass =
+    settings.badge?.tone === "accent"
+      ? "border-sky-200 bg-sky-500/10 text-sky-700"
+      : settings.badge?.tone === "success"
+        ? "border-emerald-200 bg-emerald-500/10 text-emerald-700"
+        : settings.badge?.tone === "warning"
+          ? "border-amber-200 bg-amber-500/10 text-amber-700"
+          : settings.badge?.tone === "danger"
+            ? "border-rose-200 bg-rose-500/10 text-rose-700"
+            : "border-border bg-muted/40 text-foreground";
   return (
     <div
       className={cn(
@@ -91,11 +106,26 @@ export function MenuItemRow({
         <div className="pointer-events-none flex-1">
           <div className="text-sm font-semibold">{label}</div>
           <div className="text-xs text-muted-foreground">
-            {item.pageTitle
+            {settings.description
+              ? settings.description
+              : item.pageTitle
               ? `Page: ${item.pageTitle}`
               : item.href || "Missing link"}
           </div>
         </div>
+        {hasMetadataBadge ? (
+          <Badge
+            variant="outline"
+            className={cn("pointer-events-none", toneClass)}
+          >
+            {settings.badge?.label}
+          </Badge>
+        ) : null}
+        {hasRestrictedVisibility ? (
+          <Badge variant="outline" className="pointer-events-none">
+            {settings.visibility === "logged_in" ? "Members" : "Guests"}
+          </Badge>
+        ) : null}
         {item.status === "error" ? (
           <Badge
             variant="outline"

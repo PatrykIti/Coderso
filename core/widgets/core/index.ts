@@ -44,6 +44,9 @@ import { createSpacerWidget, type SpacerData } from "./spacer";
 import { createStackWidget, type StackData } from "./stack";
 import { createStatsKpiWidget, type StatsKpiData } from "./statsKpi";
 import { createTeamWidget, type TeamData } from "./team";
+import { createTabsWidget, type TabsData } from "./tabs";
+import { createAccordionWidget, type AccordionData } from "./accordion";
+import { createToggleBlockWidget, type ToggleBlockData } from "./toggleBlock";
 import {
   createTemplateSectionWidget,
   type TemplateSectionData,
@@ -62,6 +65,9 @@ export type CoreWidgetEditors = {
   templateSection: EditorBundle<TemplateSectionData>;
   gridColumns: EditorBundle<GridColumnsData>;
   splitLayout: EditorBundle<SplitLayoutData>;
+  tabs: EditorBundle<TabsData>;
+  accordion: EditorBundle<AccordionData>;
+  toggleBlock: EditorBundle<ToggleBlockData>;
   spacer: EditorBundle<SpacerData>;
   divider: EditorBundle<DividerData>;
   stack: EditorBundle<StackData>;
@@ -102,6 +108,9 @@ export function createCoreWidgetDefinitions(
     createTemplateSectionWidget(editors.templateSection),
     createGridColumnsWidget(editors.gridColumns),
     createSplitLayoutWidget(editors.splitLayout),
+    createTabsWidget(editors.tabs),
+    createAccordionWidget(editors.accordion),
+    createToggleBlockWidget(editors.toggleBlock),
     createSpacerWidget(editors.spacer),
     createDividerWidget(editors.divider),
     createStackWidget(editors.stack),

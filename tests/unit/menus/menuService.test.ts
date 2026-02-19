@@ -118,6 +118,40 @@ testIfDb("replaceMenuItems stores items", async () => {
   createdMenuId = undefined;
 });
 
+testIfDb("replaceMenuItems normalizes menu metadata settings", async () => {
+  const menu = await createMenu({
+    name: `Meta-${randomUUID()}`,
+    location: "meta",
+  });
+
+  createdMenuId = menu?.id;
+  if (!createdMenuId) throw new Error("menu_missing");
+
+  await replaceMenuItems(createdMenuId, [
+    {
+      label: "Offers",
+      href: "/offers",
+      settings: {
+        visibility: "logged_out",
+        badge: { label: " New ", tone: "accent" },
+        description: " Seasonal promotions ",
+        icon: " sparkles ",
+      },
+    },
+  ]);
+
+  const stored = await getMenuWithItems(createdMenuId);
+  expect(stored?.items[0]?.settings).toEqual({
+    visibility: "logged_out",
+    badge: { label: "New", tone: "accent" },
+    description: "Seasonal promotions",
+    icon: "sparkles",
+  });
+
+  await cleanupMenu(createdMenuId);
+  createdMenuId = undefined;
+});
+
 testIfDb("replaceMenuItems rejects missing page ids", async () => {
   const menu = await createMenu({
     name: `Primary-${randomUUID()}`,

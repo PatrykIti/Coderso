@@ -1,3 +1,5 @@
+import type { MenuItemSettings } from "./menuItemSettings";
+
 export type MenuItemRecord = {
   id: string;
   label: string;
@@ -5,7 +7,7 @@ export type MenuItemRecord = {
   pageId: string | null;
   parentId: string | null;
   orderIndex: number;
-  settings?: Record<string, unknown>;
+  settings?: MenuItemSettings;
 };
 
 export type MenuItemNode = MenuItemRecord & { children: MenuItemNode[] };

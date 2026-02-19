@@ -56,6 +56,7 @@ import {
 import { MenuTree, type MenuDropIntent } from "@/ui/menus/MenuTree";
 import type { MenuItemDisplay } from "@/ui/menus/types";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { normalizeMenuItemSettings } from "../../../services/menus/menuItemSettings";
 
 const createTempId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -75,6 +76,7 @@ const flattenMenuItems = (items: MenuItemNode[]) => {
         pageId: node.pageId ?? null,
         parentId: node.parentId ?? null,
         orderIndex: node.orderIndex,
+        settings: normalizeMenuItemSettings(node.settings),
       });
       if (node.children?.length) walk(node.children);
     });
@@ -537,6 +539,7 @@ export function MenuEditorPage() {
       pageId: defaultLinkType === "page" ? defaultPageId : null,
       parentId: null,
       orderIndex: items.filter((item) => item.parentId === null).length,
+      settings: { visibility: "all" },
     };
     setItems((prev) => [...prev, newItem]);
     setActiveItemId(newItem.id);
@@ -588,6 +591,7 @@ export function MenuEditorPage() {
               pageId: draft.linkType === "page" ? draft.pageId || null : null,
               parentId: nextParent,
               orderIndex: nextOrderIndex,
+              settings: normalizeMenuItemSettings(draft.settings),
             }
           : entry
       );
@@ -655,6 +659,7 @@ export function MenuEditorPage() {
             label: entry.label.trim(),
             parentId: entry.parentId ?? null,
             orderIndex: entry.orderIndex,
+            settings: normalizeMenuItemSettings(entry.settings),
           };
           const href = entry.href?.trim() ?? "";
           const hasPage = Boolean(entry.pageId);

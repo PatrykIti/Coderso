@@ -21,6 +21,7 @@ import {
   type MenuSummary,
 } from "@/services/menusClient";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { resolveMenuItemSettings } from "../../../../services/menus/menuItemSettings";
 
 import {
   navigationDefaults,
@@ -93,17 +94,35 @@ const resolvePickerColor = (value: string | undefined, fallback: string) =>
   value && hexColorPattern.test(value) ? value : fallback;
 
 export function mapMenuNodesToNavigationItems(nodes: MenuItemNode[]): NavigationItem[] {
-  return nodes.map((node) => ({
-    label: node.label,
-    href: node.href ?? "#",
-    children:
-      node.children.length > 0
-        ? node.children.map((child) => ({
-            label: child.label,
-            href: child.href ?? "#",
-          }))
-        : undefined,
-  }));
+  return nodes.map((node) => {
+    const nodeMeta = resolveMenuItemSettings(node.settings);
+    return {
+      label: node.label,
+      href: node.href ?? "#",
+      meta: {
+        visibility: nodeMeta.visibility,
+        badge: nodeMeta.badge,
+        description: nodeMeta.description,
+        icon: nodeMeta.icon,
+      },
+      children:
+        node.children.length > 0
+          ? node.children.map((child) => {
+              const childMeta = resolveMenuItemSettings(child.settings);
+              return {
+                label: child.label,
+                href: child.href ?? "#",
+                meta: {
+                  visibility: childMeta.visibility,
+                  badge: childMeta.badge,
+                  description: childMeta.description,
+                  icon: childMeta.icon,
+                },
+              };
+            })
+          : undefined,
+    };
+  });
 }
 
 export function buildMenuSelectionPatch(

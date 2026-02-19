@@ -8,6 +8,10 @@ import {
   MenuItemForm,
   type MenuItemFormValue,
 } from "@/ui/menus/MenuItemForm";
+import {
+  normalizeMenuItemSettings,
+  type MenuItemBadgeTone,
+} from "../../../services/menus/menuItemSettings";
 
 export type MenuItemDraft = MenuItemRecord & {
   linkType: "page" | "url";
@@ -34,8 +38,15 @@ const toFormValue = (item: MenuItemDraft | null): MenuItemFormValue => {
       pageId: "",
       href: "",
       parentId: null,
+      visibility: "all",
+      badgeLabel: "",
+      badgeTone: "default",
+      description: "",
+      icon: "",
     };
   }
+
+  const settings = normalizeMenuItemSettings(item.settings);
 
   return {
     id: item.id,
@@ -44,6 +55,11 @@ const toFormValue = (item: MenuItemDraft | null): MenuItemFormValue => {
     pageId: item.pageId ?? "",
     href: item.href ?? "",
     parentId: item.parentId ?? null,
+    visibility: settings.visibility ?? "all",
+    badgeLabel: settings.badge?.label ?? "",
+    badgeTone: (settings.badge?.tone ?? "default") as MenuItemBadgeTone,
+    description: settings.description ?? "",
+    icon: settings.icon ?? "",
   };
 };
 
@@ -86,6 +102,7 @@ function MenuItemDrawerContent({
   const handleSave = () => {
     if (!item) return;
     if (!validate()) return;
+    const badgeLabel = draft.badgeLabel.trim();
     onSave({
       ...item,
       label: draft.label.trim(),
@@ -93,6 +110,17 @@ function MenuItemDrawerContent({
       pageId: draft.linkType === "page" ? draft.pageId : "",
       href: draft.linkType === "url" ? draft.href : "",
       parentId: draft.parentId ?? null,
+      settings: normalizeMenuItemSettings({
+        visibility: draft.visibility,
+        badge: badgeLabel
+          ? {
+              label: badgeLabel,
+              tone: draft.badgeTone,
+            }
+          : undefined,
+        description: draft.description,
+        icon: draft.icon,
+      }),
     });
   };
 

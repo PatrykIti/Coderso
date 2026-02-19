@@ -65,3 +65,7 @@ const reviews = await listReviews({ entityType, entityId, status: "approved" });
   - delivered Coderso popups/reviews admin screens (list/editor/moderation),
   - wired cache + prefetch + route aliases for popup/review surfaces,
   - enabled popups/reviews in Coderso navigation with permission-aware visibility.
+- Completed `TASK-054-12-05`:
+  - delivered mega-menu metadata editing (visibility/badge/description/icon) with strict validation and persistence,
+  - mapped deterministic menu metadata into navigation runtime items,
+  - added utility widgets (`tabs`, `accordion`, `toggle-block`) with runtime renderers and Wizard/Visual/Advanced editors.

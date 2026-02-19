@@ -2,6 +2,7 @@ import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
+import type { MenuItemSettings } from "../../services/menus/menuItemSettings";
 
 export type MenuSummary = {
   id: string;
@@ -17,7 +18,7 @@ export type MenuItemRecord = {
   pageId: string | null;
   parentId: string | null;
   orderIndex: number;
-  settings?: Record<string, unknown>;
+  settings?: MenuItemSettings;
 };
 
 export type MenuItemNode = MenuItemRecord & { children: MenuItemNode[] };
@@ -34,7 +35,7 @@ export type MenuItemInput = {
   pageId?: string | null;
   parentId?: string | null;
   orderIndex?: number;
-  settings?: Record<string, unknown>;
+  settings?: MenuItemSettings;
 };
 
 let cachedMenus: MenuSummary[] | null = null;

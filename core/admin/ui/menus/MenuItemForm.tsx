@@ -8,6 +8,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PageSummary } from "@/services/pagesClient";
+import {
+  menuBadgeToneOptions,
+  menuVisibilityOptions,
+  type MenuItemBadgeTone,
+  type MenuItemVisibility,
+} from "../../../services/menus/menuItemSettings";
 
 const NO_PAGES_VALUE = "no-pages";
 
@@ -18,6 +24,11 @@ export type MenuItemFormValue = {
   pageId: string;
   href: string;
   parentId: string | null;
+  visibility: MenuItemVisibility;
+  badgeLabel: string;
+  badgeTone: MenuItemBadgeTone;
+  description: string;
+  icon: string;
 };
 
 type ParentOption = {
@@ -167,6 +178,109 @@ export function MenuItemForm({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Visibility</label>
+        <Select
+          value={value.visibility}
+          onValueChange={(next) =>
+            onChange({
+              ...value,
+              visibility: next as MenuItemVisibility,
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Visibility rule" />
+          </SelectTrigger>
+          <SelectContent>
+            {menuVisibilityOptions.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option === "all"
+                  ? "Show to everyone"
+                  : option === "logged_in"
+                    ? "Only logged-in users"
+                    : "Only logged-out users"}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Controls when this link should appear in navigation.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Badge Label</label>
+        <Input
+          value={value.badgeLabel}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              badgeLabel: event.target.value,
+            })
+          }
+          placeholder="New"
+        />
+        <p className="text-xs text-muted-foreground">
+          Optional pill shown next to the menu label.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Badge Tone</label>
+        <Select
+          value={value.badgeTone}
+          onValueChange={(next) =>
+            onChange({
+              ...value,
+              badgeTone: next as MenuItemBadgeTone,
+            })
+          }
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Badge tone" />
+          </SelectTrigger>
+          <SelectContent>
+            {menuBadgeToneOptions.map((tone) => (
+              <SelectItem key={tone} value={tone}>
+                {tone}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Description</label>
+        <Input
+          value={value.description}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              description: event.target.value,
+            })
+          }
+          placeholder="Optional helper text"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Icon Name</label>
+        <Input
+          value={value.icon}
+          onChange={(event) =>
+            onChange({
+              ...value,
+              icon: event.target.value,
+            })
+          }
+          placeholder="e.g. sparkles"
+        />
+        <p className="text-xs text-muted-foreground">
+          Optional icon token for custom menu presenters.
+        </p>
       </div>
     </form>
   );

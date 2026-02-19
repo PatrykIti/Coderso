@@ -52,7 +52,11 @@ CTA jest renderowane dla wariantow:
 ## Supported fields (summary)
 
 - `logo`: `type`, `value`, `href`, `alt`, `source`, `assetId`
-- `items`: `label`, `href`, optional `children[]`
+- `items`: `label`, `href`, optional `meta`, optional `children[]`
+  - `meta.visibility`: `all | logged_in | logged_out`
+  - `meta.badge`: `{ label, tone } | null`
+  - `meta.description`: `string | null`
+  - `meta.icon`: `string | null`
 - `cta`: `label`, `href`
 - `linksSource`: `manual | menu | pages`
 - `menuKey`: string (menu id)
@@ -85,6 +89,8 @@ CTA jest renderowane dla wariantow:
   - gdy `menuKey` jest ustawione: runtime pobiera menu po ID i mapuje je do linkow.
   - gdy `menuKey` brak: fallback do menu o `location = "primary"`.
   - gdy wynik ma 0 linkow: fallback do manual `items`.
+  - runtime mapuje rowniez metadata z menu item settings do `items[].meta`
+    (deterministyczny shape: `visibility`, `badge`, `description`, `icon`).
 - `linksSource = "pages"`:
   - runtime buduje linki z opublikowanych stron (`status = published`) z `page.data.settings.showInNav = true` (brak pola traktujemy jako `true`).
   - gdy wynik ma 0 linkow: fallback do manual `items`.
@@ -108,6 +114,12 @@ CTA jest renderowane dla wariantow:
     {
       "label": "string",
       "href": "string",
+      "meta": {
+        "visibility": "all",
+        "badge": { "label": "string", "tone": "default" },
+        "description": "string",
+        "icon": "string"
+      },
       "children": [{ "label": "string", "href": "string" }]
     }
   ],

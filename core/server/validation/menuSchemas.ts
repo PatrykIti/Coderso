@@ -33,7 +33,28 @@ export const menuItemsSchema = {
           pageId: { type: "string" },
           parentId: { type: ["string", "null"] },
           orderIndex: { type: "number" },
-          settings: { type: "object" },
+          settings: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              visibility: {
+                enum: ["all", "logged_in", "logged_out"],
+              },
+              badge: {
+                type: "object",
+                additionalProperties: false,
+                required: ["label"],
+                properties: {
+                  label: { type: "string" },
+                  tone: {
+                    enum: ["default", "accent", "success", "warning", "danger"],
+                  },
+                },
+              },
+              description: { type: "string" },
+              icon: { type: "string" },
+            },
+          },
         },
         additionalProperties: false,
       },

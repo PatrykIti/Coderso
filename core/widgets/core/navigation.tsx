@@ -6,10 +6,18 @@ import type { WidgetBlock } from "../types";
 export type NavigationItem = {
   label: string;
   href: string;
-  children?: Array<{
+  meta?: NavigationItemMeta;
+  children?: NavigationItem[];
+};
+
+export type NavigationItemMeta = {
+  visibility: "all" | "logged_in" | "logged_out";
+  badge: {
     label: string;
-    href: string;
-  }>;
+    tone: "default" | "accent" | "success" | "warning" | "danger";
+  } | null;
+  description: string | null;
+  icon: string | null;
 };
 
 export type NavigationLogo = {
@@ -91,6 +99,25 @@ export const navigationSchema = {
         properties: {
           label: { type: "string" },
           href: { type: "string" },
+          meta: {
+            type: "object",
+            additionalProperties: false,
+            required: ["visibility", "badge", "description", "icon"],
+            properties: {
+              visibility: { enum: ["all", "logged_in", "logged_out"] },
+              badge: {
+                type: ["object", "null"],
+                additionalProperties: false,
+                required: ["label", "tone"],
+                properties: {
+                  label: { type: "string" },
+                  tone: { enum: ["default", "accent", "success", "warning", "danger"] },
+                },
+              },
+              description: { type: ["string", "null"] },
+              icon: { type: ["string", "null"] },
+            },
+          },
           children: {
             type: "array",
             items: {
@@ -100,6 +127,27 @@ export const navigationSchema = {
               properties: {
                 label: { type: "string" },
                 href: { type: "string" },
+                meta: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["visibility", "badge", "description", "icon"],
+                  properties: {
+                    visibility: { enum: ["all", "logged_in", "logged_out"] },
+                    badge: {
+                      type: ["object", "null"],
+                      additionalProperties: false,
+                      required: ["label", "tone"],
+                      properties: {
+                        label: { type: "string" },
+                        tone: {
+                          enum: ["default", "accent", "success", "warning", "danger"],
+                        },
+                      },
+                    },
+                    description: { type: ["string", "null"] },
+                    icon: { type: ["string", "null"] },
+                  },
+                },
               },
             },
           },

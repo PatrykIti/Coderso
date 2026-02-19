@@ -19,6 +19,21 @@ export {
   SplitLayoutWizardEditor,
 } from "./SplitLayoutEditors";
 export {
+  TabsAdvancedEditor,
+  TabsVisualEditor,
+  TabsWizardEditor,
+} from "./TabsEditors";
+export {
+  AccordionAdvancedEditor,
+  AccordionVisualEditor,
+  AccordionWizardEditor,
+} from "./AccordionEditors";
+export {
+  ToggleBlockAdvancedEditor,
+  ToggleBlockVisualEditor,
+  ToggleBlockWizardEditor,
+} from "./ToggleBlockEditors";
+export {
   SpacerAdvancedEditor,
   SpacerVisualEditor,
   SpacerWizardEditor,
