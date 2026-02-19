@@ -595,8 +595,17 @@ Przyklady:
 - addAction("content:save", (payload, ctx) => {})
 - addFilter("render:html", (html, ctx) => html)
 - addAction("admin:menu", (payload, ctx) => {})
+- addFilter("commerce:checkout:adapters", (payload, ctx) => payload)
 
 Hook handler zawsze dostaje `ctx` (request/session/user) jako drugi argument.
+
+Commerce checkout adapters (v1):
+- Core dostarcza domyslny adapter `internal_noop`.
+- Registry checkout moze byc rozszerzony przez filtr:
+  - `commerce:checkout:adapters`
+- Filtr dostaje payload:
+  - `{ adapters: Record<string, Adapter>, defaultKey: string }`
+- Niepoprawne payloady pluginu sa ignorowane; fallback `internal_noop` jest zawsze zachowany.
 
 ---
 

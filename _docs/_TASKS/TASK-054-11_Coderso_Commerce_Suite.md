@@ -102,3 +102,7 @@ return renderProductTemplate(templateId, { products });
   - added `product-gallery`, `product-compare`, `product-table` widget models/renderers/editors,
   - wired SSR hydration via shared runtime helpers into public site rendering,
   - added widget/runtime registry + hydration test coverage.
+- Completed `TASK-054-11-07`:
+  - defined typed checkout/cart adapter contract with deterministic internal fallback,
+  - added adapter registry with provider resolution and operation wrappers (add-to-cart + checkout URL),
+  - added plugin filter hook bridge (`commerce:checkout:adapters`) with safe invalid payload handling.

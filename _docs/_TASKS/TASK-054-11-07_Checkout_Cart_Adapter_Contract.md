@@ -5,7 +5,7 @@
 **Category:** Integrations/Architecture  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-11-03, TASK-054-11-06  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -33,3 +33,17 @@ const checkoutUrl = await adapter.createCheckoutUrl({ items, returnUrl });
 1. Core can run with default adapter (no provider lock-in).
 2. Contract is plugin-extensible and typed.
 3. Unit tests cover adapter resolution/fallback behavior.
+
+## Sub-Tasks
+- `TASK-054-11-07-01`: Checkout adapter domain contract and default behavior
+- `TASK-054-11-07-02`: Checkout adapter registry and plugin hook bridge
+- `TASK-054-11-07-03`: Checkout adapter tests, docs, and closure
+
+## Delivered
+- Added checkout/cart adapter contract:
+  - `core/services/commerce/checkoutAdapter.ts`
+- Added adapter registry and plugin hook bridge:
+  - `core/services/commerce/checkoutRegistry.ts`
+  - `core/plugins/hooks/commerce.ts`
+- Added unit tests for fallback/registry/plugin extension behavior:
+  - `tests/unit/commerce/checkoutAdapter.test.ts`

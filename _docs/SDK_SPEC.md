@@ -181,6 +181,27 @@ export interface HooksAPI {
 }
 ```
 
+Przyklad rozszerzenia checkout adapterow (Commerce):
+
+```ts
+ctx.hooks.addFilter("commerce:checkout:adapters", (payload) => {
+  return {
+    ...payload,
+    adapters: {
+      ...payload.adapters,
+      my_provider: {
+        key: "my_provider",
+        label: "My Provider",
+        capabilities: { addToCart: true, checkout: true },
+        addToCart: async () => ({ mode: "none", cartUrl: null, checkoutUrl: null, cartReference: null, metadata: {} }),
+        createCheckoutUrl: async () => ({ mode: "redirect", url: "https://checkout.example/session", providerReference: "ref-1", metadata: {} }),
+      },
+    },
+    defaultKey: "my_provider",
+  };
+});
+```
+
 ### RoutesAPI
 
 ```ts

@@ -289,3 +289,4 @@ Project Change Log.
 | 253 | 2026-02-19 | Commerce admin API routes and RBAC | Core/API |
 | 254 | 2026-02-19 | Commerce admin UI catalog and editor | Admin/UI |
 | 255 | 2026-02-19 | Commerce runtime widgets (gallery, compare, table) | CMS/Widgets |
+| 256 | 2026-02-19 | Commerce checkout/cart adapter contract | CMS/Commerce |

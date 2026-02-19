@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 31 tasks
+- **To Do:** 30 tasks
 - **In Progress:** 2 tasks
-- **Done:** 351 tasks
+- **Done:** 355 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-11-07 | Checkout/Cart Adapter Contract | Medium | Medium | Pluggable checkout adapter interface for providers/plugins |
 | TASK-054-11-08 | Commerce QA, Docs, and Changelog Closure | Medium | Medium | Regression matrix + docs/changelog closure |
 | TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
 | TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
@@ -87,6 +86,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-11-07 | Checkout/Cart Adapter Contract | Medium | Medium | Pluggable checkout adapter contract with registry + plugin hook bridge |
+| TASK-054-11-07-03 | Checkout Adapter Tests, Docs, and Closure | Medium | Medium | Unit coverage + lint/types + docs/changelog sync |
+| TASK-054-11-07-02 | Checkout Adapter Registry and Plugin Hook Bridge | High | Medium | Registry resolution + plugin filter extension point |
+| TASK-054-11-07-01 | Checkout Adapter Domain Contract and Default Behavior | High | Medium | Typed add-to-cart/checkout contract + internal noop adapter |
 | TASK-054-11-06 | Commerce Runtime Widgets (Gallery/Compare/Table) | High | Large | Runtime product widgets + resolver integration |
 | TASK-054-11-05 | Commerce Admin UI Catalog and Editor | High | Large | Product list/editor UX with cache/prefetch patterns |
 | TASK-054-11-04 | Commerce Admin API Routes and RBAC | High | Medium | Internal `/commerce/*` routes + RBAC + error mapping tests |
