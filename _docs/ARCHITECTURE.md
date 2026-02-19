@@ -271,6 +271,29 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `appointment-form` konsumuje selected slot po `flowId` i tworzy rezerwacje przez public API,
   - resolver runtime (`resolveBookingRuntimeData`) hydratuje active services/resources + submission nonce.
 
+## Coderso Commerce (v1 preview)
+
+- Commerce domain (internal admin API + RBAC) opiera sie o tabele:
+  - `commerce_products`,
+  - `commerce_collections`,
+  - `commerce_product_collections`.
+- Internal admin API (`/admin/api/commerce/*`) udostepnia:
+  - product CRUD + collection assignment,
+  - collections CRUD,
+  - deterministic query endpoint (`POST /commerce/products/query`).
+- Runtime widgets:
+  - `product-gallery`,
+  - `product-compare`,
+  - `product-table`.
+- Public runtime:
+  - dane commerce widgetow sa hydradowane SSR przez internal services (`publicSite` + `commerceWidgetRuntime`),
+  - brak publicznych endpointow `/api/commerce/*` w v1.
+- Checkout/cart abstraction:
+  - registry adapterow z fallbackiem `internal_noop`,
+  - rozszerzalnosc pluginowa przez filter hook:
+    - `commerce:checkout:adapters`,
+  - niepoprawne payloady pluginow sa ignorowane, fallback core pozostaje aktywny.
+
 
 ## Media delivery access
 

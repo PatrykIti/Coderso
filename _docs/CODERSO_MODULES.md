@@ -35,7 +35,7 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 ### v3 Growth Builder
 | Module | Owner | Lifecycle | Default Nav |
 |---|---|---|---|
-| Commerce | growth | planned | No |
+| Commerce | growth | preview | Yes (`Beta`) |
 | Popups | marketing | planned | No |
 | Mega Menu | design | planned | No |
 | Portal | platform | planned | No |
@@ -86,10 +86,15 @@ const sections = buildDefaultNavSections({
   - form editor `Automation` panel + dedicated action logs screen,
   - form settings model (`forms.settings`) for multi-step, save-progress, presets, retry policy,
   - runtime form embed inline submit + multi-step navigation + local progress restore.
-- 054-10 in progress: Booking foundation delivered (domain + API):
+- 054-10 done: Booking suite delivered:
   - DB model/migration: resources, services, schedules, blackouts, reservations,
   - internal API: `/booking/*` with RBAC (`booking:read`, `booking:write`),
-  - slot preview filters conflicts against reservations and blackout windows.
+  - runtime widgets + access modes + QA/docs closure.
+- 054-11 done: Commerce suite delivered:
+  - domain contract + DB schema + service/query engine + admin API RBAC,
+  - Coderso Commerce list/editor UI with cache/prefetch,
+  - runtime widgets (`product-gallery`, `product-compare`, `product-table`) with SSR hydration,
+  - checkout/cart adapter registry with plugin extension hook (`commerce:checkout:adapters`).
 - 054-10-05 done: Booking Admin UI delivered:
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,

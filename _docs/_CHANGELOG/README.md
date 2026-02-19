@@ -290,3 +290,4 @@ Project Change Log.
 | 254 | 2026-02-19 | Commerce admin UI catalog and editor | Admin/UI |
 | 255 | 2026-02-19 | Commerce runtime widgets (gallery, compare, table) | CMS/Widgets |
 | 256 | 2026-02-19 | Commerce checkout/cart adapter contract | CMS/Commerce |
+| 257 | 2026-02-19 | Commerce suite QA, docs, and closure | QA/Docs |

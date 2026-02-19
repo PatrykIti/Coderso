@@ -5,7 +5,7 @@
 **Category:** Commerce + Admin/UI + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-07, TASK-054-08  
-**Status:** In Progress (started 2026-02-19)
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -106,3 +106,7 @@ return renderProductTemplate(templateId, { products });
   - defined typed checkout/cart adapter contract with deterministic internal fallback,
   - added adapter registry with provider resolution and operation wrappers (add-to-cart + checkout URL),
   - added plugin filter hook bridge (`commerce:checkout:adapters`) with safe invalid payload handling.
+- Completed `TASK-054-11-08`:
+  - executed lint/types/full-suite regression checks for commerce scope,
+  - finalized CMS API + architecture docs for commerce internal API/runtime contracts,
+  - synchronized kanban/changelog closure for the full 054-11 chain.

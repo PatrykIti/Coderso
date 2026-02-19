@@ -799,6 +799,79 @@ Selected error codes:
 - `booking_blackout_conflict`
 - `booking_service_resource_not_allowed`
 
+## Coderso Commerce (v1 preview)
+
+Permissions: `commerce:read`, `commerce:write`
+
+Internal admin API (`/admin/api/*`, RBAC required):
+
+Products:
+- `GET /commerce/products`
+- `GET /commerce/products/:id`
+- `POST /commerce/products`
+- `PATCH /commerce/products/:id`
+- `DELETE /commerce/products/:id`
+- `PUT /commerce/products/:id/collections`
+- `POST /commerce/products/query`
+
+Collections:
+- `GET /commerce/collections`
+- `GET /commerce/collections/:id`
+- `POST /commerce/collections`
+- `PATCH /commerce/collections/:id`
+- `DELETE /commerce/collections/:id`
+
+Product create payload (summary):
+
+```json
+{
+  "title": "Starter Home",
+  "slug": "starter-home",
+  "status": "draft",
+  "excerpt": "Compact modern home.",
+  "description": "Long form description...",
+  "pricing": {
+    "amount": 120000,
+    "currency": "USD",
+    "compareAtAmount": 130000
+  },
+  "stock": {
+    "state": "in_stock",
+    "quantity": 3
+  },
+  "collectionIds": ["uuid"],
+  "mediaIds": ["uuid"],
+  "variants": [],
+  "metadata": {},
+  "data": {}
+}
+```
+
+Products query payload (summary):
+
+```json
+{
+  "filters": [
+    { "field": "status", "op": "eq", "value": "published" }
+  ],
+  "sort": [
+    { "field": "updatedAt", "dir": "desc" }
+  ],
+  "pagination": {
+    "limit": 24,
+    "offset": 0
+  },
+  "status": ["published"],
+  "collectionIds": ["uuid"],
+  "search": "starter"
+}
+```
+
+Runtime behavior (v1):
+- public runtime widgets (`product-gallery`, `product-compare`, `product-table`) sa hydradowane SSR przez internal services.
+- v1 **nie dodaje** publicznych endpointow `/api/commerce/*`.
+- checkout/cart provider contract jest warstwa service + plugin hooks (`commerce:checkout:adapters`) i nie jest public API route.
+
 ---
 
 ## Widgets
