@@ -113,6 +113,22 @@ const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: "commerce",
+    label: "Commerce",
+    permissions: [
+      {
+        id: "commerce:read",
+        label: "View commerce",
+        description: "Read commerce products, collections, and query previews",
+      },
+      {
+        id: "commerce:write",
+        label: "Manage commerce",
+        description: "Create, update, and delete commerce products and collections",
+      },
+    ],
+  },
+  {
     id: "themes",
     label: "Themes",
     permissions: [

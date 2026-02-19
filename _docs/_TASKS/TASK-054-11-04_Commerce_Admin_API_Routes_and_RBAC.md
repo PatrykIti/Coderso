@@ -5,7 +5,7 @@
 **Category:** API/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-11-03, TASK-004  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -39,3 +39,20 @@ try {
 1. Commerce routes are internal and RBAC-protected.
 2. Validation + domain errors never leak as generic 500 for known cases.
 3. Integration tests cover route registration and error mapping.
+
+## Delivered
+- Added internal commerce admin routes with RBAC:
+  - `core/server/routes/commerceRoutes.ts`
+  - product CRUD + collection assignment,
+  - product query endpoint (`POST /commerce/products/query`),
+  - collection CRUD.
+- Added domain-to-API error mapping with stable status codes:
+  - `mapCommerceError` + `withCommerceErrors`.
+- Registered commerce routes in global route registry:
+  - `core/server/routes/index.ts`
+- Added commerce permissions to role catalog:
+  - `commerce:read`
+  - `commerce:write`
+  - file: `core/services/admin/permissionsCatalog.ts`
+- Added integration tests for route wiring + error mapping:
+  - `tests/integration/routes/commerceRoutes.test.ts`

@@ -5,7 +5,7 @@
 **Category:** Services/Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-11-01, TASK-054-11-02  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -36,3 +36,23 @@ return rows.map(toRuntimeProductCard);
 1. Product CRUD and query service produce deterministic outputs.
 2. Unsafe query inputs are rejected before DB access.
 3. Unit/DB tests cover lifecycle + query behavior.
+
+## Delivered
+- Added commerce product/collection service layer:
+  - `core/services/commerce/commerceService.ts`
+  - product CRUD,
+  - collection CRUD,
+  - collection assignment,
+  - slug uniqueness + publish lifecycle rules.
+- Added deterministic, allowlisted query engine:
+  - `core/services/commerce/commerceQueryService.ts`
+  - filter/sort/pagination normalization,
+  - safe field/operator validation before row loading,
+  - deterministic filtering/sorting/paging output.
+- Added runtime payload builders/resolver:
+  - `core/services/commerce/commerceRuntimeResolver.ts`
+  - runtime cards + compare payload + wishlist payload.
+- Added test coverage:
+  - `tests/unit/commerce/commerceService.test.ts`
+  - `tests/unit/commerce/commerceQueryService.test.ts`
+  - `tests/unit/commerce/commerceRuntimeResolver.test.ts`

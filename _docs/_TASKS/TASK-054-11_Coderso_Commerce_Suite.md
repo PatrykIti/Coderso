@@ -82,3 +82,15 @@ return renderProductTemplate(templateId, { products });
   - established commerce product/query type contract,
   - added normalization helpers for status/stock/money/slug,
   - added create/update/query/collection schema validation with unit coverage.
+- Completed `TASK-054-11-02`:
+  - added `commerce_products`, `commerce_collections`, and `commerce_product_collections`,
+  - generated migration SQL + snapshot + journal entry,
+  - added DB constraint tests for cascade and unique slug behavior.
+- Completed `TASK-054-11-03`:
+  - implemented commerce product/collection service CRUD with lifecycle rules,
+  - implemented deterministic commerce query service with allowlisted filters/sort,
+  - added runtime resolver payload builders for cards/compare/wishlist with tests.
+- Completed `TASK-054-11-04`:
+  - added internal `/commerce/*` admin API routes with RBAC guards,
+  - added error mapping for domain/query codes to stable API responses,
+  - registered new permissions (`commerce:read`, `commerce:write`) and route coverage tests.

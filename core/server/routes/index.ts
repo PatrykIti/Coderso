@@ -36,6 +36,7 @@ import { registerAssistantRoutes } from "./assistantRoutes";
 import { registerListingsRoutes } from "./listingsRoutes";
 import { registerFilterRoutes } from "./filterRoutes";
 import { registerBookingRoutes } from "./bookingRoutes";
+import { registerCommerceRoutes } from "./commerceRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -99,6 +100,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerBookingRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerCommerceRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

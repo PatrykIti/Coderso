@@ -5,7 +5,7 @@
 **Category:** DB/Migrations  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-11-01  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -39,3 +39,13 @@ create table commerce_product_collections (...);
 1. Migration is idempotent and reversible by migration tooling.
 2. Table/index design supports listing and admin edits.
 3. DB-backed tests validate key constraints.
+
+## Delivered
+- Added commerce DB tables and indexes in schema:
+  - `core/db/schema.ts`
+- Generated migration + metadata:
+  - `core/db/migrations/0042_jazzy_kid_colt.sql`
+  - `core/db/migrations/meta/0042_snapshot.json`
+  - `core/db/migrations/meta/_journal.json`
+- Added DB-backed schema tests:
+  - `tests/unit/commerce/schema.test.ts`

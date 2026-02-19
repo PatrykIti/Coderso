@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 36 tasks
+- **To Do:** 33 tasks
 - **In Progress:** 2 tasks
-- **Done:** 346 tasks
+- **Done:** 349 tasks
 
 ---
 
@@ -38,9 +38,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-11-02 | Commerce DB Schema and Migrations | High | Medium | `commerce_*` tables + indexes + migration metadata |
-| TASK-054-11-03 | Commerce Service and Query Engine | High | Large | Deterministic product CRUD and runtime query engine |
-| TASK-054-11-04 | Commerce Admin API Routes and RBAC | High | Medium | `/admin/api/commerce/*` + permissions + error mapping |
 | TASK-054-11-05 | Commerce Admin UI Catalog and Editor | High | Large | Product list/editor UX with cache/prefetch patterns |
 | TASK-054-11-06 | Commerce Runtime Widgets (Gallery/Compare/Table) | High | Large | Runtime product widgets + resolver integration |
 | TASK-054-11-07 | Checkout/Cart Adapter Contract | Medium | Medium | Pluggable checkout adapter interface for providers/plugins |
@@ -91,6 +88,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-11-04 | Commerce Admin API Routes and RBAC | High | Medium | Internal `/commerce/*` routes + RBAC + error mapping tests |
+| TASK-054-11-03 | Commerce Service and Query Engine | High | Large | Product/collection services + deterministic query engine + runtime payload resolver |
+| TASK-054-11-02 | Commerce DB Schema and Migrations | High | Medium | `commerce_*` tables + migration metadata + DB constraint tests |
 | TASK-054-11-01 | Commerce Domain Contract and Schemas | High | Medium | Commerce types + normalization helpers + schema validation tests |
 | TASK-054-10-07 | Booking QA, Docs, and Closure | Medium | Medium | Regression matrix complete + docs/changelog closure |
 | TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Domain, API, admin UI, runtime widgets, access modes, and QA closure delivered |
