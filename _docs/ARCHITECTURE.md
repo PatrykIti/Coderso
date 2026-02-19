@@ -320,10 +320,15 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Internal admin API (`/admin/api/*`):
   - `GET /solution-kits`,
   - `GET /solution-kits/:id`,
-  - `POST /solution-kits/plan`.
+  - `POST /solution-kits/plan`,
+  - `POST /solution-kits/:id/apply`,
+  - `POST /solution-kits/:id/rollback`,
+  - `GET /solution-kits/runs`,
+  - `GET /solution-kits/runs/:runId`.
 - Security:
-  - endpointy sa internal-only i wymagaja RBAC `solution-kits:read`,
-  - `solution-kits:write` jest zarezerwowane dla kolejnego etapu apply/rollback.
+  - endpointy sa internal-only i wymagaja RBAC,
+  - read: `solution-kits:read`,
+  - mutate (`apply`/`rollback`): `solution-kits:write`.
 - Planner contract:
   - wejscie: profil biznesu + cele + locale (+ opcjonalny preferred kit),
   - wyjscie: `recommendedKitId`, `confidence`, `steps[]`, `settingsPatch`, `notes`,

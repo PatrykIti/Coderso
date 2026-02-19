@@ -1,5 +1,6 @@
 import { apiRequest } from "./apiClient";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
+import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
 
 export type SolutionKitId =
@@ -65,6 +66,67 @@ export type SiteBuilderPlanOutput = {
   notes: string[];
 };
 
+export type SolutionKitInstallMode = "dry_run" | "apply" | "rollback";
+export type SolutionKitInstallStatus = "running" | "success" | "failed";
+export type SolutionKitInstallItemStatus = "planned" | "success" | "failed" | "skipped";
+export type SolutionKitInstallItemOperation =
+  | "create"
+  | "update"
+  | "noop"
+  | "delete"
+  | "restore";
+
+export type SolutionKitInstallSummary = {
+  total: number;
+  success: number;
+  failed: number;
+  planned: number;
+  skipped: number;
+  operations: Record<SolutionKitInstallItemOperation, number>;
+};
+
+export type SolutionKitInstallRunRecord = {
+  id: string;
+  kitId: string;
+  mode: SolutionKitInstallMode;
+  status: SolutionKitInstallStatus;
+  actorId: string | null;
+  rollbackOfRunId: string | null;
+  options: Record<string, unknown>;
+  summary: SolutionKitInstallSummary;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+};
+
+export type SolutionKitInstallItemRecord = {
+  id: string;
+  runId: string;
+  position: number;
+  resourceType: "content_type" | "form" | "page" | "menu";
+  resourceKey: string;
+  operation: SolutionKitInstallItemOperation;
+  status: SolutionKitInstallItemStatus;
+  beforeSnapshot: Record<string, unknown> | null;
+  afterSnapshot: Record<string, unknown> | null;
+  rollbackAction: Record<string, unknown> | null;
+  error: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SolutionKitInstallResult = {
+  run: SolutionKitInstallRunRecord;
+  items: SolutionKitInstallItemRecord[];
+  summary: SolutionKitInstallSummary;
+};
+
+export type SolutionKitRunDetail = {
+  run: SolutionKitInstallRunRecord;
+  items: SolutionKitInstallItemRecord[];
+};
+
 const solutionKitIds: SolutionKitId[] = [
   "automotive-workshop",
   "medical-clinic",
@@ -114,14 +176,101 @@ const isSiteBuilderPlanOutput = (value: unknown): value is SiteBuilderPlanOutput
   isRecord(value.settingsPatch) &&
   isStringArray(value.notes);
 
+const isInstallMode = (value: unknown): value is SolutionKitInstallMode =>
+  value === "dry_run" || value === "apply" || value === "rollback";
+
+const isInstallStatus = (value: unknown): value is SolutionKitInstallStatus =>
+  value === "running" || value === "success" || value === "failed";
+
+const isInstallItemStatus = (value: unknown): value is SolutionKitInstallItemStatus =>
+  value === "planned" || value === "success" || value === "failed" || value === "skipped";
+
+const isInstallItemOperation = (value: unknown): value is SolutionKitInstallItemOperation =>
+  value === "create" ||
+  value === "update" ||
+  value === "noop" ||
+  value === "delete" ||
+  value === "restore";
+
+const isInstallSummary = (value: unknown): value is SolutionKitInstallSummary => {
+  if (!isRecord(value) || !isRecord(value.operations)) return false;
+  return (
+    typeof value.total === "number" &&
+    typeof value.success === "number" &&
+    typeof value.failed === "number" &&
+    typeof value.planned === "number" &&
+    typeof value.skipped === "number"
+  );
+};
+
+const isInstallRunRecord = (value: unknown): value is SolutionKitInstallRunRecord =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.kitId === "string" &&
+  isInstallMode(value.mode) &&
+  isInstallStatus(value.status) &&
+  (value.actorId === null || typeof value.actorId === "string") &&
+  (value.rollbackOfRunId === null || typeof value.rollbackOfRunId === "string") &&
+  isRecord(value.options) &&
+  isInstallSummary(value.summary) &&
+  (value.error === null || typeof value.error === "string") &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string" &&
+  (value.finishedAt === null || typeof value.finishedAt === "string");
+
+const isInstallRunRecordList = (value: unknown): value is SolutionKitInstallRunRecord[] =>
+  Array.isArray(value) && value.every(isInstallRunRecord);
+
+const isInstallItemRecord = (value: unknown): value is SolutionKitInstallItemRecord =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.runId === "string" &&
+  typeof value.position === "number" &&
+  typeof value.resourceType === "string" &&
+  typeof value.resourceKey === "string" &&
+  isInstallItemOperation(value.operation) &&
+  isInstallItemStatus(value.status) &&
+  (value.beforeSnapshot === null || isRecord(value.beforeSnapshot)) &&
+  (value.afterSnapshot === null || isRecord(value.afterSnapshot)) &&
+  (value.rollbackAction === null || isRecord(value.rollbackAction)) &&
+  (value.error === null || typeof value.error === "string") &&
+  typeof value.createdAt === "string" &&
+  typeof value.updatedAt === "string";
+
+const isInstallItemRecordList = (value: unknown): value is SolutionKitInstallItemRecord[] =>
+  Array.isArray(value) && value.every(isInstallItemRecord);
+
+const isInstallResult = (value: unknown): value is SolutionKitInstallResult =>
+  isRecord(value) &&
+  isInstallRunRecord(value.run) &&
+  isInstallItemRecordList(value.items) &&
+  isInstallSummary(value.summary);
+
+const isInstallRunDetail = (value: unknown): value is SolutionKitRunDetail =>
+  isRecord(value) && isInstallRunRecord(value.run) && isInstallItemRecordList(value.items);
+
 let cachedKits: SolutionKitSummary[] | null = null;
 let cachedKitsPromise: Promise<SolutionKitSummary[]> | null = null;
+const cachedRunsPromises = new Map<string, Promise<SolutionKitInstallRunRecord[]>>();
 
 const readKitsCache = () =>
   readLocalCache(cacheKeys.solutionKitsList, cacheTtlMs.list, isSolutionKitList);
 
 const readKitDetailCache = (id: string) =>
   readLocalCache(cacheKeys.solutionKitDetail(id), cacheTtlMs.detail, isSolutionKitDefinition);
+
+const runsListCacheKey = (kitId?: string | null) =>
+  cacheKeys.solutionKitRunsList(kitId ?? "all");
+
+const readRunsListCache = (kitId?: string | null) =>
+  readLocalCache(
+    runsListCacheKey(kitId),
+    cacheTtlMs.list,
+    isInstallRunRecordList
+  );
+
+const readRunDetailCache = (runId: string) =>
+  readLocalCache(cacheKeys.solutionKitRunDetail(runId), cacheTtlMs.detail, isInstallRunDetail);
 
 const primeKitsCache = (items: SolutionKitSummary[]) => {
   cachedKits = items;
@@ -198,4 +347,154 @@ export async function previewSolutionKitPlan(input: SiteBuilderPlanInput) {
   }
 
   return payload;
+}
+
+const primeRunsCache = (
+  runs: SolutionKitInstallRunRecord[],
+  kitId?: string | null
+) => {
+  writeLocalCache(runsListCacheKey(kitId), runs);
+  cachedRunsPromises.delete(runsListCacheKey(kitId));
+};
+
+export const clearSolutionKitRunsCache = (kitId?: string | null) => {
+  if (kitId) {
+    const key = runsListCacheKey(kitId);
+    cachedRunsPromises.delete(key);
+    clearLocalCache(key);
+    return;
+  }
+  cachedRunsPromises.clear();
+};
+
+export async function listSolutionKitRuns(options?: {
+  kitId?: SolutionKitId;
+  mode?: SolutionKitInstallMode;
+  limit?: number;
+}) {
+  const searchParams = new URLSearchParams();
+  if (options?.kitId) searchParams.set("kitId", options.kitId);
+  if (options?.mode) searchParams.set("mode", options.mode);
+  if (typeof options?.limit === "number" && Number.isFinite(options.limit)) {
+    searchParams.set("limit", String(options.limit));
+  }
+  const query = searchParams.toString();
+  const path = query.length > 0 ? `/solution-kits/runs?${query}` : "/solution-kits/runs";
+  const payload = await apiRequest<{ items: SolutionKitInstallRunRecord[] }>(path, {
+    method: "GET",
+  });
+  return payload.items ?? [];
+}
+
+export async function listSolutionKitRunsCached(options?: {
+  kitId?: SolutionKitId;
+  mode?: SolutionKitInstallMode;
+  limit?: number;
+  force?: boolean;
+}) {
+  const key = runsListCacheKey(options?.kitId ?? null);
+
+  if (!options?.force && !options?.mode && typeof options?.limit === "undefined") {
+    const cached = readRunsListCache(options?.kitId ?? null);
+    if (cached) return cached;
+    const pending = cachedRunsPromises.get(key);
+    if (pending) return pending;
+  }
+
+  const request = listSolutionKitRuns({
+    kitId: options?.kitId,
+    mode: options?.mode,
+    limit: options?.limit,
+  });
+  cachedRunsPromises.set(key, request);
+  const items = await request;
+  if (!options?.mode && typeof options?.limit === "undefined") {
+    primeRunsCache(items, options?.kitId ?? null);
+  } else {
+    cachedRunsPromises.delete(key);
+  }
+  return items;
+}
+
+export async function getSolutionKitRun(runId: string) {
+  const payload = await apiRequest<SolutionKitRunDetail>(`/solution-kits/runs/${runId}`, {
+    method: "GET",
+  });
+  if (!isInstallRunDetail(payload)) {
+    throw new Error("Invalid solution kit run response");
+  }
+  writeLocalCache(cacheKeys.solutionKitRunDetail(runId), payload);
+  return payload;
+}
+
+export async function getSolutionKitRunCached(runId: string, options?: { force?: boolean }) {
+  if (!options?.force) {
+    const cached = readRunDetailCache(runId);
+    if (cached) return cached;
+  }
+  return getSolutionKitRun(runId);
+}
+
+const assertInstallResult = (payload: unknown) => {
+  if (!isInstallResult(payload)) {
+    throw new Error("Invalid solution kit install response");
+  }
+  return payload;
+};
+
+const notifyRunsRefresh = (kitId: SolutionKitId) => {
+  const key = runsListCacheKey(kitId);
+  clearLocalCache(key);
+  cachedRunsPromises.delete(key);
+  broadcastCacheEvent({ key, action: "invalidate" });
+};
+
+export async function applySolutionKit(
+  kitId: SolutionKitId,
+  input?: {
+    dryRun?: boolean;
+    continueOnError?: boolean;
+  }
+) {
+  const payload = await apiRequest<SolutionKitInstallResult>(
+    `/solution-kits/${kitId}/apply`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input ?? {}),
+    },
+    { withCsrf: true }
+  );
+  const normalized = assertInstallResult(payload);
+  writeLocalCache(cacheKeys.solutionKitRunDetail(normalized.run.id), {
+    run: normalized.run,
+    items: normalized.items,
+  });
+  notifyRunsRefresh(kitId);
+  return normalized;
+}
+
+export async function rollbackSolutionKit(
+  kitId: SolutionKitId,
+  input?: {
+    sourceRunId?: string;
+    continueOnError?: boolean;
+  }
+) {
+  const payload = await apiRequest<SolutionKitInstallResult>(
+    `/solution-kits/${kitId}/rollback`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input ?? {}),
+    },
+    { withCsrf: true }
+  );
+  const normalized = assertInstallResult(payload);
+  writeLocalCache(cacheKeys.solutionKitRunDetail(normalized.run.id), {
+    run: normalized.run,
+    items: normalized.items,
+  });
+  notifyRunsRefresh(kitId);
+  return normalized;
 }

@@ -45,6 +45,10 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `popups:detail:<id>`
 - `reviews:list`
 - `reviews:detail:<id>`
+- `solutionKits:list`
+- `solutionKits:detail:<id>`
+- `solutionKits:runs:list:<kitId|all>`
+- `solutionKits:runs:detail:<runId>`
 - `listings:queries:list`
 - `listings:queries:detail:<id>`
 - `listings:templates:list`

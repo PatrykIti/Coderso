@@ -2,7 +2,9 @@ import { expect, test } from "bun:test";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import {
+  applySolutionKit,
   clearSolutionKitsCache,
+  listSolutionKitRunsCached,
   listSolutionKits,
   listSolutionKitsCached,
   previewSolutionKitPlan,
@@ -119,6 +121,140 @@ test("previewSolutionKitPlan posts planner payload", async () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.input).toBe("/admin/api/solution-kits/plan");
     expect(calls[0]?.init?.method).toBe("POST");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listSolutionKitRunsCached reads from local storage", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ items: [] });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    storage.setItem(
+      cacheKeys.solutionKitRunsList("all"),
+      JSON.stringify({
+        value: [
+          {
+            id: "run-1",
+            kitId: "automotive-workshop",
+            mode: "apply",
+            status: "success",
+            actorId: null,
+            rollbackOfRunId: null,
+            options: {},
+            summary: {
+              total: 1,
+              success: 1,
+              failed: 0,
+              planned: 0,
+              skipped: 0,
+              operations: {
+                create: 1,
+                update: 0,
+                noop: 0,
+                delete: 0,
+                restore: 0,
+              },
+            },
+            error: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            finishedAt: new Date().toISOString(),
+          },
+        ],
+        savedAt: Date.now(),
+      })
+    );
+
+    const items = await listSolutionKitRunsCached();
+    expect(items).toHaveLength(1);
+    expect(items[0]?.id).toBe("run-1");
+    expect(calls).toHaveLength(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("applySolutionKit posts payload to apply endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push({ input, init });
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      run: {
+        id: "run-apply",
+        kitId: "automotive-workshop",
+        mode: "apply",
+        status: "success",
+        actorId: null,
+        rollbackOfRunId: null,
+        options: {},
+        summary: {
+          total: 1,
+          success: 1,
+          failed: 0,
+          planned: 0,
+          skipped: 0,
+          operations: {
+            create: 1,
+            update: 0,
+            noop: 0,
+            delete: 0,
+            restore: 0,
+          },
+        },
+        error: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+      },
+      items: [],
+      summary: {
+        total: 1,
+        success: 1,
+        failed: 0,
+        planned: 0,
+        skipped: 0,
+        operations: {
+          create: 1,
+          update: 0,
+          noop: 0,
+          delete: 0,
+          restore: 0,
+        },
+      },
+    });
+  };
+
+  try {
+    await applySolutionKit("automotive-workshop", {
+      dryRun: false,
+      continueOnError: true,
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/solution-kits/automotive-workshop/apply");
+    expect(calls[1]?.init?.method).toBe("POST");
   } finally {
     globalThis.fetch = originalFetch;
   }

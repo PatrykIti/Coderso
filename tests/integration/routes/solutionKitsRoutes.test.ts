@@ -45,23 +45,44 @@ test("registerSolutionKitsRoutes wires solution kits endpoints", () => {
   expect(paths).toEqual(
     expect.arrayContaining([
       "GET /solution-kits",
+      "GET /solution-kits/runs",
+      "GET /solution-kits/runs/:runId",
       "GET /solution-kits/:id",
       "POST /solution-kits/plan",
+      "POST /solution-kits/:id/apply",
+      "POST /solution-kits/:id/rollback",
     ])
+  );
+  expect(paths.indexOf("GET /solution-kits/runs")).toBeLessThan(
+    paths.indexOf("GET /solution-kits/:id")
   );
   expect(requestedPermissions).toEqual([
     "solution-kits:read",
     "solution-kits:read",
     "solution-kits:read",
+    "solution-kits:read",
+    "solution-kits:read",
+    "solution-kits:write",
+    "solution-kits:write",
   ]);
 });
 
 test("mapSolutionKitError maps domain errors", () => {
   const notFound = mapSolutionKitError(new Error("solution_kit_not_found"));
+  const runNotFound = mapSolutionKitError(new Error("solution_kit_install_run_not_found"));
+  const rollbackSourceNotFound = mapSolutionKitError(
+    new Error("solution_kit_rollback_source_not_found")
+  );
+  const rollbackInvalidSource = mapSolutionKitError(
+    new Error("solution_kit_rollback_invalid_source")
+  );
   const invalid = mapSolutionKitError(new Error("solution_kit_payload_invalid"));
   const unknown = mapSolutionKitError(new Error("other_error"));
 
   expect(notFound?.status).toBe(404);
+  expect(runNotFound?.status).toBe(404);
+  expect(rollbackSourceNotFound?.status).toBe(404);
+  expect(rollbackInvalidSource?.status).toBe(409);
   expect(invalid?.status).toBe(400);
   expect(unknown).toBeNull();
 });

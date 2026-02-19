@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
+  type SolutionKitInstallRunRecord,
   getSolutionKitCached,
   previewSolutionKitPlan,
   type SiteBuilderBusinessType,
@@ -21,6 +22,7 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { SolutionKitCard } from "./SolutionKitCard";
 import { useSolutionKits } from "./hooks/useSolutionKits";
+import { useSolutionKitRuns } from "./hooks/useSolutionKitRuns";
 
 const businessTypeOptions: Array<{ value: SiteBuilderBusinessType; label: string }> = [
   { value: "automotive_workshop", label: "Automotive workshop" },
@@ -78,6 +80,20 @@ const normalizeLocale = (value: string) => {
   return trimmed.length > 0 ? trimmed : "en";
 };
 
+const formatRunDate = (value: string | null) => {
+  if (!value) return "In progress";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  return date.toLocaleString();
+};
+
+const runStatusBadgeVariant = (run: SolutionKitInstallRunRecord) => {
+  if (run.status === "failed") return "destructive" as const;
+  if (run.mode === "dry_run") return "secondary" as const;
+  if (run.status === "success") return "default" as const;
+  return "outline" as const;
+};
+
 export function SolutionKitsPage() {
   const { items, isLoading, error } = useSolutionKits();
 
@@ -92,6 +108,23 @@ export function SolutionKitsPage() {
   const [plan, setPlan] = useState<SiteBuilderPlanOutput | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
+  const {
+    runs,
+    isLoading: runsLoading,
+    error: runsError,
+    selectedRunId,
+    setSelectedRunId,
+    selectedRun,
+    isDetailLoading,
+    detailError,
+    refreshRuns,
+    apply,
+    rollback,
+    isMutating,
+    mutationError,
+    lastResult,
+    latestApplyRunId,
+  } = useSolutionKitRuns(selectedId);
 
   useEffect(() => {
     if (selectedId || items.length === 0) return;
@@ -147,6 +180,18 @@ export function SolutionKitsPage() {
     } finally {
       setPlanLoading(false);
     }
+  };
+
+  const handleApplyKit = async () => {
+    await apply({ dryRun: false, continueOnError: true });
+  };
+
+  const handleDryRunKit = async () => {
+    await apply({ dryRun: true, continueOnError: true });
+  };
+
+  const handleRollbackLatest = async () => {
+    await rollback(latestApplyRunId ?? undefined);
   };
 
   return (
@@ -292,6 +337,158 @@ export function SolutionKitsPage() {
                 </CardContent>
               </Card>
             ) : null}
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Kit install actions</CardTitle>
+                <CardDescription>
+                  Execute deterministic apply/dry-run flows and review rollback-safe history.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button onClick={handleApplyKit} disabled={!selectedId || isMutating}>
+                    {isMutating ? "Running..." : "Apply kit"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleDryRunKit}
+                    disabled={!selectedId || isMutating}
+                  >
+                    Dry run
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleRollbackLatest}
+                  disabled={!selectedId || isMutating || !latestApplyRunId}
+                >
+                  Rollback latest apply
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Latest apply run: {latestApplyRunId ?? "none"}
+                </p>
+                {mutationError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Install action failed</AlertTitle>
+                    <AlertDescription>{mutationError}</AlertDescription>
+                  </Alert>
+                ) : null}
+                {lastResult ? (
+                  <Alert>
+                    <AlertTitle>Last run: {lastResult.run.status}</AlertTitle>
+                    <AlertDescription>
+                      Mode: {lastResult.run.mode}. Success: {lastResult.summary.success} /{" "}
+                      {lastResult.summary.total}.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Install runs</CardTitle>
+                <CardDescription>
+                  Latest execution history for the selected solution kit.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => refreshRuns(true)}
+                    disabled={runsLoading}
+                  >
+                    Refresh
+                  </Button>
+                </div>
+
+                {runsError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Failed to load runs</AlertTitle>
+                    <AlertDescription>{runsError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {runsLoading && runs.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Loading install runs...</p>
+                ) : null}
+
+                {runs.length === 0 && !runsLoading ? (
+                  <p className="text-sm text-muted-foreground">
+                    No runs yet. Use “Apply kit” or “Dry run” to generate history.
+                  </p>
+                ) : null}
+
+                {runs.length > 0 ? (
+                  <div className="space-y-2">
+                    {runs.map((run) => (
+                      <button
+                        key={run.id}
+                        type="button"
+                        onClick={() => setSelectedRunId(run.id)}
+                        className={`w-full rounded-md border p-2 text-left transition ${
+                          selectedRunId === run.id
+                            ? "border-primary/60 bg-primary/5"
+                            : "hover:border-primary/30"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-foreground">{run.mode}</p>
+                          <Badge variant={runStatusBadgeVariant(run)}>{run.status}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {formatRunDate(run.finishedAt)}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+
+                {isDetailLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading run details...</p>
+                ) : null}
+
+                {detailError ? (
+                  <Alert variant="destructive">
+                    <AlertTitle>Failed to load run details</AlertTitle>
+                    <AlertDescription>{detailError}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {selectedRun ? (
+                  <div className="space-y-2 rounded-md border p-3">
+                    <p className="text-sm font-medium text-foreground">
+                      Run summary ({selectedRun.run.mode})
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      success: {selectedRun.run.summary.success}, failed:{" "}
+                      {selectedRun.run.summary.failed}, planned:{" "}
+                      {selectedRun.run.summary.planned}, skipped:{" "}
+                      {selectedRun.run.summary.skipped}
+                    </p>
+                    <div className="space-y-1">
+                      {selectedRun.items.slice(0, 6).map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between gap-2 rounded border px-2 py-1"
+                        >
+                          <span className="text-xs text-foreground">
+                            {item.resourceType}:{item.resourceKey}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {item.operation}/{item.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
 
             {planError ? (
               <Alert variant="destructive">

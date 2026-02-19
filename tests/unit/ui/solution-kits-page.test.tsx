@@ -25,6 +25,8 @@ test("SolutionKitsPage renders shell and planner controls", () => {
   expect(html).toContain("Solution Kits");
   expect(html).toContain("AI plan preview");
   expect(html).toContain("Generate plan");
+  expect(html).toContain("Kit install actions");
+  expect(html).toContain("Install runs");
 });
 
 test("SolutionKitsPage renders cached cards without loading placeholder", () => {

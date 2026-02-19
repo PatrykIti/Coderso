@@ -72,3 +72,13 @@ await applyKit({
   - implemented idempotent apply engine with `dry_run`/`apply` and per-resource trace,
   - implemented best-effort rollback flow using operation snapshots,
   - added audit events for apply/rollback execution outcomes.
+- Completed `TASK-054-13-03`:
+  - added full internal API surface for apply/rollback and install runs history,
+  - wired RBAC split (`solution-kits:read` for read routes, `solution-kits:write` for mutate routes),
+  - added schema validation contracts for apply/rollback/runs query and runId path,
+  - extended domain error mapping for install-run and rollback failures.
+- Completed `TASK-054-13-04`:
+  - extended admin client with apply/rollback/runs APIs + cache keys,
+  - added run-history UX and install action controls on `/admin/coderso/solution-kits`,
+  - wired cache-bus invalidation and prefetch for kits + runs data,
+  - updated admin cache documentation for solution-kits run keys.

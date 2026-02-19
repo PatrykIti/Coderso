@@ -19,7 +19,10 @@ import {
 } from "@/services/commerceClient";
 import { listPopupsCached } from "@/services/popupsClient";
 import { listReviewsCached } from "@/services/reviewsClient";
-import { listSolutionKitsCached } from "@/services/solutionKitsClient";
+import {
+  listSolutionKitRunsCached,
+  listSolutionKitsCached,
+} from "@/services/solutionKitsClient";
 import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
@@ -161,7 +164,11 @@ const defaultEntries: AdminPrefetchEntry[] = [
   },
   {
     match: "/coderso/solution-kits",
-    run: () => listSolutionKitsCached({ force: true }),
+    run: () =>
+      Promise.all([
+        listSolutionKitsCached({ force: true }),
+        listSolutionKitRunsCached({ force: true }),
+      ]),
   },
   {
     match: "/menus",

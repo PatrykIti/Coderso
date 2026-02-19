@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-13-03  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -45,3 +45,21 @@ renderPlan(plan);
 ## Documentation Updates Required
 - `_docs/ADMIN_CACHE.md` (mapa cache/prefetch)
 
+## Completion Notes
+- Extended Solution Kits admin client with install execution APIs:
+  - `listSolutionKitRunsCached`
+  - `getSolutionKitRunCached`
+  - `applySolutionKit`
+  - `rollbackSolutionKit`
+- Added cache support for runs list/detail keys and cache-bus invalidation after apply/rollback.
+- Updated prefetch contract for `/coderso/solution-kits` to preload:
+  - kits list,
+  - install runs list.
+- Expanded page UX:
+  - install action panel (apply, dry-run, rollback latest),
+  - runs history list with detail preview,
+  - refresh/error/loading states consistent with admin patterns.
+- Added/updated tests:
+  - `tests/unit/admin/solutionKitsClient.test.ts`
+  - `tests/unit/ui/solution-kits-page.test.tsx`
+  - `tests/unit/admin/adminPrefetch.test.ts`

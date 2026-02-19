@@ -1089,6 +1089,10 @@ Internal admin API (`/admin/api/*`, RBAC required):
 - `GET /solution-kits`
 - `GET /solution-kits/:id`
 - `POST /solution-kits/plan`
+- `POST /solution-kits/:id/apply`
+- `POST /solution-kits/:id/rollback`
+- `GET /solution-kits/runs`
+- `GET /solution-kits/runs/:runId`
 
 Plan request payload (summary):
 
@@ -1108,10 +1112,33 @@ Plan response highlights:
 - transparent `steps[]` list,
 - `settingsPatch` preview (no side effects in this endpoint).
 
-Install engine foundation (DB contract used by next API step):
+Install engine:
 - `solution_kit_install_runs` stores one run per `dry_run` / `apply` / `rollback`,
 - `solution_kit_install_items` stores per-resource operation trace (`content_type|form|page|menu`),
 - idempotency keying uses resource keys (`slug` / `location`) and records rollback hints.
+
+Apply request payload:
+
+```json
+{
+  "dryRun": false,
+  "continueOnError": true
+}
+```
+
+Rollback request payload:
+
+```json
+{
+  "sourceRunId": "123e4567-e89b-12d3-a456-426614174000",
+  "continueOnError": true
+}
+```
+
+Runs query params:
+- `kitId` (optional)
+- `mode` (`dry_run|apply|rollback`, optional)
+- `limit` (optional, 1..200)
 
 Run shape (summary):
 - `id`, `kitId`, `mode`, `status`,
@@ -1127,7 +1154,8 @@ Item shape (summary):
 - `error`, `createdAt`, `updatedAt`.
 
 Note:
-- Apply/rollback internal endpoints (`solution-kits:write`) are delivered in the next subtask (`TASK-054-13-03`).
+- `POST /solution-kits/:id/apply` and `POST /solution-kits/:id/rollback` require `solution-kits:write`.
+- Read routes require `solution-kits:read`.
 
 ---
 

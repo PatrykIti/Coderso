@@ -5,7 +5,7 @@
 **Category:** API/Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-13-01, TASK-054-13-02  
-**Status:** To Do
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -52,3 +52,22 @@ router.post("/solution-kits/:id/apply", requirePermission("solution-kits:write")
 ## Documentation Updates Required
 - `_docs/CMS_API.md` (pełny kontrakt endpointów)
 
+## Completion Notes
+- Extended internal solution kits API routes:
+  - `POST /solution-kits/:id/apply`
+  - `POST /solution-kits/:id/rollback`
+  - `GET /solution-kits/runs`
+  - `GET /solution-kits/runs/:runId`
+- Kept existing endpoints:
+  - `GET /solution-kits`
+  - `GET /solution-kits/:id`
+  - `POST /solution-kits/plan`
+- Added payload/query validation schemas:
+  - `solutionKitApplyRequestSchema`
+  - `solutionKitRollbackRequestSchema`
+  - `solutionKitRunsQuerySchema`
+  - `solutionKitRunIdSchema`
+- Added domain error mapping for install-run and rollback-specific errors.
+- Added tests:
+  - `tests/integration/routes/solutionKitsRoutes.test.ts`
+  - `tests/unit/server/solutionKitSchemas.test.ts`
