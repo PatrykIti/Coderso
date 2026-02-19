@@ -5,7 +5,7 @@
 **Category:** Product UX + Assistant + Templates  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-06..12, TASK-101  
-**Status:** To Do
+**Status:** In Progress (2026-02-19)
 
 ---
 
@@ -51,3 +51,12 @@ await applyKit({
 1. User can launch a working site from kit in guided flow.
 2. AI wizard outputs editable, transparent configuration steps.
 3. Kit install is idempotent, reversible, and documented.
+
+## Sub-Tasks
+- `TASK-054-13-01`: Solution Kits domain, catalog, and planner
+- `TASK-054-13-02`: Install engine + idempotency + rollback log
+- `TASK-054-13-03`: Internal API + RBAC for kits
+- `TASK-054-13-04`: Admin UI page + cache/prefetch
+- `TASK-054-13-05`: AI site wizard guided flow
+- `TASK-054-13-06`: Per-kit content packs and installers
+- `TASK-054-13-07`: QA/docs/changelog closure

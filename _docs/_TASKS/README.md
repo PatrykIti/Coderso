@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 26 tasks
-- **In Progress:** 1 task
+- **To Do:** 30 tasks
+- **In Progress:** 3 tasks
 - **Done:** 364 tasks
 
 ---
@@ -39,7 +39,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
+| TASK-054-13-02 | Solution Kits Install Engine, Idempotency, and Rollback | High | Large | Install run log + rollback-safe apply |
+| TASK-054-13-03 | Solution Kits Internal API and RBAC | High | Medium | Internal endpoints + permissions + error mapping |
+| TASK-054-13-04 | Solution Kits Admin UI, Cache, and Prefetch | High | Medium | `/coderso/solution-kits` screen + cache/prefetch |
+| TASK-054-13-05 | AI Site Wizard Guided Flow | High | Large | Step-by-step planner review and execute |
+| TASK-054-13-06 | Solution Kits Content Packs and Installers | High | Large | Per-kit models/pages/forms/menu/SEO installers |
+| TASK-054-13-07 | Solution Kits QA, Docs, and Closure | Medium | Medium | Full regression matrix + docs/changelog closure |
 | TASK-054-14 | Coderso Composite-First Widget Strategy | High | Large | Kits -> Composite -> Atomic delivery model |
 | TASK-054-15 | Coderso Plugin Contract and Package Manifest | High | Large | Safe plugin module/widget manifest contract |
 | TASK-054-16 | Coderso Module Widget Pack Matrix | High | Medium | Minimum composite packs per module |
@@ -76,6 +81,8 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
+| TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
+| TASK-054-13-01 | Solution Kits Domain, Catalog, and Planner | High | Medium | Deterministic kit catalog + recommendation planner |
 
 ---
 
