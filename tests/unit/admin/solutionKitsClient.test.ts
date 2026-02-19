@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import {
   applySolutionKit,
   clearSolutionKitsCache,
@@ -192,6 +193,7 @@ test("listSolutionKitRunsCached reads from local storage", async () => {
 test("applySolutionKit posts payload to apply endpoint", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  resetCsrfToken();
 
   globalThis.fetch = async (input, init) => {
     const url = String(input);
@@ -256,6 +258,7 @@ test("applySolutionKit posts payload to apply endpoint", async () => {
     expect(calls[1]?.input).toBe("/admin/api/solution-kits/automotive-workshop/apply");
     expect(calls[1]?.init?.method).toBe("POST");
   } finally {
+    resetCsrfToken();
     globalThis.fetch = originalFetch;
   }
 });

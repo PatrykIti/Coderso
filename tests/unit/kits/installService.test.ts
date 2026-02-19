@@ -246,7 +246,8 @@ testIfDb("rollbackSolutionKitInstall restores updated rows and deletes created r
     .where(eq(forms.slug, createdFormSlug));
 
   expect(restoredType?.name).toBe("Legacy Service Type");
-  expect(asRecord(restoredType?.schema).legacy).toBeDefined();
+  const restoredTypeProperties = asRecord(asRecord(restoredType?.schema).properties);
+  expect(restoredTypeProperties.legacy).toBeDefined();
   expect(restoredPage?.title).toBe("Legacy Landing");
   expect(restoredPage?.status).toBe("draft");
   expect(remainingForm).toBeUndefined();
@@ -256,4 +257,3 @@ const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
-
