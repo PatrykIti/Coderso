@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { UploadCloud } from "lucide-react";
+import { Settings2, UploadCloud } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -13,29 +13,35 @@ import {
   updateMedia,
   uploadMedia,
 } from "@/services/mediaClient";
+import {
+  getStorageSettings,
+  updateStorageSettings,
+} from "@/services/settingsClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
-import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { MediaDetailsDrawer } from "@/ui/media/MediaDetailsDrawer";
 import { MediaGrid } from "@/ui/media/MediaGrid";
-import { PageHeader } from "@/ui/shared/PageHeader";
+import { MediaSettingsDrawer } from "@/ui/media/MediaSettingsDrawer";
 import {
   MediaToolbar,
   type MediaFilter,
   type MediaView,
 } from "@/ui/media/MediaToolbar";
+import type { MediaItem, MediaMetaUpdate } from "@/ui/media/types";
 import {
   UploadDropzone,
   type UploadDropzoneHandle,
 } from "@/ui/media/UploadDropzone";
-import type { MediaItem, MediaMetaUpdate } from "@/ui/media/types";
 import { toMediaItem } from "@/ui/media/utils";
-
+import { PageHeader } from "@/ui/shared/PageHeader";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);
   const initialCached = getCachedMedia();
-  const [items, setItems] = useState<MediaItem[]>(() => (initialCached ? initialCached.map(toMediaItem) : []));
+  const [items, setItems] = useState<MediaItem[]>(() =>
+    initialCached ? initialCached.map(toMediaItem) : []
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -46,6 +52,14 @@ export function MediaLibraryPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(() => !initialCached);
   const [error, setError] = useState<string | null>(null);
+  const [isSettingsDrawerOpen, setIsSettingsDrawerOpen] = useState(false);
+  const [deliveryAccessMode, setDeliveryAccessMode] = useState<
+    "public" | "internal"
+  >("public");
+  const [isSettingsLoading, setIsSettingsLoading] = useState(false);
+  const [isSettingsSaving, setIsSettingsSaving] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
   const hasHydratedRef = useRef(false);
 
   const initialSelectedId = useMemo(() => {
@@ -221,6 +235,54 @@ export function MediaLibraryPage() {
     }
   };
 
+  const loadMediaSettings = useCallback(async () => {
+    setSettingsError(null);
+    setSettingsSuccess(null);
+    setIsSettingsLoading(true);
+    try {
+      const settings = await getStorageSettings();
+      setDeliveryAccessMode(settings.delivery.accessMode ?? "public");
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setSettingsError(err.message);
+      } else {
+        setSettingsError("Failed to load media settings.");
+      }
+    } finally {
+      setIsSettingsLoading(false);
+    }
+  }, []);
+
+  const handleOpenMediaSettings = () => {
+    setIsSettingsDrawerOpen(true);
+    loadMediaSettings().catch(() => undefined);
+  };
+
+  const handleSaveMediaSettings = () => {
+    if (isSettingsLoading || isSettingsSaving) return;
+
+    void (async () => {
+      setSettingsError(null);
+      setSettingsSuccess(null);
+      setIsSettingsSaving(true);
+      try {
+        const updated = await updateStorageSettings({
+          delivery: { accessMode: deliveryAccessMode },
+        });
+        setDeliveryAccessMode(updated.delivery.accessMode ?? "public");
+        setSettingsSuccess("Media settings updated.");
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setSettingsError(err.message);
+        } else {
+          setSettingsError("Failed to update media settings.");
+        }
+      } finally {
+        setIsSettingsSaving(false);
+      }
+    })();
+  };
+
   return (
     <AdminShell
       activeHref="/admin/media"
@@ -237,13 +299,23 @@ export function MediaLibraryPage() {
           title="Media Library"
           description="Manage your images and assets."
           actions={
-            <Button
-              className="gap-2"
-              onClick={() => dropzoneRef.current?.openFileDialog()}
-            >
-              <UploadCloud className="h-4 w-4" />
-              Upload New
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={handleOpenMediaSettings}
+              >
+                <Settings2 className="h-4 w-4" />
+                Media settings
+              </Button>
+              <Button
+                className="gap-2"
+                onClick={() => dropzoneRef.current?.openFileDialog()}
+              >
+                <UploadCloud className="h-4 w-4" />
+                Upload New
+              </Button>
+            </div>
           }
         />
         {error ? (
@@ -299,6 +371,17 @@ export function MediaLibraryPage() {
         onDelete={handleDelete}
         onCopy={handleCopy}
         onOpen={handleOpen}
+      />
+      <MediaSettingsDrawer
+        open={isSettingsDrawerOpen}
+        onOpenChange={setIsSettingsDrawerOpen}
+        accessMode={deliveryAccessMode}
+        isLoading={isSettingsLoading}
+        isSaving={isSettingsSaving}
+        error={settingsError}
+        success={settingsSuccess}
+        onAccessModeChange={setDeliveryAccessMode}
+        onSave={handleSaveMediaSettings}
       />
     </AdminShell>
   );

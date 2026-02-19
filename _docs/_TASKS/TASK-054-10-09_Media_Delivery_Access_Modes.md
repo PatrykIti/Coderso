@@ -48,7 +48,7 @@ Add configurable media delivery access mode:
 
 ## Delivered
 - Extended storage settings contract with `delivery.accessMode` (`public` / `internal`).
-- Added Delivery Access controls in Settings -> Storage UI.
+- Added Delivery Access controls in admin UI (final placement: Media Library settings drawer).
 - Hardened `/media/*` runtime:
   - internal mode requires authenticated session or API key scope (`media.read`),
   - public mode preserves existing behavior.

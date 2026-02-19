@@ -114,7 +114,6 @@ type StorageFormState = {
   maxSizeValue: string;
   maxSizeUnit: StorageSizeUnit;
   allowedMime: string;
-  deliveryAccessMode: "public" | "internal";
   s3AccessKey: string;
   s3SecretKey: string;
   s3Bucket: string;
@@ -302,7 +301,6 @@ const emptyFormState: StorageFormState = {
   maxSizeValue: "",
   maxSizeUnit: DEFAULT_SIZE_UNIT,
   allowedMime: "",
-  deliveryAccessMode: "public",
   s3AccessKey: "",
   s3SecretKey: "",
   s3Bucket: "",
@@ -393,7 +391,6 @@ export function StorageSettingsPage() {
           maxSizeValue: sizeState.value,
           maxSizeUnit: sizeState.unit,
           allowedMime: result.allowedMime ?? "",
-          deliveryAccessMode: result.delivery.accessMode ?? "public",
           s3AccessKey: "",
           s3SecretKey: "",
           s3Bucket: result.s3.bucket ?? "",
@@ -461,7 +458,6 @@ export function StorageSettingsPage() {
         publicBaseUrl: normalizeOptional(form.publicBaseUrl),
         maxSizeBytes: normalizeMaxSize(form.maxSizeValue, form.maxSizeUnit),
         allowedMime: normalizeOptional(form.allowedMime),
-        delivery: { accessMode: form.deliveryAccessMode },
         s3: {
           bucket: normalizeOptional(form.s3Bucket),
           region: normalizeOptional(form.s3Region),
@@ -486,7 +482,6 @@ export function StorageSettingsPage() {
         maxSizeValue: resolveSizeFromBytes(updated.maxSizeBytes).value,
         maxSizeUnit: resolveSizeFromBytes(updated.maxSizeBytes).unit,
         allowedMime: updated.allowedMime ?? "",
-        deliveryAccessMode: updated.delivery.accessMode ?? "public",
         s3AccessKey: "",
         s3SecretKey: "",
         s3Bucket: updated.s3.bucket ?? "",
@@ -758,44 +753,6 @@ export function StorageSettingsPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-border/60 shadow-sm">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5 text-primary" />
-                      Delivery Access
-                    </CardTitle>
-                    <CardDescription>
-                      Control who can open `/media/*` URLs on the runtime site.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <label className={labelClassName}>Access mode</label>
-                      <Select
-                        value={form.deliveryAccessMode}
-                        onValueChange={(value) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            deliveryAccessMode: value as "public" | "internal",
-                          }))
-                        }
-                      >
-                        <SelectTrigger className="bg-muted/40">
-                          <SelectValue placeholder="Choose access mode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="public">Public (recommended)</SelectItem>
-                          <SelectItem value="internal">Internal (session or API key)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-xs text-muted-foreground">
-                      Internal mode blocks anonymous media access. Requests must come from an authenticated
-                      admin session or API key with the <span className="font-medium">media.read</span>
-                      scope.
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
 
               <div className="space-y-6">

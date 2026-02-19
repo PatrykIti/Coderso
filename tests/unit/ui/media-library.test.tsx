@@ -8,6 +8,7 @@ test("MediaLibraryPage renders toolbar and grid", () => {
   const html = renderAdminUi(<MediaLibraryPage />);
 
   expect(html).toContain("Media Library");
+  expect(html).toContain("Media settings");
   expect(html).toContain("Upload New");
 });
 
