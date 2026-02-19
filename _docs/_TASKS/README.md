@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 31 tasks
+- **To Do:** 37 tasks
 - **In Progress:** 2 tasks
-- **Done:** 343 tasks
+- **Done:** 345 tasks
 
 ---
 
@@ -38,7 +38,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-11 | Coderso Commerce Suite | Medium | Large | Product templates, compare, wishlist, tables |
+| TASK-054-11-01 | Commerce Domain Contract and Schemas | High | Medium | Product/variant/price/stock contracts + validation schemas |
+| TASK-054-11-02 | Commerce DB Schema and Migrations | High | Medium | `commerce_*` tables + indexes + migration metadata |
+| TASK-054-11-03 | Commerce Service and Query Engine | High | Large | Deterministic product CRUD and runtime query engine |
+| TASK-054-11-04 | Commerce Admin API Routes and RBAC | High | Medium | `/admin/api/commerce/*` + permissions + error mapping |
+| TASK-054-11-05 | Commerce Admin UI Catalog and Editor | High | Large | Product list/editor UX with cache/prefetch patterns |
+| TASK-054-11-06 | Commerce Runtime Widgets (Gallery/Compare/Table) | High | Large | Runtime product widgets + resolver integration |
+| TASK-054-11-07 | Checkout/Cart Adapter Contract | Medium | Medium | Pluggable checkout adapter interface for providers/plugins |
+| TASK-054-11-08 | Commerce QA, Docs, and Changelog Closure | Medium | Medium | Regression matrix + docs/changelog closure |
 | TASK-054-12 | Coderso Menu, Popup, Reviews, Engagement Suite | Medium | Medium | Mega menu + popups + review workflow |
 | TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
 | TASK-054-14 | Coderso Composite-First Widget Strategy | High | Large | Kits -> Composite -> Atomic delivery model |
@@ -49,7 +56,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Mandatory release gates for modules |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
-| TASK-054-10-07 | Booking QA, Docs, and Closure | Medium | Medium | Regression matrix + docs/changelog closure |
 | TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts flow on top of content engine |
 | TASK-055-01 | Posts Domain Model and API Contract | High | Medium | `post` type abstraction + API aliases |
 | TASK-055-02 | Posts List Screen (WordPress-Like Table) | High | Medium | Pages-like editorial list UX |
@@ -78,7 +84,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Domain+API foundation in progress |
+| TASK-054-11 | Coderso Commerce Suite | Medium | Large | Product templates, compare, wishlist, tables |
 
 ---
 
@@ -86,6 +92,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-10-07 | Booking QA, Docs, and Closure | Medium | Medium | Regression matrix complete + docs/changelog closure |
+| TASK-054-10 | Coderso Booking and Appointment Suite | High | Large | Domain, API, admin UI, runtime widgets, access modes, and QA closure delivered |
 | TASK-054-10-09-03 | Media Access Tests and Docs | Medium | Medium | Coverage + docs/changelog closure for media delivery access |
 | TASK-054-10-09-02 | Media Runtime Access Enforcement | High | Medium | `/media/*` gate requires session or `media.read` API key in internal mode |
 | TASK-054-10-09-01 | Storage Settings Delivery Access Model and UI | High | Medium | `delivery.accessMode` in model/API/UI |

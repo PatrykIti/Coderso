@@ -5,7 +5,7 @@
 **Category:** Booking Domain + Admin/UI + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-07, TASK-054-09  
-**Status:** In Progress (started 2026-02-18)
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -78,9 +78,6 @@ Provide full booking and appointments features (JetBooking + JetAppointment pari
     - slot preview with reservation/blackout conflict filtering,
     - reservation creation and status transitions.
   - `TASK-054-10-04`: internal admin API routes `/booking/*` + RBAC (`booking:read`, `booking:write`) + deterministic error mapping.
-- Pending:
-  - final QA/docs closure (`TASK-054-10-07`).
-
 ## Progress Update (2026-02-18, Booking Admin UI)
 - Completed `TASK-054-10-05`:
   - added `/admin/coderso/booking` admin screen with tabs:
@@ -149,3 +146,9 @@ await createReservation({ requestedSlot, customerData });
   - storage setting `delivery.accessMode` for media runtime,
   - `/media/*` runtime gate for internal mode (session or `media.read` API key),
   - storage settings UI and tests/docs coverage.
+
+## Progress Update (2026-02-19, Final Closure)
+- Completed `TASK-054-10-07`:
+  - booking regression matrix executed (unit/integration/UI/runtime widget coverage),
+  - QA/docs closure completed in `_docs/CMS_API.md` and `_docs/ARCHITECTURE.md`,
+  - final booking-suite closure changelog added (`250-2026-02-19-booking-suite-qa-docs-closure.md`).
