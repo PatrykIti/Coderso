@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
 
-import { buildSiteBuilderPlan } from "../../../core/services/assistant/siteBuilderPlanner";
+import {
+  buildSiteBuilderPlan,
+  filterKitDefinitionByPlan,
+} from "../../../core/services/assistant/siteBuilderPlanner";
+import { getSolutionKitFromCatalog } from "../../../core/services/kits/solutionKitsCatalog";
 
 test("buildSiteBuilderPlan recommends matching business kit first", () => {
   const output = buildSiteBuilderPlan({
@@ -41,4 +45,19 @@ test("buildSiteBuilderPlan output is deterministic for identical input", () => {
 
   expect(left).toEqual(right);
   expect(left.recommendedKitId).toBe("small-ecommerce");
+});
+
+test("filterKitDefinitionByPlan removes resource groups for disabled editable steps", () => {
+  const kit = getSolutionKitFromCatalog("automotive-workshop");
+  expect(kit).toBeTruthy();
+  if (!kit) return;
+
+  const filtered = filterKitDefinitionByPlan(kit, {
+    enabledStepIds: ["settings", "pages", "qa"],
+  });
+
+  expect(filtered.resourceBlueprint.pages.length).toBeGreaterThan(0);
+  expect(filtered.resourceBlueprint.contentTypes).toHaveLength(0);
+  expect(filtered.resourceBlueprint.forms).toHaveLength(0);
+  expect(filtered.resourceBlueprint.menus).toHaveLength(0);
 });

@@ -1083,7 +1083,7 @@ Notes:
 
 Permissions:
 - `solution-kits:read` (list/detail/plan preview)
-- `solution-kits:write` (reserved for apply/rollback in next steps)
+- `solution-kits:write` (apply/rollback execution)
 
 Internal admin API (`/admin/api/*`, RBAC required):
 - `GET /solution-kits`
@@ -1109,7 +1109,7 @@ Plan request payload (summary):
 
 Plan response highlights:
 - deterministic `recommendedKitId` + `confidence`,
-- transparent `steps[]` list,
+- transparent `steps[]` list (`id`, `title`, `description`, `editable`, `affectsResources`),
 - `settingsPatch` preview (no side effects in this endpoint).
 
 Install engine:
@@ -1122,9 +1122,24 @@ Apply request payload:
 ```json
 {
   "dryRun": false,
-  "continueOnError": true
+  "continueOnError": true,
+  "plan": {
+    "enabledStepIds": ["settings", "content-model", "pages", "forms", "navigation", "qa"],
+    "settingsPatch": {
+      "site.locale": "pl",
+      "site.name": "AutoFix Warsaw"
+    },
+    "notes": [
+      "Recommended kit: Automotive Workshop."
+    ]
+  }
 }
 ```
+
+`plan` (optional):
+- `enabledStepIds`: execution scope selected in AI wizard review step,
+- `settingsPatch`: planner output snapshot attached to run metadata,
+- `notes`: planner notes attached to run metadata.
 
 Rollback request payload:
 
@@ -1145,6 +1160,11 @@ Run shape (summary):
 - `actorId`, `rollbackOfRunId`,
 - `options`, `summary`, `error`,
 - `createdAt`, `updatedAt`, `finishedAt`.
+
+`options.wizard` (when run started from AI wizard apply):
+- `enabledStepIds`,
+- `settingsPatch`,
+- `notes`.
 
 Item shape (summary):
 - `id`, `runId`, `position`,

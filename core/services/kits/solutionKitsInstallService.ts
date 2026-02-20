@@ -184,6 +184,7 @@ export type ApplySolutionKitInstallInput = {
   dryRun?: boolean;
   continueOnError?: boolean;
   kitDefinitionOverride?: SolutionKitDefinition;
+  runOptions?: JsonRecord;
 };
 
 export type RollbackSolutionKitInstallInput = {
@@ -1441,6 +1442,7 @@ export async function applySolutionKitInstall(
     options: {
       continueOnError,
       operationCount: operations.length,
+      ...asRecord(input.runOptions),
     },
   });
 
@@ -1631,4 +1633,3 @@ export async function rollbackSolutionKitInstall(
     summary,
   };
 }
-

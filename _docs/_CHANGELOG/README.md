@@ -301,3 +301,4 @@ Project Change Log.
 | 265 | 2026-02-19 | Solution kits install engine, idempotency, and rollback | CMS/Kits |
 | 266 | 2026-02-19 | Solution kits internal API and RBAC | Core/API |
 | 267 | 2026-02-19 | Solution kits admin UI runs, cache, and prefetch | Admin/UI |
+| 268 | 2026-02-19 | AI site wizard guided flow for solution kits | Admin/UI |

@@ -82,3 +82,8 @@ await applyKit({
   - added run-history UX and install action controls on `/admin/coderso/solution-kits`,
   - wired cache-bus invalidation and prefetch for kits + runs data,
   - updated admin cache documentation for solution-kits run keys.
+- Completed `TASK-054-13-05`:
+  - added `AiSiteWizard` guided flow (profile -> goals -> recommendation -> review -> execute),
+  - introduced typed `plan` payload for apply with step-level execution selection,
+  - persisted wizard metadata in install run options for rerun/clone-as-draft flows,
+  - integrated run timeline actions (apply/dry-run/rerun/rollback/clone) into wizard UX.

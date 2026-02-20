@@ -4,11 +4,14 @@ import {
   listSolutionKitsCatalog,
 } from "../kits/solutionKitsCatalog";
 import {
+  type SiteBuilderPlanApplyInput,
   type SiteBuilderPlanInput,
   type SiteBuilderPlanOutput,
+  type SiteBuilderPlanStepId,
   type SiteBuilderPlanStep,
   type SolutionKitDefinition,
   type SolutionKitId,
+  siteBuilderPlanStepIds,
 } from "../kits/solutionKitTypes";
 
 const normalizeLocale = (value: string) => {
@@ -63,38 +66,89 @@ const buildPlanSteps = (kit: SolutionKitDefinition): SiteBuilderPlanStep[] => [
     type: "settings",
     title: "Configure site basics",
     description: "Apply locale, branding defaults, and initial site configuration.",
+    editable: false,
+    affectsResources: [],
   },
   {
     id: "content-model",
     type: "content-model",
     title: "Create content model",
     description: `Provision content structure for ${kit.title.toLowerCase()}.`,
+    editable: true,
+    affectsResources: ["content_type"],
   },
   {
     id: "pages",
     type: "pages",
     title: "Create starter pages",
     description: `Install starter page set (${kit.resourceBlueprint.pages.length} pages).`,
+    editable: true,
+    affectsResources: ["page"],
   },
   {
     id: "forms",
     type: "forms",
     title: "Configure forms",
     description: `Install and wire form definitions (${kit.resourceBlueprint.forms.length} forms).`,
+    editable: true,
+    affectsResources: ["form"],
   },
   {
     id: "navigation",
     type: "navigation",
     title: "Apply navigation",
     description: "Create or update primary/footer menus for the kit.",
+    editable: true,
+    affectsResources: ["menu"],
   },
   {
     id: "qa",
     type: "qa",
     title: "Review and publish",
     description: "Run final checks and publish selected starter resources.",
+    editable: false,
+    affectsResources: [],
   },
 ];
+
+const cloneKitDefinition = (kit: SolutionKitDefinition): SolutionKitDefinition => ({
+  ...kit,
+  businessTypes: [...kit.businessTypes],
+  defaultGoals: [...kit.defaultGoals],
+  recommendedModules: [...kit.recommendedModules],
+  features: [...kit.features],
+  resourceBlueprint: {
+    contentTypes: kit.resourceBlueprint.contentTypes.map((item) => ({ ...item })),
+    forms: kit.resourceBlueprint.forms.map((item) => ({ ...item })),
+    pages: kit.resourceBlueprint.pages.map((item) => ({ ...item })),
+    menus: kit.resourceBlueprint.menus.map((item) => ({ ...item })),
+  },
+});
+
+const toEnabledStepSet = (
+  input: SiteBuilderPlanApplyInput | undefined
+): Set<SiteBuilderPlanStepId> => {
+  const enabled = input?.enabledStepIds;
+  if (!enabled || enabled.length === 0) {
+    return new Set(siteBuilderPlanStepIds);
+  }
+  return new Set(enabled);
+};
+
+export const filterKitDefinitionByPlan = (
+  kit: SolutionKitDefinition,
+  plan: SiteBuilderPlanApplyInput | undefined
+): SolutionKitDefinition => {
+  const enabled = toEnabledStepSet(plan);
+  const normalized = cloneKitDefinition(kit);
+
+  if (!enabled.has("content-model")) normalized.resourceBlueprint.contentTypes = [];
+  if (!enabled.has("pages")) normalized.resourceBlueprint.pages = [];
+  if (!enabled.has("forms")) normalized.resourceBlueprint.forms = [];
+  if (!enabled.has("navigation")) normalized.resourceBlueprint.menus = [];
+
+  return normalized;
+};
 
 export function buildSiteBuilderPlan(input: SiteBuilderPlanInput): SiteBuilderPlanOutput {
   const kits = listSolutionKitsCatalog();

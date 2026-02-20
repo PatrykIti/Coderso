@@ -262,3 +262,82 @@ test("applySolutionKit posts payload to apply endpoint", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("applySolutionKit sends wizard plan payload when provided", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  resetCsrfToken();
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push({ input, init });
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      run: {
+        id: "run-apply-2",
+        kitId: "automotive-workshop",
+        mode: "apply",
+        status: "success",
+        actorId: null,
+        rollbackOfRunId: null,
+        options: {},
+        summary: {
+          total: 1,
+          success: 1,
+          failed: 0,
+          planned: 0,
+          skipped: 0,
+          operations: {
+            create: 1,
+            update: 0,
+            noop: 0,
+            delete: 0,
+            restore: 0,
+          },
+        },
+        error: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+      },
+      items: [],
+      summary: {
+        total: 1,
+        success: 1,
+        failed: 0,
+        planned: 0,
+        skipped: 0,
+        operations: {
+          create: 1,
+          update: 0,
+          noop: 0,
+          delete: 0,
+          restore: 0,
+        },
+      },
+    });
+  };
+
+  try {
+    await applySolutionKit("automotive-workshop", {
+      dryRun: false,
+      continueOnError: true,
+      plan: {
+        enabledStepIds: ["settings", "pages", "qa"],
+        settingsPatch: { "site.locale": "pl" },
+        notes: ["Wizard note"],
+      },
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(calls[1]?.input).toBe("/admin/api/solution-kits/automotive-workshop/apply");
+    const body = String(calls[1]?.init?.body ?? "");
+    expect(body).toContain("\"enabledStepIds\":[\"settings\",\"pages\",\"qa\"]");
+    expect(body).toContain("\"settingsPatch\":{\"site.locale\":\"pl\"}");
+  } finally {
+    resetCsrfToken();
+    globalThis.fetch = originalFetch;
+  }
+});

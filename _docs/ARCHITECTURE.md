@@ -331,8 +331,13 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - mutate (`apply`/`rollback`): `solution-kits:write`.
 - Planner contract:
   - wejscie: profil biznesu + cele + locale (+ opcjonalny preferred kit),
-  - wyjscie: `recommendedKitId`, `confidence`, `steps[]`, `settingsPatch`, `notes`,
+  - wyjscie: `recommendedKitId`, `confidence`, `steps[]` (`editable`, `affectsResources`), `settingsPatch`, `notes`,
   - wynik jest deterministiczny dla identycznego inputu.
+- AI wizard guided execution contract:
+  - flow: `profile -> goals -> recommendation -> review -> execute`,
+  - review pozwala ograniczyc execution do `enabledStepIds`,
+  - apply endpoint dostaje typed `plan` payload, backend filtruje `resourceBlueprint` przed install run,
+  - run metadata (`run.options.wizard`) przechowuje plan snapshot do `rerun` i `clone as draft`.
 - Install engine foundation (service + DB):
   - `solution_kit_install_runs` trzyma execution context (`dry_run|apply|rollback`, status, summary),
   - `solution_kit_install_items` trzyma per-resource trace (operation + snapshots + rollback_action),

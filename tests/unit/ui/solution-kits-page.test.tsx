@@ -17,16 +17,16 @@ const createLocalStorage = () => {
   };
 };
 
-test("SolutionKitsPage renders shell and planner controls", () => {
+test("SolutionKitsPage renders shell and guided wizard controls", () => {
   const html = renderAdminUi(<SolutionKitsPage />, {
     path: "/admin/coderso/solution-kits",
   });
 
   expect(html).toContain("Solution Kits");
-  expect(html).toContain("AI plan preview");
-  expect(html).toContain("Generate plan");
-  expect(html).toContain("Kit install actions");
-  expect(html).toContain("Install runs");
+  expect(html).toContain("AI Site Wizard");
+  expect(html).toContain("Business profile");
+  expect(html).toContain("Plan review");
+  expect(html).toContain("Execute");
 });
 
 test("SolutionKitsPage renders cached cards without loading placeholder", () => {

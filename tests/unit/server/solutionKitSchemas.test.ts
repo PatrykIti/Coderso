@@ -36,8 +36,26 @@ test("solution kit apply schema accepts dryRun and continueOnError", () => {
     validate(solutionKitApplyRequestSchema, {
       dryRun: true,
       continueOnError: false,
+      plan: {
+        enabledStepIds: ["settings", "content-model", "pages", "forms", "navigation", "qa"],
+        settingsPatch: {
+          "site.locale": "pl",
+        },
+        notes: ["Custom note"],
+      },
     })
   ).not.toThrow();
+});
+
+test("solution kit apply schema rejects invalid plan step id", () => {
+  expect(() =>
+    validate(solutionKitApplyRequestSchema, {
+      dryRun: true,
+      plan: {
+        enabledStepIds: ["unknown-step"],
+      },
+    })
+  ).toThrow(ApiError);
 });
 
 test("solution kit apply schema rejects unknown properties", () => {
@@ -65,4 +83,3 @@ test("solution kit rollback schema rejects invalid run id", () => {
     })
   ).toThrow(ApiError);
 });
-

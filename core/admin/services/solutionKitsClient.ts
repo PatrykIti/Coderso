@@ -26,6 +26,14 @@ export type SiteBuilderGoal =
   | "sell_products"
   | "collect_qualified_leads";
 
+export type SiteBuilderPlanStepId =
+  | "settings"
+  | "content-model"
+  | "pages"
+  | "forms"
+  | "navigation"
+  | "qa";
+
 export type SolutionKitSummary = {
   id: SolutionKitId;
   title: string;
@@ -61,9 +69,22 @@ export type SiteBuilderPlanOutput = {
   recommendedKitId: SolutionKitId;
   confidence: number;
   recommendations: Array<{ kitId: SolutionKitId; score: number; reasons: string[] }>;
-  steps: Array<{ id: string; type: string; title: string; description: string }>;
+  steps: Array<{
+    id: SiteBuilderPlanStepId;
+    type: string;
+    title: string;
+    description: string;
+    editable?: boolean;
+    affectsResources?: string[];
+  }>;
   settingsPatch: Record<string, unknown>;
   notes: string[];
+};
+
+export type SolutionKitPlanApplyInput = {
+  enabledStepIds?: SiteBuilderPlanStepId[];
+  settingsPatch?: Record<string, unknown>;
+  notes?: string[];
 };
 
 export type SolutionKitInstallMode = "dry_run" | "apply" | "rollback";
@@ -454,6 +475,7 @@ export async function applySolutionKit(
   input?: {
     dryRun?: boolean;
     continueOnError?: boolean;
+    plan?: SolutionKitPlanApplyInput;
   }
 ) {
   const payload = await apiRequest<SolutionKitInstallResult>(

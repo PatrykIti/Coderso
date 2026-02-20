@@ -1,6 +1,7 @@
 import {
   siteBuilderBusinessTypes,
   siteBuilderGoals,
+  siteBuilderPlanStepIds,
   solutionKitIds,
 } from "../../services/kits/solutionKitTypes";
 
@@ -58,6 +59,35 @@ export const solutionKitApplyRequestSchema = {
   properties: {
     dryRun: { type: "boolean" },
     continueOnError: { type: "boolean" },
+    plan: {
+      type: "object",
+      properties: {
+        enabledStepIds: {
+          type: "array",
+          minItems: 1,
+          maxItems: siteBuilderPlanStepIds.length,
+          items: {
+            type: "string",
+            enum: [...siteBuilderPlanStepIds],
+          },
+          uniqueItems: true,
+        },
+        settingsPatch: {
+          type: "object",
+          additionalProperties: true,
+        },
+        notes: {
+          type: "array",
+          maxItems: 20,
+          items: {
+            type: "string",
+            minLength: 1,
+            maxLength: 240,
+          },
+        },
+      },
+      additionalProperties: false,
+    },
   },
   additionalProperties: false,
 } as const;

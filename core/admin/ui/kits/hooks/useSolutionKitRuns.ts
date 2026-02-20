@@ -5,6 +5,7 @@ import {
   applySolutionKit,
   getSolutionKitRunCached,
   listSolutionKitRunsCached,
+  type SolutionKitPlanApplyInput,
   rollbackSolutionKit,
   type SolutionKitId,
   type SolutionKitInstallResult,
@@ -98,7 +99,11 @@ export function useSolutionKitRuns(kitId: SolutionKitId | null) {
   }, [refreshRunDetail, selectedRunId]);
 
   const apply = useCallback(
-    async (input: { dryRun?: boolean; continueOnError?: boolean }) => {
+    async (input: {
+      dryRun?: boolean;
+      continueOnError?: boolean;
+      plan?: SolutionKitPlanApplyInput;
+    }) => {
       if (!kitId) return null;
       setIsMutating(true);
       setMutationError(null);
@@ -171,4 +176,3 @@ export function useSolutionKitRuns(kitId: SolutionKitId | null) {
     latestApplyRunId,
   };
 }
-

@@ -5,7 +5,7 @@
 **Category:** Assistant/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-13-03, TASK-054-13-04  
-**Status:** In Progress (2026-02-19)
+**Status:** Done (2026-02-19)
 
 ---
 
@@ -53,3 +53,16 @@ trackRunStatus(run.id);
 ## Documentation Updates Required
 - `_docs/ASSISTANT_GUIDE.md` (wizard flow)
 - `_docs/CMS_API.md` (run/status payload)
+
+## Delivered
+- Added multi-step `AiSiteWizard` with guided flow:
+  - profile -> goals -> recommendation -> plan review -> execute,
+  - step-level validation and explicit transition gating.
+- Added review-time plan editing (`enabledStepIds`) before apply.
+- Extended apply contract to carry wizard `plan` payload and persist wizard metadata in run options.
+- Added execute actions + timeline:
+  - apply,
+  - dry-run,
+  - rerun,
+  - rollback latest,
+  - clone latest run as draft (from `run.options.wizard`).

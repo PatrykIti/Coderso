@@ -107,6 +107,11 @@ const sections = buildDefaultNavSections({
   - deterministic kit catalog with five starter verticals,
   - planner engine (`/solution-kits/plan`) with transparent steps and settings patch preview,
   - Coderso navigation/module activation for `Solution Kits` (`Beta`) with internal RBAC route surface.
+- 054-13-05 done: AI Site Wizard guided flow delivered:
+  - `AiSiteWizard` multi-step UX (`profile -> goals -> recommendation -> review -> execute`),
+  - review-stage execution step editing (`enabledStepIds`) before apply,
+  - execute timeline with apply/dry-run/rerun/rollback/clone-as-draft actions,
+  - typed apply plan payload persisted in `run.options.wizard`.
 - 054-10-05 done: Booking Admin UI delivered:
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,

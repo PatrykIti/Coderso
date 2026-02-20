@@ -18,7 +18,9 @@ import {
   previewSolutionKitPlan,
   rollbackSolutionKitInstall,
 } from "../../services/kits/solutionKitsService";
+import { filterKitDefinitionByPlan } from "../../services/assistant/siteBuilderPlanner";
 import type {
+  SiteBuilderPlanApplyInput,
   SiteBuilderPlanInput,
   SolutionKitId,
 } from "../../services/kits/solutionKitTypes";
@@ -173,12 +175,32 @@ export function registerSolutionKitsRoutes(router: Router, deps: SolutionKitsRou
         const payload = (ctx.body ?? {}) as {
           dryRun?: boolean;
           continueOnError?: boolean;
+          plan?: SiteBuilderPlanApplyInput;
         };
+        const kitId = ctx.params.id as SolutionKitId;
+        const sourceKit = getSolutionKit(kitId);
+        if (!sourceKit) throw new Error("solution_kit_not_found");
+        const planPayload = payload.plan;
+        const kitDefinitionOverride =
+          planPayload && Object.keys(planPayload).length > 0
+            ? filterKitDefinitionByPlan(sourceKit, planPayload)
+            : sourceKit;
         const request: ApplySolutionKitInstallInput = {
-          kitId: ctx.params.id as SolutionKitId,
+          kitId,
           actorId: ctx.user?.id ?? null,
           dryRun: payload.dryRun,
           continueOnError: payload.continueOnError,
+          kitDefinitionOverride,
+          runOptions:
+            planPayload && Object.keys(planPayload).length > 0
+              ? {
+                  wizard: {
+                    enabledStepIds: planPayload.enabledStepIds ?? null,
+                    settingsPatch: planPayload.settingsPatch ?? {},
+                    notes: planPayload.notes ?? [],
+                  },
+                }
+              : undefined,
         };
         return applySolutionKitInstall(request);
       });

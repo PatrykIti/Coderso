@@ -66,6 +66,17 @@ export type SiteBuilderPlanInput = {
   preferredKitId?: SolutionKitId | null;
 };
 
+export const siteBuilderPlanStepIds = [
+  "settings",
+  "content-model",
+  "pages",
+  "forms",
+  "navigation",
+  "qa",
+] as const;
+
+export type SiteBuilderPlanStepId = (typeof siteBuilderPlanStepIds)[number];
+
 export type SiteBuilderPlanStepType =
   | "settings"
   | "content-model"
@@ -75,10 +86,18 @@ export type SiteBuilderPlanStepType =
   | "qa";
 
 export type SiteBuilderPlanStep = {
-  id: string;
+  id: SiteBuilderPlanStepId;
   type: SiteBuilderPlanStepType;
   title: string;
   description: string;
+  editable: boolean;
+  affectsResources: Array<"content_type" | "form" | "page" | "menu">;
+};
+
+export type SiteBuilderPlanApplyInput = {
+  enabledStepIds?: SiteBuilderPlanStepId[];
+  settingsPatch?: Record<string, unknown>;
+  notes?: string[];
 };
 
 export type SiteBuilderRecommendation = {

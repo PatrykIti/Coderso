@@ -3,6 +3,7 @@
 - `ARCHITECTURE.md` - architecture and system rules
 - `CMS_SPEC.md` - CMS scope and overview
 - `CMS_API.md` - admin API endpoints
+- `ASSISTANT_GUIDE.md` - assistant and AI site wizard flows
 - `CONTENT_FIELDS.md` - content field types, layout, and configuration
 - `CONTENT_EDITOR_UX.md` - content editor helper texts and tooltips
 - `CONTENT_LIST_UX.md` - content list filters and bulk actions

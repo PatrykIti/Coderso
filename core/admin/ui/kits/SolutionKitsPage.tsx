@@ -1,72 +1,19 @@
-import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
-  type SolutionKitInstallRunRecord,
   getSolutionKitCached,
-  previewSolutionKitPlan,
-  type SiteBuilderBusinessType,
-  type SiteBuilderGoal,
-  type SiteBuilderPlanOutput,
   type SolutionKitDefinition,
   type SolutionKitId,
 } from "@/services/solutionKitsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { AiSiteWizard } from "@/ui/setup/AiSiteWizard";
 
 import { SolutionKitCard } from "./SolutionKitCard";
 import { useSolutionKits } from "./hooks/useSolutionKits";
-import { useSolutionKitRuns } from "./hooks/useSolutionKitRuns";
-
-const businessTypeOptions: Array<{ value: SiteBuilderBusinessType; label: string }> = [
-  { value: "automotive_workshop", label: "Automotive workshop" },
-  { value: "medical_clinic", label: "Medical clinic" },
-  { value: "beauty_salon", label: "Beauty salon" },
-  { value: "services_directory", label: "Services directory" },
-  { value: "small_ecommerce", label: "Small e-commerce" },
-  { value: "custom", label: "Custom" },
-];
-
-const goalOptions: Array<{ value: SiteBuilderGoal; label: string; description: string }> = [
-  {
-    value: "lead_generation",
-    label: "Lead generation",
-    description: "Capture contact opportunities from key pages.",
-  },
-  {
-    value: "online_booking",
-    label: "Online booking",
-    description: "Enable appointment or service booking workflows.",
-  },
-  {
-    value: "catalog_showcase",
-    label: "Catalog showcase",
-    description: "Present offers, services, or products as structured listings.",
-  },
-  {
-    value: "reviews_social_proof",
-    label: "Reviews",
-    description: "Prioritize trust sections and moderation-ready reviews.",
-  },
-  {
-    value: "sell_products",
-    label: "Sell products",
-    description: "Prepare commerce-oriented pages and conversion slots.",
-  },
-  {
-    value: "collect_qualified_leads",
-    label: "Qualified leads",
-    description: "Use richer forms for pre-qualified inquiries.",
-  },
-];
-
-const defaultGoals: SiteBuilderGoal[] = ["lead_generation", "online_booking"];
 
 const formatBusinessType = (value: string) =>
   value
@@ -75,66 +22,17 @@ const formatBusinessType = (value: string) =>
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
 
-const normalizeLocale = (value: string) => {
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : "en";
-};
-
-const formatRunDate = (value: string | null) => {
-  if (!value) return "In progress";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-  return date.toLocaleString();
-};
-
-const runStatusBadgeVariant = (run: SolutionKitInstallRunRecord) => {
-  if (run.status === "failed") return "destructive" as const;
-  if (run.mode === "dry_run") return "secondary" as const;
-  if (run.status === "success") return "default" as const;
-  return "outline" as const;
-};
-
 export function SolutionKitsPage() {
   const { items, isLoading, error } = useSolutionKits();
 
   const [selectedId, setSelectedId] = useState<SolutionKitId | null>(null);
   const [selectedKit, setSelectedKit] = useState<SolutionKitDefinition | null>(null);
-  const [businessType, setBusinessType] = useState<SiteBuilderBusinessType>(
-    "automotive_workshop"
-  );
-  const [locale, setLocale] = useState("en");
-  const [siteName, setSiteName] = useState("");
-  const [goals, setGoals] = useState<SiteBuilderGoal[]>(defaultGoals);
-  const [plan, setPlan] = useState<SiteBuilderPlanOutput | null>(null);
-  const [planError, setPlanError] = useState<string | null>(null);
-  const [planLoading, setPlanLoading] = useState(false);
-  const {
-    runs,
-    isLoading: runsLoading,
-    error: runsError,
-    selectedRunId,
-    setSelectedRunId,
-    selectedRun,
-    isDetailLoading,
-    detailError,
-    refreshRuns,
-    apply,
-    rollback,
-    isMutating,
-    mutationError,
-    lastResult,
-    latestApplyRunId,
-  } = useSolutionKitRuns(selectedId);
+  const effectiveSelectedId = selectedId ?? items[0]?.id ?? null;
 
   useEffect(() => {
-    if (selectedId || items.length === 0) return;
-    setSelectedId(items[0]?.id ?? null);
-  }, [items, selectedId]);
-
-  useEffect(() => {
-    if (!selectedId) return;
+    if (!effectiveSelectedId) return;
     let active = true;
-    getSolutionKitCached(selectedId)
+    getSolutionKitCached(effectiveSelectedId)
       .then((detail) => {
         if (active) setSelectedKit(detail);
       })
@@ -144,55 +42,12 @@ export function SolutionKitsPage() {
     return () => {
       active = false;
     };
-  }, [selectedId]);
+  }, [effectiveSelectedId]);
 
   const selectedSummary = useMemo(
-    () => items.find((item) => item.id === selectedId) ?? null,
-    [items, selectedId]
+    () => items.find((item) => item.id === effectiveSelectedId) ?? null,
+    [effectiveSelectedId, items]
   );
-
-  const toggleGoal = (goal: SiteBuilderGoal, checked: boolean | string) => {
-    setGoals((prev) => {
-      if (checked && !prev.includes(goal)) return [...prev, goal];
-      if (!checked) return prev.filter((item) => item !== goal);
-      return prev;
-    });
-  };
-
-  const handleGeneratePlan = async () => {
-    setPlanLoading(true);
-    setPlanError(null);
-    try {
-      const nextPlan = await previewSolutionKitPlan({
-        businessType,
-        goals: goals.length > 0 ? goals : defaultGoals,
-        locale: normalizeLocale(locale),
-        siteName: siteName.trim().length > 0 ? siteName.trim() : null,
-        preferredKitId: selectedId,
-      });
-      setPlan(nextPlan);
-    } catch (error) {
-      if (error instanceof Error) {
-        setPlanError(error.message);
-      } else {
-        setPlanError("Failed to generate solution plan.");
-      }
-    } finally {
-      setPlanLoading(false);
-    }
-  };
-
-  const handleApplyKit = async () => {
-    await apply({ dryRun: false, continueOnError: true });
-  };
-
-  const handleDryRunKit = async () => {
-    await apply({ dryRun: true, continueOnError: true });
-  };
-
-  const handleRollbackLatest = async () => {
-    await rollback(latestApplyRunId ?? undefined);
-  };
 
   return (
     <AdminShell
@@ -230,7 +85,7 @@ export function SolutionKitsPage() {
                 <SolutionKitCard
                   key={kit.id}
                   kit={kit}
-                  isActive={kit.id === selectedId}
+                  isActive={kit.id === effectiveSelectedId}
                   onSelect={setSelectedId}
                 />
               ))}
@@ -246,76 +101,17 @@ export function SolutionKitsPage() {
           </div>
 
           <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Sparkles className="h-4 w-4" />
-                  AI plan preview
-                </CardTitle>
-                <CardDescription>
-                  Select business profile and goals to generate a transparent setup plan.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium text-foreground">Business type</span>
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={businessType}
-                    onChange={(event) =>
-                      setBusinessType(event.target.value as SiteBuilderBusinessType)
-                    }
-                  >
-                    {businessTypeOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium text-foreground">Site name (optional)</span>
-                  <Input
-                    value={siteName}
-                    onChange={(event) => setSiteName(event.target.value)}
-                    placeholder="e.g. AutoFix Warsaw"
-                  />
-                </label>
-
-                <label className="space-y-2 text-sm">
-                  <span className="font-medium text-foreground">Locale</span>
-                  <Input value={locale} onChange={(event) => setLocale(event.target.value)} placeholder="en" />
-                </label>
-
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">Goals</p>
-                  <div className="space-y-2">
-                    {goalOptions.map((goal) => (
-                      <label key={goal.value} className="flex items-start gap-2 rounded-md border p-2">
-                        <Checkbox
-                          checked={goals.includes(goal.value)}
-                          onCheckedChange={(checked) => toggleGoal(goal.value, checked)}
-                        />
-                        <span className="space-y-0.5">
-                          <span className="block text-sm font-medium text-foreground">{goal.label}</span>
-                          <span className="block text-xs text-muted-foreground">{goal.description}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <Button className="w-full" onClick={handleGeneratePlan} disabled={planLoading}>
-                  {planLoading ? "Generating..." : "Generate plan"}
-                </Button>
-              </CardContent>
-            </Card>
+            <AiSiteWizard
+              kits={items}
+              selectedKitId={effectiveSelectedId}
+              selectedKit={selectedKit}
+              onSelectKit={setSelectedId}
+            />
 
             {selectedSummary ? (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Selected kit</CardTitle>
+                  <CardTitle className="text-base">Selected kit details</CardTitle>
                   <CardDescription>{selectedSummary.title}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
@@ -334,186 +130,6 @@ export function SolutionKitsPage() {
                       </p>
                     </>
                   ) : null}
-                </CardContent>
-              </Card>
-            ) : null}
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Kit install actions</CardTitle>
-                <CardDescription>
-                  Execute deterministic apply/dry-run flows and review rollback-safe history.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Button onClick={handleApplyKit} disabled={!selectedId || isMutating}>
-                    {isMutating ? "Running..." : "Apply kit"}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={handleDryRunKit}
-                    disabled={!selectedId || isMutating}
-                  >
-                    Dry run
-                  </Button>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={handleRollbackLatest}
-                  disabled={!selectedId || isMutating || !latestApplyRunId}
-                >
-                  Rollback latest apply
-                </Button>
-                <p className="text-xs text-muted-foreground">
-                  Latest apply run: {latestApplyRunId ?? "none"}
-                </p>
-                {mutationError ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Install action failed</AlertTitle>
-                    <AlertDescription>{mutationError}</AlertDescription>
-                  </Alert>
-                ) : null}
-                {lastResult ? (
-                  <Alert>
-                    <AlertTitle>Last run: {lastResult.run.status}</AlertTitle>
-                    <AlertDescription>
-                      Mode: {lastResult.run.mode}. Success: {lastResult.summary.success} /{" "}
-                      {lastResult.summary.total}.
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Install runs</CardTitle>
-                <CardDescription>
-                  Latest execution history for the selected solution kit.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => refreshRuns(true)}
-                    disabled={runsLoading}
-                  >
-                    Refresh
-                  </Button>
-                </div>
-
-                {runsError ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Failed to load runs</AlertTitle>
-                    <AlertDescription>{runsError}</AlertDescription>
-                  </Alert>
-                ) : null}
-
-                {runsLoading && runs.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Loading install runs...</p>
-                ) : null}
-
-                {runs.length === 0 && !runsLoading ? (
-                  <p className="text-sm text-muted-foreground">
-                    No runs yet. Use “Apply kit” or “Dry run” to generate history.
-                  </p>
-                ) : null}
-
-                {runs.length > 0 ? (
-                  <div className="space-y-2">
-                    {runs.map((run) => (
-                      <button
-                        key={run.id}
-                        type="button"
-                        onClick={() => setSelectedRunId(run.id)}
-                        className={`w-full rounded-md border p-2 text-left transition ${
-                          selectedRunId === run.id
-                            ? "border-primary/60 bg-primary/5"
-                            : "hover:border-primary/30"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-sm font-medium text-foreground">{run.mode}</p>
-                          <Badge variant={runStatusBadgeVariant(run)}>{run.status}</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {formatRunDate(run.finishedAt)}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-
-                {isDetailLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading run details...</p>
-                ) : null}
-
-                {detailError ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Failed to load run details</AlertTitle>
-                    <AlertDescription>{detailError}</AlertDescription>
-                  </Alert>
-                ) : null}
-
-                {selectedRun ? (
-                  <div className="space-y-2 rounded-md border p-3">
-                    <p className="text-sm font-medium text-foreground">
-                      Run summary ({selectedRun.run.mode})
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      success: {selectedRun.run.summary.success}, failed:{" "}
-                      {selectedRun.run.summary.failed}, planned:{" "}
-                      {selectedRun.run.summary.planned}, skipped:{" "}
-                      {selectedRun.run.summary.skipped}
-                    </p>
-                    <div className="space-y-1">
-                      {selectedRun.items.slice(0, 6).map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between gap-2 rounded border px-2 py-1"
-                        >
-                          <span className="text-xs text-foreground">
-                            {item.resourceType}:{item.resourceKey}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {item.operation}/{item.status}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-
-            {planError ? (
-              <Alert variant="destructive">
-                <AlertTitle>Plan generation failed</AlertTitle>
-                <AlertDescription>{planError}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            {plan ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Planner output</CardTitle>
-                  <CardDescription>
-                    Recommended kit: <strong>{plan.recommendedKitId}</strong> (confidence {plan.confidence}%)
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="space-y-1">
-                    {plan.steps.map((step) => (
-                      <div key={step.id} className="rounded-md border p-2">
-                        <p className="text-sm font-medium text-foreground">{step.title}</p>
-                        <p className="text-xs text-muted-foreground">{step.description}</p>
-                      </div>
-                    ))}
-                  </div>
                 </CardContent>
               </Card>
             ) : null}
