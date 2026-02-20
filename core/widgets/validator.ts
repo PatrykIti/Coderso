@@ -116,7 +116,10 @@ export function normalizeWidgetBlock(block: WidgetBlock): WidgetBlock {
   const validate = getValidator(def);
   const valid = validate(merged);
   if (!valid) {
-    throw new Error("widget_schema_invalid");
+    const details = validate.errors
+      ? ajv.errorsText(validate.errors, { separator: "; " })
+      : "unknown";
+    throw new Error(`widget_schema_invalid: ${details}`);
   }
 
   const slots = normalizeSlotsForDefinition(def, normalizeSlotMap(block));

@@ -246,6 +246,13 @@ test("form embed validator accepts resolved runtime payload", () => {
             layoutMode: "single",
             saveProgress: false,
             stepTitles: ["Contact"],
+            preset: "custom",
+            automationRetry: {
+              enabled: false,
+              maxAttempts: 1,
+              baseDelayMs: 300,
+              maxDelayMs: 2000,
+            },
           },
           fields: [
             {
@@ -256,6 +263,7 @@ test("form embed validator accepts resolved runtime payload", () => {
               required: true,
               settings: {
                 placeholder: "Your name",
+                legacyKey: "kept",
               },
             },
           ],

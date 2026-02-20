@@ -227,61 +227,7 @@ export const formEmbedSchema = {
     },
     resolved: {
       type: "object",
-      additionalProperties: false,
-      properties: {
-        formName: { type: "string" },
-        description: { type: ["string", "null"] },
-        status: { type: "string" },
-        successMessage: { type: ["string", "null"] },
-        successRedirectUrl: { type: ["string", "null"] },
-        submissionAccess: { enum: ["public", "internal"] },
-        submissionNonce: { type: ["string", "null"] },
-        settings: {
-          type: "object",
-          additionalProperties: false,
-          properties: {
-            layoutMode: { enum: ["single", "multi_step"] },
-            saveProgress: { type: "boolean" },
-            stepTitles: {
-              type: "array",
-              items: { type: "string" },
-            },
-          },
-        },
-        fields: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              id: { type: "string" },
-              type: { type: "string" },
-              label: { type: "string" },
-              name: { type: "string" },
-              required: { type: "boolean" },
-              settings: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  placeholder: { type: "string" },
-                  helper: { type: "string" },
-                  options: {
-                    type: "array",
-                    items: { type: "string" },
-                  },
-                  defaultValue: {
-                    anyOf: [{ type: "string" }, { type: "boolean" }],
-                  },
-                  pattern: { type: "string" },
-                  step: { type: "number" },
-                },
-              },
-            },
-            required: ["id", "type", "label", "name", "required"],
-          },
-        },
-        error: { type: "string" },
-      },
+      additionalProperties: true,
     },
   },
 };

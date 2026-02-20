@@ -120,8 +120,16 @@ export function WidgetRenderer({
   let normalized: WidgetBlock;
   try {
     normalized = normalizeWidgetBlock(block);
-  } catch {
-    return <MissingWidget type={block.type} message="Invalid widget data" />;
+  } catch (error) {
+    const detail =
+      error instanceof Error && error.message ? ` (${error.message})` : "";
+    const isDev = process.env.NODE_ENV !== "production";
+    return (
+      <MissingWidget
+        type={block.type}
+        message={isDev ? `Invalid widget data${detail}` : "Invalid widget data"}
+      />
+    );
   }
   if (normalized.visibility?.enabled === false) return null;
   if (
