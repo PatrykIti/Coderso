@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 25 tasks
-- **In Progress:** 2 tasks
-- **Done:** 374 tasks
+- **To Do:** 24 tasks
+- **In Progress:** 1 tasks
+- **Done:** 376 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-13-07 | Solution Kits QA, Docs, and Closure | Medium | Medium | Full regression matrix + docs/changelog closure |
 | TASK-054-14 | Coderso Composite-First Widget Strategy | High | Large | Kits -> Composite -> Atomic delivery model |
 | TASK-054-15 | Coderso Plugin Contract and Package Manifest | High | Large | Safe plugin module/widget manifest contract |
 | TASK-054-16 | Coderso Module Widget Pack Matrix | High | Medium | Minimum composite packs per module |
@@ -76,7 +75,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
 
 ---
 
@@ -84,6 +82,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
+| TASK-054-13-07 | Solution Kits QA, Docs, and Closure | Medium | Medium | Full regression matrix + docs/changelog closure |
 | TASK-054-13-06 | Solution Kits Content Packs and Installers | High | Large | Expanded per-kit packs: taxonomy/forms/pages/menu/seo installer |
 | TASK-054-13-05 | AI Site Wizard Guided Flow | High | Large | Guided multi-step solution-kit flow with editable plan and execute timeline |
 | TASK-054-13-05-04 | Wizard Tests, Docs, Changelog, and Closure | Medium | Medium | Unit/integration coverage + docs/changelog/board sync |

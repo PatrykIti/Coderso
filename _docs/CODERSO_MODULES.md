@@ -117,6 +117,10 @@ const sections = buildDefaultNavSections({
   - installer sync for nested resources (`content_terms`, `form_fields`, `seo_documents`, `menu_items`),
   - rollback restore path extended to nested snapshots for update/create scenarios,
   - catalog validation coverage and installer regression tests updated.
+- 054-13-07 done: Solution Kits QA/docs closure delivered:
+  - full QA matrix executed for kits/client/UI/routes suites,
+  - docs contracts synchronized (`SOLUTION_KITS`, `CMS_API`, `ARCHITECTURE`),
+  - parent `TASK-054-13` moved to Done.
 - 054-10-05 done: Booking Admin UI delivered:
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,

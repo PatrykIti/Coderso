@@ -108,3 +108,18 @@ Rollback reads `beforeSnapshot` and:
 - restores nested resources for `update`,
 - deletes created resources for `create`,
 - restores/deletes linked page SEO as part of page rollback path.
+
+## QA Matrix (2026-02-20)
+
+| Suite | Command | Result |
+|---|---|---|
+| Core lint | `bun --cwd core lint` | Pass |
+| Core types | `bun --cwd core lint:types` | Pass |
+| Kits unit set | `bun test tests/unit/kits` | Pass (`5 pass`, `5 skip`) |
+| Kits DB-dependent subset | `set -a; source .env; set +a; bun test tests/unit/kits/installService.test.ts tests/unit/kits/schema.test.ts` | Skip (`0 pass`, `5 skip`) |
+| Admin client | `bun test tests/unit/admin/solutionKitsClient.test.ts` | Pass (`6 pass`) |
+| UI pages | `bun test tests/unit/ui/solution-kits-page.test.tsx tests/unit/ui/ai-site-wizard.test.tsx` | Pass (`6 pass`) |
+| Integration routes/UI | `bun test tests/integration/routes/solutionKitsRoutes.test.ts tests/integration/ui/setup-wizard.test.tsx` | Pass (`4 pass`) |
+
+Notes:
+- DB-dependent kit suites are intentionally `skip` when DB preconditions are not met in runtime (`canConnect + hasTable` guard in tests).
