@@ -10,6 +10,9 @@ const baseDef: WidgetDefinition = {
   title: "Hero",
   description: "Hero section",
   category: "layout",
+  complexity: "composite",
+  audience: "beginner",
+  module: "content",
   variants: [{ id: "centered", label: "Centered" }],
   schema: { type: "object", properties: { headline: { type: "string" } } },
   defaults: { headline: "Hello" },
@@ -46,6 +49,18 @@ test("registerWidget rejects invalid type", () => {
 test("registerWidget rejects empty variants", () => {
   expect(() => registerWidget({ ...baseDef, variants: [] })).toThrow(
     "widget_variants_required"
+  );
+});
+
+test("registerWidget rejects invalid metadata", () => {
+  expect(() =>
+    registerWidget({ ...baseDef, complexity: "bad" as "composite" })
+  ).toThrow("widget_complexity_invalid");
+  expect(() => registerWidget({ ...baseDef, audience: "bad" as "beginner" })).toThrow(
+    "widget_audience_invalid"
+  );
+  expect(() => registerWidget({ ...baseDef, module: "  " })).toThrow(
+    "widget_module_invalid"
   );
 });
 

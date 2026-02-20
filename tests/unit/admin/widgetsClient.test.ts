@@ -71,6 +71,11 @@ test("listWidgetCatalogCached reads from local storage", async () => {
         description: null,
         category: "layout",
         variants: ["default"],
+        complexity: "composite" as const,
+        audience: "beginner" as const,
+        module: "content",
+        presets: [],
+        requires: [],
         status: "published" as const,
       },
     ];

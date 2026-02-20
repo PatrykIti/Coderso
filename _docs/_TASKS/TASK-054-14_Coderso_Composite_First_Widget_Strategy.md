@@ -5,7 +5,7 @@
 **Category:** Product UX + Widgets Architecture  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-06, TASK-050  
-**Status:** To Do
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -31,6 +31,12 @@ Adopt a `Composite-first` delivery model for non-technical users while keeping a
 - `core/admin/ui/widgets/WidgetLibraryPage.tsx`
 - `core/admin/ui/widgets/editors/*`
 - `core/admin/ui/widgets/WidgetCatalogFilters.tsx` (new)
+
+## Security Contract
+- **Visibility:** internal (`/admin/api/widgets` catalog contract extension).
+- **Auth path:** session + RBAC (`widgets:read`).
+- **Rate-limit bucket:** `admin_read`.
+- **Data safety:** only metadata exposure (`complexity`, `audience`, `module`, `requires`, `presets`), no secrets/user data.
 
 ## Required Data Contract
 ```ts
@@ -69,6 +75,12 @@ const visible = advancedMode ? widgets : recommended;
 2. Atomic widgets are available but do not dominate default UX.
 3. Widget metadata supports filtering by module and complexity.
 
+## Sub-Tasks
+- `TASK-054-14-01`: Widget metadata contract and registry validation
+- `TASK-054-14-02`: Catalog/API/client contract extension for complexity/module metadata
+- `TASK-054-14-03`: Admin library UX (Recommended + All widgets + Advanced mode + filters)
+- `TASK-054-14-04`: Tests, docs, changelog, and board closure
+
 ## Testing Requirements
 - Unit: widget registry validation for `complexity/audience/module`.
 - Unit: library filters and advanced toggle behavior.
@@ -78,3 +90,9 @@ const visible = advancedMode ? widgets : recommended;
 - `_docs/WIDGETS_COMPOSITE_STRATEGY.md` (new)
 - `_docs/CODERSO_MODULES.md`
 - `_docs/_CHANGELOG/*.md` (when implemented)
+
+## Completion Notes (2026-02-20)
+- Widget metadata contract added to registry/catalog (`complexity`, `audience`, `module`, `presets`, `requires`).
+- Widget library switched to composite-first default flow (`Recommended` tab).
+- Added `All widgets` + `Advanced mode` and module/complexity filters.
+- Updated docs and added changelog entry.

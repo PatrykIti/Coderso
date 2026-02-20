@@ -7,6 +7,16 @@ export type WidgetCategory =
   | "navigation"
   | "media";
 
+export type WidgetComplexity = "composite" | "atomic";
+
+export type WidgetAudience = "beginner" | "intermediate" | "advanced";
+
+export type WidgetPreset = {
+  id: string;
+  label: string;
+  description?: string;
+};
+
 export type WidgetVariant = {
   id: string;
   label: string;
@@ -38,6 +48,11 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   title: string;
   description?: string;
   category: WidgetCategory;
+  complexity?: WidgetComplexity;
+  audience?: WidgetAudience;
+  module?: string;
+  presets?: WidgetPreset[];
+  requires?: string[];
   canHaveChildren?: boolean;
   slots?: WidgetSlotDefinition[];
   variants: WidgetVariant[];

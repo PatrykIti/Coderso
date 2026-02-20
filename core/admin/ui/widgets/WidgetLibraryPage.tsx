@@ -59,15 +59,23 @@ import {
 import type { Block } from "@/ui/pages/builder/types";
 
 import { WidgetCard } from "./WidgetCard";
+import { WidgetCatalogFilters } from "./WidgetCatalogFilters";
 import { WidgetTemplateCategoryDrawer } from "./WidgetTemplateCategoryDrawer";
 import { WidgetCreateDialog } from "./WidgetCreateDialog";
 import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
 import { WidgetInsertDialog } from "./WidgetInsertDialog";
-import { matchesTemplateCategory, normalizeCategoryValue } from "./widgetLibraryUtils";
-import type { WidgetCategoryId, WidgetItem, WidgetSource } from "./types";
+import { filterWidgetLibraryItems, normalizeCategoryValue } from "./widgetLibraryUtils";
+import type {
+  WidgetCategoryId,
+  WidgetComplexity,
+  WidgetItem,
+  WidgetLibraryTab,
+  WidgetSource,
+} from "./types";
 
 type LibraryScope = "all-items" | "favorites" | "templates" | "widgets";
 type WidgetCategoryFilter = "all" | WidgetCategoryId;
+type WidgetComplexityFilter = "all" | WidgetComplexity;
 type TemplateCategoryFilter = "all" | string;
 type WidgetView = "grid" | "list";
 type WidgetPreview =
@@ -86,6 +94,14 @@ type CategoryItem = {
   icon: LucideIcon;
 };
 type WidgetWithPreview = WidgetItem & { preview: WidgetPreview; source: WidgetSource };
+
+const formatModuleLabel = (value: string) =>
+  value
+    .split("-")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
 const primaryCategories: CategoryItem[] = [
   { id: "all-items", label: "All Items", icon: LayoutGrid },
   { id: "favorites", label: "Favorites", icon: Star },
@@ -247,9 +263,14 @@ export function WidgetLibraryPage() {
   });
   const [query, setQuery] = useState("");
   const [view, setView] = useState<WidgetView>("grid");
-  const [activeScope, setActiveScope] = useState<LibraryScope>("all-items");
+  const [activeScope, setActiveScope] = useState<LibraryScope>("widgets");
+  const [widgetTab, setWidgetTab] = useState<WidgetLibraryTab>("recommended");
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [widgetCategory, setWidgetCategory] =
     useState<WidgetCategoryFilter>("all");
+  const [widgetComplexity, setWidgetComplexity] =
+    useState<WidgetComplexityFilter>("all");
+  const [widgetModule, setWidgetModule] = useState("all");
   const [templateCategory, setTemplateCategory] =
     useState<TemplateCategoryFilter>("all");
   const [catalogItems, setCatalogItems] = useState<WidgetCatalogItem[]>(() => initialCatalog ?? []);
@@ -299,6 +320,11 @@ export function WidgetLibraryPage() {
         name: item.name,
         category: categoryValue,
         categoryLabel,
+        complexity: item.complexity,
+        audience: item.audience,
+        module: item.module,
+        presets: item.presets,
+        requires: item.requires,
         preview: meta?.preview ?? "hero",
         badge: item.source === "template" ? "Template" : undefined,
         source: item.source,
@@ -475,38 +501,54 @@ export function WidgetLibraryPage() {
     [widgets]
   );
 
+  const widgetTabCounts = useMemo(() => {
+    const coreItems = widgets.filter((widget) => widget.source === "core");
+    const recommended = coreItems.filter(
+      (widget) => widget.complexity === "composite"
+    );
+    return {
+      recommended: recommended.length,
+      all: coreItems.length,
+    };
+  }, [widgets]);
 
-  const filteredWidgets = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    const normalizedTemplateCategory =
-      templateCategory === "all"
-        ? "all"
-        : normalizeCategoryValue(templateCategory);
-    return widgets.filter((widget) => {
-      const matchesQuery =
-        normalized.length === 0 ||
-        widget.name.toLowerCase().includes(normalized) ||
-        widget.categoryLabel.toLowerCase().includes(normalized);
+  const widgetModuleOptions = useMemo(() => {
+    const modules = new Set<string>();
+    for (const widget of widgets) {
+      if (widget.source !== "core") continue;
+      modules.add(widget.module);
+    }
+    return Array.from(modules).sort((left, right) =>
+      left.localeCompare(right)
+    );
+  }, [widgets]);
 
-      const matchesCategory = (() => {
-        if (activeScope === "all-items") return true;
-        if (activeScope === "favorites") return widget.isFavorite;
-        if (activeScope === "templates") {
-          if (widget.source !== "template") return false;
-          if (normalizedTemplateCategory === "all") return true;
-          if (typeof widget.category !== "string") return false;
-          return matchesTemplateCategory(widget.category, normalizedTemplateCategory);
-        }
-        if (activeScope === "widgets") {
-          if (widget.source !== "core") return false;
-          return widgetCategory === "all" || widget.category === widgetCategory;
-        }
-        return true;
-      })();
 
-      return matchesQuery && matchesCategory;
-    });
-  }, [widgets, query, activeScope, templateCategory, widgetCategory]);
+  const filteredWidgets = useMemo(
+    () =>
+      filterWidgetLibraryItems(widgets, {
+        query,
+        activeScope,
+        templateCategory:
+          templateCategory === "all"
+            ? "all"
+            : normalizeCategoryValue(templateCategory),
+        widgetCategory,
+        widgetTab,
+        widgetModule,
+        widgetComplexity,
+      }),
+    [
+    widgets,
+    query,
+    activeScope,
+    templateCategory,
+    widgetCategory,
+    widgetTab,
+    widgetModule,
+    widgetComplexity,
+    ]
+  );
 
   const templateCategoryOptions = useMemo(
     () => [
@@ -554,6 +596,18 @@ export function WidgetLibraryPage() {
   const handleSelectWidgetCategory = (category: WidgetCategoryFilter) => {
     setActiveScope("widgets");
     setWidgetCategory(category);
+  };
+
+  const handleWidgetTabChange = (value: WidgetLibraryTab) => {
+    setWidgetTab(value);
+    setActiveScope("widgets");
+  };
+
+  const handleAdvancedModeChange = (enabled: boolean) => {
+    setAdvancedMode(enabled);
+    if (!enabled && widgetComplexity === "atomic") {
+      setWidgetComplexity("all");
+    }
   };
 
   const handleSelectWidget = (widget: WidgetWithPreview) => {
@@ -917,6 +971,21 @@ export function WidgetLibraryPage() {
                       ? "templates"
                       : "items"}
                 </Badge>
+                {activeScope === "widgets" ? (
+                  <WidgetCatalogFilters
+                    tab={widgetTab}
+                    onTabChange={handleWidgetTabChange}
+                    recommendedCount={widgetTabCounts.recommended}
+                    allCount={widgetTabCounts.all}
+                    advancedMode={advancedMode}
+                    onAdvancedModeChange={handleAdvancedModeChange}
+                    moduleFilter={widgetModule}
+                    onModuleFilterChange={setWidgetModule}
+                    moduleOptions={widgetModuleOptions}
+                    complexityFilter={widgetComplexity}
+                    onComplexityFilterChange={setWidgetComplexity}
+                  />
+                ) : null}
                 {activeScope === "templates" ? (
                   <Select
                     value={templateCategory}
@@ -993,6 +1062,11 @@ export function WidgetLibraryPage() {
                       categoryLabel={widget.categoryLabel}
                       preview={renderPreview(widget.preview)}
                       badge={widget.badge}
+                      metaBadges={
+                        widget.source === "core"
+                          ? [widget.complexity, formatModuleLabel(widget.module)]
+                          : undefined
+                      }
                       isFavorite={widget.isFavorite}
                       onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
                       onInsert={

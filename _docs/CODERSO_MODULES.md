@@ -121,6 +121,10 @@ const sections = buildDefaultNavSections({
   - full QA matrix executed for kits/client/UI/routes suites,
   - docs contracts synchronized (`SOLUTION_KITS`, `CMS_API`, `ARCHITECTURE`),
   - parent `TASK-054-13` moved to Done.
+- 054-14 done: Composite-first widget strategy delivered:
+  - widget metadata contract (`complexity`, `audience`, `module`, `presets`, `requires`) added to registry/catalog,
+  - widget library default flow changed to `Recommended` composite-first mode,
+  - `All widgets` + `Advanced mode` + module/complexity filters introduced for progressive disclosure UX.
 - 054-10-05 done: Booking Admin UI delivered:
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,

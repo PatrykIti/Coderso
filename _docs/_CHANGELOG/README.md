@@ -304,3 +304,4 @@ Project Change Log.
 | 268 | 2026-02-19 | AI site wizard guided flow for solution kits | Admin/UI |
 | 269 | 2026-02-20 | Solution kits content packs and installers | CMS/Kits |
 | 270 | 2026-02-20 | Solution kits QA, docs, and closure | QA/Docs |
+| 271 | 2026-02-20 | Coderso composite-first widget strategy | CMS/Widgets |

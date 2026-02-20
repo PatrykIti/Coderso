@@ -888,6 +888,15 @@ Permissions: `widgets:read`, `widgets:write`
 - `GET /widgets/templates/:id/revisions` (alias: `GET /widget-templates/:id/revisions`)
 - `POST /widgets/templates/:id/revisions/:revisionId/restore`
 
+`GET /widgets` catalog item shape (summary):
+- `id`, `source`, `name`, `description`, `category`, `variants`, `status`
+- composite-first metadata:
+  - `complexity`: `composite | atomic`
+  - `audience`: `beginner | intermediate | advanced`
+  - `module`: module key (`layout`, `content`, `forms`, `navigation`, `media`, etc.)
+  - `presets[]`: optional preset metadata
+  - `requires[]`: optional module dependencies
+
 Core catalog includes utility widgets for engagement layouts:
 - `tabs`
 - `accordion`

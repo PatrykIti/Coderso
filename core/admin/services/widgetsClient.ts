@@ -9,6 +9,11 @@ export type WidgetCatalogItem = {
   description: string | null;
   category: string;
   variants: string[];
+  complexity: "composite" | "atomic";
+  audience: "beginner" | "intermediate" | "advanced";
+  module: string;
+  presets: Array<{ id: string; label: string; description?: string }>;
+  requires: string[];
   status: "draft" | "published";
 };
 

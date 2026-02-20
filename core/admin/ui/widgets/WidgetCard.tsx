@@ -10,6 +10,7 @@ type WidgetCardProps = {
   categoryLabel: string;
   preview?: React.ReactNode;
   badge?: string;
+  metaBadges?: string[];
   isFavorite?: boolean;
   onFavoriteToggle?: () => void;
   onInsert?: () => void;
@@ -27,6 +28,7 @@ export function WidgetCard({
   categoryLabel,
   preview,
   badge,
+  metaBadges,
   isFavorite = false,
   onFavoriteToggle,
   onInsert,
@@ -94,6 +96,11 @@ export function WidgetCard({
           <Badge variant="secondary" className="text-[10px] uppercase">
             {categoryLabel}
           </Badge>
+          {metaBadges?.map((item) => (
+            <Badge key={item} variant="outline" className="text-[10px] uppercase">
+              {item}
+            </Badge>
+          ))}
           {badge ? (
             <Badge variant="outline" className="text-[10px] uppercase">
               {badge}

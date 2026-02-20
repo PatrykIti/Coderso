@@ -11,6 +11,9 @@ const definition: WidgetDefinition<{ headline: string; tone?: string }> = {
   title: "Hero",
   description: "Hero",
   category: "layout",
+  complexity: "composite",
+  audience: "beginner",
+  module: "content",
   variants: [{ id: "centered", label: "Centered" }],
   schema: {
     type: "object",
@@ -31,6 +34,9 @@ const repeatableDefinition: WidgetDefinition<{ headline: string }> = {
   title: "Layout Columns",
   description: "Layout",
   category: "layout",
+  complexity: "atomic",
+  audience: "advanced",
+  module: "layout",
   variants: [{ id: "equal", label: "Equal" }],
   slots: [
     { id: "column", label: "Column", kind: "repeatable", minItems: 2, maxItems: 3 },

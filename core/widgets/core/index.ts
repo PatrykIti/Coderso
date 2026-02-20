@@ -1,5 +1,11 @@
 import type { ComponentType } from "react";
-import type { WidgetDefinition, WidgetEditorProps } from "../types";
+import type {
+  WidgetAudience,
+  WidgetComplexity,
+  WidgetDefinition,
+  WidgetEditorProps,
+  WidgetPreset,
+} from "../types";
 import { getWidget, registerWidget } from "../registry";
 import { createCompareTimelineWidget, type CompareTimelineData } from "./compareTimeline";
 import { createContentListWidget, type ContentListData } from "./contentList";
@@ -60,6 +66,214 @@ type EditorBundle<T> = {
   advanced: ComponentType<WidgetEditorProps<T>>;
 };
 
+type CoreWidgetMetadata = {
+  complexity: WidgetComplexity;
+  audience: WidgetAudience;
+  module: string;
+  presets?: WidgetPreset[];
+  requires?: string[];
+};
+
+const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
+  section: {
+    complexity: "atomic",
+    audience: "advanced",
+    module: "layout",
+  },
+  "template-section": {
+    complexity: "atomic",
+    audience: "advanced",
+    module: "layout",
+  },
+  "grid-columns": {
+    complexity: "atomic",
+    audience: "advanced",
+    module: "layout",
+  },
+  "split-layout": {
+    complexity: "atomic",
+    audience: "advanced",
+    module: "layout",
+  },
+  tabs: {
+    complexity: "atomic",
+    audience: "intermediate",
+    module: "engagement",
+  },
+  accordion: {
+    complexity: "atomic",
+    audience: "intermediate",
+    module: "engagement",
+  },
+  "toggle-block": {
+    complexity: "atomic",
+    audience: "intermediate",
+    module: "engagement",
+  },
+  spacer: {
+    complexity: "atomic",
+    audience: "advanced",
+    module: "layout",
+  },
+  divider: {
+    complexity: "atomic",
+    audience: "advanced",
+    module: "layout",
+  },
+  stack: {
+    complexity: "atomic",
+    audience: "advanced",
+    module: "layout",
+  },
+  hero: {
+    complexity: "composite",
+    audience: "beginner",
+    module: "content",
+  },
+  "feature-grid": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "content",
+  },
+  testimonials: {
+    complexity: "composite",
+    audience: "beginner",
+    module: "engagement",
+  },
+  "pricing-plans": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "content",
+  },
+  "faq-accordion": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "engagement",
+  },
+  "cta-banner": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "content",
+  },
+  "logo-cloud": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "content",
+  },
+  "gallery-mosaic": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "media",
+  },
+  "stats-kpi": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "content",
+  },
+  team: {
+    complexity: "composite",
+    audience: "beginner",
+    module: "content",
+  },
+  "rich-text-section": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "content",
+  },
+  "content-list": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "listings",
+    requires: ["entries"],
+  },
+  "entry-teaser": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "listings",
+    requires: ["entries"],
+  },
+  "product-gallery": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "commerce",
+    requires: ["commerce"],
+  },
+  "product-compare": {
+    complexity: "composite",
+    audience: "advanced",
+    module: "commerce",
+    requires: ["commerce"],
+  },
+  "product-table": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "commerce",
+    requires: ["commerce"],
+  },
+  "listing-filters": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "listings",
+    requires: ["listings"],
+  },
+  "search-box": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "search",
+    requires: ["search"],
+  },
+  timeline: {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "content",
+  },
+  "compare-timeline": {
+    complexity: "composite",
+    audience: "advanced",
+    module: "content",
+  },
+  newsletter: {
+    complexity: "composite",
+    audience: "beginner",
+    module: "forms",
+    requires: ["forms"],
+  },
+  "booking-calendar": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "booking",
+    requires: ["booking"],
+  },
+  "appointment-form": {
+    complexity: "composite",
+    audience: "intermediate",
+    module: "booking",
+    requires: ["booking"],
+  },
+  "form-embed": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "forms",
+    requires: ["forms"],
+  },
+  contact: {
+    complexity: "composite",
+    audience: "beginner",
+    module: "forms",
+    requires: ["forms"],
+  },
+  navigation: {
+    complexity: "composite",
+    audience: "beginner",
+    module: "navigation",
+  },
+  footer: {
+    complexity: "composite",
+    audience: "beginner",
+    module: "navigation",
+  },
+};
+
 export type CoreWidgetEditors = {
   section: EditorBundle<SectionData>;
   templateSection: EditorBundle<TemplateSectionData>;
@@ -103,7 +317,7 @@ export type CoreWidgetEditors = {
 export function createCoreWidgetDefinitions(
   editors: CoreWidgetEditors
 ): Array<WidgetDefinition<any>> {
-  return [
+  const definitions = [
     createSectionWidget(editors.section),
     createTemplateSectionWidget(editors.templateSection),
     createGridColumnsWidget(editors.gridColumns),
@@ -142,6 +356,21 @@ export function createCoreWidgetDefinitions(
     createNavigationWidget(editors.navigation),
     createFooterWidget(editors.footer),
   ];
+
+  return definitions.map((definition) => {
+    const metadata = coreWidgetMetadata[definition.type];
+    if (!metadata) {
+      throw new Error(`widget_core_metadata_missing:${definition.type}`);
+    }
+    return {
+      ...definition,
+      complexity: metadata.complexity,
+      audience: metadata.audience,
+      module: metadata.module,
+      presets: metadata.presets,
+      requires: metadata.requires,
+    };
+  });
 }
 
 export function registerCoreWidgets(editors: CoreWidgetEditors) {

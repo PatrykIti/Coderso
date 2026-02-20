@@ -1,4 +1,9 @@
-import type { WidgetDefinition } from "../../widgets/types";
+import type {
+  WidgetAudience,
+  WidgetComplexity,
+  WidgetDefinition,
+  WidgetPreset,
+} from "../../widgets/types";
 import { listWidgets } from "../../widgets/registry";
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { listWidgetTemplates, type WidgetTemplateRecord } from "./widgetTemplateService";
@@ -12,6 +17,11 @@ export type WidgetCatalogItem = {
   description: string | null;
   category: string;
   variants: string[];
+  complexity: WidgetComplexity;
+  audience: WidgetAudience;
+  module: string;
+  presets: WidgetPreset[];
+  requires: string[];
   status: "draft" | "published";
 };
 
@@ -23,11 +33,16 @@ export function buildWidgetCatalog(
     id: widget.type,
     source: "core" as const,
     name: widget.title,
-    description: widget.description ?? null,
-    category: widget.category,
-    variants: widget.variants.map((variant) => variant.id),
-    status: "published" as const,
-  }));
+      description: widget.description ?? null,
+      category: widget.category,
+      variants: widget.variants.map((variant) => variant.id),
+      complexity: widget.complexity ?? "composite",
+      audience: widget.audience ?? "beginner",
+      module: widget.module ?? "general",
+      presets: widget.presets ?? [],
+      requires: widget.requires ?? [],
+      status: "published" as const,
+    }));
 
   const templateItems = templates.map((template) => ({
     id: template.id,
@@ -36,6 +51,11 @@ export function buildWidgetCatalog(
     description: template.description ?? null,
     category: template.category,
     variants: ["default"],
+    complexity: "composite" as const,
+    audience: "beginner" as const,
+    module: "templates",
+    presets: [],
+    requires: [],
     status: template.status as "draft" | "published",
   }));
 

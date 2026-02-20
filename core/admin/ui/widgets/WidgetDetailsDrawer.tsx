@@ -82,6 +82,36 @@ export function WidgetDetailsDrawer({
             <ScrollArea className="flex-1 min-h-0">
               <div className="space-y-6 px-6 py-6">
                 <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3 rounded-xl border bg-muted/20 p-3 text-xs">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Module
+                      </p>
+                      <p className="mt-1 font-medium">{widget.module}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Complexity
+                      </p>
+                      <p className="mt-1 font-medium">{widget.complexity}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Audience
+                      </p>
+                      <p className="mt-1 font-medium">{widget.audience}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                        Requires
+                      </p>
+                      <p className="mt-1 font-medium">
+                        {widget.requires && widget.requires.length > 0
+                          ? widget.requires.join(", ")
+                          : "None"}
+                      </p>
+                    </div>
+                  </div>
                   {widgetDefinition ? (
                     <p className="text-[11px] text-muted-foreground">
                       This is a preview of the configuration. Insert the widget to

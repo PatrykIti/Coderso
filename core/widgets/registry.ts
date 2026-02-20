@@ -6,6 +6,8 @@ const registry = new Map<string, WidgetDefinition<any>>();
 const coreTypePattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const pluginTypePattern =
   /^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const widgetComplexityValues = new Set(["composite", "atomic"]);
+const widgetAudienceValues = new Set(["beginner", "intermediate", "advanced"]);
 
 function isValidType(type: string) {
   return coreTypePattern.test(type) || pluginTypePattern.test(type);
@@ -25,6 +27,46 @@ export function registerWidget(def: WidgetDefinition<any>) {
     if (!variant.id || !variant.label) {
       throw new Error("widget_variant_invalid");
     }
+  }
+  const normalizedComplexity =
+    def.complexity ?? (def.category === "layout" ? "atomic" : "composite");
+  if (!widgetComplexityValues.has(normalizedComplexity)) {
+    throw new Error("widget_complexity_invalid");
+  }
+  const normalizedAudience =
+    def.audience ?? (normalizedComplexity === "atomic" ? "advanced" : "beginner");
+  if (!widgetAudienceValues.has(normalizedAudience)) {
+    throw new Error("widget_audience_invalid");
+  }
+  if (typeof def.module === "string" && !def.module.trim()) {
+    throw new Error("widget_module_invalid");
+  }
+  const normalizedModule =
+    typeof def.module === "string" ? def.module.trim() : def.category;
+  if (!normalizedModule) {
+    throw new Error("widget_module_invalid");
+  }
+  if (def.presets !== undefined) {
+    if (!Array.isArray(def.presets)) {
+      throw new Error("widget_presets_invalid");
+    }
+    for (const preset of def.presets) {
+      if (
+        !preset ||
+        typeof preset !== "object" ||
+        !preset.id ||
+        !preset.label
+      ) {
+        throw new Error("widget_preset_invalid");
+      }
+    }
+  }
+  if (def.requires !== undefined && (!Array.isArray(def.requires) ||
+      def.requires.some(
+        (value) => typeof value !== "string" || !value.trim()
+      ))
+  ) {
+    throw new Error("widget_requires_invalid");
   }
   if (!def.schema || typeof def.schema !== "object" || Array.isArray(def.schema)) {
     throw new Error("widget_schema_invalid");
@@ -111,7 +153,14 @@ export function registerWidget(def: WidgetDefinition<any>) {
   if (registry.has(def.type)) {
     throw new Error("widget_already_registered");
   }
-  registry.set(def.type, def);
+  registry.set(def.type, {
+    ...def,
+    complexity: normalizedComplexity,
+    audience: normalizedAudience,
+    module: normalizedModule,
+    presets: def.presets ?? [],
+    requires: def.requires ?? [],
+  });
 }
 
 export function getWidget(type: string): WidgetDefinition<any> | null {

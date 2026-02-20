@@ -35,6 +35,9 @@ const repeatableDefinition: WidgetDefinition<{ headline: string }> = {
   title: "Layout Columns",
   description: "Layout",
   category: "layout",
+  complexity: "atomic",
+  audience: "advanced",
+  module: "layout",
   variants: [{ id: "equal", label: "Equal" }],
   slots: [
     { id: "column", label: "Column", kind: "repeatable", minItems: 1, maxItems: 2 },
