@@ -5,7 +5,7 @@
 **Category:** Platform + SDK + Store  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-021, TASK-022, TASK-026, TASK-054-06  
-**Status:** To Do
+**Status:** In Progress (2026-02-20)
 
 ---
 
@@ -71,3 +71,9 @@ registerModuleContributions(manifest.provides);
 - `_docs/CODERSO_PLUGIN_CONTRACT.md` (new)
 - `_docs/STORE_API.md`
 - `_docs/_CHANGELOG/*.md` (when implemented)
+
+## Sub-Tasks
+- `TASK-054-15-01`: SDK manifest contract and normalization helpers
+- `TASK-054-15-02`: Core runtime manifest validator and module registrar
+- `TASK-054-15-03`: Plugin routes hardening and internal plugins routes contract
+- `TASK-054-15-04`: Tests, docs, changelog, and task closure
