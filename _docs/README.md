@@ -5,6 +5,7 @@
 - `CMS_API.md` - admin API endpoints
 - `ASSISTANT_GUIDE.md` - assistant and AI site wizard flows
 - `ASSISTANT_SITE_BUILDER.md` - guided site builder contract (`plan -> actions -> execute -> validate`)
+- `CODERSO_RELEASE_GATES.md` - mandatory Coderso release gates and CI automation contract
 - `CONTENT_FIELDS.md` - content field types, layout, and configuration
 - `CONTENT_EDITOR_UX.md` - content editor helper texts and tooltips
 - `CONTENT_LIST_UX.md` - content list filters and bulk actions

@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 25 tasks
-- **In Progress:** 1 task
-- **Done:** 400 tasks
+- **To Do:** 24 tasks
+- **In Progress:** 2 tasks
+- **Done:** 404 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Mandatory release gates for modules |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts flow on top of content engine |
@@ -71,6 +70,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
+| TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
 ---
 
@@ -78,6 +78,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-19-04 | Docs, Changelog, and Kanban Closure | Medium | Medium | Release gates docs/spec/changelog/task sync (parent pending 054-199) |
+| TASK-054-19-03 | Gate Runner and CI Pipeline Wiring | High | Medium | Gate runner script + package scripts + CI workflow |
+| TASK-054-19-02 | Performance and Security Gate Test Suites | High | Medium | Dedicated `tests/perf` and `tests/security` suites |
+| TASK-054-19-01 | Release Gates Contract and Runbook | High | Medium | Mandatory gate matrix + budgets + execution contract |
 | TASK-054-18 | Coderso AI Assistant Guided Builder Workflow | High | Large | Full guided executor (`plan/actions/execute/validate`) + assistant routes + modular wizard UX |
 | TASK-054-18-04 | QA, Docs, Changelog, and Closure | Medium | Medium | Lint/types/tests + assistant site-builder docs/changelog/kanban sync |
 | TASK-054-18-03 | AI Wizard UI Modularization and Explainable Execution | High | Large | `AiSiteWizard` orchestration split + action map + validation UI |

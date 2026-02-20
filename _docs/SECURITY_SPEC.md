@@ -27,6 +27,23 @@ Zakres: podstawowe zabezpieczenia w core. Rozszerzenia przez pluginy.
   - Referrer-Policy
 - HTTPS w produkcji (HSTS zalecany).
 
+## Release Gate Security Checks (Coderso)
+
+Security gate automation is defined in:
+- `_docs/CODERSO_RELEASE_GATES.md`
+- `tests/security/codersoSecurityGate.test.ts`
+
+Mandatory baseline verified by gate suite:
+- public submission modes (`forms`, `booking`) require captcha path,
+- internal submission modes require session or API key scope,
+- nonce contracts reject missing/tampered tokens,
+- default rate-limit and bot-protection thresholds remain hardened.
+
+Related gate suites executed by runner:
+- `tests/unit/security/rateLimit.test.ts`
+- `tests/unit/forms/submissionNonce.test.ts`
+- `tests/unit/server/publicBookingApi.test.ts`
+
 ### Konfiguracja runtime (Admin UI)
 
 - Wszystkie ustawienia middleware sa trzymane w DB (`settings.key = security.settings`).

@@ -70,6 +70,13 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - Prefetch uses cache TTL + throttling to avoid repeated requests.
 - Implemented via `AdminLink` + `prefetchAdminRoute`.
 
+## Release Gate Link
+- Admin cache/SPA transition behavior is part of Coderso release gates:
+  - performance suite: `tests/perf/codersoPerformanceGate.test.ts`
+  - gate contract: `_docs/CODERSO_RELEASE_GATES.md`
+- Transition helper budget baseline:
+  - admin route transition helper p95 under `CODERSO_PERF_ADMIN_NAV_P95_MS` (default `150ms`).
+
 
 ## Cross-tab Sync
 `core/admin/utils/cacheBus.ts` broadcasts cache events:

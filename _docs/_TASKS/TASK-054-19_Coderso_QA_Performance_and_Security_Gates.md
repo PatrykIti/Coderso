@@ -5,7 +5,7 @@
 **Category:** QA + Security + Platform Reliability  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-07..18, TASK-020-11  
-**Status:** To Do
+**Status:** In Progress (2026-02-20)
 
 ---
 
@@ -59,7 +59,11 @@ for (const gate of gates) {
 3. Release checklist is documented and automation-backed.
 
 ## Sub-Tasks
-- `TASK-054-199`: Security gate for SAST/SCA/secrets/CVE in CI
+1. `TASK-054-19-01`: Release gates contract and runbook.
+2. `TASK-054-19-02`: Performance and security gate test suites.
+3. `TASK-054-19-03`: Gate runner and CI pipeline wiring.
+4. `TASK-054-19-04`: Docs/changelog/kanban closure.
+5. `TASK-054-199`: Security gate for SAST/SCA/secrets/CVE in CI.
 
 ## Testing Requirements
 - Perf: synthetic load for listing/search/filter APIs.
@@ -70,3 +74,12 @@ for (const gate of gates) {
 - `_docs/CODERSO_RELEASE_GATES.md` (new)
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_CHANGELOG/*.md` (when implemented)
+
+## Progress Notes (2026-02-20)
+- Completed:
+  - `TASK-054-19-01` (release gates contract + runbook docs),
+  - `TASK-054-19-02` (performance/security gate suites),
+  - `TASK-054-19-03` (runner + package scripts + CI workflow),
+  - `TASK-054-19-04` (docs/changelog/kanban sync for current baseline).
+- Pending:
+  - `TASK-054-199` (SAST/SCA/Secrets/CVE CI security gate) before final parent-task closure.

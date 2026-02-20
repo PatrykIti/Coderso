@@ -309,3 +309,4 @@ Project Change Log.
 | 273 | 2026-02-20 | Coderso module widget pack matrix | CMS/Widgets |
 | 274 | 2026-02-20 | Coderso presets, templates, and kits contract | CMS/Kits |
 | 275 | 2026-02-20 | Assistant site builder guided executor | Admin/UI |
+| 276 | 2026-02-20 | Coderso release gates baseline | QA/Security |
