@@ -8,7 +8,18 @@ import {
 import {
   assistantChatSchema,
   assistantReindexSchema,
+  assistantSiteBuilderExecuteSchema,
+  assistantSiteBuilderPlanSchema,
+  assistantSiteBuilderValidateSchema,
 } from "../validation/assistantSchemas";
+import {
+  executeGuidedSiteBuilder,
+  previewGuidedSiteBuilderPlan,
+  validateGuidedSiteBuilderRun,
+  type GuidedSiteBuilderExecuteInput,
+  type GuidedSiteBuilderPlanInput,
+  type GuidedSiteBuilderValidateRunInput,
+} from "../../services/assistant/siteBuilderExecutor";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -29,12 +40,18 @@ type AssistantRouteService = {
   getStatus: typeof getAssistantStatus;
   reindex: typeof reindexAssistantDocs;
   chat: typeof answerAssistantQuestion;
+  previewSiteBuilderPlan: typeof previewGuidedSiteBuilderPlan;
+  executeSiteBuilder: typeof executeGuidedSiteBuilder;
+  validateSiteBuilderRun: typeof validateGuidedSiteBuilderRun;
 };
 
 const defaultService: AssistantRouteService = {
   getStatus: getAssistantStatus,
   reindex: reindexAssistantDocs,
   chat: answerAssistantQuestion,
+  previewSiteBuilderPlan: previewGuidedSiteBuilderPlan,
+  executeSiteBuilder: executeGuidedSiteBuilder,
+  validateSiteBuilderRun: validateGuidedSiteBuilderRun,
 };
 
 export type AssistantRouteDeps = {
@@ -78,7 +95,38 @@ const mapAssistantError = (error: unknown) => {
         message: "Assistant token budget exceeded",
         status: 429,
       };
+    case "site_builder_kit_not_found":
+      return {
+        code: "site_builder_kit_not_found",
+        message: "Selected site builder kit was not found",
+        status: 404,
+      };
+    case "site_builder_run_not_found":
+      return {
+        code: "site_builder_run_not_found",
+        message: "Site builder run was not found",
+        status: 404,
+      };
+    case "solution_kit_not_found":
+      return {
+        code: "solution_kit_not_found",
+        message: "Solution kit not found",
+        status: 404,
+      };
+    case "solution_kit_install_run_not_found":
+      return {
+        code: "solution_kit_install_run_not_found",
+        message: "Solution kit install run not found",
+        status: 404,
+      };
     default:
+      if (error.message.startsWith("solution_kit_")) {
+        return {
+          code: error.message,
+          message: "Invalid guided site builder payload",
+          status: 400,
+        };
+      }
       return null;
   }
 };
@@ -147,6 +195,45 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
           context: body.context,
           actorId: ctx.user?.id ?? null,
         })
+      );
+    }
+  );
+
+  router.post(
+    "/assistant/site-builder/plan",
+    requirePermission("solution-kits:read"),
+    async (ctx) => {
+      validate(assistantSiteBuilderPlanSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as GuidedSiteBuilderPlanInput;
+      return withAssistantErrors(ctx.requestId, async () =>
+        service.previewSiteBuilderPlan(body)
+      );
+    }
+  );
+
+  router.post(
+    "/assistant/site-builder/execute",
+    requirePermission("solution-kits:write"),
+    async (ctx) => {
+      validate(assistantSiteBuilderExecuteSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as GuidedSiteBuilderExecuteInput;
+      return withAssistantErrors(ctx.requestId, async () =>
+        service.executeSiteBuilder({
+          ...body,
+          actorId: ctx.user?.id ?? null,
+        })
+      );
+    }
+  );
+
+  router.post(
+    "/assistant/site-builder/validate",
+    requirePermission("solution-kits:read"),
+    async (ctx) => {
+      validate(assistantSiteBuilderValidateSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as GuidedSiteBuilderValidateRunInput;
+      return withAssistantErrors(ctx.requestId, async () =>
+        service.validateSiteBuilderRun(body)
       );
     }
   );

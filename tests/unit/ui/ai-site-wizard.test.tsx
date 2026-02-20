@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 
 import { AiSiteWizard } from "../../../core/admin/ui/setup/AiSiteWizard";
+import { AiSiteWizardStepContent } from "../../../core/admin/ui/setup/AiSiteWizardSteps";
 import {
+  AI_SITE_WIZARD_DEFAULT_DRAFT,
   getDefaultEnabledStepIds,
   readWizardPlanFromRunOptions,
   validateAiSiteWizardStep,
@@ -89,4 +91,161 @@ test("AiSiteWizard renders guided flow sections", () => {
   expect(html).toContain("Business profile");
   expect(html).toContain("Plan review");
   expect(html).toContain("Execute");
+});
+
+test("AiSiteWizardStepContent renders explainable action map in plan review", () => {
+  const html = renderAdminUi(
+    <AiSiteWizardStepContent
+      step={4}
+      draft={AI_SITE_WIZARD_DEFAULT_DRAFT}
+      onDraftChange={() => undefined}
+      onToggleGoal={() => undefined}
+      plan={{
+        recommendedKitId: "automotive-workshop",
+        confidence: 90,
+        recommendations: [],
+        steps: [
+          {
+            id: "settings",
+            type: "settings",
+            title: "Settings",
+            description: "Apply settings",
+            editable: false,
+          },
+          {
+            id: "pages",
+            type: "pages",
+            title: "Pages",
+            description: "Apply pages",
+            editable: true,
+          },
+          {
+            id: "qa",
+            type: "qa",
+            title: "QA",
+            description: "Run checks",
+            editable: false,
+          },
+        ],
+        settingsPatch: {},
+        notes: [],
+      }}
+      guidedPlan={{
+        plan: {
+          recommendedKitId: "automotive-workshop",
+          confidence: 90,
+          recommendations: [],
+          steps: [],
+          settingsPatch: {},
+          notes: [],
+        },
+        selectedKitId: "automotive-workshop",
+        selectedKitTitle: "Automotive Workshop",
+        enabledStepIds: ["settings", "pages", "qa"],
+        actions: [
+          {
+            id: "pages:page:home",
+            stepId: "pages",
+            title: "Upsert page: Home",
+            description: "Sync page payload.",
+            target: "page",
+            resourceKey: "home",
+            required: true,
+          },
+        ],
+        modules: {
+          required: ["forms"],
+          optional: [],
+          recommended: ["booking"],
+        },
+      }}
+      enabledStepIds={["settings", "pages", "qa"]}
+      onToggleStep={() => undefined}
+      onGeneratePlan={() => undefined}
+      isPlanLoading={false}
+      kits={[]}
+      selectedKitId="automotive-workshop"
+      selectedKit={null}
+      selectedSummary={null}
+      onSelectKit={() => undefined}
+      onApply={() => undefined}
+      onRerunLatest={() => undefined}
+      onRollbackLatest={() => undefined}
+      onCloneLatest={() => undefined}
+      onRefreshRuns={() => undefined}
+      isExecuting={false}
+      runs={[]}
+      runsLoading={false}
+      runsError={null}
+      selectedRunId={null}
+      onSelectRunId={() => undefined}
+      selectedRun={null}
+      isDetailLoading={false}
+      detailError={null}
+      latestApplyRun={null}
+      latestApplyRunId={null}
+      validation={null}
+    />,
+    { path: "/admin/coderso/solution-kits" }
+  );
+
+  expect(html).toContain("Action map (explainable)");
+  expect(html).toContain("Upsert page: Home");
+  expect(html).toContain("Modules");
+});
+
+test("AiSiteWizardStepContent renders validation checks in execute step", () => {
+  const html = renderAdminUi(
+    <AiSiteWizardStepContent
+      step={5}
+      draft={AI_SITE_WIZARD_DEFAULT_DRAFT}
+      onDraftChange={() => undefined}
+      onToggleGoal={() => undefined}
+      plan={null}
+      guidedPlan={null}
+      enabledStepIds={["settings", "pages", "qa"]}
+      onToggleStep={() => undefined}
+      onGeneratePlan={() => undefined}
+      isPlanLoading={false}
+      kits={[]}
+      selectedKitId="automotive-workshop"
+      selectedKit={null}
+      selectedSummary={null}
+      onSelectKit={() => undefined}
+      onApply={() => undefined}
+      onRerunLatest={() => undefined}
+      onRollbackLatest={() => undefined}
+      onCloneLatest={() => undefined}
+      onRefreshRuns={() => undefined}
+      isExecuting={false}
+      runs={[]}
+      runsLoading={false}
+      runsError={null}
+      selectedRunId={null}
+      onSelectRunId={() => undefined}
+      selectedRun={null}
+      isDetailLoading={false}
+      detailError={null}
+      latestApplyRun={null}
+      latestApplyRunId={null}
+      validation={{
+        runId: "run-1",
+        status: "warning",
+        unresolvedItems: ["No form operations were applied."],
+        checks: [
+          {
+            id: "step.forms",
+            label: "Forms step",
+            status: "warning",
+            details: "No form operations were applied.",
+          },
+        ],
+      }}
+    />,
+    { path: "/admin/coderso/solution-kits" }
+  );
+
+  expect(html).toContain("Validation result");
+  expect(html).toContain("No form operations were applied.");
+  expect(html).toContain("Forms step");
 });

@@ -1957,11 +1957,16 @@ Przykładowe klucze:
 Permissions:
 - `settings:read` dla `GET /assistant/status` i `POST /assistant/chat`
 - `settings:write` dla `POST /assistant/reindex`
+- `solution-kits:read` dla `POST /assistant/site-builder/plan` i `POST /assistant/site-builder/validate`
+- `solution-kits:write` dla `POST /assistant/site-builder/execute`
 
 Endpoints:
 - `GET /assistant/status`
 - `POST /assistant/chat`
 - `POST /assistant/reindex`
+- `POST /assistant/site-builder/plan`
+- `POST /assistant/site-builder/execute`
+- `POST /assistant/site-builder/validate`
 
 `retrievalBackend` moze miec wartosc `filesystem` lub `db`.
 
@@ -2050,6 +2055,101 @@ Endpoints:
 }
 ```
 
+`POST /assistant/site-builder/plan` request
+
+```json
+{
+  "businessType": "automotive_workshop",
+  "goals": ["lead_generation", "online_booking"],
+  "locale": "en",
+  "siteName": "AutoFix",
+  "selectedKitId": "automotive-workshop",
+  "enabledStepIds": ["settings", "pages", "qa"]
+}
+```
+
+`POST /assistant/site-builder/plan` response (fragment)
+
+```json
+{
+  "selectedKitId": "automotive-workshop",
+  "selectedKitTitle": "Automotive Workshop",
+  "enabledStepIds": ["settings", "pages", "qa"],
+  "actions": [
+    {
+      "id": "pages:page:home",
+      "stepId": "pages",
+      "target": "page",
+      "resourceKey": "home",
+      "title": "Upsert page: Home",
+      "description": "Sync page data, publish state, and SEO defaults.",
+      "required": true
+    }
+  ],
+  "modules": {
+    "required": ["forms"],
+    "optional": [],
+    "recommended": ["booking"]
+  },
+  "plan": {
+    "recommendedKitId": "automotive-workshop",
+    "confidence": 90,
+    "recommendations": [],
+    "steps": [],
+    "settingsPatch": {},
+    "notes": []
+  }
+}
+```
+
+`POST /assistant/site-builder/execute` request (fragment)
+
+```json
+{
+  "businessType": "automotive_workshop",
+  "goals": ["lead_generation", "online_booking"],
+  "locale": "en",
+  "selectedKitId": "automotive-workshop",
+  "enabledStepIds": ["settings", "pages", "qa"],
+  "dryRun": false,
+  "continueOnError": true
+}
+```
+
+`POST /assistant/site-builder/execute` response adds:
+- `execution` (solution kit install payload)
+- `validation`:
+  - `runId`
+  - `status` (`ok|warning|failed`)
+  - `checks[]`
+  - `unresolvedItems[]`
+
+`POST /assistant/site-builder/validate` request
+
+```json
+{
+  "runId": "0f7573a3-9ac9-4bc7-a492-fb11da09c37e"
+}
+```
+
+`POST /assistant/site-builder/validate` response
+
+```json
+{
+  "runId": "0f7573a3-9ac9-4bc7-a492-fb11da09c37e",
+  "status": "warning",
+  "unresolvedItems": ["No form operations were applied."],
+  "checks": [
+    {
+      "id": "step.forms",
+      "label": "Forms step",
+      "status": "warning",
+      "details": "No form operations were applied."
+    }
+  ]
+}
+```
+
 Error codes:
 - `assistant_disabled`
 - `assistant_index_missing`
@@ -2057,6 +2157,8 @@ Error codes:
 - `assistant_message_invalid`
 - `assistant_rate_limited`
 - `assistant_budget_exceeded`
+- `site_builder_kit_not_found`
+- `site_builder_run_not_found`
 - `validation_error` (payload schema mismatch)
 
 Uwagi:

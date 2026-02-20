@@ -1,4 +1,13 @@
 import { apiRequest } from "./apiClient";
+import type {
+  SiteBuilderPlanInput,
+  SiteBuilderPlanOutput,
+  SiteBuilderPlanStepId,
+  SolutionKitId,
+  SolutionKitInstallItemRecord,
+  SolutionKitInstallRunRecord,
+  SolutionKitInstallSummary,
+} from "./solutionKitsClient";
 
 export type AssistantMode = "docs-only" | "llm-rag";
 
@@ -73,6 +82,79 @@ export type AssistantReindexResponse = {
   actorId: string | null;
 };
 
+export type GuidedSiteBuilderActionTarget =
+  | "settings"
+  | "content_type"
+  | "form"
+  | "page"
+  | "menu"
+  | "template"
+  | "qa";
+
+export type GuidedSiteBuilderAction = {
+  id: string;
+  stepId: SiteBuilderPlanStepId;
+  title: string;
+  description: string;
+  target: GuidedSiteBuilderActionTarget;
+  resourceKey: string;
+  required: boolean;
+};
+
+export type GuidedSiteBuilderPlanRequest = SiteBuilderPlanInput & {
+  selectedKitId?: SolutionKitId | null;
+  enabledStepIds?: SiteBuilderPlanStepId[];
+};
+
+export type GuidedSiteBuilderPlanResponse = {
+  plan: SiteBuilderPlanOutput;
+  selectedKitId: SolutionKitId;
+  selectedKitTitle: string;
+  enabledStepIds: SiteBuilderPlanStepId[];
+  actions: GuidedSiteBuilderAction[];
+  modules: {
+    required: string[];
+    optional: string[];
+    recommended: string[];
+  };
+};
+
+export type GuidedSiteBuilderValidationStatus = "ok" | "warning" | "failed";
+
+export type GuidedSiteBuilderValidationCheck = {
+  id: string;
+  label: string;
+  status: GuidedSiteBuilderValidationStatus;
+  details: string;
+};
+
+export type GuidedSiteBuilderValidationResult = {
+  runId: string;
+  status: GuidedSiteBuilderValidationStatus;
+  unresolvedItems: string[];
+  checks: GuidedSiteBuilderValidationCheck[];
+};
+
+export type GuidedSiteBuilderExecuteRequest = GuidedSiteBuilderPlanRequest & {
+  dryRun?: boolean;
+  continueOnError?: boolean;
+  notes?: string[];
+  settingsPatch?: Record<string, unknown>;
+};
+
+export type GuidedSiteBuilderExecuteResponse = GuidedSiteBuilderPlanResponse & {
+  execution: {
+    run: SolutionKitInstallRunRecord;
+    items: SolutionKitInstallItemRecord[];
+    summary: SolutionKitInstallSummary;
+  };
+  validation: GuidedSiteBuilderValidationResult;
+};
+
+export type GuidedSiteBuilderValidateRequest = {
+  runId: string;
+};
+
 export async function getAssistantStatus() {
   return apiRequest<AssistantStatusResponse>("/assistant/status", {
     method: "GET",
@@ -98,6 +180,42 @@ export async function reindexAssistantDocs() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
+    },
+    { withCsrf: true }
+  );
+}
+
+export async function previewAssistantSiteBuilderPlan(payload: GuidedSiteBuilderPlanRequest) {
+  return apiRequest<GuidedSiteBuilderPlanResponse>(
+    "/assistant/site-builder/plan",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+}
+
+export async function executeAssistantSiteBuilder(payload: GuidedSiteBuilderExecuteRequest) {
+  return apiRequest<GuidedSiteBuilderExecuteResponse>(
+    "/assistant/site-builder/execute",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+}
+
+export async function validateAssistantSiteBuilderRun(payload: GuidedSiteBuilderValidateRequest) {
+  return apiRequest<GuidedSiteBuilderValidationResult>(
+    "/assistant/site-builder/validate",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     },
     { withCsrf: true }
   );

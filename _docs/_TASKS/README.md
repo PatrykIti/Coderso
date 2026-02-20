@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 25 tasks
 - **In Progress:** 1 task
-- **Done:** 395 tasks
+- **Done:** 400 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-18 | Coderso AI Assistant Guided Builder Workflow | High | Large | Guided setup and explainable execution |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Mandatory release gates for modules |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
@@ -79,6 +78,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-18 | Coderso AI Assistant Guided Builder Workflow | High | Large | Full guided executor (`plan/actions/execute/validate`) + assistant routes + modular wizard UX |
+| TASK-054-18-04 | QA, Docs, Changelog, and Closure | Medium | Medium | Lint/types/tests + assistant site-builder docs/changelog/kanban sync |
+| TASK-054-18-03 | AI Wizard UI Modularization and Explainable Execution | High | Large | `AiSiteWizard` orchestration split + action map + validation UI |
+| TASK-054-18-02 | Assistant Site Builder Routes and Client Contract | High | Medium | Internal assistant routes + schemas + typed client + rate-limit bucket mapping |
+| TASK-054-18-01 | Site Builder Executor Domain and Schemas | High | Medium | Typed executor service with deterministic action mapping and validation checks |
 | TASK-054-17 | Coderso Presets, Templates, and Kits Contract | High | Large | Manifest contract + template installer orchestration + kits UI exposure |
 | TASK-054-17-04 | QA, Docs, Changelog, and Closure | Medium | Medium | Lint/types/tests + docs/changelog/kanban closure |
 | TASK-054-17-03 | Solution Kits API and Admin UX Contract | High | Medium | Manifest payload exposure + kits detail UI checklist |

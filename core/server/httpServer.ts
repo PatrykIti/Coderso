@@ -317,10 +317,15 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     try {
       const isAuthRoute = pathname.startsWith("/auth");
       const isAssistantRoute = pathname.startsWith("/assistant");
+      const isAssistantSiteBuilderRoute = pathname.startsWith("/assistant/site-builder/");
       const isPublicWrite = req.method === "POST" && isPublicWritePath(pathname);
       const bucket = isAuthRoute
         ? "auth"
-        : isAssistantRoute
+        : isAssistantSiteBuilderRoute
+          ? pathname.endsWith("/execute")
+            ? "admin_write"
+            : "admin_read"
+          : isAssistantRoute
           ? "assistant"
           : isPublicWrite
             ? "public_write"

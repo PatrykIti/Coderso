@@ -118,8 +118,30 @@ Warstwa Admin UI:
 - `core/admin/ui/assistant/AssistantModeSwitch.tsx` obsluguje `docs-only`/`llm-rag`.
 - `core/admin/ui/assistant/AssistantMessage.tsx` pokazuje fallback badge, confidence i sources.
 - `core/admin/ui/assistant/AssistantAvatar.tsx` renderuje opcjonalna warstwe avatara z fallback 2D.
-- `core/admin/services/assistantClient.ts` obsluguje `/assistant/status`, `/assistant/chat`, `/assistant/reindex`.
+- `core/admin/services/assistantClient.ts` obsluguje:
+  - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,
+  - `/assistant/site-builder/plan`, `/assistant/site-builder/execute`, `/assistant/site-builder/validate`.
 - preferencje usera (`assistant.mode`, `assistant.ui.enabled`, `assistant.ui.avatarEnabled`, `assistant.ui.avatarAsset`) sa trzymane w `user_settings`.
+
+## Assistant Site Builder (Guided Executor)
+
+Warstwa domain:
+- `core/services/assistant/siteBuilderExecutor.ts` odpowiada za kontrakt:
+  - `previewGuidedSiteBuilderPlan` (`plan + actions + modules`),
+  - `executeGuidedSiteBuilder` (`execute + validation`),
+  - `validateGuidedSiteBuilderRun` (post-run checks i unresolved items).
+
+Warstwa API:
+- `POST /assistant/site-builder/plan` (`solution-kits:read`, rate-limit `admin_read`)
+- `POST /assistant/site-builder/execute` (`solution-kits:write`, rate-limit `admin_write`)
+- `POST /assistant/site-builder/validate` (`solution-kits:read`, rate-limit `admin_read`)
+- wszystkie endpointy sa internal i CSRF-protected.
+
+Warstwa UI:
+- `core/admin/ui/setup/AiSiteWizard.tsx` jako orchestrator stanu/wykonania.
+- `core/admin/ui/setup/AiSiteWizardSteps.tsx` jako modularny renderer krokow.
+- Step `Plan review` pokazuje explainable action map (`step -> target -> resource`).
+- Step `Execute` pokazuje walidacje (`ok/warning/failed`) i `unresolvedItems`.
 
 ## Terminologia
 
