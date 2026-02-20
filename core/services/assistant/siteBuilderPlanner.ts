@@ -122,6 +122,7 @@ const cloneKitDefinition = (kit: SolutionKitDefinition): SolutionKitDefinition =
     forms: kit.resourceBlueprint.forms.map((item) => ({ ...item })),
     pages: kit.resourceBlueprint.pages.map((item) => ({ ...item })),
     menus: kit.resourceBlueprint.menus.map((item) => ({ ...item })),
+    templates: kit.resourceBlueprint.templates?.map((item) => ({ ...item })) ?? [],
   },
 });
 
@@ -143,7 +144,10 @@ export const filterKitDefinitionByPlan = (
   const normalized = cloneKitDefinition(kit);
 
   if (!enabled.has("content-model")) normalized.resourceBlueprint.contentTypes = [];
-  if (!enabled.has("pages")) normalized.resourceBlueprint.pages = [];
+  if (!enabled.has("pages")) {
+    normalized.resourceBlueprint.pages = [];
+    normalized.resourceBlueprint.templates = [];
+  }
   if (!enabled.has("forms")) normalized.resourceBlueprint.forms = [];
   if (!enabled.has("navigation")) normalized.resourceBlueprint.menus = [];
 

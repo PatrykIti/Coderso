@@ -12,6 +12,7 @@ test("listSolutionKits returns v1 catalog summaries", () => {
   expect(kits.length).toBeGreaterThanOrEqual(5);
   expect(kits.some((kit) => kit.id === "automotive-workshop")).toBe(true);
   expect(kits.some((kit) => kit.id === "small-ecommerce")).toBe(true);
+  expect(kits.every((kit) => kit.manifest && kit.manifest.includes.forms.length > 0)).toBe(true);
 });
 
 test("getSolutionKit returns full definition", () => {
@@ -20,6 +21,7 @@ test("getSolutionKit returns full definition", () => {
   expect(kit).not.toBeNull();
   expect(kit?.title).toContain("Medical");
   expect(kit?.resourceBlueprint.pages.length).toBeGreaterThan(0);
+  expect(kit?.manifest?.includes.templates.length).toBeGreaterThan(0);
 });
 
 test("previewSolutionKitPlan returns recommendation and steps", () => {

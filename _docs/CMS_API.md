@@ -1103,6 +1103,11 @@ Internal admin API (`/admin/api/*`, RBAC required):
 - `GET /solution-kits/runs`
 - `GET /solution-kits/runs/:runId`
 
+List/detail payload includes normalized `manifest`:
+- `vertical`,
+- `includes` (`contentTypes|entries|widgets|templates|forms|menus`),
+- `requiredModules`, `optionalModules`, `postInstallTasks`.
+
 Plan request payload (summary):
 
 ```json
@@ -1125,6 +1130,8 @@ Install engine:
 - `solution_kit_install_runs` stores one run per `dry_run` / `apply` / `rollback`,
 - `solution_kit_install_items` stores per-resource operation trace (`content_type|form|page|menu`),
 - idempotency keying uses resource keys (`slug` / `location`) and records rollback hints,
+- apply uses additional template phase (`templateInstaller`) that upserts widget templates with deterministic collision suffixing,
+- template phase rollback metadata is stored in `run.options.kitInstaller.templateRollbackPlan`,
 - resource installers include nested pack sync:
   - content type taxonomy terms,
   - form fields,
@@ -1180,6 +1187,13 @@ Run shape (summary):
 - `enabledStepIds`,
 - `settingsPatch`,
 - `notes`.
+
+`options.manifest`:
+- manifest snapshot used for this run.
+
+`options.kitInstaller`:
+- `templateInstallSummary`,
+- `templateRollbackPlan`.
 
 Item shape (summary):
 - `id`, `runId`, `position`,

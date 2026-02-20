@@ -307,3 +307,5 @@ Project Change Log.
 | 271 | 2026-02-20 | Coderso composite-first widget strategy | CMS/Widgets |
 | 272 | 2026-02-20 | Coderso plugin contract and package manifest | Core/Plugins |
 | 273 | 2026-02-20 | Coderso module widget pack matrix | CMS/Widgets |
+| 274 | 2026-02-20 | Coderso presets, templates, and kits contract | CMS/Kits |
+

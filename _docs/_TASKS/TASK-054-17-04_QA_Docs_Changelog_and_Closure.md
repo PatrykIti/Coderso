@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-17-01, TASK-054-17-02, TASK-054-17-03  
-**Status:** To Do
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -38,3 +38,7 @@ Domknac TASK-054-17 testami, dokumentacja i aktualizacja kanban/changelog.
 - `_docs/_CHANGELOG/*`
 - `_docs/_TASKS/README.md`
 
+## Completion Notes (2026-02-20)
+- Ran lint/types and targeted unit/integration suites for kits, routes, admin client, and kits page UI.
+- Updated docs: `SOLUTION_KITS.md`, `TEMPLATE_CONTRACTS.md`, `CMS_API.md`.
+- Added changelog entry and synced kanban status.

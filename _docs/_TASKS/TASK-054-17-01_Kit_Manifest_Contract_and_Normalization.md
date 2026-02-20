@@ -5,7 +5,7 @@
 **Category:** Domain Contract  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-17  
-**Status:** In Progress (2026-02-20)
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -56,3 +56,7 @@ return {
 ## Documentation Updates Required
 - `_docs/SOLUTION_KITS.md`
 
+## Completion Notes (2026-02-20)
+- Implemented `core/services/kits/kitManifest.ts` with deterministic normalization and includes extraction.
+- Extended kit types/catalog to carry manifest in summaries/details.
+- Added unit tests for manifest normalization and validation.

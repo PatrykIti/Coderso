@@ -22,6 +22,13 @@ const formatBusinessType = (value: string) =>
     .map((part) => part[0]?.toUpperCase() + part.slice(1))
     .join(" ");
 
+const formatIncludeLabel = (value: string) =>
+  value
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+
 export function SolutionKitsPage() {
   const { items, isLoading, error } = useSolutionKits();
 
@@ -48,6 +55,8 @@ export function SolutionKitsPage() {
     () => items.find((item) => item.id === effectiveSelectedId) ?? null,
     [effectiveSelectedId, items]
   );
+
+  const manifest = selectedKit?.manifest ?? selectedSummary?.manifest ?? null;
 
   return (
     <AdminShell
@@ -114,22 +123,62 @@ export function SolutionKitsPage() {
                   <CardTitle className="text-base">Selected kit details</CardTitle>
                   <CardDescription>{selectedSummary.title}</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
                   <p>{selectedKit?.longDescription ?? selectedSummary.shortDescription}</p>
                   {selectedKit ? (
+                    <p>
+                      <span className="font-medium text-foreground">Business fit:</span>{" "}
+                      {selectedKit.businessTypes.map(formatBusinessType).join(", ")}
+                    </p>
+                  ) : null}
+
+                  {manifest ? (
                     <>
                       <p>
-                        <span className="font-medium text-foreground">Business fit:</span>{" "}
-                        {selectedKit.businessTypes.map(formatBusinessType).join(", ")}
+                        <span className="font-medium text-foreground">Manifest vertical:</span>{" "}
+                        {formatIncludeLabel(manifest.vertical)}
                       </p>
-                      <p>
-                        <span className="font-medium text-foreground">Starter resources:</span>{" "}
-                        {selectedKit.resourceBlueprint.pages.length} pages, {" "}
-                        {selectedKit.resourceBlueprint.forms.length} forms, {" "}
-                        {selectedKit.resourceBlueprint.contentTypes.length} content types.
-                      </p>
+
+                      <div className="space-y-1">
+                        <p className="font-medium text-foreground">Includes</p>
+                        <div className="flex flex-wrap gap-2">
+                          {Object.entries(manifest.includes).map(([key, values]) => (
+                            <Badge key={key} variant="outline" className="text-[11px]">
+                              {formatIncludeLabel(key)}: {Array.isArray(values) ? values.length : 0}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      {manifest.requiredModules.length > 0 ? (
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Required modules</p>
+                          <div className="flex flex-wrap gap-2">
+                            {manifest.requiredModules.map((moduleId) => (
+                              <Badge key={moduleId} variant="secondary" className="text-[11px]">
+                                {moduleId}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {(manifest.postInstallTasks?.length ?? 0) > 0 ? (
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Post-install checklist</p>
+                          <ul className="list-disc space-y-1 pl-5 text-xs text-muted-foreground">
+                            {manifest.postInstallTasks?.map((task) => (
+                              <li key={task}>{task}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                     </>
-                  ) : null}
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      Manifest details will appear after refreshing this kit.
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             ) : null}

@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 28 tasks
-- **In Progress:** 3 tasks
-- **Done:** 390 tasks
+- **To Do:** 25 tasks
+- **In Progress:** 1 task
+- **Done:** 395 tasks
 
 ---
 
@@ -43,9 +43,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Mandatory release gates for modules |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
-| TASK-054-17-02 | Template and Preset Installer Service | High | Large | Deterministic template/preset installer + rollback snapshot |
-| TASK-054-17-03 | Solution Kits API and Admin UX Contract | High | Medium | Expose manifest contract in API and kits UI |
-| TASK-054-17-04 | QA, Docs, Changelog, and Closure | Medium | Medium | Lint/types/tests + docs/changelog/kanban closure |
 | TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts flow on top of content engine |
 | TASK-055-01 | Posts Domain Model and API Contract | High | Medium | `post` type abstraction + API aliases |
 | TASK-055-02 | Posts List Screen (WordPress-Like Table) | High | Medium | Pages-like editorial list UX |
@@ -75,8 +72,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-17 | Coderso Presets, Templates, and Kits Contract | High | Large | Manifest contract + template/preset installer + UI exposure |
-| TASK-054-17-01 | Kit Manifest Contract and Normalization | High | Medium | `SolutionKitManifest` builder + normalization + includes mapping |
 
 ---
 
@@ -84,6 +79,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-17 | Coderso Presets, Templates, and Kits Contract | High | Large | Manifest contract + template installer orchestration + kits UI exposure |
+| TASK-054-17-04 | QA, Docs, Changelog, and Closure | Medium | Medium | Lint/types/tests + docs/changelog/kanban closure |
+| TASK-054-17-03 | Solution Kits API and Admin UX Contract | High | Medium | Manifest payload exposure + kits detail UI checklist |
+| TASK-054-17-02 | Template and Preset Installer Service | High | Large | Deterministic template install/rollback + kit orchestration |
+| TASK-054-17-01 | Kit Manifest Contract and Normalization | High | Medium | `SolutionKitManifest` builder + catalog normalization |
 | TASK-054-16 | Coderso Module Widget Pack Matrix | High | Medium | Pack matrix contract + strict/advisory validation + pack-aware widget module UX |
 | TASK-054-16-04 | Pack Matrix QA, Docs, and Closure | Medium | Medium | Lint/types/tests + docs/changelog/board closure |
 | TASK-054-16-03 | Widget Library Pack-Aware Module UX | Medium | Medium | Module option ordering/labels driven by pack readiness |

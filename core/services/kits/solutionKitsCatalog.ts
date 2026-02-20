@@ -4,6 +4,7 @@ import {
   type SolutionKitDefinition,
   type SolutionKitId,
 } from "./solutionKitTypes";
+import { buildSolutionKitManifest } from "./kitManifest";
 
 const block = (id: string, type: string, data: Record<string, unknown> = {}) => ({
   id,
@@ -80,6 +81,8 @@ const providerSchema = {
   required: ["title"],
 };
 
+type SolutionKitCatalogSeed = Omit<SolutionKitDefinition, "manifest">;
+
 const catalogSchema = {
   type: "object",
   additionalProperties: false,
@@ -93,7 +96,7 @@ const catalogSchema = {
   required: ["title"],
 };
 
-export const solutionKitsCatalog: SolutionKitDefinition[] = [
+const solutionKitsCatalogSeed: SolutionKitCatalogSeed[] = [
   {
     id: "automotive-workshop",
     title: "Automotive Workshop",
@@ -822,6 +825,17 @@ export const solutionKitsCatalog: SolutionKitDefinition[] = [
     },
   },
 ];
+
+const toDefinition = (kit: SolutionKitCatalogSeed): SolutionKitDefinition => ({
+  ...kit,
+  manifest: buildSolutionKitManifest({
+    ...kit,
+    businessTypes: [...kit.businessTypes],
+    recommendedModules: [...kit.recommendedModules],
+  }),
+});
+
+export const solutionKitsCatalog: SolutionKitDefinition[] = solutionKitsCatalogSeed.map(toDefinition);
 
 const byId = new Map(solutionKitsCatalog.map((kit) => [kit.id, kit]));
 

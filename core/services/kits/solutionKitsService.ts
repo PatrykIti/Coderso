@@ -9,12 +9,11 @@ import {
   type SolutionKitSummary,
 } from "./solutionKitTypes";
 import {
-  applySolutionKitInstall,
   getSolutionKitInstallRun,
   listSolutionKitInstallItems,
   listSolutionKitInstallRuns,
-  rollbackSolutionKitInstall,
 } from "./solutionKitsInstallService";
+import { applyKitInstall, rollbackKitInstall } from "./kitInstaller";
 
 export const listSolutionKits = (): SolutionKitSummary[] =>
   listSolutionKitsCatalog().map((kit) => ({
@@ -23,6 +22,7 @@ export const listSolutionKits = (): SolutionKitSummary[] =>
     shortDescription: kit.shortDescription,
     recommendedModules: [...kit.recommendedModules],
     features: [...kit.features],
+    manifest: kit.manifest,
   }));
 
 export const getSolutionKit = (id: SolutionKitId) => getSolutionKitFromCatalog(id);
@@ -31,8 +31,8 @@ export const previewSolutionKitPlan = (input: SiteBuilderPlanInput) =>
   buildSiteBuilderPlan(input);
 
 export {
-  applySolutionKitInstall,
-  rollbackSolutionKitInstall,
+  applyKitInstall as applySolutionKitInstall,
+  rollbackKitInstall as rollbackSolutionKitInstall,
   listSolutionKitInstallRuns,
   getSolutionKitInstallRun,
   listSolutionKitInstallItems,

@@ -1,14 +1,15 @@
 # Solution Kits
 
-Reference for Coderso `Solution Kits` starter packs and installer behavior.
+Reference for Coderso `Solution Kits` starter packs, manifest contract, and installer behavior.
 
 ## Catalog
 
-Each kit ships with a complete starter pack:
+Each kit ships with starter resources:
 - `content type` with schema + taxonomy defaults,
 - `form` with fields + settings defaults,
 - `pages` with starter block composition + SEO defaults,
-- `menus` with seeded menu items.
+- `menus` with seeded menu items,
+- derived `template seeds` (from page templates) for widget template library.
 
 | Kit ID | Pages | Form | Content Type | Menus |
 |---|---|---|---|---|
@@ -18,96 +19,62 @@ Each kit ships with a complete starter pack:
 | `services-directory` | `/`, `directory`, `submit` | `directory-inquiry` | `provider` | `primary`, `footer` |
 | `small-ecommerce` | `/`, `catalog`, `contact` | `custom-order` | `catalog-page` | `primary`, `footer` |
 
-## Blueprint Contract
+## Manifest Contract
 
-`resourceBlueprint` uses typed nested resources:
+Every catalog kit exposes normalized `manifest` (`core/services/kits/kitManifest.ts`):
 
 ```ts
-type SolutionKitResourceBlueprint = {
-  contentTypes: Array<{
-    slug: string;
-    name: string;
-    schema?: Record<string, unknown>;
-    taxonomy?: {
-      categories?: Array<{ name: string; slug?: string }>;
-      tags?: Array<{ name: string; slug?: string }>;
-    };
-  }>;
-  forms: Array<{
-    slug: string;
-    name: string;
-    status?: "draft" | "published";
-    description?: string;
-    successMessage?: string;
-    successRedirectUrl?: string;
-    submissionAccess?: "public" | "internal";
-    settings?: Record<string, unknown>;
-    fields?: Array<{
-      id?: string;
-      type: string;
-      label: string;
-      name: string;
-      required?: boolean;
-      orderIndex?: number;
-      settings?: Record<string, unknown>;
-    }>;
-  }>;
-  pages: Array<{
-    slug: string;
-    title: string;
-    status?: "draft" | "published";
-    template?: string;
-    data?: Record<string, unknown>;
-    seo?: {
-      title?: string;
-      description?: string;
-      canonicalUrl?: string;
-      robots?: string;
-    };
-  }>;
-  menus: Array<{
-    location?: string;
-    name: string;
-    items?: Array<{
-      key: string;
-      label: string;
-      href?: string;
-      pageSlug?: string;
-      parentKey?: string;
-      orderIndex?: number;
-      settings?: Record<string, unknown>;
-    }>;
-  }>;
+type SolutionKitManifest = {
+  id: string;
+  title: string;
+  vertical: string;
+  includes: {
+    contentTypes: string[];
+    entries: string[];
+    widgets: string[];
+    templates: string[];
+    forms: string[];
+    menus: string[];
+  };
+  requiredModules: string[];
+  optionalModules?: string[];
+  postInstallTasks?: string[];
 };
 ```
 
-## Installer Strategy
+Normalization rules:
+- arrays are deduplicated, trimmed, sorted,
+- `vertical` defaults from first business type (`_` -> `-`),
+- `widgets` are inferred from page block `type`,
+- `templates` are inferred from page `template` and `page.data.settings.template`,
+- manifest overrides (if provided by catalog object) merge into generated includes.
 
-`apply`/`dry-run`/`rollback` is implemented by `solutionKitsInstallService` with per-resource snapshots.
+## Installer Phases
 
-- `content_type`:
-  - key: `slug`,
-  - syncs schema + taxonomy (`content_taxonomies`, `content_terms`).
-- `form`:
-  - key: `slug`,
-  - syncs base metadata + replaces `form_fields` set.
-- `page`:
-  - key: normalized `slug`,
-  - syncs page payload + upserts page SEO (`seo_documents`, `targetType=page`).
-- `menu`:
-  - key: `location` (fallback `name`),
-  - resolves `pageSlug -> pageId`, replaces `menu_items` set.
+`/solution-kits/:id/apply` uses two phases:
+1. Core resource install (`solutionKitsInstallService`): `content_type`, `form`, `page`, `menu`.
+2. Template seed install (`templateInstaller`): upsert widget templates with deterministic collision strategy.
 
-### Idempotency
+Template collision strategy:
+- ownership marker is appended to description: `[nextless-kit-template:<kitId>:<key>]`,
+- if managed template exists -> `update`/`noop`,
+- if name collision on unmanaged template -> deterministic suffix (`Name`, `Name (2)`, `Name (3)`, ...).
 
-Reapplying the same kit does not create duplicates. If effective state is unchanged, operation is stored as `noop`.
+Run metadata:
+- apply run `options.manifest` stores manifest snapshot,
+- `options.kitInstaller.templateInstallSummary` stores template phase summary,
+- `options.kitInstaller.templateRollbackPlan` stores rollback actions for template phase.
 
-### Rollback
+## Rollback
 
-Rollback reads `beforeSnapshot` and:
-- restores nested resources for `update`,
-- deletes created resources for `create`,
-- restores/deletes linked page SEO as part of page rollback path.
+`/solution-kits/:id/rollback` now executes:
+1. template rollback from source run `templateRollbackPlan`,
+2. core resource rollback from `solution_kit_install_items` snapshots.
+
+Core rollback behavior (unchanged):
+- restore nested snapshots for `update`,
+- remove created resources for `create`,
+- includes nested content: taxonomies, form fields, page SEO, menu items.
 
 ## QA Matrix (2026-02-20)
 
@@ -115,11 +82,10 @@ Rollback reads `beforeSnapshot` and:
 |---|---|---|
 | Core lint | `bun --cwd core lint` | Pass |
 | Core types | `bun --cwd core lint:types` | Pass |
-| Kits unit set | `bun test tests/unit/kits` | Pass (`5 pass`, `5 skip`) |
-| Kits DB-dependent subset | `set -a; source .env; set +a; bun test tests/unit/kits/installService.test.ts tests/unit/kits/schema.test.ts` | Skip (`0 pass`, `5 skip`) |
+| Kits unit set | `bun test tests/unit/kits` | Pass (`9 pass`, `5 skip`) |
+| Template installer DB-guarded | `bun test tests/unit/templates/templateInstaller.test.ts` | Skip (`0 pass`, `2 skip`) in current runtime |
 | Admin client | `bun test tests/unit/admin/solutionKitsClient.test.ts` | Pass (`6 pass`) |
-| UI pages | `bun test tests/unit/ui/solution-kits-page.test.tsx tests/unit/ui/ai-site-wizard.test.tsx` | Pass (`6 pass`) |
-| Integration routes/UI | `bun test tests/integration/routes/solutionKitsRoutes.test.ts tests/integration/ui/setup-wizard.test.tsx` | Pass (`4 pass`) |
+| UI page + routes | `bun test tests/unit/ui/solution-kits-page.test.tsx tests/integration/routes/solutionKitsRoutes.test.ts` | Pass (`4 pass`) |
 
 Notes:
-- DB-dependent kit suites are intentionally `skip` when DB preconditions are not met in runtime (`canConnect + hasTable` guard in tests).
+- DB-dependent kit suites remain skip-guarded when DB prerequisites are unavailable.

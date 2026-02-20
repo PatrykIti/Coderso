@@ -34,19 +34,40 @@ export type SiteBuilderPlanStepId =
   | "navigation"
   | "qa";
 
+export type SolutionKitManifestIncludes = {
+  contentTypes: string[];
+  entries: string[];
+  widgets: string[];
+  templates: string[];
+  forms: string[];
+  menus: string[];
+};
+
+export type SolutionKitManifest = {
+  id: string;
+  title: string;
+  vertical: string;
+  includes: SolutionKitManifestIncludes;
+  requiredModules: string[];
+  optionalModules?: string[];
+  postInstallTasks?: string[];
+};
+
 export type SolutionKitSummary = {
   id: SolutionKitId;
   title: string;
   shortDescription: string;
   recommendedModules: string[];
   features: string[];
+  manifest?: SolutionKitManifest;
 };
 
 export type SolutionKitResourceBlueprint = {
-  pages: Array<{ slug: string; title: string; status: "draft" | "published" }>;
+  pages: Array<{ slug: string; title: string; status: "draft" | "published"; template?: string }>;
   forms: Array<{ slug: string; name: string; status: "draft" | "published" }>;
   contentTypes: Array<{ slug: string; name: string }>;
   menus: Array<{ location: "primary" | "footer"; name: string }>;
+  templates?: Array<{ key: string; name?: string }>;
 };
 
 export type SolutionKitDefinition = SolutionKitSummary & {
@@ -165,13 +186,33 @@ const isStringArray = (value: unknown): value is string[] =>
 const isSolutionKitId = (value: unknown): value is SolutionKitId =>
   typeof value === "string" && solutionKitIds.includes(value as SolutionKitId);
 
+const isManifestIncludes = (value: unknown): value is SolutionKitManifestIncludes =>
+  isRecord(value) &&
+  isStringArray(value.contentTypes) &&
+  isStringArray(value.entries) &&
+  isStringArray(value.widgets) &&
+  isStringArray(value.templates) &&
+  isStringArray(value.forms) &&
+  isStringArray(value.menus);
+
+const isManifest = (value: unknown): value is SolutionKitManifest =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  typeof value.title === "string" &&
+  typeof value.vertical === "string" &&
+  isManifestIncludes(value.includes) &&
+  isStringArray(value.requiredModules) &&
+  (typeof value.optionalModules === "undefined" || isStringArray(value.optionalModules)) &&
+  (typeof value.postInstallTasks === "undefined" || isStringArray(value.postInstallTasks));
+
 const isSolutionKitSummary = (value: unknown): value is SolutionKitSummary =>
   isRecord(value) &&
   isSolutionKitId(value.id) &&
   typeof value.title === "string" &&
   typeof value.shortDescription === "string" &&
   isStringArray(value.recommendedModules) &&
-  isStringArray(value.features);
+  isStringArray(value.features) &&
+  (typeof value.manifest === "undefined" || isManifest(value.manifest));
 
 const isSolutionKitList = (value: unknown): value is SolutionKitSummary[] =>
   Array.isArray(value) && value.every(isSolutionKitSummary);

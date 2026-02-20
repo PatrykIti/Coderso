@@ -1,3 +1,5 @@
+import type { SolutionKitManifest } from "./kitManifest";
+
 export const solutionKitIds = [
   "automotive-workshop",
   "medical-clinic",
@@ -101,11 +103,23 @@ export type SolutionKitMenuBlueprint = {
   items?: SolutionKitMenuItemBlueprint[];
 };
 
+export type SolutionKitTemplateBlueprint = {
+  key: string;
+  name?: string;
+  description?: string | null;
+  category?: string;
+  status?: "draft" | "published";
+  sourcePageSlug?: string | null;
+  blocks?: Array<Record<string, unknown>>;
+  settings?: Record<string, unknown>;
+};
+
 export type SolutionKitResourceBlueprint = {
   pages: SolutionKitPageBlueprint[];
   forms: SolutionKitFormBlueprint[];
   contentTypes: SolutionKitContentTypeBlueprint[];
   menus: SolutionKitMenuBlueprint[];
+  templates?: SolutionKitTemplateBlueprint[];
 };
 
 export type SolutionKitDefinition = {
@@ -118,6 +132,7 @@ export type SolutionKitDefinition = {
   recommendedModules: string[];
   features: string[];
   resourceBlueprint: SolutionKitResourceBlueprint;
+  manifest?: SolutionKitManifest;
 };
 
 export type SolutionKitSummary = {
@@ -126,6 +141,7 @@ export type SolutionKitSummary = {
   shortDescription: string;
   recommendedModules: string[];
   features: string[];
+  manifest?: SolutionKitManifest;
 };
 
 export type SiteBuilderPlanInput = {

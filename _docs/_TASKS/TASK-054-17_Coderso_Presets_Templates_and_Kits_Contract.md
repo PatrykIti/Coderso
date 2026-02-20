@@ -5,7 +5,7 @@
 **Category:** CMS/Templates + Setup UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-07, TASK-054-13, TASK-055  
-**Status:** In Progress (2026-02-20)
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -98,3 +98,9 @@ try {
 - `_docs/SOLUTION_KITS.md`
 - `_docs/TEMPLATE_CONTRACTS.md`
 - `_docs/_CHANGELOG/*.md` (when implemented)
+
+## Completion Notes (2026-02-20)
+- Added normalized `SolutionKitManifest` contract and catalog wiring.
+- Added template install/rollback layer with deterministic collision strategy and marker-based ownership.
+- Wired solution kits service to run template install phase and persist run metadata (`options.manifest`, `options.kitInstaller`).
+- Updated kits UI and API docs to expose manifest/includes and post-install checklist.

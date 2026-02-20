@@ -5,7 +5,7 @@
 **Category:** API + Admin UX  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-17-01, TASK-054-17-02  
-**Status:** To Do
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -62,3 +62,7 @@ return {
 - `_docs/CMS_API.md`
 - `_docs/SOLUTION_KITS.md`
 
+## Completion Notes (2026-02-20)
+- Exposed manifest in list/detail service payloads used by internal solution kits API.
+- Updated admin client contracts and Solution Kits page to render includes/modules/post-install checklist.
+- Updated API contract docs (`_docs/CMS_API.md`).

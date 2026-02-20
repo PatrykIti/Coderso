@@ -5,7 +5,7 @@
 **Category:** Services/Installer  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-17-01  
-**Status:** To Do
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -53,3 +53,7 @@ return updateTemplate(target.id, input);
 - `_docs/SOLUTION_KITS.md`
 - `_docs/TEMPLATE_CONTRACTS.md`
 
+## Completion Notes (2026-02-20)
+- Added `core/services/templates/templateInstaller.ts` with create/update/noop logic and deterministic name collision handling.
+- Added `core/services/kits/kitInstaller.ts` orchestration layer for apply/rollback template phase.
+- Added seed builder logic to derive templates from page blueprint and explicit `resourceBlueprint.templates`.

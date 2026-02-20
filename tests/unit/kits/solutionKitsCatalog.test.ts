@@ -17,6 +17,10 @@ test("solution kits catalog provides complete starter packs for each kit", () =>
     expect(kit.resourceBlueprint.pages.length).toBeGreaterThan(0);
     expect(kit.resourceBlueprint.menus.length).toBeGreaterThan(0);
 
+    expect(kit.manifest).toBeDefined();
+    expect(kit.manifest?.includes.forms.length).toBeGreaterThan(0);
+    expect(kit.manifest?.requiredModules.length).toBeGreaterThan(0);
+
     for (const form of kit.resourceBlueprint.forms) {
       expect(form.fields.length).toBeGreaterThan(0);
     }
