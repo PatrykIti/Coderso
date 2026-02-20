@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 24 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 1 tasks
 - **Done:** 376 tasks
 
@@ -67,6 +67,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-054-199 | Security Gate (SAST, SCA, Secrets, CVE) | High | Medium | CI security gate with fail thresholds and exception policy |
 
 ---
 

@@ -58,6 +58,9 @@ for (const gate of gates) {
 2. Security baseline is verified for every public-facing flow.
 3. Release checklist is documented and automation-backed.
 
+## Sub-Tasks
+- `TASK-054-199`: Security gate for SAST/SCA/secrets/CVE in CI
+
 ## Testing Requirements
 - Perf: synthetic load for listing/search/filter APIs.
 - Security: rate-limit, nonce, captcha policy tests.
