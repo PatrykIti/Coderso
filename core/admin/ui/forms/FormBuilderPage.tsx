@@ -693,35 +693,39 @@ export function FormBuilderPage() {
           ) : null}
         </div>
       }
-      topbarActions={
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={openActionLogs}>
-            Action logs
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2"
-            disabled={isBusy || !hasUnsavedChanges}
-            onClick={handleSave}
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save form"}
-          </Button>
-        </div>
-      }
     >
-      <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur lg:hidden">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
-          <Button variant="outline" size="sm" onClick={() => setMobileFieldsOpen(true)}>
-            Fields
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setMobileSettingsOpen(true)}
-          >
-            Details
-          </Button>
+      <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={openActionLogs}>
+              Action logs
+            </Button>
+            <Button
+              size="sm"
+              className="gap-2"
+              disabled={isBusy || !hasUnsavedChanges}
+              onClick={handleSave}
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? "Saving..." : "Save form"}
+            </Button>
+          </div>
+          <div className="ml-auto flex items-center gap-2 lg:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileFieldsOpen(true)}
+            >
+              Fields
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMobileSettingsOpen(true)}
+            >
+              Details
+            </Button>
+          </div>
         </div>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-6 px-6 py-6">

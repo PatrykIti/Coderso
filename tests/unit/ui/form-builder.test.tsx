@@ -16,4 +16,6 @@ test("FormBuilderPage renders form builder layout", () => {
   expect(html).toContain("Fields");
   expect(html).toContain("Library");
   expect(html).toContain("Form Settings");
+  expect(html).toContain("Action logs");
+  expect(html).toContain("Save form");
 });
