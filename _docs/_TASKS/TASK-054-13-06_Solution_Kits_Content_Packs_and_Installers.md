@@ -5,7 +5,7 @@
 **Category:** CMS/Content  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-13-02, TASK-054-13-05  
-**Status:** In Progress (2026-02-20)
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -55,3 +55,9 @@ installers[kit.id] = [
 - `TASK-054-13-06-02`: Installer extensions (taxonomies, form fields, menu items, SEO defaults)
 - `TASK-054-13-06-03`: Regression tests for per-kit install/reinstall/rollback
 - `TASK-054-13-06-04`: Docs, changelog, and task board closure
+
+## Completion Notes (2026-02-20)
+- Catalog/types expanded for full starter packs across all 5 kits.
+- Install engine extended for nested resources (taxonomy, form fields, page SEO, menu items) with rollback restore support.
+- Added kit catalog validation tests and extended install service regression tests.
+- Updated architecture/API/module docs and added `SOLUTION_KITS.md`.

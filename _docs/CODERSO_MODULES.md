@@ -112,6 +112,11 @@ const sections = buildDefaultNavSections({
   - review-stage execution step editing (`enabledStepIds`) before apply,
   - execute timeline with apply/dry-run/rerun/rollback/clone-as-draft actions,
   - typed apply plan payload persisted in `run.options.wizard`.
+- 054-13-06 done: Solution Kits content packs and installers delivered:
+  - expanded per-kit packs (content type schema+taxonomy, forms with fields, pages with SEO defaults, menus with items),
+  - installer sync for nested resources (`content_terms`, `form_fields`, `seo_documents`, `menu_items`),
+  - rollback restore path extended to nested snapshots for update/create scenarios,
+  - catalog validation coverage and installer regression tests updated.
 - 054-10-05 done: Booking Admin UI delivered:
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,

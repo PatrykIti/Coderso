@@ -87,3 +87,7 @@ await applyKit({
   - introduced typed `plan` payload for apply with step-level execution selection,
   - persisted wizard metadata in install run options for rerun/clone-as-draft flows,
   - integrated run timeline actions (apply/dry-run/rerun/rollback/clone) into wizard UX.
+- Completed `TASK-054-13-06`:
+  - expanded all five solution kits to full starter packs (content model + pages + forms + menus + SEO),
+  - extended install engine and rollback to nested resources (`content_terms`, `form_fields`, `seo_documents`, `menu_items`),
+  - added catalog and installer regression coverage for pack completeness/idempotency/rollback.

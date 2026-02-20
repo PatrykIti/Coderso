@@ -343,6 +343,12 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `solution_kit_install_items` trzyma per-resource trace (operation + snapshots + rollback_action),
   - apply jest idempotentny po kluczach zasobow (`slug` / `location`) i moze dzialac partial-safe,
   - rollback jest best-effort i odtwarza snapshoty dla `update` oraz usuwa zasoby `create`.
+- Nested installer strategy (content packs):
+  - `content_type`: sync schema + taxonomy state (`content_taxonomies`, `content_terms`),
+  - `form`: sync metadata + replace fieldset (`form_fields`),
+  - `page`: sync page payload + SEO defaults (`seo_documents`, `targetType=page`),
+  - `menu`: resolve `pageSlug -> pageId` and replace menu tree (`menu_items`),
+  - nested data jest takze snapshotowane dla rollback (`beforeSnapshot` / `afterSnapshot`).
 
 
 ## Media delivery access

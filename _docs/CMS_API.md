@@ -1115,7 +1115,13 @@ Plan response highlights:
 Install engine:
 - `solution_kit_install_runs` stores one run per `dry_run` / `apply` / `rollback`,
 - `solution_kit_install_items` stores per-resource operation trace (`content_type|form|page|menu`),
-- idempotency keying uses resource keys (`slug` / `location`) and records rollback hints.
+- idempotency keying uses resource keys (`slug` / `location`) and records rollback hints,
+- resource installers include nested pack sync:
+  - content type taxonomy terms,
+  - form fields,
+  - page SEO defaults,
+  - menu items (`pageSlug -> pageId` resolution),
+- rollback restores nested snapshots for `update` items and removes nested data for `create` items.
 
 Apply request payload:
 

@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 25 tasks
-- **In Progress:** 3 tasks
-- **Done:** 373 tasks
+- **In Progress:** 2 tasks
+- **Done:** 374 tasks
 
 ---
 
@@ -77,7 +77,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
-| TASK-054-13-06 | Solution Kits Content Packs and Installers | High | Large | Expanded per-kit packs: taxonomy/forms/pages/menu/seo installer |
 
 ---
 
@@ -85,6 +84,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-13-06 | Solution Kits Content Packs and Installers | High | Large | Expanded per-kit packs: taxonomy/forms/pages/menu/seo installer |
 | TASK-054-13-05 | AI Site Wizard Guided Flow | High | Large | Guided multi-step solution-kit flow with editable plan and execute timeline |
 | TASK-054-13-05-04 | Wizard Tests, Docs, Changelog, and Closure | Medium | Medium | Unit/integration coverage + docs/changelog/board sync |
 | TASK-054-13-05-03 | Wizard Execute Timeline, Rerun, Rollback, and Clone | High | Medium | Apply/dry-run timeline with rerun/rollback/clone-as-draft actions |

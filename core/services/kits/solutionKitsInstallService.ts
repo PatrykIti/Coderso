@@ -1,21 +1,33 @@
+import { randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import {
+  contentTaxonomies,
+  contentTerms,
   contentTypes,
+  formFields,
   forms,
+  menuItems,
   menus,
   pages,
+  seoDocuments,
   solutionKitInstallItems,
   solutionKitInstallRuns,
 } from "../../db/schema";
 import { logAudit } from "../audit/auditService";
 import { getSolutionKitFromCatalog } from "./solutionKitsCatalog";
 import type {
+  SolutionKitContentTypeBlueprint,
   SolutionKitDefinition,
+  SolutionKitFormBlueprint,
   SolutionKitId,
+  SolutionKitMenuBlueprint,
+  SolutionKitPageBlueprint,
   SolutionKitResourceBlueprint,
+  SolutionKitSeoDefaults,
+  SolutionKitTaxonomyTerm,
 } from "./solutionKitTypes";
 
 type JsonRecord = Record<string, unknown>;
@@ -42,8 +54,11 @@ export type SolutionKitInstallResourceType =
 type SolutionKitInstallRunRow = typeof solutionKitInstallRuns.$inferSelect;
 type SolutionKitInstallItemRow = typeof solutionKitInstallItems.$inferSelect;
 type ContentTypeRow = typeof contentTypes.$inferSelect;
+type ContentTaxonomyRow = typeof contentTaxonomies.$inferSelect;
+type ContentTermRow = typeof contentTerms.$inferSelect;
 type FormRow = typeof forms.$inferSelect;
 type PageRow = typeof pages.$inferSelect;
+type SeoDocumentRow = typeof seoDocuments.$inferSelect;
 type MenuRow = typeof menus.$inferSelect;
 
 type ContentTypeSnapshot = {
@@ -51,6 +66,30 @@ type ContentTypeSnapshot = {
   name: string;
   slug: string;
   schema: JsonRecord;
+  taxonomy: {
+    categories: Array<{ id: string; name: string; slug: string }>;
+    tags: Array<{ id: string; name: string; slug: string }>;
+  };
+};
+
+type FormFieldSnapshot = {
+  id: string;
+  type: string;
+  label: string;
+  name: string;
+  required: boolean;
+  orderIndex: number;
+  settings: JsonRecord;
+};
+
+type FormFieldDesired = {
+  id?: string | null;
+  type: string;
+  label: string;
+  name: string;
+  required: boolean;
+  orderIndex: number;
+  settings: JsonRecord;
 };
 
 type FormSnapshot = {
@@ -63,6 +102,15 @@ type FormSnapshot = {
   successRedirectUrl: string | null;
   submissionAccess: string;
   settings: JsonRecord;
+  fields: FormFieldSnapshot[];
+};
+
+type SeoSnapshot = {
+  id: string;
+  title: string | null;
+  description: string | null;
+  canonicalUrl: string | null;
+  robots: string | null;
 };
 
 type PageSnapshot = {
@@ -74,12 +122,34 @@ type PageSnapshot = {
   currentData: JsonRecord;
   publishedData: JsonRecord | null;
   publishedAt: string | null;
+  seo: SeoSnapshot | null;
+};
+
+type MenuItemSnapshot = {
+  id: string;
+  label: string;
+  href: string | null;
+  pageId: string | null;
+  parentId: string | null;
+  orderIndex: number;
+  settings: JsonRecord;
+};
+
+type MenuItemDesired = {
+  id?: string | null;
+  label: string;
+  href: string | null;
+  pageId: string | null;
+  parentId: string | null;
+  orderIndex: number;
+  settings: JsonRecord;
 };
 
 type MenuSnapshot = {
   id: string;
   name: string;
   location: string | null;
+  items: MenuItemSnapshot[];
 };
 
 type InstallPlanOperation =
@@ -91,6 +161,10 @@ type InstallPlanOperation =
         slug: string;
         name: string;
         schema: JsonRecord;
+        taxonomy: {
+          categories?: SolutionKitTaxonomyTerm[];
+          tags?: SolutionKitTaxonomyTerm[];
+        };
       };
     }
   | {
@@ -101,6 +175,12 @@ type InstallPlanOperation =
         slug: string;
         name: string;
         status: "draft" | "published";
+        description: string | null;
+        successMessage: string | null;
+        successRedirectUrl: string | null;
+        submissionAccess: "public" | "internal";
+        settings: JsonRecord;
+        fields: FormFieldDesired[];
       };
     }
   | {
@@ -112,6 +192,7 @@ type InstallPlanOperation =
         title: string;
         status: "draft" | "published";
         currentData: JsonRecord;
+        seo: SolutionKitSeoDefaults | null;
       };
     }
   | {
@@ -121,6 +202,15 @@ type InstallPlanOperation =
       payload: {
         location: string | null;
         name: string;
+        items: Array<{
+          key: string;
+          label: string;
+          href: string | null;
+          pageSlug: string | null;
+          parentKey: string | null;
+          orderIndex: number;
+          settings: JsonRecord;
+        }>;
       };
     };
 
@@ -235,6 +325,19 @@ const defaultContentTypeSchema = (): JsonRecord => ({
   required: [],
 });
 
+const defaultFormSettings = (): JsonRecord => ({
+  layoutMode: "single",
+  saveProgress: false,
+  stepTitles: [],
+  preset: "custom",
+  automationRetry: {
+    enabled: false,
+    maxAttempts: 1,
+    baseDelayMs: 300,
+    maxDelayMs: 2000,
+  },
+});
+
 const defaultPageData = (): JsonRecord => ({
   blocks: [],
   settings: {
@@ -242,14 +345,267 @@ const defaultPageData = (): JsonRecord => ({
   },
 });
 
-const snapshotContentType = (row: ContentTypeRow): ContentTypeSnapshot => ({
+const normalizeTaxonomyTerms = (items?: SolutionKitTaxonomyTerm[]) => {
+  if (!Array.isArray(items) || items.length === 0) return [] as SolutionKitTaxonomyTerm[];
+  const seen = new Set<string>();
+  const normalized: SolutionKitTaxonomyTerm[] = [];
+  for (const item of items) {
+    const name = normalizeString(item?.name);
+    if (!name) continue;
+    const slug = normalizeString(item?.slug);
+    const key = `${name.toLowerCase()}::${slug?.toLowerCase() ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push({ name, ...(slug ? { slug } : {}) });
+  }
+  return normalized;
+};
+
+const normalizeContentTypeBlueprint = (value: SolutionKitContentTypeBlueprint) => ({
+  slug: normalizeString(value.slug),
+  name: normalizeString(value.name),
+  schema: isRecord(value.schema) ? asRecord(value.schema) : defaultContentTypeSchema(),
+  taxonomy: {
+    categories: normalizeTaxonomyTerms(value.taxonomy?.categories),
+    tags: normalizeTaxonomyTerms(value.taxonomy?.tags),
+  },
+});
+
+const normalizeFormFieldsBlueprint = (
+  value: SolutionKitFormBlueprint["fields"]
+): FormFieldDesired[] => {
+  if (!Array.isArray(value) || value.length === 0) return [];
+  return value
+    .map((field, index) => ({
+      id: typeof field.id === "string" ? normalizeString(field.id) : null,
+      type: normalizeString(field.type) ?? "text",
+      label: normalizeString(field.label) ?? `Field ${index + 1}`,
+      name:
+        normalizeString(field.name) ??
+        `field_${index + 1}`,
+      required: Boolean(field.required),
+      orderIndex:
+        typeof field.orderIndex === "number" && Number.isFinite(field.orderIndex)
+          ? Math.round(field.orderIndex)
+          : index,
+      settings: isRecord(field.settings) ? asRecord(field.settings) : {},
+    }))
+    .sort((left, right) => left.orderIndex - right.orderIndex);
+};
+
+const normalizeFormBlueprint = (value: SolutionKitFormBlueprint) => {
+  const status: "draft" | "published" =
+    value.status === "published" ? "published" : "draft";
+  const submissionAccess: "public" | "internal" =
+    value.submissionAccess === "internal" ? "internal" : "public";
+  return {
+    slug: normalizeString(value.slug),
+    name: normalizeString(value.name),
+    status,
+    description:
+      typeof value.description === "string" ? normalizeString(value.description) : null,
+    successMessage:
+      typeof value.successMessage === "string" ? normalizeString(value.successMessage) : null,
+    successRedirectUrl:
+      typeof value.successRedirectUrl === "string"
+        ? normalizeString(value.successRedirectUrl)
+        : null,
+    submissionAccess,
+    settings: isRecord(value.settings) ? asRecord(value.settings) : defaultFormSettings(),
+    fields: normalizeFormFieldsBlueprint(value.fields),
+  };
+};
+
+const normalizeSeoDefaults = (value: SolutionKitSeoDefaults | undefined | null) => {
+  if (!value || !isRecord(value)) return null;
+  const title = typeof value.title === "string" ? normalizeString(value.title) : null;
+  const description =
+    typeof value.description === "string" ? normalizeString(value.description) : null;
+  const canonicalUrl =
+    typeof value.canonicalUrl === "string" ? normalizeString(value.canonicalUrl) : null;
+  const robots = typeof value.robots === "string" ? normalizeString(value.robots) : null;
+  if (!title && !description && !canonicalUrl && !robots) return null;
+  return {
+    ...(title ? { title } : {}),
+    ...(description ? { description } : {}),
+    ...(canonicalUrl ? { canonicalUrl } : {}),
+    ...(robots ? { robots } : {}),
+  } satisfies SolutionKitSeoDefaults;
+};
+
+const normalizePageBlueprint = (value: SolutionKitPageBlueprint) => {
+  const status: "draft" | "published" =
+    value.status === "published" ? "published" : "draft";
+  return {
+    slug: normalizePageSlug(value.slug),
+    title: normalizeString(value.title),
+    status,
+    currentData: isRecord(value.data) ? asRecord(value.data) : defaultPageData(),
+    seo: normalizeSeoDefaults(value.seo),
+  };
+};
+
+const normalizeMenuItemsBlueprint = (value: SolutionKitMenuBlueprint["items"]) => {
+  if (!Array.isArray(value) || value.length === 0) return [] as Array<{
+    key: string;
+    label: string;
+    href: string | null;
+    pageSlug: string | null;
+    parentKey: string | null;
+    orderIndex: number;
+    settings: JsonRecord;
+  }>;
+
+  return value
+    .map((item, index) => {
+      const key = normalizeString(item?.key);
+      const label = normalizeString(item?.label);
+      const href = typeof item?.href === "string" ? normalizeString(item.href) : null;
+      const pageSlug =
+        typeof item?.pageSlug === "string" ? normalizePageSlug(item.pageSlug) : null;
+      const parentKey =
+        typeof item?.parentKey === "string" ? normalizeString(item.parentKey) : null;
+      const orderIndex =
+        typeof item?.orderIndex === "number" && Number.isFinite(item.orderIndex)
+          ? Math.round(item.orderIndex)
+          : index;
+      if (!key || !label || (!href && !pageSlug)) {
+        throw new Error("solution_kit_blueprint_menu_item_invalid");
+      }
+      return {
+        key,
+        label,
+        href: href ?? null,
+        pageSlug: pageSlug ?? null,
+        parentKey: parentKey ?? null,
+        orderIndex,
+        settings: isRecord(item?.settings) ? asRecord(item?.settings) : {},
+      };
+    })
+    .sort((left, right) => left.orderIndex - right.orderIndex);
+};
+
+const normalizeMenuBlueprint = (value: SolutionKitMenuBlueprint) => ({
+  name: normalizeString(value.name),
+  location: normalizeString(value.location),
+  items: normalizeMenuItemsBlueprint(value.items),
+});
+
+const snapshotSeo = (row: SeoDocumentRow): SeoSnapshot => ({
+  id: row.id,
+  title: row.title ?? null,
+  description: row.description ?? null,
+  canonicalUrl: row.canonicalUrl ?? null,
+  robots: row.robots ?? null,
+});
+
+const getSeoForPage = async (executor: QueryExecutor, pageId: string): Promise<SeoSnapshot | null> => {
+  const [row] = await executor
+    .select()
+    .from(seoDocuments)
+    .where(and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, pageId)));
+  return row ? snapshotSeo(row) : null;
+};
+
+const listTaxonomyState = async (executor: QueryExecutor, typeId: string) => {
+  const taxonomyRows = await executor
+    .select()
+    .from(contentTaxonomies)
+    .where(eq(contentTaxonomies.typeId, typeId))
+    .orderBy(asc(contentTaxonomies.kind), asc(contentTaxonomies.name));
+
+  if (taxonomyRows.length === 0) {
+    return {
+      categories: [] as Array<{ id: string; name: string; slug: string }>,
+      tags: [] as Array<{ id: string; name: string; slug: string }>,
+    };
+  }
+
+  const taxonomyIds = taxonomyRows.map((row) => row.id);
+  const termRows = await executor
+    .select()
+    .from(contentTerms)
+    .where(inArray(contentTerms.taxonomyId, taxonomyIds))
+    .orderBy(asc(contentTerms.name), asc(contentTerms.slug));
+  const termsByTaxonomy = new Map<string, ContentTermRow[]>();
+  for (const row of termRows) {
+    const existing = termsByTaxonomy.get(row.taxonomyId) ?? [];
+    existing.push(row);
+    termsByTaxonomy.set(row.taxonomyId, existing);
+  }
+
+  const toTerms = (kind: "category" | "tag") =>
+    taxonomyRows
+      .filter((row) => row.kind === kind)
+      .flatMap((taxonomy) =>
+        (termsByTaxonomy.get(taxonomy.id) ?? []).map((term) => ({
+          id: term.id,
+          name: term.name,
+          slug: term.slug,
+        }))
+      );
+
+  return {
+    categories: toTerms("category"),
+    tags: toTerms("tag"),
+  };
+};
+
+const listFormFieldSnapshots = async (
+  executor: QueryExecutor,
+  formId: string
+): Promise<FormFieldSnapshot[]> => {
+  const rows = await executor
+    .select()
+    .from(formFields)
+    .where(eq(formFields.formId, formId))
+    .orderBy(asc(formFields.orderIndex), asc(formFields.label));
+  return rows.map((row) => ({
+    id: row.id,
+    type: row.type,
+    label: row.label,
+    name: row.name,
+    required: row.required,
+    orderIndex: row.orderIndex,
+    settings: asRecord(row.settings),
+  }));
+};
+
+const listMenuItemSnapshots = async (
+  executor: QueryExecutor,
+  menuId: string
+): Promise<MenuItemSnapshot[]> => {
+  const rows = await executor
+    .select()
+    .from(menuItems)
+    .where(eq(menuItems.menuId, menuId))
+    .orderBy(asc(menuItems.orderIndex), asc(menuItems.label));
+  return rows.map((row) => ({
+    id: row.id,
+    label: row.label,
+    href: row.href ?? null,
+    pageId: row.pageId ?? null,
+    parentId: row.parentId ?? null,
+    orderIndex: row.orderIndex,
+    settings: asRecord(row.settings),
+  }));
+};
+
+const snapshotContentType = async (
+  executor: QueryExecutor,
+  row: ContentTypeRow
+): Promise<ContentTypeSnapshot> => ({
   id: row.id,
   name: row.name,
   slug: row.slug,
   schema: asRecord(row.schema),
+  taxonomy: await listTaxonomyState(executor, row.id),
 });
 
-const snapshotForm = (row: FormRow): FormSnapshot => ({
+const snapshotForm = async (
+  executor: QueryExecutor,
+  row: FormRow
+): Promise<FormSnapshot> => ({
   id: row.id,
   name: row.name,
   slug: row.slug,
@@ -259,9 +615,13 @@ const snapshotForm = (row: FormRow): FormSnapshot => ({
   successRedirectUrl: row.successRedirectUrl,
   submissionAccess: row.submissionAccess,
   settings: asRecord(row.settings),
+  fields: await listFormFieldSnapshots(executor, row.id),
 });
 
-const snapshotPage = (row: PageRow): PageSnapshot => ({
+const snapshotPage = async (
+  executor: QueryExecutor,
+  row: PageRow
+): Promise<PageSnapshot> => ({
   id: row.id,
   title: row.title,
   slug: row.slug,
@@ -270,13 +630,473 @@ const snapshotPage = (row: PageRow): PageSnapshot => ({
   currentData: asRecord(row.currentData),
   publishedData: isRecord(row.publishedData) ? (row.publishedData as JsonRecord) : null,
   publishedAt: toIsoOrNull(row.publishedAt),
+  seo: await getSeoForPage(executor, row.id),
 });
 
-const snapshotMenu = (row: MenuRow): MenuSnapshot => ({
+const snapshotMenu = async (
+  executor: QueryExecutor,
+  row: MenuRow
+): Promise<MenuSnapshot> => ({
   id: row.id,
   name: row.name,
   location: row.location,
+  items: await listMenuItemSnapshots(executor, row.id),
 });
+
+const slugify = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+
+const normalizeTermSlug = (name: string, slug?: string | null) =>
+  slugify(slug && slug.trim().length > 0 ? slug : name) || "term";
+
+const toSnapshotTerms = (
+  items: SolutionKitTaxonomyTerm[],
+  prefix: string
+): Array<{ id: string; name: string; slug: string }> =>
+  sortTermsBySlug(
+    items.map((item) => ({
+      id: `${prefix}:${normalizeTermSlug(item.name, item.slug)}`,
+      name: item.name,
+      slug: normalizeTermSlug(item.name, item.slug),
+    }))
+  );
+
+const sortTermsBySlug = <T extends { name: string; slug: string }>(items: T[]) =>
+  [...items].sort((left, right) => {
+    const slugCompare = left.slug.localeCompare(right.slug);
+    if (slugCompare !== 0) return slugCompare;
+    return left.name.localeCompare(right.name);
+  });
+
+const compareTermSets = (
+  left: Array<{ name: string; slug: string }>,
+  right: Array<{ name: string; slug: string }>
+) => {
+  if (left.length !== right.length) return false;
+  const leftSorted = sortTermsBySlug(left);
+  const rightSorted = sortTermsBySlug(right);
+  return leftSorted.every(
+    (item, index) =>
+      item.name === rightSorted[index]?.name && item.slug === rightSorted[index]?.slug
+  );
+};
+
+const compareTaxonomyState = (
+  left: ContentTypeSnapshot["taxonomy"],
+  right: ContentTypeSnapshot["taxonomy"]
+) =>
+  compareTermSets(
+    left.categories.map((item) => ({ name: item.name, slug: item.slug })),
+    right.categories.map((item) => ({ name: item.name, slug: item.slug }))
+  ) &&
+  compareTermSets(
+    left.tags.map((item) => ({ name: item.name, slug: item.slug })),
+    right.tags.map((item) => ({ name: item.name, slug: item.slug }))
+  );
+
+const compareFormFields = (left: FormFieldDesired[], right: FormFieldDesired[]) => {
+  if (left.length !== right.length) return false;
+  const sortedLeft = [...left].sort((a, b) => a.orderIndex - b.orderIndex);
+  const sortedRight = [...right].sort((a, b) => a.orderIndex - b.orderIndex);
+  return sortedLeft.every((item, index) => {
+    const target = sortedRight[index];
+    if (!target) return false;
+    return (
+      item.type === target.type &&
+      item.label === target.label &&
+      item.name === target.name &&
+      item.required === target.required &&
+      item.orderIndex === target.orderIndex &&
+      isDeepStrictEqual(item.settings, target.settings)
+    );
+  });
+};
+
+const compareSeo = (left: SeoSnapshot | null, right: SolutionKitSeoDefaults | null) => {
+  const normalizedRight = normalizeSeoDefaults(right);
+  if (!left && !normalizedRight) return true;
+  if (!left || !normalizedRight) return false;
+  return (
+    (left.title ?? null) === (normalizedRight.title ?? null) &&
+    (left.description ?? null) === (normalizedRight.description ?? null) &&
+    (left.canonicalUrl ?? null) === (normalizedRight.canonicalUrl ?? null) &&
+    (left.robots ?? null) === (normalizedRight.robots ?? null)
+  );
+};
+
+const compareMenuItems = (left: MenuItemDesired[], right: MenuItemDesired[]) => {
+  if (left.length !== right.length) return false;
+  const sortedLeft = [...left].sort((a, b) => a.orderIndex - b.orderIndex);
+  const sortedRight = [...right].sort((a, b) => a.orderIndex - b.orderIndex);
+  return sortedLeft.every((item, index) => {
+    const target = sortedRight[index];
+    if (!target) return false;
+    return (
+      item.label === target.label &&
+      (item.href ?? null) === (target.href ?? null) &&
+      (item.pageId ?? null) === (target.pageId ?? null) &&
+      (item.parentId ?? null) === (target.parentId ?? null) &&
+      item.orderIndex === target.orderIndex &&
+      isDeepStrictEqual(item.settings, target.settings)
+    );
+  });
+};
+
+const getTaxonomyByKind = (
+  rows: ContentTaxonomyRow[],
+  kind: "category" | "tag"
+) => rows.find((row) => row.kind === kind);
+
+const ensureTaxonomyRow = async (
+  executor: QueryExecutor,
+  input: {
+    existing: ContentTaxonomyRow | undefined;
+    typeId: string;
+    kind: "category" | "tag";
+  }
+) => {
+  if (input.existing) return input.existing;
+  const defaults =
+    input.kind === "category"
+      ? { name: "Categories", slug: "categories" }
+      : { name: "Tags", slug: "tags" };
+  const [created] = await executor
+    .insert(contentTaxonomies)
+    .values({
+      typeId: input.typeId,
+      kind: input.kind,
+      name: defaults.name,
+      slug: defaults.slug,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+  return created;
+};
+
+const syncTaxonomyTermsForKind = async (
+  executor: QueryExecutor,
+  input: {
+    typeId: string;
+    kind: "category" | "tag";
+    desired: SolutionKitTaxonomyTerm[];
+  }
+) => {
+  const taxonomyRows = await executor
+    .select()
+    .from(contentTaxonomies)
+    .where(eq(contentTaxonomies.typeId, input.typeId));
+  const currentTaxonomy = getTaxonomyByKind(taxonomyRows, input.kind);
+
+  if (input.desired.length === 0) {
+    if (currentTaxonomy) {
+      await executor
+        .delete(contentTaxonomies)
+        .where(eq(contentTaxonomies.id, currentTaxonomy.id));
+    }
+    return;
+  }
+
+  const taxonomy = await ensureTaxonomyRow(executor, {
+    existing: currentTaxonomy,
+    typeId: input.typeId,
+    kind: input.kind,
+  });
+  if (!taxonomy) return;
+
+  const existingTerms = await executor
+    .select()
+    .from(contentTerms)
+    .where(eq(contentTerms.taxonomyId, taxonomy.id));
+  const bySlug = new Map(existingTerms.map((row) => [row.slug, row]));
+  const desiredBySlug = new Map(
+    input.desired.map((item) => [normalizeTermSlug(item.name, item.slug), item])
+  );
+
+  for (const [slug, desiredTerm] of desiredBySlug.entries()) {
+    const existing = bySlug.get(slug);
+    if (existing) {
+      if (existing.name !== desiredTerm.name) {
+        await executor
+          .update(contentTerms)
+          .set({
+            name: desiredTerm.name,
+            updatedAt: new Date(),
+          })
+          .where(eq(contentTerms.id, existing.id));
+      }
+      bySlug.delete(slug);
+      continue;
+    }
+
+    await executor
+      .insert(contentTerms)
+      .values({
+        taxonomyId: taxonomy.id,
+        name: desiredTerm.name,
+        slug,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+  }
+
+  for (const stale of bySlug.values()) {
+    await executor.delete(contentTerms).where(eq(contentTerms.id, stale.id));
+  }
+};
+
+const syncContentTypeTaxonomy = async (
+  executor: QueryExecutor,
+  typeId: string,
+  taxonomy: { categories?: SolutionKitTaxonomyTerm[]; tags?: SolutionKitTaxonomyTerm[] }
+) => {
+  await syncTaxonomyTermsForKind(executor, {
+    typeId,
+    kind: "category",
+    desired: taxonomy.categories ?? [],
+  });
+  await syncTaxonomyTermsForKind(executor, {
+    typeId,
+    kind: "tag",
+    desired: taxonomy.tags ?? [],
+  });
+};
+
+const replaceFormFieldsTx = async (
+  executor: QueryExecutor,
+  formId: string,
+  fields: FormFieldDesired[]
+) => {
+  await executor.delete(formFields).where(eq(formFields.formId, formId));
+  if (fields.length === 0) return;
+  await executor.insert(formFields).values(
+    fields.map((field, index) => ({
+      id: field.id && field.id.trim().length > 0 ? field.id : randomUUID(),
+      formId,
+      type: field.type,
+      label: field.label,
+      name: field.name,
+      required: field.required,
+      orderIndex: Number.isFinite(field.orderIndex) ? field.orderIndex : index,
+      settings: field.settings,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }))
+  );
+};
+
+const upsertPageSeoTx = async (
+  executor: QueryExecutor,
+  input: {
+    pageId: string;
+    pageSlug: string;
+    seo: SolutionKitSeoDefaults | null;
+  }
+) => {
+  if (!input.seo) return;
+  const [existing] = await executor
+    .select()
+    .from(seoDocuments)
+    .where(and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, input.pageId)));
+
+  if (existing) {
+    await executor
+      .update(seoDocuments)
+      .set({
+        slug: input.pageSlug,
+        title: input.seo.title ?? null,
+        description: input.seo.description ?? null,
+        canonicalUrl: input.seo.canonicalUrl ?? null,
+        robots: input.seo.robots ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(seoDocuments.id, existing.id));
+    return;
+  }
+
+  await executor.insert(seoDocuments).values({
+    targetType: "page",
+    targetId: input.pageId,
+    slug: input.pageSlug,
+    title: input.seo.title ?? null,
+    description: input.seo.description ?? null,
+    canonicalUrl: input.seo.canonicalUrl ?? null,
+    robots: input.seo.robots ?? null,
+    status: "warning",
+    issues: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+};
+
+const restorePageSeoTx = async (
+  executor: QueryExecutor,
+  pageId: string,
+  snapshot: SeoSnapshot | null
+) => {
+  const [existing] = await executor
+    .select()
+    .from(seoDocuments)
+    .where(and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, pageId)));
+
+  if (!snapshot) {
+    if (existing) {
+      await executor.delete(seoDocuments).where(eq(seoDocuments.id, existing.id));
+    }
+    return;
+  }
+
+  if (existing) {
+    await executor
+      .update(seoDocuments)
+      .set({
+        title: snapshot.title,
+        description: snapshot.description,
+        canonicalUrl: snapshot.canonicalUrl,
+        robots: snapshot.robots,
+        updatedAt: new Date(),
+      })
+      .where(eq(seoDocuments.id, existing.id));
+    return;
+  }
+
+  await executor.insert(seoDocuments).values({
+    id: snapshot.id,
+    targetType: "page",
+    targetId: pageId,
+    slug: null,
+    title: snapshot.title,
+    description: snapshot.description,
+    canonicalUrl: snapshot.canonicalUrl,
+    robots: snapshot.robots,
+    status: "warning",
+    issues: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+};
+
+const resolvePageIdBySlug = async (
+  executor: QueryExecutor,
+  slug: string
+): Promise<string | null> => {
+  const [page] = await executor
+    .select({ id: pages.id })
+    .from(pages)
+    .where(inArray(pages.slug, pageSlugCandidates(slug)));
+  return page?.id ?? null;
+};
+
+const resolveMenuDesiredItems = async (
+  executor: QueryExecutor,
+  menuItemsPayload: Array<{
+    key: string;
+    label: string;
+    href: string | null;
+    pageSlug: string | null;
+    parentKey: string | null;
+    orderIndex: number;
+    settings: JsonRecord;
+  }>,
+  options?: {
+    allowMissingPageSlug?: boolean;
+  }
+): Promise<MenuItemDesired[]> => {
+  const resolved: Array<{
+    key: string;
+    label: string;
+    href: string | null;
+    pageId: string | null;
+    parentKey: string | null;
+    orderIndex: number;
+    settings: JsonRecord;
+  }> = [];
+
+  for (const item of menuItemsPayload) {
+    let pageId: string | null = null;
+    if (item.pageSlug) {
+      pageId = await resolvePageIdBySlug(executor, item.pageSlug);
+      if (!pageId) {
+        if (options?.allowMissingPageSlug) {
+          pageId = `predicted:page:${normalizePageSlug(item.pageSlug)}`;
+        } else {
+          throw new Error("solution_kit_menu_item_page_missing");
+        }
+      }
+    }
+    resolved.push({
+      key: item.key,
+      label: item.label,
+      href: item.href ?? null,
+      pageId,
+      parentKey: item.parentKey ?? null,
+      orderIndex: item.orderIndex,
+      settings: item.settings,
+    });
+  }
+
+  const idByKey = new Map<string, string>();
+  for (const item of resolved) {
+    idByKey.set(item.key, randomUUID());
+  }
+
+  return resolved.map((item) => ({
+    id: idByKey.get(item.key) ?? randomUUID(),
+    label: item.label,
+    href: item.href,
+    pageId: item.pageId,
+    parentId: item.parentKey ? idByKey.get(item.parentKey) ?? null : null,
+    orderIndex: item.orderIndex,
+    settings: item.settings,
+  }));
+};
+
+const replaceMenuItemsTx = async (
+  executor: QueryExecutor,
+  menuId: string,
+  items: MenuItemDesired[]
+) => {
+  await executor.delete(menuItems).where(eq(menuItems.menuId, menuId));
+  if (items.length === 0) return;
+  await executor.insert(menuItems).values(
+    items.map((item, index) => ({
+      id: item.id && item.id.trim().length > 0 ? item.id : randomUUID(),
+      menuId,
+      label: item.label,
+      href: item.href ?? null,
+      pageId: item.pageId ?? null,
+      parentId: item.parentId ?? null,
+      orderIndex: Number.isFinite(item.orderIndex) ? item.orderIndex : index,
+      settings: item.settings,
+    }))
+  );
+};
+
+const toMenuDesiredFromSnapshot = (items: MenuItemSnapshot[]): MenuItemDesired[] =>
+  items.map((item) => ({
+    id: item.id,
+    label: item.label,
+    href: item.href,
+    pageId: item.pageId,
+    parentId: item.parentId,
+    orderIndex: item.orderIndex,
+    settings: item.settings,
+  }));
+
+const toMenuSnapshotFromDesired = (items: MenuItemDesired[]): MenuItemSnapshot[] =>
+  items.map((item, index) => ({
+    id: item.id && item.id.trim().length > 0 ? item.id : `predicted:${index + 1}`,
+    label: item.label,
+    href: item.href ?? null,
+    pageId: item.pageId ?? null,
+    parentId: item.parentId ?? null,
+    orderIndex: item.orderIndex,
+    settings: item.settings,
+  }));
 
 const normalizeRunRow = (row: SolutionKitInstallRunRow): SolutionKitInstallRunRecord => ({
   id: row.id,
@@ -451,8 +1271,9 @@ const planOperations = (blueprint: SolutionKitResourceBlueprint): InstallPlanOpe
   };
 
   for (const type of blueprint.contentTypes) {
-    const slug = normalizeString(type.slug);
-    const name = normalizeString(type.name);
+    const normalized = normalizeContentTypeBlueprint(type);
+    const slug = normalized.slug;
+    const name = normalized.name;
     if (!slug || !name) throw new Error("solution_kit_blueprint_content_type_invalid");
     push({
       position,
@@ -461,15 +1282,17 @@ const planOperations = (blueprint: SolutionKitResourceBlueprint): InstallPlanOpe
       payload: {
         slug,
         name,
-        schema: defaultContentTypeSchema(),
+        schema: normalized.schema,
+        taxonomy: normalized.taxonomy,
       },
     });
     position += 1;
   }
 
   for (const form of blueprint.forms) {
-    const slug = normalizeString(form.slug);
-    const name = normalizeString(form.name);
+    const normalized = normalizeFormBlueprint(form);
+    const slug = normalized.slug;
+    const name = normalized.name;
     if (!slug || !name) throw new Error("solution_kit_blueprint_form_invalid");
     push({
       position,
@@ -478,15 +1301,22 @@ const planOperations = (blueprint: SolutionKitResourceBlueprint): InstallPlanOpe
       payload: {
         slug,
         name,
-        status: form.status === "published" ? "published" : "draft",
+        status: normalized.status,
+        description: normalized.description,
+        successMessage: normalized.successMessage,
+        successRedirectUrl: normalized.successRedirectUrl,
+        submissionAccess: normalized.submissionAccess,
+        settings: normalized.settings,
+        fields: normalized.fields,
       },
     });
     position += 1;
   }
 
   for (const page of blueprint.pages) {
-    const slug = normalizePageSlug(page.slug);
-    const title = normalizeString(page.title);
+    const normalized = normalizePageBlueprint(page);
+    const slug = normalized.slug;
+    const title = normalized.title;
     if (!title) throw new Error("solution_kit_blueprint_page_invalid");
     push({
       position,
@@ -495,17 +1325,19 @@ const planOperations = (blueprint: SolutionKitResourceBlueprint): InstallPlanOpe
       payload: {
         slug,
         title,
-        status: page.status === "published" ? "published" : "draft",
-        currentData: defaultPageData(),
+        status: normalized.status,
+        currentData: normalized.currentData,
+        seo: normalized.seo,
       },
     });
     position += 1;
   }
 
   for (const menu of blueprint.menus) {
-    const name = normalizeString(menu.name);
+    const normalized = normalizeMenuBlueprint(menu);
+    const name = normalized.name;
     if (!name) throw new Error("solution_kit_blueprint_menu_invalid");
-    const location = normalizeString(menu.location);
+    const location = normalized.location;
     push({
       position,
       resourceType: "menu",
@@ -513,6 +1345,7 @@ const planOperations = (blueprint: SolutionKitResourceBlueprint): InstallPlanOpe
       payload: {
         location,
         name,
+        items: normalized.items,
       },
     });
     position += 1;
@@ -532,12 +1365,20 @@ const executeContentTypeOperation = async (
     .where(eq(contentTypes.slug, op.payload.slug));
 
   if (!existing) {
+    const predictedTaxonomy = {
+      categories: toSnapshotTerms(op.payload.taxonomy.categories ?? [], "category"),
+      tags: toSnapshotTerms(op.payload.taxonomy.tags ?? [], "tag"),
+    };
     if (dryRun) {
       return {
         operation: "create",
         beforeSnapshot: null,
         afterSnapshot: {
-          ...op.payload,
+          id: `predicted:${op.payload.slug}`,
+          name: op.payload.name,
+          slug: op.payload.slug,
+          schema: op.payload.schema,
+          taxonomy: predictedTaxonomy,
         },
         rollbackAction: { strategy: "delete_created" },
       };
@@ -555,7 +1396,13 @@ const executeContentTypeOperation = async (
       .returning();
     if (!created) throw new Error("solution_kit_content_type_create_failed");
 
-    const afterSnapshot = snapshotContentType(created);
+    await syncContentTypeTaxonomy(executor, created.id, op.payload.taxonomy);
+    const [reloaded] = await executor
+      .select()
+      .from(contentTypes)
+      .where(eq(contentTypes.id, created.id));
+    if (!reloaded) throw new Error("solution_kit_content_type_create_failed");
+    const afterSnapshot = await snapshotContentType(executor, reloaded);
     return {
       operation: "create",
       beforeSnapshot: null,
@@ -564,7 +1411,12 @@ const executeContentTypeOperation = async (
     };
   }
 
-  const beforeSnapshot = snapshotContentType(existing);
+  const beforeSnapshot = await snapshotContentType(executor, existing);
+  const expectedTaxonomy = {
+    categories: toSnapshotTerms(op.payload.taxonomy.categories ?? [], "category"),
+    tags: toSnapshotTerms(op.payload.taxonomy.tags ?? [], "tag"),
+  };
+  const taxonomyChanged = !compareTaxonomyState(beforeSnapshot.taxonomy, expectedTaxonomy);
   const patch: Partial<typeof contentTypes.$inferInsert> = {};
 
   if (existing.name !== op.payload.name) patch.name = op.payload.name;
@@ -572,7 +1424,7 @@ const executeContentTypeOperation = async (
     patch.schema = op.payload.schema;
   }
 
-  if (Object.keys(patch).length === 0) {
+  if (Object.keys(patch).length === 0 && !taxonomyChanged) {
     return {
       operation: "noop",
       beforeSnapshot,
@@ -589,26 +1441,38 @@ const executeContentTypeOperation = async (
         ...beforeSnapshot,
         ...(patch.name ? { name: patch.name } : {}),
         ...(patch.schema ? { schema: asRecord(patch.schema) } : {}),
+        ...(taxonomyChanged ? { taxonomy: expectedTaxonomy } : {}),
       },
       rollbackAction: { strategy: "restore_snapshot" },
     };
   }
 
-  const [updated] = await executor
-    .update(contentTypes)
-    .set({
-      ...patch,
-      updatedAt: new Date(),
-    })
-    .where(eq(contentTypes.id, existing.id))
-    .returning();
+  if (Object.keys(patch).length > 0) {
+    const [updated] = await executor
+      .update(contentTypes)
+      .set({
+        ...patch,
+        updatedAt: new Date(),
+      })
+      .where(eq(contentTypes.id, existing.id))
+      .returning();
+    if (!updated) throw new Error("solution_kit_content_type_update_failed");
+  }
 
-  if (!updated) throw new Error("solution_kit_content_type_update_failed");
+  if (taxonomyChanged) {
+    await syncContentTypeTaxonomy(executor, existing.id, op.payload.taxonomy);
+  }
+
+  const [reloaded] = await executor
+    .select()
+    .from(contentTypes)
+    .where(eq(contentTypes.id, existing.id));
+  if (!reloaded) throw new Error("solution_kit_content_type_update_failed");
 
   return {
     operation: "update",
     beforeSnapshot,
-    afterSnapshot: snapshotContentType(updated),
+    afterSnapshot: await snapshotContentType(executor, reloaded),
     rollbackAction: { strategy: "restore_snapshot" },
   };
 };
@@ -626,14 +1490,16 @@ const executeFormOperation = async (
         operation: "create",
         beforeSnapshot: null,
         afterSnapshot: {
+          id: `predicted:${op.payload.slug}`,
           name: op.payload.name,
           slug: op.payload.slug,
           status: op.payload.status,
-          description: null,
-          successMessage: null,
-          successRedirectUrl: null,
-          submissionAccess: "public",
-          settings: {},
+          description: op.payload.description,
+          successMessage: op.payload.successMessage,
+          successRedirectUrl: op.payload.successRedirectUrl,
+          submissionAccess: op.payload.submissionAccess,
+          settings: op.payload.settings,
+          fields: op.payload.fields,
         },
         rollbackAction: { strategy: "delete_created" },
       };
@@ -646,35 +1512,55 @@ const executeFormOperation = async (
         name: op.payload.name,
         slug: op.payload.slug,
         status: op.payload.status,
-        description: null,
-        successMessage: null,
-        successRedirectUrl: null,
-        submissionAccess: "public",
-        settings: {},
+        description: op.payload.description,
+        successMessage: op.payload.successMessage,
+        successRedirectUrl: op.payload.successRedirectUrl,
+        submissionAccess: op.payload.submissionAccess,
+        settings: op.payload.settings,
         createdAt: now,
         updatedAt: now,
       })
       .returning();
 
     if (!created) throw new Error("solution_kit_form_create_failed");
+    await replaceFormFieldsTx(executor, created.id, op.payload.fields);
+    const [reloaded] = await executor.select().from(forms).where(eq(forms.id, created.id));
+    if (!reloaded) throw new Error("solution_kit_form_create_failed");
 
     return {
       operation: "create",
       beforeSnapshot: null,
-      afterSnapshot: snapshotForm(created),
+      afterSnapshot: await snapshotForm(executor, reloaded),
       rollbackAction: { strategy: "delete_by_id", id: created.id },
     };
   }
 
-  const beforeSnapshot = snapshotForm(existing);
+  const beforeSnapshot = await snapshotForm(executor, existing);
   const patch: Partial<typeof forms.$inferInsert> = {};
 
   if (existing.name !== op.payload.name) patch.name = op.payload.name;
   if (op.payload.status === "published" && existing.status !== "published") {
     patch.status = "published";
   }
+  if ((existing.description ?? null) !== (op.payload.description ?? null)) {
+    patch.description = op.payload.description;
+  }
+  if ((existing.successMessage ?? null) !== (op.payload.successMessage ?? null)) {
+    patch.successMessage = op.payload.successMessage;
+  }
+  if ((existing.successRedirectUrl ?? null) !== (op.payload.successRedirectUrl ?? null)) {
+    patch.successRedirectUrl = op.payload.successRedirectUrl;
+  }
+  if ((existing.submissionAccess ?? "public") !== op.payload.submissionAccess) {
+    patch.submissionAccess = op.payload.submissionAccess;
+  }
+  if (!isDeepStrictEqual(asRecord(existing.settings), op.payload.settings)) {
+    patch.settings = op.payload.settings;
+  }
 
-  if (Object.keys(patch).length === 0) {
+  const fieldsChanged = !compareFormFields(beforeSnapshot.fields, op.payload.fields);
+
+  if (Object.keys(patch).length === 0 && !fieldsChanged) {
     return {
       operation: "noop",
       beforeSnapshot,
@@ -691,26 +1577,46 @@ const executeFormOperation = async (
         ...beforeSnapshot,
         ...(patch.name ? { name: patch.name } : {}),
         ...(patch.status ? { status: patch.status } : {}),
+        ...(typeof patch.description !== "undefined"
+          ? { description: patch.description ?? null }
+          : {}),
+        ...(typeof patch.successMessage !== "undefined"
+          ? { successMessage: patch.successMessage ?? null }
+          : {}),
+        ...(typeof patch.successRedirectUrl !== "undefined"
+          ? { successRedirectUrl: patch.successRedirectUrl ?? null }
+          : {}),
+        ...(patch.submissionAccess ? { submissionAccess: patch.submissionAccess } : {}),
+        ...(patch.settings ? { settings: asRecord(patch.settings) } : {}),
+        ...(fieldsChanged ? { fields: op.payload.fields } : {}),
       },
       rollbackAction: { strategy: "restore_snapshot" },
     };
   }
 
-  const [updated] = await executor
-    .update(forms)
-    .set({
-      ...patch,
-      updatedAt: new Date(),
-    })
-    .where(eq(forms.id, existing.id))
-    .returning();
+  if (Object.keys(patch).length > 0) {
+    const [updated] = await executor
+      .update(forms)
+      .set({
+        ...patch,
+        updatedAt: new Date(),
+      })
+      .where(eq(forms.id, existing.id))
+      .returning();
+    if (!updated) throw new Error("solution_kit_form_update_failed");
+  }
 
-  if (!updated) throw new Error("solution_kit_form_update_failed");
+  if (fieldsChanged) {
+    await replaceFormFieldsTx(executor, existing.id, op.payload.fields);
+  }
+
+  const [reloaded] = await executor.select().from(forms).where(eq(forms.id, existing.id));
+  if (!reloaded) throw new Error("solution_kit_form_update_failed");
 
   return {
     operation: "update",
     beforeSnapshot,
-    afterSnapshot: snapshotForm(updated),
+    afterSnapshot: await snapshotForm(executor, reloaded),
     rollbackAction: { strategy: "restore_snapshot" },
   };
 };
@@ -736,12 +1642,16 @@ const executePageOperation = async (
         operation: "create",
         beforeSnapshot: null,
         afterSnapshot: {
+          id: `predicted:${op.payload.slug}`,
           title: op.payload.title,
           slug: op.payload.slug,
           status: op.payload.status,
+          authorId: null,
           currentData: op.payload.currentData,
           publishedData:
             op.payload.status === "published" ? op.payload.currentData : null,
+          publishedAt: op.payload.status === "published" ? new Date().toISOString() : null,
+          seo: normalizeSeoDefaults(op.payload.seo),
         },
         rollbackAction: { strategy: "delete_created" },
       };
@@ -765,30 +1675,40 @@ const executePageOperation = async (
       .returning();
 
     if (!created) throw new Error("solution_kit_page_create_failed");
+    await upsertPageSeoTx(executor, {
+      pageId: created.id,
+      pageSlug: created.slug,
+      seo: op.payload.seo,
+    });
+    const [reloaded] = await executor.select().from(pages).where(eq(pages.id, created.id));
+    if (!reloaded) throw new Error("solution_kit_page_create_failed");
 
     return {
       operation: "create",
       beforeSnapshot: null,
-      afterSnapshot: snapshotPage(created),
+      afterSnapshot: await snapshotPage(executor, reloaded),
       rollbackAction: { strategy: "delete_by_id", id: created.id },
     };
   }
 
-  const beforeSnapshot = snapshotPage(existing);
+  const beforeSnapshot = await snapshotPage(executor, existing);
   const patch: Partial<typeof pages.$inferInsert> = {};
   const now = new Date();
 
   if (existing.title !== op.payload.title) patch.title = op.payload.title;
+  if (!isDeepStrictEqual(asRecord(existing.currentData), op.payload.currentData)) {
+    patch.currentData = op.payload.currentData;
+  }
   if (op.payload.status === "published" && existing.status !== "published") {
     patch.status = "published";
-    patch.publishedData =
-      isRecord(existing.publishedData) && existing.publishedData
-        ? existing.publishedData
-        : existing.currentData;
+    patch.publishedData = op.payload.currentData;
     patch.publishedAt = existing.publishedAt ?? now;
+  } else if (op.payload.status === "published" && !isDeepStrictEqual(asRecord(existing.publishedData), op.payload.currentData)) {
+    patch.publishedData = op.payload.currentData;
   }
+  const seoChanged = !compareSeo(beforeSnapshot.seo, op.payload.seo);
 
-  if (Object.keys(patch).length === 0) {
+  if (Object.keys(patch).length === 0 && !seoChanged) {
     return {
       operation: "noop",
       beforeSnapshot,
@@ -813,29 +1733,42 @@ const executePageOperation = async (
               publishedAt:
                 patch.publishedAt instanceof Date
                   ? patch.publishedAt.toISOString()
-                  : null,
+              : null,
             }
           : {}),
+        ...(seoChanged ? { seo: normalizeSeoDefaults(op.payload.seo) } : {}),
       },
       rollbackAction: { strategy: "restore_snapshot" },
     };
   }
 
-  const [updated] = await executor
-    .update(pages)
-    .set({
-      ...patch,
-      updatedAt: now,
-    })
-    .where(eq(pages.id, existing.id))
-    .returning();
+  if (Object.keys(patch).length > 0) {
+    const [updated] = await executor
+      .update(pages)
+      .set({
+        ...patch,
+        updatedAt: now,
+      })
+      .where(eq(pages.id, existing.id))
+      .returning();
+    if (!updated) throw new Error("solution_kit_page_update_failed");
+  }
 
-  if (!updated) throw new Error("solution_kit_page_update_failed");
+  if (seoChanged) {
+    await upsertPageSeoTx(executor, {
+      pageId: existing.id,
+      pageSlug: op.payload.slug,
+      seo: op.payload.seo,
+    });
+  }
+
+  const [reloaded] = await executor.select().from(pages).where(eq(pages.id, existing.id));
+  if (!reloaded) throw new Error("solution_kit_page_update_failed");
 
   return {
     operation: "update",
     beforeSnapshot,
-    afterSnapshot: snapshotPage(updated),
+    afterSnapshot: await snapshotPage(executor, reloaded),
     rollbackAction: { strategy: "restore_snapshot" },
   };
 };
@@ -860,17 +1793,23 @@ const executeMenuOperation = async (
 
   if (!existing) {
     if (dryRun) {
+      const desiredItems = await resolveMenuDesiredItems(executor, op.payload.items, {
+        allowMissingPageSlug: true,
+      });
       return {
         operation: "create",
         beforeSnapshot: null,
         afterSnapshot: {
+          id: `predicted:${op.payload.name.toLowerCase()}`,
           name: op.payload.name,
           location: op.payload.location,
+          items: toMenuSnapshotFromDesired(desiredItems),
         },
         rollbackAction: { strategy: "delete_created" },
       };
     }
 
+    const desiredItems = await resolveMenuDesiredItems(executor, op.payload.items);
     const [created] = await executor
       .insert(menus)
       .values({
@@ -881,15 +1820,23 @@ const executeMenuOperation = async (
       .returning();
 
     if (!created) throw new Error("solution_kit_menu_create_failed");
+    await replaceMenuItemsTx(executor, created.id, desiredItems);
+    const [reloaded] = await executor.select().from(menus).where(eq(menus.id, created.id));
+    if (!reloaded) throw new Error("solution_kit_menu_create_failed");
     return {
       operation: "create",
       beforeSnapshot: null,
-      afterSnapshot: snapshotMenu(created),
+      afterSnapshot: await snapshotMenu(executor, reloaded),
       rollbackAction: { strategy: "delete_by_id", id: created.id },
     };
   }
 
-  const beforeSnapshot = snapshotMenu(existing);
+  const beforeSnapshot = await snapshotMenu(executor, existing);
+  const desiredItems = await resolveMenuDesiredItems(executor, op.payload.items);
+  const itemsChanged = !compareMenuItems(
+    toMenuDesiredFromSnapshot(beforeSnapshot.items),
+    desiredItems
+  );
   const patch: Partial<typeof menus.$inferInsert> = {};
 
   if (existing.name !== op.payload.name) patch.name = op.payload.name;
@@ -897,7 +1844,7 @@ const executeMenuOperation = async (
     patch.location = op.payload.location;
   }
 
-  if (Object.keys(patch).length === 0) {
+  if (Object.keys(patch).length === 0 && !itemsChanged) {
     return {
       operation: "noop",
       beforeSnapshot,
@@ -916,22 +1863,31 @@ const executeMenuOperation = async (
         ...(typeof patch.location !== "undefined"
           ? { location: patch.location }
           : {}),
+        ...(itemsChanged ? { items: toMenuSnapshotFromDesired(desiredItems) } : {}),
       },
       rollbackAction: { strategy: "restore_snapshot" },
     };
   }
 
-  const [updated] = await executor
-    .update(menus)
-    .set(patch)
-    .where(eq(menus.id, existing.id))
-    .returning();
+  if (Object.keys(patch).length > 0) {
+    const [updated] = await executor
+      .update(menus)
+      .set(patch)
+      .where(eq(menus.id, existing.id))
+      .returning();
+    if (!updated) throw new Error("solution_kit_menu_update_failed");
+  }
 
-  if (!updated) throw new Error("solution_kit_menu_update_failed");
+  if (itemsChanged) {
+    await replaceMenuItemsTx(executor, existing.id, desiredItems);
+  }
+
+  const [reloaded] = await executor.select().from(menus).where(eq(menus.id, existing.id));
+  if (!reloaded) throw new Error("solution_kit_menu_update_failed");
   return {
     operation: "update",
     beforeSnapshot,
-    afterSnapshot: snapshotMenu(updated),
+    afterSnapshot: await snapshotMenu(executor, reloaded),
     rollbackAction: { strategy: "restore_snapshot" },
   };
 };
@@ -970,6 +1926,26 @@ const parseContentTypeSnapshot = (payload: JsonRecord): ContentTypeSnapshot => (
   name: String(payload.name ?? ""),
   slug: String(payload.slug ?? ""),
   schema: asRecord(payload.schema),
+  taxonomy: {
+    categories: Array.isArray(asRecord(payload.taxonomy).categories)
+      ? (asRecord(payload.taxonomy).categories as unknown[])
+          .filter((value) => isRecord(value))
+          .map((value) => ({
+            id: String(value.id ?? ""),
+            name: String(value.name ?? ""),
+            slug: String(value.slug ?? ""),
+          }))
+      : [],
+    tags: Array.isArray(asRecord(payload.taxonomy).tags)
+      ? (asRecord(payload.taxonomy).tags as unknown[])
+          .filter((value) => isRecord(value))
+          .map((value) => ({
+            id: String(value.id ?? ""),
+            name: String(value.name ?? ""),
+            slug: String(value.slug ?? ""),
+          }))
+      : [],
+  },
 });
 
 const parseFormSnapshot = (payload: JsonRecord): FormSnapshot => ({
@@ -992,6 +1968,31 @@ const parseFormSnapshot = (payload: JsonRecord): FormSnapshot => ({
       : null,
   submissionAccess: String(payload.submissionAccess ?? "public"),
   settings: asRecord(payload.settings),
+  fields: Array.isArray(payload.fields)
+    ? (payload.fields as unknown[])
+        .filter((value) => isRecord(value))
+        .map((value) => ({
+          id: String(value.id ?? ""),
+          type: String(value.type ?? "text"),
+          label: String(value.label ?? ""),
+          name: String(value.name ?? ""),
+          required: Boolean(value.required),
+          orderIndex:
+            typeof value.orderIndex === "number" && Number.isFinite(value.orderIndex)
+              ? Math.round(value.orderIndex)
+              : 0,
+          settings: asRecord(value.settings),
+        }))
+        .sort((left, right) => left.orderIndex - right.orderIndex)
+    : [],
+});
+
+const parseSeoSnapshot = (payload: JsonRecord): SeoSnapshot => ({
+  id: String(payload.id ?? ""),
+  title: typeof payload.title === "string" ? payload.title : null,
+  description: typeof payload.description === "string" ? payload.description : null,
+  canonicalUrl: typeof payload.canonicalUrl === "string" ? payload.canonicalUrl : null,
+  robots: typeof payload.robots === "string" ? payload.robots : null,
 });
 
 const parsePageSnapshot = (payload: JsonRecord): PageSnapshot => ({
@@ -1011,6 +2012,7 @@ const parsePageSnapshot = (payload: JsonRecord): PageSnapshot => ({
     payload.publishedAt === null || typeof payload.publishedAt === "string"
       ? payload.publishedAt
       : null,
+  seo: isRecord(payload.seo) ? parseSeoSnapshot(payload.seo) : null,
 });
 
 const parseMenuSnapshot = (payload: JsonRecord): MenuSnapshot => ({
@@ -1020,6 +2022,29 @@ const parseMenuSnapshot = (payload: JsonRecord): MenuSnapshot => ({
     payload.location === null || typeof payload.location === "string"
       ? payload.location
       : null,
+  items: Array.isArray(payload.items)
+    ? (payload.items as unknown[])
+        .filter((value) => isRecord(value))
+        .map((value) => ({
+          id: String(value.id ?? ""),
+          label: String(value.label ?? ""),
+          href: value.href === null || typeof value.href === "string" ? value.href : null,
+          pageId:
+            value.pageId === null || typeof value.pageId === "string"
+              ? value.pageId
+              : null,
+          parentId:
+            value.parentId === null || typeof value.parentId === "string"
+              ? value.parentId
+              : null,
+          orderIndex:
+            typeof value.orderIndex === "number" && Number.isFinite(value.orderIndex)
+              ? Math.round(value.orderIndex)
+              : 0,
+          settings: asRecord(value.settings),
+        }))
+        .sort((left, right) => left.orderIndex - right.orderIndex)
+    : [],
 });
 
 const rollbackCreatedResource = async (
@@ -1049,7 +2074,7 @@ const rollbackCreatedResource = async (
         operation: "delete",
         status: deleted ? "success" : "skipped",
         error: null,
-        beforeSnapshot: deleted ? snapshotContentType(deleted) : null,
+        beforeSnapshot: deleted ? await snapshotContentType(executor, deleted) : null,
         afterSnapshot: null,
         rollbackAction: { strategy: "none" },
       };
@@ -1060,18 +2085,21 @@ const rollbackCreatedResource = async (
         operation: "delete",
         status: deleted ? "success" : "skipped",
         error: null,
-        beforeSnapshot: deleted ? snapshotForm(deleted) : null,
+        beforeSnapshot: deleted ? await snapshotForm(executor, deleted) : null,
         afterSnapshot: null,
         rollbackAction: { strategy: "none" },
       };
     }
     case "page": {
+      await executor
+        .delete(seoDocuments)
+        .where(and(eq(seoDocuments.targetType, "page"), eq(seoDocuments.targetId, id)));
       const [deleted] = await executor.delete(pages).where(eq(pages.id, id)).returning();
       return {
         operation: "delete",
         status: deleted ? "success" : "skipped",
         error: null,
-        beforeSnapshot: deleted ? snapshotPage(deleted) : null,
+        beforeSnapshot: deleted ? await snapshotPage(executor, deleted) : null,
         afterSnapshot: null,
         rollbackAction: { strategy: "none" },
       };
@@ -1082,7 +2110,7 @@ const rollbackCreatedResource = async (
         operation: "delete",
         status: deleted ? "success" : "skipped",
         error: null,
-        beforeSnapshot: deleted ? snapshotMenu(deleted) : null,
+        beforeSnapshot: deleted ? await snapshotMenu(executor, deleted) : null,
         afterSnapshot: null,
         rollbackAction: { strategy: "none" },
       };
@@ -1134,8 +2162,18 @@ const rollbackUpdatedResource = async (
         .from(contentTypes)
         .where(eq(contentTypes.id, snapshot.id));
 
-      const beforeSnapshot = current ? snapshotContentType(current) : null;
+      const beforeSnapshot = current ? await snapshotContentType(executor, current) : null;
       let restored: ContentTypeRow | undefined;
+      const restoreTaxonomy = {
+        categories: snapshot.taxonomy.categories.map((item) => ({
+          name: item.name,
+          slug: item.slug,
+        })),
+        tags: snapshot.taxonomy.tags.map((item) => ({
+          name: item.name,
+          slug: item.slug,
+        })),
+      };
 
       if (current) {
         [restored] = await executor
@@ -1162,12 +2200,16 @@ const rollbackUpdatedResource = async (
           .returning();
       }
 
+      if (restored) {
+        await syncContentTypeTaxonomy(executor, restored.id, restoreTaxonomy);
+      }
+
       return {
         operation: "restore",
         status: restored ? "success" : "failed",
         error: restored ? null : "solution_kit_rollback_content_type_restore_failed",
         beforeSnapshot,
-        afterSnapshot: restored ? snapshotContentType(restored) : null,
+        afterSnapshot: restored ? await snapshotContentType(executor, restored) : null,
         rollbackAction: { strategy: "none" },
       };
     }
@@ -1185,7 +2227,7 @@ const rollbackUpdatedResource = async (
       }
 
       const [current] = await executor.select().from(forms).where(eq(forms.id, snapshot.id));
-      const beforeSnapshot = current ? snapshotForm(current) : null;
+      const beforeSnapshot = current ? await snapshotForm(executor, current) : null;
       const now = new Date();
       let restored: FormRow | undefined;
 
@@ -1224,12 +2266,16 @@ const rollbackUpdatedResource = async (
           .returning();
       }
 
+      if (restored) {
+        await replaceFormFieldsTx(executor, restored.id, snapshot.fields);
+      }
+
       return {
         operation: "restore",
         status: restored ? "success" : "failed",
         error: restored ? null : "solution_kit_rollback_form_restore_failed",
         beforeSnapshot,
-        afterSnapshot: restored ? snapshotForm(restored) : null,
+        afterSnapshot: restored ? await snapshotForm(executor, restored) : null,
         rollbackAction: { strategy: "none" },
       };
     }
@@ -1247,7 +2293,7 @@ const rollbackUpdatedResource = async (
       }
 
       const [current] = await executor.select().from(pages).where(eq(pages.id, snapshot.id));
-      const beforeSnapshot = current ? snapshotPage(current) : null;
+      const beforeSnapshot = current ? await snapshotPage(executor, current) : null;
       const now = new Date();
       const publishedAt = snapshot.publishedAt ? new Date(snapshot.publishedAt) : null;
       let restored: PageRow | undefined;
@@ -1285,12 +2331,16 @@ const rollbackUpdatedResource = async (
           .returning();
       }
 
+      if (restored) {
+        await restorePageSeoTx(executor, restored.id, snapshot.seo);
+      }
+
       return {
         operation: "restore",
         status: restored ? "success" : "failed",
         error: restored ? null : "solution_kit_rollback_page_restore_failed",
         beforeSnapshot,
-        afterSnapshot: restored ? snapshotPage(restored) : null,
+        afterSnapshot: restored ? await snapshotPage(executor, restored) : null,
         rollbackAction: { strategy: "none" },
       };
     }
@@ -1308,7 +2358,7 @@ const rollbackUpdatedResource = async (
       }
 
       const [current] = await executor.select().from(menus).where(eq(menus.id, snapshot.id));
-      const beforeSnapshot = current ? snapshotMenu(current) : null;
+      const beforeSnapshot = current ? await snapshotMenu(executor, current) : null;
       let restored: MenuRow | undefined;
 
       if (current) {
@@ -1332,12 +2382,16 @@ const rollbackUpdatedResource = async (
           .returning();
       }
 
+      if (restored) {
+        await replaceMenuItemsTx(executor, restored.id, toMenuDesiredFromSnapshot(snapshot.items));
+      }
+
       return {
         operation: "restore",
         status: restored ? "success" : "failed",
         error: restored ? null : "solution_kit_rollback_menu_restore_failed",
         beforeSnapshot,
-        afterSnapshot: restored ? snapshotMenu(restored) : null,
+        afterSnapshot: restored ? await snapshotMenu(executor, restored) : null,
         rollbackAction: { strategy: "none" },
       };
     }

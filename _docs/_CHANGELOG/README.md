@@ -302,3 +302,4 @@ Project Change Log.
 | 266 | 2026-02-19 | Solution kits internal API and RBAC | Core/API |
 | 267 | 2026-02-19 | Solution kits admin UI runs, cache, and prefetch | Admin/UI |
 | 268 | 2026-02-19 | AI site wizard guided flow for solution kits | Admin/UI |
+| 269 | 2026-02-20 | Solution kits content packs and installers | CMS/Kits |

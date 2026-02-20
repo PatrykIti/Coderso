@@ -15,6 +15,7 @@
 - `MEDIA_SPEC.md` - media storage and uploads
 - `INTEGRATIONS.md` - integrations registry and runtime/security rules
 - `PAGE_MODEL.md` - page builder JSON model
+- `SOLUTION_KITS.md` - solution kits catalog and installer contract
 - `PREVIEW_SPEC.md` - draft preview flow
 - `ORM_SPEC.md` - ORM choice and configuration
 - `AUTH_SPEC.md` - authentication and sessions

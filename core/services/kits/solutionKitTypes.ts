@@ -30,11 +30,82 @@ export const siteBuilderGoals = [
 
 export type SiteBuilderGoal = (typeof siteBuilderGoals)[number];
 
+export type SolutionKitSeoDefaults = {
+  title?: string;
+  description?: string;
+  canonicalUrl?: string | null;
+  robots?: string | null;
+};
+
+export type SolutionKitTaxonomyTerm = {
+  name: string;
+  slug?: string;
+};
+
+export type SolutionKitContentTypeTaxonomy = {
+  categories?: SolutionKitTaxonomyTerm[];
+  tags?: SolutionKitTaxonomyTerm[];
+};
+
+export type SolutionKitContentTypeBlueprint = {
+  slug: string;
+  name: string;
+  schema?: Record<string, unknown>;
+  taxonomy?: SolutionKitContentTypeTaxonomy;
+};
+
+export type SolutionKitFormFieldBlueprint = {
+  id?: string;
+  type: "text" | "email" | "select" | "checkbox" | "textarea" | "phone" | "date";
+  label: string;
+  name?: string;
+  required?: boolean;
+  orderIndex?: number;
+  settings?: Record<string, unknown>;
+};
+
+export type SolutionKitFormBlueprint = {
+  slug: string;
+  name: string;
+  status: "draft" | "published";
+  description?: string | null;
+  successMessage?: string | null;
+  successRedirectUrl?: string | null;
+  submissionAccess?: "public" | "internal";
+  settings?: Record<string, unknown>;
+  fields?: SolutionKitFormFieldBlueprint[];
+};
+
+export type SolutionKitPageBlueprint = {
+  slug: string;
+  title: string;
+  status: "draft" | "published";
+  template?: string;
+  data?: Record<string, unknown>;
+  seo?: SolutionKitSeoDefaults;
+};
+
+export type SolutionKitMenuItemBlueprint = {
+  key: string;
+  label: string;
+  href?: string;
+  pageSlug?: string;
+  parentKey?: string | null;
+  orderIndex?: number;
+  settings?: Record<string, unknown>;
+};
+
+export type SolutionKitMenuBlueprint = {
+  location: "primary" | "footer";
+  name: string;
+  items?: SolutionKitMenuItemBlueprint[];
+};
+
 export type SolutionKitResourceBlueprint = {
-  pages: Array<{ slug: string; title: string; status: "draft" | "published" }>;
-  forms: Array<{ slug: string; name: string; status: "draft" | "published" }>;
-  contentTypes: Array<{ slug: string; name: string }>;
-  menus: Array<{ location: "primary" | "footer"; name: string }>;
+  pages: SolutionKitPageBlueprint[];
+  forms: SolutionKitFormBlueprint[];
+  contentTypes: SolutionKitContentTypeBlueprint[];
+  menus: SolutionKitMenuBlueprint[];
 };
 
 export type SolutionKitDefinition = {
