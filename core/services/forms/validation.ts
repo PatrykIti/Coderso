@@ -91,28 +91,39 @@ const normalizeSettings = (
   if (!assertPlainObject(settings)) throw new Error("form_field_invalid");
   const normalized: FormFieldSettings = {};
 
+  const normalizeOptionalSettingText = (value: unknown) => {
+    if (value === undefined) return undefined;
+    if (typeof value !== "string") throw new Error("form_field_invalid");
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  };
+
   if (settings.placeholder !== undefined) {
-    const placeholder = normalizeString(settings.placeholder);
-    if (!placeholder) throw new Error("form_field_invalid");
-    normalized.placeholder = placeholder;
+    const placeholder = normalizeOptionalSettingText(settings.placeholder);
+    if (placeholder !== undefined) {
+      normalized.placeholder = placeholder;
+    }
   }
   if (settings.helper !== undefined) {
-    const helper = normalizeString(settings.helper);
-    if (!helper) throw new Error("form_field_invalid");
-    normalized.helper = helper;
+    const helper = normalizeOptionalSettingText(settings.helper);
+    if (helper !== undefined) {
+      normalized.helper = helper;
+    }
   }
   if (settings.pattern !== undefined) {
-    const pattern = normalizeString(settings.pattern);
-    if (!pattern) throw new Error("form_field_invalid");
-    normalized.pattern = pattern;
+    const pattern = normalizeOptionalSettingText(settings.pattern);
+    if (pattern !== undefined) {
+      normalized.pattern = pattern;
+    }
   }
   if (settings.defaultValue !== undefined) {
     if (type === "checkbox" && typeof settings.defaultValue === "boolean") {
       normalized.defaultValue = settings.defaultValue;
     } else if (typeof settings.defaultValue === "string") {
       const trimmed = settings.defaultValue.trim();
-      if (!trimmed) throw new Error("form_field_invalid");
-      normalized.defaultValue = trimmed;
+      if (trimmed.length > 0) {
+        normalized.defaultValue = trimmed;
+      }
     } else {
       throw new Error("form_field_invalid");
     }

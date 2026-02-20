@@ -225,6 +225,64 @@ export const formEmbedSchema = {
         showRequiredIndicator: { type: "boolean" },
       },
     },
+    resolved: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        formName: { type: "string" },
+        description: { type: ["string", "null"] },
+        status: { type: "string" },
+        successMessage: { type: ["string", "null"] },
+        successRedirectUrl: { type: ["string", "null"] },
+        submissionAccess: { enum: ["public", "internal"] },
+        submissionNonce: { type: ["string", "null"] },
+        settings: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            layoutMode: { enum: ["single", "multi_step"] },
+            saveProgress: { type: "boolean" },
+            stepTitles: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
+        },
+        fields: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              id: { type: "string" },
+              type: { type: "string" },
+              label: { type: "string" },
+              name: { type: "string" },
+              required: { type: "boolean" },
+              settings: {
+                type: "object",
+                additionalProperties: false,
+                properties: {
+                  placeholder: { type: "string" },
+                  helper: { type: "string" },
+                  options: {
+                    type: "array",
+                    items: { type: "string" },
+                  },
+                  defaultValue: {
+                    anyOf: [{ type: "string" }, { type: "boolean" }],
+                  },
+                  pattern: { type: "string" },
+                  step: { type: "number" },
+                },
+              },
+            },
+            required: ["id", "type", "label", "name", "required"],
+          },
+        },
+        error: { type: "string" },
+      },
+    },
   },
 };
 
@@ -492,6 +550,8 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
   const showSuccessMessage = (normalizedData.successMessage ?? "").trim().length > 0;
   const formAction = buildFormAction(normalizedData.formId);
   const hasMultipleSteps = runtimeLayoutMode === "multi_step" && stepGroups.length > 1;
+  const hasRuntimeFormReference = Boolean(normalizedData.formId);
+  const runtimeDataMissing = hasRuntimeFormReference && resolved === undefined;
 
   return (
     <section
@@ -526,7 +586,9 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
             </div>
           ) : fields.length === 0 ? (
             <div className="rounded-lg border border-dashed px-4 py-3 text-sm text-[var(--color-text)]/70">
-              No fields configured yet.
+              {runtimeDataMissing
+                ? "Form fields load in runtime preview."
+                : "No fields configured yet."}
             </div>
           ) : (
             <form

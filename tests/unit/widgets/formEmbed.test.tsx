@@ -180,6 +180,19 @@ test("form embed injects runtime script when fields exist", () => {
   expect(html).toContain("__nextlessFormRuntimeClient");
 });
 
+test("form embed shows runtime-preview hint when runtime data is not hydrated", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain("Form fields load in runtime preview.");
+});
+
 test("form embed validator accepts schema", () => {
   clearWidgets();
   const widget = createFormEmbedWidget({
@@ -201,6 +214,52 @@ test("form embed validator accepts schema", () => {
         submitLabel: "Send",
         layout: { width: "lg", alignment: "center" },
         fields: { showLabels: true },
+      },
+    })
+  ).not.toThrow();
+});
+
+test("form embed validator accepts resolved runtime payload", () => {
+  clearWidgets();
+  const widget = createFormEmbedWidget({
+    wizard: StubEditor,
+    visual: StubEditor,
+    advanced: StubEditor,
+  });
+  registerWidget(widget);
+
+  expect(() =>
+    normalizeWidgetBlock({
+      id: "form-embed-runtime",
+      type: "form-embed",
+      variant: "standard",
+      data: {
+        formId: "form-123",
+        resolved: {
+          formName: "Contact",
+          description: "Reach us",
+          status: "published",
+          successMessage: "Done",
+          submissionAccess: "public",
+          submissionNonce: "nonce-1",
+          settings: {
+            layoutMode: "single",
+            saveProgress: false,
+            stepTitles: ["Contact"],
+          },
+          fields: [
+            {
+              id: "field-1",
+              type: "text",
+              label: "Name",
+              name: "name",
+              required: true,
+              settings: {
+                placeholder: "Your name",
+              },
+            },
+          ],
+        },
       },
     })
   ).not.toThrow();
