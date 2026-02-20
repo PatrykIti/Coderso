@@ -5,6 +5,7 @@ import type {
   WidgetLibraryTab,
   WidgetSource,
 } from "./types";
+import type { ModulePackStatus } from "../../../widgets/registry";
 
 export const normalizeCategoryValue = (value: string) => value.trim().toLowerCase();
 
@@ -39,6 +40,13 @@ export type WidgetFilterOptions = {
   widgetTab: WidgetLibraryTab;
   widgetModule: string;
   widgetComplexity: "all" | WidgetComplexity;
+};
+
+export type WidgetModuleOption = {
+  value: string;
+  label: string;
+  readiness: "ready" | "needs-coverage" | "untracked";
+  enforcement?: ModulePackStatus["enforcement"];
 };
 
 const toSource = (value: WidgetFilterItem["source"]): WidgetSource =>
@@ -105,3 +113,61 @@ export const filterWidgetLibraryItems = <T extends WidgetFilterItem>(
     return left.name.localeCompare(right.name);
   });
 };
+
+const toDisplayLabel = (value: string) =>
+  value
+    .split("-")
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+
+export function buildWidgetModuleOptions(
+  moduleValues: Iterable<string>,
+  packStatuses: ModulePackStatus[]
+): WidgetModuleOption[] {
+  const statusByModule = new Map(packStatuses.map((status) => [status.module, status]));
+  const options = Array.from(new Set(moduleValues))
+    .filter((module) => module.trim().length > 0)
+    .map((module) => {
+      const status = statusByModule.get(module);
+      if (!status) {
+        return {
+          value: module,
+          label: toDisplayLabel(module),
+          readiness: "untracked" as const,
+          enforcement: undefined,
+        };
+      }
+
+      if (status.valid) {
+        const readySuffix =
+          status.enforcement === "strict" ? "Ready" : "Ready (Beta)";
+        return {
+          value: module,
+          label: `${toDisplayLabel(module)} - ${readySuffix}`,
+          readiness: "ready" as const,
+          enforcement: status.enforcement,
+        };
+      }
+
+      return {
+        value: module,
+        label: `${toDisplayLabel(module)} - Needs coverage`,
+        readiness: "needs-coverage" as const,
+        enforcement: status.enforcement,
+      };
+    });
+
+  const weight = (option: WidgetModuleOption) => {
+    if (option.readiness === "ready" && option.enforcement === "strict") return 0;
+    if (option.readiness === "ready") return 1;
+    if (option.readiness === "needs-coverage") return 2;
+    return 3;
+  };
+
+  return options.sort((left, right) => {
+    const byWeight = weight(left) - weight(right);
+    if (byWeight !== 0) return byWeight;
+    return left.label.localeCompare(right.label);
+  });
+}

@@ -14,7 +14,7 @@ type WidgetCatalogFiltersProps = {
   onAdvancedModeChange: (enabled: boolean) => void;
   moduleFilter: string;
   onModuleFilterChange: (value: string) => void;
-  moduleOptions: string[];
+  moduleOptions: Array<{ value: string; label: string }>;
   complexityFilter: "all" | WidgetComplexity;
   onComplexityFilterChange: (value: "all" | WidgetComplexity) => void;
 };
@@ -67,8 +67,8 @@ export function WidgetCatalogFilters({
         <SelectContent>
           <SelectItem value="all">All modules</SelectItem>
           {moduleOptions.map((module) => (
-            <SelectItem key={module} value={module}>
-              {module}
+            <SelectItem key={module.value} value={module.value}>
+              {module.label}
             </SelectItem>
           ))}
         </SelectContent>

@@ -1,5 +1,10 @@
 import type { WidgetDefinition } from "./types";
 import { getWidgetSlotKind } from "./slots";
+import {
+  listWidgetPackMatrix,
+  type ModuleWidgetPackDefinition,
+  type WidgetPackEnforcement,
+} from "./modulePackMatrix";
 
 const registry = new Map<string, WidgetDefinition<any>>();
 
@@ -8,6 +13,30 @@ const pluginTypePattern =
   /^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const widgetComplexityValues = new Set(["composite", "atomic"]);
 const widgetAudienceValues = new Set(["beginner", "intermediate", "advanced"]);
+
+export type ModulePackStatus = {
+  module: string;
+  label: string;
+  enforcement: WidgetPackEnforcement;
+  minimum: {
+    pagePresets: number;
+    sectionPresets: number;
+    compositeWidgets: number;
+  };
+  counts: {
+    pagePresets: number;
+    sectionPresets: number;
+    compositeWidgets: number;
+  };
+  missing: {
+    pagePresets: number;
+    sectionPresets: number;
+    compositeWidgets: number;
+    compositeWidgetRefs: string[];
+  };
+  valid: boolean;
+  notes?: string;
+};
 
 function isValidType(type: string) {
   return coreTypePattern.test(type) || pluginTypePattern.test(type);
@@ -173,4 +202,75 @@ export function listWidgets(): WidgetDefinition<any>[] {
 
 export function clearWidgets() {
   registry.clear();
+}
+
+function resolvePackStatus(
+  pack: ModuleWidgetPackDefinition,
+  widgets: WidgetDefinition<any>[]
+): ModulePackStatus {
+  const widgetByType = new Map(widgets.map((widget) => [widget.type, widget]));
+  const validCompositeRefs = pack.compositeWidgets.filter((type) => {
+    const def = widgetByType.get(type);
+    return Boolean(def && def.complexity === "composite");
+  });
+  const missingCompositeRefs = pack.compositeWidgets.filter(
+    (type) => !validCompositeRefs.includes(type)
+  );
+
+  const counts = {
+    pagePresets: pack.pagePresets.length,
+    sectionPresets: pack.sectionPresets.length,
+    compositeWidgets: validCompositeRefs.length,
+  };
+
+  const missing = {
+    pagePresets: Math.max(pack.minimum.pagePresets - counts.pagePresets, 0),
+    sectionPresets: Math.max(pack.minimum.sectionPresets - counts.sectionPresets, 0),
+    compositeWidgets: Math.max(pack.minimum.compositeWidgets - counts.compositeWidgets, 0),
+    compositeWidgetRefs: missingCompositeRefs,
+  };
+
+  const valid =
+    missing.pagePresets === 0 &&
+    missing.sectionPresets === 0 &&
+    missing.compositeWidgets === 0 &&
+    missing.compositeWidgetRefs.length === 0;
+
+  return {
+    module: pack.module,
+    label: pack.label,
+    enforcement: pack.enforcement,
+    minimum: {
+      pagePresets: pack.minimum.pagePresets,
+      sectionPresets: pack.minimum.sectionPresets,
+      compositeWidgets: pack.minimum.compositeWidgets,
+    },
+    counts,
+    missing,
+    valid,
+    notes: pack.notes,
+  };
+}
+
+export function listModulePackStatus(
+  widgets: WidgetDefinition<any>[] = listWidgets()
+): ModulePackStatus[] {
+  return listWidgetPackMatrix().map((pack) => resolvePackStatus(pack, widgets));
+}
+
+export function validateModulePackMatrix(options?: {
+  widgets?: WidgetDefinition<any>[];
+  strictOnly?: boolean;
+}) {
+  const strictOnly = options?.strictOnly ?? true;
+  const statuses = listModulePackStatus(options?.widgets ?? listWidgets());
+
+  for (const status of statuses) {
+    if (strictOnly && status.enforcement !== "strict") continue;
+    if (!status.valid) {
+      throw new Error(`module_pack_invalid:${status.module}`);
+    }
+  }
+
+  return statuses;
 }

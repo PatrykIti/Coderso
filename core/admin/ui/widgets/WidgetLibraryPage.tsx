@@ -50,6 +50,7 @@ import {
   getWidgetSlotKind,
   isSlotIdMatchingDefinition,
 } from "../../../widgets/slots";
+import { listModulePackStatus } from "../../../widgets/registry";
 import {
   appendSlotBlock,
   createBlock,
@@ -64,7 +65,11 @@ import { WidgetTemplateCategoryDrawer } from "./WidgetTemplateCategoryDrawer";
 import { WidgetCreateDialog } from "./WidgetCreateDialog";
 import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
 import { WidgetInsertDialog } from "./WidgetInsertDialog";
-import { filterWidgetLibraryItems, normalizeCategoryValue } from "./widgetLibraryUtils";
+import {
+  buildWidgetModuleOptions,
+  filterWidgetLibraryItems,
+  normalizeCategoryValue,
+} from "./widgetLibraryUtils";
 import type {
   WidgetCategoryId,
   WidgetComplexity,
@@ -95,7 +100,7 @@ type CategoryItem = {
 };
 type WidgetWithPreview = WidgetItem & { preview: WidgetPreview; source: WidgetSource };
 
-const formatModuleLabel = (value: string) =>
+const formatModuleBadgeLabel = (value: string) =>
   value
     .split("-")
     .filter(Boolean)
@@ -303,6 +308,10 @@ export function WidgetLibraryPage() {
   const widgetDefinitions = useMemo(() => listRegisteredWidgets(), []);
   const widgetDefinitionMap = useMemo(
     () => new Map(widgetDefinitions.map((definition) => [definition.type, definition])),
+    [widgetDefinitions]
+  );
+  const modulePackStatuses = useMemo(
+    () => listModulePackStatus(widgetDefinitions),
     [widgetDefinitions]
   );
 
@@ -518,10 +527,8 @@ export function WidgetLibraryPage() {
       if (widget.source !== "core") continue;
       modules.add(widget.module);
     }
-    return Array.from(modules).sort((left, right) =>
-      left.localeCompare(right)
-    );
-  }, [widgets]);
+    return buildWidgetModuleOptions(modules, modulePackStatuses);
+  }, [modulePackStatuses, widgets]);
 
 
   const filteredWidgets = useMemo(
@@ -1064,7 +1071,7 @@ export function WidgetLibraryPage() {
                       badge={widget.badge}
                       metaBadges={
                         widget.source === "core"
-                          ? [widget.complexity, formatModuleLabel(widget.module)]
+                          ? [widget.complexity, formatModuleBadgeLabel(widget.module)]
                           : undefined
                       }
                       isFavorite={widget.isFavorite}

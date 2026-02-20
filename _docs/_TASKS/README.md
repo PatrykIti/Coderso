@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 23 tasks
+- **To Do:** 21 tasks
 - **In Progress:** 1 task
-- **Done:** 382 tasks
+- **Done:** 387 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-16 | Coderso Module Widget Pack Matrix | High | Medium | Minimum composite packs per module |
 | TASK-054-17 | Coderso Presets, Templates, and Kits Contract | High | Large | Idempotent kit installer + manifest |
 | TASK-054-18 | Coderso AI Assistant Guided Builder Workflow | High | Large | Guided setup and explainable execution |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Mandatory release gates for modules |
@@ -81,6 +80,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-16 | Coderso Module Widget Pack Matrix | High | Medium | Pack matrix contract + strict/advisory validation + pack-aware widget module UX |
+| TASK-054-16-04 | Pack Matrix QA, Docs, and Closure | Medium | Medium | Lint/types/tests + docs/changelog/board closure |
+| TASK-054-16-03 | Widget Library Pack-Aware Module UX | Medium | Medium | Module option ordering/labels driven by pack readiness |
+| TASK-054-16-02 | Registry Pack Validator and Coverage Report | High | Medium | `listModulePackStatus` + `validateModulePackMatrix` |
+| TASK-054-16-01 | Matrix Contract and Module Pack Definitions | High | Medium | Static pack matrix + enforcement profile contract |
 | TASK-054-15 | Coderso Plugin Contract and Package Manifest | High | Large | Strict manifest contract + runtime/plugin route guardrails |
 | TASK-054-15-04 | Plugin Contract QA, Docs, and Closure | Medium | Medium | Lint/types/tests + docs/changelog/board closure |
 | TASK-054-15-03 | Plugin Routes Hardening and Internal Plugins API | High | Medium | Internal plugin routes + route scope/permission hardening |

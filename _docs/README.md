@@ -32,6 +32,7 @@
 - `STORE_API.md` - store endpoint contract and metadata flow
 - `WIDGETS.md` - core widgets and configuration model
 - `WIDGETS_COMPOSITE_STRATEGY.md` - composite-first widget delivery model
+- `WIDGET_PACK_MATRIX.md` - module pack coverage matrix and validation rules
 - `CODERSO_PLUGIN_CONTRACT.md` - plugin manifest and runtime contribution contract
 - `_WIDGETS/README.md` - widgets index and per-widget docs
 - `_TASKS/README.md` - tasks index

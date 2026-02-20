@@ -783,6 +783,10 @@ Composite-first delivery (Coderso):
   - `module`,
   - optional `presets[]` i `requires[]`,
 - admin widget library filtruje po `module` i `complexity`.
+- module pack matrix:
+  - minimum per module: `1 page preset`, `2 section presets`, `3 composite widgets`,
+  - enforcement profile: `strict` (runtime gate) / `advisory` (gap reporting),
+  - runtime validator: `validateModulePackMatrix({ strictOnly: true })`.
 
 Szczegoly: `WIDGETS.md`.
 
