@@ -5,23 +5,45 @@
 **Category:** CMS/Templates + Setup UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-07, TASK-054-13, TASK-055  
-**Status:** To Do
+**Status:** In Progress (2026-02-20)
 
 ---
 
-## Goal
-Standardize how presets, templates, and full kits are packaged and installed.
+## Overview
+Ustandaryzowac kontrakt manifestu kitow oraz instalacje presetow/template'ow tak, aby:
+- instalacja byla idempotentna,
+- kolizje nazw byly rozwiazywane deterministycznie,
+- rollback odtwarzal snapshot,
+- admin widzial czytelny plan `includes` + `postInstallTasks`.
+
+## Sub-Tasks
+1. `TASK-054-17-01` - Kit manifest contract + normalization.
+2. `TASK-054-17-02` - Template/preset installer with deterministic collisions.
+3. `TASK-054-17-03` - Solution kits API + admin UX contract exposure.
+4. `TASK-054-17-04` - QA, docs, changelog, kanban closure.
 
 ## Files to Change
 - `_docs/SOLUTION_KITS.md`
-- `_docs/TEMPLATE_CONTRACTS.md`
+- `_docs/TEMPLATE_CONTRACTS.md` (new)
 - `core/services/kits/kitManifest.ts` (new)
 - `core/services/kits/kitInstaller.ts` (new)
 - `core/services/templates/templateInstaller.ts` (new)
+- `core/services/kits/solutionKitTypes.ts`
+- `core/services/kits/solutionKitsCatalog.ts`
+- `core/services/kits/solutionKitsService.ts`
 - `core/server/routes/solutionKitsRoutes.ts`
+- `core/server/validation/solutionKitSchemas.ts`
+- `core/admin/services/solutionKitsClient.ts`
 - `core/admin/ui/kits/SolutionKitsPage.tsx`
 
-## Kit Manifest Contract
+## Security Contract
+- Endpointy: `internal` (`/admin/api/solution-kits/*`).
+- Auth: sesja admin + RBAC (`solution-kits:read`, `solution-kits:write`).
+- Rate-limit: bucket `admin_read` dla GET, `admin_write` dla POST.
+- Anti-abuse: CSRF dla write (zachowane przez `apiRequest` + serwerowe middleware).
+- Brak publicznych write endpointow w tym tasku.
+
+## Manifest Contract (Target)
 ```ts
 export type SolutionKitManifest = {
   id: string;
@@ -70,7 +92,7 @@ try {
 ## Testing Requirements
 - Unit: manifest validator and collision strategy.
 - Integration: install -> rollback -> reinstall flow.
-- E2E: one-click kit setup to working frontend page.
+- UI: kits page shows `includes` and post-install tasks from manifest.
 
 ## Documentation Updates Required
 - `_docs/SOLUTION_KITS.md`
