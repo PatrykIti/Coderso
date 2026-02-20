@@ -696,10 +696,10 @@ export function FormBuilderPage() {
     >
       <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={openActionLogs}>
-              Action logs
-            </Button>
+          <Button variant="outline" size="sm" onClick={openActionLogs}>
+            Action logs
+          </Button>
+          <div className="ml-auto flex items-center gap-2">
             <Button
               size="sm"
               className="gap-2"
@@ -709,22 +709,22 @@ export function FormBuilderPage() {
               <Save className="h-4 w-4" />
               {isSaving ? "Saving..." : "Save form"}
             </Button>
-          </div>
-          <div className="ml-auto flex items-center gap-2 lg:hidden">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileFieldsOpen(true)}
-            >
-              Fields
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileSettingsOpen(true)}
-            >
-              Details
-            </Button>
+            <div className="flex items-center gap-2 lg:hidden">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileFieldsOpen(true)}
+              >
+                Fields
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileSettingsOpen(true)}
+              >
+                Details
+              </Button>
+            </div>
           </div>
         </div>
       </div>
