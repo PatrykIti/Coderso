@@ -47,25 +47,41 @@ export function filterPages(
   });
 }
 
+export function resolvePagesRefreshBackground(input: {
+  explicitBackground?: boolean;
+  hasHydrated: boolean;
+  hasInitialCache: boolean;
+}) {
+  if (typeof input.explicitBackground === "boolean") {
+    return input.explicitBackground;
+  }
+  return input.hasHydrated || input.hasInitialCache;
+}
+
 export function PageListPage() {
   const { navigate } = useAdminRouter();
-  const initialCached = getCachedPages();
+  const initialCached = useMemo(() => getCachedPages(), []);
+  const hasInitialCache = initialCached !== null;
   const [items, setItems] = useState<PageSummary[]>(() => initialCached ?? []);
   const [createOpen, setCreateOpen] = useState(false);
   const [drawerKey, setDrawerKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(() => !initialCached);
+  const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [authorFilter, setAuthorFilter] = useState("any");
   const [openAfterCreate, setOpenAfterCreate] = useState(true);
-  const hasHydratedRef = useRef(false);
+  const hasHydratedRef = useRef(hasInitialCache);
 
   const refresh = useCallback(
     async (options?: { force?: boolean; background?: boolean }) => {
       const force = options?.force ?? false;
-      const background = options?.background ?? hasHydratedRef.current;
+      const background = resolvePagesRefreshBackground({
+        explicitBackground: options?.background,
+        hasHydrated: hasHydratedRef.current,
+        hasInitialCache,
+      });
       if (!background) {
         setIsLoading(true);
       }
@@ -86,12 +102,12 @@ export function PageListPage() {
         }
       }
     },
-    []
+    [hasInitialCache]
   );
 
   useEffect(() => {
-    refresh({ force: true }).catch(() => undefined);
-  }, [refresh]);
+    refresh({ force: true, background: hasInitialCache }).catch(() => undefined);
+  }, [hasInitialCache, refresh]);
 
   useEffect(() => {
     return subscribeCacheEvents((event) => {

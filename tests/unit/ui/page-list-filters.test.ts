@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 
 import type { PageSummary } from "../../../core/admin/services/pagesClient";
-import { filterPages } from "../../../core/admin/ui/pages/PageListPage";
+import {
+  filterPages,
+  resolvePagesRefreshBackground,
+} from "../../../core/admin/ui/pages/PageListPage";
 
 const basePage: PageSummary = {
   id: "1",
@@ -29,4 +32,32 @@ test("filterPages matches query, status, and author", () => {
   expect(filterPages(pages, "", "draft", "any")).toHaveLength(1);
   expect(filterPages(pages, "", "all", "author-2")).toHaveLength(1);
   expect(filterPages(pages, "missing", "all", "any")).toHaveLength(0);
+});
+
+test("resolvePagesRefreshBackground keeps refresh in background when cache exists", () => {
+  expect(
+    resolvePagesRefreshBackground({
+      hasHydrated: false,
+      hasInitialCache: true,
+    })
+  ).toBe(true);
+});
+
+test("resolvePagesRefreshBackground shows loading when no cache and not hydrated", () => {
+  expect(
+    resolvePagesRefreshBackground({
+      hasHydrated: false,
+      hasInitialCache: false,
+    })
+  ).toBe(false);
+});
+
+test("resolvePagesRefreshBackground respects explicit override", () => {
+  expect(
+    resolvePagesRefreshBackground({
+      explicitBackground: false,
+      hasHydrated: true,
+      hasInitialCache: true,
+    })
+  ).toBe(false);
 });
