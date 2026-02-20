@@ -3,7 +3,8 @@ import path from "node:path";
 import { tmpdir } from "node:os";
 import { loadPluginByName } from "./pluginManager";
 import { readPluginManifest } from "./loader";
-import { getPluginByName, registerPlugin, setPluginEnabled } from "./registry";
+import { getPluginByName, listPlugins, registerPlugin, setPluginEnabled } from "./registry";
+import { assertManifestDependencies } from "./runtime/moduleRegistrar";
 import { logAudit } from "../services/audit/auditService";
 import {
   fetchMetadata,
@@ -70,6 +71,12 @@ export async function installPluginFromStore(name: string, version: string, opti
   if (manifest.name !== meta.name || manifest.version !== meta.version) {
     throw new Error("plugin_manifest_mismatch");
   }
+
+  const installed = await listPlugins();
+  const installedPluginIds = new Set(
+    installed.filter((entry) => entry.enabled).map((entry) => entry.name)
+  );
+  assertManifestDependencies(manifest, installedPluginIds);
 
   await validatePluginFiles(tempDir, manifest.entry);
 

@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 27 tasks
-- **In Progress:** 2 tasks
-- **Done:** 377 tasks
+- **To Do:** 23 tasks
+- **In Progress:** 1 task
+- **Done:** 382 tasks
 
 ---
 
@@ -39,10 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054-15-01 | SDK Manifest Contract and Normalization | High | Medium | `CodersoPluginManifest` + alias normalization |
-| TASK-054-15-02 | Core Runtime Manifest Validator and Module Registrar | High | Large | strict provides/dependencies/runtime registration |
-| TASK-054-15-03 | Plugin Routes Hardening and Internal Plugins API | High | Medium | route scope restrictions + internal manifest validation endpoint |
-| TASK-054-15-04 | Plugin Contract QA, Docs, and Closure | Medium | Medium | tests/docs/changelog/board closure |
 | TASK-054-16 | Coderso Module Widget Pack Matrix | High | Medium | Minimum composite packs per module |
 | TASK-054-17 | Coderso Presets, Templates, and Kits Contract | High | Large | Idempotent kit installer + manifest |
 | TASK-054-18 | Coderso AI Assistant Guided Builder Workflow | High | Large | Guided setup and explainable execution |
@@ -78,7 +74,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-15 | Coderso Plugin Contract and Package Manifest | High | Large | Strict manifest contract + runtime/plugin route guardrails |
 
 ---
 
@@ -86,6 +81,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-15 | Coderso Plugin Contract and Package Manifest | High | Large | Strict manifest contract + runtime/plugin route guardrails |
+| TASK-054-15-04 | Plugin Contract QA, Docs, and Closure | Medium | Medium | Lint/types/tests + docs/changelog/board closure |
+| TASK-054-15-03 | Plugin Routes Hardening and Internal Plugins API | High | Medium | Internal plugin routes + route scope/permission hardening |
+| TASK-054-15-02 | Core Runtime Manifest Validator and Module Registrar | High | Large | strict manifest validation + contributions registry + dependency checks |
+| TASK-054-15-01 | SDK Manifest Contract and Normalization | High | Medium | `@core/sdk/pluginManifest` contract + alias normalization |
 | TASK-054-14 | Coderso Composite-First Widget Strategy | High | Large | Metadata contract + composite-first widget library flow |
 | TASK-054-13 | Coderso Solution Kits and AI Wizard | High | Large | Vertical kits + guided AI setup |
 | TASK-054-13-07 | Solution Kits QA, Docs, and Closure | Medium | Medium | Full regression matrix + docs/changelog closure |

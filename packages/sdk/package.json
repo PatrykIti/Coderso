@@ -6,7 +6,8 @@
   "exports": {
     "./server": "./src/server.ts",
     "./client": "./src/client.ts",
-    "./shared": "./src/shared.ts"
+    "./shared": "./src/shared.ts",
+    "./pluginManifest": "./src/pluginManifest.ts"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

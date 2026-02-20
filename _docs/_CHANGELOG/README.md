@@ -305,3 +305,4 @@ Project Change Log.
 | 269 | 2026-02-20 | Solution kits content packs and installers | CMS/Kits |
 | 270 | 2026-02-20 | Solution kits QA, docs, and closure | QA/Docs |
 | 271 | 2026-02-20 | Coderso composite-first widget strategy | CMS/Widgets |
+| 272 | 2026-02-20 | Coderso plugin contract and package manifest | Core/Plugins |

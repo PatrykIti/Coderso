@@ -29,8 +29,10 @@
 - `SITE_RUNTIME.md` - public/admin runtime behavior
 - `SDK_SPEC.md` - plugin SDK contract
 - `STORE_SPEC.md` - store + security pipeline
+- `STORE_API.md` - store endpoint contract and metadata flow
 - `WIDGETS.md` - core widgets and configuration model
 - `WIDGETS_COMPOSITE_STRATEGY.md` - composite-first widget delivery model
+- `CODERSO_PLUGIN_CONTRACT.md` - plugin manifest and runtime contribution contract
 - `_WIDGETS/README.md` - widgets index and per-widget docs
 - `_TASKS/README.md` - tasks index
 - `_CHANGELOG/README.md` - changelog index

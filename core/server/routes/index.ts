@@ -27,6 +27,7 @@ import { registerApiKeysRoutes } from "./apiKeysRoutes";
 import { registerWebhooksRoutes } from "./webhooksRoutes";
 import { registerEmailSettingsRoutes } from "./emailSettingsRoutes";
 import { registerIntegrationsRoutes } from "./integrationsRoutes";
+import { registerPluginsRoutes } from "./pluginsRoutes";
 import { registerUserSettingsRoutes } from "./userSettingsRoutes";
 import { registerWidgetRoutes } from "./widgetRoutes";
 import { registerWidgetTemplateRoutes } from "./widgetTemplateRoutes";
@@ -78,6 +79,9 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerWebhooksRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerEmailSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerIntegrationsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerPluginsRoutes(router, {
+    requirePermission: deps.requirePermission,
+  });
   registerSettingsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerUserSettingsRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
   registerWidgetRoutes(router, { requirePermission: deps.requirePermission });

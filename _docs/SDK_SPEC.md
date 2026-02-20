@@ -22,6 +22,8 @@ integracji z core.
 
 - `SDK_API_VERSION = "1"`.
 - `plugin.json` musi deklarowac `apiVersion`.
+- preferowane pola manifestu: `targetApiVersion` + `targetCoreVersion`
+  (legacy alias: `apiVersion` + `coreVersion`).
 - Core odrzuca pluginy z niekompatybilnym `apiVersion`.
 - Zmiany breaking -> nowa wartosc `apiVersion`.
 - `@core/sdk` jest wersjonowane semverem razem z core.
@@ -37,6 +39,7 @@ ESM only:
 - `@core/sdk/server`
 - `@core/sdk/client`
 - `@core/sdk/shared` (typy wspolne)
+- `@core/sdk/pluginManifest` (typy manifestu i helpery normalizacji)
 
 SDK dostarczane przez core jako dependency runtime (externals).
 
@@ -210,13 +213,15 @@ export interface RoutesAPI {
     method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     path: string; // bez prefiksu, core doda /api/plugins/<name>
     handler: (req: Request) => Response | Promise<Response>;
-    permission?: string; // opcjonalny permission wymagany dla route
+    permission?: string; // wymagany dla write methods
   }): void;
 }
 
 Notes:
 - Jesli `permission` jest podany, core sprawdza czy plugin ma go zadeklarowany
   w `plugin.json` (brak = error).
+- Dla `POST|PUT|PATCH|DELETE` permission jest wymagany.
+- Jesli manifest deklaruje `provides.routes`, core wymaga zgodnosci rejestrowanych path.
 ```
 
 ### PermissionsAPI

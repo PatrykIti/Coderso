@@ -1,5 +1,10 @@
 import { createAssetsApi, DEFAULT_PLUGINS_DIR } from "./loader";
 import {
+  assertPluginRouteContract,
+  buildPluginRuntimeRoutePath,
+  normalizePluginRoutePath,
+} from "./runtime/moduleRegistrar";
+import {
   deletePluginSetting,
   getPluginSetting,
   setPluginSetting,
@@ -44,6 +49,18 @@ export function getPluginRoutes() {
   return [...pluginRoutes];
 }
 
+export function clearPluginRoutes() {
+  pluginRoutes.splice(0, pluginRoutes.length);
+}
+
+export function clearPluginRoutesForPlugin(pluginName: string) {
+  for (let index = pluginRoutes.length - 1; index >= 0; index -= 1) {
+    if (pluginRoutes[index]?.pluginName === pluginName) {
+      pluginRoutes.splice(index, 1);
+    }
+  }
+}
+
 function createLogger(pluginName: string) {
   return {
     info: (...args: unknown[]) => console.info(`[plugin:${pluginName}]`, ...args),
@@ -84,8 +101,13 @@ function createHooksApi(pluginName: string) {
   };
 }
 
-function createRoutesApi(pluginName: string, permissions: string[]) {
+function createRoutesApi(
+  pluginName: string,
+  permissions: string[],
+  declaredRouteList: string[] = []
+) {
   const allowed = new Set(permissions);
+  const declaredRoutes = new Set<string>(declaredRouteList);
   return {
     register: (input: {
       method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -93,16 +115,34 @@ function createRoutesApi(pluginName: string, permissions: string[]) {
       handler: (req: Request) => Response | Promise<Response>;
       permission?: string;
     }) => {
+      assertPluginRouteContract(input);
+      const normalizedPath = normalizePluginRoutePath(input.path);
       if (input.permission && !allowed.has(input.permission)) {
         throw new Error("plugin_permission_missing");
       }
-      pluginRoutes.push({
+      if (declaredRoutes.size > 0 && !declaredRoutes.has(normalizedPath)) {
+        throw new Error("plugin_route_not_declared");
+      }
+      const scopedPath = buildPluginRuntimeRoutePath(pluginName, normalizedPath);
+      const route: PluginRoute = {
         pluginName,
         method: input.method,
-        path: input.path,
+        path: scopedPath,
         handler: input.handler,
         permission: input.permission,
-      });
+      };
+
+      const existingIndex = pluginRoutes.findIndex(
+        (entry) =>
+          entry.pluginName === pluginName &&
+          entry.method === route.method &&
+          entry.path === route.path
+      );
+      if (existingIndex === -1) {
+        pluginRoutes.push(route);
+      } else {
+        pluginRoutes[existingIndex] = route;
+      }
     },
   };
 }
@@ -145,7 +185,8 @@ function createStorageApi(pluginName: string) {
 
 export function createServerContext(
   plugin: PluginRecord,
-  runtimeDir: string = DEFAULT_PLUGINS_DIR
+  runtimeDir: string = DEFAULT_PLUGINS_DIR,
+  options?: { declaredRoutes?: string[] }
 ) {
   const permissionList = Array.isArray(plugin.permissions)
     ? plugin.permissions.filter((item) => typeof item === "string")
@@ -159,7 +200,7 @@ export function createServerContext(
       get: (key: string) => process.env[key] ?? null,
     },
     hooks: createHooksApi(plugin.name),
-    routes: createRoutesApi(plugin.name, permissionList),
+    routes: createRoutesApi(plugin.name, permissionList, options?.declaredRoutes ?? []),
     assets: createAssetsApi(runtimeDir, plugin.name, plugin.version),
     permissions: createPermissionsApi(permissionList),
     settings: createSettingsApi(plugin.name),

@@ -101,6 +101,10 @@ Opcjonalnie:
 5. Podpisanie `metadata.json`.
 6. Publikacja wersji.
 
+Kontrakt manifestu:
+- canonical source: `_docs/CODERSO_PLUGIN_CONTRACT.md`
+- store akceptuje aliasy legacy (`apiVersion/coreVersion`) i normalizuje je do target fields.
+
 ---
 
 ## Skanowanie bezpieczenstwa (v1)
@@ -192,6 +196,8 @@ Public:
 - `GET /plugins/:name/versions/:version/metadata.sig`
 - `GET /plugins/:name/versions/:version/download`
 - `GET /revocations.json`
+
+Szczegoly payload/API: `_docs/STORE_API.md`.
 
 Private:
 - `POST /publish`

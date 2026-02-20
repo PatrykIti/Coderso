@@ -2275,16 +2275,15 @@ Uwagi:
 Permissions: `plugins:read`, `plugins:manage`
 
 - `GET /plugins`
-- `POST /plugins/install` (name + version)
-- `POST /plugins/:name/enable`
-- `POST /plugins/:name/disable`
-- `POST /plugins/:name/update`
-- `DELETE /plugins/:name`
+- `POST /plugins/manifest/validate`
 
 Uwagi:
-- `POST /plugins/:name/update` respektuje polityke update (domyslnie `auto-security`).
-- Dla update manualnych polityka moze byc nadpisana przez admina.
-- Revocations z `revocations.json` skutkuja auto-disable w core.
+- `GET /plugins` zwraca zainstalowane pluginy + snapshot contribution contract (`modules/widgets/presets/templates/routes`).
+- `POST /plugins/manifest/validate` wykonuje dry-run walidacji manifestu i zwraca znormalizowany manifest.
+- Walidacja obejmuje:
+  - compatibility (`targetApiVersion`/`targetCoreVersion`, z aliasami legacy),
+  - dependencies,
+  - contribution ids i route contract.
 
 ---
 
@@ -2292,8 +2291,9 @@ Uwagi:
 
 Permissions: `store:browse`
 
-- `GET /store/plugins`
-- `GET /store/plugins/:name`
+- v1 core nie udostepnia jeszcze internal admin routes `/store/*`.
+- Browser/listing Store jest realizowany przez dedykowany Store API (zewnetrzny kontrakt):
+  - zobacz: `_docs/STORE_API.md`
 
 ---
 

@@ -1,6 +1,7 @@
 import path from "node:path";
 import {
   DEFAULT_PLUGINS_DIR,
+  readPluginManifest,
   loadPluginFromDir,
   type PluginManifest,
 } from "./loader";
@@ -14,9 +15,17 @@ import {
 } from "./registry";
 import {
   createServerContext,
+  clearPluginRoutes,
+  clearPluginRoutesForPlugin,
   getHookRegistry,
   getPluginRoutes,
 } from "./sdkRuntime";
+import {
+  assertManifestDependencies,
+  clearPluginContributions,
+  registerPluginContributions,
+  unregisterPluginContributions,
+} from "./runtime/moduleRegistrar";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 
 export type LoadedPlugin = {
@@ -67,22 +76,33 @@ export async function loadAllPlugins(options?: { runtimeDir?: string }) {
 
   const runtimeDir = options?.runtimeDir ?? DEFAULT_PLUGINS_DIR;
   const installed = await listPlugins();
+  const installedPluginIds = new Set(installed.map((plugin) => plugin.name));
   const loaded: LoadedPlugin[] = [];
+  clearPluginRoutes();
+  clearPluginContributions();
 
   for (const plugin of installed) {
     if (!plugin.enabled) continue;
 
     const pluginDir = path.join(runtimeDir, plugin.name, plugin.version);
-    const ctx = createServerContext(plugin, runtimeDir);
+    clearPluginRoutesForPlugin(plugin.name);
 
     try {
-      const manifest = await loadPluginFromDir(pluginDir, ctx);
+      const manifest = await readPluginManifest(pluginDir);
+      const ctx = createServerContext(plugin, runtimeDir, {
+        declaredRoutes: manifest.provides.routes ?? [],
+      });
+      await loadPluginFromDir(pluginDir, ctx, manifest);
       if (manifest.name !== plugin.name || manifest.version !== plugin.version) {
         throw new Error("plugin_manifest_mismatch");
       }
+      assertManifestDependencies(manifest, installedPluginIds);
+      registerPluginContributions(manifest);
       await resetPluginErrors(plugin.name);
       loaded.push({ plugin, manifest });
     } catch (error) {
+      clearPluginRoutesForPlugin(plugin.name);
+      unregisterPluginContributions(plugin.name);
       await recordPluginFailure(plugin.name, error);
     }
   }
@@ -97,13 +117,28 @@ export async function loadPluginByName(name: string, options?: { runtimeDir?: st
 
   const runtimeDir = options?.runtimeDir ?? DEFAULT_PLUGINS_DIR;
   const pluginDir = path.join(runtimeDir, plugin.name, plugin.version);
-  const ctx = createServerContext(plugin, runtimeDir);
+  clearPluginRoutesForPlugin(plugin.name);
+  const installed = await listPlugins();
+  const installedPluginIds = new Set(
+    installed.filter((entry) => entry.enabled).map((entry) => entry.name)
+  );
+  try {
+    const manifest = await readPluginManifest(pluginDir);
+    const ctx = createServerContext(plugin, runtimeDir, {
+      declaredRoutes: manifest.provides.routes ?? [],
+    });
+    await loadPluginFromDir(pluginDir, ctx, manifest);
+    if (manifest.name !== plugin.name || manifest.version !== plugin.version) {
+      throw new Error("plugin_manifest_mismatch");
+    }
 
-  const manifest = await loadPluginFromDir(pluginDir, ctx);
-  if (manifest.name !== plugin.name || manifest.version !== plugin.version) {
-    throw new Error("plugin_manifest_mismatch");
+    assertManifestDependencies(manifest, installedPluginIds);
+    registerPluginContributions(manifest);
+    await resetPluginErrors(plugin.name);
+    return { plugin, manifest } as LoadedPlugin;
+  } catch (error) {
+    clearPluginRoutesForPlugin(plugin.name);
+    unregisterPluginContributions(plugin.name);
+    throw error;
   }
-
-  await resetPluginErrors(plugin.name);
-  return { plugin, manifest } as LoadedPlugin;
 }

@@ -125,6 +125,11 @@ const sections = buildDefaultNavSections({
   - widget metadata contract (`complexity`, `audience`, `module`, `presets`, `requires`) added to registry/catalog,
   - widget library default flow changed to `Recommended` composite-first mode,
   - `All widgets` + `Advanced mode` + module/complexity filters introduced for progressive disclosure UX.
+- 054-15 done: Plugin contract and package manifest delivered:
+  - strict `CodersoPluginManifest` contract with target version aliases and normalized provides/dependencies,
+  - runtime manifest validator + contribution registrar + dependency fail-fast checks,
+  - plugin route hardening (`write -> permission`, safe scoped paths, declared route enforcement),
+  - internal admin plugin routes (`GET /plugins`, `POST /plugins/manifest/validate`).
 - 054-10-05 done: Booking Admin UI delivered:
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,

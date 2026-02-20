@@ -5,7 +5,7 @@
 **Category:** Platform + SDK + Store  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-021, TASK-022, TASK-026, TASK-054-06  
-**Status:** In Progress (2026-02-20)
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -77,3 +77,9 @@ registerModuleContributions(manifest.provides);
 - `TASK-054-15-02`: Core runtime manifest validator and module registrar
 - `TASK-054-15-03`: Plugin routes hardening and internal plugins routes contract
 - `TASK-054-15-04`: Tests, docs, changelog, and task closure
+
+## Completion Notes (2026-02-20)
+- Added SDK manifest contract (`@core/sdk/pluginManifest`) with strict normalization and legacy alias handling.
+- Added runtime validator + module registrar with dependency fail-fast checks in install/load flows.
+- Added internal plugin routes (`GET /plugins`, `POST /plugins/manifest/validate`) and route hardening for plugin SDK registration.
+- Synchronized architecture/API/store docs and recorded changelog entry.

@@ -557,20 +557,31 @@ Wymagania build:
 ## Manifest pluginu (plugin.json)
 
 {
+  "id": "seo-boost",
   "name": "seo-boost",
   "version": "1.0.0",
-  "apiVersion": "1",
-  "coreVersion": ">=0.1.0 <0.2.0",
+  "targetApiVersion": "1",
+  "targetCoreVersion": ">=0.1.0 <0.2.0",
   "entry": {
     "server": "dist/server.mjs",
     "client": "dist/client.mjs",
     "styles": "dist/style.css"
+  },
+  "provides": {
+    "modules": ["widgets", "plugin:seo-boost/custom-module"],
+    "widgets": ["plugin:seo-boost/hero-pro"],
+    "presets": ["plugin:seo-boost/landing-a"],
+    "templates": ["plugin:seo-boost/footer-a"],
+    "routes": ["/sync"]
   },
   "permissions": [
     "content:read",
     "content:write",
     "admin:ui"
   ],
+  "dependencies": ["forms-plus"],
+  "featureFlags": ["seo-beta"],
+  "migrations": [{ "id": "001_init", "file": "migrations/001.sql" }],
   "metadata": {
     "title": "SEO Boost",
     "description": "Meta tagi i sitemap",
@@ -583,7 +594,10 @@ Wymagania build:
 }
 
 Weryfikacja:
-- core sprawdza `apiVersion`, `coreVersion`, `integrity`.
+- core normalizuje aliasy legacy:
+  - `apiVersion` -> `targetApiVersion`
+  - `coreVersion` -> `targetCoreVersion`
+- core sprawdza kompatybilnosc API/core, dependencies i contribution contract.
 - podpis i metadane zaufania dostarcza store (oddzielnie od plugin.json).
 
 ---
@@ -781,6 +795,11 @@ Wersja v1:
   `/api/plugins/<plugin-name>/*`.
 - Rejestracja przez SDK:
   registerRoute({ method, path, handler, permission? })
+- hardening:
+  - write methods wymagaja jawnego `permission`,
+  - permission musi byc zadeklarowany w manifescie pluginu,
+  - path musi byc bezpieczny (`/path`, bez `..`, query/hash),
+  - gdy plugin deklaruje `provides.routes`, runtime wymaga zgodnosci.
 
 Cel:
 - webhooki (platnosci, integracje).

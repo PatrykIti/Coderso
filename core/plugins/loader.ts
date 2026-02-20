@@ -1,22 +1,16 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { assertCompatible } from "./compat";
 import type { RouteContext, RouteHandler, Router } from "../server/router";
+import type {
+  CodersoPluginManifest,
+  CodersoPluginManifestInput,
+} from "../../packages/sdk/src/pluginManifest";
+import { toLegacyManifestShape, validatePluginManifest } from "./runtime/manifestValidator";
 
-export type PluginManifest = {
-  name: string;
-  version: string;
+export type PluginManifest = CodersoPluginManifest & {
   apiVersion: string;
   coreVersion: string;
-  entry: {
-    server: string;
-    client?: string;
-    styles?: string;
-  };
-  permissions: string[];
-  metadata?: Record<string, unknown>;
-  integrity: Record<string, string>;
 };
 
 export type AssetsAPI = {
@@ -115,57 +109,17 @@ export function createAssetsApi(
 export async function readPluginManifest(pluginDir: string): Promise<PluginManifest> {
   const manifestPath = path.join(pluginDir, "plugin.json");
   const raw = await readFile(manifestPath, "utf8");
-  const parsed = JSON.parse(raw) as Record<string, unknown>;
-  return assertManifest(parsed);
-}
-
-export function assertManifest(value: Record<string, unknown>): PluginManifest {
-  const name = value.name;
-  const version = value.version;
-  const apiVersion = value.apiVersion;
-  const coreVersion = value.coreVersion;
-  const entry = value.entry as Record<string, unknown> | undefined;
-  const permissions = value.permissions as unknown;
-  const integrity = value.integrity as Record<string, unknown> | undefined;
-
-  if (typeof name !== "string" || !name) throw new Error("plugin_manifest_invalid");
-  if (typeof version !== "string" || !version) throw new Error("plugin_manifest_invalid");
-  if (typeof apiVersion !== "string" || !apiVersion) throw new Error("plugin_manifest_invalid");
-  if (typeof coreVersion !== "string" || !coreVersion) throw new Error("plugin_manifest_invalid");
-  if (!entry || typeof entry !== "object") throw new Error("plugin_manifest_invalid");
-  if (typeof entry.server !== "string" || !entry.server) throw new Error("plugin_manifest_invalid");
-  if (!Array.isArray(permissions) || !permissions.every((item) => typeof item === "string")) {
-    throw new Error("plugin_manifest_invalid");
-  }
-  if (!integrity || typeof integrity.sha256 !== "string") {
-    throw new Error("plugin_manifest_invalid");
-  }
-
-  return {
-    name,
-    version,
-    apiVersion,
-    coreVersion,
-    entry: {
-      server: entry.server,
-      client: typeof entry.client === "string" ? entry.client : undefined,
-      styles: typeof entry.styles === "string" ? entry.styles : undefined,
-    },
-    permissions,
-    metadata:
-      value.metadata && typeof value.metadata === "object"
-        ? (value.metadata as Record<string, unknown>)
-        : undefined,
-    integrity: integrity as Record<string, string>,
-  };
+  const parsed = JSON.parse(raw) as CodersoPluginManifestInput;
+  const validated = validatePluginManifest(parsed);
+  return toLegacyManifestShape(validated);
 }
 
 export async function loadPluginFromDir(
   pluginDir: string,
-  ctx: ServerContext
+  ctx: ServerContext,
+  manifestInput?: PluginManifest
 ): Promise<PluginManifest> {
-  const manifest = await readPluginManifest(pluginDir);
-  assertCompatible({ apiVersion: manifest.apiVersion, coreVersion: manifest.coreVersion });
+  const manifest = manifestInput ?? (await readPluginManifest(pluginDir));
 
   const entryPath = resolveSafePath(pluginDir, manifest.entry.server);
   await stat(entryPath);

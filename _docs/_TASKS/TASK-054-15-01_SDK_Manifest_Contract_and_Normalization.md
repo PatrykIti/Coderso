@@ -5,7 +5,7 @@
 **Category:** SDK + Contract  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-15  
-**Status:** To Do
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -50,3 +50,7 @@ normalizePluginManifest(input) {
 ## Documentation Updates Required
 - `_docs/CODERSO_PLUGIN_CONTRACT.md`
 
+## Completion Notes (2026-02-20)
+- Added SDK manifest contract (`@core/sdk/pluginManifest`) with normalization helpers.
+- Added support for legacy alias normalization (`apiVersion/coreVersion`).
+- Exported manifest module from SDK package exports.

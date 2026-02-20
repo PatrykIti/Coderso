@@ -5,7 +5,7 @@
 **Category:** Core/API + Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-15-02  
-**Status:** To Do
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -61,3 +61,12 @@ routes.register(input) {
 - `_docs/CMS_API.md`
 - `_docs/CODERSO_PLUGIN_CONTRACT.md`
 
+## Completion Notes (2026-02-20)
+- Added internal plugins routes:
+  - `GET /plugins`
+  - `POST /plugins/manifest/validate`
+- Hardened SDK route registration:
+  - safe path normalization and scoped runtime paths,
+  - write methods require explicit permission,
+  - declared route enforcement for manifest-declared routes.
+- Wired route registration into route index and covered with integration tests.

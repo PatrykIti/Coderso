@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-15-01, TASK-054-15-02, TASK-054-15-03  
-**Status:** To Do
+**Status:** Done (2026-02-20)
 
 ---
 
@@ -45,3 +45,7 @@ move cards in _docs/_TASKS/README.md
 ## Documentation Updates Required
 - full sync: architecture + API + store/plugin contract + changelog
 
+## Completion Notes (2026-02-20)
+- Executed lint/types and plugin/store/routes regression suites for touched areas.
+- Added plugin contract docs (`CODERSO_PLUGIN_CONTRACT.md`) and store API doc (`STORE_API.md`).
+- Synchronized architecture/API/spec docs and closed task + board/changelog state.
