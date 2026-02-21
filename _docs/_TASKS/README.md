@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 19 tasks
-- **In Progress:** 6 tasks
-- **Done:** 420 tasks
+- **In Progress:** 4 tasks
+- **Done:** 422 tasks
 
 ---
 
@@ -67,8 +67,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-057 | Gutenberg-Like Posts Block Editor | High | Large | WordPress-like block editor for `/admin/coderso/posts/:id` |
 | TASK-057-03 | Rich Text Engine and Text Formatting Capabilities | High | Large | Lightweight rich-text adapter + sanitizer/serializer + toolbar shortcuts |
-| TASK-057-04 | Block Inserter, Slash Command, List View, and Transforms | High | Large | Inserter search/categories + slash commands + list view DnD/keyboard + block transforms |
-| TASK-057-05 | Document and Block Inspector Panels | High | Medium | Inspector split into Document/Block modules with full block options and user-friendly hints |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -78,6 +76,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-057-05 | Document and Block Inspector Panels | High | Medium | Document/Block inspector split with full metadata/block options and user-friendly hints |
+| TASK-057-04 | Block Inserter, Slash Command, List View, and Transforms | High | Large | Inserter with search/categories + slash menu + list view DnD/keyboard + transforms |
 | TASK-057-02 | Post Editor Shell and State Architecture | High | Large | Modular post editor shell + state store + preview workflow route integration |
 | TASK-057-01 | Post Block Document Contract and Backward Compatibility | High | Medium | Versioned post block document + strict normalization + legacy adapter |
 | TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts module (`/admin/coderso/posts`) delivered |

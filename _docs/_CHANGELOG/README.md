@@ -314,3 +314,5 @@ Project Change Log.
 | 278 | 2026-02-21 | Posts module in Coderso (list + editor + API aliases) | CMS/Content |
 | 279 | 2026-02-21 | TASK-057-01 post block document contract and legacy compatibility | CMS/Content |
 | 280 | 2026-02-21 | TASK-057-02 modular Gutenberg-like post editor shell and state architecture | Admin/UI |
+| 281 | 2026-02-21 | TASK-057-04 inserter, slash command, list view DnD/keyboard, and block transforms | Admin/UI |
+| 282 | 2026-02-21 | TASK-057-05 document/block inspector panels with metadata save integration | Admin/UI |

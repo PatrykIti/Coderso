@@ -5,7 +5,7 @@
 **Category:** Editor UX + Metadata  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-057-04  
-**Status:** In Progress (2026-02-21)
+**Status:** Done (2026-02-21)
 
 ---
 
