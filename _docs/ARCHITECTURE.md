@@ -55,7 +55,7 @@ przez `setup.completed=true`.
   - `Forms` (`/admin/coderso/forms`) - lista i edytor formularzy.
   - `Posts` (`/admin/coderso/posts`) - dedykowany workflow edytorski (TASK-055).
     - implementacja jest aliasem na `content_entries` z zarezerwowanym typem `post` (bez osobnej tabeli),
-    - internal API: `/admin/api/posts*` (CRUD/publish/preview/duplicate/delete) z tym samym RBAC co content entries.
+    - internal API: `/admin/api/posts*` (CRUD + autosave/revisions/restore + publish/preview/duplicate/delete) z tym samym RBAC co content entries.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`
   i opisany w `_docs/CODERSO_MODULES.md`.

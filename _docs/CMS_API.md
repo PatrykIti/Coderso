@@ -563,6 +563,9 @@ Routes:
 - `GET /posts/:id`
 - `PATCH /posts/:id`
 - `PATCH /posts/:id/metadata`
+- `POST /posts/:id/autosave`
+- `GET /posts/:id/revisions`
+- `POST /posts/:id/revisions/:revisionId/restore`
 - `POST /posts/:id/publish`
 - `POST /posts/:id/unpublish`
 - `POST /posts/:id/preview`
@@ -601,6 +604,28 @@ Metadata payload (summary):
     "canonicalUrl": "https://example.com/blog/how-we-deliver-projects",
     "robots": "index,follow"
   }
+}
+```
+
+Autosave response (summary):
+
+```json
+{
+  "post": {
+    "id": "post-id",
+    "title": "Draft title",
+    "slug": "draft-title",
+    "status": "draft",
+    "data": { "document": { "version": 1, "blocks": [] } }
+  },
+  "revision": {
+    "id": "revision-id",
+    "postId": "post-id",
+    "version": 4,
+    "createdAt": "2026-02-21T13:00:00.000Z"
+  },
+  "savedAt": "2026-02-21T13:00:00.000Z",
+  "reusedRevision": false
 }
 ```
 

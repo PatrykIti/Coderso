@@ -18,6 +18,7 @@ import { BlockInspector } from "./inspector/BlockInspector";
 import { DocumentInspector } from "./inspector/DocumentInspector";
 import { PostEditorCanvas } from "./PostEditorCanvas";
 import { PostEditorTopBar } from "./PostEditorTopBar";
+import { PostRevisionDrawer } from "./PostRevisionDrawer";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 
 export function PostBlockEditorShell() {
@@ -143,14 +144,29 @@ export function PostBlockEditorShell() {
           </div>
         ) : null}
 
+        {editor.autosaveError ? (
+          <div className="px-4 pt-4 sm:px-6">
+            <Alert variant="destructive">
+              <AlertTitle>Autosave paused</AlertTitle>
+              <AlertDescription>{editor.autosaveError}</AlertDescription>
+            </Alert>
+          </div>
+        ) : null}
+
         <PostEditorTopBar
           status={editor.status}
           dirty={editor.hasUnsavedChanges}
-          saving={editor.state.saving}
+          saving={
+            editor.state.saving ||
+            editor.autosaveSaving ||
+            editor.restoringRevisionId !== null
+          }
+          lastSavedAt={editor.lastSavedAt}
           canUndo={editor.canUndo}
           canRedo={editor.canRedo}
           onUndo={editor.undo}
           onRedo={editor.redo}
+          onOpenRevisions={editor.openRevisions}
           onSaveDraft={() => {
             editor.saveDraft().catch(() => undefined);
           }}
@@ -159,6 +175,18 @@ export function PostBlockEditorShell() {
           }}
           onPublish={() => {
             editor.publish().catch(() => undefined);
+          }}
+        />
+
+        <PostRevisionDrawer
+          open={editor.revisionsOpen}
+          onOpenChange={editor.setRevisionsOpen}
+          revisions={editor.revisions}
+          isLoading={editor.revisionsLoading}
+          error={editor.revisionsError}
+          restoringId={editor.restoringRevisionId}
+          onRestore={(revisionId) => {
+            editor.restoreRevision(revisionId).catch(() => undefined);
           }}
         />
 

@@ -49,6 +49,9 @@ test("registerPostsRoutes wires post alias endpoints", () => {
       "POST /posts/:id/unpublish",
       "POST /posts/:id/preview",
       "POST /posts/:id/duplicate",
+      "POST /posts/:id/autosave",
+      "GET /posts/:id/revisions",
+      "POST /posts/:id/revisions/:revisionId/restore",
       "DELETE /posts/:id",
     ])
   );

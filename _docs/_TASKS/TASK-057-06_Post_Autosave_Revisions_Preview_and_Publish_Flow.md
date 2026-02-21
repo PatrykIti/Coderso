@@ -5,7 +5,7 @@
 **Category:** API + Workflow + Reliability  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-057-05  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 

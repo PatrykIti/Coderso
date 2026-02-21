@@ -65,3 +65,40 @@ export const postPreviewSchema = {
   },
   additionalProperties: false,
 };
+
+export const postAutosaveSchema = {
+  type: "object",
+  properties: {
+    title: { type: "string", minLength: 1, maxLength: 200 },
+    slug: { type: "string", minLength: 1, maxLength: 200 },
+    data: { type: "object" },
+    tags: {
+      type: "array",
+      maxItems: 20,
+      items: { type: "string", minLength: 1, maxLength: 24 },
+    },
+    taxonomy: {
+      type: "object",
+      properties: {
+        categoryId: { type: ["string", "null"] },
+        tagIds: {
+          type: "array",
+          maxItems: 20,
+          items: { type: "string", minLength: 1 },
+        },
+      },
+      additionalProperties: false,
+    },
+    seo: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        canonicalUrl: { type: "string" },
+        robots: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
+};

@@ -12,5 +12,6 @@ test("PostBlockEditorShell renders Gutenberg-like frame", () => {
   expect(html).toContain("Document");
   expect(html).toContain("Block");
   expect(html).toContain("Save draft");
+  expect(html).toContain("Revisions");
   expect(html).toContain("Runtime preview");
 });

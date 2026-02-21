@@ -72,6 +72,31 @@ export type PreviewResponse = {
   expiresAt: string;
 };
 
+export type PostRevision = {
+  id: string;
+  postId: string;
+  version: number;
+  data: Record<string, unknown>;
+  createdAt: string;
+  createdBy: PostAuthor | null;
+};
+
+export type PostAutosavePayload = Partial<PostPayload> & {
+  tags?: string[];
+  taxonomy?: {
+    categoryId?: string | null;
+    tagIds?: string[];
+  };
+  seo?: PostSeo;
+};
+
+export type PostAutosaveResponse = {
+  post: PostDetail;
+  revision: PostRevision;
+  savedAt: string;
+  reusedRevision: boolean;
+};
+
 let cachedPosts: PostSummary[] | null = null;
 let cachedPostsPromise: Promise<PostSummary[]> | null = null;
 const cachedPostDetails = new Map<string, PostDetail>();
@@ -276,6 +301,47 @@ export async function previewPost(id: string, ttlMinutes?: number) {
     },
     { withCsrf: true }
   );
+}
+
+export async function autosavePost(id: string, payload: PostAutosavePayload) {
+  const result = await apiRequest<PostAutosaveResponse>(
+    `/posts/${id}/autosave`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+  if (result?.post) {
+    upsertCachedPost(result.post);
+    broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.postDetail(result.post.id), action: "update" });
+  }
+  return result;
+}
+
+export async function listPostRevisions(id: string) {
+  return apiRequest<PostRevision[]>(`/posts/${id}/revisions`, { method: "GET" });
+}
+
+export async function restorePostRevision(id: string, revisionId: string) {
+  const result = await apiRequest<{
+    ok: boolean;
+    restored: boolean;
+    revision: PostRevision;
+    post: PostDetail;
+  }>(
+    `/posts/${id}/revisions/${revisionId}/restore`,
+    { method: "POST" },
+    { withCsrf: true }
+  );
+  if (result?.post) {
+    upsertCachedPost(result.post);
+    broadcastCacheEvent({ key: cacheKeys.postsList, action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.postDetail(result.post.id), action: "update" });
+  }
+  return result;
 }
 
 export async function publishPost(id: string) {

@@ -1,11 +1,14 @@
 import {
+  autosavePost,
   createPost,
   createPostPreview,
   deletePost,
   duplicatePost,
   getPost,
+  listPostRevisions,
   listPosts,
   publishPost,
+  restorePostRevision,
   unpublishPost,
   updatePost,
   updatePostMetadata,
@@ -16,6 +19,7 @@ import {
   resolvePreviewUrl,
 } from "../utils/previewUrls";
 import {
+  postAutosaveSchema,
   postCreateSchema,
   postMetadataSchema,
   postPreviewSchema,
@@ -104,6 +108,14 @@ const mapPostError = (error: unknown) => {
       return new ApiError("auth_required", "Authentication required.", 401);
     case "post_duplicate_failed":
       return new ApiError("post_duplicate_failed", "Failed to duplicate post.", 500);
+    case "post_revision_not_found":
+      return new ApiError("post_revision_not_found", "Revision not found.", 404);
+    case "post_revision_create_failed":
+      return new ApiError(
+        "post_revision_create_failed",
+        "Failed to create post revision.",
+        500
+      );
     default:
       return null;
   }
@@ -257,6 +269,70 @@ export function registerPostsRoutes(router: Router, deps: PostsRouteDeps) {
       return duplicated;
     });
   });
+
+  router.post("/posts/:id/autosave", requirePermission("content:write"), async (ctx) => {
+    return withPostErrors(async () => {
+      validate(postAutosaveSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as {
+        title?: string;
+        slug?: string;
+        data?: Record<string, unknown>;
+        tags?: string[];
+        taxonomy?: {
+          categoryId?: string | null;
+          tagIds?: string[];
+        };
+        seo?: {
+          title?: string;
+          description?: string;
+          canonicalUrl?: string;
+          robots?: string;
+        };
+      };
+      const result = await autosavePost(
+        ctx.params.id,
+        {
+          title: body.title,
+          slug: body.slug,
+          data: body.data,
+          tags: body.tags,
+          taxonomy: body.taxonomy,
+          seo: body.seo,
+        },
+        ctx.user?.id ?? null
+      );
+      return {
+        post: result.post,
+        revision: result.revision,
+        savedAt: result.savedAt,
+        reusedRevision: result.reusedRevision,
+      };
+    });
+  });
+
+  router.get("/posts/:id/revisions", requirePermission("content:read"), async (ctx) => {
+    return withPostErrors(async () => listPostRevisions(ctx.params.id));
+  });
+
+  router.post(
+    "/posts/:id/revisions/:revisionId/restore",
+    requirePermission("content:write"),
+    async (ctx) => {
+      return withPostErrors(async () => {
+        const restored = await restorePostRevision(
+          ctx.params.id,
+          ctx.params.revisionId,
+          ctx.user?.id ?? null
+        );
+        return {
+          ok: true,
+          restored: restored.restored,
+          revision: restored.revision,
+          post: restored.post,
+        };
+      });
+    }
+  );
 
   router.delete("/posts/:id", requirePermission("content:write"), async (ctx) => {
     return withPostErrors(async () => deletePost(ctx.params.id));

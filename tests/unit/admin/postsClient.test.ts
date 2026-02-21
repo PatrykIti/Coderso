@@ -1,13 +1,16 @@
 import { expect, test } from "bun:test";
 
 import {
+  autosavePost,
   clearPostsCache,
   createPost,
   duplicatePost,
   getPostCached,
+  listPostRevisions,
   listPosts,
   listPostsCached,
   previewPost,
+  restorePostRevision,
 } from "../../../core/admin/services/postsClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
@@ -108,6 +111,117 @@ test("previewPost posts ttlMinutes with CSRF", async () => {
     expect(calls[1]?.input).toBe("/admin/api/posts/post-123/preview");
     const body = JSON.parse(calls[1]?.init?.body as string);
     expect(body.ttlMinutes).toBe(30);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("autosavePost posts payload with CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      post: {
+        id: "post-1",
+        typeId: "post-type",
+        title: "Autosaved",
+        slug: "autosaved",
+        status: "draft",
+        data: {},
+        tags: [],
+        createdAt: "2026-02-21T10:00:00.000Z",
+        updatedAt: "2026-02-21T10:00:00.000Z",
+      },
+      revision: {
+        id: "rev-1",
+        postId: "post-1",
+        version: 1,
+        data: {},
+        createdAt: "2026-02-21T10:00:00.000Z",
+        createdBy: null,
+      },
+      savedAt: "2026-02-21T10:00:00.000Z",
+      reusedRevision: false,
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await autosavePost("post-1", { title: "Autosaved" });
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/posts/post-1/autosave");
+    const body = JSON.parse(calls[1]?.init?.body as string);
+    expect(body.title).toBe("Autosaved");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listPostRevisions calls revisions endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+
+  try {
+    await listPostRevisions("post-1");
+    expect(calls[0]?.input).toBe("/admin/api/posts/post-1/revisions");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("restorePostRevision posts with CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      ok: true,
+      restored: true,
+      revision: {
+        id: "rev-1",
+        postId: "post-1",
+        version: 1,
+        data: {},
+        createdAt: "2026-02-21T10:00:00.000Z",
+        createdBy: null,
+      },
+      post: {
+        id: "post-1",
+        typeId: "post-type",
+        title: "Restored",
+        slug: "restored",
+        status: "draft",
+        data: {},
+        tags: [],
+        createdAt: "2026-02-21T10:00:00.000Z",
+        updatedAt: "2026-02-21T10:00:00.000Z",
+      },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await restorePostRevision("post-1", "rev-1");
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/posts/post-1/revisions/rev-1/restore");
   } finally {
     globalThis.fetch = originalFetch;
   }

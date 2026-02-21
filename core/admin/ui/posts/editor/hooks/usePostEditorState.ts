@@ -3,10 +3,14 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
+  autosavePost,
   getCachedPostDetail,
   getPostCached,
+  listPostRevisions,
   previewPost,
   publishPost,
+  restorePostRevision,
+  type PostRevision,
   type PostDetail,
   type PostSeo,
   type PostStatus,
@@ -24,6 +28,7 @@ import {
   createPostBlock,
   postEditorReducer,
 } from "../postEditorStore";
+import { usePostAutosave } from "./usePostAutosave";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -112,6 +117,9 @@ export type UsePostEditorStateResult = {
   hasUnsavedChanges: boolean;
   loading: boolean;
   error: string | null;
+  autosaveError: string | null;
+  autosaveSaving: boolean;
+  lastSavedAt: string | null;
   remoteUpdatePending: boolean;
   setTitle: (value: string) => void;
   setSlug: (value: string) => void;
@@ -141,6 +149,14 @@ export type UsePostEditorStateResult = {
   previewLoading: boolean;
   previewError: string | null;
   setPreviewOpen: (open: boolean) => void;
+  revisionsOpen: boolean;
+  setRevisionsOpen: (open: boolean) => void;
+  revisions: PostRevision[];
+  revisionsLoading: boolean;
+  revisionsError: string | null;
+  restoringRevisionId: string | null;
+  openRevisions: () => void;
+  restoreRevision: (revisionId: string) => Promise<void>;
   state: ReturnType<typeof createInitialPostEditorState>;
   selectedBlock: PostBlock | null;
   canUndo: boolean;
@@ -186,6 +202,14 @@ export function usePostEditorState(): UsePostEditorStateResult {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [autosaveSaving, setAutosaveSaving] = useState(false);
+  const [autosaveError, setAutosaveError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
+  const [revisions, setRevisions] = useState<PostRevision[]>([]);
+  const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [revisionsError, setRevisionsError] = useState<string | null>(null);
+  const [restoringRevisionId, setRestoringRevisionId] = useState<string | null>(null);
 
   const [state, dispatch] = useReducer(
     postEditorReducer,
@@ -196,12 +220,14 @@ export function usePostEditorState(): UsePostEditorStateResult {
   const baseMetadataSignatureRef = useRef<string>(
     serializeMetadataDraft(createMetadataDraftState(initialCachedPost))
   );
+  const autosaveInFlightRef = useRef(false);
 
   const applyLoadedPost = useCallback((nextPost: PostDetail) => {
     setPost(nextPost);
     setTitle(nextPost.title);
     setSlug(nextPost.slug);
     setStatus(nextPost.status);
+    setLastSavedAt(nextPost.updatedAt);
     baseDataRef.current = getPostDataRecord(nextPost);
     const nextFeaturedImage =
       isRecord(nextPost.data) && typeof nextPost.data.featuredImage === "string"
@@ -321,9 +347,87 @@ export function usePostEditorState(): UsePostEditorStateResult {
     };
   }, [metadataDraft]);
 
+  const buildAutosavePayload = useCallback(
+    () => ({
+      title,
+      slug,
+      data: buildPayloadData(),
+      ...buildMetadataPayload(),
+    }),
+    [buildMetadataPayload, buildPayloadData, slug, title]
+  );
+
+  const autosaveSignature = useMemo(
+    () =>
+      JSON.stringify({
+        postId,
+        payload: buildAutosavePayload(),
+      }),
+    [buildAutosavePayload, postId]
+  );
+
+  const runAutosave = useCallback(async () => {
+    if (!postId || !hasUnsavedChanges || state.saving || autosaveInFlightRef.current) {
+      return;
+    }
+    autosaveInFlightRef.current = true;
+    setAutosaveSaving(true);
+    setAutosaveError(null);
+    try {
+      const result = await autosavePost(postId, buildAutosavePayload());
+      applyLoadedPost(result.post);
+      dispatch({ type: "mark_saved", at: result.savedAt });
+      setLastSavedAt(result.savedAt);
+      setRemoteUpdatePending(false);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setAutosaveError(err.message);
+      } else {
+        setAutosaveError("Failed to autosave post.");
+      }
+    } finally {
+      autosaveInFlightRef.current = false;
+      setAutosaveSaving(false);
+    }
+  }, [applyLoadedPost, buildAutosavePayload, hasUnsavedChanges, postId, state.saving]);
+
+  const { cancel: cancelAutosave } = usePostAutosave({
+    enabled: Boolean(postId) && !loading && !remoteUpdatePending,
+    dirty: hasUnsavedChanges,
+    signature: autosaveSignature,
+    onAutosave: runAutosave,
+  });
+
+  const loadRevisions = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!postId) return;
+      if (!options?.silent) {
+        setRevisionsLoading(true);
+      }
+      setRevisionsError(null);
+      try {
+        const nextRevisions = await listPostRevisions(postId);
+        setRevisions(nextRevisions);
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setRevisionsError(err.message);
+        } else {
+          setRevisionsError("Failed to load post revisions.");
+        }
+      } finally {
+        if (!options?.silent) {
+          setRevisionsLoading(false);
+        }
+      }
+    },
+    [postId]
+  );
+
   const saveDraft = useCallback(async () => {
     if (!postId) return;
+    cancelAutosave();
     dispatch({ type: "set_saving", saving: true });
+    setAutosaveError(null);
     setError(null);
     try {
       const updatedDraft = await updatePost(postId, {
@@ -335,7 +439,9 @@ export function usePostEditorState(): UsePostEditorStateResult {
         ? await updatePostMetadata(postId, buildMetadataPayload())
         : updatedDraft;
       applyLoadedPost(synchronizedPost);
-      dispatch({ type: "mark_saved", at: new Date().toISOString() });
+      const savedAt = new Date().toISOString();
+      dispatch({ type: "mark_saved", at: savedAt });
+      setLastSavedAt(savedAt);
       setRemoteUpdatePending(false);
     } catch (err) {
       dispatch({ type: "set_saving", saving: false });
@@ -346,7 +452,16 @@ export function usePostEditorState(): UsePostEditorStateResult {
       }
       throw err;
     }
-  }, [applyLoadedPost, buildMetadataPayload, buildPayloadData, metadataDirty, postId, slug, title]);
+  }, [
+    applyLoadedPost,
+    cancelAutosave,
+    buildMetadataPayload,
+    buildPayloadData,
+    metadataDirty,
+    postId,
+    slug,
+    title,
+  ]);
 
   const publish = useCallback(async () => {
     if (!postId) return;
@@ -524,6 +639,50 @@ export function usePostEditorState(): UsePostEditorStateResult {
     []
   );
 
+  const openRevisions = useCallback(() => {
+    setRevisionsOpen(true);
+    loadRevisions().catch(() => undefined);
+  }, [loadRevisions]);
+
+  const handleSetRevisionsOpen = useCallback(
+    (open: boolean) => {
+      setRevisionsOpen(open);
+      if (open) {
+        loadRevisions().catch(() => undefined);
+      }
+    },
+    [loadRevisions]
+  );
+
+  const restoreRevision = useCallback(
+    async (revisionId: string) => {
+      if (!postId) return;
+      setError(null);
+      setRevisionsError(null);
+      setRestoringRevisionId(revisionId);
+      try {
+        cancelAutosave();
+        const restored = await restorePostRevision(postId, revisionId);
+        applyLoadedPost(restored.post);
+        const restoredAt = new Date().toISOString();
+        dispatch({ type: "mark_saved", at: restoredAt });
+        setLastSavedAt(restoredAt);
+        setRemoteUpdatePending(false);
+        await loadRevisions({ silent: true });
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setRevisionsError(err.message);
+        } else {
+          setRevisionsError("Failed to restore revision.");
+        }
+        throw err;
+      } finally {
+        setRestoringRevisionId(null);
+      }
+    },
+    [applyLoadedPost, cancelAutosave, loadRevisions, postId]
+  );
+
   const markReloadRemote = useCallback(async () => {
     await refresh({ force: true, allowDirty: true, setLoading: false });
     setRemoteUpdatePending(false);
@@ -538,6 +697,9 @@ export function usePostEditorState(): UsePostEditorStateResult {
     hasUnsavedChanges,
     loading,
     error,
+    autosaveError,
+    autosaveSaving,
+    lastSavedAt: lastSavedAt ?? state.lastSavedAt,
     remoteUpdatePending,
     setTitle,
     setSlug,
@@ -559,6 +721,14 @@ export function usePostEditorState(): UsePostEditorStateResult {
     previewLoading,
     previewError,
     setPreviewOpen,
+    revisionsOpen,
+    setRevisionsOpen: handleSetRevisionsOpen,
+    revisions,
+    revisionsLoading,
+    revisionsError,
+    restoringRevisionId,
+    openRevisions,
+    restoreRevision,
     state,
     selectedBlock,
     canUndo: state.history.past.length > 0,

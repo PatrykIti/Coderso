@@ -1,5 +1,6 @@
 import {
   createEntry,
+  createEntryRevision,
   createEntryPreview,
   deleteEntry,
   getEntry,
@@ -24,6 +25,9 @@ import {
   ensurePostDocumentForRead,
   ensurePostDocumentForWrite,
 } from "../posts/editor/postBlockLegacyAdapter";
+import { db } from "../../db/client";
+import { contentRevisions, users } from "../../db/schema";
+import { desc, eq } from "drizzle-orm";
 
 export const POST_CONTENT_TYPE_SLUG = "post";
 export const POST_CONTENT_TYPE_NAME = "Post";
@@ -116,6 +120,37 @@ export type UpdatePostInput = {
   title?: string;
   slug?: string;
   data?: EntryData;
+};
+
+export type PostRevisionAuthor = {
+  id: string;
+  name: string | null;
+  email: string;
+};
+
+export type PostRevision = {
+  id: string;
+  postId: string;
+  version: number;
+  data: EntryData;
+  createdAt: Date;
+  createdBy: PostRevisionAuthor | null;
+};
+
+export type PostAutosaveInput = {
+  title?: string;
+  slug?: string;
+  data?: EntryData;
+  tags?: string[];
+  taxonomy?: UpdateEntryMetadataInput["taxonomy"];
+  seo?: UpdateEntryMetadataInput["seo"];
+};
+
+export type PostAutosaveResult = {
+  post: PostDetail;
+  revision: PostRevision;
+  savedAt: string;
+  reusedRevision: boolean;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -232,6 +267,80 @@ const createDuplicatedEntry = async (
   throw new Error("post_duplicate_failed");
 };
 
+const serializeRevisionData = (data: EntryData) => JSON.stringify(data);
+
+const mapPostRevision = (
+  row: {
+    id: string;
+    entryId: string;
+    version: number;
+    data: EntryData;
+    createdAt: Date;
+    createdById: string | null;
+    createdByName: string | null;
+    createdByEmail: string | null;
+  }
+): PostRevision => ({
+  id: row.id,
+  postId: row.entryId,
+  version: row.version,
+  data: row.data,
+  createdAt: row.createdAt,
+  createdBy:
+    row.createdById && row.createdByEmail
+      ? {
+          id: row.createdById,
+          name: row.createdByName,
+          email: row.createdByEmail,
+        }
+      : null,
+});
+
+const listPostRevisionsInternal = async (postId: string) => {
+  const rows = await db
+    .select({
+      id: contentRevisions.id,
+      entryId: contentRevisions.entryId,
+      version: contentRevisions.version,
+      data: contentRevisions.data,
+      createdAt: contentRevisions.createdAt,
+      createdById: users.id,
+      createdByName: users.name,
+      createdByEmail: users.email,
+    })
+    .from(contentRevisions)
+    .leftJoin(users, eq(contentRevisions.createdBy, users.id))
+    .where(eq(contentRevisions.entryId, postId))
+    .orderBy(desc(contentRevisions.version));
+
+  return rows.map((row) =>
+    mapPostRevision({
+      ...row,
+      data: row.data as EntryData,
+    })
+  );
+};
+
+const createOrReuseRevision = async (
+  postId: string,
+  data: EntryData,
+  actorId: string
+) => {
+  const revisions = await listPostRevisionsInternal(postId);
+  const latest = revisions[0] ?? null;
+  const serialized = serializeRevisionData(data);
+  if (latest && serializeRevisionData(latest.data) === serialized) {
+    return { revision: latest, reused: true };
+  }
+
+  const created = await createEntryRevision(postId, data, actorId);
+  if (!created) throw new Error("post_revision_create_failed");
+
+  const fresh = (await listPostRevisionsInternal(postId))[0];
+  if (!fresh) throw new Error("post_revision_create_failed");
+  return { revision: fresh, reused: false };
+};
+
 export async function ensurePostContentType() {
   const existing = await getContentTypeBySlug(POST_CONTENT_TYPE_SLUG);
   if (existing) {
@@ -331,7 +440,8 @@ export async function updatePostMetadata(
   const postType = await ensurePostContentType();
   const existing = await getPostFromEntry(postType.id, id);
   if (!existing) throw new Error("post_not_found");
-  return updateEntryMetadata(id, input, actorId);
+  const updated = await updateEntryMetadata(id, input, actorId);
+  return updated ? withNormalizedReadData(updated) : null;
 }
 
 export async function publishPost(id: string, actorId: string) {
@@ -392,4 +502,100 @@ export async function duplicatePost(id: string, actorId?: string | null) {
   });
 
   return getPostFromEntry(postType.id, duplicated.id);
+}
+
+export async function listPostRevisions(id: string) {
+  const postType = await ensurePostContentType();
+  const existing = await getPostFromEntry(postType.id, id);
+  if (!existing) throw new Error("post_not_found");
+  return listPostRevisionsInternal(id);
+}
+
+export async function autosavePost(
+  id: string,
+  input: PostAutosaveInput,
+  actorId?: string | null
+): Promise<PostAutosaveResult> {
+  if (!actorId) throw new Error("auth_required");
+
+  const postType = await ensurePostContentType();
+  const existing = await getPostFromEntry(postType.id, id);
+  if (!existing) throw new Error("post_not_found");
+
+  let next = existing;
+
+  if (input.title !== undefined || input.slug !== undefined || input.data !== undefined) {
+    const updated = await updatePost(id, {
+      title: input.title,
+      slug: input.slug,
+      data: input.data,
+    });
+    if (!updated) throw new Error("post_not_found");
+    next = updated;
+  }
+
+  if (input.tags !== undefined || input.taxonomy !== undefined || input.seo !== undefined) {
+    const updated = await updatePostMetadata(
+      id,
+      {
+        tags: input.tags,
+        taxonomy: input.taxonomy,
+        seo: input.seo,
+      },
+      actorId
+    );
+    if (!updated) throw new Error("post_not_found");
+    next = updated;
+  }
+
+  const normalizedData = ensurePostDocumentForWrite(normalizePostData(next.data));
+  const { revision, reused } = await createOrReuseRevision(id, normalizedData, actorId);
+
+  return {
+    post: withNormalizedReadData(next),
+    revision,
+    savedAt: new Date().toISOString(),
+    reusedRevision: reused,
+  };
+}
+
+export async function restorePostRevision(
+  id: string,
+  revisionId: string,
+  actorId?: string | null
+) {
+  const postType = await ensurePostContentType();
+  const existing = await getPostFromEntry(postType.id, id);
+  if (!existing) throw new Error("post_not_found");
+
+  const revisions = await listPostRevisionsInternal(id);
+  const revision = revisions.find((item) => item.id === revisionId);
+  if (!revision) throw new Error("post_revision_not_found");
+
+  const currentData = ensurePostDocumentForWrite(normalizePostData(existing.data));
+  const targetData = ensurePostDocumentForWrite(normalizePostData(revision.data));
+
+  const isSameSnapshot =
+    serializeRevisionData(currentData) === serializeRevisionData(targetData);
+
+  if (isSameSnapshot) {
+    return {
+      restored: false,
+      revision,
+      post: withNormalizedReadData(existing),
+    };
+  }
+
+  if (actorId) {
+    await createOrReuseRevision(id, currentData, actorId);
+  }
+
+  const updated = await updatePost(id, { data: targetData });
+  if (!updated) throw new Error("post_not_found");
+
+  return {
+    restored: true,
+    revision,
+    post: updated,
+  };
 }
