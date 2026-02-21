@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 23 tasks
 - **In Progress:** 2 tasks
 - **Done:** 427 tasks
 
@@ -39,6 +39,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-058 | Admin Cache, Prefetch, and Request Stability | High | Large | Eliminacja petli fetch + dedupe + stabilna polityka refresh/prefetch |
+| TASK-058-01 | Request Storm Instrumentation and Baseline | High | Medium | Diagnostyka endpointow i baseline request budget |
+| TASK-058-02 | Shared Dedupe Cache for Global Admin Reads | High | Large | `user-settings`/`assistant/status`/`admin-theme-profiles` dedupe |
+| TASK-058-03 | Pages and Menus Hydration and Force Refresh Policy | High | Large | Usuniecie petli i dublowanego ladowania list/detail |
+| TASK-058-04 | Admin Prefetch Policy Rework and Request Budgeting | High | Medium | Prefetch jako cache warmup (`force: false`) + budgety |
+| TASK-058-05 | Admin Shell Global Request Minimization | High | Large | Ograniczenie globalnych fetchy z shell/topbar |
+| TASK-058-06 | Regression Tests, Docs, Changelog, and Closure | Medium | Medium | Pelna walidacja + dokumentacja + zamkniecie tasku |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |

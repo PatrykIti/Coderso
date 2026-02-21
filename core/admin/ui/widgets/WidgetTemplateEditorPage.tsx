@@ -43,6 +43,7 @@ import {
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { BlockList } from "@/ui/pages/builder/BlockList";
@@ -174,7 +175,10 @@ export function WidgetTemplateEditorPage() {
   const isNew = !templateId || templateId === "new";
 
   const widgets = useMemo(() => listRegisteredWidgets(), []);
-  const initialCategories = getCachedWidgetTemplateCategories();
+  const initialCategories = useMemo(
+    () => getCachedWidgetTemplateCategories(),
+    []
+  );
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -191,6 +195,7 @@ export function WidgetTemplateEditorPage() {
   const [templateCategories, setTemplateCategories] = useState<
     WidgetTemplateCategory[]
   >(() => initialCategories ?? []);
+  const hasHydratedCategoriesRef = useRef(Boolean(initialCategories));
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -484,7 +489,10 @@ export function WidgetTemplateEditorPage() {
   const refreshCategories = useCallback(
     async (options?: { force?: boolean; background?: boolean }) => {
       const force = options?.force ?? false;
-      const background = options?.background ?? Boolean(initialCategories);
+      const background = resolveCacheRefreshBackground({
+        explicitBackground: options?.background,
+        hasHydrated: hasHydratedCategoriesRef.current,
+      });
       if (!background) {
         setCategoriesError(null);
       }
@@ -492,13 +500,14 @@ export function WidgetTemplateEditorPage() {
         const result = await listWidgetTemplateCategoriesCached({ force });
         setTemplateCategories(result);
         setCategoriesError(null);
+        hasHydratedCategoriesRef.current = true;
       } catch {
         if (!background) {
           setCategoriesError("Failed to load categories.");
         }
       }
     },
-    [initialCategories]
+    []
   );
 
   useEffect(() => {

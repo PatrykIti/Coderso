@@ -56,6 +56,7 @@ import {
 import { MenuTree, type MenuDropIntent } from "@/ui/menus/MenuTree";
 import type { MenuItemDisplay } from "@/ui/menus/types";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 import { normalizeMenuItemSettings } from "../../../services/menus/menuItemSettings";
 
 const createTempId = () => {
@@ -291,8 +292,8 @@ export const validateMenuItemsPayload = (items: MenuItemRecord[]) => {
 };
 
 export function MenuEditorPage() {
-  const initialMenus = getCachedMenus();
-  const initialPages = getCachedPages();
+  const initialMenus = useMemo(() => getCachedMenus(), []);
+  const initialPages = useMemo(() => getCachedPages(), []);
   const [menus, setMenus] = useState<MenuSummary[]>(() => initialMenus ?? []);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(
     () => initialMenus?.[0]?.id ?? null
@@ -394,7 +395,10 @@ export function MenuEditorPage() {
   const refreshMenus = useCallback(
     async (options?: { force?: boolean; background?: boolean; reloadActive?: boolean }) => {
       const force = options?.force ?? false;
-      const background = options?.background ?? hasHydratedRef.current;
+      const background = resolveCacheRefreshBackground({
+        explicitBackground: options?.background,
+        hasHydrated: hasHydratedRef.current,
+      });
       const reloadActive = options?.reloadActive ?? true;
       const currentActiveId = activeMenuIdRef.current;
       if (!background) {
@@ -439,16 +443,8 @@ export function MenuEditorPage() {
   );
 
   useEffect(() => {
-    if (initialMenus) {
-      setMenus(initialMenus);
-      setIsLoading(false);
-      hasHydratedRef.current = true;
-    }
-    if (initialPages) {
-      setPages(initialPages);
-    }
     refreshMenus({ force: true, reloadActive: true }).catch(() => undefined);
-  }, [initialMenus, initialPages, refreshMenus]);
+  }, [refreshMenus]);
 
   useEffect(() => {
     if (!activeMenuId) return;
