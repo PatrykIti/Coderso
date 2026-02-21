@@ -1,13 +1,29 @@
-import { GitBranch, Info, Settings2 } from "lucide-react";
+import { Info, Settings2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  formFieldLabelPositionOptions,
+  formFieldLogicOperatorOptions,
+  formFieldWidthOptions,
+  isValueLogicOperator,
+  type FormFieldLogic,
+  type FormFieldLogicOperator,
+  type FormFieldStyle,
+} from "../../../services/forms/fieldSettings";
 
 export type FieldSettings = {
   id: string;
@@ -22,11 +38,14 @@ export type FieldSettings = {
     defaultValue?: boolean | string;
     pattern?: string;
     step?: number;
+    logic?: FormFieldLogic;
+    style?: FormFieldStyle;
   };
 };
 
 type FieldSettingsPanelProps = {
   field: FieldSettings | null;
+  allFields: Array<Pick<FieldSettings, "id" | "name" | "label">>;
   onChange: (fieldId: string, updates: Partial<FieldSettings>) => void;
   onSettingsChange: (
     fieldId: string,
@@ -39,8 +58,48 @@ const supportsPlaceholder = new Set(["text", "email", "textarea", "phone", "date
 const supportsOptions = new Set(["select"]);
 const supportsDefault = new Set(["checkbox"]);
 
+const createLogicPatch = (
+  current: FormFieldLogic | undefined,
+  patch: Partial<FormFieldLogic>
+): FormFieldLogic => {
+  const base = current ?? { operator: "always" as FormFieldLogicOperator };
+  const merged: FormFieldLogic = {
+    ...base,
+    ...patch,
+  };
+
+  if (merged.operator === "always") {
+    return { operator: "always" };
+  }
+
+  const field = merged.field?.trim() ?? "";
+  if (!field) {
+    return {
+      operator: merged.operator,
+      field: "",
+      ...(isValueLogicOperator(merged.operator)
+        ? { value: merged.value?.trim() ?? "" }
+        : {}),
+    };
+  }
+
+  if (isValueLogicOperator(merged.operator)) {
+    return {
+      operator: merged.operator,
+      field,
+      value: merged.value?.trim() ?? "",
+    };
+  }
+
+  return {
+    operator: merged.operator,
+    field,
+  };
+};
+
 export function FieldSettingsPanel({
   field,
+  allFields,
   onChange,
   onSettingsChange,
   onDuplicate,
@@ -54,6 +113,25 @@ export function FieldSettingsPanel({
   }
 
   const optionsValue = field.settings.options?.join("\n") ?? "";
+  const dependentFieldOptions = allFields.filter((entry) => entry.id !== field.id);
+  const logic = field.settings.logic ?? { operator: "always" as FormFieldLogicOperator };
+  const style = field.settings.style ?? { width: "full", labelPosition: "above" };
+  const needsField = logic.operator !== "always";
+  const needsValue = isValueLogicOperator(logic.operator);
+
+  const patchLogic = (patch: Partial<FormFieldLogic>) => {
+    const next = createLogicPatch(field.settings.logic, patch);
+    onSettingsChange(field.id, { logic: next });
+  };
+
+  const patchStyle = (patch: Partial<FormFieldStyle>) => {
+    onSettingsChange(field.id, {
+      style: {
+        ...(field.settings.style ?? {}),
+        ...patch,
+      },
+    });
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -227,29 +305,128 @@ export function FieldSettingsPanel({
                 </div>
               </div>
             </div>
-            <Separator />
-            <div className="rounded-xl border bg-primary/5 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                <GitBranch className="h-4 w-4" />
-                Conditional Logic
+          </TabsContent>
+          <TabsContent value="logic" className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Visibility rule
+              </label>
+              <Select
+                value={logic.operator}
+                onValueChange={(value) =>
+                  patchLogic({ operator: value as FormFieldLogicOperator })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select rule" />
+                </SelectTrigger>
+                <SelectContent>
+                  {formFieldLogicOperatorOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {needsField ? (
+              <div className="space-y-2">
+                <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  Dependent field
+                </label>
+                {dependentFieldOptions.length === 0 ? (
+                  <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+                    Add at least one more field to create conditional visibility.
+                  </div>
+                ) : (
+                  <Select
+                    value={logic.field && logic.field.length > 0 ? logic.field : undefined}
+                    onValueChange={(value) => patchLogic({ field: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose field" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dependentFieldOptions.map((entry) => (
+                        <SelectItem key={entry.id} value={entry.name}>
+                          {entry.label} ({entry.name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Show this field only if &quot;Subject&quot; is set to &quot;Technical
-                Support&quot;.
-              </p>
-              <Button variant="link" className="mt-3 h-auto p-0 text-xs">
-                Edit logic rule
-              </Button>
+            ) : null}
+
+            {needsValue ? (
+              <div className="space-y-2">
+                <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  Match value
+                </label>
+                <Input
+                  value={logic.value ?? ""}
+                  onChange={(event) => patchLogic({ value: event.target.value })}
+                  placeholder="Value to match"
+                />
+              </div>
+            ) : null}
+
+            <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+              Hidden fields are excluded from required validation and submission payload.
             </div>
           </TabsContent>
-          <TabsContent value="logic" className="space-y-3">
-            <div className="rounded-lg border bg-muted/20 p-4 text-xs text-muted-foreground">
-              Logic rules and visibility conditions will appear here.
+          <TabsContent value="style" className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Field width
+              </label>
+              <Select
+                value={style.width ?? "full"}
+                onValueChange={(value) =>
+                  patchStyle({ width: value as FormFieldStyle["width"] })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select width" />
+                </SelectTrigger>
+                <SelectContent>
+                  {formFieldWidthOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </TabsContent>
-          <TabsContent value="style" className="space-y-3">
-            <div className="rounded-lg border bg-muted/20 p-4 text-xs text-muted-foreground">
-              Typography, spacing, and accent controls will appear here.
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Label position
+              </label>
+              <Select
+                value={style.labelPosition ?? "above"}
+                onValueChange={(value) =>
+                  patchStyle({
+                    labelPosition: value as FormFieldStyle["labelPosition"],
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select label position" />
+                </SelectTrigger>
+                <SelectContent>
+                  {formFieldLabelPositionOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
+              Style options apply in runtime preview and frontend form rendering.
             </div>
           </TabsContent>
         </Tabs>

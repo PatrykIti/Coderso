@@ -155,6 +155,53 @@ test("form embed renders multi-step runtime structure", () => {
   expect(html).toContain("Details");
 });
 
+test("form embed applies field style and logic runtime attributes", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Styled Form",
+          fields: [
+            {
+              id: "field-category",
+              type: "text",
+              label: "Category",
+              name: "category",
+              required: false,
+            },
+            {
+              id: "field-details",
+              type: "text",
+              label: "Details",
+              name: "details",
+              required: true,
+              settings: {
+                style: {
+                  width: "half",
+                  labelPosition: "hidden",
+                },
+                logic: {
+                  operator: "equals",
+                  field: "category",
+                  value: "support",
+                },
+              },
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  expect(html).toContain("md:col-span-1");
+  expect(html).toContain('data-form-field="details"');
+  expect(html).toContain('data-logic-operator="equals"');
+  expect(html).toContain('data-logic-field="category"');
+  expect(html).toContain('data-logic-value="support"');
+});
+
 test("form embed injects runtime script when fields exist", () => {
   const html = renderToString(
     <FormEmbedBlock

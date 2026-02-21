@@ -3,6 +3,7 @@ import {
   AtSign,
   Calendar,
   CheckSquare,
+  Eye,
   ListChecks,
   Save,
   Type,
@@ -62,6 +63,7 @@ import { FieldListPanel, type FormFieldListItem } from "./FieldListPanel";
 import { FormActionsPanel } from "./FormActionsPanel";
 import { FieldSettingsPanel, type FieldSettings } from "./FieldSettingsPanel";
 import { FormCanvas } from "./FormCanvas";
+import { FormRuntimePreviewDialog } from "./FormRuntimePreviewDialog";
 import { FormSettingsPanel } from "./FormSettingsPanel";
 
 const fieldLibraryItems: FieldLibraryItem[] = [
@@ -227,6 +229,7 @@ export function FormBuilderPage() {
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [mobileFieldsOpen, setMobileFieldsOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const setUnsavedChanges = (value: boolean) => {
     hasUnsavedChangesRef.current = value;
@@ -590,6 +593,15 @@ export function FormBuilderPage() {
     navigate(`/forms/${encodeURIComponent(formId)}/action-runs`);
   };
 
+  const openRuntimePreview = () => {
+    if (!activeForm) return;
+    if (hasUnsavedChanges) {
+      setSaveError("Save form before opening runtime preview.");
+      return;
+    }
+    setPreviewOpen(true);
+  };
+
   const renderFormInspector = () => (
     <Tabs
       value={inspectorTab}
@@ -669,6 +681,7 @@ export function FormBuilderPage() {
         ) : (
           <FieldSettingsPanel
             field={selectedField}
+            allFields={fields}
             onChange={handleFieldChange}
             onSettingsChange={handleFieldSettingsChange}
             onDuplicate={handleDuplicate}
@@ -696,9 +709,21 @@ export function FormBuilderPage() {
     >
       <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3">
-          <Button variant="outline" size="sm" onClick={openActionLogs}>
-            Action logs
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={openActionLogs}>
+              Action logs
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={openRuntimePreview}
+              disabled={!activeForm || isBusy}
+            >
+              <Eye className="h-4 w-4" />
+              Runtime preview
+            </Button>
+          </div>
           <div className="ml-auto flex items-center gap-2">
             <Button
               size="sm"
@@ -831,6 +856,7 @@ export function FormBuilderPage() {
             ) : (
               <FieldSettingsPanel
                 field={selectedField}
+                allFields={fields}
                 onChange={handleFieldChange}
                 onSettingsChange={handleFieldSettingsChange}
                 onDuplicate={handleDuplicate}
@@ -839,6 +865,17 @@ export function FormBuilderPage() {
           </div>
         </SheetContent>
       </Sheet>
+      <FormRuntimePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        formId={activeForm?.id ?? null}
+        formName={formTitle}
+        formDescription={formDescription}
+        settings={meta.settings}
+        fields={fields}
+        hasUnsavedChanges={hasUnsavedChanges}
+        onOpenLogs={openActionLogs}
+      />
     </EditorShell>
   );
 }

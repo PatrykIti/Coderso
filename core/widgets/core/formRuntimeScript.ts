@@ -39,6 +39,87 @@ const runtimeClientScript = String.raw`(() => {
       return true;
     });
 
+  const getFieldContainers = (form) =>
+    Array.from(form.querySelectorAll("[data-form-field]")).filter(
+      (element) => element instanceof HTMLElement
+    );
+
+  const collectValues = (form) => {
+    const values = {};
+    getFormFields(form).forEach((field) => {
+      const value = readNamedValue(field);
+      if (value === null) return;
+      values[field.name] = value;
+    });
+    return values;
+  };
+
+  const toComparable = (value) => {
+    if (value === null || value === undefined) return null;
+    const text = String(value).trim();
+    return text.length > 0 ? text : null;
+  };
+
+  const evaluateFieldLogic = (container, values) => {
+    if (!(container instanceof HTMLElement)) return true;
+    const operator = (container.dataset.logicOperator || "").trim();
+    if (!operator || operator === "always") return true;
+    const fieldName = (container.dataset.logicField || "").trim();
+    if (!fieldName) return true;
+    const expected = (container.dataset.logicValue || "").trim().toLowerCase();
+    const actualRaw = values[fieldName];
+    const actual = (toComparable(actualRaw) || "").toLowerCase();
+    const exists = actual.length > 0;
+
+    switch (operator) {
+      case "exists":
+        return exists;
+      case "not_exists":
+        return !exists;
+      case "equals":
+        return actual === expected;
+      case "not_equals":
+        return actual !== expected;
+      case "contains":
+        return actual.includes(expected);
+      case "not_contains":
+        return !actual.includes(expected);
+      default:
+        return true;
+    }
+  };
+
+  const setFieldVisibility = (container, visible) => {
+    if (!(container instanceof HTMLElement)) return;
+    container.hidden = !visible;
+    container.dataset.logicVisible = visible ? "1" : "0";
+
+    const controls = Array.from(
+      container.querySelectorAll("input, textarea, select")
+    );
+    controls.forEach((control) => {
+      if (
+        !(control instanceof HTMLInputElement) &&
+        !(control instanceof HTMLTextAreaElement) &&
+        !(control instanceof HTMLSelectElement)
+      ) {
+        return;
+      }
+      control.disabled = !visible;
+      const requiredOriginal = control.dataset.requiredOriginal === "1";
+      control.required = visible ? requiredOriginal : false;
+    });
+  };
+
+  const refreshFieldLogic = (form) => {
+    const values = collectValues(form);
+    const containers = getFieldContainers(form);
+    containers.forEach((container) => {
+      const visible = evaluateFieldLogic(container, values);
+      setFieldVisibility(container, visible);
+    });
+  };
+
   const getProgressKey = (form) => {
     const formId = (form.dataset.formId || "").trim();
     if (!formId) return null;
@@ -241,16 +322,19 @@ const runtimeClientScript = String.raw`(() => {
     }
 
     hydrateProgress(form);
+    refreshFieldLogic(form);
     refreshStepUi(form);
 
     const successNode = form.querySelector("[data-form-embed-success]");
     const errorNode = form.querySelector("[data-form-embed-error]");
 
     form.addEventListener("input", () => {
+      refreshFieldLogic(form);
       persistProgress(form);
     });
 
     form.addEventListener("change", () => {
+      refreshFieldLogic(form);
       persistProgress(form);
     });
 
@@ -331,6 +415,7 @@ const runtimeClientScript = String.raw`(() => {
         clearProgress(form);
         form.reset();
         setCurrentStep(form, 1);
+        refreshFieldLogic(form);
         refreshStepUi(form);
       } catch {
         if (errorNode instanceof HTMLElement) {

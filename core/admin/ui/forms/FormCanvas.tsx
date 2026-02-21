@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { resolveFormFieldStyle } from "../../../services/forms/fieldSettings";
 
 type FieldPreviewProps = {
   id: string;
@@ -15,6 +16,7 @@ type FieldPreviewProps = {
   selected?: boolean;
   multiline?: boolean;
   kind?: "text" | "select" | "checkbox";
+  labelHidden?: boolean;
   onSelect?: (id: string) => void;
   onRemove?: (id: string) => void;
 };
@@ -27,6 +29,7 @@ function FieldPreview({
   selected = false,
   multiline = false,
   kind = "text",
+  labelHidden = false,
   onSelect,
   onRemove,
 }: FieldPreviewProps) {
@@ -66,14 +69,16 @@ function FieldPreview({
         </div>
       ) : null}
       <div className="space-y-2">
-        <label
-          className={cn(
-            "text-[10px] font-semibold uppercase tracking-[0.2em]",
-            selected ? "text-primary" : "text-muted-foreground"
-          )}
-        >
-          {label}
-        </label>
+        {!labelHidden ? (
+          <label
+            className={cn(
+              "text-[10px] font-semibold uppercase tracking-[0.2em]",
+              selected ? "text-primary" : "text-muted-foreground"
+            )}
+          >
+            {label}
+          </label>
+        ) : null}
         {multiline ? (
           <Textarea
             placeholder={placeholder}
@@ -119,12 +124,16 @@ type FormCanvasProps = {
     label: string;
     type: string;
     required: boolean;
-    settings: {
-      placeholder?: string;
-      helper?: string;
-      defaultValue?: string | boolean;
-      step?: number;
-    };
+      settings: {
+        placeholder?: string;
+        helper?: string;
+        defaultValue?: string | boolean;
+        step?: number;
+        style?: {
+          width?: "full" | "half";
+          labelPosition?: "above" | "inline" | "hidden";
+        };
+      };
   }>;
   onSelectField: (id: string) => void;
   onSelectForm: () => void;
@@ -172,6 +181,7 @@ export function FormCanvas({
       typeof field.settings.defaultValue === "string"
         ? field.settings.defaultValue
         : undefined;
+    const style = resolveFormFieldStyle(field.settings.style);
     return (
       <FieldPreview
         key={field.id}
@@ -182,6 +192,7 @@ export function FormCanvas({
         selected={selectedFieldId === field.id}
         multiline={multiline}
         kind={kind}
+        labelHidden={style.labelPosition === "hidden"}
         onSelect={onSelectField}
         onRemove={onRemoveField}
       />
@@ -218,13 +229,33 @@ export function FormCanvas({
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                         {stepTitles[step - 1]?.trim() || `Step ${step}`}
                       </p>
-                      <div className="space-y-3">
-                        {(groupedFields[step] ?? []).map((field) => renderField(field))}
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {(groupedFields[step] ?? []).map((field) => {
+                          const style = resolveFormFieldStyle(field.settings.style);
+                          const spanClass =
+                            style.width === "half" ? "md:col-span-1" : "md:col-span-2";
+                          return (
+                            <div key={field.id} className={spanClass}>
+                              {renderField(field)}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ))
                 ) : (
-                  fields.map((field) => renderField(field))
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {fields.map((field) => {
+                      const style = resolveFormFieldStyle(field.settings.style);
+                      const spanClass =
+                        style.width === "half" ? "md:col-span-1" : "md:col-span-2";
+                      return (
+                        <div key={field.id} className={spanClass}>
+                          {renderField(field)}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )
               ) : (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/60 bg-muted/20 py-10 text-center text-muted-foreground">

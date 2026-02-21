@@ -348,6 +348,9 @@ export function FormActionsPanel({
     const config = isRecord(action.config) ? action.config : {};
     return (
       <div className="space-y-2">
+        <p className="text-xs text-muted-foreground">
+          SMTP and default sender are loaded from Settings &gt; Email.
+        </p>
         <Input
           value={typeof config.to === "string" ? config.to : ""}
           onChange={(event) => updateActionConfig(index, { to: event.target.value })}

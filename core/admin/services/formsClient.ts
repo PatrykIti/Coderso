@@ -402,13 +402,24 @@ export async function listFormSubmissions(formId: string) {
   });
 }
 
-export async function submitForm(formId: string, data: Record<string, unknown>) {
+export async function submitForm(
+  formId: string,
+  data: Record<string, unknown>,
+  options?: { formNonce?: string; captchaToken?: string }
+) {
+  const body: Record<string, unknown> = { data };
+  if (options?.formNonce) {
+    body.formNonce = options.formNonce;
+  }
+  if (options?.captchaToken) {
+    body.captchaToken = options.captchaToken;
+  }
   return apiRequest<FormSubmissionResponse>(
     `/forms/${formId}/submissions`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data }),
+      body: JSON.stringify(body),
     },
     { withCsrf: true }
   );

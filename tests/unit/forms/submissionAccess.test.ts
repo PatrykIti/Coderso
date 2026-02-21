@@ -27,6 +27,15 @@ test("evaluateSubmissionAccess allows public with captcha", () => {
   expect(result.requireCaptcha).toBe(true);
 });
 
+test("evaluateSubmissionAccess skips captcha for authenticated public submissions", () => {
+  const result = evaluateSubmissionAccess({
+    mode: "public",
+    isAuthenticated: true,
+  });
+  expect(result.allow).toBe(true);
+  expect(result.requireCaptcha).toBe(false);
+});
+
 test("evaluateSubmissionAccess allows internal with admin session", () => {
   const result = evaluateSubmissionAccess({
     mode: "internal",

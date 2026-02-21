@@ -1,6 +1,11 @@
 import type { CSSProperties, ComponentType } from "react";
 import type { WidgetDefinition, WidgetEditorProps } from "../types";
 import { getFormRuntimeClientScript } from "./formRuntimeScript";
+import {
+  resolveFormFieldStyle,
+  type FormFieldLogic,
+  type FormFieldStyle,
+} from "../../services/forms/fieldSettings";
 
 export type FormEmbedVariantId = "standard";
 
@@ -38,6 +43,8 @@ export type ResolvedFormField = {
     defaultValue?: string | boolean;
     pattern?: string;
     step?: number;
+    logic?: FormFieldLogic;
+    style?: FormFieldStyle;
   };
 };
 
@@ -335,6 +342,11 @@ const groupFieldsByStep = (fields: ResolvedFormField[]) => {
     .map(([step, stepFields]) => ({ step, fields: stepFields }));
 };
 
+const resolveFieldGridSpanClass = (field: ResolvedFormField) => {
+  const style = resolveFormFieldStyle(field.settings?.style);
+  return style.width === "half" ? "md:col-span-1" : "md:col-span-2";
+};
+
 function renderFieldControl(field: ResolvedFormField, options: {
   showLabels: boolean;
   showRequiredIndicator: boolean;
@@ -343,26 +355,42 @@ function renderFieldControl(field: ResolvedFormField, options: {
   radiusClassName: string;
   borderColor: string;
 }) {
-  const { showLabels, showRequiredIndicator, inputClassName, borderClassName, radiusClassName, borderColor } = options;
+  const {
+    showLabels,
+    showRequiredIndicator,
+    inputClassName,
+    borderClassName,
+    radiusClassName,
+    borderColor,
+  } = options;
   const placeholder = field.settings?.placeholder ?? "";
   const helper = field.settings?.helper;
   const required = Boolean(field.required);
   const labelSuffix = showRequiredIndicator && required ? " *" : "";
+  const resolvedFieldStyle = resolveFormFieldStyle(field.settings?.style);
+  const labelHidden =
+    !showLabels || resolvedFieldStyle.labelPosition === "hidden";
+  const inlineLabel = resolvedFieldStyle.labelPosition === "inline" && !labelHidden;
+  const wrapperClassName = inlineLabel
+    ? "grid gap-2 md:grid-cols-[180px_minmax(0,1fr)] md:items-center md:gap-3"
+    : "space-y-2";
 
   const renderLabel = () =>
-    showLabels ? (
+    !labelHidden ? (
       <label className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text)]/70">
-        {field.label}{labelSuffix}
+        {field.label}
+        {labelSuffix}
       </label>
     ) : null;
 
   if (field.type === "textarea") {
     return (
-      <div className="space-y-2">
+      <div className={wrapperClassName}>
         {renderLabel()}
         <textarea
           name={field.name}
           required={required}
+          data-required-original={required ? "1" : "0"}
           placeholder={placeholder}
           className={joinClasses(
             "w-full border bg-transparent",
@@ -387,11 +415,15 @@ function renderFieldControl(field: ResolvedFormField, options: {
           type="checkbox"
           name={field.name}
           required={required}
+          data-required-original={required ? "1" : "0"}
           defaultChecked={Boolean(field.settings?.defaultValue)}
           className={joinClasses("h-4 w-4", borderClassName, radiusClassName)}
           style={{ borderColor }}
         />
-        <span>{field.label}{labelSuffix}</span>
+        <span>
+          {!labelHidden ? field.label : "Checkbox"}
+          {labelSuffix}
+        </span>
       </label>
     );
   }
@@ -401,11 +433,12 @@ function renderFieldControl(field: ResolvedFormField, options: {
       ? field.settings?.options
       : [];
     return (
-      <div className="space-y-2">
+      <div className={wrapperClassName}>
         {renderLabel()}
         <select
           name={field.name}
           required={required}
+          data-required-original={required ? "1" : "0"}
           className={joinClasses(
             "w-full border bg-transparent",
             inputClassName,
@@ -439,12 +472,13 @@ function renderFieldControl(field: ResolvedFormField, options: {
       : "text";
 
   return (
-    <div className="space-y-2">
+    <div className={wrapperClassName}>
       {renderLabel()}
       <input
         type={inputType}
         name={field.name}
         required={required}
+        data-required-original={required ? "1" : "0"}
         placeholder={placeholder}
         defaultValue={field.settings?.defaultValue as string | undefined}
         pattern={field.settings?.pattern}
@@ -566,34 +600,52 @@ export function FormEmbedBlock({ data, variant }: { data: FormEmbedData; variant
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/60">
                         {runtimeStepTitles[group.step - 1]?.trim() || `Step ${group.step}`}
                       </p>
-                      {group.fields.map((field) => (
-                        <div key={field.id}>
-                          {renderFieldControl(field, {
-                            showLabels: fieldsConfig.showLabels,
-                            showRequiredIndicator: fieldsConfig.showRequiredIndicator,
-                            inputClassName,
-                            borderClassName,
-                            radiusClassName,
-                            borderColor: style.borderColor,
-                          })}
-                        </div>
-                      ))}
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {group.fields.map((field) => (
+                          <div
+                            key={field.id}
+                            className={resolveFieldGridSpanClass(field)}
+                            data-form-field={field.name}
+                            data-logic-operator={field.settings?.logic?.operator}
+                            data-logic-field={field.settings?.logic?.field}
+                            data-logic-value={field.settings?.logic?.value}
+                          >
+                            {renderFieldControl(field, {
+                              showLabels: fieldsConfig.showLabels,
+                              showRequiredIndicator: fieldsConfig.showRequiredIndicator,
+                              inputClassName,
+                              borderClassName,
+                              radiusClassName,
+                              borderColor: style.borderColor,
+                            })}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                fields.map((field) => (
-                  <div key={field.id}>
-                    {renderFieldControl(field, {
-                      showLabels: fieldsConfig.showLabels,
-                      showRequiredIndicator: fieldsConfig.showRequiredIndicator,
-                      inputClassName,
-                      borderClassName,
-                      radiusClassName,
-                      borderColor: style.borderColor,
-                    })}
-                  </div>
-                ))
+                <div className="grid gap-4 md:grid-cols-2">
+                  {fields.map((field) => (
+                    <div
+                      key={field.id}
+                      className={resolveFieldGridSpanClass(field)}
+                      data-form-field={field.name}
+                      data-logic-operator={field.settings?.logic?.operator}
+                      data-logic-field={field.settings?.logic?.field}
+                      data-logic-value={field.settings?.logic?.value}
+                    >
+                      {renderFieldControl(field, {
+                        showLabels: fieldsConfig.showLabels,
+                        showRequiredIndicator: fieldsConfig.showRequiredIndicator,
+                        inputClassName,
+                        borderClassName,
+                        radiusClassName,
+                        borderColor: style.borderColor,
+                      })}
+                    </div>
+                  ))}
+                </div>
               )}
               <div className={joinClasses("flex", buttonAlignClassMap[layout.buttonAlignment])}>
                 {hasMultipleSteps ? (

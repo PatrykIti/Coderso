@@ -212,7 +212,7 @@ export function FormActionLogsPage() {
               ) : runs.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
-                    No action runs yet.
+                    No action runs yet. Use Runtime preview in the form editor to trigger a test submission.
                   </td>
                 </tr>
               ) : (

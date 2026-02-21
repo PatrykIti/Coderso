@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 24 tasks
 - **In Progress:** 2 tasks
-- **Done:** 404 tasks
+- **Done:** 411 tasks
 
 ---
 
@@ -78,6 +78,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-056 | Forms Editor Logic, Style, Runtime Preview, and Action Logs | High | Medium | Forms editor parity: logic/style tabs + runtime test flow + action logs clarity |
+| TASK-056-06 | Forms QA, Docs, Changelog, and Closure | Medium | Medium | Lint/types/full tests + docs/changelog/task board sync |
+| TASK-056-05 | Form Submission Access Adjustments for Admin Testing | Medium | Small | Authenticated admin can test public forms without captcha friction |
+| TASK-056-04 | Form Runtime Preview and Action Logs Test Flow | High | Medium | Interactive runtime preview dialog with test submit and logs CTA |
+| TASK-056-03 | Form Editor Logic/Style UI | High | Medium | Real controls for field logic/style tabs and canvas parity |
+| TASK-056-02 | Form Field Style Contract and Runtime Rendering | High | Medium | Typed style contract + runtime width/label-position rendering |
+| TASK-056-01 | Form Field Logic Contract and Normalization | High | Medium | Typed logic contract + normalization + evaluator |
 | TASK-054-19-04 | Docs, Changelog, and Kanban Closure | Medium | Medium | Release gates docs/spec/changelog/task sync (parent pending 054-199) |
 | TASK-054-19-03 | Gate Runner and CI Pipeline Wiring | High | Medium | Gate runner script + package scripts + CI workflow |
 | TASK-054-19-02 | Performance and Security Gate Test Suites | High | Medium | Dedicated `tests/perf` and `tests/security` suites |

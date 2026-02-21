@@ -34,6 +34,9 @@ export function evaluateSubmissionAccess(params: {
     params.requiredApiKeyScope ?? submissionAccessDefaults.requiredApiKeyScope;
 
   if (params.mode === "public") {
+    if (params.isAuthenticated) {
+      return { allow: true, requireCaptcha: false };
+    }
     return { allow: true, requireCaptcha: true };
   }
 

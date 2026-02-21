@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { normalizeFormStep } from "./formSettings";
+import {
+  evaluateFormFieldLogic,
+  normalizeFormFieldLogic,
+  normalizeFormFieldStyle,
+  type FormFieldLogic,
+  type FormFieldStyle,
+} from "./fieldSettings";
 
 export type FormFieldType =
   | "text"
@@ -17,6 +24,8 @@ export type FormFieldSettings = {
   defaultValue?: string | boolean;
   pattern?: string;
   step?: number;
+  logic?: FormFieldLogic;
+  style?: FormFieldStyle;
 };
 
 export type FormFieldInput = {
@@ -137,6 +146,16 @@ const normalizeSettings = (
     normalized.options = normalizeOptions(settings.options);
   }
 
+  const logic = normalizeFormFieldLogic(settings.logic);
+  if (logic) {
+    normalized.logic = logic;
+  }
+
+  const style = normalizeFormFieldStyle(settings.style);
+  if (style) {
+    normalized.style = style;
+  }
+
   return normalized;
 };
 
@@ -216,6 +235,10 @@ export function validateSubmissionPayload(
   }
 
   for (const field of fields) {
+    const visible = evaluateFormFieldLogic(field.settings.logic, data);
+    if (!visible) {
+      continue;
+    }
     const value = data[field.name];
     if (value === undefined || value === null || value === "") {
       if (field.required) {
