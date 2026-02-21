@@ -1,4 +1,4 @@
-import { Layers3, PanelLeftOpen, PanelRightOpen, RefreshCcw } from "lucide-react";
+import { PanelLeftOpen, PanelRightOpen, RefreshCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -15,23 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
-import { POST_BLOCK_TYPES } from "../../../../services/posts/editor/postBlockDocument";
+import { BlockInserter } from "./blocks/BlockInserter";
+import { getPostBlockLabel } from "./blocks/blockCatalog";
 import { PostEditorCanvas } from "./PostEditorCanvas";
 import { PostEditorTopBar } from "./PostEditorTopBar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
-
-const blockTypeLabel: Record<string, string> = {
-  paragraph: "Paragraph",
-  heading: "Heading",
-  list: "List",
-  quote: "Quote",
-  code: "Code",
-  image: "Image",
-  separator: "Separator",
-  callout: "Callout",
-  button: "Button",
-  embed: "Embed",
-};
 
 const toNumberValue = (value: unknown, fallback = 0) =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
@@ -45,30 +33,13 @@ export function PostBlockEditorShell() {
   const editor = usePostEditorState();
 
   const blockLibrary = (
-    <div className="flex h-full flex-col">
-      <div className="border-b px-4 py-3">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">
-          Block inserter
-        </p>
-      </div>
-      <div className="space-y-2 overflow-auto p-3">
-        {POST_BLOCK_TYPES.map((type) => (
-          <Button
-            key={type}
-            type="button"
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => {
-              editor.insertBlock(type);
-              setMobileBlocksOpen(false);
-            }}
-          >
-            <Layers3 className="mr-2 h-4 w-4" />
-            {blockTypeLabel[type]}
-          </Button>
-        ))}
-      </div>
-    </div>
+    <BlockInserter
+      onInsertBlock={(type) => {
+        editor.insertBlock(type);
+        setMobileBlocksOpen(false);
+      }}
+      disabled={editor.loading}
+    />
   );
 
   const inspectorPanel = (
@@ -105,7 +76,7 @@ export function PostBlockEditorShell() {
           {editor.selectedBlock ? (
             <div className="space-y-4">
               <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-                <p>Type: {blockTypeLabel[editor.selectedBlock.type]}</p>
+                <p>Type: {getPostBlockLabel(editor.selectedBlock.type)}</p>
                 <p>ID: {editor.selectedBlock.id}</p>
               </div>
 
@@ -354,6 +325,9 @@ export function PostBlockEditorShell() {
             onSelectBlock={(id) => editor.selectBlock(id)}
             onUpdateSelectedBlockContent={editor.updateSelectedBlockContent}
             onMoveSelectedBlock={editor.moveSelectedBlock}
+            onMoveBlockToIndex={editor.moveBlockToIndex}
+            onTransformSelectedBlock={editor.transformSelectedBlock}
+            onInsertBlock={editor.insertBlock}
             onDeleteSelectedBlock={editor.deleteSelectedBlock}
           />
         )}

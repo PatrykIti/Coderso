@@ -68,3 +68,47 @@ test("postEditorStore supports undo and redo", () => {
   const redone = postEditorReducer(undone, { type: "redo" });
   expect(redone.document.blocks[0]?.content).toBe("Hello world");
 });
+
+test("postEditorStore moves blocks by target index", () => {
+  const initial = createInitialPostEditorState();
+  const withHeading = postEditorReducer(initial, {
+    type: "insert_block",
+    mutation: { block: createPostBlock("heading"), afterId: initial.selectedBlockId },
+  });
+  const withQuote = postEditorReducer(withHeading, {
+    type: "insert_block",
+    mutation: { block: createPostBlock("quote"), afterId: withHeading.selectedBlockId },
+  });
+
+  const moved = postEditorReducer(withQuote, {
+    type: "move_block_to_index",
+    mutation: { id: withQuote.document.blocks[0]?.id ?? "", targetIndex: 3 },
+  });
+
+  expect(moved.document.blocks.map((block) => block.type)).toEqual([
+    "heading",
+    "quote",
+    "paragraph",
+  ]);
+});
+
+test("postEditorStore transforms selected block without changing id", () => {
+  const initial = createInitialPostEditorState();
+  const blockId = initial.selectedBlockId ?? "";
+  const updated = postEditorReducer(initial, {
+    type: "update_block",
+    mutation: {
+      id: blockId,
+      mutate: (block) => ({ ...block, content: "Item one\nItem two" }),
+    },
+  });
+
+  const transformed = postEditorReducer(updated, {
+    type: "transform_block",
+    mutation: { id: blockId, targetType: "list" },
+  });
+
+  expect(transformed.document.blocks[0]?.id).toBe(blockId);
+  expect(transformed.document.blocks[0]?.type).toBe("list");
+  expect(transformed.document.blocks[0]?.content).toEqual(["Item one", "Item two"]);
+});

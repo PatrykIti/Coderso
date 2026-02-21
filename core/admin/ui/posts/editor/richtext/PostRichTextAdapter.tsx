@@ -3,6 +3,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type KeyboardEvent,
 } from "react";
 
@@ -14,6 +15,9 @@ import {
   serializePostRichText,
 } from "../../../../../services/posts/editor/postRichTextSerializer";
 import { postRichTextBlockTagSet } from "../../../../../services/posts/editor/postRichTextSchema";
+import type { PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
+import { searchPostBlockCatalog } from "../blocks/blockCatalog";
+import { SlashCommandMenu } from "../blocks/SlashCommandMenu";
 import {
   PostRichTextToolbar,
   type PostRichTextCommand,
@@ -27,6 +31,7 @@ type PostRichTextAdapterProps = {
   disabled?: boolean;
   className?: string;
   minHeightClassName?: string;
+  onSlashInsertBlock?: (type: PostBlockType) => void;
 };
 
 const escapeHtml = (value: string) =>
@@ -81,8 +86,11 @@ export function PostRichTextAdapter({
   disabled = false,
   className,
   minHeightClassName = "min-h-[18rem]",
+  onSlashInsertBlock,
 }: PostRichTextAdapterProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashOpen, setSlashOpen] = useState(false);
 
   const emitChange = useCallback(() => {
     const current = editorRef.current;
@@ -199,6 +207,13 @@ export function PostRichTextAdapter({
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Escape" && slashOpen) {
+        event.preventDefault();
+        setSlashOpen(false);
+        setSlashQuery("");
+        return;
+      }
+
       const modifier = event.metaKey || event.ctrlKey;
       const key = event.key.toLowerCase();
 
@@ -237,10 +252,55 @@ export function PostRichTextAdapter({
         executeCommand("quote");
       }
     },
-    [executeCommand]
+    [executeCommand, slashOpen]
   );
 
   const hasValue = useMemo(() => postRichTextToPlainText(value).length > 0, [value]);
+
+  const updateSlashState = useCallback(() => {
+    if (!onSlashInsertBlock) {
+      if (slashOpen) {
+        setSlashOpen(false);
+        setSlashQuery("");
+      }
+      return;
+    }
+    const current = editorRef.current;
+    if (!current) return;
+    const plainText = postRichTextToPlainText(current.innerHTML);
+    const match = /(?:^|\s)\/([a-z0-9-]*)$/i.exec(plainText);
+    if (!match) {
+      setSlashOpen(false);
+      setSlashQuery("");
+      return;
+    }
+    setSlashOpen(true);
+    setSlashQuery((match[1] ?? "").toLowerCase());
+  }, [onSlashInsertBlock, slashOpen]);
+
+  const slashOptions = useMemo(
+    () => searchPostBlockCatalog(slashQuery).slice(0, 8),
+    [slashQuery]
+  );
+
+  const handleSlashSelect = useCallback(
+    (type: PostBlockType) => {
+      onSlashInsertBlock?.(type);
+      const current = editorRef.current;
+      if (current) {
+        const plain = postRichTextToPlainText(current.innerHTML);
+        if (/^\/[a-z0-9-]*$/i.test(plain.trim())) {
+          current.innerHTML = "";
+          onChange("");
+        } else {
+          emitChange();
+        }
+      }
+      setSlashOpen(false);
+      setSlashQuery("");
+    },
+    [emitChange, onChange, onSlashInsertBlock]
+  );
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -260,9 +320,26 @@ export function PostRichTextAdapter({
             "w-full rounded-lg px-3 py-2 text-sm leading-relaxed focus:outline-none",
             minHeightClassName
           )}
-          onInput={emitChange}
-          onBlur={emitChange}
+          onInput={() => {
+            emitChange();
+            updateSlashState();
+          }}
+          onBlur={() => {
+            emitChange();
+            setSlashOpen(false);
+            setSlashQuery("");
+          }}
           onKeyDown={handleKeyDown}
+        />
+        <SlashCommandMenu
+          open={slashOpen}
+          query={slashQuery}
+          options={slashOptions}
+          onSelect={handleSlashSelect}
+          onClose={() => {
+            setSlashOpen(false);
+            setSlashQuery("");
+          }}
         />
       </div>
       <p className="text-xs text-muted-foreground">

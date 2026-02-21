@@ -312,3 +312,5 @@ Project Change Log.
 | 276 | 2026-02-20 | Coderso release gates baseline | QA/Security |
 | 277 | 2026-02-21 | Forms editor logic/style parity and runtime test preview | CMS/Forms |
 | 278 | 2026-02-21 | Posts module in Coderso (list + editor + API aliases) | CMS/Content |
+| 279 | 2026-02-21 | TASK-057-01 post block document contract and legacy compatibility | CMS/Content |
+| 280 | 2026-02-21 | TASK-057-02 modular Gutenberg-like post editor shell and state architecture | Admin/UI |

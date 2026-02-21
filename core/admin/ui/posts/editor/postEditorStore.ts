@@ -7,6 +7,7 @@ import {
   createEmptyPostBlockDocument,
   normalizePostBlockDocument,
 } from "../../../../services/posts/editor/postBlockNormalizer";
+import { transformPostBlock } from "./blocks/blockTransforms";
 
 const HISTORY_LIMIT = 100;
 
@@ -39,6 +40,16 @@ type MoveBlockMutation = {
   direction: "up" | "down";
 };
 
+type MoveBlockToIndexMutation = {
+  id: string;
+  targetIndex: number;
+};
+
+type TransformBlockMutation = {
+  id: string;
+  targetType: PostBlockType;
+};
+
 export type PostEditorAction =
   | {
       type: "hydrate";
@@ -53,6 +64,8 @@ export type PostEditorAction =
   | { type: "insert_block"; mutation: InsertBlockMutation }
   | { type: "delete_block"; id: string }
   | { type: "move_block"; mutation: MoveBlockMutation }
+  | { type: "move_block_to_index"; mutation: MoveBlockToIndexMutation }
+  | { type: "transform_block"; mutation: TransformBlockMutation }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -240,6 +253,37 @@ const mutateMoveBlock = (state: PostEditorState, mutation: MoveBlockMutation) =>
   return withHistory(state, normalizePostBlockDocument(nextDocument));
 };
 
+const mutateMoveBlockToIndex = (
+  state: PostEditorState,
+  mutation: MoveBlockToIndexMutation
+) => {
+  const nextDocument = cloneDocument(state.document);
+  const sourceIndex = nextDocument.blocks.findIndex((block) => block.id === mutation.id);
+  if (sourceIndex === -1) return state;
+
+  const boundedTarget = Math.max(0, Math.min(nextDocument.blocks.length, mutation.targetIndex));
+  if (boundedTarget === sourceIndex || boundedTarget === sourceIndex + 1) return state;
+
+  const [item] = nextDocument.blocks.splice(sourceIndex, 1);
+  if (!item) return state;
+
+  const insertIndex = sourceIndex < boundedTarget ? boundedTarget - 1 : boundedTarget;
+  nextDocument.blocks.splice(insertIndex, 0, item as PostBlock);
+
+  return withHistory(state, normalizePostBlockDocument(nextDocument));
+};
+
+const mutateTransformBlock = (state: PostEditorState, mutation: TransformBlockMutation) => {
+  const nextDocument = cloneDocument(state.document);
+  const index = nextDocument.blocks.findIndex((block) => block.id === mutation.id);
+  if (index === -1) return state;
+  const current = nextDocument.blocks[index] as PostBlock;
+  const transformed = transformPostBlock(current, mutation.targetType);
+  if (!transformed) return state;
+  nextDocument.blocks[index] = transformed;
+  return withHistory(state, normalizePostBlockDocument(nextDocument));
+};
+
 export const createInitialPostEditorState = (
   document?: PostBlockDocument,
   selectedBlockId?: string | null
@@ -302,6 +346,10 @@ export const postEditorReducer = (
       return mutateDeleteBlock(state, action.id);
     case "move_block":
       return mutateMoveBlock(state, action.mutation);
+    case "move_block_to_index":
+      return mutateMoveBlockToIndex(state, action.mutation);
+    case "transform_block":
+      return mutateTransformBlock(state, action.mutation);
     case "undo": {
       if (state.history.past.length === 0) return state;
       const previous = state.history.past[state.history.past.length - 1] as PostBlockDocument;

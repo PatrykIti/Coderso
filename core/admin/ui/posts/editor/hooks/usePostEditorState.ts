@@ -79,6 +79,8 @@ export type UsePostEditorStateResult = {
   insertBlock: (type: string) => void;
   deleteSelectedBlock: () => void;
   moveSelectedBlock: (direction: "up" | "down") => void;
+  moveBlockToIndex: (id: string, targetIndex: number) => void;
+  transformSelectedBlock: (targetType: PostBlockType) => void;
   undo: () => void;
   redo: () => void;
   markReloadRemote: () => Promise<void>;
@@ -341,6 +343,24 @@ export function usePostEditorState(): UsePostEditorStateResult {
     [state.selectedBlockId]
   );
 
+  const moveBlockToIndex = useCallback((id: string, targetIndex: number) => {
+    dispatch({
+      type: "move_block_to_index",
+      mutation: { id, targetIndex },
+    });
+  }, []);
+
+  const transformSelectedBlock = useCallback(
+    (targetType: PostBlockType) => {
+      if (!state.selectedBlockId) return;
+      dispatch({
+        type: "transform_block",
+        mutation: { id: state.selectedBlockId, targetType },
+      });
+    },
+    [state.selectedBlockId]
+  );
+
   const markReloadRemote = useCallback(async () => {
     await refresh({ force: true, allowDirty: true, setLoading: false });
     setRemoteUpdatePending(false);
@@ -377,6 +397,8 @@ export function usePostEditorState(): UsePostEditorStateResult {
     insertBlock,
     deleteSelectedBlock,
     moveSelectedBlock,
+    moveBlockToIndex,
+    transformSelectedBlock,
     undo: () => dispatch({ type: "undo" }),
     redo: () => dispatch({ type: "redo" }),
     markReloadRemote,

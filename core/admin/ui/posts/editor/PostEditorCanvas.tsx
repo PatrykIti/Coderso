@@ -1,10 +1,16 @@
-import { GripVertical, MoveDown, MoveUp, Trash2 } from "lucide-react";
+import { MoveDown, MoveUp, Shuffle, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-import type { PostBlockDocument, PostBlockType } from "../../../../services/posts/editor/postBlockDocument";
+import type {
+  PostBlockDocument,
+  PostBlockType,
+} from "../../../../services/posts/editor/postBlockDocument";
+import { getTransformTargetTypes } from "./blocks/blockTransforms";
+import { getPostBlockLabel } from "./blocks/blockCatalog";
+import { PostListViewPanel } from "./blocks/PostListViewPanel";
 import { PostRichTextAdapter } from "./richtext/PostRichTextAdapter";
 
 const blockTypeLabel: Record<PostBlockType, string> = {
@@ -30,6 +36,9 @@ type PostEditorCanvasProps = {
   onSelectBlock: (id: string) => void;
   onUpdateSelectedBlockContent: (content: unknown) => void;
   onMoveSelectedBlock: (direction: "up" | "down") => void;
+  onMoveBlockToIndex: (id: string, targetIndex: number) => void;
+  onTransformSelectedBlock: (targetType: PostBlockType) => void;
+  onInsertBlock: (type: string) => void;
   onDeleteSelectedBlock: () => void;
 };
 
@@ -48,10 +57,16 @@ export function PostEditorCanvas({
   onSelectBlock,
   onUpdateSelectedBlockContent,
   onMoveSelectedBlock,
+  onMoveBlockToIndex,
+  onTransformSelectedBlock,
+  onInsertBlock,
   onDeleteSelectedBlock,
 }: PostEditorCanvasProps) {
   const selectedBlock =
     document.blocks.find((block) => block.id === selectedBlockId) ?? null;
+  const transformTargets = selectedBlock
+    ? getTransformTargetTypes(selectedBlock.type)
+    : [];
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:p-6">
@@ -81,36 +96,12 @@ export function PostEditorCanvas({
       </div>
 
       <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
-        <div className="min-h-0 overflow-hidden rounded-xl border bg-background shadow-sm">
-          <div className="border-b px-4 py-3">
-            <p className="text-xs font-semibold uppercase text-muted-foreground">List view</p>
-          </div>
-          <div className="max-h-[30rem] space-y-2 overflow-auto p-3">
-            {document.blocks.map((block, index) => {
-              const active = block.id === selectedBlockId;
-              return (
-                <button
-                  key={block.id}
-                  type="button"
-                  className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                    active
-                      ? "border-primary/50 bg-primary/10"
-                      : "border-border/70 hover:border-primary/40"
-                  }`}
-                  onClick={() => onSelectBlock(block.id)}
-                >
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <GripVertical className="h-3.5 w-3.5" />
-                    <span>#{index + 1}</span>
-                  </div>
-                  <p className="mt-1 text-sm font-semibold text-foreground">
-                    {blockTypeLabel[block.type]}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <PostListViewPanel
+          blocks={document.blocks}
+          selectedBlockId={selectedBlockId}
+          onSelectBlock={onSelectBlock}
+          onMoveBlockToIndex={onMoveBlockToIndex}
+        />
 
         <div className="min-h-0 overflow-hidden rounded-xl border bg-background shadow-sm">
           <div className="flex items-center border-b px-4 py-3">
@@ -121,6 +112,25 @@ export function PostEditorCanvas({
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
+              {transformTargets.length > 0 ? (
+                <div className="hidden items-center gap-1 lg:flex">
+                  <span className="text-xs text-muted-foreground">Transform:</span>
+                  {transformTargets.map((type) => (
+                    <Button
+                      key={type}
+                      type="button"
+                      variant="outline"
+                      size="xs"
+                      onClick={() => onTransformSelectedBlock(type)}
+                      disabled={!selectedBlock}
+                      aria-label={`Transform to ${getPostBlockLabel(type)}`}
+                    >
+                      <Shuffle className="h-3 w-3" />
+                      {getPostBlockLabel(type)}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -168,6 +178,7 @@ export function PostEditorCanvas({
                 value={typeof selectedBlock.content === "string" ? selectedBlock.content : ""}
                 onChange={onUpdateSelectedBlockContent}
                 placeholder="Write content for this block…"
+                onSlashInsertBlock={onInsertBlock}
               />
             ) : null}
             {selectedBlock && selectedBlock.type === "code" ? (
