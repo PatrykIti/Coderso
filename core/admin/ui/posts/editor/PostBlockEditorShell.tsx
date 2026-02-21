@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -11,20 +10,15 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
 import { BlockInserter } from "./blocks/BlockInserter";
-import { getPostBlockLabel } from "./blocks/blockCatalog";
+import { BlockInspector } from "./inspector/BlockInspector";
+import { DocumentInspector } from "./inspector/DocumentInspector";
 import { PostEditorCanvas } from "./PostEditorCanvas";
 import { PostEditorTopBar } from "./PostEditorTopBar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
-
-const toNumberValue = (value: unknown, fallback = 0) =>
-  typeof value === "number" && Number.isFinite(value) ? value : fallback;
-
-const toStringValue = (value: unknown) => (typeof value === "string" ? value : "");
 
 export function PostBlockEditorShell() {
   const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false);
@@ -51,171 +45,29 @@ export function PostBlockEditorShell() {
             <TabsTrigger value="block">Block</TabsTrigger>
           </TabsList>
         </div>
-        <TabsContent value="document" className="m-0 min-h-0 flex-1 overflow-auto p-4">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Excerpt
-              </label>
-              <Textarea
-                value={editor.state.document.meta.excerpt ?? ""}
-                onChange={(event) => editor.setExcerpt(event.target.value)}
-                placeholder="Short summary used in listings"
-              />
-            </div>
-            <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-              <p>Reading time: {editor.state.document.meta.readingTimeMinutes ?? 0} min</p>
-              <p>Blocks: {editor.state.document.blocks.length}</p>
-            </div>
-          </div>
+        <TabsContent value="document" className="m-0 min-h-0 flex-1 overflow-auto">
+          <DocumentInspector
+            status={editor.status}
+            slug={editor.slug}
+            excerpt={editor.state.document.meta.excerpt ?? ""}
+            featuredImage={editor.featuredImage}
+            tagsInput={editor.tagsInput}
+            categoryId={editor.categoryId}
+            seo={editor.seoDraft}
+            taxonomySummary={editor.taxonomySummary}
+            onSlugChange={editor.setSlug}
+            onExcerptChange={editor.setExcerpt}
+            onFeaturedImageChange={editor.setFeaturedImage}
+            onTagsInputChange={editor.setTagsInput}
+            onCategoryIdChange={editor.setCategoryId}
+            onSeoChange={editor.setSeoDraft}
+          />
         </TabsContent>
-        <TabsContent value="block" className="m-0 min-h-0 flex-1 overflow-auto p-4">
-          {!editor.selectedBlock ? (
-            <p className="text-sm text-muted-foreground">Select block to edit settings.</p>
-          ) : null}
-          {editor.selectedBlock ? (
-            <div className="space-y-4">
-              <div className="rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
-                <p>Type: {getPostBlockLabel(editor.selectedBlock.type)}</p>
-                <p>ID: {editor.selectedBlock.id}</p>
-              </div>
-
-              {editor.selectedBlock.type === "heading" ? (
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Heading level
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={6}
-                    value={toNumberValue(editor.selectedBlock.attrs?.level, 2)}
-                    onChange={(event) => {
-                      const value = Number(event.target.value);
-                      editor.updateSelectedBlockAttrs({ level: value });
-                    }}
-                  />
-                </div>
-              ) : null}
-
-              {editor.selectedBlock.type === "list" ? (
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Ordered list
-                  </label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() =>
-                      editor.updateSelectedBlockAttrs({
-                        ordered: editor.selectedBlock?.attrs?.ordered !== true,
-                      })
-                    }
-                  >
-                    {editor.selectedBlock.attrs?.ordered === true ? "Ordered" : "Bulleted"}
-                  </Button>
-                </div>
-              ) : null}
-
-              {editor.selectedBlock.type === "image" ? (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Media ID
-                    </label>
-                    <Input
-                      value={toStringValue(editor.selectedBlock.attrs?.mediaId)}
-                      onChange={(event) =>
-                        editor.updateSelectedBlockAttrs({ mediaId: event.target.value })
-                      }
-                      placeholder="media-uuid"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Alt text
-                    </label>
-                    <Input
-                      value={toStringValue(editor.selectedBlock.attrs?.alt)}
-                      onChange={(event) =>
-                        editor.updateSelectedBlockAttrs({ alt: event.target.value })
-                      }
-                    />
-                  </div>
-                </>
-              ) : null}
-
-              {editor.selectedBlock.type === "callout" ? (
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Tone
-                  </label>
-                  <Input
-                    value={toStringValue(editor.selectedBlock.attrs?.tone)}
-                    onChange={(event) =>
-                      editor.updateSelectedBlockAttrs({ tone: event.target.value })
-                    }
-                    placeholder="info/success/warning/danger"
-                  />
-                </div>
-              ) : null}
-
-              {editor.selectedBlock.type === "button" ? (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Label
-                    </label>
-                    <Input
-                      value={toStringValue(editor.selectedBlock.attrs?.label)}
-                      onChange={(event) =>
-                        editor.updateSelectedBlockAttrs({ label: event.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
-                      URL
-                    </label>
-                    <Input
-                      value={toStringValue(editor.selectedBlock.attrs?.url)}
-                      onChange={(event) =>
-                        editor.updateSelectedBlockAttrs({ url: event.target.value })
-                      }
-                    />
-                  </div>
-                </>
-              ) : null}
-
-              {editor.selectedBlock.type === "embed" ? (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Provider
-                    </label>
-                    <Input
-                      value={toStringValue(editor.selectedBlock.attrs?.provider)}
-                      onChange={(event) =>
-                        editor.updateSelectedBlockAttrs({ provider: event.target.value })
-                      }
-                      placeholder="youtube/vimeo/custom"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Embed URL
-                    </label>
-                    <Input
-                      value={toStringValue(editor.selectedBlock.attrs?.url)}
-                      onChange={(event) =>
-                        editor.updateSelectedBlockAttrs({ url: event.target.value })
-                      }
-                    />
-                  </div>
-                </>
-              ) : null}
-            </div>
-          ) : null}
+        <TabsContent value="block" className="m-0 min-h-0 flex-1 overflow-auto">
+          <BlockInspector
+            block={editor.selectedBlock}
+            onChangeAttrs={editor.updateSelectedBlockAttrs}
+          />
         </TabsContent>
       </Tabs>
     </div>
@@ -293,7 +145,7 @@ export function PostBlockEditorShell() {
 
         <PostEditorTopBar
           status={editor.status}
-          dirty={editor.state.dirty}
+          dirty={editor.hasUnsavedChanges}
           saving={editor.state.saving}
           canUndo={editor.canUndo}
           canRedo={editor.canRedo}

@@ -8,8 +8,10 @@ import {
   previewPost,
   publishPost,
   type PostDetail,
+  type PostSeo,
   type PostStatus,
   unpublishPost,
+  updatePostMetadata,
   updatePost,
 } from "@/services/postsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -48,17 +50,88 @@ const createSafeBlockType = (value: string): PostBlockType => {
   return fallback;
 };
 
+const readOptionalString = (value: unknown) => (typeof value === "string" ? value : "");
+
+const normalizeTagInput = (value: string) => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  value
+    .split(/[,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .forEach((tag) => {
+      const key = tag.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      result.push(tag);
+    });
+  return result;
+};
+
+type MetadataDraftState = {
+  tagsInput: string;
+  categoryId: string;
+  seo: {
+    title: string;
+    description: string;
+    canonicalUrl: string;
+    robots: string;
+  };
+};
+
+const createMetadataDraftState = (post: PostDetail | null): MetadataDraftState => {
+  const tagsInput = (post?.tags ?? []).join(", ");
+  const categoryId = post?.taxonomy?.category?.id ?? "";
+  const seo = {
+    title: readOptionalString(post?.seo?.title),
+    description: readOptionalString(post?.seo?.description),
+    canonicalUrl: readOptionalString(post?.seo?.canonicalUrl),
+    robots: readOptionalString(post?.seo?.robots) || "index,follow",
+  };
+  return { tagsInput, categoryId, seo };
+};
+
+const serializeMetadataDraft = (draft: MetadataDraftState) =>
+  JSON.stringify({
+    tags: normalizeTagInput(draft.tagsInput),
+    categoryId: draft.categoryId.trim() || null,
+    seo: {
+      title: draft.seo.title.trim(),
+      description: draft.seo.description.trim(),
+      canonicalUrl: draft.seo.canonicalUrl.trim(),
+      robots: draft.seo.robots.trim() || "index,follow",
+    },
+  });
+
 export type UsePostEditorStateResult = {
   postId: string | null;
   post: PostDetail | null;
   title: string;
   slug: string;
   status: PostStatus;
+  hasUnsavedChanges: boolean;
   loading: boolean;
   error: string | null;
   remoteUpdatePending: boolean;
   setTitle: (value: string) => void;
   setSlug: (value: string) => void;
+  featuredImage: string;
+  setFeaturedImage: (value: string) => void;
+  tagsInput: string;
+  setTagsInput: (value: string) => void;
+  categoryId: string;
+  setCategoryId: (value: string) => void;
+  seoDraft: {
+    title: string;
+    description: string;
+    canonicalUrl: string;
+    robots: string;
+  };
+  setSeoDraft: (patch: Partial<UsePostEditorStateResult["seoDraft"]>) => void;
+  taxonomySummary: {
+    categoryName: string | null;
+    tagCount: number;
+  };
   saveDraft: () => Promise<void>;
   publish: () => Promise<void>;
   unpublish: () => Promise<void>;
@@ -98,6 +171,13 @@ export function usePostEditorState(): UsePostEditorStateResult {
   const [title, setTitle] = useState(() => initialCachedPost?.title ?? "");
   const [slug, setSlug] = useState(() => initialCachedPost?.slug ?? "");
   const [status, setStatus] = useState<PostStatus>(() => initialCachedPost?.status ?? "draft");
+  const [featuredImage, setFeaturedImage] = useState(() => {
+    if (!initialCachedPost || !isRecord(initialCachedPost.data)) return "";
+    return readOptionalString(initialCachedPost.data.featuredImage);
+  });
+  const [metadataDraft, setMetadataDraft] = useState<MetadataDraftState>(() =>
+    createMetadataDraftState(initialCachedPost)
+  );
   const [loading, setLoading] = useState(() => !initialCachedPost);
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
@@ -113,6 +193,9 @@ export function usePostEditorState(): UsePostEditorStateResult {
   );
 
   const baseDataRef = useRef<Record<string, unknown>>(getPostDataRecord(initialCachedPost));
+  const baseMetadataSignatureRef = useRef<string>(
+    serializeMetadataDraft(createMetadataDraftState(initialCachedPost))
+  );
 
   const applyLoadedPost = useCallback((nextPost: PostDetail) => {
     setPost(nextPost);
@@ -120,11 +203,42 @@ export function usePostEditorState(): UsePostEditorStateResult {
     setSlug(nextPost.slug);
     setStatus(nextPost.status);
     baseDataRef.current = getPostDataRecord(nextPost);
+    const nextFeaturedImage =
+      isRecord(nextPost.data) && typeof nextPost.data.featuredImage === "string"
+        ? nextPost.data.featuredImage
+        : "";
+    setFeaturedImage(nextFeaturedImage);
+    const nextMetadataDraft = createMetadataDraftState(nextPost);
+    setMetadataDraft(nextMetadataDraft);
+    baseMetadataSignatureRef.current = serializeMetadataDraft(nextMetadataDraft);
     dispatch({
       type: "hydrate",
       document: coercePostDocument(nextPost.data),
     });
   }, []);
+
+  const titleDirty = title !== (post?.title ?? "");
+  const slugDirty = slug !== (post?.slug ?? "");
+  const baselineFeaturedImage =
+    post && isRecord(post.data) && typeof post.data.featuredImage === "string"
+      ? post.data.featuredImage
+      : "";
+  const featuredImageDirty = featuredImage !== baselineFeaturedImage;
+  const metadataSignature = useMemo(
+    () => serializeMetadataDraft(metadataDraft),
+    [metadataDraft]
+  );
+  const metadataDirty = metadataSignature !== baseMetadataSignatureRef.current;
+  const hasUnsavedChanges =
+    state.dirty || titleDirty || slugDirty || featuredImageDirty || metadataDirty;
+
+  const taxonomySummary = useMemo(
+    () => ({
+      categoryName: post?.taxonomy?.category?.name ?? null,
+      tagCount: post?.taxonomy?.tags?.length ?? 0,
+    }),
+    [post]
+  );
 
   const refresh = useCallback(
     async (options?: { force?: boolean; allowDirty?: boolean; setLoading?: boolean }) => {
@@ -143,7 +257,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
           setError("Post not found.");
           return;
         }
-        if (!options?.allowDirty && state.dirty) {
+        if (!options?.allowDirty && hasUnsavedChanges) {
           setRemoteUpdatePending(true);
           return;
         }
@@ -161,7 +275,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
         }
       }
     },
-    [applyLoadedPost, postId, state.dirty]
+    [applyLoadedPost, hasUnsavedChanges, postId]
   );
 
   useEffect(() => {
@@ -179,20 +293,48 @@ export function usePostEditorState(): UsePostEditorStateResult {
   const buildPayloadData = useCallback(() => {
     const current = { ...baseDataRef.current };
     current.document = state.document;
+    const nextFeaturedImage = featuredImage.trim();
+    if (nextFeaturedImage.length > 0) {
+      current.featuredImage = nextFeaturedImage;
+    } else {
+      delete current.featuredImage;
+    }
     return current;
-  }, [state.document]);
+  }, [featuredImage, state.document]);
+
+  const buildMetadataPayload = useCallback(() => {
+    const normalizedTags = normalizeTagInput(metadataDraft.tagsInput);
+    const normalizedCategoryId = metadataDraft.categoryId.trim() || null;
+    const normalizedSeo: PostSeo = {
+      title: metadataDraft.seo.title.trim() || null,
+      description: metadataDraft.seo.description.trim() || null,
+      canonicalUrl: metadataDraft.seo.canonicalUrl.trim() || null,
+      robots: metadataDraft.seo.robots.trim() || "index,follow",
+    };
+
+    return {
+      tags: normalizedTags,
+      taxonomy: {
+        ...(normalizedCategoryId !== null ? { categoryId: normalizedCategoryId } : { categoryId: null }),
+      },
+      seo: normalizedSeo,
+    };
+  }, [metadataDraft]);
 
   const saveDraft = useCallback(async () => {
     if (!postId) return;
     dispatch({ type: "set_saving", saving: true });
     setError(null);
     try {
-      const updated = await updatePost(postId, {
+      const updatedDraft = await updatePost(postId, {
         title,
         slug,
         data: buildPayloadData(),
       });
-      applyLoadedPost(updated);
+      const synchronizedPost = metadataDirty
+        ? await updatePostMetadata(postId, buildMetadataPayload())
+        : updatedDraft;
+      applyLoadedPost(synchronizedPost);
       dispatch({ type: "mark_saved", at: new Date().toISOString() });
       setRemoteUpdatePending(false);
     } catch (err) {
@@ -204,13 +346,13 @@ export function usePostEditorState(): UsePostEditorStateResult {
       }
       throw err;
     }
-  }, [applyLoadedPost, buildPayloadData, postId, slug, title]);
+  }, [applyLoadedPost, buildMetadataPayload, buildPayloadData, metadataDirty, postId, slug, title]);
 
   const publish = useCallback(async () => {
     if (!postId) return;
     setError(null);
     try {
-      if (state.dirty) {
+      if (hasUnsavedChanges) {
         await saveDraft();
       }
       await publishPost(postId);
@@ -223,7 +365,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
       }
       throw err;
     }
-  }, [postId, refresh, saveDraft, state.dirty]);
+  }, [hasUnsavedChanges, postId, refresh, saveDraft]);
 
   const unpublish = useCallback(async () => {
     if (!postId) return;
@@ -248,7 +390,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     setPreviewError(null);
     setError(null);
     try {
-      if (state.dirty) {
+      if (hasUnsavedChanges) {
         await saveDraft();
       }
       const result = await previewPost(postId, 30);
@@ -263,7 +405,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     } finally {
       setPreviewLoading(false);
     }
-  }, [postId, saveDraft, state.dirty]);
+  }, [hasUnsavedChanges, postId, saveDraft]);
 
   const selectedBlock = useMemo(() => {
     if (!state.selectedBlockId) return null;
@@ -361,6 +503,27 @@ export function usePostEditorState(): UsePostEditorStateResult {
     [state.selectedBlockId]
   );
 
+  const setTagsInput = useCallback((value: string) => {
+    setMetadataDraft((prev) => ({ ...prev, tagsInput: value }));
+  }, []);
+
+  const setCategoryId = useCallback((value: string) => {
+    setMetadataDraft((prev) => ({ ...prev, categoryId: value }));
+  }, []);
+
+  const setSeoDraft = useCallback(
+    (patch: Partial<UsePostEditorStateResult["seoDraft"]>) => {
+      setMetadataDraft((prev) => ({
+        ...prev,
+        seo: {
+          ...prev.seo,
+          ...patch,
+        },
+      }));
+    },
+    []
+  );
+
   const markReloadRemote = useCallback(async () => {
     await refresh({ force: true, allowDirty: true, setLoading: false });
     setRemoteUpdatePending(false);
@@ -372,11 +535,21 @@ export function usePostEditorState(): UsePostEditorStateResult {
     title,
     slug,
     status,
+    hasUnsavedChanges,
     loading,
     error,
     remoteUpdatePending,
     setTitle,
     setSlug,
+    featuredImage,
+    setFeaturedImage,
+    tagsInput: metadataDraft.tagsInput,
+    setTagsInput,
+    categoryId: metadataDraft.categoryId,
+    setCategoryId,
+    seoDraft: metadataDraft.seo,
+    setSeoDraft,
+    taxonomySummary,
     saveDraft,
     publish,
     unpublish,
