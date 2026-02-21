@@ -48,6 +48,12 @@ const mapPostError = (error: unknown) => {
       return new ApiError("post_slug_invalid", "Post slug is invalid.", 400);
     case "post_data_invalid":
       return new ApiError("post_data_invalid", "Post data is invalid.", 400);
+    case "post_document_invalid":
+      return new ApiError(
+        "post_document_invalid",
+        "Post document is invalid.",
+        400
+      );
     case "post_type_create_failed":
       return new ApiError(
         "post_type_create_failed",

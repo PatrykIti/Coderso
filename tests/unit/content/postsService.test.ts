@@ -69,6 +69,14 @@ testIfDb("ensurePostContentType is idempotent", async () => {
 
   expect(postType.slug).toBe(POST_CONTENT_TYPE_SLUG);
   expect(second.id).toBe(postType.id);
+  expect(
+    typeof (postType.schema as Record<string, unknown>)?.properties === "object" &&
+      (postType.schema as Record<string, unknown>)?.properties !== null &&
+      Object.prototype.hasOwnProperty.call(
+        (postType.schema as Record<string, unknown>).properties as Record<string, unknown>,
+        "document"
+      )
+  ).toBe(true);
 
   if (before.length === 0) {
     shouldDeletePostType = true;
@@ -112,6 +120,7 @@ testIfDb("listPosts returns only entries for reserved post type", async () => {
 
   const loaded = await getPost(post.id);
   expect(loaded?.typeId).toBe(postType.id);
+  expect(loaded?.data).toHaveProperty("document");
   const missing = await getPost(customEntry.id);
   expect(missing).toBeNull();
 });

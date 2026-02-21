@@ -13,11 +13,55 @@ import {
   type UpdateEntryInput,
   type UpdateEntryMetadataInput,
 } from "./entryService";
-import { createContentType, getContentTypeBySlug } from "./typeService";
+import {
+  createContentType,
+  getContentTypeBySlug,
+  updateContentType,
+} from "./typeService";
 import type { ContentSchema } from "./validation";
+import { POST_BLOCK_TYPES } from "../posts/editor/postBlockDocument";
+import {
+  ensurePostDocumentForRead,
+  ensurePostDocumentForWrite,
+} from "../posts/editor/postBlockLegacyAdapter";
 
 export const POST_CONTENT_TYPE_SLUG = "post";
 export const POST_CONTENT_TYPE_NAME = "Post";
+
+const POST_DOCUMENT_SCHEMA_PROPERTY: Record<string, unknown> = {
+  type: "object",
+  additionalProperties: false,
+  required: ["version", "blocks"],
+  properties: {
+    version: { type: "number", const: 1 },
+    blocks: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["id", "type", "attrs", "content"],
+        properties: {
+          id: { type: "string", minLength: 1 },
+          type: {
+            type: "string",
+            enum: [...POST_BLOCK_TYPES],
+          },
+          attrs: { type: "object" },
+          content: {},
+        },
+      },
+    },
+    meta: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string", maxLength: 200 },
+        excerpt: { type: "string", maxLength: 320 },
+        readingTimeMinutes: { type: "number", minimum: 0 },
+      },
+    },
+  },
+};
 
 export const DEFAULT_POST_CONTENT_SCHEMA: ContentSchema = {
   type: "object",
@@ -54,6 +98,7 @@ export const DEFAULT_POST_CONTENT_SCHEMA: ContentSchema = {
         label: "Featured post",
       },
     },
+    document: POST_DOCUMENT_SCHEMA_PROPERTY,
   },
 };
 
@@ -133,13 +178,19 @@ const withSchemaSyncedFields = (
   return next;
 };
 
+const withNormalizedReadData = <T extends { data: EntryData }>(entry: T): T =>
+  ({
+    ...entry,
+    data: ensurePostDocumentForRead(entry.data),
+  }) as T;
+
 const getPostFromEntry = async (
   postTypeId: string,
   entryId: string
 ): Promise<PostDetail | null> => {
   const entry = await getEntry(entryId);
   if (!entry || entry.typeId !== postTypeId) return null;
-  return entry;
+  return withNormalizedReadData(entry);
 };
 
 const resolveDuplicateTitle = (sourceTitle: string, index: number) => {
@@ -157,7 +208,7 @@ const createDuplicatedEntry = async (
   source: PostDetail,
   actorId?: string | null
 ) => {
-  const sourceData = normalizePostData(source.data);
+  const sourceData = ensurePostDocumentForWrite(normalizePostData(source.data));
   for (let index = 0; index < 100; index += 1) {
     const nextTitle = resolveDuplicateTitle(source.title, index);
     const nextSlug = resolveDuplicateSlug(source.slug, index);
@@ -183,7 +234,22 @@ const createDuplicatedEntry = async (
 
 export async function ensurePostContentType() {
   const existing = await getContentTypeBySlug(POST_CONTENT_TYPE_SLUG);
-  if (existing) return existing;
+  if (existing) {
+    if (schemaHasField(existing.schema, "document")) return existing;
+    const nextSchema = {
+      ...(isRecord(existing.schema) ? existing.schema : {}),
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        ...(isRecord(existing.schema) && isRecord(existing.schema.properties)
+          ? existing.schema.properties
+          : {}),
+        document: POST_DOCUMENT_SCHEMA_PROPERTY,
+      },
+    } satisfies ContentSchema;
+    const updated = await updateContentType(existing.id, { schema: nextSchema });
+    return updated ?? { ...existing, schema: nextSchema };
+  }
 
   try {
     return await createContentType({
@@ -200,7 +266,8 @@ export async function ensurePostContentType() {
 
 export async function listPosts() {
   const postType = await ensurePostContentType();
-  return listEntries(postType.id);
+  const items = await listEntries(postType.id);
+  return items.map((item) => withNormalizedReadData(item));
 }
 
 export async function getPost(id: string) {
@@ -215,7 +282,7 @@ export async function createPost(input: CreatePostInput) {
   const slug = resolvePostSlug(title, requestedSlug);
   const data = withSchemaSyncedFields(
     postType.schema,
-    normalizePostData(input.data),
+    ensurePostDocumentForWrite(normalizePostData(input.data)),
     title,
     slug
   );
@@ -239,7 +306,10 @@ export async function updatePost(id: string, input: UpdatePostInput) {
   const slugInput =
     input.slug !== undefined ? normalizeOptionalPostSlug(input.slug) : undefined;
   const slug = slugInput ?? existing.slug;
-  const incomingData = input.data !== undefined ? normalizePostData(input.data) : existing.data;
+  const incomingData =
+    input.data !== undefined
+      ? ensurePostDocumentForWrite(normalizePostData(input.data))
+      : ensurePostDocumentForWrite(normalizePostData(existing.data));
   const data = withSchemaSyncedFields(postType.schema, incomingData, title, slug);
 
   const payload: UpdateEntryInput = {
@@ -249,7 +319,8 @@ export async function updatePost(id: string, input: UpdatePostInput) {
       ? { data }
       : {}),
   };
-  return updateEntry(id, payload);
+  const updated = await updateEntry(id, payload);
+  return updated ? withNormalizedReadData(updated) : null;
 }
 
 export async function updatePostMetadata(

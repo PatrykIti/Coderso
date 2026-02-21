@@ -123,6 +123,9 @@ function slugify(value: string) {
     .replace(/(^-|-$)+/g, "");
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
 export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
   const [{ mode, type, id }] = useState<{
     mode: EditorRouteMode;
@@ -175,10 +178,16 @@ export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
     () => new Set(fields.map((field) => field.name)),
     [fields]
   );
+  const hiddenSchemaFieldNames = useMemo(
+    () => (mode === "posts" ? new Set(["document"]) : new Set<string>()),
+    [mode]
+  );
 
   const applyEntry = useCallback(
     (entryResult: EntryDetail, contentType: ContentTypeSummary) => {
-      const mappedFields = fieldsFromSchema(contentType.schema);
+      const mappedFields = fieldsFromSchema(contentType.schema).filter(
+        (field) => !hiddenSchemaFieldNames.has(field.name)
+      );
       setFields(mappedFields);
       setEntry(entryResult);
       setContentTypeName(contentType.name);
@@ -192,7 +201,7 @@ export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
       setError(null);
       setRemoteUpdatePending(false);
     },
-    []
+    [hiddenSchemaFieldNames]
   );
 
   const loadTaxonomy = useCallback(
@@ -362,6 +371,13 @@ export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
   const buildPayloadData = () => {
     const schema = buildSchemaFromFields(fields);
     const data: Record<string, unknown> = {};
+    if (isRecord(entry?.data)) {
+      hiddenSchemaFieldNames.forEach((key) => {
+        if (entry.data[key] !== undefined) {
+          data[key] = entry.data[key];
+        }
+      });
+    }
     Object.keys(schema.properties).forEach((key) => {
       if (values[key] !== undefined) data[key] = values[key];
     });
