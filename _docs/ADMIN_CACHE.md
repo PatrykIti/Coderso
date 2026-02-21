@@ -115,8 +115,10 @@ Consumers subscribe and revalidate when matching keys change.
 ## UI Behavior
 ### Lists
 1. Render immediately from cache (if present).
-2. Revalidate in background (`force: true`).
-3. On cache event, refresh if no local action is in progress.
+2. If cache is missing, fetch in foreground (`force: false`, empty cache triggers network read).
+3. If cache exists, mount does not force network refresh.
+4. On explicit user action (Refresh/Save/Publish/Delete) use `force: true`.
+5. On cache invalidation/update events use `force: true` in background.
 
 ### Editors
 1. Hydrate from cache.
@@ -138,6 +140,17 @@ When adding a new resource:
 3. Add cached `list*Cached` / `get*Cached` wrappers in the service client.
 4. Broadcast cache events after mutations.
 5. In UI, hydrate from cache then revalidate in background.
+
+## Pages and Menus Lifecycle Policy
+- `PageListPage` mount policy:
+  - cache present -> `{ force: false, background: true }`
+  - cache missing -> `{ force: true, background: false }`
+- `MenuEditorPage` mount policy:
+  - cache present -> `{ force: false, background: true, reloadActive: false }`
+  - cache missing -> `{ force: false, background: false, reloadActive: false }`
+- Active menu detail reload:
+  - reloads when active menu changed, explicit refresh is clicked, save completes, or cacheBus detail event is received
+  - does not auto-force on every route entry when detail cache exists
 
 
 ## Route Map

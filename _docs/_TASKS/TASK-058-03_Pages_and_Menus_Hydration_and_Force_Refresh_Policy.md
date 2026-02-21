@@ -5,7 +5,7 @@
 **Category:** Admin UX/Data Flow  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-058-02  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -72,3 +72,21 @@ onUserRefreshClick():
 
 ## Documentation Updates Required
 - `_docs/ADMIN_CACHE.md` (Pages/Menus lifecycle)
+
+## Completion Notes (2026-02-21)
+- Updated `PageListPage` mount hydration to avoid forced refresh when cache exists:
+  - added `resolvePageListMountRefreshOptions`
+  - switched refresh background resolution to shared `resolveCacheRefreshBackground`
+- Updated `MenuEditorPage` refresh policy:
+  - added `resolveMenuMountRefreshOptions` and `shouldLoadActiveMenuAfterRefresh`
+  - `loadMenu` now respects `force` option (default `false`) instead of forcing every load
+  - mount now hydrates without force and without redundant active-detail reload
+  - explicit refresh/save/remote-update actions now force detail refresh
+  - cacheBus menu detail event now reloads with `force: true`
+- Added regression tests:
+  - `tests/unit/ui/page-list-cache-behavior.test.tsx`
+  - `tests/unit/ui/menu-editor-refresh-policy.test.tsx`
+- Verified checks:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/unit/ui/page-list-cache-behavior.test.tsx tests/unit/ui/menu-editor-refresh-policy.test.tsx tests/unit/ui/page-list.test.tsx tests/unit/ui/menu-editor.test.tsx`

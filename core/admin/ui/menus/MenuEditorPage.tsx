@@ -291,9 +291,26 @@ export const validateMenuItemsPayload = (items: MenuItemRecord[]) => {
   return { ok: true } as const;
 };
 
+export const shouldLoadActiveMenuAfterRefresh = (input: {
+  currentActiveId: string | null;
+  nextActiveId: string | null;
+  reloadActive: boolean;
+}) =>
+  Boolean(
+    input.nextActiveId &&
+      (input.reloadActive || input.nextActiveId !== input.currentActiveId)
+  );
+
+export const resolveMenuMountRefreshOptions = (hasInitialCache: boolean) => ({
+  force: false,
+  background: hasInitialCache,
+  reloadActive: false,
+});
+
 export function MenuEditorPage() {
   const initialMenus = useMemo(() => getCachedMenus(), []);
   const initialPages = useMemo(() => getCachedPages(), []);
+  const hasInitialCache = Boolean(initialMenus || initialPages);
   const [menus, setMenus] = useState<MenuSummary[]>(() => initialMenus ?? []);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(
     () => initialMenus?.[0]?.id ?? null
@@ -311,7 +328,7 @@ export function MenuEditorPage() {
   const [isDirty, setIsDirty] = useState(false);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
-  const hasHydratedRef = useRef(false);
+  const hasHydratedRef = useRef(hasInitialCache);
   const skipNextLoadRef = useRef<string | null>(null);
   const activeMenuIdRef = useRef<string | null>(activeMenuId);
   const activeItemIdRef = useRef<string | null>(activeItemId);
@@ -366,13 +383,19 @@ export function MenuEditorPage() {
   const loadMenu = useCallback(
     async (
       menuId: string,
-      options?: { allowUnsaved?: boolean; setLoading?: boolean; preserveItemId?: string | null }
+      options?: {
+        force?: boolean;
+        allowUnsaved?: boolean;
+        setLoading?: boolean;
+        preserveItemId?: string | null;
+      }
     ) => {
       const shouldSetLoading = options?.setLoading !== false;
+      const force = options?.force ?? false;
       if (shouldSetLoading) setIsLoading(true);
       setError(null);
       try {
-        const payload = await getMenuWithItemsCached(menuId, { force: true });
+        const payload = await getMenuWithItemsCached(menuId, { force });
         if (!payload) return;
         if (!options?.allowUnsaved && hasUnsavedChangesRef.current) {
           setRemoteUpdatePending(true);
@@ -399,7 +422,7 @@ export function MenuEditorPage() {
         explicitBackground: options?.background,
         hasHydrated: hasHydratedRef.current,
       });
-      const reloadActive = options?.reloadActive ?? true;
+      const reloadActive = options?.reloadActive ?? false;
       const currentActiveId = activeMenuIdRef.current;
       if (!background) {
         setIsLoading(true);
@@ -419,13 +442,18 @@ export function MenuEditorPage() {
         setActiveMenuId(nextActiveId);
         hasHydratedRef.current = true;
 
-        const shouldLoadMenu = nextActiveId && (reloadActive || nextActiveId !== currentActiveId);
+        const shouldLoadMenu = shouldLoadActiveMenuAfterRefresh({
+          currentActiveId,
+          nextActiveId,
+          reloadActive,
+        });
         if (shouldLoadMenu && nextActiveId) {
-          const preserveItemId = nextActiveId === currentActiveId ? activeItemIdRef.current : null;
+          const preserveItemId =
+            nextActiveId === currentActiveId ? activeItemIdRef.current : null;
           if (nextActiveId !== currentActiveId) {
             skipNextLoadRef.current = nextActiveId;
           }
-          await loadMenu(nextActiveId, { setLoading: false, preserveItemId });
+          await loadMenu(nextActiveId, { force, setLoading: false, preserveItemId });
         }
       } catch (err) {
         if (isApiClientError(err)) {
@@ -443,8 +471,9 @@ export function MenuEditorPage() {
   );
 
   useEffect(() => {
-    refreshMenus({ force: true, reloadActive: true }).catch(() => undefined);
-  }, [refreshMenus]);
+    const mountOptions = resolveMenuMountRefreshOptions(hasInitialCache);
+    refreshMenus(mountOptions).catch(() => undefined);
+  }, [hasInitialCache, refreshMenus]);
 
   useEffect(() => {
     if (!activeMenuId) return;
@@ -457,7 +486,11 @@ export function MenuEditorPage() {
       applyMenuPayload(cached);
       setIsLoading(false);
     }
-    loadMenu(activeMenuId, { setLoading: !cached, allowUnsaved: true }).catch(() => undefined);
+    loadMenu(activeMenuId, {
+      force: false,
+      setLoading: !cached,
+      allowUnsaved: true,
+    }).catch(() => undefined);
   }, [activeMenuId, applyMenuPayload, loadMenu]);
 
   useEffect(() => {
@@ -471,7 +504,11 @@ export function MenuEditorPage() {
     if (!activeMenuId) return;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.menuDetail(activeMenuId)) return;
-      loadMenu(activeMenuId, { setLoading: false, preserveItemId: activeItemId }).catch(() => undefined);
+      loadMenu(activeMenuId, {
+        force: true,
+        setLoading: false,
+        preserveItemId: activeItemId,
+      }).catch(() => undefined);
     });
   }, [activeMenuId, activeItemId, loadMenu]);
 
@@ -673,7 +710,12 @@ export function MenuEditorPage() {
         });
         await replaceMenuItems(activeMenuId, payload);
       }
-      await loadMenu(activeMenuId, { allowUnsaved: true, preserveItemId: activeItemId });
+      await loadMenu(activeMenuId, {
+        force: true,
+        allowUnsaved: true,
+        setLoading: false,
+        preserveItemId: activeItemId,
+      });
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -718,7 +760,17 @@ export function MenuEditorPage() {
           description="Build navigation structures and map them to your site."
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="outline" className="gap-2" onClick={() => refreshMenus({ force: true, reloadActive: true })}>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() =>
+                  refreshMenus({
+                    force: true,
+                    background: false,
+                    reloadActive: true,
+                  })
+                }
+              >
                 <RefreshCcw className="h-4 w-4" />
                 Refresh
               </Button>
@@ -777,7 +829,12 @@ export function MenuEditorPage() {
                 size="sm"
                 onClick={() => {
                   if (activeMenuId) {
-                    loadMenu(activeMenuId, { allowUnsaved: true, preserveItemId: activeItemId }).catch(() => undefined);
+                    loadMenu(activeMenuId, {
+                      force: true,
+                      allowUnsaved: true,
+                      setLoading: false,
+                      preserveItemId: activeItemId,
+                    }).catch(() => undefined);
                   }
                 }}
               >

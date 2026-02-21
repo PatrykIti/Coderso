@@ -41,9 +41,10 @@ Ujednolicic odczyty globalne admina (`user-settings`, `assistant/status`, `admin
 - `core/admin/services/userSettingsClient.ts`
 - `core/admin/services/assistantClient.ts`
 - `core/admin/services/adminThemeClient.ts`
-- `tests/unit/admin/read-through-cache.test.ts` (new)
-- `tests/unit/services/user-settings-cache.test.ts` (new)
-- `tests/unit/services/assistant-status-cache.test.ts` (new)
+- `tests/unit/admin/readThroughCache.test.ts` (new)
+- `tests/unit/admin/userSettingsClient.test.ts` (new)
+- `tests/unit/admin/assistantClient.test.ts` (extended)
+- `tests/unit/admin/adminThemeClient.test.ts` (extended)
 
 ## Pseudocode
 ```ts

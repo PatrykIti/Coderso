@@ -24,6 +24,7 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 
 import { PageFilters } from "./PageFilters";
 import { PageTable } from "./PageTable";
@@ -47,15 +48,11 @@ export function filterPages(
   });
 }
 
-export function resolvePagesRefreshBackground(input: {
-  explicitBackground?: boolean;
-  hasHydrated: boolean;
-  hasInitialCache: boolean;
-}) {
-  if (typeof input.explicitBackground === "boolean") {
-    return input.explicitBackground;
-  }
-  return input.hasHydrated || input.hasInitialCache;
+export function resolvePageListMountRefreshOptions(hasInitialCache: boolean) {
+  return {
+    force: !hasInitialCache,
+    background: hasInitialCache,
+  };
 }
 
 export function PageListPage() {
@@ -77,10 +74,9 @@ export function PageListPage() {
   const refresh = useCallback(
     async (options?: { force?: boolean; background?: boolean }) => {
       const force = options?.force ?? false;
-      const background = resolvePagesRefreshBackground({
+      const background = resolveCacheRefreshBackground({
         explicitBackground: options?.background,
         hasHydrated: hasHydratedRef.current,
-        hasInitialCache,
       });
       if (!background) {
         setIsLoading(true);
@@ -102,11 +98,12 @@ export function PageListPage() {
         }
       }
     },
-    [hasInitialCache]
+    []
   );
 
   useEffect(() => {
-    refresh({ force: true, background: hasInitialCache }).catch(() => undefined);
+    const mountOptions = resolvePageListMountRefreshOptions(hasInitialCache);
+    refresh(mountOptions).catch(() => undefined);
   }, [hasInitialCache, refresh]);
 
   useEffect(() => {

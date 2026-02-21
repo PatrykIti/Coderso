@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 20 tasks
+- **To Do:** 19 tasks
 - **In Progress:** 3 tasks
-- **Done:** 429 tasks
+- **Done:** 430 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-058-03 | Pages and Menus Hydration and Force Refresh Policy | High | Large | Usuniecie petli i dublowanego ladowania list/detail |
 | TASK-058-04 | Admin Prefetch Policy Rework and Request Budgeting | High | Medium | Prefetch jako cache warmup (`force: false`) + budgety |
 | TASK-058-05 | Admin Shell Global Request Minimization | High | Large | Ograniczenie globalnych fetchy z shell/topbar |
 | TASK-058-06 | Regression Tests, Docs, Changelog, and Closure | Medium | Medium | Pelna walidacja + dokumentacja + zamkniecie tasku |
@@ -76,6 +75,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-058-03 | Pages and Menus Hydration and Force Refresh Policy | High | Large | Mount hydration policy fixed for pages/menus with explicit-only force refresh and no redundant active-menu reload |
 | TASK-058-02 | Shared Dedupe Cache for Global Admin Reads | High | Large | Shared read-through cache for global admin reads + invalidation + tests |
 | TASK-058-01 | Request Storm Instrumentation and Baseline | High | Medium | apiClient request metrics + baseline perf gate + docs sync |
 | TASK-057 | Gutenberg-Like Posts Block Editor | High | Large | Full WordPress-like block editor rollout complete with fallback and runtime parity |
