@@ -7,6 +7,13 @@ import {
 
 const FORM_ID = "form-123";
 
+const tamperNonce = (nonce: string) => {
+  const [timestamp, signature] = nonce.split(".");
+  if (!timestamp || !signature) return `${nonce}-tampered`;
+  const first = signature[0] === "a" ? "b" : "a";
+  return `${timestamp}.${first}${signature.slice(1)}`;
+};
+
 const withEnv = (values: Record<string, string | undefined>, fn: () => void) => {
   const previous: Record<string, string | undefined> = {};
   for (const key of Object.keys(values)) {
@@ -72,7 +79,7 @@ test("assertFormSubmissionNonce rejects invalid signature", () => {
   withEnv({ FORM_SUBMIT_NONCE_SECRET: "test-secret" }, () => {
     const now = 1_700_000_000_000;
     const nonce = createFormSubmissionNonce(FORM_ID, now);
-    const tampered = nonce.replace(/.$/, "0");
+    const tampered = tamperNonce(nonce);
     expect(() => assertFormSubmissionNonce(FORM_ID, tampered, now)).toThrow("Form submission nonce is invalid");
   });
 });

@@ -14,6 +14,7 @@ import {
   type UpdateEntryInput,
   type UpdateEntryMetadataInput,
 } from "./entryService";
+import { areRevisionSnapshotsEqual, serializeRevisionSnapshot } from "./revisionSnapshot";
 import {
   createContentType,
   getContentTypeBySlug,
@@ -267,8 +268,6 @@ const createDuplicatedEntry = async (
   throw new Error("post_duplicate_failed");
 };
 
-const serializeRevisionData = (data: EntryData) => JSON.stringify(data);
-
 const mapPostRevision = (
   row: {
     id: string;
@@ -328,8 +327,8 @@ const createOrReuseRevision = async (
 ) => {
   const revisions = await listPostRevisionsInternal(postId);
   const latest = revisions[0] ?? null;
-  const serialized = serializeRevisionData(data);
-  if (latest && serializeRevisionData(latest.data) === serialized) {
+  const serialized = serializeRevisionSnapshot(data);
+  if (latest && serializeRevisionSnapshot(latest.data) === serialized) {
     return { revision: latest, reused: true };
   }
 
@@ -575,8 +574,7 @@ export async function restorePostRevision(
   const currentData = ensurePostDocumentForWrite(normalizePostData(existing.data));
   const targetData = ensurePostDocumentForWrite(normalizePostData(revision.data));
 
-  const isSameSnapshot =
-    serializeRevisionData(currentData) === serializeRevisionData(targetData);
+  const isSameSnapshot = areRevisionSnapshotsEqual(currentData, targetData);
 
   if (isSameSnapshot) {
     return {

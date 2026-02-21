@@ -19,10 +19,20 @@ import {
 import { SECURITY_SETTINGS_DEFAULTS } from "../../core/services/settings/securitySettings";
 
 const NONCE_SECRET = "nextless_release_gate_nonce_secret_32";
+const NONCE_TTL_MINUTES = "10";
+
+const tamperNonce = (nonce: string) => {
+  const [timestamp, signature] = nonce.split(".");
+  if (!timestamp || !signature) return `${nonce}-tampered`;
+  const first = signature[0] === "a" ? "b" : "a";
+  return `${timestamp}.${first}${signature.slice(1)}`;
+};
 
 const withNonceSecret = (fn: () => void) => {
   const previous = process.env.FORM_SUBMIT_NONCE_SECRET;
+  const previousTtl = process.env.FORM_SUBMIT_NONCE_TTL_MINUTES;
   process.env.FORM_SUBMIT_NONCE_SECRET = NONCE_SECRET;
+  process.env.FORM_SUBMIT_NONCE_TTL_MINUTES = NONCE_TTL_MINUTES;
   try {
     fn();
   } finally {
@@ -30,6 +40,12 @@ const withNonceSecret = (fn: () => void) => {
       delete process.env.FORM_SUBMIT_NONCE_SECRET;
     } else {
       process.env.FORM_SUBMIT_NONCE_SECRET = previous;
+    }
+
+    if (previousTtl === undefined) {
+      delete process.env.FORM_SUBMIT_NONCE_TTL_MINUTES;
+    } else {
+      process.env.FORM_SUBMIT_NONCE_TTL_MINUTES = previousTtl;
     }
   }
 };
@@ -93,7 +109,7 @@ test("security gate: form and booking nonce contracts reject missing and tampere
     const validFormNonce = createFormSubmissionNonce("contact-form", now);
     expect(() => assertFormSubmissionNonce("contact-form", validFormNonce, now + 1_000)).not.toThrow();
 
-    const tamperedFormNonce = `${validFormNonce.slice(0, -1)}0`;
+    const tamperedFormNonce = tamperNonce(validFormNonce);
     expect(() => assertFormSubmissionNonce("contact-form", tamperedFormNonce, now + 1_000)).toThrow(
       "Form submission nonce is invalid"
     );
@@ -105,7 +121,7 @@ test("security gate: form and booking nonce contracts reject missing and tampere
     const validBookingNonce = createBookingSubmissionNonce(now);
     expect(() => assertBookingSubmissionNonce(validBookingNonce, now + 1_000)).not.toThrow();
 
-    const tamperedBookingNonce = `${validBookingNonce.slice(0, -1)}0`;
+    const tamperedBookingNonce = tamperNonce(validBookingNonce);
     expect(() => assertBookingSubmissionNonce(tamperedBookingNonce, now + 1_000)).toThrow(
       "Form submission nonce is invalid"
     );

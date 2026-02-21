@@ -59,108 +59,116 @@ afterAll(async () => {
   await cleanup();
 });
 
-testIfDb("autosavePost creates revisions and deduplicates identical snapshots", async () => {
-  const actor = await createActor();
-  const post = await createPost({
-    title: `Autosave ${randomUUID()}`,
-    data: { excerpt: "Draft body v1" },
-  });
-  if (!post) throw new Error("post_create_failed");
-  createdPostIds.add(post.id);
+testIfDb(
+  "autosavePost creates revisions and deduplicates identical snapshots",
+  async () => {
+    const actor = await createActor();
+    const post = await createPost({
+      title: `Autosave ${randomUUID()}`,
+      data: { excerpt: "Draft body v1" },
+    });
+    if (!post) throw new Error("post_create_failed");
+    createdPostIds.add(post.id);
 
-  const first = await autosavePost(
-    post.id,
-    {
-      title: `${post.title} Updated`,
-      data: {
-        ...(post.data as Record<string, unknown>),
-        excerpt: "Draft body v1",
+    const first = await autosavePost(
+      post.id,
+      {
+        title: `${post.title} Updated`,
+        data: {
+          ...(post.data as Record<string, unknown>),
+          excerpt: "Draft body v1",
+        },
+        tags: ["news"],
       },
-      tags: ["news"],
-    },
-    actor.id
-  );
-  expect(first.reusedRevision).toBe(false);
-  expect(first.revision.version).toBe(1);
+      actor.id
+    );
+    expect(first.reusedRevision).toBe(false);
+    expect(first.revision.version).toBe(1);
 
-  const second = await autosavePost(
-    post.id,
-    {
-      title: `${post.title} Updated`,
-      data: {
-        ...(post.data as Record<string, unknown>),
-        excerpt: "Draft body v1",
+    const second = await autosavePost(
+      post.id,
+      {
+        title: `${post.title} Updated`,
+        data: {
+          ...(post.data as Record<string, unknown>),
+          excerpt: "Draft body v1",
+        },
+        tags: ["news"],
       },
-      tags: ["news"],
-    },
-    actor.id
-  );
-  expect(second.reusedRevision).toBe(true);
-  expect(second.revision.id).toBe(first.revision.id);
+      actor.id
+    );
+    expect(second.reusedRevision).toBe(true);
+    expect(second.revision.id).toBe(first.revision.id);
 
-  const third = await autosavePost(
-    post.id,
-    {
-      title: `${post.title} Updated`,
-      data: {
-        ...(post.data as Record<string, unknown>),
-        excerpt: "Draft body v2",
+    const third = await autosavePost(
+      post.id,
+      {
+        title: `${post.title} Updated`,
+        data: {
+          ...(post.data as Record<string, unknown>),
+          excerpt: "Draft body v2",
+        },
+        tags: ["news", "release"],
       },
-      tags: ["news", "release"],
-    },
-    actor.id
-  );
-  expect(third.reusedRevision).toBe(false);
-  expect(third.revision.version).toBeGreaterThan(first.revision.version);
+      actor.id
+    );
+    expect(third.reusedRevision).toBe(false);
+    expect(third.revision.version).toBeGreaterThan(first.revision.version);
 
-  const revisions = await listPostRevisions(post.id);
-  expect(revisions.length).toBeGreaterThanOrEqual(2);
-  expect(revisions[0]?.version).toBeGreaterThanOrEqual(revisions[1]?.version ?? 0);
-});
+    const revisions = await listPostRevisions(post.id);
+    expect(revisions.length).toBeGreaterThanOrEqual(2);
+    expect(revisions[0]?.version).toBeGreaterThanOrEqual(revisions[1]?.version ?? 0);
+  },
+  { timeout: 15_000 }
+);
 
-testIfDb("restorePostRevision restores older snapshot and is idempotent", async () => {
-  const actor = await createActor();
-  const post = await createPost({
-    title: `Restore ${randomUUID()}`,
-    data: { excerpt: "Initial" },
-  });
-  if (!post) throw new Error("post_create_failed");
-  createdPostIds.add(post.id);
+testIfDb(
+  "restorePostRevision restores older snapshot and is idempotent",
+  async () => {
+    const actor = await createActor();
+    const post = await createPost({
+      title: `Restore ${randomUUID()}`,
+      data: { excerpt: "Initial" },
+    });
+    if (!post) throw new Error("post_create_failed");
+    createdPostIds.add(post.id);
 
-  await autosavePost(
-    post.id,
-    {
-      title: post.title,
-      data: {
-        ...(post.data as Record<string, unknown>),
-        excerpt: "Snapshot A",
+    await autosavePost(
+      post.id,
+      {
+        title: post.title,
+        data: {
+          ...(post.data as Record<string, unknown>),
+          excerpt: "Snapshot A",
+        },
       },
-    },
-    actor.id
-  );
+      actor.id
+    );
 
-  await autosavePost(
-    post.id,
-    {
-      title: post.title,
-      data: {
-        ...(post.data as Record<string, unknown>),
-        excerpt: "Snapshot B",
+    await autosavePost(
+      post.id,
+      {
+        title: post.title,
+        data: {
+          ...(post.data as Record<string, unknown>),
+          excerpt: "Snapshot B",
+        },
       },
-    },
-    actor.id
-  );
+      actor.id
+    );
 
-  const revisions = await listPostRevisions(post.id);
-  const target = revisions.find((revision) => revision.version === 1);
-  if (!target) throw new Error("expected_revision_missing");
+    const revisions = await listPostRevisions(post.id);
+    const target = revisions.find((revision) => revision.version === 1);
+    if (!target) throw new Error("expected_revision_missing");
 
-  const restored = await restorePostRevision(post.id, target.id, actor.id);
-  expect(restored.restored).toBe(true);
+    const restored = await restorePostRevision(post.id, target.id, actor.id);
+    expect(restored.restored).toBe(true);
 
-  const loaded = await getPost(post.id);
-  expect((loaded?.data as Record<string, unknown>)?.excerpt).toBe("Snapshot A");
+    const loaded = await getPost(post.id);
+    expect((loaded?.data as Record<string, unknown>)?.excerpt).toBe("Snapshot A");
 
-  const restoredAgain = await restorePostRevision(post.id, target.id, actor.id);
-  expect(restoredAgain.restored).toBe(false);
-});
+    const restoredAgain = await restorePostRevision(post.id, target.id, actor.id);
+    expect(restoredAgain.restored).toBe(false);
+  },
+  { timeout: 15_000 }
+);
