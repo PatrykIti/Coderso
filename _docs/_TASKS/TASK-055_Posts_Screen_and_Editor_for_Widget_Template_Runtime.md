@@ -5,7 +5,7 @@
 **Category:** CMS/Content + Admin/UI + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054, TASK-053-07, TASK-053-08  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -64,5 +64,12 @@ Implementation should avoid duplicate data models by reusing `content_types` + `
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/ADMIN_NAVIGATION.md`
-- `_docs/CONTENT_MODELING.md`
+- `_docs/CONTENT_MODELING_COOKBOOK.md`
 - `_docs/_CHANGELOG/*.md` (when implemented)
+
+## Completion Notes (2026-02-21)
+- Delivered dedicated `Posts` module in admin (`/admin/coderso/posts`) with list + editor workflow.
+- Added internal posts API aliases on top of content entries (`/admin/api/posts*`) with `post` type bootstrap.
+- Wired posts UI cache/events, row actions (preview/publish/unpublish/duplicate/delete), and direct title navigation.
+- Reused editor workflow via dedicated posts route (`/admin/coderso/posts/:id`) with post-specific context.
+- Confirmed listings/search/runtime contracts already support `posts` source; documented final behavior.

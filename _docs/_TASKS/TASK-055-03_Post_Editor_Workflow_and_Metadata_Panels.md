@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editorial Workflow  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-055-02  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -51,3 +51,8 @@ useAutosave({ key: `post:${postId}`, value: draft, onSave: savePostDraft });
 1. Editor supports complete draft/publish workflow.
 2. Metadata panel persists all post metadata fields correctly.
 3. Autosave/history behavior is explicit and test-covered.
+
+## Completion Notes (2026-02-21)
+- Added dedicated posts editor route wrapper: `core/admin/ui/posts/PostEditorPage.tsx`.
+- Reused `EntryEditor` workflow with post mode (`mode="posts"`) for draft/publish/preview/metadata operations.
+- Added route wiring in `AdminApp.tsx`: `/coderso/posts/:id`.

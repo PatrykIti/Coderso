@@ -54,11 +54,38 @@ import {
   fieldsFromSchema,
 } from "../content-types/schemaMapping";
 
-const resolveEntryParams = (pathname: string) => {
+type EditorRouteMode = "entries" | "posts";
+
+type EntryEditorProps = {
+  mode?: EditorRouteMode;
+};
+
+const resolveEntryParams = (
+  pathname: string,
+  mode?: EditorRouteMode
+): { mode: EditorRouteMode; type: string | null; id: string | null } => {
   const parts = pathname.split("/").filter(Boolean);
-  const index = parts.findIndex((segment) => segment === "entries");
-  if (index === -1) return { type: null, id: null };
-  return { type: parts[index + 1] ?? null, id: parts[index + 2] ?? null };
+  if (mode === "posts") {
+    const index = parts.findIndex((segment) => segment === "posts");
+    if (index === -1) return { mode: "posts", type: "post", id: null };
+    return { mode: "posts", type: "post", id: parts[index + 1] ?? null };
+  }
+
+  const entriesIndex = parts.findIndex((segment) => segment === "entries");
+  if (entriesIndex !== -1) {
+    return {
+      mode: "entries",
+      type: parts[entriesIndex + 1] ?? null,
+      id: parts[entriesIndex + 2] ?? null,
+    };
+  }
+
+  const postsIndex = parts.findIndex((segment) => segment === "posts");
+  if (postsIndex !== -1) {
+    return { mode: "posts", type: "post", id: parts[postsIndex + 1] ?? null };
+  }
+
+  return { mode: "entries", type: null, id: null };
 };
 
 function resolveDefaultValue(field: ContentField) {
@@ -96,12 +123,18 @@ function slugify(value: string) {
     .replace(/(^-|-$)+/g, "");
 }
 
-export function EntryEditor() {
-  const [{ type, id }] = useState<{ type: string | null; id: string | null }>(() => {
+export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
+  const [{ mode, type, id }] = useState<{
+    mode: EditorRouteMode;
+    type: string | null;
+    id: string | null;
+  }>(() => {
     if (typeof window === "undefined") {
-      return { type: null, id: null };
+      return preferredMode === "posts"
+        ? { mode: "posts", type: "post", id: null }
+        : { mode: "entries", type: null, id: null };
     }
-    return resolveEntryParams(window.location.pathname);
+    return resolveEntryParams(window.location.pathname, preferredMode);
   });
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [contentTypeName, setContentTypeName] = useState<string | null>(null);
@@ -521,6 +554,8 @@ export function EntryEditor() {
   const { singular: typeSingular, plural: typePlural } = getContentTypeLabels(
     contentTypeName ?? type ?? ""
   );
+  const typeLabel = mode === "posts" ? "Posts" : typePlural;
+  const editorLabel = mode === "posts" ? "Edit Post" : `Edit ${typeSingular}`;
   const helpItems = [
     "Fields are defined by the content type schema.",
     "Media fields pull assets from the Media Library.",
@@ -595,15 +630,15 @@ export function EntryEditor() {
 
   return (
     <AdminShell
-      activeHref="/admin/entries"
+      activeHref={mode === "posts" ? "/admin/coderso/posts" : "/admin/entries"}
       showSearch={false}
       contentClassName="p-0 overflow-hidden"
       breadcrumbs={
         <EntryEditorHeader
           status={status}
           hasUnsavedChanges={hasUnsavedChanges}
-          contentType={typePlural}
-          entryLabel={entry?.title ?? `Edit ${typeSingular}`}
+          contentType={typeLabel}
+          entryLabel={entry?.title ?? editorLabel}
         />
       }
     >
@@ -894,14 +929,18 @@ export function EntryEditor() {
       <RuntimePreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
-        title="Entry Preview"
+        title={mode === "posts" ? "Post Preview" : "Entry Preview"}
         subtitle="Runtime preview (read-only, site theme)."
         canPreview={Boolean(type && id)}
         previewUrl={previewUrl}
         isLoading={previewLoading}
         error={previewError}
-        cannotPreviewMessage="Save this entry first to generate a runtime preview."
-        iframeTitle="Entry runtime preview"
+        cannotPreviewMessage={
+          mode === "posts"
+            ? "Save this post first to generate a runtime preview."
+            : "Save this entry first to generate a runtime preview."
+        }
+        iframeTitle={mode === "posts" ? "Post runtime preview" : "Entry runtime preview"}
       />
     </AdminShell>
   );

@@ -41,6 +41,8 @@ import { PopupsListPage } from "@/ui/popups/PopupsListPage";
 import { ReviewsModerationPage } from "@/ui/reviews/ReviewsModerationPage";
 import { PageListPage } from "@/ui/pages/PageListPage";
 import { PageEditor } from "@/ui/pages/PageEditor";
+import { PostEditorPage } from "@/ui/posts/PostEditorPage";
+import { PostsListPage } from "@/ui/posts/PostsListPage";
 import { MediaLibraryPage } from "@/ui/media/MediaLibraryPage";
 import { MenuEditorPage } from "@/ui/menus/MenuEditorPage";
 import { PermissionsMatrixPage } from "@/ui/roles/PermissionsMatrixPage";
@@ -175,15 +177,6 @@ const NotFound = () => (
 const Loading = () => (
   <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
     Loading...
-  </div>
-);
-
-const CodersoPostsPlaceholder = () => (
-  <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-border bg-card p-8 text-card-foreground shadow-sm">
-    <h1 className="text-xl font-semibold">Posts module is coming next</h1>
-    <p className="text-sm text-muted-foreground">
-      Use Pages and Entries for now. The dedicated Posts workflow lands in TASK-055.
-    </p>
   </div>
 );
 
@@ -540,7 +533,8 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/coderso/engine/:id/schema", element: <SchemaBuilderPage /> },
       { pattern: "/coderso/entries", element: <EntryList /> },
       { pattern: "/coderso/entries/:type/:id", element: <EntryEditor /> },
-      { pattern: "/coderso/posts", element: <CodersoPostsPlaceholder /> },
+      { pattern: "/coderso/posts", element: <PostsListPage /> },
+      { pattern: "/coderso/posts/:id", element: <PostEditorPage /> },
       { pattern: "/coderso/listings", element: <ListingListPage /> },
       { pattern: "/coderso/listings/:id", element: <ListingEditorPage /> },
       { pattern: "/coderso/filters", element: <ListingFiltersPage /> },

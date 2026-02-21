@@ -311,3 +311,4 @@ Project Change Log.
 | 275 | 2026-02-20 | Assistant site builder guided executor | Admin/UI |
 | 276 | 2026-02-20 | Coderso release gates baseline | QA/Security |
 | 277 | 2026-02-21 | Forms editor logic/style parity and runtime test preview | CMS/Forms |
+| 278 | 2026-02-21 | Posts module in Coderso (list + editor + API aliases) | CMS/Content |

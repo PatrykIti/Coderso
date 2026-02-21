@@ -5,7 +5,7 @@
 **Category:** QA + Docs + Data Safety  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-055-01..05  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -49,3 +49,12 @@ test("legacy content routes remain unaffected", async () => {
 1. Test coverage protects API, UI, and runtime post flows.
 2. Bootstrap logic is deterministic and idempotent.
 3. Docs explain how posts relate to content types and templates.
+
+## Completion Notes (2026-02-21)
+- Added unit/integration/UI coverage for posts service/routes/client/pages:
+  - `tests/unit/content/postsService.test.ts`
+  - `tests/integration/routes/postsRoutes.test.ts`
+  - `tests/unit/admin/postsClient.test.ts`
+  - `tests/unit/ui/posts-list.test.tsx`
+  - `tests/unit/ui/post-editor-page.test.tsx`
+- Updated docs/contracts and changelog for posts module delivery.

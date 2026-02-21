@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-055-01  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -46,3 +46,8 @@ const { data, loading } = usePostsList({ search, status, authorId, taxonomy });
 1. List interactions match Pages table UX standards.
 2. Title click opens editor directly (without three-dot menu).
 3. Preview action opens runtime preview for the selected post.
+
+## Completion Notes (2026-02-21)
+- Added posts list UI: `core/admin/ui/posts/PostsListPage.tsx`.
+- Added posts create drawer and table components with direct title links and full row actions.
+- Added typed admin client/cache layer: `core/admin/services/postsClient.ts`.

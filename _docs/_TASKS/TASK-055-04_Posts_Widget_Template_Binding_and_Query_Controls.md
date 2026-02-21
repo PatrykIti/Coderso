@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets + Runtime  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-055-01, TASK-055-03  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -50,3 +50,8 @@ resolveContentList({ source: "posts", filters, sort, limit }) {
 1. Widget can query posts without manual content-type setup.
 2. Editors expose user-friendly query controls.
 3. Runtime output respects publish status and filters.
+
+## Completion Notes (2026-02-21)
+- Posts source support remained aligned with existing listings/query contracts (`entries/posts/users/taxonomies`).
+- Runtime filters/sorting for `posts` source continue to enforce published-only behavior outside preview.
+- No breaking changes required in widget contracts; existing posts source adapters were validated in test suite.

@@ -38,7 +38,7 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
     "Popups",
     "Solution Kits",
   ]);
-  expect(items.find((item) => item.label === "Posts")?.badge).toBe("Soon");
+  expect(items.find((item) => item.label === "Posts")?.badge).toBeUndefined();
   expect(items.find((item) => item.label === "Listings")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Filters")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Search")?.badge).toBe("Beta");

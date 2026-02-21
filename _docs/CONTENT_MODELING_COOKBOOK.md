@@ -13,6 +13,21 @@ zbudowac realne serwisy bez wiedzy technicznej.
 
 ---
 
+## Posts vs Entries (kiedy czego uzywac)
+
+- `Posts` (`/admin/coderso/posts`) to gotowy workflow redakcyjny pod artykuly/blog:
+  - lista wpisow + szybkie akcje publikacji,
+  - metadata/SEO/taxonomy jak w klasycznym "Wpisy" (WordPress-like),
+  - reserved content type `post` tworzony automatycznie przez system.
+- `Entries` (`/admin/coderso/entries`) to workflow generyczny dla Twoich wlasnych typow tresci z Engine
+  (np. Services, Projects, Team, Testimonials, Products bez checkout).
+
+Praktyczna zasada:
+1. Uzyj `Posts`, gdy chcesz klasyczne artykuly/aktualnosci.
+2. Uzyj `Entries`, gdy modelujesz dane biznesowe pod custom widgety/listingi.
+
+---
+
 ## Wzorzec 1: Mabudo‑style (uslugi + realizacje)
 
 **Cel:** strona firmy z uslugami i portfolio.

@@ -152,14 +152,13 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     label: "Posts",
     tier: "v1",
     ownerArea: "content",
-    lifecycle: "planned",
+    lifecycle: "stable",
     description: "Editorial flow for blog/news style content publishing.",
     dependencies: ["engine", "entries", "widgets"],
     nav: {
       href: "/admin/coderso/posts",
       icon: FileText,
       defaultEnabled: true,
-      badge: "Soon",
     },
   },
   {

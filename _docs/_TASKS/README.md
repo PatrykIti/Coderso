@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 24 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 2 tasks
-- **Done:** 411 tasks
+- **Done:** 418 tasks
 
 ---
 
@@ -41,13 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
-| TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts flow on top of content engine |
-| TASK-055-01 | Posts Domain Model and API Contract | High | Medium | `post` type abstraction + API aliases |
-| TASK-055-02 | Posts List Screen (WordPress-Like Table) | High | Medium | Pages-like editorial list UX |
-| TASK-055-03 | Post Editor Workflow and Metadata Panels | High | Large | Draft/publish/editor metadata workflow |
-| TASK-055-04 | Posts Widget/Template Binding and Query Controls | High | Medium | Widget source preset + query controls |
-| TASK-055-05 | Posts Public Routes and Rendering | High | Medium | List/detail runtime routes + templates |
-| TASK-055-06 | Posts Tests, Migrations, and Documentation | Medium | Medium | QA, idempotent bootstrap, docs |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
 | TASK-020-11 | Security Hardening + Settings UX | High | Large | Auth/public/admin protection & UX presets |
 | TASK-020-11-01 | Rate Limit Buckets + Keying | High | Medium | New buckets + keying strategy |
@@ -78,6 +71,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts module (`/admin/coderso/posts`) delivered |
+| TASK-055-06 | Posts Tests, Migrations, and Documentation | Medium | Medium | Lint/types/tests + docs/changelog/kanban closure |
+| TASK-055-05 | Posts Public Routes and Rendering | High | Medium | Posts preview/runtime contract documented and aligned with entry pipeline |
+| TASK-055-04 | Posts Widget/Template Binding and Query Controls | High | Medium | Listings/search/widget source contract confirmed for posts |
+| TASK-055-03 | Post Editor Workflow and Metadata Panels | High | Large | Post editor route/context parity with entries/pages workflow |
+| TASK-055-02 | Posts List Screen (WordPress-Like Table) | High | Medium | Dedicated posts list with row actions and title navigation |
+| TASK-055-01 | Posts Domain Model and API Contract | High | Medium | Reserved `post` type + `/admin/api/posts*` aliases |
 | TASK-056 | Forms Editor Logic, Style, Runtime Preview, and Action Logs | High | Medium | Forms editor parity: logic/style tabs + runtime test flow + action logs clarity |
 | TASK-056-06 | Forms QA, Docs, Changelog, and Closure | Medium | Medium | Lint/types/full tests + docs/changelog/task board sync |
 | TASK-056-05 | Form Submission Access Adjustments for Admin Testing | Medium | Small | Authenticated admin can test public forms without captcha friction |

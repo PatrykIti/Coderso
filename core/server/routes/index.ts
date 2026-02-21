@@ -41,6 +41,7 @@ import { registerCommerceRoutes } from "./commerceRoutes";
 import { registerPopupsRoutes } from "./popupsRoutes";
 import { registerReviewsRoutes } from "./reviewsRoutes";
 import { registerSolutionKitsRoutes } from "./solutionKitsRoutes";
+import { registerPostsRoutes } from "./postsRoutes";
 
 export type RouteDeps = {
   requireAuth: (ctx: RouteContext) => Promise<void> | void;
@@ -55,6 +56,7 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerMenuRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerContentTypeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerContentEntryRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerPostsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerSearchRoutes(router, { requirePermission: deps.requirePermission });
   registerAuditRoutes(router, { requirePermission: deps.requirePermission });
   registerThemeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });

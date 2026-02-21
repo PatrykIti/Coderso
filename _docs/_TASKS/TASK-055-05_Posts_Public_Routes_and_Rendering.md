@@ -5,7 +5,7 @@
 **Category:** Runtime/Site + Templates  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-055-04  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -48,3 +48,8 @@ if (pathname.startsWith(`${blogBasePath}/`)) {
 1. Published posts are available on list/detail routes.
 2. Preview can render draft post by explicit preview context.
 3. Template fallback strategy is stable and documented.
+
+## Completion Notes (2026-02-21)
+- Public runtime remained on the existing content-routes contract (`site.contentRoutes`), where `type="post"` enables list/detail.
+- Preview flow for posts continues via entry preview token (`/preview?type=content...`).
+- Rendering/template fallback logic is unchanged and deterministic through `renderPublicEntry*` pipeline.

@@ -20,7 +20,7 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 | Widgets | design | stable | Yes |
 | Templates | design | stable | No (managed inside Widgets flows) |
 | Forms | forms | stable | Yes |
-| Posts | content | planned | Yes (`Soon`) |
+| Posts | content | stable | Yes |
 
 ### v2 Business Builder
 | Module | Owner | Lifecycle | Default Nav |
@@ -138,3 +138,7 @@ const sections = buildDefaultNavSections({
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,
   - admin cache + route prefetch support for booking section.
+- 055 done: Posts module delivered:
+  - dedicated `Posts` list + editor routes (`/admin/coderso/posts`, `/admin/coderso/posts/:id`),
+  - internal API aliases (`/admin/api/posts*`) on top of reserved `post` content type,
+  - editor workflow parity with entries/pages (publish, preview, metadata, duplicate, delete).

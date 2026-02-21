@@ -12,7 +12,7 @@ internal screens. This reduces loading flashes and keeps cached data warm.
   - `Entries` -> `/admin/coderso/entries`
   - `Widgets` -> `/admin/coderso/widgets`
   - `Forms` -> `/admin/coderso/forms`
-  - `Posts` -> `/admin/coderso/posts` (placeholder until TASK-055)
+  - `Posts` -> `/admin/coderso/posts`
 - Tiered catalog (v1-v3) is documented in `_docs/CODERSO_MODULES.md`.
 - Sidebar can expose future modules through feature flags passed to
   `buildDefaultNavSections(flags)` (`CodersoFeatureFlags`).

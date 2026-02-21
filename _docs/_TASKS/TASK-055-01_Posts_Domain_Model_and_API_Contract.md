@@ -5,7 +5,7 @@
 **Category:** CMS/Content + API  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-055  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -57,3 +57,8 @@ async function listPosts(params) {
 1. No new `posts` table is required.
 2. API returns only `post` entries for posts endpoints.
 3. Missing `post` type is auto-created safely once.
+
+## Completion Notes (2026-02-21)
+- Added `core/services/content/postsService.ts` with idempotent `ensurePostContentType()` bootstrap.
+- Added internal posts alias routes in `core/server/routes/postsRoutes.ts` and registered them in `routes/index.ts`.
+- Added post schemas in `core/server/validation/postSchemas.ts`.

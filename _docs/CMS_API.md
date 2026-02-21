@@ -549,6 +549,73 @@ Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhos
 
 ---
 
+## Posts
+
+Permissions: `content:read`, `content:write`, `content:publish`
+
+Posts API to internal alias na content entries:
+- reserved content type slug: `post` (auto-bootstrap przez serwis przy pierwszym uzyciu),
+- brak dedykowanej tabeli DB dla posts.
+
+Routes:
+- `GET /posts`
+- `POST /posts`
+- `GET /posts/:id`
+- `PATCH /posts/:id`
+- `PATCH /posts/:id/metadata`
+- `POST /posts/:id/publish`
+- `POST /posts/:id/unpublish`
+- `POST /posts/:id/preview`
+- `POST /posts/:id/duplicate`
+- `DELETE /posts/:id`
+
+Create payload (summary):
+
+```json
+{
+  "title": "How we deliver projects",
+  "slug": "how-we-deliver-projects",
+  "data": {
+    "excerpt": "Short intro for listing cards.",
+    "content": "<p>Full article body</p>",
+    "featuredImage": "media-id",
+    "featured": true
+  }
+}
+```
+
+Metadata payload (summary):
+
+```json
+{
+  "status": "draft",
+  "scheduledAt": null,
+  "tags": ["engineering", "process"],
+  "taxonomy": {
+    "categoryId": "term-cat-id",
+    "tagIds": ["term-tag-id-1", "term-tag-id-2"]
+  },
+  "seo": {
+    "title": "Post SEO title",
+    "description": "Post SEO description",
+    "canonicalUrl": "https://example.com/blog/how-we-deliver-projects",
+    "robots": "index,follow"
+  }
+}
+```
+
+Preview response:
+
+```json
+{
+  "token": "preview-token",
+  "previewUrl": "/preview?type=content&contentType=post&token=preview-token",
+  "expiresAt": "2026-02-21T13:00:00.000Z"
+}
+```
+
+---
+
 ## Coderso Listings (v1 beta)
 
 Permissions: `content:read`, `content:write`
