@@ -299,6 +299,7 @@ export async function duplicatePost(id: string, actorId?: string | null) {
 
   const duplicated = await createDuplicatedEntry(postType.id, source, actorId);
   await updateEntryMetadata(duplicated.id, {
+    tags: source.tags ?? [],
     taxonomy: {
       categoryId: source.taxonomy?.category?.id ?? null,
       tagIds: source.taxonomy?.tags?.map((term) => term.id) ?? [],
