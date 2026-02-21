@@ -70,6 +70,18 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - Prefetch uses cache TTL + throttling to avoid repeated requests.
 - Implemented via `AdminLink` + `prefetchAdminRoute`.
 
+## Diagnostics and Baselines
+- Request instrumentation is available via `core/admin/utils/requestMetrics.ts` and is wired in `core/admin/services/apiClient.ts`.
+- Dev debug handle:
+  - `window.__NEXTLESS_ADMIN_NET_DEBUG__.events()`
+  - `window.__NEXTLESS_ADMIN_NET_DEBUG__.snapshot(windowMs?)`
+  - `window.__NEXTLESS_ADMIN_NET_DEBUG__.reset()`
+  - `window.__NEXTLESS_ADMIN_NET_DEBUG__.setEnabled(boolean)`
+- Instrumentation is enabled by default on localhost and disabled by default outside localhost.
+- Baseline perf gate:
+  - `tests/perf/admin-request-baseline.test.ts`
+  - env budget: `CODERSO_PERF_ADMIN_REQUEST_SNAPSHOT_P95_MS` (default `25ms`).
+
 ## Release Gate Link
 - Admin cache/SPA transition behavior is part of Coderso release gates:
   - performance suite: `tests/perf/codersoPerformanceGate.test.ts`

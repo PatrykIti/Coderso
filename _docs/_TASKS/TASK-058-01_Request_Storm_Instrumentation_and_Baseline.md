@@ -5,7 +5,7 @@
 **Category:** Performance/Observability  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-058  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -59,3 +59,15 @@ requestMetrics.snapshot(windowMs):
 
 ## Documentation Updates Required
 - `_docs/ADMIN_CACHE.md` (sekcja "Diagnostics & Baselines")
+
+
+## Completion Notes (2026-02-21)
+- Added admin request instrumentation in `core/admin/services/apiClient.ts` with per-request metrics hooks.
+- Added request metrics utility and debug handle in `core/admin/utils/requestMetrics.ts`.
+- Added unit and perf tests for metrics behavior and snapshot budget:
+  - `tests/unit/admin/requestMetrics.test.ts`
+  - `tests/perf/admin-request-baseline.test.ts`
+- Verified checks:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/unit/admin/requestMetrics.test.ts tests/perf/admin-request-baseline.test.ts tests/unit/admin/pagesClient.test.ts tests/unit/admin/menusClient.test.ts`

@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 23 tasks
-- **In Progress:** 2 tasks
-- **Done:** 427 tasks
+- **To Do:** 21 tasks
+- **In Progress:** 3 tasks
+- **Done:** 428 tasks
 
 ---
 
@@ -39,8 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-058 | Admin Cache, Prefetch, and Request Stability | High | Large | Eliminacja petli fetch + dedupe + stabilna polityka refresh/prefetch |
-| TASK-058-01 | Request Storm Instrumentation and Baseline | High | Medium | Diagnostyka endpointow i baseline request budget |
 | TASK-058-02 | Shared Dedupe Cache for Global Admin Reads | High | Large | `user-settings`/`assistant/status`/`admin-theme-profiles` dedupe |
 | TASK-058-03 | Pages and Menus Hydration and Force Refresh Policy | High | Large | Usuniecie petli i dublowanego ladowania list/detail |
 | TASK-058-04 | Admin Prefetch Policy Rework and Request Budgeting | High | Medium | Prefetch jako cache warmup (`force: false`) + budgety |
@@ -69,6 +67,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-058 | Admin Cache, Prefetch, and Request Stability | High | Large | In progress: cache/prefetch/request-storm stabilization |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -78,6 +77,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-058-01 | Request Storm Instrumentation and Baseline | High | Medium | apiClient request metrics + baseline perf gate + docs sync |
 | TASK-057 | Gutenberg-Like Posts Block Editor | High | Large | Full WordPress-like block editor rollout complete with fallback and runtime parity |
 | TASK-057-08 | Post Editor QA, Docs, Changelog, and Rollout | Medium | Medium | Full lint/types/tests validation + docs/changelog + rollout fallback mode |
 | TASK-057-03 | Rich Text Engine and Text Formatting Capabilities | High | Large | Rich text adapter/toolbars/serializer/sanitizer integrated in post block editor |

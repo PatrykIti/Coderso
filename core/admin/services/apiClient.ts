@@ -1,4 +1,5 @@
 import { resolveAdminBasePath } from "@/utils/adminPaths";
+import { startRequestMetric } from "@/utils/requestMetrics";
 
 export type ApiErrorPayload = {
   error: {
@@ -36,16 +37,22 @@ export function resetCsrfToken() {
 export async function getCsrfToken(options?: { force?: boolean }) {
   if (cachedCsrfToken && !options?.force) return cachedCsrfToken;
 
+  const finishMetric = startRequestMetric({ path: "/auth/csrf", method: "GET" });
   try {
     const response = await fetch(`${getApiBase()}/auth/csrf`, {
       method: "GET",
       credentials: "include",
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      finishMetric({ status: response.status, ok: false, errorCode: "csrf_request_failed" });
+      return null;
+    }
     const payload = (await response.json()) as { token?: string };
     cachedCsrfToken = payload.token ?? null;
+    finishMetric({ status: response.status, ok: true });
     return cachedCsrfToken;
   } catch {
+    finishMetric({ status: 0, ok: false, errorCode: "csrf_network_error" });
     return null;
   }
 }
@@ -94,13 +101,29 @@ export async function apiRequest<T>(
     if (csrf) headers.set("X-CSRF-Token", csrf);
   }
 
-  const response = await fetch(`${getApiBase()}${path}`, {
-    ...init,
-    headers,
-    credentials: "include",
-  });
+  const method = (init.method ?? "GET").toUpperCase();
+  const finishMetric = startRequestMetric({ path, method });
 
-  if (!response.ok) throw await parseError(response);
+  try {
+    const response = await fetch(`${getApiBase()}${path}`, {
+      ...init,
+      headers,
+      credentials: "include",
+    });
 
-  return parseJson<T>(response);
+    if (!response.ok) {
+      finishMetric({ status: response.status, ok: false, errorCode: "http_error" });
+      throw await parseError(response);
+    }
+
+    const payload = await parseJson<T>(response);
+    finishMetric({ status: response.status, ok: true });
+    return payload;
+  } catch (error) {
+    if (isApiClientError(error)) {
+      throw error;
+    }
+    finishMetric({ status: 0, ok: false, errorCode: "network_error" });
+    throw error;
+  }
 }
