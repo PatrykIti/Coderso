@@ -142,3 +142,8 @@ const sections = buildDefaultNavSections({
   - dedicated `Posts` list + editor routes (`/admin/coderso/posts`, `/admin/coderso/posts/:id`),
   - internal API aliases (`/admin/api/posts*`) on top of reserved `post` content type,
   - editor workflow parity with entries/pages (publish, preview, metadata, duplicate, delete).
+- 057 done: Gutenberg-like Posts editor finalized:
+  - block document model + rich text sanitization + inserter/slash/list-view/transforms,
+  - autosave/revisions/restore workflow and topbar editorial lifecycle statuses,
+  - runtime/public parity renderer for post blocks (preview and published use the same pipeline),
+  - fallback mode via `settings["posts.editor.mode"]` and query override `?editor=classic`.

@@ -12,6 +12,7 @@ type WidgetTemplateCategorySetting = {
 export type AssistantMode = "docs-only" | "llm-rag";
 export type AssistantLlmProvider = "openrouter" | "none";
 export type AssistantDocsBackend = "filesystem" | "db";
+export type PostEditorMode = "blocks" | "classic";
 
 export type AssistantGlobalSettings = {
   "assistant.enabled": boolean;
@@ -62,6 +63,7 @@ const DEFAULT_SETTINGS = {
   "site.cacheTtlSeconds": 30,
   "auth.sessionTtlDays": 14,
   "auth.resetTtlMinutes": 60,
+  "posts.editor.mode": "blocks" as PostEditorMode,
   "setup.completed": false,
   "design.tokens": {} as DesignTokenOverrides,
   "search.categoryOverrides": {} as SearchCategoryOverrides,
@@ -131,6 +133,7 @@ const assistantSettingKeySet = new Set<string>(ASSISTANT_SETTING_KEYS);
 const assistantModes: AssistantMode[] = ["docs-only", "llm-rag"];
 const assistantProviders: AssistantLlmProvider[] = ["openrouter", "none"];
 const assistantDocsBackends: AssistantDocsBackend[] = ["filesystem", "db"];
+const postEditorModes: PostEditorMode[] = ["blocks", "classic"];
 
 const isAssistantSettingKey = (key: SettingKey): key is AssistantSettingKey =>
   assistantSettingKeySet.has(key);
@@ -439,6 +442,16 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return normalizeBoundedInteger(value, 5, 1440);
   }
 
+  if (key === "posts.editor.mode") {
+    if (
+      typeof value !== "string" ||
+      !postEditorModes.includes(value as PostEditorMode)
+    ) {
+      throw new Error("settings_value_invalid");
+    }
+    return value as PostEditorMode;
+  }
+
   if (key === "setup.completed") {
     return normalizeBooleanValue(value);
   }
@@ -606,6 +619,7 @@ export async function listSettings(): Promise<SettingValueMap> {
     if (
       key === "auth.sessionTtlDays" ||
       key === "auth.resetTtlMinutes" ||
+      key === "posts.editor.mode" ||
       key === "setup.completed"
     ) {
       try {

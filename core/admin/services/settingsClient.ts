@@ -10,6 +10,7 @@ export type SettingResponse = {
 export type AssistantMode = "docs-only" | "llm-rag";
 export type AssistantLlmProvider = "openrouter" | "none";
 export type AssistantDocsBackend = "filesystem" | "db";
+export type PostEditorMode = "blocks" | "classic";
 
 export type AssistantSettingsPayload = {
   "assistant.enabled": boolean;
@@ -32,6 +33,7 @@ export type RuntimeSettingsPayload = {
   "site.publicBaseUrl": string | null;
   "auth.sessionTtlDays": number;
   "auth.resetTtlMinutes": number;
+  "posts.editor.mode": PostEditorMode;
   "setup.completed": boolean;
 };
 

@@ -32,6 +32,7 @@ const cleanupKeys = [
   "site.adminRedirectEnabled",
   "auth.sessionTtlDays",
   "auth.resetTtlMinutes",
+  "posts.editor.mode",
   "setup.completed",
   "design.tokens",
   "assistant.enabled",
@@ -68,6 +69,7 @@ testIfDb("set/get/list/delete settings", async () => {
   await setSetting("site.adminRedirectEnabled", true);
   await setSetting("auth.sessionTtlDays", 30);
   await setSetting("auth.resetTtlMinutes", 90);
+  await setSetting("posts.editor.mode", "classic");
   await setSetting("setup.completed", true);
   await setSetting("design.tokens", {
     colors: { primary: "#111111" },
@@ -86,6 +88,7 @@ testIfDb("set/get/list/delete settings", async () => {
   expect(list["site.adminRedirectEnabled"]).toBe(true);
   expect(list["auth.sessionTtlDays"]).toBe(30);
   expect(list["auth.resetTtlMinutes"]).toBe(90);
+  expect(list["posts.editor.mode"]).toBe("classic");
   expect(list["setup.completed"]).toBe(true);
   expect(list["design.tokens"]).toEqual({
     colors: { primary: "#111111" },
@@ -100,6 +103,7 @@ testIfDb("set/get/list/delete settings", async () => {
     "site.adminRedirectEnabled": false,
     "auth.sessionTtlDays": 14,
     "auth.resetTtlMinutes": 45,
+    "posts.editor.mode": "blocks",
     "setup.completed": false,
   });
   expect(bulk["site.name"]).toBe("Nextless Updated");
@@ -110,6 +114,7 @@ testIfDb("set/get/list/delete settings", async () => {
   expect(bulk["site.adminRedirectEnabled"]).toBe(false);
   expect(bulk["auth.sessionTtlDays"]).toBe(14);
   expect(bulk["auth.resetTtlMinutes"]).toBe(45);
+  expect(bulk["posts.editor.mode"]).toBe("blocks");
   expect(bulk["setup.completed"]).toBe(false);
 
   await deleteSetting("site.name");
@@ -130,16 +135,21 @@ testIfDb("enforces auth TTL bounds and setup boolean type", async () => {
   await expect(setSetting("auth.resetTtlMinutes", 1441)).rejects.toThrow(
     "settings_value_invalid"
   );
+  await expect(setSetting("posts.editor.mode", "invalid")).rejects.toThrow(
+    "settings_value_invalid"
+  );
   await expect(setSetting("setup.completed", "yes")).rejects.toThrow(
     "settings_value_invalid"
   );
 
   await setSetting("auth.sessionTtlDays", 365);
   await setSetting("auth.resetTtlMinutes", 1440);
+  await setSetting("posts.editor.mode", "classic");
   await setSetting("setup.completed", true);
 
   expect(await getSetting("auth.sessionTtlDays")).toBe(365);
   expect(await getSetting("auth.resetTtlMinutes")).toBe(1440);
+  expect(await getSetting("posts.editor.mode")).toBe("classic");
   expect(await getSetting("setup.completed")).toBe(true);
 });
 

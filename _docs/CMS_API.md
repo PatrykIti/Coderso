@@ -1978,6 +1978,7 @@ Payloady:
   "site.cacheTtlSeconds": 30,
   "auth.sessionTtlDays": 14,
   "auth.resetTtlMinutes": 60,
+  "posts.editor.mode": "blocks",
   "setup.completed": false,
   "site.contentRoutes": [
     { "type": "blog", "listPath": "/blog", "detailPath": "/blog/:slug", "enabled": true }
@@ -2010,6 +2011,7 @@ Response:
 - `site.cacheTtlSeconds` kontroluje TTL cache HTML (0 = off).
 - `auth.sessionTtlDays` ustawia TTL sesji logowania (zakres `1..365` dni).
 - `auth.resetTtlMinutes` ustawia TTL tokenu resetu hasla (zakres `5..1440` minut).
+- `posts.editor.mode` przełącza edytor posts: `blocks` (domyślny Gutenberg-like) lub `classic` (legacy fallback).
 - `setup.completed` ustawia stan pierwszej konfiguracji.
 - UI mapping: `site.publicBaseUrl` jest zarzadzane w Settings -> General, a `auth.*TTL*` w Settings -> Security.
 - Setup Wizard zapisuje `site.*`, `auth.*` i finalnie `setup.completed=true` jednym bulk requestem.

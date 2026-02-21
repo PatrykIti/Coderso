@@ -5,7 +5,7 @@
 **Category:** QA + Docs + Release  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-057-01, TASK-057-02, TASK-057-03, TASK-057-04, TASK-057-05, TASK-057-06, TASK-057-07  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -23,7 +23,7 @@ Domknac wdrozenie: testy, dokumentacja, changelog, kanban, rollout i checklista 
 
 ## Files to Create / Change
 - `tests/integration/ui/post-editor-smoke-regression.test.tsx` (new)
-- `tests/perf/post-editor-load.test.ts` (new, lightweight)
+- `tests/perf/post-editor-load.test.tsx` (new, lightweight)
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/ADMIN_NAVIGATION.md`

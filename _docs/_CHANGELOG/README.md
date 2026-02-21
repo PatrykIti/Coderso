@@ -318,3 +318,5 @@ Project Change Log.
 | 282 | 2026-02-21 | TASK-057-05 document/block inspector panels with metadata save integration | Admin/UI |
 | 283 | 2026-02-21 | TASK-057-06 autosave/revisions flow with restore drawer and editor lifecycle statuses | CMS/Content |
 | 284 | 2026-02-21 | TASK-057-07 post block runtime renderer and public preview/published parity | CMS/Runtime |
+| 285 | 2026-02-21 | TASK-057-03 rich text engine and text formatting capabilities | Admin/UI |
+| 286 | 2026-02-21 | TASK-057-08 post editor QA/docs/rollout closure with fallback mode | QA/Docs |

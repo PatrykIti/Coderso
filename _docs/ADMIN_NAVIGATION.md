@@ -13,6 +13,9 @@ internal screens. This reduces loading flashes and keeps cached data warm.
   - `Widgets` -> `/admin/coderso/widgets`
   - `Forms` -> `/admin/coderso/forms`
   - `Posts` -> `/admin/coderso/posts`
+  - editor route: `/admin/coderso/posts/:id` (default `blocks` mode),
+  - emergency fallback: `?editor=classic` (legacy entry editor for posts),
+  - global setting key: `posts.editor.mode` (`blocks` | `classic`).
 - Tiered catalog (v1-v3) is documented in `_docs/CODERSO_MODULES.md`.
 - Sidebar can expose future modules through feature flags passed to
   `buildDefaultNavSections(flags)` (`CodersoFeatureFlags`).
