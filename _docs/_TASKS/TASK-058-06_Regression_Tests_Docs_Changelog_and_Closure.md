@@ -5,7 +5,7 @@
 **Category:** QA/Documentation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-058-01, TASK-058-02, TASK-058-03, TASK-058-04, TASK-058-05  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -60,3 +60,17 @@ bun test tests/perf/admin-*.test.ts
 - `_docs/ARCHITECTURE.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes (2026-02-21)
+- Full closure validation completed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test`
+- Regression fix included in scope:
+  - `tests/unit/ui/page-list-filters.test.ts` was aligned with the new refresh-policy helpers:
+    - `resolvePageListMountRefreshOptions` (from `PageListPage`)
+    - `resolveCacheRefreshBackground` (from `cacheRefresh`)
+  - Removed stale expectation/import tied to the old `resolvePagesRefreshBackground` helper.
+- Final regression result:
+  - `1338 pass`, `0 fail` (`bun test` full suite; skipped integration DB cases remain opt-in).
+- Documentation and board sync completed for TASK-058/TASK-058-06.

@@ -124,6 +124,18 @@ Contract:
 - Transition helper budget baseline:
   - admin route transition helper p95 under `CODERSO_PERF_ADMIN_NAV_P95_MS` (default `150ms`).
 
+## TASK-058 Closure Snapshot (2026-02-21)
+- Final closure checks executed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test`
+- Full test-suite outcome at closure:
+  - `1338 pass`, `0 fail` (`143 skip` for opt-in DB scenarios).
+- This snapshot is the baseline after:
+  - pages/menus mount refresh loop fixes,
+  - prefetch warmup throttling and active-route skip,
+  - admin shell global-read minimization (`/auth/me`, assistant runtime, theme profiles).
+
 
 ## Cross-tab Sync
 `core/admin/utils/cacheBus.ts` broadcasts cache events:

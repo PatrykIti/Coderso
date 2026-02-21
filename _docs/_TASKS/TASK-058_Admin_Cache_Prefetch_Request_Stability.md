@@ -5,7 +5,7 @@
 **Category:** Performance/UX Architecture  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-053-07, TASK-053-08  
-**Status:** In Progress (2026-02-21)
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -72,3 +72,17 @@ Ustabilizowac warstwe cache + prefetch w Admin UI tak, aby wyeliminowac petle fe
 - `_docs/ARCHITECTURE.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes (2026-02-21)
+- TASK-058-01..06 were completed and validated end-to-end.
+- Finalized architecture outcomes:
+  - request-storm instrumentation + baseline perf gates,
+  - shared read-through dedupe cache for global admin reads,
+  - pages/menus hydration refresh policy without mount-force loops,
+  - prefetch strategy switched to cache warmup with route-aware throttling,
+  - shell/global reads minimized (`/auth/me`, assistant runtime, admin theme profiles).
+- Final closure checks:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test`
+- Result confirms no request-loop regressions in the covered admin flows and a stable cache/prefetch contract for future modules.

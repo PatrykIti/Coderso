@@ -76,6 +76,10 @@ przez `setup.completed=true`.
   - skip dla aktywnej trasy/modulu,
   - fresh-window + cooldown throttling,
   - kolejka z limitem rownoleglych prefetchy.
+- TASK-058 (Admin Cache/Prefetch/Request Stability) jest zamkniety:
+  - global reads (`auth bootstrap`, `assistant runtime`, `admin theme profiles`) maja dedupe/single-shot policy,
+  - pages/menus nie wymuszaja mount-force refetch przy istniejacym cache,
+  - closure validated przez `lint + lint:types + bun test` i perf/security gates.
 
 ## Assistant Doc Navigator (Phase A + A2)
 

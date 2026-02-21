@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 292 | 2026-02-21 | TASK-058-06 regression tests, docs, changelog, and closure | QA/Docs |
 | 291 | 2026-02-21 | TASK-058-05 admin shell global request minimization | Admin/Performance |
 | 290 | 2026-02-21 | TASK-058-04 admin prefetch policy rework and budgeting | Admin/Performance |
 | 289 | 2026-02-21 | TASK-058-03 pages and menus hydration refresh policy | Admin/Performance |
