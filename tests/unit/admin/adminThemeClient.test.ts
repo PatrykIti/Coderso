@@ -325,3 +325,72 @@ test("activateAdminThemeProfile uses CSRF and POST", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("listAdminThemeProfiles uses read-through cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({ items: [] });
+  };
+
+  try {
+    resetCaches();
+    await listAdminThemeProfiles({ force: true });
+    await listAdminThemeProfiles();
+
+    const profileCalls = calls.filter((call) => String(call.input).endsWith("/admin-theme-profiles"));
+    expect(profileCalls).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
+test("activateAdminThemeProfile invalidates read-through cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/admin-theme-profiles") && init?.method === "GET") {
+      return jsonResponse({
+        items: [
+          {
+            id: "profile-1",
+            name: "Default",
+            description: null,
+            templateId: "template-1",
+            isActive: true,
+            createdAt: "2026-02-14T00:00:00.000Z",
+            updatedAt: "2026-02-14T00:00:00.000Z",
+          },
+        ],
+      });
+    }
+    if (url.endsWith("/admin-theme-profiles/profile-1/activate")) {
+      return jsonResponse({ ok: true });
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    resetCaches();
+    resetCsrfToken();
+
+    await listAdminThemeProfiles({ force: true });
+    await activateAdminThemeProfile("profile-1");
+    await listAdminThemeProfiles();
+
+    const profileCalls = calls.filter((call) => String(call.input).endsWith("/admin-theme-profiles") && call.init?.method === "GET");
+    expect(profileCalls).toHaveLength(2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});

@@ -82,6 +82,17 @@ Defined in `core/admin/services/cachePolicy.ts`:
   - `tests/perf/admin-request-baseline.test.ts`
   - env budget: `CODERSO_PERF_ADMIN_REQUEST_SNAPSHOT_P95_MS` (default `25ms`).
 
+## Global Read Dedupe (Admin Shell)
+Shared in-memory read-through cache is used for high-frequency global reads to prevent duplicate calls across mounted components:
+- `getUserSettings()` -> `core/admin/services/userSettingsClient.ts`
+- `getAssistantStatus()` -> `core/admin/services/assistantClient.ts`
+- `listAdminThemeProfiles()` -> `core/admin/services/adminThemeClient.ts`
+
+Contract:
+- Read-through cache includes TTL and in-flight request dedupe.
+- Mutations invalidate relevant read-through caches (`setUserSetting`, assistant reindex, admin theme profile mutations).
+- This layer complements list/detail localStorage cache and does not replace entity mutation invalidation.
+
 ## Release Gate Link
 - Admin cache/SPA transition behavior is part of Coderso release gates:
   - performance suite: `tests/perf/codersoPerformanceGate.test.ts`

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 288 | 2026-02-21 | TASK-058-02 global read dedupe cache | Admin/Performance |
 | 287 | 2026-02-21 | TASK-058-01 request storm instrumentation and baseline | Admin/Performance |
 | 001 | 2026-01-25 | ORM foundation and auth tables | Core/DB |
 | 002 | 2026-01-25 | Pages, revisions, and preview | CMS/Pages |

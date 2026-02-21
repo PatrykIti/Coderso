@@ -5,7 +5,7 @@
 **Category:** Frontend Architecture  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-058-01  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -69,3 +69,22 @@ setUserSetting(key, value):
 
 ## Documentation Updates Required
 - `_docs/ADMIN_CACHE.md` (global reads matrix)
+
+
+## Completion Notes (2026-02-21)
+- Added shared read-through cache utility: `core/admin/utils/readThroughCache.ts`.
+- Wired user settings global read dedupe and cache invalidation:
+  - `core/admin/services/userSettingsClient.ts`
+- Wired assistant status global read dedupe and explicit invalidation after reindex:
+  - `core/admin/services/assistantClient.ts`
+- Wired admin theme profiles read dedupe and mutation invalidation:
+  - `core/admin/services/adminThemeClient.ts`
+- Added tests:
+  - `tests/unit/admin/readThroughCache.test.ts`
+  - `tests/unit/admin/userSettingsClient.test.ts`
+  - `tests/unit/admin/assistantClient.test.ts` (extended)
+  - `tests/unit/admin/adminThemeClient.test.ts` (extended)
+- Verified checks:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/unit/admin/readThroughCache.test.ts tests/unit/admin/userSettingsClient.test.ts tests/unit/admin/assistantClient.test.ts tests/unit/admin/adminThemeClient.test.ts`

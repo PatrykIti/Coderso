@@ -1,0 +1,89 @@
+import { expect, test } from "bun:test";
+
+import { resetCsrfToken } from "../../../core/admin/services/apiClient";
+import {
+  getUserSetting,
+  getUserSettings,
+  invalidateUserSettingsCache,
+  setUserSetting,
+  type UserSettings,
+} from "../../../core/admin/services/userSettingsClient";
+
+const jsonResponse = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+
+const makeSettings = (): UserSettings => ({
+  "pages.openAfterCreate": true,
+  "media.openAfterUpload": false,
+  "widgets.favorites": ["hero"],
+  "widgets.hero.presets": [],
+  "assistant.mode": "docs-only",
+  "assistant.ui.enabled": true,
+  "assistant.ui.avatarEnabled": false,
+  "assistant.ui.avatarAsset": null,
+});
+
+test("getUserSettings uses read-through cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse(makeSettings());
+  };
+
+  try {
+    invalidateUserSettingsCache();
+    const first = await getUserSettings();
+    const second = await getUserSettings();
+
+    expect(first).toEqual(second);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/user-settings");
+  } finally {
+    globalThis.fetch = originalFetch;
+    invalidateUserSettingsCache();
+  }
+});
+
+test("setUserSetting updates cached settings", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const settings = makeSettings();
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/user-settings") && init?.method === "GET") {
+      return jsonResponse(settings);
+    }
+    if (url.includes("/user-settings/pages.openAfterCreate") && init?.method === "PATCH") {
+      settings["pages.openAfterCreate"] = false;
+      return jsonResponse({ key: "pages.openAfterCreate", value: false });
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    invalidateUserSettingsCache();
+    resetCsrfToken();
+
+    await getUserSettings();
+    await setUserSetting("pages.openAfterCreate", false);
+
+    const next = await getUserSetting("pages.openAfterCreate");
+    expect(next.value).toBe(false);
+
+    const getCalls = calls.filter((call) => String(call.input).endsWith("/user-settings"));
+    expect(getCalls).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    invalidateUserSettingsCache();
+  }
+});

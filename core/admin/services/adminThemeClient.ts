@@ -1,3 +1,4 @@
+import { createReadThroughCache } from "@/utils/readThroughCache";
 import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
@@ -52,6 +53,20 @@ let cachedAdminThemeTemplates: AdminThemeTemplate[] | null = null;
 let cachedAdminThemeTemplatesPromise: Promise<AdminThemeTemplate[]> | null = null;
 let cachedAdminThemeProfiles: AdminThemeProfile[] | null = null;
 let cachedAdminThemeProfilesPromise: Promise<AdminThemeProfile[]> | null = null;
+const ADMIN_THEME_PROFILES_READ_TTL_MS = 10_000;
+
+const adminThemeProfilesReadCache = createReadThroughCache<{ items: AdminThemeProfile[] }>({
+  ttlMs: ADMIN_THEME_PROFILES_READ_TTL_MS,
+  load: () =>
+    apiRequest<{ items: AdminThemeProfile[] }>("/admin-theme-profiles", {
+      method: "GET",
+    }),
+});
+
+const invalidateAdminThemeProfilesReadCache = () => {
+  adminThemeProfilesReadCache.invalidate();
+};
+
 
 const isAdminThemeTemplateList = (value: unknown): value is AdminThemeTemplate[] =>
   Array.isArray(value);
@@ -151,6 +166,7 @@ export const clearAdminThemeProfilesCache = () => {
   cachedAdminThemeProfiles = null;
   cachedAdminThemeProfilesPromise = null;
   clearLocalCache(cacheKeys.adminThemeProfilesList);
+  invalidateAdminThemeProfilesReadCache();
 };
 
 export async function listAdminThemeTemplates() {
@@ -225,10 +241,8 @@ export async function deleteAdminThemeTemplate(id: string) {
   return result;
 }
 
-export async function listAdminThemeProfiles() {
-  return apiRequest<{ items: AdminThemeProfile[] }>("/admin-theme-profiles", {
-    method: "GET",
-  });
+export async function listAdminThemeProfiles(options?: { force?: boolean }) {
+  return adminThemeProfilesReadCache.get({ force: options?.force });
 }
 
 export async function listAdminThemeProfilesCached(options?: { force?: boolean }) {
@@ -237,7 +251,7 @@ export async function listAdminThemeProfilesCached(options?: { force?: boolean }
     if (cached) return cached;
     if (cachedAdminThemeProfilesPromise) return cachedAdminThemeProfilesPromise;
   }
-  const request = listAdminThemeProfiles().then((payload) => payload.items ?? []);
+  const request = listAdminThemeProfiles({ force: options?.force }).then((payload) => payload.items ?? []);
   cachedAdminThemeProfilesPromise = request;
   const items = await request;
   primeAdminThemeProfilesCacheInternal(items);
@@ -256,6 +270,7 @@ export async function createAdminThemeProfile(payload: AdminThemeProfileCreate) 
   );
   if (created) {
     upsertCachedAdminThemeProfile(created);
+    invalidateAdminThemeProfilesReadCache();
     broadcastCacheEvent({ key: cacheKeys.adminThemeProfilesList, action: "update" });
   }
   return created;
@@ -276,6 +291,7 @@ export async function updateAdminThemeProfile(
   );
   if (updated) {
     upsertCachedAdminThemeProfile(updated);
+    invalidateAdminThemeProfilesReadCache();
     broadcastCacheEvent({ key: cacheKeys.adminThemeProfilesList, action: "update" });
   }
   return updated;
@@ -289,6 +305,7 @@ export async function activateAdminThemeProfile(id: string) {
   );
   if (result?.ok) {
     setActiveAdminThemeProfile(id);
+    invalidateAdminThemeProfilesReadCache();
     broadcastCacheEvent({ key: cacheKeys.adminThemeProfilesList, action: "update" });
   }
   return result;

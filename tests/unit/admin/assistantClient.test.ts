@@ -300,3 +300,84 @@ test("validateAssistantSiteBuilderRun uses CSRF and POST", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+test("getAssistantStatus uses read-through cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      enabled: true,
+      defaultMode: "docs-only",
+      retrievalBackend: "filesystem",
+      llmAvailable: false,
+      indexReady: true,
+      indexBuilding: false,
+      indexError: null,
+      lastReindexAt: null,
+      docCount: 12,
+      chunkCount: 80,
+    });
+  };
+
+  try {
+    const first = await getAssistantStatus({ force: true });
+    const second = await getAssistantStatus();
+    expect(first).toEqual(second);
+    expect(calls).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("reindexAssistantDocs invalidates assistant status cache", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/assistant/status")) {
+      return jsonResponse({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "filesystem",
+        llmAvailable: false,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 80,
+      });
+    }
+    if (url.endsWith("/assistant/reindex")) {
+      return jsonResponse({
+        retrievalBackend: "db",
+        builtAt: "2026-02-09T22:00:00.000Z",
+        buildDurationMs: 120,
+        docCount: 20,
+        chunkCount: 90,
+        totalTokens: 900,
+        actorId: "user-1",
+      });
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    resetCsrfToken();
+    await getAssistantStatus({ force: true });
+    await reindexAssistantDocs();
+    await getAssistantStatus();
+
+    const statusCalls = calls.filter((call) => String(call.input).endsWith("/assistant/status"));
+    expect(statusCalls).toHaveLength(2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
