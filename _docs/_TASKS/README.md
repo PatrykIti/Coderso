@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
+- **To Do:** 17 tasks
 - **In Progress:** 4 tasks
-- **Done:** 423 tasks
+- **Done:** 424 tasks
 
 ---
 
@@ -41,7 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
-| TASK-057-07 | Post Block Runtime Renderer and Public Parity | High | Medium | Front runtime parity for block documents |
 | TASK-057-08 | Post Editor QA, Docs, Changelog, and Rollout | Medium | Medium | Full closure, rollout, and documentation sync |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
 | TASK-020-11 | Security Hardening + Settings UX | High | Large | Auth/public/admin protection & UX presets |
@@ -75,6 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-057-07 | Post Block Runtime Renderer and Public Parity | High | Medium | Post block runtime renderer with legacy fallback and preview/published parity |
 | TASK-057-06 | Post Autosave, Revisions, Preview, and Publish Flow | High | Large | Autosave endpoint + revisions restore UI + post editor status lifecycle |
 | TASK-057-05 | Document and Block Inspector Panels | High | Medium | Document/Block inspector split with full metadata/block options and user-friendly hints |
 | TASK-057-04 | Block Inserter, Slash Command, List View, and Transforms | High | Large | Inserter with search/categories + slash menu + list view DnD/keyboard + transforms |

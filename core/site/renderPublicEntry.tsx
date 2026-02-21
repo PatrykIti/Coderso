@@ -8,6 +8,12 @@ import { ensureThemesLoaded } from "../themes/registry";
 import { resolveTemplate } from "../themes/resolver";
 import type { ContentSchema } from "../services/content/validation";
 import type { EntryDetail } from "../services/content/entryService";
+import {
+  isPostContentTypeSlug,
+  mapPostDocumentForRuntime,
+  type PostRuntimeMappedDocument,
+} from "../services/posts/runtime/postBlockRuntimeMapper";
+import { PostBlockRuntimeRenderer } from "../services/posts/runtime/postBlockRuntimeRenderer";
 
 export type PublicEntrySummary = {
   id: string;
@@ -51,6 +57,7 @@ export type ContentDetailTemplateProps = {
   title: string;
   contentType: ContentTypeSnapshot;
   entry: EntryDetail;
+  postRuntimeDocument?: PostRuntimeMappedDocument | null;
   isPreview?: boolean;
 };
 
@@ -218,15 +225,22 @@ const DefaultListTemplate = ({ title, items }: ContentListTemplateProps) => (
   </main>
 );
 
-const DefaultDetailTemplate = ({ entry }: ContentDetailTemplateProps) => (
+const DefaultDetailTemplate = ({
+  entry,
+  postRuntimeDocument,
+}: ContentDetailTemplateProps) => (
   <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-12">
     <header className="space-y-2">
       <h1 className="text-3xl font-semibold">{entry.title}</h1>
       <p className="text-sm text-[var(--color-text)]/70">Entry preview</p>
     </header>
-    <pre className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm text-[var(--color-text)]/80">
-      {JSON.stringify(entry.data ?? {}, null, 2)}
-    </pre>
+    {postRuntimeDocument ? (
+      <PostBlockRuntimeRenderer document={postRuntimeDocument} />
+    ) : (
+      <pre className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 text-sm text-[var(--color-text)]/80">
+        {JSON.stringify(entry.data ?? {}, null, 2)}
+      </pre>
+    )}
   </main>
 );
 
@@ -308,11 +322,16 @@ export async function renderPublicEntryDetailHtml(
     ? await loadTemplateComponent<ContentDetailTemplateProps>(templatePath)
     : null;
 
+  const postRuntimeDocument = isPostContentTypeSlug(contentType.slug)
+    ? await mapPostDocumentForRuntime(entry.data)
+    : null;
+
   const templateProps: ContentDetailTemplateProps = {
     variant: "detail",
     title,
     contentType,
     entry,
+    postRuntimeDocument,
     isPreview,
   };
 

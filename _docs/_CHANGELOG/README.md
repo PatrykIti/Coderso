@@ -317,3 +317,4 @@ Project Change Log.
 | 281 | 2026-02-21 | TASK-057-04 inserter, slash command, list view DnD/keyboard, and block transforms | Admin/UI |
 | 282 | 2026-02-21 | TASK-057-05 document/block inspector panels with metadata save integration | Admin/UI |
 | 283 | 2026-02-21 | TASK-057-06 autosave/revisions flow with restore drawer and editor lifecycle statuses | CMS/Content |
+| 284 | 2026-02-21 | TASK-057-07 post block runtime renderer and public preview/published parity | CMS/Runtime |

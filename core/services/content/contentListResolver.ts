@@ -28,6 +28,7 @@ import {
   type ContentListData,
   type ContentListRuntimeItem,
 } from "../../widgets/core/contentList";
+import { resolvePostRuntimeExcerpt } from "../posts/runtime/postBlockRuntimeMapper";
 
 type ListEntriesRow = Awaited<ReturnType<typeof listEntries>>[number];
 export type ContentListResolverEntry = ListEntriesRow;
@@ -98,8 +99,9 @@ const buildDetailHref = (pattern: string, slug: string, id: string) => {
 
 const resolveExcerpt = (entry: ListEntriesRow) => {
   const data = isRecord(entry.data) ? entry.data : {};
+  const runtimeExcerpt = resolvePostRuntimeExcerpt(data, excerptMaxLength);
+  if (runtimeExcerpt) return runtimeExcerpt;
   const candidates = [
-    data.excerpt,
     data.summary,
     data.description,
     data.lead,

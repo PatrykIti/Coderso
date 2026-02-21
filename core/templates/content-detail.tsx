@@ -1,4 +1,5 @@
 import type { ContentDetailTemplateProps } from "../site/renderPublicEntry";
+import { PostBlockRuntimeRenderer } from "../services/posts/runtime/postBlockRuntimeRenderer";
 
 const renderEntryData = (data: Record<string, unknown>) => {
   const entries = Object.entries(data);
@@ -28,6 +29,7 @@ const renderEntryData = (data: Record<string, unknown>) => {
 
 export default function ContentDetailTemplate({
   entry,
+  postRuntimeDocument,
 }: ContentDetailTemplateProps) {
   return (
     <main
@@ -38,9 +40,13 @@ export default function ContentDetailTemplate({
         <h1 className="text-3xl font-semibold">{entry.title}</h1>
         <p className="text-sm text-[var(--color-text)]/70">Entry preview</p>
       </header>
-      <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        {renderEntryData(entry.data ?? {})}
-      </section>
+      {postRuntimeDocument ? (
+        <PostBlockRuntimeRenderer document={postRuntimeDocument} />
+      ) : (
+        <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+          {renderEntryData(entry.data ?? {})}
+        </section>
+      )}
     </main>
   );
 }

@@ -83,6 +83,7 @@ import {
   resolveListingFiltersRuntimeData,
   resolveListingSearchRuntimeState,
 } from "../services/search/listingRuntimeService";
+import { resolvePostRuntimeMetaDescription } from "../services/posts/runtime/postBlockRuntimeMapper";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 import { searchPublicIndex } from "../services/search/searchIndexService";
@@ -687,8 +688,8 @@ const renderEntryDetailHtml = async (
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
     metaDescription:
       "seo" in entryDetail && entryDetail.seo
-        ? entryDetail.seo.description ?? null
-        : null,
+        ? entryDetail.seo.description ?? resolvePostRuntimeMetaDescription(entryDetail.data)
+        : resolvePostRuntimeMetaDescription(entryDetail.data),
   });
 };
 

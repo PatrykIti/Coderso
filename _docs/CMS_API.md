@@ -639,6 +639,10 @@ Preview response:
 }
 ```
 
+Runtime rendering contract (posts):
+- post detail runtime (`/preview?type=content...` and published content routes) renders `data.document` block document with the same pipeline in preview and published mode,
+- legacy posts without `data.document` are auto-coerced from legacy fields (`content`/`excerpt`) before runtime rendering.
+
 ---
 
 ## Coderso Listings (v1 beta)
