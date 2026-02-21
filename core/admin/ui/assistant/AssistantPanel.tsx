@@ -55,50 +55,162 @@ const normalizeMode = (
   return preferred;
 };
 
+type AssistantRuntimeState = {
+  status: AssistantStatusResponse;
+  mode: AssistantMode;
+  isEnabled: boolean;
+  avatarEnabled: boolean;
+  avatarAsset: string;
+};
+
+const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
+
+let runtimeStateCache:
+  | {
+      value: AssistantRuntimeState;
+      savedAt: number;
+    }
+  | null = null;
+let runtimeStatePromise: Promise<AssistantRuntimeState> | null = null;
+
+const readRuntimeStateCache = (nowMs: number) => {
+  if (!runtimeStateCache) return null;
+  if (nowMs - runtimeStateCache.savedAt > ASSISTANT_RUNTIME_CACHE_TTL_MS) {
+    return null;
+  }
+  return runtimeStateCache.value;
+};
+
+const buildRuntimeState = (
+  assistantStatus: AssistantStatusResponse,
+  userSettings: Awaited<ReturnType<typeof getUserSettings>>
+): AssistantRuntimeState => {
+  const userEnabled = userSettings["assistant.ui.enabled"];
+  const preferredMode = userSettings["assistant.mode"] ?? assistantStatus.defaultMode;
+  const preferredAvatarEnabled = userSettings["assistant.ui.avatarEnabled"] ?? false;
+  const preferredAvatarAsset = userSettings["assistant.ui.avatarAsset"] ?? null;
+
+  return {
+    status: assistantStatus,
+    mode: normalizeMode(preferredMode, assistantStatus),
+    isEnabled: Boolean(assistantStatus.enabled) && Boolean(userEnabled),
+    avatarEnabled: preferredAvatarEnabled,
+    avatarAsset: preferredAvatarAsset ?? "",
+  };
+};
+
+export const clearAssistantRuntimeStateCache = () => {
+  runtimeStateCache = null;
+  runtimeStatePromise = null;
+};
+
+export async function loadAssistantRuntimeStateCached(options?: {
+  force?: boolean;
+  now?: () => number;
+}) {
+  const force = options?.force ?? false;
+  const now = options?.now ?? (() => Date.now());
+
+  if (!force) {
+    const cached = readRuntimeStateCache(now());
+    if (cached) return cached;
+  }
+
+  if (runtimeStatePromise) {
+    return runtimeStatePromise;
+  }
+
+  const request = Promise.all([
+    getAssistantStatus({ force }),
+    getUserSettings({ force }),
+  ])
+    .then(([assistantStatus, userSettings]) =>
+      buildRuntimeState(assistantStatus, userSettings)
+    )
+    .then((nextState) => {
+      runtimeStateCache = {
+        value: nextState,
+        savedAt: now(),
+      };
+      return nextState;
+    })
+    .finally(() => {
+      runtimeStatePromise = null;
+    });
+
+  runtimeStatePromise = request;
+  return request;
+}
+
+export const shouldLoadAssistantRuntimeState = (input: {
+  open: boolean;
+  isReady: boolean;
+  isLoading: boolean;
+}) => input.open && !input.isReady && !input.isLoading;
+
 export function AssistantPanel() {
+  const cachedRuntimeState = readRuntimeStateCache(Date.now());
   const [open, setOpen] = useState(false);
-  const [isReady, setIsReady] = useState(false);
-  const [isEnabled, setIsEnabled] = useState(false);
-  const [status, setStatus] = useState<AssistantStatusResponse | null>(null);
-  const [mode, setMode] = useState<AssistantMode>("docs-only");
+  const [isReady, setIsReady] = useState(() => cachedRuntimeState !== null);
+  const [isLoadingRuntime, setIsLoadingRuntime] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(
+    () => cachedRuntimeState?.isEnabled ?? true
+  );
+  const [status, setStatus] = useState<AssistantStatusResponse | null>(
+    () => cachedRuntimeState?.status ?? null
+  );
+  const [mode, setMode] = useState<AssistantMode>(
+    () => cachedRuntimeState?.mode ?? "docs-only"
+  );
   const [messages, setMessages] = useState<AssistantEntry[]>([]);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [avatarEnabled, setAvatarEnabled] = useState(false);
-  const [avatarAssetDraft, setAvatarAssetDraft] = useState("");
+  const [avatarEnabled, setAvatarEnabled] = useState(
+    () => cachedRuntimeState?.avatarEnabled ?? false
+  );
+  const [avatarAssetDraft, setAvatarAssetDraft] = useState(
+    () => cachedRuntimeState?.avatarAsset ?? ""
+  );
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
 
-  const loadRuntimeState = useCallback(async () => {
+  const applyRuntimeState = useCallback((nextState: AssistantRuntimeState) => {
+    setStatus(nextState.status);
+    setMode(nextState.mode);
+    setAvatarEnabled(nextState.avatarEnabled);
+    setAvatarAssetDraft(nextState.avatarAsset);
+    setIsEnabled(nextState.isEnabled);
+  }, []);
+
+  const loadRuntimeState = useCallback(async (options?: { force?: boolean }) => {
     setLoadError(null);
+    setIsLoadingRuntime(true);
     try {
-      const [assistantStatus, userSettings] = await Promise.all([
-        getAssistantStatus(),
-        getUserSettings(),
-      ]);
-
-      const userEnabled = userSettings["assistant.ui.enabled"];
-      const preferredMode =
-        userSettings["assistant.mode"] ?? assistantStatus.defaultMode;
-      const preferredAvatarEnabled = userSettings["assistant.ui.avatarEnabled"] ?? false;
-      const preferredAvatarAsset = userSettings["assistant.ui.avatarAsset"] ?? null;
-
-      setStatus(assistantStatus);
-      setMode(normalizeMode(preferredMode, assistantStatus));
-      setAvatarEnabled(preferredAvatarEnabled);
-      setAvatarAssetDraft(preferredAvatarAsset ?? "");
-      setIsEnabled(Boolean(assistantStatus.enabled) && Boolean(userEnabled));
+      const runtimeState = await loadAssistantRuntimeStateCached({
+        force: options?.force,
+      });
+      applyRuntimeState(runtimeState);
     } catch (error) {
       setIsEnabled(false);
       setLoadError(resolveApiError(error, "Failed to load assistant status."));
     } finally {
       setIsReady(true);
+      setIsLoadingRuntime(false);
     }
-  }, []);
+  }, [applyRuntimeState]);
 
   useEffect(() => {
-    loadRuntimeState();
-  }, [loadRuntimeState]);
+    if (
+      !shouldLoadAssistantRuntimeState({
+        open,
+        isReady,
+        isLoading: isLoadingRuntime,
+      })
+    ) {
+      return;
+    }
+    loadRuntimeState().catch(() => undefined);
+  }, [isLoadingRuntime, isReady, loadRuntimeState, open]);
 
   const submitMessage = useCallback(async () => {
     const trimmed = message.trim();
@@ -205,20 +317,13 @@ export function AssistantPanel() {
   }, [isSending, messages]);
 
   const canSend = useMemo(
-    () => Boolean(message.trim()) && !isSending && Boolean(status?.indexReady),
-    [isSending, message, status?.indexReady]
+    () =>
+      Boolean(message.trim()) &&
+      !isSending &&
+      Boolean(status?.indexReady) &&
+      isEnabled,
+    [isEnabled, isSending, message, status?.indexReady]
   );
-
-  if (!isReady) {
-    return (
-      <Button variant="outline" size="sm" disabled>
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Assistant
-      </Button>
-    );
-  }
-
-  if (!isEnabled && !loadError) return null;
 
   return (
     <>
@@ -228,7 +333,11 @@ export function AssistantPanel() {
         className="gap-2"
         onClick={() => setOpen(true)}
       >
-        <Bot className="h-4 w-4" />
+        {isLoadingRuntime && !isReady ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Bot className="h-4 w-4" />
+        )}
         Assistant
       </Button>
       <Sheet open={open} onOpenChange={setOpen}>
@@ -244,10 +353,38 @@ export function AssistantPanel() {
           </SheetHeader>
 
           <div className="flex flex-1 min-h-0 flex-col gap-4 px-4 py-4">
+            {!isReady ? (
+              <div className="flex items-center gap-2 rounded-xl border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Loading assistant runtime...
+              </div>
+            ) : null}
+
             {loadError ? (
               <Alert variant="destructive" className="py-2">
                 <AlertTitle className="text-xs">Assistant unavailable</AlertTitle>
-                <AlertDescription className="text-xs">{loadError}</AlertDescription>
+                <AlertDescription className="flex items-center justify-between gap-2 text-xs">
+                  <span>{loadError}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => void loadRuntimeState({ force: true })}
+                  >
+                    <RefreshCw className="mr-1 h-3 w-3" />
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {isReady && !isEnabled && !loadError ? (
+              <Alert className="py-2">
+                <AlertTitle className="text-xs">Assistant is disabled</AlertTitle>
+                <AlertDescription className="text-xs">
+                  Enable it from your assistant preferences to start a conversation.
+                </AlertDescription>
               </Alert>
             ) : null}
 
@@ -304,7 +441,7 @@ export function AssistantPanel() {
                         variant="ghost"
                         size="sm"
                         className="h-7 px-2"
-                        onClick={loadRuntimeState}
+                        onClick={() => void loadRuntimeState({ force: true })}
                       >
                         <RefreshCw className="mr-1 h-3 w-3" />
                         Refresh
@@ -342,7 +479,7 @@ export function AssistantPanel() {
                 onChange={(event) => setMessage(event.target.value)}
                 placeholder="Ask where to find a feature in documentation..."
                 rows={4}
-                disabled={isSending || !status?.indexReady}
+                disabled={isSending || !status?.indexReady || !isEnabled}
               />
               <div className="flex justify-end">
                 <Button type="button" size="sm" onClick={submitMessage} disabled={!canSend}>

@@ -95,11 +95,27 @@ Shared in-memory read-through cache is used for high-frequency global reads to p
 - `getUserSettings()` -> `core/admin/services/userSettingsClient.ts`
 - `getAssistantStatus()` -> `core/admin/services/assistantClient.ts`
 - `listAdminThemeProfiles()` -> `core/admin/services/adminThemeClient.ts`
+- `resolveAuthBootstrap()` -> `core/admin/services/authClient.ts` (single-shot `/auth/me` bootstrap cache)
 
 Contract:
 - Read-through cache includes TTL and in-flight request dedupe.
 - Mutations invalidate relevant read-through caches (`setUserSetting`, assistant reindex, admin theme profile mutations).
 - This layer complements list/detail localStorage cache and does not replace entity mutation invalidation.
+
+### Shell Lifecycle Policy
+- `AdminApp` auth bootstrap:
+  - resolves auth via `resolveAuthBootstrap()` without per-route `me()` loops.
+  - protected/public route transitions reuse bootstrap cache instead of forcing new requests.
+- `AssistantPanel` runtime:
+  - lazy-loads on first panel open,
+  - uses runtime snapshot cache + in-flight dedupe (`loadAssistantRuntimeStateCached`),
+  - no status/user-settings read while panel stays closed.
+- `AdminThemeSwitcher`:
+  - reads profiles via `listAdminThemeProfilesCached()`,
+  - fetches on dropdown open instead of every topbar mount.
+- `theme:updated` event:
+  - refresh scope is limited to admin theme token reload,
+  - global settings refresh is not triggered by theme update.
 
 ## Release Gate Link
 - Admin cache/SPA transition behavior is part of Coderso release gates:

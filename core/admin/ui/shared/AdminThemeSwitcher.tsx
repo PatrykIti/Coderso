@@ -1,5 +1,5 @@
 import { Palette } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AdminLink } from "@/ui/shared/AdminLink";
@@ -16,25 +16,34 @@ import {
 import { isApiClientError } from "@/services/apiClient";
 import {
   activateAdminThemeProfile,
-  listAdminThemeProfiles,
+  getCachedAdminThemeProfiles,
+  listAdminThemeProfilesCached,
   type AdminThemeProfile,
 } from "@/services/adminThemeClient";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
 
+const resolveActiveProfileId = (profiles: AdminThemeProfile[]) => {
+  const active = profiles.find((profile) => profile.isActive);
+  return active?.id ?? profiles[0]?.id ?? null;
+};
+
 export function AdminThemeSwitcher() {
-  const [profiles, setProfiles] = useState<AdminThemeProfile[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const initialCachedProfiles = getCachedAdminThemeProfiles() ?? [];
+  const [profiles, setProfiles] = useState<AdminThemeProfile[]>(initialCachedProfiles);
+  const [activeId, setActiveId] = useState<string | null>(
+    resolveActiveProfileId(initialCachedProfiles)
+  );
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
-  const refreshProfiles = async () => {
+  const refreshProfiles = useCallback(async (options?: { force?: boolean }) => {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await listAdminThemeProfiles();
-      setProfiles(result.items);
-      const active = result.items.find((profile) => profile.isActive);
-      setActiveId(active?.id ?? result.items[0]?.id ?? null);
+      const items = await listAdminThemeProfilesCached({ force: options?.force });
+      setProfiles(items);
+      setActiveId(resolveActiveProfileId(items));
     } catch (err) {
       if (isApiClientError(err)) {
         setError(err.message);
@@ -44,18 +53,19 @@ export function AdminThemeSwitcher() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    if (!open) return;
     void refreshProfiles();
-  }, []);
+  }, [open, refreshProfiles]);
 
   const handleSelect = async (nextId: string) => {
     if (!nextId || nextId === activeId) return;
     setActiveId(nextId);
     try {
       await activateAdminThemeProfile(nextId);
-      await refreshProfiles();
+      await refreshProfiles({ force: true });
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("theme:updated"));
       }
@@ -72,7 +82,7 @@ export function AdminThemeSwitcher() {
   const basePath = resolveAdminBasePath();
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" size="sm" className="gap-2">
           <Palette className="h-4 w-4" />

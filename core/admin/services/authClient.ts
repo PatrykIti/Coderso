@@ -22,18 +22,92 @@ export type LoginResponse = {
   session: AuthSession;
 };
 
+export type AuthBootstrapState = "authenticated" | "unauthenticated";
+
+export type AuthBootstrapResult = {
+  state: AuthBootstrapState;
+  user: AuthUser | null;
+};
+
+let authBootstrapCache: AuthBootstrapResult | null = null;
+let authBootstrapPromise: Promise<AuthBootstrapResult> | null = null;
+
+const isAuthBootstrapError = (error: unknown) =>
+  error instanceof Error &&
+  "status" in error &&
+  "code" in error &&
+  (Number((error as { status?: unknown }).status) === 401 ||
+    Number((error as { status?: unknown }).status) === 403 ||
+    String((error as { code?: unknown }).code) === "auth_required");
+
+export const clearAuthBootstrapCache = () => {
+  authBootstrapCache = null;
+  authBootstrapPromise = null;
+};
+
+export async function resolveAuthBootstrap(options?: { force?: boolean }) {
+  const force = options?.force ?? false;
+  if (!force && authBootstrapCache) {
+    return authBootstrapCache;
+  }
+
+  if (authBootstrapPromise) {
+    return authBootstrapPromise;
+  }
+
+  const request = me()
+    .then((result) => ({
+      state: "authenticated",
+      user: result.user,
+    }) satisfies AuthBootstrapResult)
+    .catch((error: unknown) => {
+      if (isAuthBootstrapError(error)) {
+        return {
+          state: "unauthenticated",
+          user: null,
+        } satisfies AuthBootstrapResult;
+      }
+      throw error;
+    })
+    .finally(() => {
+      authBootstrapPromise = null;
+    });
+
+  authBootstrapPromise = request;
+  const resolved = await request;
+  authBootstrapCache = resolved;
+  return resolved;
+}
+
 export async function login(payload: { email: string; password: string; captchaToken?: string }) {
-  return apiRequest<LoginResponse>("/auth/login", {
+  const result = await apiRequest<LoginResponse>("/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+  authBootstrapCache = {
+    state: "authenticated",
+    user: result.user,
+  };
+  return result;
 }
 
 export async function logout() {
-  return apiRequest<{ ok: boolean }>("/auth/logout", {
-    method: "POST",
-  }, { withCsrf: true });
+  clearAuthBootstrapCache();
+  const result = await apiRequest<{ ok: boolean }>(
+    "/auth/logout",
+    {
+      method: "POST",
+    },
+    { withCsrf: true }
+  );
+  if (result?.ok) {
+    authBootstrapCache = {
+      state: "unauthenticated",
+      user: null,
+    };
+  }
+  return result;
 }
 
 export async function me() {

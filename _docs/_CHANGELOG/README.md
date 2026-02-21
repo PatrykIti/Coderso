@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 291 | 2026-02-21 | TASK-058-05 admin shell global request minimization | Admin/Performance |
 | 290 | 2026-02-21 | TASK-058-04 admin prefetch policy rework and budgeting | Admin/Performance |
 | 289 | 2026-02-21 | TASK-058-03 pages and menus hydration refresh policy | Admin/Performance |
 | 288 | 2026-02-21 | TASK-058-02 global read dedupe cache | Admin/Performance |

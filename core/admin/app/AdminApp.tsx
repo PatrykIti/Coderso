@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { me } from "@/services/authClient";
+import { resolveAuthBootstrap } from "@/services/authClient";
 import { isApiClientError } from "@/services/apiClient";
 import {
   getSettings,
@@ -8,8 +8,8 @@ import {
   type GeneralSettingsPayload,
 } from "@/services/settingsClient";
 import {
-  listAdminThemeProfiles,
-  listAdminThemeTemplates,
+  listAdminThemeProfilesCached,
+  listAdminThemeTemplatesCached,
 } from "@/services/adminThemeClient";
 import { DashboardPage } from "@/ui/dashboard/DashboardPage";
 import { AnalyticsPage } from "@/ui/analytics/AnalyticsPage";
@@ -190,6 +190,11 @@ export const shouldShowSetupWizard = (input: {
   input.authState === "authenticated" &&
   input.settingsStatus === "ready" &&
   !input.setupCompleted;
+
+export const resolveThemeUpdatedRefreshScope = () => ({
+  refreshSettings: false,
+  refreshTheme: true,
+});
 
 const resolveSettingsPayload = (
   payload: Record<string, unknown>,
@@ -649,12 +654,13 @@ export function AdminApp({ path }: AdminAppProps) {
       });
   }, []);
 
-  const refreshAdminTheme = useCallback(() => {
+  const refreshAdminTheme = useCallback((options?: { force?: boolean }) => {
     const fallback = DEFAULT_ADMIN_THEME_TOKENS;
-    Promise.all([listAdminThemeTemplates(), listAdminThemeProfiles()])
-      .then(([templatesResult, profilesResult]) => {
-        const templates = templatesResult.items;
-        const profiles = profilesResult.items;
+    Promise.all([
+      listAdminThemeTemplatesCached({ force: options?.force }),
+      listAdminThemeProfilesCached({ force: options?.force }),
+    ])
+      .then(([templates, profiles]) => {
         const activeProfile =
           profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
         const template = activeProfile
@@ -675,11 +681,14 @@ export function AdminApp({ path }: AdminAppProps) {
   }, []);
 
   useEffect(() => {
-    if (!isProtected) return;
+    if (!isAdminPath) return;
     let active = true;
-    me()
-      .then(() => {
-        if (active) setAuthState("authenticated");
+    if (isProtected) {
+      setAuthState("checking");
+    }
+    resolveAuthBootstrap()
+      .then((result) => {
+        if (active) setAuthState(result.state);
       })
       .catch(() => {
         if (active) setAuthState("unauthenticated");
@@ -687,7 +696,7 @@ export function AdminApp({ path }: AdminAppProps) {
     return () => {
       active = false;
     };
-  }, [isProtected, normalizedPath]);
+  }, [isAdminPath, isProtected]);
 
   useEffect(() => {
     if (authState !== "authenticated") return;
@@ -696,34 +705,24 @@ export function AdminApp({ path }: AdminAppProps) {
 
   useEffect(() => {
     if (authState !== "authenticated") return;
-    refreshAdminTheme();
+    refreshAdminTheme({ force: false });
   }, [authState, refreshAdminTheme]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (authState !== "authenticated") return;
     const handler = () => {
-      refreshSettings();
-      refreshAdminTheme();
+      const scope = resolveThemeUpdatedRefreshScope();
+      if (scope.refreshSettings) {
+        refreshSettings();
+      }
+      if (scope.refreshTheme) {
+        refreshAdminTheme({ force: true });
+      }
     };
     window.addEventListener("theme:updated", handler);
     return () => window.removeEventListener("theme:updated", handler);
   }, [authState, refreshAdminTheme, refreshSettings]);
-
-  useEffect(() => {
-    if (!isPublic) return;
-    let active = true;
-    me()
-      .then(() => {
-        if (active) setAuthState("authenticated");
-      })
-      .catch(() => {
-        if (active) setAuthState("unauthenticated");
-      });
-    return () => {
-      active = false;
-    };
-  }, [canonicalRelativePath, isPublic, normalizedPath]);
 
   useEffect(() => {
     if (!isAdminPath) return;

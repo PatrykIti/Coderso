@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
+- **To Do:** 17 tasks
 - **In Progress:** 3 tasks
-- **Done:** 431 tasks
+- **Done:** 432 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-058-05 | Admin Shell Global Request Minimization | High | Large | Ograniczenie globalnych fetchy z shell/topbar |
 | TASK-058-06 | Regression Tests, Docs, Changelog, and Closure | Medium | Medium | Pelna walidacja + dokumentacja + zamkniecie tasku |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
@@ -74,6 +73,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-058-05 | Admin Shell Global Request Minimization | High | Large | Single-shot auth bootstrap + assistant lazy-load runtime + cached theme switcher and narrowed theme:update refresh scope |
 | TASK-058-04 | Admin Prefetch Policy Rework and Request Budgeting | High | Medium | Prefetch switched to force:false warmup with active-route skip, fresh/cooldown throttling, queue concurrency, and budget tests |
 | TASK-058-03 | Pages and Menus Hydration and Force Refresh Policy | High | Large | Mount hydration policy fixed for pages/menus with explicit-only force refresh and no redundant active-menu reload |
 | TASK-058-02 | Shared Dedupe Cache for Global Admin Reads | High | Large | Shared read-through cache for global admin reads + invalidation + tests |

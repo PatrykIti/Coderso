@@ -1,7 +1,11 @@
 import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
-import { AdminApp, shouldShowSetupWizard } from "../../../core/admin/app/AdminApp";
+import {
+  AdminApp,
+  resolveThemeUpdatedRefreshScope,
+  shouldShowSetupWizard,
+} from "../../../core/admin/app/AdminApp";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 
 test("AdminApp renders theme tokens during loading state", () => {
@@ -55,4 +59,11 @@ test("shouldShowSetupWizard returns true only for authenticated protected ready 
       setupCompleted: true,
     })
   ).toBe(false);
+});
+
+test("resolveThemeUpdatedRefreshScope refreshes only admin theme", () => {
+  expect(resolveThemeUpdatedRefreshScope()).toEqual({
+    refreshSettings: false,
+    refreshTheme: true,
+  });
 });

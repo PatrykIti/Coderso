@@ -5,7 +5,7 @@
 **Category:** App Shell/State Management  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-058-02, TASK-058-03  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -69,3 +69,28 @@ onThemeUpdated():
 
 ## Documentation Updates Required
 - `_docs/ADMIN_CACHE.md` (global shell reads)
+
+## Completion Notes (2026-02-21)
+- `AdminApp` auth bootstrap switched to cached single-shot flow:
+  - replaced route-coupled `me()` effects with `resolveAuthBootstrap()` orchestration,
+  - removed repeated protected/public path-driven auth calls.
+- `AdminApp` theme refresh flow minimized:
+  - switched to cached clients (`listAdminThemeTemplatesCached`, `listAdminThemeProfilesCached`),
+  - `theme:updated` scope reduced to theme refresh only (no settings refresh cascade).
+- `AssistantPanel` moved to lazy runtime load:
+  - runtime state loads on first panel open,
+  - added runtime snapshot cache + in-flight dedupe:
+    - `loadAssistantRuntimeStateCached`
+    - `clearAssistantRuntimeStateCache`
+    - `shouldLoadAssistantRuntimeState`
+- `AdminThemeSwitcher` switched to cached list reads:
+  - now uses `listAdminThemeProfilesCached`,
+  - loads profiles on dropdown open instead of every topbar mount.
+- Added tests:
+  - `tests/unit/ui/assistant-panel-lazy-load.test.tsx`
+  - `tests/integration/ui/admin-shell-request-budget.test.tsx`
+  - updated `tests/unit/admin/adminApp.test.tsx` with theme refresh-scope assertion.
+- Verified checks:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/unit/admin/adminApp.test.tsx tests/unit/ui/assistant-panel.test.tsx tests/unit/ui/assistant-panel-lazy-load.test.tsx tests/unit/ui/theme-switcher.test.tsx tests/integration/ui/admin-shell-request-budget.test.tsx`
