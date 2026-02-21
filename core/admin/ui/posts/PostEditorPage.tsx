@@ -1,5 +1,5 @@
-import { EntryEditor } from "../entries/EntryEditor";
+import { PostBlockEditorShell } from "./editor/PostBlockEditorShell";
 
 export function PostEditorPage() {
-  return <EntryEditor mode="posts" />;
+  return <PostBlockEditorShell />;
 }

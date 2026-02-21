@@ -7,6 +7,10 @@ import {
   type PostBlockDocumentMeta,
   type PostBlockType,
 } from "./postBlockDocument";
+import {
+  postRichTextToPlainText,
+  serializePostRichText,
+} from "./postRichTextSerializer";
 
 const MAX_TEXT_LENGTH = 20_000;
 const MAX_META_TITLE_LENGTH = 200;
@@ -125,6 +129,15 @@ const normalizeListContent = (value: unknown) => {
   return normalized;
 };
 
+const normalizeRichTextContent = (value: unknown) => {
+  if (typeof value !== "string") return "";
+  const serialized = serializePostRichText(value);
+  if (!serialized) return "";
+  const plainText = postRichTextToPlainText(serialized);
+  if (plainText.length <= MAX_TEXT_LENGTH) return serialized;
+  return serializePostRichText(plainText.slice(0, MAX_TEXT_LENGTH));
+};
+
 const normalizeBlockContent = (type: PostBlockType, content: unknown) => {
   switch (type) {
     case "list":
@@ -132,8 +145,9 @@ const normalizeBlockContent = (type: PostBlockType, content: unknown) => {
     case "paragraph":
     case "heading":
     case "quote":
-    case "code":
     case "callout":
+      return normalizeRichTextContent(content);
+    case "code":
       return normalizeString(content);
     case "separator":
       return null;
@@ -167,7 +181,7 @@ const normalizeBlock = (
 const estimateReadingTimeMinutes = (blocks: PostBlock[]) => {
   const textPayload = blocks
     .map((block) => {
-      if (typeof block.content === "string") return block.content;
+      if (typeof block.content === "string") return postRichTextToPlainText(block.content);
       if (Array.isArray(block.content)) return block.content.join(" ");
       return "";
     })

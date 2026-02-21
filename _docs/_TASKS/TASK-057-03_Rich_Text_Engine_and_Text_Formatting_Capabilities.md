@@ -5,7 +5,7 @@
 **Category:** Editor UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-057-02  
-**Status:** To Do
+**Status:** In Progress (2026-02-21)
 
 ---
 
@@ -13,7 +13,7 @@
 Zapewnic "prosty, ale bogaty" edytor tekstu w blokach posta.
 
 ## Scope
-1. Dodac sprawdzony engine rich text (np. TipTap/ProseMirror) opakowany w lokalny adapter.
+1. Dodac lekki engine rich text (`contentEditable`) opakowany w lokalny adapter i toolbar.
 2. Wspierac podstawowe i rozszerzone formatowanie:
    - inline marks: bold, italic, underline, strike, inline code, link, highlight,
    - block formatting: paragraph, headings H2-H6, bullet/ordered list, quote, code block,
@@ -23,10 +23,9 @@ Zapewnic "prosty, ale bogaty" edytor tekstu w blokach posta.
 4. Utrzymac output w bezpiecznym, serializowalnym formacie.
 
 ## Files to Create / Change
-- `core/package.json` (editor deps)
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` (new)
 - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` (new)
-- `core/admin/ui/posts/editor/richtext/postRichTextSchema.ts` (new)
+- `core/services/posts/editor/postRichTextSchema.ts` (new)
 - `core/services/posts/editor/postRichTextSerializer.ts` (new)
 - `core/services/posts/editor/postRichTextSanitizer.ts` (new)
 - `tests/unit/posts/post-richtext-serializer.test.ts` (new)

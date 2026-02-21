@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 23 tasks
+- **To Do:** 21 tasks
 - **In Progress:** 4 tasks
-- **Done:** 418 tasks
+- **Done:** 420 tasks
 
 ---
 
@@ -41,8 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
-| TASK-057-02 | Post Editor Shell and State Architecture | High | Large | Modular editor shell + state/store + routing |
-| TASK-057-03 | Rich Text Engine and Text Formatting Capabilities | High | Large | Simple UX + advanced text formatting toolkit |
 | TASK-057-04 | Block Inserter, Slash Command, List View, and Transforms | High | Large | Core Gutenberg-like editing mechanics |
 | TASK-057-05 | Document and Block Inspector Panels | High | Medium | Right sidebar tabs with user-friendly settings |
 | TASK-057-06 | Post Autosave, Revisions, Preview, and Publish Flow | High | Large | Reliable editorial lifecycle and API aliases |
@@ -70,7 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-057 | Gutenberg-Like Posts Block Editor | High | Large | WordPress-like block editor for `/admin/coderso/posts/:id` |
-| TASK-057-01 | Post Block Document Contract and Backward Compatibility | High | Medium | Versioned block schema + legacy adapter (implementation started) |
+| TASK-057-03 | Rich Text Engine and Text Formatting Capabilities | High | Large | Lightweight rich-text adapter + sanitizer/serializer + toolbar shortcuts |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -80,6 +78,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-057-02 | Post Editor Shell and State Architecture | High | Large | Modular post editor shell + state store + preview workflow route integration |
+| TASK-057-01 | Post Block Document Contract and Backward Compatibility | High | Medium | Versioned post block document + strict normalization + legacy adapter |
 | TASK-055 | Posts Screen and Editor for Widget/Template Runtime | High | Large | Dedicated posts module (`/admin/coderso/posts`) delivered |
 | TASK-055-06 | Posts Tests, Migrations, and Documentation | Medium | Medium | Lint/types/tests + docs/changelog/kanban closure |
 | TASK-055-05 | Posts Public Routes and Rendering | High | Medium | Posts preview/runtime contract documented and aligned with entry pipeline |

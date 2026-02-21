@@ -9,7 +9,9 @@ test("PostEditorPage renders post editor shell", () => {
   });
 
   expect(html).toContain("Edit Post");
-  expect(html).toContain("Loading entry fields");
+  expect(html).toContain("Loading post editor");
+  expect(html).toContain("Block inserter");
   expect(html).toContain("Runtime preview");
-  expect(html).toContain("Search Engine Optimization");
+  expect(html).toContain("Document");
+  expect(html).toContain("Block");
 });

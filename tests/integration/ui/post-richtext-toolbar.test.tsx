@@ -1,0 +1,17 @@
+import { expect, test } from "bun:test";
+
+import { PostRichTextAdapter } from "../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter";
+import { renderAdminUi } from "../../utils/adminRouterRender";
+
+test("PostRichTextAdapter renders toolbar and editor shortcuts", () => {
+  const html = renderAdminUi(
+    <PostRichTextAdapter value="<p>Hello</p>" onChange={() => undefined} />
+  );
+
+  expect(html).toContain("More formatting");
+  expect(html).toContain('aria-label="Bold"');
+  expect(html).toContain('aria-label="Italic"');
+  expect(html).toContain('aria-label="Link"');
+  expect(html).toContain("Shortcuts: Ctrl/Cmd+B");
+  expect(html).toContain("contentEditable=\"true\"");
+});

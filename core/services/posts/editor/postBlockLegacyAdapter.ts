@@ -7,6 +7,7 @@ import {
   createEmptyPostBlockDocument,
   normalizePostBlockDocument,
 } from "./postBlockNormalizer";
+import { postRichTextToPlainText } from "./postRichTextSerializer";
 
 const DEFAULT_PARAGRAPH_BLOCK: PostBlock = {
   id: "block-1",
@@ -58,7 +59,7 @@ const normalizeDocumentFromLegacyFields = (data: Record<string, unknown>) => {
 const collectTextFromDocument = (document: PostBlockDocument) => {
   const parts = document.blocks
     .map((block) => {
-      if (typeof block.content === "string") return block.content;
+      if (typeof block.content === "string") return postRichTextToPlainText(block.content);
       if (Array.isArray(block.content)) {
         return block.content
           .filter((item): item is string => typeof item === "string")
