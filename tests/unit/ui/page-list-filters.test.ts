@@ -3,8 +3,9 @@ import { expect, test } from "bun:test";
 import type { PageSummary } from "../../../core/admin/services/pagesClient";
 import {
   filterPages,
-  resolvePagesRefreshBackground,
+  resolvePageListMountRefreshOptions,
 } from "../../../core/admin/ui/pages/PageListPage";
+import { resolveCacheRefreshBackground } from "../../../core/admin/utils/cacheRefresh";
 
 const basePage: PageSummary = {
   id: "1",
@@ -34,30 +35,29 @@ test("filterPages matches query, status, and author", () => {
   expect(filterPages(pages, "missing", "all", "any")).toHaveLength(0);
 });
 
-test("resolvePagesRefreshBackground keeps refresh in background when cache exists", () => {
+test("resolvePageListMountRefreshOptions keeps mount refresh in background when cache exists", () => {
   expect(
-    resolvePagesRefreshBackground({
-      hasHydrated: false,
-      hasInitialCache: true,
-    })
-  ).toBe(true);
+    resolvePageListMountRefreshOptions(true)
+  ).toEqual({
+    force: false,
+    background: true,
+  });
 });
 
-test("resolvePagesRefreshBackground shows loading when no cache and not hydrated", () => {
+test("resolvePageListMountRefreshOptions uses foreground forced fetch when cache is missing", () => {
   expect(
-    resolvePagesRefreshBackground({
-      hasHydrated: false,
-      hasInitialCache: false,
-    })
-  ).toBe(false);
+    resolvePageListMountRefreshOptions(false)
+  ).toEqual({
+    force: true,
+    background: false,
+  });
 });
 
-test("resolvePagesRefreshBackground respects explicit override", () => {
+test("resolveCacheRefreshBackground respects explicit override", () => {
   expect(
-    resolvePagesRefreshBackground({
+    resolveCacheRefreshBackground({
       explicitBackground: false,
       hasHydrated: true,
-      hasInitialCache: true,
     })
   ).toBe(false);
 });
