@@ -298,12 +298,20 @@ export async function duplicatePost(id: string, actorId?: string | null) {
   if (!source) throw new Error("post_not_found");
 
   const duplicated = await createDuplicatedEntry(postType.id, source, actorId);
+  const categoryId = source.taxonomy?.category?.id ?? null;
+  const tagIds = source.taxonomy?.tags?.map((term) => term.id) ?? [];
+  const hasAssignedTaxonomy = Boolean(categoryId) || tagIds.length > 0;
+
   await updateEntryMetadata(duplicated.id, {
     tags: source.tags ?? [],
-    taxonomy: {
-      categoryId: source.taxonomy?.category?.id ?? null,
-      tagIds: source.taxonomy?.tags?.map((term) => term.id) ?? [],
-    },
+    ...(hasAssignedTaxonomy
+      ? {
+          taxonomy: {
+            categoryId,
+            tagIds,
+          },
+        }
+      : {}),
     seo: {
       title: source.seo?.title ?? undefined,
       description: source.seo?.description ?? undefined,
