@@ -5,7 +5,7 @@
 **Category:** Performance  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-058-02  
-**Status:** To Do
+**Status:** Done (2026-02-21)
 
 ---
 
@@ -55,3 +55,22 @@ entry.run():
 ## Documentation Updates Required
 - `_docs/ADMIN_CACHE.md` (prefetch policy + budgets)
 - `_docs/ARCHITECTURE.md` (prefetch as cache warmup pattern)
+
+## Completion Notes (2026-02-21)
+- Reworked `core/admin/utils/adminPrefetch.ts`:
+  - prefetch defaults to cache warmup (`prefetchWarmupOptions = { force: false }`),
+  - added active-route/module skip (`activeHref` support),
+  - added fresh-window (`freshMs`) + cooldown throttling,
+  - added low-priority queue with max concurrency (`maxConcurrency`),
+  - retained canonical route matching/legacy alias behavior.
+- Updated `core/admin/ui/contexts/AdminRouterContext.tsx` to pass current route to prefetch (`activeHref: path`).
+- Added prefetch policy and budget tests:
+  - `tests/unit/admin/admin-prefetch-policy.test.ts`
+  - `tests/perf/admin-prefetch-budget.test.ts`
+- Documentation synced:
+  - `_docs/ADMIN_CACHE.md`
+  - `_docs/ARCHITECTURE.md`
+- Verified checks:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/unit/admin/adminPrefetch.test.ts tests/unit/admin/admin-prefetch-policy.test.ts tests/perf/admin-prefetch-budget.test.ts`

@@ -92,9 +92,9 @@ export function AdminRouterProvider({
   const prefetch = useCallback(
     (href: string) => {
       if (!href) return;
-      prefetchAdminRoute(href, adminBasePath);
+      prefetchAdminRoute(href, adminBasePath, { activeHref: path });
     },
-    [adminBasePath]
+    [adminBasePath, path]
   );
 
   const value = useMemo(

@@ -71,6 +71,11 @@ przez `setup.completed=true`.
   - renderowania linkow admin (`resolveAdminHref`),
   - route matchingu (`resolveAdminRoutePath`),
   - prefetch (`core/admin/utils/adminPrefetch.ts`).
+- Prefetch admina jest traktowany jako low-priority cache warmup:
+  - `force: false` (bez wymuszonego refetch),
+  - skip dla aktywnej trasy/modulu,
+  - fresh-window + cooldown throttling,
+  - kolejka z limitem rownoleglych prefetchy.
 
 ## Assistant Doc Navigator (Phase A + A2)
 

@@ -67,8 +67,16 @@ Defined in `core/admin/services/cachePolicy.ts`:
 ## Prefetch
 - Sidebar navigation can trigger optional prefetch on hover/focus.
 - Prefetch only hits cached list endpoints (safe, no editor state).
-- Prefetch uses cache TTL + throttling to avoid repeated requests.
+- Prefetch is cache warmup only (`force: false`), never forced refetch.
+- Prefetch skips the currently active route/module.
+- Prefetch skips entries considered fresh (`freshMs`) and applies cooldown throttling.
+- Prefetch uses a low-priority queue with max parallelism to avoid request bursts.
 - Implemented via `AdminLink` + `prefetchAdminRoute`.
+
+### Prefetch budgets
+- Per-hover burst request budget is gated by:
+  - `tests/perf/admin-prefetch-budget.test.ts`
+  - env: `CODERSO_PERF_ADMIN_PREFETCH_BURST_MAX` (default `6`)
 
 ## Diagnostics and Baselines
 - Request instrumentation is available via `core/admin/utils/requestMetrics.ts` and is wired in `core/admin/services/apiClient.ts`.

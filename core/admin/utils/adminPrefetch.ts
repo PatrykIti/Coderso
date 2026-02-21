@@ -44,9 +44,22 @@ export type AdminPrefetchEntry = {
 
 type PrefetchOptions = {
   cooldownMs?: number;
+  freshMs?: number;
+  maxConcurrency?: number;
   schedule?: (callback: () => void) => void;
   now?: () => number;
 };
+
+export type AdminPrefetchRequestOptions = {
+  activeHref?: string;
+};
+
+type QueuedPrefetch = {
+  key: string;
+  entry: AdminPrefetchEntry;
+};
+
+export const prefetchWarmupOptions = { force: false } as const;
 
 const defaultSchedule = (callback: () => void) => {
   if (typeof window !== "undefined" && "requestIdleCallback" in window) {
@@ -61,129 +74,182 @@ export const createAdminPrefetcher = (
   options?: PrefetchOptions
 ) => {
   const cooldownMs = options?.cooldownMs ?? 15000;
+  const freshMs = options?.freshMs ?? cooldownMs;
+  const maxConcurrency = Math.max(1, options?.maxConcurrency ?? 2);
   const schedule = options?.schedule ?? defaultSchedule;
   const now = options?.now ?? (() => Date.now());
   const inFlight = new Map<string, Promise<void>>();
-  const lastRun = new Map<string, number>();
+  const queued = new Set<string>();
+  const queue: QueuedPrefetch[] = [];
+  const lastAttempt = new Map<string, number>();
+  const lastSuccess = new Map<string, number>();
+  let activeCount = 0;
+  let drainScheduled = false;
 
-  return (href: string, basePath?: string) => {
+  const findEntryByPath = (path: string) =>
+    entries.find((item) => path.startsWith(item.match)) ?? null;
+
+  const drainQueue = () => {
+    while (activeCount < maxConcurrency && queue.length > 0) {
+      const next = queue.shift();
+      if (!next) break;
+      queued.delete(next.key);
+      activeCount += 1;
+      const startedAt = now();
+      const promise = Promise.resolve()
+        .then(() => next.entry.run())
+        .then(() => {
+          lastSuccess.set(next.key, startedAt);
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          inFlight.delete(next.key);
+          activeCount = Math.max(0, activeCount - 1);
+          drainQueue();
+        }) as Promise<void>;
+      inFlight.set(next.key, promise);
+    }
+  };
+
+  const scheduleDrain = () => {
+    if (drainScheduled) return;
+    drainScheduled = true;
+    schedule(() => {
+      drainScheduled = false;
+      drainQueue();
+    });
+  };
+
+  return (href: string, basePath?: string, request?: AdminPrefetchRequestOptions) => {
     if (!href) return;
     if (typeof window === "undefined") return;
     if (isExternalHref(href)) return;
 
     const resolvedBase = basePath ?? resolveAdminBasePath(href);
     const path = resolveAdminRoutePath(stripAdminBasePath(href, resolvedBase));
-    const entry = entries.find((item) => path.startsWith(item.match));
+    const entry = findEntryByPath(path);
     if (!entry) return;
 
-    const key = entry.match;
-    const last = lastRun.get(key);
-    if (last != null && now() - last < cooldownMs) return;
-    if (inFlight.has(key)) return;
-    lastRun.set(key, now());
+    const activeHref = request?.activeHref;
+    if (activeHref && !isExternalHref(activeHref)) {
+      const activeBase = resolveAdminBasePath(activeHref);
+      const activePath = resolveAdminRoutePath(
+        stripAdminBasePath(activeHref, activeBase)
+      );
+      const activeEntry = findEntryByPath(activePath);
+      if (activeEntry?.match === entry.match) {
+        return;
+      }
+    }
 
-    schedule(() => {
-      const promise = Promise.resolve()
-        .then(() => entry.run())
-        .catch(() => undefined)
-        .finally(() => {
-          inFlight.delete(key);
-        }) as Promise<void>;
-      inFlight.set(key, promise);
-    });
+    const key = entry.match;
+    const currentTs = now();
+    const successTs = lastSuccess.get(key);
+    if (successTs != null && currentTs - successTs < freshMs) return;
+
+    const lastTs = lastAttempt.get(key);
+    if (lastTs != null && currentTs - lastTs < cooldownMs) return;
+
+    if (inFlight.has(key)) return;
+    if (queued.has(key)) return;
+    lastAttempt.set(key, currentTs);
+
+    queue.push({ key, entry });
+    queued.add(key);
+    scheduleDrain();
   };
 };
 
 const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/pages",
-    run: () => listPagesCached({ force: true }),
+    run: () => listPagesCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/widgets",
     run: () =>
       Promise.all([
-        listWidgetCatalogCached({ force: true }),
-        listWidgetTemplateCategoriesCached({ force: true }),
-        listWidgetTemplatesCached({ force: true }),
+        listWidgetCatalogCached(prefetchWarmupOptions),
+        listWidgetTemplateCategoriesCached(prefetchWarmupOptions),
+        listWidgetTemplatesCached(prefetchWarmupOptions),
       ]),
   },
   {
     match: "/coderso/engine",
-    run: () => listContentTypesCached({ force: true }),
+    run: () => listContentTypesCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/entries",
-    run: () => listContentTypesCached({ force: true }),
+    run: () => listContentTypesCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/forms",
-    run: () => listFormsCached({ force: true }),
+    run: () => listFormsCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/listings",
     run: () =>
       Promise.all([
-        listListingQueriesCached({ force: true }),
-        listListingTemplatesCached({ force: true }),
+        listListingQueriesCached(prefetchWarmupOptions),
+        listListingTemplatesCached(prefetchWarmupOptions),
       ]),
   },
   {
     match: "/coderso/filters",
-    run: () => listListingQueriesCached({ force: true }),
+    run: () => listListingQueriesCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/search",
-    run: () => listListingQueriesCached({ force: true }),
+    run: () => listListingQueriesCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/booking",
     run: () =>
       Promise.all([
-        listBookingResourcesCached({ force: true }),
-        listBookingServicesCached({ force: true }),
-        listBookingReservationsCached({ force: true }),
-        listBookingBlackoutsCached({ force: true }),
+        listBookingResourcesCached(prefetchWarmupOptions),
+        listBookingServicesCached(prefetchWarmupOptions),
+        listBookingReservationsCached(prefetchWarmupOptions),
+        listBookingBlackoutsCached(prefetchWarmupOptions),
       ]),
   },
   {
     match: "/coderso/commerce",
     run: () =>
       Promise.all([
-        listCommerceProductsCached({ force: true }),
-        listCommerceCollectionsCached({ force: true }),
+        listCommerceProductsCached(prefetchWarmupOptions),
+        listCommerceCollectionsCached(prefetchWarmupOptions),
       ]),
   },
   {
     match: "/coderso/popups",
-    run: () => listPopupsCached({ force: true }),
+    run: () => listPopupsCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/reviews",
-    run: () => listReviewsCached({ force: true }),
+    run: () => listReviewsCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/solution-kits",
     run: () =>
       Promise.all([
-        listSolutionKitsCached({ force: true }),
-        listSolutionKitRunsCached({ force: true }),
+        listSolutionKitsCached(prefetchWarmupOptions),
+        listSolutionKitRunsCached(prefetchWarmupOptions),
       ]),
   },
   {
     match: "/menus",
-    run: () => listMenusCached({ force: true }),
+    run: () => listMenusCached(prefetchWarmupOptions),
   },
   {
     match: "/media",
-    run: () => listMediaCached({ force: true }),
+    run: () => listMediaCached(prefetchWarmupOptions),
   },
   {
     match: "/themes",
     run: () =>
       Promise.all([
-        listAdminThemeTemplatesCached({ force: true }),
-        listAdminThemeProfilesCached({ force: true }),
+        listAdminThemeTemplatesCached(prefetchWarmupOptions),
+        listAdminThemeProfilesCached(prefetchWarmupOptions),
       ]),
   },
 ];
