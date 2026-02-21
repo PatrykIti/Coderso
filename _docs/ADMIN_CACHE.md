@@ -89,6 +89,9 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - Baseline perf gate:
   - `tests/perf/admin-request-baseline.test.ts`
   - env budget: `CODERSO_PERF_ADMIN_REQUEST_SNAPSHOT_P95_MS` (default `25ms`).
+- Dev-mode strict render note:
+  - admin React StrictMode is now opt-in via `VITE_ADMIN_STRICT_MODE=true`,
+  - default dev behavior keeps it disabled to avoid duplicate mount fetches during request diagnostics.
 
 ## Global Read Dedupe (Admin Shell)
 Shared in-memory read-through cache is used for high-frequency global reads to prevent duplicate calls across mounted components:
