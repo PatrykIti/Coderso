@@ -4,7 +4,7 @@ import { db } from "../../db/client";
 import { contentTaxonomies, contentTerms } from "../../db/schema";
 import { listUsers } from "../admin/usersService";
 import { listEntries } from "./entryService";
-import { getContentTypeBySlug } from "./typeService";
+import { listPosts } from "./postsService";
 import type { ListingSource, ListingSourceConfig, ListingSort } from "./queryBuilderService";
 
 export type ListingSourceRow = Record<string, unknown>;
@@ -17,8 +17,6 @@ export type ListingSourceDefinition = {
   defaultSort: readonly ListingSort[];
   fetchRows: (config: ListingSourceConfig) => Promise<ListingSourceRow[]>;
 };
-
-const POSTS_TYPE_SLUGS = ["post", "posts"] as const;
 
 const entryFieldAllowlist = [
   "id",
@@ -62,21 +60,27 @@ const fetchEntriesRows = async (config: ListingSourceConfig) => {
   }));
 };
 
-const resolvePostsTypeId = async () => {
-  for (const slug of POSTS_TYPE_SLUGS) {
-    const postType = await getContentTypeBySlug(slug);
-    if (postType) return postType.id;
-  }
-  return undefined;
-};
-
 const fetchPostsRows = async (config: ListingSourceConfig) => {
-  const typeId = await resolvePostsTypeId();
-  if (!typeId) return [];
-  return fetchEntriesRows({
-    contentTypeId: typeId,
-    includeDrafts: config.includeDrafts,
-  });
+  const rows = await listPosts();
+  const includeDrafts = config.includeDrafts === true;
+  const filtered = includeDrafts
+    ? rows
+    : rows.filter((row) => row.status === "published" && Boolean(row.publishedAt));
+
+  return filtered.map((row) => ({
+    id: row.id,
+    typeId: row.typeId,
+    title: row.title,
+    slug: row.slug,
+    status: row.status,
+    tags: row.tags,
+    data: row.data,
+    publishedAt: row.publishedAt,
+    scheduledAt: row.scheduledAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    author: row.author,
+  }));
 };
 
 const fetchUsersRows = async () => {

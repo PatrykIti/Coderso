@@ -21,6 +21,13 @@ test("entries source allows data.* dynamic fields", () => {
   expect(isListingFieldAllowed(source, "passwordHash")).toBe(false);
 });
 
+test("posts source keeps the same safe allowlist contract", () => {
+  const source = getListingSourceDefinition("posts");
+  expect(isListingFieldAllowed(source, "data.document.blocks")).toBe(true);
+  expect(isListingFieldAllowed(source, "author.email")).toBe(true);
+  expect(isListingFieldAllowed(source, "metadata.secret")).toBe(false);
+});
+
 test("users source blocks non-allowlisted fields", () => {
   const source = getListingSourceDefinition("users");
   expect(isListingFieldAllowed(source, "email")).toBe(true);

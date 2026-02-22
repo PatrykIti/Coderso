@@ -7,7 +7,6 @@ import { createTemplateCache } from "../themes/cache";
 import { ensureThemesLoaded } from "../themes/registry";
 import { resolveTemplate } from "../themes/resolver";
 import type { ContentSchema } from "../services/content/validation";
-import type { EntryDetail } from "../services/content/entryService";
 import {
   isPostContentTypeSlug,
   mapPostDocumentForRuntime,
@@ -28,6 +27,18 @@ export type PublicEntrySummary = {
   createdAt?: Date | null;
   updatedAt?: Date | null;
   author?: { id: string; name: string | null; email: string } | null;
+};
+
+export type PublicEntryDetailRecord = PublicEntrySummary & {
+  taxonomy?: unknown;
+  seo?:
+    | {
+        title?: string | null;
+        description?: string | null;
+        canonicalUrl?: string | null;
+        robots?: string | null;
+      }
+    | null;
 };
 
 export type PublicEntryListItem = {
@@ -56,7 +67,7 @@ export type ContentDetailTemplateProps = {
   variant: "detail";
   title: string;
   contentType: ContentTypeSnapshot;
-  entry: EntryDetail;
+  entry: PublicEntryDetailRecord;
   postRuntimeDocument?: PostRuntimeMappedDocument | null;
   isPreview?: boolean;
 };
@@ -80,7 +91,7 @@ export type PublicEntryListOptions = {
 export type PublicEntryDetailOptions = {
   title: string;
   contentType: ContentTypeSnapshot;
-  entry: EntryDetail;
+  entry: PublicEntryDetailRecord;
   themeName?: string | null;
   cssHref?: string | null;
   inlineCss?: string | null;

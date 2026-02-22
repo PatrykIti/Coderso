@@ -1,6 +1,7 @@
 import { getMediaById } from "../media/mediaService";
 import type { ContentRouteSetting } from "../settings/settingsService";
 import { listEntries } from "./entryService";
+import { POST_CONTENT_TYPE_SLUG } from "./postsService";
 import { getContentType, getContentTypeBySlug } from "./typeService";
 import { getListingQuery } from "./listingQueriesService";
 import {
@@ -28,19 +29,16 @@ import {
   type ContentListData,
   type ContentListRuntimeItem,
 } from "../../widgets/core/contentList";
-import { resolvePostRuntimeExcerpt } from "../posts/runtime/postBlockRuntimeMapper";
+import {
+  isPostContentTypeSlug,
+  resolvePostRuntimeExcerpt,
+} from "../posts/runtime/postBlockRuntimeMapper";
 
 type ListEntriesRow = Awaited<ReturnType<typeof listEntries>>[number];
 export type ContentListResolverEntry = ListEntriesRow;
 
 const featuredTagToken = "featured";
 const excerptMaxLength = 220;
-const postsTypeSlugs = ["post", "posts"] as const;
-
-type ContentTypeSnapshot = {
-  id: string;
-  slug: string;
-};
 
 type ContentListListingRuntimeDeps = {
   getListingQueryById: typeof getListingQuery;
@@ -459,17 +457,9 @@ const resolveTemplateActionHref = (
   return sanitizeHref(interpolateTemplateHref(action.href, row));
 };
 
-const resolvePostsType = async (
-  deps: ContentListListingRuntimeDeps
-): Promise<ContentTypeSnapshot | null> => {
-  for (const slug of postsTypeSlugs) {
-    const type = await deps.getContentTypeBySlug(slug);
-    if (type) {
-      return { id: type.id, slug: type.slug };
-    }
-  }
-  return null;
-};
+const resolvePostsRouteType = (contentRoutes: ContentRouteSetting[]) =>
+  contentRoutes.find((entry) => entry.enabled && isPostContentTypeSlug(entry.type))
+    ?.type ?? POST_CONTENT_TYPE_SLUG;
 
 const resolveListingRouteMeta = async (
   query: ListingQuery,
@@ -501,18 +491,11 @@ const resolveListingRouteMeta = async (
   }
 
   if (query.source === "posts") {
-    const postType = await resolvePostsType(deps);
-    if (!postType) {
-      return {
-        sourceTypeId: "",
-        sourceTypeSlug: "",
-        detailPathPattern: undefined,
-      };
-    }
+    const postRouteType = resolvePostsRouteType(contentRoutes);
     return {
-      sourceTypeId: postType.id,
-      sourceTypeSlug: postType.slug,
-      detailPathPattern: resolveDetailPathPattern(contentRoutes, postType.slug),
+      sourceTypeId: POST_CONTENT_TYPE_SLUG,
+      sourceTypeSlug: postRouteType,
+      detailPathPattern: resolveDetailPathPattern(contentRoutes, postRouteType),
     };
   }
 

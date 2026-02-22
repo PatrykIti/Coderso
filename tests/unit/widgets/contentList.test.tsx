@@ -401,6 +401,74 @@ test("content list listing mode resolves rows from saved query", async () => {
   expect(resolved.listingTemplateId).toBe("listing-template-1");
 });
 
+test("content list listing mode resolves posts source without content-type lookup", async () => {
+  const resolved = await resolveContentListRuntimeData(
+    {
+      ...contentListDefaults,
+      source: {
+        ...contentListDefaults.source,
+        mode: "listing",
+        listingQueryId: "listing-query-posts",
+        listingTemplateId: "",
+      },
+    },
+    {
+      preview: false,
+      contentRoutes: [
+        {
+          type: "posts",
+          listPath: "/news",
+          detailPath: "/news/:slug",
+          enabled: true,
+        },
+      ],
+    },
+    {
+      getListingQueryById: async () => ({
+        id: "listing-query-posts",
+        name: "Posts list",
+        description: null,
+        query: {
+          source: "posts",
+          sourceConfig: {
+            includeDrafts: false,
+          },
+          filters: [],
+          sort: [{ field: "id", dir: "asc" }],
+          pagination: { limit: 12, offset: 0 },
+          fields: ["id", "title", "slug", "status", "publishedAt"],
+        },
+        createdAt: new Date("2026-02-18T12:00:00.000Z"),
+        updatedAt: new Date("2026-02-18T12:00:00.000Z"),
+      }),
+      executeListing: async () => ({
+        source: "posts",
+        total: 1,
+        limit: 12,
+        offset: 0,
+        rows: [
+          {
+            id: "post-1",
+            title: "Monthly update",
+            slug: "monthly-update",
+            status: "published",
+            publishedAt: "2026-02-18T10:00:00.000Z",
+          },
+        ],
+      }),
+      getContentTypeById: async () => {
+        throw new Error("content_type_lookup_should_not_run_for_posts");
+      },
+      getContentTypeBySlug: async () => null,
+    }
+  );
+
+  expect(resolved.total).toBe(1);
+  expect(resolved.sourceTypeId).toBe("post");
+  expect(resolved.sourceTypeSlug).toBe("posts");
+  expect(resolved.items[0]?.href).toBe("/news/monthly-update");
+});
+
 test("content list listing bindings can hide blocks via conditions", async () => {
   const resolved = await resolveContentListRuntimeData(
     {

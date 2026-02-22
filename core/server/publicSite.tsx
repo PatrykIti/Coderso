@@ -27,6 +27,14 @@ import {
   getEntryBySlug,
   listEntries,
 } from "../services/content/entryService";
+import {
+  DEFAULT_POST_CONTENT_SCHEMA,
+  getPost,
+  getPostBySlug,
+  listPosts,
+  POST_CONTENT_TYPE_NAME,
+  POST_CONTENT_TYPE_SLUG,
+} from "../services/content/postsService";
 import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
 import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
 import {
@@ -83,7 +91,10 @@ import {
   resolveListingFiltersRuntimeData,
   resolveListingSearchRuntimeState,
 } from "../services/search/listingRuntimeService";
-import { resolvePostRuntimeMetaDescription } from "../services/posts/runtime/postBlockRuntimeMapper";
+import {
+  isPostContentTypeSlug,
+  resolvePostRuntimeMetaDescription,
+} from "../services/posts/runtime/postBlockRuntimeMapper";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { getSecuritySettings } from "../services/settings/securitySettings";
 import { searchPublicIndex } from "../services/search/searchIndexService";
@@ -623,6 +634,34 @@ const renderEntryListHtml = async (
   detailPath: string,
   options?: { preview?: boolean; themeName?: string }
 ) => {
+  if (isPostContentTypeSlug(typeSlug)) {
+    const postItems = (await listPosts())
+      .filter((entry) => isEntryPublished(entry))
+      .map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        href: buildDetailHref(detailPath, entry.slug, entry.id),
+        entry,
+      }));
+
+    const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
+    return renderPublicEntryListHtml({
+      title: POST_CONTENT_TYPE_NAME,
+      contentType: {
+        id: POST_CONTENT_TYPE_SLUG,
+        name: POST_CONTENT_TYPE_NAME,
+        slug: POST_CONTENT_TYPE_SLUG,
+        schema: DEFAULT_POST_CONTENT_SCHEMA as unknown as ContentSchema,
+      },
+      items: postItems,
+      cssHref,
+      inlineCss,
+      devModuleScripts,
+      isPreview: options?.preview ?? false,
+      themeName: options?.themeName ?? (await resolvePublicThemeName()),
+    });
+  }
+
   const contentType = await getContentTypeBySlug(typeSlug);
   if (!contentType) return null;
 
@@ -659,6 +698,33 @@ const renderEntryDetailHtml = async (
   slug: string,
   options?: { preview?: boolean; themeName?: string }
 ) => {
+  if (isPostContentTypeSlug(typeSlug)) {
+    const post = await getPostBySlug(slug);
+    if (!post) return null;
+    if (!options?.preview && !isEntryPublished(post)) {
+      return null;
+    }
+
+    const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
+    return renderPublicEntryDetailHtml({
+      title: post.title ?? POST_CONTENT_TYPE_NAME,
+      contentType: {
+        id: POST_CONTENT_TYPE_SLUG,
+        name: POST_CONTENT_TYPE_NAME,
+        slug: POST_CONTENT_TYPE_SLUG,
+        schema: DEFAULT_POST_CONTENT_SCHEMA as unknown as ContentSchema,
+      },
+      entry: post,
+      cssHref,
+      inlineCss,
+      devModuleScripts,
+      isPreview: options?.preview ?? false,
+      themeName: options?.themeName ?? (await resolvePublicThemeName()),
+      metaDescription:
+        post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
+    });
+  }
+
   const contentType = await getContentTypeBySlug(typeSlug);
   if (!contentType) return null;
 
@@ -775,6 +841,15 @@ export async function handlePublicRequest(req: Request) {
     }
 
     if (preview.targetType === "content") {
+      const post = await getPost(preview.targetId);
+      if (post) {
+        const html = await renderEntryDetailHtml(POST_CONTENT_TYPE_SLUG, post.slug, {
+          preview: true,
+        });
+        if (!html) return new Response("Not Found", { status: 404 });
+        return buildHtmlResponse(html);
+      }
+
       const entry = await getEntry(preview.targetId);
       if (!entry) return new Response("Not Found", { status: 404 });
       const contentType = await getContentType(entry.typeId);

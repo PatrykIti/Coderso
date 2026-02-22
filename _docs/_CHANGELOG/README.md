@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 299 | 2026-02-22 | TASK-059-05 posts runtime listings search cutover | Runtime/Search |
 | 298 | 2026-02-22 | TASK-059-04 posts admin ui decoupling from entries | Admin/UI |
 | 297 | 2026-02-22 | TASK-059-03 posts admin api decoupling | Core/API |
 | 296 | 2026-02-22 | TASK-059-02 posts domain service extraction | Core/Content |

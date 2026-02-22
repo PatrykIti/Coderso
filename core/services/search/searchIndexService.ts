@@ -1,7 +1,9 @@
-import { and, eq, ilike, inArray, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, ilike, notInArray, or, sql } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { contentEntries, contentTypes, pages } from "../../db/schema";
+import { contentEntries, contentTypes, pages, posts } from "../../db/schema";
+import { POST_CONTENT_TYPE_SLUG } from "../content/postsService";
+import { isPostContentTypeSlug } from "../posts/runtime/postBlockRuntimeMapper";
 import type { ContentRouteSetting } from "../settings/settingsService";
 import { buildPrefixQuery, normalizeSearchQuery, resolveSearchLimit } from "./searchService";
 
@@ -30,12 +32,19 @@ type PublicPageSearchRow = {
   updatedAt: Date | string | null;
 };
 
-type PublicContentSearchRow = {
+type PublicEntrySearchRow = {
   id: string;
   title: string;
   slug: string;
   updatedAt: Date | string | null;
   typeSlug: string;
+};
+
+type PublicPostSearchRow = {
+  id: string;
+  title: string;
+  slug: string;
+  updatedAt: Date | string | null;
 };
 
 const POST_TYPE_SLUGS = ["post", "posts"] as const;
@@ -104,13 +113,16 @@ export type SearchPublicIndexDeps = {
     likeQuery: string;
     limit: number;
   }) => Promise<PublicPageSearchRow[]>;
-  listContent: (input: {
+  listEntries: (input: {
     tsQuery: string;
     likeQuery: string;
     limit: number;
-    includeEntries: boolean;
-    includePosts: boolean;
-  }) => Promise<PublicContentSearchRow[]>;
+  }) => Promise<PublicEntrySearchRow[]>;
+  listPosts: (input: {
+    tsQuery: string;
+    likeQuery: string;
+    limit: number;
+  }) => Promise<PublicPostSearchRow[]>;
 };
 
 const defaultDeps: SearchPublicIndexDeps = {
@@ -134,7 +146,7 @@ const defaultDeps: SearchPublicIndexDeps = {
         )
       )
       .limit(limit),
-  listContent: ({ tsQuery, likeQuery, limit, includeEntries, includePosts }) =>
+  listEntries: ({ tsQuery, likeQuery, limit }) =>
     db
       .select({
         id: contentEntries.id,
@@ -150,11 +162,7 @@ const defaultDeps: SearchPublicIndexDeps = {
       .where(
         and(
           eq(contentEntries.status, "published"),
-          includeEntries && !includePosts
-            ? notInArray(contentTypes.slug, [...POST_TYPE_SLUGS])
-            : includePosts && !includeEntries
-              ? inArray(contentTypes.slug, [...POST_TYPE_SLUGS])
-              : undefined,
+          notInArray(contentTypes.slug, [...POST_TYPE_SLUGS]),
           or(
             sql`to_tsvector('simple', coalesce(${contentEntries.title}, '') || ' ' || ${contentEntries.slug} || ' ' || coalesce(${contentEntries.data} ->> 'title', '')) @@ to_tsquery('simple', ${tsQuery})`,
             ilike(contentEntries.title, likeQuery),
@@ -164,11 +172,37 @@ const defaultDeps: SearchPublicIndexDeps = {
         )
       )
       .limit(limit),
+  listPosts: ({ tsQuery, likeQuery, limit }) =>
+    db
+      .select({
+        id: posts.id,
+        title: posts.title,
+        slug: posts.slug,
+        updatedAt: posts.updatedAt,
+      })
+      .from(posts)
+      .where(
+        and(
+          eq(posts.status, "published"),
+          or(
+            sql`to_tsvector('simple', coalesce(${posts.title}, '') || ' ' || ${posts.slug} || ' ' || coalesce(${posts.excerpt}, '') || ' ' || coalesce(${posts.data} ->> 'title', '')) @@ to_tsquery('simple', ${tsQuery})`,
+            ilike(posts.title, likeQuery),
+            ilike(posts.slug, likeQuery),
+            ilike(posts.excerpt, likeQuery),
+            ilike(sql`${posts.data} ->> 'title'`, likeQuery)
+          )
+        )
+      )
+      .limit(limit),
 };
 
 export function parsePublicSearchSources(input: string | undefined) {
   return normalizeSources(input);
 }
+
+const resolvePostsRouteType = (routes: ContentRouteSetting[]) =>
+  routes.find((entry) => entry.enabled && isPostContentTypeSlug(entry.type))
+    ?.type ?? POST_CONTENT_TYPE_SLUG;
 
 export async function searchPublicIndex(
   query: string,
@@ -211,30 +245,42 @@ export async function searchPublicIndex(
       })
     : [];
 
-  const contentRows = includeEntries || includePosts
-    ? await deps.listContent({
+  const entryRows = includeEntries
+    ? await deps.listEntries({
         tsQuery,
         likeQuery,
-        limit,
-        includeEntries,
-        includePosts,
+        limit: perSource,
       })
     : [];
 
-  const entryItems = contentRows
-    .map((row): PublicSearchItem => {
-      const isPost = POST_TYPE_SLUGS.includes(row.typeSlug as (typeof POST_TYPE_SLUGS)[number]);
-      return {
-        id: row.id,
-        source: isPost ? "posts" : "entries",
-        title: row.title,
-        slug: row.slug,
-        href: resolveEntryHref(row.typeSlug, row.slug, row.id, routes),
-        updatedAt: resolveIso(row.updatedAt),
-        typeSlug: row.typeSlug,
-      };
-    })
-    .filter((item) => normalizedSources.includes(item.source));
+  const postRows = includePosts
+    ? await deps.listPosts({
+        tsQuery,
+        likeQuery,
+        limit: perSource,
+      })
+    : [];
+
+  const entryItems = entryRows.map((row): PublicSearchItem => ({
+    id: row.id,
+    source: "entries",
+    title: row.title,
+    slug: row.slug,
+    href: resolveEntryHref(row.typeSlug, row.slug, row.id, routes),
+    updatedAt: resolveIso(row.updatedAt),
+    typeSlug: row.typeSlug,
+  }));
+
+  const postTypeSlug = resolvePostsRouteType(routes);
+  const postItems = postRows.map((row): PublicSearchItem => ({
+    id: row.id,
+    source: "posts",
+    title: row.title,
+    slug: row.slug,
+    href: resolveEntryHref(postTypeSlug, row.slug, row.id, routes),
+    updatedAt: resolveIso(row.updatedAt),
+    typeSlug: postTypeSlug,
+  }));
 
   const pageItems: PublicSearchItem[] = pageRows.map((row) => ({
     id: row.id,
@@ -245,7 +291,7 @@ export async function searchPublicIndex(
     updatedAt: resolveIso(row.updatedAt),
   }));
 
-  const items = [...pageItems, ...entryItems]
+  const items = [...pageItems, ...entryItems, ...postItems]
     .sort((left, right) => {
       const delta = new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       if (delta !== 0) return delta;

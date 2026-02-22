@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 20 tasks
+- **To Do:** 19 tasks
 - **In Progress:** 3 tasks
-- **Done:** 438 tasks
+- **Done:** 439 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-059-05 | Posts Runtime, Listings, and Search Source Cutover | High | Medium | Runtime/listings/search source `posts` na nowym storage |
 | TASK-059-06 | Posts Data Backfill and Cutover | High | Medium | Idempotentny backfill z entries + cutover/rollback plan |
 | TASK-059-07 | Posts Embed Widget and Page Integration | High | Medium | Dedykowany widget do osadzania postow na stronach |
 | TASK-059-08 | Posts Decoupling QA, Docs, and Closure | Medium | Medium | Full regression + docs/changelog/kanban closure |
@@ -66,7 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-059 | Posts Domain Decoupling From Entries | High | Large | In progress: DB + service + admin API/UI decoupling done; runtime/listings/search/backfill/widget cutover pending |
+| TASK-059 | Posts Domain Decoupling From Entries | High | Large | In progress: DB + service + admin API/UI + runtime/listings/search cutover done; backfill/widget/closure pending |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -76,6 +75,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-059-05 | Posts Runtime, Listings, and Search Source Cutover | High | Medium | Runtime/listings/search source `posts` przepiety na dedykowany storage (`posts`), bez `entries` dependency |
 | TASK-059-04 | Posts Admin UI Decoupling From Entries | High | Large | `PostEditorPage` classic fallback przeniesiony do `PostClassicEditorShell`; `EntryEditor` uproszczony do entries-only |
 | TASK-059-03 | Posts Admin API Decoupling | High | Medium | `/admin/api/posts*` domkniete na post-native kontrakcie (bez `entry_*` fallbackow) + route RBAC/error mapping tests |
 | TASK-059-02 | Posts Domain Service Extraction | High | Large | `postsService` refactored to `posts*` tables with post-native metadata/revisions/autosave |

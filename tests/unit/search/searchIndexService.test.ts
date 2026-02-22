@@ -31,7 +31,7 @@ test("searchPublicIndex maps hrefs and sorts by updatedAt", async () => {
         updatedAt: "2026-02-10T10:00:00.000Z",
       },
     ],
-    listContent: async () => [
+    listEntries: async () => [
       {
         id: "entry-1",
         title: "Service A",
@@ -39,12 +39,13 @@ test("searchPublicIndex maps hrefs and sorts by updatedAt", async () => {
         updatedAt: "2026-02-11T10:00:00.000Z",
         typeSlug: "services",
       },
+    ],
+    listPosts: async () => [
       {
         id: "post-1",
         title: "News update",
         slug: "news-update",
         updatedAt: "2026-02-12T10:00:00.000Z",
-        typeSlug: "post",
       },
     ],
   };

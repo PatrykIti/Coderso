@@ -392,6 +392,22 @@ const getPostById = async (id: string): Promise<PostDetail | null> => {
   };
 };
 
+const getPostBySlugInternal = async (slug: string): Promise<PostDetail | null> => {
+  const [row] = await db
+    .select(selectPostBase)
+    .from(posts)
+    .leftJoin(users, eq(posts.authorId, users.id))
+    .where(eq(posts.slug, slug));
+
+  if (!row) return null;
+
+  const taxonomy = await getPostTaxonomies(row.id);
+  return {
+    ...mapPostBase(row),
+    taxonomy,
+  };
+};
+
 const ensurePostSlugAvailable = async (slug: string, excludePostId?: string) => {
   const rows = await db
     .select({ id: posts.id })
@@ -615,6 +631,12 @@ export async function listPosts(): Promise<PostSummary[]> {
 
 export async function getPost(id: string): Promise<PostDetail | null> {
   return getPostById(id);
+}
+
+export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
+  const normalized = slug.trim();
+  if (!normalized) return null;
+  return getPostBySlugInternal(normalized);
 }
 
 export async function createPost(input: CreatePostInput): Promise<PostDetail | null> {

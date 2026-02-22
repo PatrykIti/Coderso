@@ -5,7 +5,7 @@
 **Category:** Runtime/Query Engine  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-059-02, TASK-059-03  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -67,3 +67,10 @@ resolvePublicPostBySlug(slug, previewToken?) {
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes
+1. Listing source `posts` w `listingSources` czyta bezposrednio z posts domain (`listPosts`) zamiast `entries/content-types`.
+2. Public search (`searchPublicIndex`) ma oddzielny, published-only indeks dla `posts` table; `entries` i `posts` sa rozdzielone i bez cross-dependency.
+3. Runtime route meta dla listing queries `source=posts` nie zalezy od `content_types` (`sourceTypeId='post'`, route slug z `site.contentRoutes` lub fallback `post`).
+4. Public site runtime dla content routes i preview tokenow obsluguje posts przez `postsService` (`getPostBySlug`/`getPost`) z zachowaniem dotychczasowego output shape.
+5. Dodano testy pokrywajace cutover listing/search/runtime dla posts.

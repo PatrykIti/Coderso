@@ -649,6 +649,7 @@ Preview response:
 Runtime rendering contract (posts):
 - post detail runtime (`/preview?type=content...` and published content routes) renders `data.document` block document with the same pipeline in preview and published mode,
 - legacy posts without `data.document` are auto-coerced from legacy fields (`content`/`excerpt`) before runtime rendering.
+- public list/detail dla content route typu `post/posts` jest rozwiązywany przez dedykowany posts storage (`posts*`), bez odwołania do `content_entries`.
 
 ---
 
@@ -700,6 +701,10 @@ Allowed query operators:
 
 Supported sources:
 - `entries`, `posts`, `users`, `taxonomies`
+
+Source notes:
+- `entries` czyta rekordy `content_entries` (bez typow `post/posts`),
+- `posts` czyta dedykowane rekordy `posts` (post-native flow).
 
 ### Listing template payload (summary)
 
@@ -806,6 +811,11 @@ Response (summary):
 Public search endpoint:
 - `GET /api/search?q=<query>&limit=<1..50>&sources=pages,entries,posts`
 - brak auth (public read), podlega public rate-limit bucket.
+
+Indexed fields (current):
+- `pages`: `title`, `slug`,
+- `entries`: `content_entries.title`, `content_entries.slug`, `content_entries.data.title` (bez post types),
+- `posts`: `posts.title`, `posts.slug`, `posts.excerpt`, `posts.data.title`.
 
 `sources`:
 - `pages`
