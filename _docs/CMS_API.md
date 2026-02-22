@@ -565,6 +565,12 @@ Post document contract (update `TASK-061-02`):
   - `nodes[]` (`paragraph`, `heading`, `list`, `quote`, `image`),
 - normalizer egzekwuje deterministic limits/sanitization dla nodow i zachowuje compatibility z legacy data.
 
+Smart paste contract (update `TASK-061-03`):
+- editor normalizuje payload `text/html` i `text/plain` przez `normalizePostPastePayload`,
+- Office/Docs artifacts sa usuwane przed mapowaniem (`stripPostOfficeHtmlArtifacts`),
+- bezpieczny output mapuje sie do writing nodes + rich text insertion HTML,
+- dla payloadow duzych lub degradacji parser zwraca warningi (`html_truncated`, `fallback_to_plain_text`, `unsupported_markup_removed`, itd.).
+
 Routes:
 - `GET /posts`
 - `POST /posts`

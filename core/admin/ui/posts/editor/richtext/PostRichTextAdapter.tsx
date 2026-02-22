@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type ClipboardEvent,
   type KeyboardEvent,
 } from "react";
 
@@ -14,6 +15,10 @@ import {
   postRichTextToPlainText,
   serializePostRichText,
 } from "../../../../../services/posts/editor/postRichTextSerializer";
+import {
+  normalizePostPastePayload,
+  type NormalizePostPastePayloadInput,
+} from "../../../../../services/posts/editor/postPasteNormalizer";
 import { postRichTextBlockTagSet } from "../../../../../services/posts/editor/postRichTextSchema";
 import type { PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
 import { searchPostBlockCatalog } from "../blocks/blockCatalog";
@@ -79,6 +84,40 @@ const wrapSelectionWithTag = (tagName: "code" | "mark") => {
   runCommand("insertHTML", `<${tagName}>${escapeHtml(selectedText)}</${tagName}>`);
 };
 
+const insertHtmlAtCursor = (html: string) => {
+  if (!html) return false;
+  if (runCommand("insertHTML", html)) return true;
+  if (typeof window === "undefined") return false;
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return false;
+
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+  const fragment = range.createContextualFragment(html);
+  const lastNode = fragment.lastChild;
+  range.insertNode(fragment);
+
+  if (lastNode) {
+    range.setStartAfter(lastNode);
+    range.setEndAfter(lastNode);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  return true;
+};
+
+export const buildPostRichTextPasteInsert = (input: NormalizePostPastePayloadInput) => {
+  const normalized = normalizePostPastePayload(input);
+  return {
+    html: normalized.html,
+    warnings: normalized.warnings.map((warning) => warning.message),
+    mode: normalized.mode,
+    source: normalized.source,
+  };
+};
+
 export function PostRichTextAdapter({
   value,
   onChange,
@@ -93,6 +132,7 @@ export function PostRichTextAdapter({
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashOpen, setSlashOpen] = useState(false);
+  const [pasteHint, setPasteHint] = useState<string | null>(null);
 
   const emitChange = useCallback(() => {
     const current = editorRef.current;
@@ -110,6 +150,16 @@ export function PostRichTextAdapter({
       current.innerHTML = nextHtml;
     }
   }, [value]);
+
+  useEffect(() => {
+    if (!pasteHint || typeof window === "undefined") return;
+    const timeoutId = window.setTimeout(() => {
+      setPasteHint(null);
+    }, 7000);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [pasteHint]);
 
   const executeCommand = useCallback(
     (command: PostRichTextCommand) => {
@@ -285,6 +335,38 @@ export function PostRichTextAdapter({
     [slashQuery]
   );
 
+  const handlePaste = useCallback(
+    (event: ClipboardEvent<HTMLDivElement>) => {
+      if (disabled) return;
+
+      const html = event.clipboardData.getData("text/html");
+      const text = event.clipboardData.getData("text/plain");
+      if (!html.trim() && !text.trim()) return;
+
+      const normalized = buildPostRichTextPasteInsert({ html, text });
+      if (!normalized.html) return;
+
+      event.preventDefault();
+      const inserted = insertHtmlAtCursor(normalized.html);
+      if (!inserted) return;
+
+      emitChange();
+      updateSlashState();
+
+      if (normalized.warnings.length > 0) {
+        const firstWarning = normalized.warnings[0] ?? "";
+        const suffix =
+          normalized.warnings.length > 1
+            ? ` (+${normalized.warnings.length - 1} more)`
+            : "";
+        setPasteHint(`${firstWarning}${suffix}`);
+      } else {
+        setPasteHint(null);
+      }
+    },
+    [disabled, emitChange, updateSlashState]
+  );
+
   const handleSlashSelect = useCallback(
     (type: PostBlockType) => {
       onSlashInsertBlock?.(type);
@@ -333,6 +415,7 @@ export function PostRichTextAdapter({
           }}
           onKeyDown={handleKeyDown}
           onFocus={onFocus}
+          onPaste={handlePaste}
         />
         <SlashCommandMenu
           open={slashOpen}
@@ -348,6 +431,11 @@ export function PostRichTextAdapter({
       <p className="text-xs text-muted-foreground">
         Shortcuts: Ctrl/Cmd+B, Ctrl/Cmd+I, Ctrl/Cmd+K, Shift+Alt+5.
       </p>
+      {pasteHint ? (
+        <p className="text-xs text-amber-500">
+          Paste notice: {pasteHint}
+        </p>
+      ) : null}
     </div>
   );
 }

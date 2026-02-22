@@ -84,11 +84,36 @@ const removeForbiddenElements = (value: string) =>
       ""
     );
 
+const officeArtifactPatterns = [
+  /<\?xml[\s\S]*?\?>/gi,
+  /<!--\[if[\s\S]*?<!\[endif\]-->/gi,
+  /<\/?[a-z0-9]+:[a-z0-9-]+\b[^>]*>/gi,
+  /<\/?o:p\b[^>]*>/gi,
+  /\sxmlns(:[a-z0-9-]+)?="[^"]*"/gi,
+  /\sxmlns(:[a-z0-9-]+)?='[^']*'/gi,
+] as const;
+
+export const stripPostOfficeHtmlArtifacts = (value: string) => {
+  let html = value;
+  let removed = false;
+
+  for (const pattern of officeArtifactPatterns) {
+    const next = html.replace(pattern, "");
+    if (next !== html) {
+      removed = true;
+      html = next;
+    }
+  }
+
+  return { html, removed };
+};
+
 export function sanitizePostRichTextHtml(rawHtml: string | undefined): string {
   if (typeof rawHtml !== "string") return "";
   if (!rawHtml.trim()) return "";
 
   let html = rawHtml.split("\0").join("").replace(/<!--[\s\S]*?-->/g, "");
+  html = stripPostOfficeHtmlArtifacts(html).html;
   html = removeForbiddenElements(html);
   html = html.replace(/\son[a-z-]+\s*=\s*(".*?"|'.*?'|[^\s>]+)/gi, "");
 

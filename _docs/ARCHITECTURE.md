@@ -81,6 +81,11 @@ przez `setup.completed=true`.
     - nowy `PostBlockType`: `writing-canvas`,
     - typed payload `WritingCanvasContent` (`paragraph/heading/list/quote/image` nodes),
     - deterministic normalization + limits + compatibility hooks (`legacy adapter`, runtime excerpt fallback).
+  - **TASK-061-03 (done):** smart paste pipeline dla authoringu postow:
+    - nowy `postPasteNormalizer` mapuje `text/html` i `text/plain` do `writing-canvas` nodes,
+    - payload z Word/Docs jest czyszczony przez `stripPostOfficeHtmlArtifacts` + rich-text sanitizer,
+    - pipeline stosuje deterministic budgets (`html/text/node/list`) + graceful warnings,
+    - `PostRichTextAdapter` interceptuje clipboard paste i wstawia bezpieczny payload z hintem dla usera przy degradacji.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

@@ -101,3 +101,4 @@ Obecny model jest technicznie poprawny, ale mniej intuicyjny dla scenariusza:
 ## Progress Notes
 - `TASK-061-01` completed: UX contract and writing-first flow anchors documented.
 - `TASK-061-02` completed: `writing-canvas` block contract + normalizer + compatibility hooks implemented.
+- `TASK-061-03` completed: smart-paste pipeline (Word/Docs/HTML), sanitizer hardening, adapter integration, and coverage tests delivered.

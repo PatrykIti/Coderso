@@ -5,7 +5,7 @@
 **Category:** Core/Editor  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-061-02  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -62,3 +62,25 @@ normalizePastePayload(input):
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
+
+## Validation Executed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test`
+  - Result: `1368 pass`, `149 skip`, `0 fail`
+
+## Closure Notes
+- Added deterministic smart-paste pipeline in `postPasteNormalizer`:
+  - source detection (`text/html` vs `text/plain`),
+  - Word/Docs artifact cleanup + sanitization,
+  - mapping to writing-canvas nodes (`paragraph`, `heading`, `list`, `quote`),
+  - size budgets and warnings (`truncated`, `fallback`, `unsupported markup removed`).
+- Extended rich-text sanitizer with Office markup stripping helper:
+  - `stripPostOfficeHtmlArtifacts`.
+- Integrated smart paste in `PostRichTextAdapter`:
+  - clipboard normalization before insertion,
+  - safe insertion at cursor,
+  - user-facing paste notices when payload is degraded.
+- Added test coverage:
+  - `tests/unit/posts/post-paste-normalizer.test.ts`,
+  - `tests/integration/ui/post-editor-paste-from-word.test.tsx`.
