@@ -291,6 +291,33 @@ const readListItemText = (items: string[]) =>
     .filter(Boolean)
     .join(" ");
 
+const readWritingCanvasText = (content: unknown) => {
+  if (!isRecord(content) || !Array.isArray(content.nodes)) return "";
+  return content.nodes
+    .map((node) => {
+      if (!isRecord(node)) return "";
+      const type = typeof node.type === "string" ? node.type.trim().toLowerCase() : "";
+      if (type === "paragraph" || type === "heading" || type === "quote") {
+        return postRichTextToPlainText(typeof node.text === "string" ? node.text : "");
+      }
+      if (type === "list" && Array.isArray(node.items)) {
+        return node.items
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => postRichTextToPlainText(item))
+          .join(" ");
+      }
+      if (type === "image") {
+        const alt = typeof node.alt === "string" ? node.alt : "";
+        const caption = typeof node.caption === "string" ? node.caption : "";
+        return `${alt} ${caption}`.trim();
+      }
+      return "";
+    })
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(" ");
+};
+
 const readBlockPlainText = (block: PostRuntimeMappedBlock) => {
   if (block.content.html) {
     return postRichTextToPlainText(block.content.html);
@@ -456,6 +483,9 @@ const resolveDocumentExcerpt = (data: Record<string, unknown>, maxLength: number
         return block.content
           .filter((item): item is string => typeof item === "string")
           .join(" ");
+      }
+      if (block.type === "writing-canvas") {
+        return readWritingCanvasText(block.content);
       }
       if (typeof block.content === "string") return postRichTextToPlainText(block.content);
       return "";

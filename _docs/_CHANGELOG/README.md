@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 306 | 2026-02-22 | TASK-061-02 writing canvas block contract and normalization | Core/Content |
+| 305 | 2026-02-22 | TASK-061-01 writing canvas ux contract and user flows | Docs/UX |
 | 304 | 2026-02-22 | TASK-060 ribbon completion and inserter drawer removal | Admin/UI |
 | 303 | 2026-02-22 | TASK-060 post editor unified canvas and ribbon UX | Admin/UI |
 | 302 | 2026-02-22 | TASK-059-08 posts decoupling QA docs and closure | QA/Docs |

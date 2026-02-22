@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Content Authoring  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-057, TASK-060  
-**Status:** To Do
+**Status:** In Progress (2026-02-22)
 
 ---
 
@@ -97,3 +97,7 @@ Obecny model jest technicznie poprawny, ale mniej intuicyjny dla scenariusza:
 - `_docs/CODERSO_MODULES.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Progress Notes
+- `TASK-061-01` completed: UX contract and writing-first flow anchors documented.
+- `TASK-061-02` completed: `writing-canvas` block contract + normalizer + compatibility hooks implemented.

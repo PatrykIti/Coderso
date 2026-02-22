@@ -75,6 +75,7 @@ export const EMBED_ASPECT_OPTIONS: SelectOption[] = [
 
 export const BLOCK_STYLE_SCOPE: Record<PostBlockType, readonly string[]> = {
   paragraph: ["alignment", "width", "spacing", "textScale"],
+  "writing-canvas": [],
   heading: ["alignment", "width", "spacing", "textScale"],
   list: ["alignment", "width", "spacing", "textScale"],
   quote: ["alignment", "width", "spacing", "textScale"],

@@ -18,6 +18,11 @@ import { PostEditorTopBar } from "./PostEditorTopBar";
 import { PostRevisionDrawer } from "./PostRevisionDrawer";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 
+// TASK-061-01 UX contract anchor:
+// - writing-first editing flow on a shared canvas,
+// - ribbon is the primary action surface,
+// - outline/list view remains informational + navigational,
+// - details opens contextually without changing canvas mode.
 export function PostBlockEditorShell() {
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
   const [outlineVisible, setOutlineVisible] = useState(true);

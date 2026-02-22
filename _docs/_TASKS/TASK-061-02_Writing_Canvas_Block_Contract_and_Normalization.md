@@ -5,7 +5,7 @@
 **Category:** Core/Content  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-061-01  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -61,3 +61,15 @@ normalizeWritingCanvas(content):
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
+
+## Validation Executed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test`
+  - Result: `1362 pass`, `149 skip`, `0 fail`
+
+## Closure Notes
+- Added `writing-canvas` to post block type contract.
+- Added typed `WritingCanvasContent` model and deterministic default initializer.
+- Extended post block normalizer with writing-canvas node normalization and limits.
+- Extended compatibility hooks (`legacy adapter` + runtime excerpt fallback text extraction) for writing-canvas payloads.

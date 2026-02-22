@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 25 tasks
-- **In Progress:** 2 tasks
-- **Done:** 450 tasks
+- **To Do:** 22 tasks
+- **In Progress:** 3 tasks
+- **Done:** 452 tasks
 
 ---
 
@@ -39,9 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | Word/Gutenberg-like writing flow, smart Word paste, inline image wrap |
-| TASK-061-01 | Writing Canvas UX Contract and User Flows | High | Medium | Final UX contract for writing-first authoring and paste behavior |
-| TASK-061-02 | Writing Canvas Block Contract and Normalization | High | Large | New `writing-canvas` block contract + normalizer + compatibility hooks |
 | TASK-061-03 | Smart Paste (Word/Docs/HTML) Parsing and Sanitization | High | Large | Deterministic paste parser/sanitizer for long documents |
 | TASK-061-04 | Clipboard Image Upload and Inline Media Insertion | High | Medium | Clipboard image -> media upload -> inline node insertion |
 | TASK-061-05 | Image Wrap Controls and Layout Semantics | High | Medium | `wrap none/left/right` + width controls + mobile fallback |
@@ -71,6 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: contract + block model done, implementation continues in 061-03+ |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -80,6 +78,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-061-02 | Writing Canvas Block Contract and Normalization | High | Large | Done: `writing-canvas` type + normalization + compatibility hooks for legacy/runtime text extraction |
+| TASK-061-01 | Writing Canvas UX Contract and User Flows | High | Medium | Done: writing-first UX contract, flow boundaries, and editor anchors documented |
 | TASK-060-06 | Regression Tests, Docs, Changelog, and Closure | Medium | Medium | Full lint/types/full-tests + docs/changelog/kanban closure for TASK-060 |
 | TASK-060 | Post Editor Unified Canvas and Ribbon UX | High | Large | Closed: unified shared canvas + ribbon controls + compact outline + contextual details flow |
 | TASK-060-05 | Details Panel and Responsive Behavior | High | Medium | Details opened on-demand from ribbon with contextual tab mode and responsive sheet behavior |

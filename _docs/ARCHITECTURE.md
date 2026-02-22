@@ -72,6 +72,15 @@ przez `setup.completed=true`.
     - staly lewy panel insertera zostal usuniety; dodawanie blokow odbywa sie z ribbona (`Insert` + `Block library`) i przez slash command,
     - list view jest kompaktowym outline (`min 220 / max 320`) z labels-only (`{index}. {BlockLabel}`) i synchronizacja select/scroll,
     - panel `Details` jest otwierany na zadanie z ribbona i dziala kontekstowo (`Document` vs `Block`) bez resetu selekcji/focusu,
+  - **TASK-061-01 (done):** UX contract dla writing-first post editing:
+    - shared canvas pozostaje glownym miejscem pracy nad trescia,
+    - ribbon prowadzi glowny flow akcji (insert/review/view),
+    - outline/list view zostaje panelem nawigacyjno-informacyjnym,
+    - dalsze taski `061-02+` rozwijaja smart paste i writing-canvas model danych.
+  - **TASK-061-02 (done):** model danych `writing-canvas` jest aktywny w normalizerze:
+    - nowy `PostBlockType`: `writing-canvas`,
+    - typed payload `WritingCanvasContent` (`paragraph/heading/list/quote/image` nodes),
+    - deterministic normalization + limits + compatibility hooks (`legacy adapter`, runtime excerpt fallback).
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

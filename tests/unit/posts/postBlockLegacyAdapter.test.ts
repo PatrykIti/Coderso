@@ -73,3 +73,28 @@ test("coercePostDocument always returns a valid document", () => {
   expect(document.version).toBe(1);
   expect(document.blocks.length).toBeGreaterThan(0);
 });
+
+test("ensurePostDocumentForWrite collects text fallback from writing-canvas nodes", () => {
+  const data = ensurePostDocumentForWrite({
+    document: {
+      version: 1,
+      blocks: [
+        {
+          id: "writing",
+          type: "writing-canvas",
+          attrs: {},
+          content: {
+            version: 1,
+            nodes: [
+              { id: "node-1", type: "paragraph", text: "<p>Hello writing canvas</p>" },
+              { id: "node-2", type: "list", ordered: false, items: ["<p>Item A</p>"] },
+            ],
+          },
+        },
+      ],
+    },
+  });
+
+  expect(data.content).toContain("Hello writing canvas");
+  expect(data.content).toContain("Item A");
+});

@@ -558,6 +558,13 @@ Posts API jest niezaleznym, internal kontraktem dla domeny posts:
 - brak runtime/API dependency `posts -> content_entries`,
 - payloady i endpointy zostaja kompatybilne dla klienta admin (`postsClient`).
 
+Post document contract (update `TASK-061-02`):
+- `PostBlockType` zawiera nowy typ `writing-canvas`,
+- `writing-canvas` przechowuje typed payload:
+  - `version: 1`,
+  - `nodes[]` (`paragraph`, `heading`, `list`, `quote`, `image`),
+- normalizer egzekwuje deterministic limits/sanitization dla nodow i zachowuje compatibility z legacy data.
+
 Routes:
 - `GET /posts`
 - `POST /posts`

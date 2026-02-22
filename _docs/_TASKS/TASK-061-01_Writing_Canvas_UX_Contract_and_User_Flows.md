@@ -5,7 +5,7 @@
 **Category:** Product UX / Admin UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-061  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -57,3 +57,19 @@ pasteModes = {
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+## Validation Executed
+- UX contract anchors added to:
+  - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
+  - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
+- Full verification run:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test`
+
+## Closure Notes
+- Writing-first UX contract approved for implementation:
+  - shared canvas as primary editing surface,
+  - ribbon as primary command surface,
+  - list view as informational/navigation panel,
+  - contextual details panel behavior preserved.

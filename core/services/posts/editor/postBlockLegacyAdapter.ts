@@ -56,6 +56,33 @@ const normalizeDocumentFromLegacyFields = (data: Record<string, unknown>) => {
   });
 };
 
+const readWritingCanvasPlainText = (content: unknown) => {
+  if (!isRecord(content) || !Array.isArray(content.nodes)) return "";
+  return content.nodes
+    .map((node) => {
+      if (!isRecord(node)) return "";
+      const type = typeof node.type === "string" ? node.type.trim().toLowerCase() : "";
+      if (type === "paragraph" || type === "heading" || type === "quote") {
+        return postRichTextToPlainText(typeof node.text === "string" ? node.text : "");
+      }
+      if (type === "list" && Array.isArray(node.items)) {
+        return node.items
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => postRichTextToPlainText(item))
+          .join(" ");
+      }
+      if (type === "image") {
+        const alt = typeof node.alt === "string" ? node.alt : "";
+        const caption = typeof node.caption === "string" ? node.caption : "";
+        return `${alt} ${caption}`.trim();
+      }
+      return "";
+    })
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(" ");
+};
+
 const collectTextFromDocument = (document: PostBlockDocument) => {
   const parts = document.blocks
     .map((block) => {
@@ -64,6 +91,9 @@ const collectTextFromDocument = (document: PostBlockDocument) => {
         return block.content
           .filter((item): item is string => typeof item === "string")
           .join("\n");
+      }
+      if (block.type === "writing-canvas") {
+        return readWritingCanvasPlainText(block.content);
       }
       return "";
     })

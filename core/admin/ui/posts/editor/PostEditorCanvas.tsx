@@ -252,6 +252,9 @@ export function PostEditorCanvas({
   onInsertBlockAfterSelected,
   outlineVisible,
 }: PostEditorCanvasProps) {
+  // TASK-061-01 UX contract anchor:
+  // this canvas is the single writing surface. Future smart-paste and
+  // writing-canvas enhancements must keep this view as the primary editing area.
   const blockRefs = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
