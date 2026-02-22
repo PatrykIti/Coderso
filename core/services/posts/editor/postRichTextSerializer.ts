@@ -30,6 +30,9 @@ const looksLikeHtml = (value: string) => {
   return false;
 };
 
+const containsKnownHtmlEntity = (value: string) =>
+  /&(nbsp|amp|lt|gt|quot|#39|#x?[0-9a-f]+);/i.test(value);
+
 const normalizeNewlines = (value: string) => value.replace(/\r\n/g, "\n");
 
 export const postRichTextFromPlainText = (value: string) =>
@@ -40,6 +43,7 @@ export function serializePostRichText(value: unknown): string {
   const normalized = normalizeNewlines(value).split("\0").join("");
   if (!normalized.trim()) return "";
   const candidate = looksLikeHtml(normalized)
+    || containsKnownHtmlEntity(normalized)
     ? normalized
     : postRichTextFromPlainText(normalized);
   return sanitizePostRichTextHtml(candidate);
