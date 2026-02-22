@@ -30,6 +30,7 @@ const renderEntryData = (data: Record<string, unknown>) => {
 export default function ContentDetailTemplate({
   entry,
   postRuntimeDocument,
+  isPreview,
 }: ContentDetailTemplateProps) {
   return (
     <main
@@ -38,7 +39,11 @@ export default function ContentDetailTemplate({
     >
       <header className="space-y-2">
         <h1 className="text-3xl font-semibold">{entry.title}</h1>
-        <p className="text-sm text-[var(--color-text)]/70">Entry preview</p>
+        {isPreview ? (
+          <p className="text-sm text-[var(--color-text)]/70">
+            {postRuntimeDocument ? "Post preview" : "Entry preview"}
+          </p>
+        ) : null}
       </header>
       {postRuntimeDocument ? (
         <PostBlockRuntimeRenderer document={postRuntimeDocument} />

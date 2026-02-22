@@ -99,6 +99,19 @@ test("renderPublicEntryDetailHtml renders entry data", async () => {
   expect(html).toContain("data-template=\"content-detail\"");
   expect(html).toContain("summary");
   expect(html).toContain("World");
+  expect(html).not.toContain("Entry preview");
+});
+
+test("renderPublicEntryDetailHtml shows preview label only in preview mode", async () => {
+  const html = await renderPublicEntryDetailHtml({
+    title: "Hello",
+    contentType: baseContentType,
+    entry: baseEntry,
+    isPreview: true,
+  });
+
+  expect(html).toContain("Preview mode");
+  expect(html).toContain("Entry preview");
 });
 
 test("renderPublicEntryListHtml prefers theme templates when available", async () => {

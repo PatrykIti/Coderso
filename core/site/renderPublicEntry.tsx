@@ -239,11 +239,16 @@ const DefaultListTemplate = ({ title, items }: ContentListTemplateProps) => (
 const DefaultDetailTemplate = ({
   entry,
   postRuntimeDocument,
+  isPreview,
 }: ContentDetailTemplateProps) => (
   <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-12">
     <header className="space-y-2">
       <h1 className="text-3xl font-semibold">{entry.title}</h1>
-      <p className="text-sm text-[var(--color-text)]/70">Entry preview</p>
+      {isPreview ? (
+        <p className="text-sm text-[var(--color-text)]/70">
+          {postRuntimeDocument ? "Post preview" : "Entry preview"}
+        </p>
+      ) : null}
     </header>
     {postRuntimeDocument ? (
       <PostBlockRuntimeRenderer document={postRuntimeDocument} />
