@@ -1,7 +1,28 @@
-import { Eye, History, Redo2, Save, Send, Undo2 } from "lucide-react";
+import { Eye, History, Plus, Redo2, Save, Send, Undo2 } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import type { PostBlockType } from "../../../../services/posts/editor/postBlockDocument";
+import { BlockInserter } from "./blocks/BlockInserter";
+import { BLOCK_CATEGORY_LABELS, POST_BLOCK_CATALOG } from "./blocks/blockCatalog";
 
 type PostEditorTopBarProps = {
   status: string;
@@ -16,7 +37,7 @@ type PostEditorTopBarProps = {
   onSaveDraft: () => void;
   onPreview: () => void;
   onPublish: () => void;
-  onOpenInsert: () => void;
+  onInsertBlock: (type: PostBlockType) => void;
   onToggleOutline: () => void;
   outlineVisible: boolean;
   onOpenDetails: () => void;
@@ -45,6 +66,22 @@ const formatSavedAt = (value: string) => {
   }).format(date);
 };
 
+type RibbonGroupProps = {
+  title: string;
+  children: React.ReactNode;
+};
+
+function RibbonGroup({ title, children }: RibbonGroupProps) {
+  return (
+    <section className="min-w-[180px] border-r pr-3 last:border-r-0 last:pr-0">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">{children}</div>
+    </section>
+  );
+}
+
 export function PostEditorTopBar({
   status,
   dirty,
@@ -58,11 +95,13 @@ export function PostEditorTopBar({
   onSaveDraft,
   onPreview,
   onPublish,
-  onOpenInsert,
+  onInsertBlock,
   onToggleOutline,
   outlineVisible,
   onOpenDetails,
 }: PostEditorTopBarProps) {
+  const [libraryOpen, setLibraryOpen] = useState(false);
+
   const syncLabel = saving
     ? "Saving..."
     : dirty
@@ -79,102 +118,227 @@ export function PostEditorTopBar({
       ? "border-rose-500/30 bg-rose-500/10 text-rose-600"
       : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600";
 
+  const groupedCatalog = Object.entries(
+    POST_BLOCK_CATALOG.reduce<Record<string, typeof POST_BLOCK_CATALOG>>((acc, item) => {
+      if (!acc[item.category]) {
+        acc[item.category] = [];
+      }
+      acc[item.category].push(item);
+      return acc;
+    }, {})
+  );
+
+  const quickInsertTypes: PostBlockType[] = [
+    "paragraph",
+    "heading",
+    "list",
+    "quote",
+    "image",
+    "button",
+  ];
+
   return (
     <div className="border-y bg-background">
-      <div className="border-b px-4 py-2 sm:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onSaveDraft}
-            disabled={saving}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save draft"}
-          </Button>
-          <div className="hidden items-center gap-2 md:flex">
-            <Badge
-              variant="outline"
-              className={statusStyle[status] ?? statusStyle.draft}
-            >
-              {statusLabel[status] ?? status}
-            </Badge>
-            <Badge variant="outline" className={syncBadgeClass}>
-              {syncLabel}
-            </Badge>
+      <Tabs defaultValue="home" className="gap-0">
+        <div className="border-b px-4 py-2 sm:px-6">
+          <TabsList variant="line" className="h-auto gap-2 p-0">
+            <TabsTrigger value="home">Home</TabsTrigger>
+            <TabsTrigger value="insert">Insert</TabsTrigger>
+            <TabsTrigger value="review">Review</TabsTrigger>
+            <TabsTrigger value="view">View</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="home" className="m-0 border-b px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-start gap-3">
+            <RibbonGroup title="Publish">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={onSaveDraft}
+                disabled={saving}
+              >
+                <Save className="h-4 w-4" />
+                {saving ? "Saving..." : "Save draft"}
+              </Button>
+              <Button type="button" size="sm" onClick={onPublish}>
+                <Send className="h-4 w-4" />
+                Publish
+              </Button>
+            </RibbonGroup>
+
+            <RibbonGroup title="Edit">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onUndo}
+                disabled={!canUndo}
+              >
+                <Undo2 className="h-4 w-4" />
+                Undo
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRedo}
+                disabled={!canRedo}
+              >
+                <Redo2 className="h-4 w-4" />
+                Redo
+              </Button>
+            </RibbonGroup>
+
+            <RibbonGroup title="Status">
+              <Badge
+                variant="outline"
+                className={statusStyle[status] ?? statusStyle.draft}
+              >
+                {statusLabel[status] ?? status}
+              </Badge>
+              <Badge variant="outline" className={syncBadgeClass}>
+                {syncLabel}
+              </Badge>
+            </RibbonGroup>
           </div>
-          <Button type="button" size="sm" onClick={onPublish}>
-            <Send className="mr-2 h-4 w-4" />
-            Publish
-          </Button>
-        </div>
-      </div>
+        </TabsContent>
 
-      <div className="border-b px-4 py-2 sm:px-6">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onUndo}
-            disabled={!canUndo}
-          >
-            <Undo2 className="mr-2 h-4 w-4" />
-            Undo
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onRedo}
-            disabled={!canRedo}
-          >
-            <Redo2 className="mr-2 h-4 w-4" />
-            Redo
-          </Button>
-        </div>
-      </div>
+        <TabsContent value="insert" className="m-0 border-b px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-start gap-3">
+            <RibbonGroup title="Quick blocks">
+              {quickInsertTypes.map((type) => {
+                const item = POST_BLOCK_CATALOG.find((entry) => entry.type === type);
+                if (!item) return null;
+                return (
+                  <Button
+                    key={type}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onInsertBlock(type)}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </RibbonGroup>
 
-      <div className="border-b px-4 py-2 sm:px-6">
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onOpenRevisions}
-          >
-            <History className="mr-2 h-4 w-4" />
-            Revisions
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onPreview}
-          >
-            <Eye className="mr-2 h-4 w-4" />
-            Runtime preview
-          </Button>
-        </div>
-      </div>
+            <RibbonGroup title="Library">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" size="sm">
+                    Add block
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  {groupedCatalog.map(([category, items], index) => (
+                    <div key={category}>
+                      <DropdownMenuLabel>
+                        {BLOCK_CATEGORY_LABELS[category as keyof typeof BLOCK_CATEGORY_LABELS]}
+                      </DropdownMenuLabel>
+                      {items.map((item) => (
+                        <DropdownMenuItem
+                          key={item.type}
+                          onSelect={() => onInsertBlock(item.type)}
+                        >
+                          {item.label}
+                        </DropdownMenuItem>
+                      ))}
+                      {index < groupedCatalog.length - 1 ? <DropdownMenuSeparator /> : null}
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLibraryOpen(true)}
+              >
+                Block library
+              </Button>
+            </RibbonGroup>
+          </div>
+        </TabsContent>
 
-      <div className="px-4 py-2 sm:px-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onToggleOutline}>
-            Blocks
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={onOpenInsert}>
-            Add block
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={onOpenDetails}>
-            Details
-          </Button>
-          <Badge variant="outline" className="ml-auto hidden md:inline-flex">
-            {outlineVisible ? "Outline visible" : "Outline hidden"}
-          </Badge>
-        </div>
-      </div>
+        <TabsContent value="review" className="m-0 border-b px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-start gap-3">
+            <RibbonGroup title="History">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenRevisions}
+              >
+                <History className="h-4 w-4" />
+                Revisions
+              </Button>
+            </RibbonGroup>
+            <RibbonGroup title="Runtime">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onPreview}
+              >
+                <Eye className="h-4 w-4" />
+                Runtime preview
+              </Button>
+            </RibbonGroup>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="view" className="m-0 px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-start gap-3">
+            <RibbonGroup title="Panels">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onToggleOutline}
+              >
+                Blocks
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onOpenDetails}
+              >
+                Details
+              </Button>
+            </RibbonGroup>
+            <RibbonGroup title="Layout state">
+              <Badge variant="outline">
+                {outlineVisible ? "Outline visible" : "Outline hidden"}
+              </Badge>
+            </RibbonGroup>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <Dialog open={libraryOpen} onOpenChange={setLibraryOpen}>
+        <DialogContent className="max-w-3xl p-0">
+          <DialogHeader className="px-4 pt-4">
+            <DialogTitle>Block library</DialogTitle>
+            <DialogDescription>
+              Search all blocks and insert them into the document.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="h-[70vh] min-h-0 border-t">
+            <BlockInserter
+              onInsertBlock={(type) => {
+                onInsertBlock(type);
+                setLibraryOpen(false);
+              }}
+              disabled={saving}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 304 | 2026-02-22 | TASK-060 ribbon completion and inserter drawer removal | Admin/UI |
 | 303 | 2026-02-22 | TASK-060 post editor unified canvas and ribbon UX | Admin/UI |
 | 302 | 2026-02-22 | TASK-059-08 posts decoupling QA docs and closure | QA/Docs |
 | 301 | 2026-02-22 | TASK-059-07 posts feed widget and page integration | CMS/Widgets |

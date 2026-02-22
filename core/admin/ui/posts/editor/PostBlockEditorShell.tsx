@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
-import { BlockInserter } from "./blocks/BlockInserter";
 import { BlockInspector } from "./inspector/BlockInspector";
 import { DocumentInspector } from "./inspector/DocumentInspector";
 import { PostEditorCanvas } from "./PostEditorCanvas";
@@ -20,7 +19,6 @@ import { PostRevisionDrawer } from "./PostRevisionDrawer";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 
 export function PostBlockEditorShell() {
-  const [insertPanelOpen, setInsertPanelOpen] = useState(false);
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
   const [outlineVisible, setOutlineVisible] = useState(true);
   const [inspectorTab, setInspectorTab] = useState<"document" | "block">(
@@ -28,16 +26,6 @@ export function PostBlockEditorShell() {
   );
 
   const editor = usePostEditorState();
-
-  const blockLibrary = (
-    <BlockInserter
-      onInsertBlock={(type) => {
-        editor.insertBlock(type);
-        setInsertPanelOpen(false);
-      }}
-      disabled={editor.loading}
-    />
-  );
 
   const inspectorPanel = (
     <div className="flex h-full flex-col">
@@ -144,7 +132,7 @@ export function PostBlockEditorShell() {
           onPublish={() => {
             editor.publish().catch(() => undefined);
           }}
-          onOpenInsert={() => setInsertPanelOpen(true)}
+          onInsertBlock={(type) => editor.insertBlock(type)}
           onToggleOutline={() => setOutlineVisible((prev) => !prev)}
           outlineVisible={outlineVisible}
           onOpenDetails={() => {
@@ -195,16 +183,6 @@ export function PostBlockEditorShell() {
           error={editor.previewError}
         />
       </div>
-
-      <Sheet open={insertPanelOpen} onOpenChange={setInsertPanelOpen}>
-        <SheetContent side="left" className="w-full max-w-sm p-0" showCloseButton={false}>
-          <SheetTitle className="sr-only">Add block</SheetTitle>
-          <SheetDescription className="sr-only">
-            Select a block type to insert into the post.
-          </SheetDescription>
-          {blockLibrary}
-        </SheetContent>
-      </Sheet>
 
       <Sheet open={detailsPanelOpen} onOpenChange={setDetailsPanelOpen}>
         <SheetContent side="right" className="w-full max-w-sm p-0" showCloseButton={false}>

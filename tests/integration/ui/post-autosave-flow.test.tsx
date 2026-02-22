@@ -16,7 +16,7 @@ const createBaseProps = () => ({
   onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
-  onOpenInsert: () => undefined,
+  onInsertBlock: () => undefined,
   onToggleOutline: () => undefined,
   outlineVisible: true,
   onOpenDetails: () => undefined,
@@ -26,7 +26,7 @@ test("PostEditorTopBar renders autosave and revisions status", () => {
   const html = renderToString(<PostEditorTopBar {...createBaseProps()} />);
 
   expect(html).toContain("Autosaved at");
-  expect(html).toContain("Revisions");
+  expect(html).toContain("Review");
 });
 
 test("PostEditorTopBar prioritizes saving and unsaved indicators", () => {

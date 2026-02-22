@@ -149,6 +149,7 @@ const sections = buildDefaultNavSections({
   - fallback mode via `settings["posts.editor.mode"]` and query override `?editor=classic`.
 - 060 done: Posts editor unified canvas + ribbon UX:
   - shared document canvas z inline editing wszystkich blokow,
-  - ribbon sections (save/publish, undo/redo, revisions/preview, blocks/add block/details),
+  - tabbed ribbon (`Home`, `Insert`, `Review`, `View`) with grouped actions,
+  - insert flow moved fully into ribbon (`Add block` + `Block library`), without left inserter drawer,
   - list view outline w kompaktowym ratio (`min 220`, `max 320`) i labels-only rows,
   - contextual details behavior (`Document`/`Block`) przy zachowaniu focusu/selekcji.

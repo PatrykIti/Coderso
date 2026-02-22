@@ -68,3 +68,8 @@ slashCommand.onSelect(type):
 - `_docs/ARCHITECTURE.md`
 - `_docs/CODERSO_MODULES.md` (posts editor UX section)
 - `_docs/_TASKS/README.md`
+
+## Closure Notes
+- Delivered as a tabbed ribbon (`Home`, `Insert`, `Review`, `View`) with grouped actions.
+- Left-side inserter drawer removed from block editor shell.
+- Insert flow is now ribbon-first (`Add block` dropdown + full `Block library` dialog), with slash command preserved.

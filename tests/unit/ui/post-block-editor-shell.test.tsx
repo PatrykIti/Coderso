@@ -8,10 +8,11 @@ test("PostBlockEditorShell renders Gutenberg-like frame", () => {
     path: "/admin/coderso/posts/post-1",
   });
 
-  expect(html).toContain("Add block");
-  expect(html).toContain("Blocks");
-  expect(html).toContain("Details");
+  expect(html).toContain("Home");
+  expect(html).toContain("Insert");
+  expect(html).toContain("Review");
+  expect(html).toContain("View");
   expect(html).toContain("Save draft");
-  expect(html).toContain("Revisions");
-  expect(html).toContain("Runtime preview");
+  expect(html).toContain("Publish");
+  expect(html).toContain("Undo");
 });

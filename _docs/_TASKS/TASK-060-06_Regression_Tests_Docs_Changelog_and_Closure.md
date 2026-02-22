@@ -70,3 +70,4 @@ if checksPass:
 ## Closure Notes
 - TASK-060 and subtasks `060-01..060-06` moved to `Done`.
 - Docs/changelog/kanban synchronized with unified canvas + ribbon editor rollout.
+- Ribbon implementation finalized as tabbed UX (`Home/Insert/Review/View`) with insert drawer removal and ribbon-only block insertion.
