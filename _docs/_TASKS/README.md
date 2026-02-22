@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 2 tasks
 - **Done:** 450 tasks
 
@@ -39,6 +39,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | Word/Gutenberg-like writing flow, smart Word paste, inline image wrap |
+| TASK-061-01 | Writing Canvas UX Contract and User Flows | High | Medium | Final UX contract for writing-first authoring and paste behavior |
+| TASK-061-02 | Writing Canvas Block Contract and Normalization | High | Large | New `writing-canvas` block contract + normalizer + compatibility hooks |
+| TASK-061-03 | Smart Paste (Word/Docs/HTML) Parsing and Sanitization | High | Large | Deterministic paste parser/sanitizer for long documents |
+| TASK-061-04 | Clipboard Image Upload and Inline Media Insertion | High | Medium | Clipboard image -> media upload -> inline node insertion |
+| TASK-061-05 | Image Wrap Controls and Layout Semantics | High | Medium | `wrap none/left/right` + width controls + mobile fallback |
+| TASK-061-06 | Editor UI Integration (Ribbon + Canvas + List View) | High | Large | Writing-first editor flow integrated with ribbon/list/details |
+| TASK-061-07 | Runtime Renderer Parity and Backward Compatibility | High | Medium | Writing canvas runtime rendering + legacy adapter path |
+| TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
