@@ -54,7 +54,8 @@ przez `setup.completed=true`.
   - `Widgets` (`/admin/coderso/widgets`) - biblioteka widgetow i template editor.
   - `Forms` (`/admin/coderso/forms`) - lista i edytor formularzy.
 - `Posts` jest eksponowany jako top-level pozycja w `Main` (obok `Pages`) i nie jest czescia grupy `Coderso`.
-  - implementacja jest aliasem na `content_entries` z zarezerwowanym typem `post` (bez osobnej tabeli),
+  - **TASK-059 (in progress):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` zostaly wprowadzone jako foundation pod pelne odciecie od `content_entries`,
+  - obecny runtime/service path jest jeszcze przepinany etapowo (cutover po subtaskach 059-02..059-06),
   - internal API: `/admin/api/posts*` (CRUD + autosave/revisions/restore + publish/preview/duplicate/delete) z tym samym RBAC co content entries.
   - fallback mode flag: `settings["posts.editor.mode"] = "blocks" | "classic"` (query override: `?editor=classic` dla awaryjnego rollbacku),
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.

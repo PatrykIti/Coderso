@@ -5,7 +5,7 @@
 **Category:** Database  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-059  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -72,3 +72,21 @@ createTable("post_term_assignments", { ...optional... });
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (data model)
 - `_docs/_TASKS/README.md`
+
+## Completion Notes (2026-02-22)
+1. Added dedicated posts schema objects in `core/db/schema.ts`:
+   - `posts`,
+   - `post_revisions`,
+   - `post_preview_tokens`,
+   - `post_term_assignments`.
+2. Generated migration artifacts:
+   - `core/db/migrations/0045_posts_decoupled.sql`
+   - `core/db/migrations/meta/0045_snapshot.json`
+   - updated `core/db/migrations/meta/_journal.json`.
+3. Added DB contract tests:
+   - `tests/unit/posts/schema.test.ts`
+   - covers slug uniqueness, revision version uniqueness, and cascade cleanup for post-owned relations.
+4. Validation run:
+   - `bun --cwd core lint`
+   - `bun --cwd core lint:types`
+   - `bun test tests/unit/posts/schema.test.ts` (tests are DB-gated and run when `DATABASE_URL` is reachable).

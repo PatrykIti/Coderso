@@ -316,6 +316,13 @@
       "when": 1771537648430,
       "tag": "0044_solution_kits_installs",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1771746279946,
+      "tag": "0045_posts_decoupled",
+      "breakpoints": true
     }
   ]
 }

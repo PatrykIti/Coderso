@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 295 | 2026-02-22 | TASK-059-01 posts db schema and migration foundation | Core/DB |
 | 294 | 2026-02-21 | posts moved to main navigation after pages | Admin/UI |
 | 293 | 2026-02-21 | admin dev strictmode fetch diagnostics fix | Admin/Performance |
 | 292 | 2026-02-21 | TASK-058-06 regression tests, docs, changelog, and closure | QA/Docs |

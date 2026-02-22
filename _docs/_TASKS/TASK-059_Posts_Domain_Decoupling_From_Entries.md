@@ -5,7 +5,7 @@
 **Category:** Architecture/Data Model  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-055, TASK-057  
-**Status:** To Do
+**Status:** In Progress (2026-02-22)
 
 ---
 
@@ -78,3 +78,7 @@ Przebudowac modul Posts tak, aby byl niezaleznym bytem CMS (WordPress-like core)
 - `_docs/ADMIN_CACHE.md` (jesli zmienia sie cache keys/clients)
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Progress Notes
+- 2026-02-22:
+  - `TASK-059-01` completed (dedicated posts DB schema + migration 0045 + schema contract tests).
