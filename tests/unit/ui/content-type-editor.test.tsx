@@ -9,4 +9,7 @@ test("ContentTypeEditor renders editor shell", () => {
   expect(html).toContain("Content Type Editor");
   expect(html).toContain("Save draft");
   expect(html).toContain("Publish");
+  expect(html).toContain("sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur");
+  expect(html).toContain("flex flex-col gap-6 px-6 py-6");
+  expect(html).not.toContain("overflow-y-auto overscroll-contain");
 });

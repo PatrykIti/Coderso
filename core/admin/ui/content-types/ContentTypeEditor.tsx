@@ -314,7 +314,7 @@ export function ContentTypeEditor() {
         </div>
       }
     >
-      <div className="flex h-full min-h-0 flex-col">
+      <>
         <div className="border-b px-6 py-6">
           <PageHeader
             title="Content Type Editor"
@@ -402,7 +402,7 @@ export function ContentTypeEditor() {
             </Button>
           </div>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-6 px-6 py-6">
+        <div className="flex flex-col gap-6 px-6 py-6">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -476,9 +476,9 @@ export function ContentTypeEditor() {
               Loading schema builder...
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden">
+            <div className="flex flex-col gap-6">
               <FieldsListPanel
-                className="lg:hidden flex-1 min-h-0"
+                className="lg:hidden"
                 fields={fields}
                 selectedId={selectedFieldId}
                 onSelect={(id) => setSelectedFieldId(id)}
@@ -499,12 +499,12 @@ export function ContentTypeEditor() {
                   if (!selectedField) return;
                   handleFieldChange(fields.filter((field) => field.id !== selectedField.id));
                 }}
-                className="hidden lg:flex flex-1 min-h-0"
+                className="hidden lg:flex h-auto overflow-visible"
               />
             </div>
           )}
         </div>
-      </div>
+      </>
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent side="right" className="w-full p-0 sm:max-w-md">
           <SheetTitle className="sr-only">Field details</SheetTitle>
