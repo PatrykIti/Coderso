@@ -5,7 +5,7 @@
 **Category:** Core/API  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-059-02  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -65,3 +65,9 @@ router.post("/posts/:id/publish", requireAuth, requirePermission("content:write"
 - `_docs/API.md` (jesli istnieje mapa endpointow)
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes
+1. `postsRoutes` zostal domkniety jako post-native API bez fallbackow `entry_*` w mapowaniu bledow.
+2. Error mapping kontrakt jest jawnie testowany (`post_not_found`, `post_slug_conflict`, `post_revision_not_found`, `post_validation_failed`).
+3. Route wiring test pokrywa komplet `/posts*` endpointow oraz wymagane scope RBAC (`content:read/write/publish`).
+4. Lint, typecheck i pakiet testow posts routes/client/service przechodza.

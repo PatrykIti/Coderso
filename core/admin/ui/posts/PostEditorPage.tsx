@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getSetting, type PostEditorMode } from "@/services/settingsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
-import { EntryEditor } from "@/ui/entries/EntryEditor";
 
+import { PostClassicEditorShell } from "./editor/PostClassicEditorShell";
 import { PostBlockEditorShell } from "./editor/PostBlockEditorShell";
 
 const isPostEditorMode = (value: unknown): value is PostEditorMode =>
@@ -58,7 +58,7 @@ export function PostEditorPage() {
   );
 
   if (mode === "classic") {
-    return <EntryEditor mode="posts" />;
+    return <PostClassicEditorShell />;
   }
 
   return <PostBlockEditorShell />;

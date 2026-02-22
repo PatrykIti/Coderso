@@ -25,6 +25,9 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 298 | 2026-02-22 | TASK-059-04 posts admin ui decoupling from entries | Admin/UI |
+| 297 | 2026-02-22 | TASK-059-03 posts admin api decoupling | Core/API |
+| 296 | 2026-02-22 | TASK-059-02 posts domain service extraction | Core/Content |
 | 295 | 2026-02-22 | TASK-059-01 posts db schema and migration foundation | Core/DB |
 | 294 | 2026-02-21 | posts moved to main navigation after pages | Admin/UI |
 | 293 | 2026-02-21 | admin dev strictmode fetch diagnostics fix | Admin/Performance |

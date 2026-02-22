@@ -54,38 +54,19 @@ import {
   fieldsFromSchema,
 } from "../content-types/schemaMapping";
 
-type EditorRouteMode = "entries" | "posts";
-
-type EntryEditorProps = {
-  mode?: EditorRouteMode;
-};
-
 const resolveEntryParams = (
-  pathname: string,
-  mode?: EditorRouteMode
-): { mode: EditorRouteMode; type: string | null; id: string | null } => {
+  pathname: string
+): { type: string | null; id: string | null } => {
   const parts = pathname.split("/").filter(Boolean);
-  if (mode === "posts") {
-    const index = parts.findIndex((segment) => segment === "posts");
-    if (index === -1) return { mode: "posts", type: "post", id: null };
-    return { mode: "posts", type: "post", id: parts[index + 1] ?? null };
-  }
-
   const entriesIndex = parts.findIndex((segment) => segment === "entries");
   if (entriesIndex !== -1) {
     return {
-      mode: "entries",
       type: parts[entriesIndex + 1] ?? null,
       id: parts[entriesIndex + 2] ?? null,
     };
   }
 
-  const postsIndex = parts.findIndex((segment) => segment === "posts");
-  if (postsIndex !== -1) {
-    return { mode: "posts", type: "post", id: parts[postsIndex + 1] ?? null };
-  }
-
-  return { mode: "entries", type: null, id: null };
+  return { type: null, id: null };
 };
 
 function resolveDefaultValue(field: ContentField) {
@@ -126,18 +107,15 @@ function slugify(value: string) {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
-  const [{ mode, type, id }] = useState<{
-    mode: EditorRouteMode;
+export function EntryEditor() {
+  const [{ type, id }] = useState<{
     type: string | null;
     id: string | null;
   }>(() => {
     if (typeof window === "undefined") {
-      return preferredMode === "posts"
-        ? { mode: "posts", type: "post", id: null }
-        : { mode: "entries", type: null, id: null };
+      return { type: null, id: null };
     }
-    return resolveEntryParams(window.location.pathname, preferredMode);
+    return resolveEntryParams(window.location.pathname);
   });
   const [entry, setEntry] = useState<EntryDetail | null>(null);
   const [contentTypeName, setContentTypeName] = useState<string | null>(null);
@@ -178,10 +156,7 @@ export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
     () => new Set(fields.map((field) => field.name)),
     [fields]
   );
-  const hiddenSchemaFieldNames = useMemo(
-    () => (mode === "posts" ? new Set(["document"]) : new Set<string>()),
-    [mode]
-  );
+  const hiddenSchemaFieldNames = useMemo(() => new Set<string>(), []);
 
   const applyEntry = useCallback(
     (entryResult: EntryDetail, contentType: ContentTypeSummary) => {
@@ -570,8 +545,8 @@ export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
   const { singular: typeSingular, plural: typePlural } = getContentTypeLabels(
     contentTypeName ?? type ?? ""
   );
-  const typeLabel = mode === "posts" ? "Posts" : typePlural;
-  const editorLabel = mode === "posts" ? "Edit Post" : `Edit ${typeSingular}`;
+  const typeLabel = typePlural;
+  const editorLabel = `Edit ${typeSingular}`;
   const helpItems = [
     "Fields are defined by the content type schema.",
     "Media fields pull assets from the Media Library.",
@@ -646,7 +621,7 @@ export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
 
   return (
     <AdminShell
-      activeHref={mode === "posts" ? "/admin/coderso/posts" : "/admin/entries"}
+      activeHref="/admin/entries"
       showSearch={false}
       contentClassName="p-0 overflow-hidden"
       breadcrumbs={
@@ -945,18 +920,14 @@ export function EntryEditor({ mode: preferredMode }: EntryEditorProps = {}) {
       <RuntimePreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}
-        title={mode === "posts" ? "Post Preview" : "Entry Preview"}
+        title="Entry Preview"
         subtitle="Runtime preview (read-only, site theme)."
         canPreview={Boolean(type && id)}
         previewUrl={previewUrl}
         isLoading={previewLoading}
         error={previewError}
-        cannotPreviewMessage={
-          mode === "posts"
-            ? "Save this post first to generate a runtime preview."
-            : "Save this entry first to generate a runtime preview."
-        }
-        iframeTitle={mode === "posts" ? "Post runtime preview" : "Entry runtime preview"}
+        cannotPreviewMessage="Save this entry first to generate a runtime preview."
+        iframeTitle="Entry runtime preview"
       />
     </AdminShell>
   );

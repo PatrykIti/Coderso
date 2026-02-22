@@ -54,9 +54,10 @@ przez `setup.completed=true`.
   - `Widgets` (`/admin/coderso/widgets`) - biblioteka widgetow i template editor.
   - `Forms` (`/admin/coderso/forms`) - lista i edytor formularzy.
 - `Posts` jest eksponowany jako top-level pozycja w `Main` (obok `Pages`) i nie jest czescia grupy `Coderso`.
-  - **TASK-059 (in progress):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` zostaly wprowadzone jako foundation pod pelne odciecie od `content_entries`,
-  - obecny runtime/service path jest jeszcze przepinany etapowo (cutover po subtaskach 059-02..059-06),
-  - internal API: `/admin/api/posts*` (CRUD + autosave/revisions/restore + publish/preview/duplicate/delete) z tym samym RBAC co content entries.
+  - **TASK-059 (in progress):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` sa aktywnie wykorzystywane przez posts domain service + admin posts API (TASK-059-02 i TASK-059-03),
+  - UI editor posts jest odciety od `EntryEditor` (`TASK-059-04`): classic fallback realizuje `PostClassicEditorShell`, a `EntryEditor` jest entries-only,
+  - internal API: `/admin/api/posts*` (CRUD + autosave/revisions/restore + publish/preview/duplicate/delete) pozostaje `internal` i egzekwuje RBAC `content:read/write/publish`,
+  - pozostaly etapowy cutover runtime/listings/search oraz migracja backfill (subtaski 059-05..059-08).
   - fallback mode flag: `settings["posts.editor.mode"] = "blocks" | "classic"` (query override: `?editor=classic` dla awaryjnego rollbacku),
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)

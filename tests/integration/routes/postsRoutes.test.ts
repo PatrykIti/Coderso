@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 
-import { registerPostsRoutes } from "../../../core/server/routes/postsRoutes";
+import {
+  mapPostError,
+  registerPostsRoutes,
+} from "../../../core/server/routes/postsRoutes";
 
 type RouteContext = {
   params: Record<string, string>;
@@ -31,9 +34,13 @@ const makeRouter = () => {
 
 test("registerPostsRoutes wires post alias endpoints", () => {
   const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
 
   registerPostsRoutes(router, {
-    requirePermission: () => async () => undefined,
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
     validate: () => undefined,
   });
 
@@ -55,4 +62,29 @@ test("registerPostsRoutes wires post alias endpoints", () => {
       "DELETE /posts/:id",
     ])
   );
+  expect(requestedPermissions).toEqual([
+    "content:read",
+    "content:write",
+    "content:read",
+    "content:write",
+    "content:write",
+    "content:publish",
+    "content:publish",
+    "content:read",
+    "content:write",
+    "content:write",
+    "content:read",
+    "content:write",
+    "content:write",
+  ]);
+});
+
+test("mapPostError maps post domain errors to API responses", () => {
+  expect(mapPostError(new Error("post_not_found"))?.status).toBe(404);
+  expect(mapPostError(new Error("post_slug_conflict"))?.status).toBe(409);
+  expect(mapPostError(new Error("post_revision_not_found"))?.status).toBe(404);
+  expect(mapPostError(new Error("post_validation_failed"))?.code).toBe(
+    "post_validation_failed"
+  );
+  expect(mapPostError(new Error("some_unknown_error"))).toBeNull();
 });

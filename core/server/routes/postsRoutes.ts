@@ -41,7 +41,7 @@ export type Router = {
   delete: (path: string, ...handlers: PostsRouteHandler[]) => void;
 };
 
-const mapPostError = (error: unknown) => {
+export const mapPostError = (error: unknown) => {
   if (!(error instanceof Error)) return null;
   switch (error.message) {
     case "post_not_found":
@@ -58,20 +58,20 @@ const mapPostError = (error: unknown) => {
         "Post document is invalid.",
         400
       );
-    case "post_type_create_failed":
+    case "post_slug_conflict":
       return new ApiError(
-        "post_type_create_failed",
-        "Failed to initialize post content type.",
-        500
-      );
-    case "entry_slug_conflict":
-      return new ApiError(
-        "entry_slug_conflict",
-        "Entry with this slug already exists.",
+        "post_slug_conflict",
+        "Post with this slug already exists.",
         409
       );
-    case "entry_validation_failed":
-      return new ApiError("entry_validation_failed", "Post data failed schema validation.", 400);
+    case "post_validation_failed":
+      return new ApiError(
+        "post_validation_failed",
+        "Post data failed schema validation.",
+        400
+      );
+    case "post_create_failed":
+      return new ApiError("post_create_failed", "Failed to create post.", 500);
     case "scheduled_at_invalid":
       return new ApiError(
         "scheduled_at_invalid",

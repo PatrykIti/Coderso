@@ -82,3 +82,6 @@ Przebudowac modul Posts tak, aby byl niezaleznym bytem CMS (WordPress-like core)
 ## Progress Notes
 - 2026-02-22:
   - `TASK-059-01` completed (dedicated posts DB schema + migration 0045 + schema contract tests).
+  - `TASK-059-02` completed (posts domain service extracted from entries/content-types; CRUD/revisions/autosave now backed by `posts*` tables).
+  - `TASK-059-03` completed (admin `/posts*` routes validated as post-native API contract with dedicated error mapping and RBAC route tests).
+  - `TASK-059-04` completed (posts editor UI no longer depends on `EntryEditor mode=\"posts\"`; dedicated classic shell + entries-only EntryEditor cleanup).

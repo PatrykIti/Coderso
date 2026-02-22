@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-059-03  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -63,3 +63,9 @@ type EditorRouteMode = "entries";
 - `_docs/ARCHITECTURE.md`
 - `_docs/ADMIN_CACHE.md` (jesli zmienią się refresh points)
 - `_docs/_TASKS/README.md`
+
+## Completion Notes
+1. `PostEditorPage` nie korzysta juz z `EntryEditor mode=\"posts\"`; classic fallback ma dedykowany komponent `PostClassicEditorShell`.
+2. `EntryEditor` zostal uproszczony do sciezki entries-only (usuniete branch-e posts mode i route resolution dla posts).
+3. Classic posts shell korzysta z posts API/cache (`postsClient`) oraz utrzymuje save/publish/preview + metadata panel.
+4. UI smoke tests posts i unit tests entries/posts list przechodza po decouplingu.

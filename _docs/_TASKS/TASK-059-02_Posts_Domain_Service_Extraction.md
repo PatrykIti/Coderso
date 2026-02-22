@@ -5,7 +5,7 @@
 **Category:** Services/Domain  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-059-01  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -23,13 +23,11 @@ Wyodrebnic posts do osobnej warstwy domenowej, bez wywolywania `entries`/`conten
 4. Usunac runtime dependency na `ensurePostContentType`.
 
 ## Files to Create / Change
-- `core/services/posts/postsService.ts` (new lub refactor z `content/postsService.ts`)
-- `core/services/posts/postsValidation.ts` (new)
-- `core/services/posts/postsPreviewService.ts` (optional split)
-- `core/services/posts/postsRevisionsService.ts` (optional split)
-- `tests/unit/posts/postsService.test.ts`
-- `tests/unit/posts/postsRevisions.test.ts`
-- `tests/unit/posts/postsValidation.test.ts`
+- `core/services/content/postsService.ts` (refactor)
+- `core/server/routes/postsRoutes.ts`
+- `tests/unit/content/postsService.test.ts`
+- `tests/integration/posts/posts-revisions-flow.test.ts`
+- `tests/integration/routes/postsRoutes.test.ts`
 
 ## Pseudocode
 ```ts
@@ -71,3 +69,20 @@ export async function autosavePost(id, patch, actorId) {
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes (2026-02-22)
+1. Reworked `core/services/content/postsService.ts` to use dedicated posts tables only:
+   - removed CRUD/revision/metadata dependence on `entryService` and `typeService`,
+   - reads/writes now target `posts`, `post_revisions`, `post_term_assignments`, `post_preview_tokens`.
+2. Preserved admin contract compatibility:
+   - same exported API surface (`create/update/delete/duplicate/autosave/revisions/restore/publish/preview`),
+   - retained `typeId` in response shape (`\"post\"`) for UI/client compatibility.
+3. Implemented taxonomy mapping on post-owned assignments:
+   - validates category/tag term kinds,
+   - updates `tags` from assigned tag terms when taxonomy payload is provided.
+4. Updated route error mapping:
+   - `post_slug_conflict` now maps to 409 response for `/posts` mutations.
+5. Validation executed:
+   - `bun --cwd core lint`
+   - `bun --cwd core lint:types`
+   - `bun test tests/unit/content/postsService.test.ts tests/integration/posts/posts-revisions-flow.test.ts tests/integration/routes/postsRoutes.test.ts tests/unit/admin/postsClient.test.ts`

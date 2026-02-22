@@ -553,9 +553,10 @@ Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhos
 
 Permissions: `content:read`, `content:write`, `content:publish`
 
-Posts API to internal alias na content entries:
-- reserved content type slug: `post` (auto-bootstrap przez serwis przy pierwszym uzyciu),
-- brak dedykowanej tabeli DB dla posts.
+Posts API jest niezaleznym, internal kontraktem dla domeny posts:
+- dane bazuja na dedykowanych tabelach `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments`,
+- brak runtime/API dependency `posts -> content_entries`,
+- payloady i endpointy zostaja kompatybilne dla klienta admin (`postsClient`).
 
 Routes:
 - `GET /posts`
@@ -571,6 +572,12 @@ Routes:
 - `POST /posts/:id/preview`
 - `POST /posts/:id/duplicate`
 - `DELETE /posts/:id`
+
+Error mapping (summary):
+- `post_not_found` -> 404
+- `post_slug_conflict` -> 409
+- `post_revision_not_found` -> 404
+- `post_validation_failed` -> 400
 
 Create payload (summary):
 
