@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   List,
+  Newspaper,
   Palette,
   Search,
   Settings,
@@ -56,6 +57,7 @@ export const buildDefaultNavSections = (
     items: [
       { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { label: "Pages", href: "/admin/pages", icon: FileText },
+      { label: "Posts", href: "/admin/coderso/posts", icon: Newspaper },
       { label: "Menus", href: "/admin/menus", icon: List },
       { label: "Media", href: "/admin/media", icon: Image },
     ],

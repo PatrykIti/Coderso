@@ -28,7 +28,6 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
     "Entries",
     "Widgets",
     "Forms",
-    "Posts",
     "Listings",
     "Filters",
     "Search",
@@ -38,7 +37,6 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
     "Popups",
     "Solution Kits",
   ]);
-  expect(items.find((item) => item.label === "Posts")?.badge).toBeUndefined();
   expect(items.find((item) => item.label === "Listings")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Filters")?.badge).toBe("Beta");
   expect(items.find((item) => item.label === "Search")?.badge).toBe("Beta");
@@ -79,9 +77,14 @@ test("buildDefaultNavSections composes Coderso group from registry", () => {
   const sections = buildDefaultNavSections({ appointments: true });
   const main = sections.find((section) => section.title === "Main");
   const coderso = main?.groups?.find((group) => group.id === "coderso");
+  const mainLabels = main?.items?.map((item) => item.label) ?? [];
 
   expect(coderso).toBeDefined();
+  expect(mainLabels).toEqual(["Dashboard", "Pages", "Posts", "Menus", "Media"]);
   expect(coderso?.items.some((item) => item.href === "/admin/coderso/appointments")).toBe(
     true
+  );
+  expect(coderso?.items.some((item) => item.href === "/admin/coderso/posts")).toBe(
+    false
   );
 });

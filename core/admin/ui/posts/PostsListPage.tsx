@@ -268,10 +268,10 @@ export function PostsListPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/coderso/posts"
+      activeHref="/admin/posts"
       breadcrumbs={
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Coderso</span>
+          <span>Content</span>
           <span>/</span>
           <span className="text-foreground">Posts</span>
         </div>

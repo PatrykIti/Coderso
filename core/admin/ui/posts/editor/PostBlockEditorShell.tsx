@@ -77,7 +77,7 @@ export function PostBlockEditorShell() {
   const breadcrumbs = useMemo(
     () => (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>Coderso</span>
+        <span>Content</span>
         <span>/</span>
         <span>Posts</span>
         <span>/</span>
@@ -89,7 +89,7 @@ export function PostBlockEditorShell() {
 
   return (
     <EditorShell
-      activeHref="/admin/coderso/posts"
+      activeHref="/admin/posts"
       breadcrumbs={breadcrumbs}
       leftPanel={blockLibrary}
       rightPanel={inspectorPanel}

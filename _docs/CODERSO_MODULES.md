@@ -20,7 +20,7 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 | Widgets | design | stable | Yes |
 | Templates | design | stable | No (managed inside Widgets flows) |
 | Forms | forms | stable | Yes |
-| Posts | content | stable | Yes |
+| Posts | content | stable | No (promoted to top-level Main navigation) |
 
 ### v2 Business Builder
 | Module | Owner | Lifecycle | Default Nav |

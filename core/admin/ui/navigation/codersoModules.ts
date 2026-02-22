@@ -5,7 +5,6 @@ import {
   Calendar,
   ClipboardList,
   Database,
-  FileText,
   Filter,
   Layers,
   LayoutGrid,
@@ -155,11 +154,7 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
     lifecycle: "stable",
     description: "Editorial flow for blog/news style content publishing.",
     dependencies: ["engine", "entries", "widgets"],
-    nav: {
-      href: "/admin/coderso/posts",
-      icon: FileText,
-      defaultEnabled: true,
-    },
+    nav: null,
   },
   {
     id: "listings",
