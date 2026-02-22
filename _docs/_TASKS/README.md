@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 23 tasks
 - **In Progress:** 2 tasks
 - **Done:** 443 tasks
 
@@ -39,6 +39,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-060 | Post Editor Unified Canvas and Ribbon UX | High | Large | Word-like shared canvas + ribbon actions + compact outline + details panel cleanup |
+| TASK-060-01 | Unified Canvas UX Contract and Interaction Model | High | Medium | Final UX contract for ribbon, outline, details, and selection flow |
+| TASK-060-02 | Shared Canvas Rendering and Inline Editing | High | Large | Render/edit all blocks inline in one document canvas |
+| TASK-060-03 | Ribbon Toolbar and Block Inserter Migration | High | Large | Remove persistent left inserter panel, migrate insert/actions into ribbon |
+| TASK-060-04 | Compact List View Layout and Navigation | High | Medium | Outline as 1/5 layout with labels-only rows and selection/scroll sync |
+| TASK-060-05 | Details Panel and Responsive Behavior | High | Medium | Contextual details panel flow for desktop/mobile without state loss |
+| TASK-060-06 | Regression Tests, Docs, Changelog, and Closure | Medium | Medium | Final lint/types/tests and full docs/changelog/kanban sync |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
