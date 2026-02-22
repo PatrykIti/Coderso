@@ -102,3 +102,17 @@ export const postAutosaveSchema = {
   },
   additionalProperties: false,
 };
+
+export const postBackfillSchema = {
+  type: "object",
+  properties: {
+    dryRun: { type: "boolean" },
+    shadowRead: { type: "boolean" },
+    entryIds: {
+      type: "array",
+      maxItems: 500,
+      items: { type: "string", minLength: 1 },
+    },
+  },
+  additionalProperties: false,
+};

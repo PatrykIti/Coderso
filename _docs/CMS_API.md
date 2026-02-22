@@ -561,6 +561,7 @@ Posts API jest niezaleznym, internal kontraktem dla domeny posts:
 Routes:
 - `GET /posts`
 - `POST /posts`
+- `POST /posts/migration/backfill` (internal ops; permission `settings:write`)
 - `GET /posts/:id`
 - `PATCH /posts/:id`
 - `PATCH /posts/:id/metadata`
@@ -572,6 +573,45 @@ Routes:
 - `POST /posts/:id/preview`
 - `POST /posts/:id/duplicate`
 - `DELETE /posts/:id`
+
+Backfill endpoint (`POST /posts/migration/backfill`) - request payload:
+
+```json
+{
+  "dryRun": true,
+  "shadowRead": true,
+  "entryIds": ["legacy-entry-id-1", "legacy-entry-id-2"]
+}
+```
+
+Backfill semantics:
+- `dryRun=true` (default): no writes, only report generation.
+- `dryRun=false`: upsert `posts` + sync revisions/preview tokens/term assignments/seo.
+- `shadowRead=true` (default): parity checks legacy vs post rows and mismatch reporting.
+- `entryIds`: optional scoped run (useful for retry after partial failures).
+
+Backfill response shape (summary):
+
+```json
+{
+  "dryRun": false,
+  "startedAt": "2026-02-22T18:00:00.000Z",
+  "finishedAt": "2026-02-22T18:00:02.000Z",
+  "totals": {
+    "legacyPosts": 12,
+    "processed": 12,
+    "inserted": 10,
+    "updated": 2,
+    "skipped": 0,
+    "failed": 0
+  },
+  "revisions": { "legacy": 18, "inserted": 16, "updated": 2, "existing": 0 },
+  "previewTokens": { "legacy": 5, "inserted": 5, "updated": 0, "existing": 0 },
+  "termAssignments": { "legacy": 7, "inserted": 7, "updated": 0, "existing": 0 },
+  "mismatches": [],
+  "failures": []
+}
+```
 
 Error mapping (summary):
 - `post_not_found` -> 404

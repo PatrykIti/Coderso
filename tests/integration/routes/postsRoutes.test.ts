@@ -49,6 +49,7 @@ test("registerPostsRoutes wires post alias endpoints", () => {
     expect.arrayContaining([
       "GET /posts",
       "POST /posts",
+      "POST /posts/migration/backfill",
       "GET /posts/:id",
       "PATCH /posts/:id",
       "PATCH /posts/:id/metadata",
@@ -65,6 +66,7 @@ test("registerPostsRoutes wires post alias endpoints", () => {
   expect(requestedPermissions).toEqual([
     "content:read",
     "content:write",
+    "settings:write",
     "content:read",
     "content:write",
     "content:write",

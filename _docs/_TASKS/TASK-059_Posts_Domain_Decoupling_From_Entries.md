@@ -86,3 +86,4 @@ Przebudowac modul Posts tak, aby byl niezaleznym bytem CMS (WordPress-like core)
   - `TASK-059-03` completed (admin `/posts*` routes validated as post-native API contract with dedicated error mapping and RBAC route tests).
   - `TASK-059-04` completed (posts editor UI no longer depends on `EntryEditor mode=\"posts\"`; dedicated classic shell + entries-only EntryEditor cleanup).
   - `TASK-059-05` completed (runtime/listings/search source `posts` cut over to dedicated posts storage; public site + listing route meta + public search aligned).
+  - `TASK-059-06` completed (idempotent legacy backfill service + mismatch/failure reporting + internal admin trigger `/admin/api/posts/migration/backfill` + rollback playbook documentation).

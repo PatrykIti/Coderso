@@ -57,8 +57,13 @@ przez `setup.completed=true`.
   - **TASK-059 (in progress):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` sa aktywnie wykorzystywane przez posts domain service + admin posts API (TASK-059-02 i TASK-059-03),
   - UI editor posts jest odciety od `EntryEditor` (`TASK-059-04`): classic fallback realizuje `PostClassicEditorShell`, a `EntryEditor` jest entries-only,
   - runtime/listings/search source `posts` sa odciete od `content_entries` (`TASK-059-05`): public routes i listing query source `posts` czytaja dedykowane `posts` storage,
+  - migracja danych historycznych posts (`TASK-059-06`) jest realizowana przez idempotentny backfill service:
+    - source: `content_entries/content_revisions/preview_tokens/content_term_assignments/seo_documents(target=entry)`,
+    - target: `posts/post_revisions/post_preview_tokens/post_term_assignments/posts.seo`,
+    - trigger internal: `POST /admin/api/posts/migration/backfill` (`settings:write`, domyslnie `dryRun=true`),
+    - parity mode: `shadowRead=true` zapisuje mismatch/failure report bez destrukcji legacy danych,
   - internal API: `/admin/api/posts*` (CRUD + autosave/revisions/restore + publish/preview/duplicate/delete) pozostaje `internal` i egzekwuje RBAC `content:read/write/publish`,
-  - pozostala migracja backfill + widget embed posts + final QA/closure (subtaski 059-06..059-08).
+  - pozostale: widget embed posts + final QA/closure (subtaski 059-07..059-08).
   - fallback mode flag: `settings["posts.editor.mode"] = "blocks" | "classic"` (query override: `?editor=classic` dla awaryjnego rollbacku),
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)

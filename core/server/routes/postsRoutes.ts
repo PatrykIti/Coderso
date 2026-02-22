@@ -13,6 +13,7 @@ import {
   updatePost,
   updatePostMetadata,
 } from "../../services/content/postsService";
+import { runPostsBackfill } from "../../services/posts/migration/postsBackfillService";
 import { ApiError } from "../errorHandler";
 import {
   createPublicUrlContextFromHeaders,
@@ -20,6 +21,7 @@ import {
 } from "../utils/previewUrls";
 import {
   postAutosaveSchema,
+  postBackfillSchema,
   postCreateSchema,
   postMetadataSchema,
   postPreviewSchema,
@@ -155,6 +157,26 @@ export function registerPostsRoutes(router: Router, deps: PostsRouteDeps) {
       });
     });
   });
+
+  router.post(
+    "/posts/migration/backfill",
+    requirePermission("settings:write"),
+    async (ctx) => {
+      return withPostErrors(async () => {
+        validate(postBackfillSchema, ctx.body ?? {});
+        const body = (ctx.body ?? {}) as {
+          dryRun?: boolean;
+          shadowRead?: boolean;
+          entryIds?: string[];
+        };
+        return runPostsBackfill({
+          dryRun: body.dryRun ?? true,
+          shadowRead: body.shadowRead ?? true,
+          entryIds: body.entryIds,
+        });
+      });
+    }
+  );
 
   router.get("/posts/:id", requirePermission("content:read"), async (ctx) => {
     return withPostErrors(async () => {
