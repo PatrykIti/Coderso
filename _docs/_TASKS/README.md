@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 2 tasks
 - **Done:** 434 tasks
 
@@ -39,6 +39,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-059 | Posts Domain Decoupling From Entries | High | Large | Posts jako niezalezny core CMS (osobne tabele, serwis, API, runtime, widget) |
+| TASK-059-01 | Posts DB Schema and Migration Foundation | High | Medium | Nowe tabele posts/revisions/preview + migracje Drizzle |
+| TASK-059-02 | Posts Domain Service Extraction | High | Large | CRUD/autosave/revisions/publish bez dependency na entries |
+| TASK-059-03 | Posts Admin API Decoupling | High | Medium | `/admin/api/posts*` przepiete na nowy service + RBAC/CSRF |
+| TASK-059-04 | Posts Admin UI Decoupling From Entries | High | Large | Posts list/editor bez `EntryEditor mode=posts` |
+| TASK-059-05 | Posts Runtime, Listings, and Search Source Cutover | High | Medium | Runtime/listings/search source `posts` na nowym storage |
+| TASK-059-06 | Posts Data Backfill and Cutover | High | Medium | Idempotentny backfill z entries + cutover/rollback plan |
+| TASK-059-07 | Posts Embed Widget and Page Integration | High | Medium | Dedykowany widget do osadzania postow na stronach |
+| TASK-059-08 | Posts Decoupling QA, Docs, and Closure | Medium | Medium | Full regression + docs/changelog/kanban closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
