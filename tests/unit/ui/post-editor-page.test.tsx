@@ -13,10 +13,10 @@ test("PostEditorPage renders post editor shell", () => {
 
   expect(html).toContain("Edit Post");
   expect(html).toContain("Loading post editor");
-  expect(html).toContain("Block inserter");
+  expect(html).toContain("Add block");
   expect(html).toContain("Runtime preview");
-  expect(html).toContain("Document");
-  expect(html).toContain("Block");
+  expect(html).toContain("Blocks");
+  expect(html).toContain("Details");
 });
 
 test("PostEditorPage supports query override for classic editor", () => {
@@ -25,7 +25,7 @@ test("PostEditorPage supports query override for classic editor", () => {
   });
 
   expect(html).toContain("Enter post title...");
-  expect(html).not.toContain("Block inserter");
+  expect(html).not.toContain("Add block");
 });
 
 test("resolvePostEditorMode prioritizes query override over settings", () => {

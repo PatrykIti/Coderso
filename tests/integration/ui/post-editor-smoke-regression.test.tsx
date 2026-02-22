@@ -9,9 +9,9 @@ test("post editor smoke: blocks mode renders canonical editor layout", () => {
     path: "/admin/coderso/posts/post-1",
   });
 
-  expect(html).toContain("Block inserter");
-  expect(html).toContain("Document");
-  expect(html).toContain("Block");
+  expect(html).toContain("Add block");
+  expect(html).toContain("Blocks");
+  expect(html).toContain("Details");
   expect(html).toContain("Revisions");
   expect(html).toContain("Runtime preview");
 });

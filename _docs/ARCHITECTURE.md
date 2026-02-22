@@ -66,6 +66,11 @@ przez `setup.completed=true`.
   - internal API: `/admin/api/posts*` (CRUD + autosave/revisions/restore + publish/preview/duplicate/delete) pozostaje `internal` i egzekwuje RBAC `content:read/write/publish`,
   - final QA/closure (`TASK-059-08`) zakonczone: lint/types/full-tests + dokumentacja/changelog/kanban sa zsynchronizowane.
   - fallback mode flag: `settings["posts.editor.mode"] = "blocks" | "classic"` (query override: `?editor=classic` dla awaryjnego rollbacku),
+  - **TASK-060 (done):** block editor UX zostal przebudowany do modelu unified canvas + ribbon:
+    - jeden wspolny canvas renderuje wszystkie bloki wpisu i pozwala na inline editing bez przechodzenia do osobnego panelu content,
+    - staly lewy panel insertera zostal usuniety; dodawanie blokow odbywa sie z ribbona (`Add block`) i przez slash command,
+    - list view jest kompaktowym outline (`min 220 / max 320`) z labels-only (`{index}. {BlockLabel}`) i synchronizacja select/scroll,
+    - panel `Details` jest otwierany na zadanie z ribbona i dziala kontekstowo (`Document` vs `Block`) bez resetu selekcji/focusu,
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

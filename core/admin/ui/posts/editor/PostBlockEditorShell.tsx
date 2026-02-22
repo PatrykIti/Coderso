@@ -20,8 +20,12 @@ import { PostRevisionDrawer } from "./PostRevisionDrawer";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 
 export function PostBlockEditorShell() {
-  const [blocksPanelOpen, setBlocksPanelOpen] = useState(false);
+  const [insertPanelOpen, setInsertPanelOpen] = useState(false);
   const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
+  const [outlineVisible, setOutlineVisible] = useState(true);
+  const [inspectorTab, setInspectorTab] = useState<"document" | "block">(
+    "document"
+  );
 
   const editor = usePostEditorState();
 
@@ -29,7 +33,7 @@ export function PostBlockEditorShell() {
     <BlockInserter
       onInsertBlock={(type) => {
         editor.insertBlock(type);
-        setBlocksPanelOpen(false);
+        setInsertPanelOpen(false);
       }}
       disabled={editor.loading}
     />
@@ -37,7 +41,13 @@ export function PostBlockEditorShell() {
 
   const inspectorPanel = (
     <div className="flex h-full flex-col">
-      <Tabs defaultValue="document" className="flex min-h-0 flex-1 flex-col">
+      <Tabs
+        value={inspectorTab}
+        onValueChange={(value) =>
+          setInspectorTab(value === "block" ? "block" : "document")
+        }
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <div className="border-b px-4 py-3">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="document">Document</TabsTrigger>
@@ -91,10 +101,6 @@ export function PostBlockEditorShell() {
     <EditorShell
       activeHref="/admin/posts"
       breadcrumbs={breadcrumbs}
-      leftPanel={blockLibrary}
-      rightPanel={inspectorPanel}
-      leftPanelClassName="lg:!hidden"
-      rightPanelClassName="lg:!hidden"
     >
       <div className="flex min-h-0 flex-1 flex-col">
         {editor.error ? (
@@ -138,8 +144,13 @@ export function PostBlockEditorShell() {
           onPublish={() => {
             editor.publish().catch(() => undefined);
           }}
-          onOpenBlocks={() => setBlocksPanelOpen(true)}
-          onOpenDetails={() => setDetailsPanelOpen(true)}
+          onOpenInsert={() => setInsertPanelOpen(true)}
+          onToggleOutline={() => setOutlineVisible((prev) => !prev)}
+          outlineVisible={outlineVisible}
+          onOpenDetails={() => {
+            setInspectorTab(editor.selectedBlock ? "block" : "document");
+            setDetailsPanelOpen(true);
+          }}
         />
 
         <PostRevisionDrawer
@@ -163,12 +174,13 @@ export function PostBlockEditorShell() {
             document={editor.state.document}
             selectedBlockId={editor.state.selectedBlockId}
             onSelectBlock={(id) => editor.selectBlock(id)}
-            onUpdateSelectedBlockContent={editor.updateSelectedBlockContent}
-            onMoveSelectedBlock={editor.moveSelectedBlock}
+            onUpdateBlockContent={editor.updateBlockContent}
+            onMoveBlock={editor.moveBlock}
             onMoveBlockToIndex={editor.moveBlockToIndex}
-            onTransformSelectedBlock={editor.transformSelectedBlock}
-            onInsertBlock={editor.insertBlock}
-            onDeleteSelectedBlock={editor.deleteSelectedBlock}
+            onTransformBlock={editor.transformBlock}
+            onDeleteBlock={editor.deleteBlock}
+            onInsertBlockAfterSelected={editor.insertBlock}
+            outlineVisible={outlineVisible}
           />
         )}
 
@@ -184,11 +196,11 @@ export function PostBlockEditorShell() {
         />
       </div>
 
-      <Sheet open={blocksPanelOpen} onOpenChange={setBlocksPanelOpen}>
+      <Sheet open={insertPanelOpen} onOpenChange={setInsertPanelOpen}>
         <SheetContent side="left" className="w-full max-w-sm p-0" showCloseButton={false}>
-          <SheetTitle className="sr-only">Blocks</SheetTitle>
+          <SheetTitle className="sr-only">Add block</SheetTitle>
           <SheetDescription className="sr-only">
-            Insert blocks to post document.
+            Select a block type to insert into the post.
           </SheetDescription>
           {blockLibrary}
         </SheetContent>

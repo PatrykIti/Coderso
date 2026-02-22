@@ -16,7 +16,9 @@ type PostEditorTopBarProps = {
   onSaveDraft: () => void;
   onPreview: () => void;
   onPublish: () => void;
-  onOpenBlocks: () => void;
+  onOpenInsert: () => void;
+  onToggleOutline: () => void;
+  outlineVisible: boolean;
   onOpenDetails: () => void;
 };
 
@@ -56,7 +58,9 @@ export function PostEditorTopBar({
   onSaveDraft,
   onPreview,
   onPublish,
-  onOpenBlocks,
+  onOpenInsert,
+  onToggleOutline,
+  outlineVisible,
   onOpenDetails,
 }: PostEditorTopBarProps) {
   const syncLabel = saving
@@ -156,13 +160,19 @@ export function PostEditorTopBar({
       </div>
 
       <div className="px-4 py-2 sm:px-6">
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onOpenBlocks}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onToggleOutline}>
             Blocks
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={onOpenInsert}>
+            Add block
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={onOpenDetails}>
             Details
           </Button>
+          <Badge variant="outline" className="ml-auto hidden md:inline-flex">
+            {outlineVisible ? "Outline visible" : "Outline hidden"}
+          </Badge>
         </div>
       </div>
     </div>

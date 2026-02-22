@@ -5,7 +5,7 @@
 **Category:** Admin/UI UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-057, TASK-059  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -75,3 +75,7 @@ Przebudowac block editor wpisow tak, aby byl bardziej Word-like: jeden wspolny c
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/ADMIN_CACHE.md` (jesli zmieni sie zachowanie prefetch/cache dla post editora)
+
+## Closure Notes
+- Completed through `TASK-060-01..060-06`.
+- Posts editor now uses shared-canvas authoring with ribbon-first actions and compact outline/details workflow.

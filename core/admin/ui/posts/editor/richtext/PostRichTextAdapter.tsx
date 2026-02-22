@@ -32,6 +32,7 @@ type PostRichTextAdapterProps = {
   className?: string;
   minHeightClassName?: string;
   onSlashInsertBlock?: (type: PostBlockType) => void;
+  onFocus?: () => void;
 };
 
 const escapeHtml = (value: string) =>
@@ -87,6 +88,7 @@ export function PostRichTextAdapter({
   className,
   minHeightClassName = "min-h-[18rem]",
   onSlashInsertBlock,
+  onFocus,
 }: PostRichTextAdapterProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [slashQuery, setSlashQuery] = useState("");
@@ -330,6 +332,7 @@ export function PostRichTextAdapter({
             setSlashQuery("");
           }}
           onKeyDown={handleKeyDown}
+          onFocus={onFocus}
         />
         <SlashCommandMenu
           open={slashOpen}

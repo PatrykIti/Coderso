@@ -147,3 +147,8 @@ const sections = buildDefaultNavSections({
   - autosave/revisions/restore workflow and topbar editorial lifecycle statuses,
   - runtime/public parity renderer for post blocks (preview and published use the same pipeline),
   - fallback mode via `settings["posts.editor.mode"]` and query override `?editor=classic`.
+- 060 done: Posts editor unified canvas + ribbon UX:
+  - shared document canvas z inline editing wszystkich blokow,
+  - ribbon sections (save/publish, undo/redo, revisions/preview, blocks/add block/details),
+  - list view outline w kompaktowym ratio (`min 220`, `max 320`) i labels-only rows,
+  - contextual details behavior (`Document`/`Block`) przy zachowaniu focusu/selekcji.

@@ -162,13 +162,18 @@ export type UsePostEditorStateResult = {
   canUndo: boolean;
   canRedo: boolean;
   selectBlock: (id: string | null) => void;
+  updateBlockContent: (id: string, content: unknown) => void;
   updateSelectedBlockContent: (content: unknown) => void;
+  updateBlockAttrs: (id: string, patch: Record<string, unknown>) => void;
   updateSelectedBlockAttrs: (patch: Record<string, unknown>) => void;
   setExcerpt: (value: string) => void;
   insertBlock: (type: string) => void;
+  deleteBlock: (id: string) => void;
   deleteSelectedBlock: () => void;
+  moveBlock: (id: string, direction: "up" | "down") => void;
   moveSelectedBlock: (direction: "up" | "down") => void;
   moveBlockToIndex: (id: string, targetIndex: number) => void;
+  transformBlock: (id: string, targetType: PostBlockType) => void;
   transformSelectedBlock: (targetType: PostBlockType) => void;
   undo: () => void;
   redo: () => void;
@@ -527,27 +532,33 @@ export function usePostEditorState(): UsePostEditorStateResult {
     return state.document.blocks.find((block) => block.id === state.selectedBlockId) ?? null;
   }, [state.document.blocks, state.selectedBlockId]);
 
-  const updateSelectedBlockContent = useCallback(
-    (content: unknown) => {
-      if (!selectedBlock) return;
+  const updateBlockContent = useCallback(
+    (id: string, content: unknown) => {
       dispatch({
         type: "update_block",
         mutation: {
-          id: selectedBlock.id,
+          id,
           mutate: (block) => ({ ...block, content }),
         },
       });
     },
-    [selectedBlock]
+    []
   );
 
-  const updateSelectedBlockAttrs = useCallback(
-    (patch: Record<string, unknown>) => {
+  const updateSelectedBlockContent = useCallback(
+    (content: unknown) => {
       if (!selectedBlock) return;
+      updateBlockContent(selectedBlock.id, content);
+    },
+    [selectedBlock, updateBlockContent]
+  );
+
+  const updateBlockAttrs = useCallback(
+    (id: string, patch: Record<string, unknown>) => {
       dispatch({
         type: "update_block",
         mutation: {
-          id: selectedBlock.id,
+          id,
           mutate: (block) => ({
             ...block,
             attrs: {
@@ -558,7 +569,15 @@ export function usePostEditorState(): UsePostEditorStateResult {
         },
       });
     },
-    [selectedBlock]
+    []
+  );
+
+  const updateSelectedBlockAttrs = useCallback(
+    (patch: Record<string, unknown>) => {
+      if (!selectedBlock) return;
+      updateBlockAttrs(selectedBlock.id, patch);
+    },
+    [selectedBlock, updateBlockAttrs]
   );
 
   const setExcerpt = useCallback((value: string) => {
@@ -584,20 +603,31 @@ export function usePostEditorState(): UsePostEditorStateResult {
     [state.selectedBlockId]
   );
 
+  const deleteBlock = useCallback((id: string) => {
+    dispatch({ type: "delete_block", id });
+  }, []);
+
   const deleteSelectedBlock = useCallback(() => {
     if (!state.selectedBlockId) return;
-    dispatch({ type: "delete_block", id: state.selectedBlockId });
-  }, [state.selectedBlockId]);
+    deleteBlock(state.selectedBlockId);
+  }, [deleteBlock, state.selectedBlockId]);
+
+  const moveBlock = useCallback(
+    (id: string, direction: "up" | "down") => {
+      dispatch({
+        type: "move_block",
+        mutation: { id, direction },
+      });
+    },
+    []
+  );
 
   const moveSelectedBlock = useCallback(
     (direction: "up" | "down") => {
       if (!state.selectedBlockId) return;
-      dispatch({
-        type: "move_block",
-        mutation: { id: state.selectedBlockId, direction },
-      });
+      moveBlock(state.selectedBlockId, direction);
     },
-    [state.selectedBlockId]
+    [moveBlock, state.selectedBlockId]
   );
 
   const moveBlockToIndex = useCallback((id: string, targetIndex: number) => {
@@ -607,15 +637,19 @@ export function usePostEditorState(): UsePostEditorStateResult {
     });
   }, []);
 
+  const transformBlock = useCallback((id: string, targetType: PostBlockType) => {
+    dispatch({
+      type: "transform_block",
+      mutation: { id, targetType },
+    });
+  }, []);
+
   const transformSelectedBlock = useCallback(
     (targetType: PostBlockType) => {
       if (!state.selectedBlockId) return;
-      dispatch({
-        type: "transform_block",
-        mutation: { id: state.selectedBlockId, targetType },
-      });
+      transformBlock(state.selectedBlockId, targetType);
     },
-    [state.selectedBlockId]
+    [state.selectedBlockId, transformBlock]
   );
 
   const setTagsInput = useCallback((value: string) => {
@@ -734,13 +768,18 @@ export function usePostEditorState(): UsePostEditorStateResult {
     canUndo: state.history.past.length > 0,
     canRedo: state.history.future.length > 0,
     selectBlock: (id) => dispatch({ type: "select_block", id }),
+    updateBlockContent,
     updateSelectedBlockContent,
+    updateBlockAttrs,
     updateSelectedBlockAttrs,
     setExcerpt,
     insertBlock,
+    deleteBlock,
     deleteSelectedBlock,
+    moveBlock,
     moveSelectedBlock,
     moveBlockToIndex,
+    transformBlock,
     transformSelectedBlock,
     undo: () => dispatch({ type: "undo" }),
     redo: () => dispatch({ type: "redo" }),

@@ -68,7 +68,7 @@ export function PostListViewPanel({
   };
 
   return (
-    <div className="min-h-0 overflow-hidden rounded-xl border bg-background shadow-sm">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-background shadow-sm">
       <div className="border-b px-4 py-3">
         <p className="text-xs font-semibold uppercase text-muted-foreground">List view</p>
         <p className="mt-1 text-xs text-muted-foreground">
@@ -76,7 +76,7 @@ export function PostListViewPanel({
         </p>
       </div>
 
-      <div className="max-h-[30rem] space-y-2 overflow-auto p-3">
+      <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
         {blocks.map((block, index) => {
           const active = block.id === selectedBlockId;
           const showDropBefore = dropIndex === index;
@@ -107,7 +107,7 @@ export function PostListViewPanel({
                 <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-foreground">
-                    #{index + 1} {getPostBlockLabel(block.type)}
+                    {index + 1}. {getPostBlockLabel(block.type)}
                   </p>
                 </div>
               </button>

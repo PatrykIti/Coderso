@@ -16,7 +16,9 @@ const createBaseProps = () => ({
   onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
-  onOpenBlocks: () => undefined,
+  onOpenInsert: () => undefined,
+  onToggleOutline: () => undefined,
+  outlineVisible: true,
   onOpenDetails: () => undefined,
 });
 

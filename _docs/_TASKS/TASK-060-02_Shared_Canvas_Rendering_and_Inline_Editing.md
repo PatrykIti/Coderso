@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-060-01  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
