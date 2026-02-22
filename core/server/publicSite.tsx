@@ -36,6 +36,7 @@ import {
   POST_CONTENT_TYPE_SLUG,
 } from "../services/content/postsService";
 import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
+import { resolvePostsFeedRuntimeData } from "../services/content/postsFeedResolver";
 import { resolveEntryTeaserRuntimeData } from "../services/content/entryTeaserResolver";
 import {
   hydrateProductCompareRuntimeData,
@@ -56,6 +57,10 @@ import {
   normalizeContentListData,
   type ContentListData,
 } from "../widgets/core/contentList";
+import {
+  normalizePostsFeedData,
+  type PostsFeedData,
+} from "../widgets/core/postsFeed";
 import {
   normalizeEntryTeaserData,
   type EntryTeaserData,
@@ -254,6 +259,22 @@ const hydrateRuntimeBlock = async (
       preview: options.preview,
       contentRoutes: options.contentRoutes,
       runtimeSearchParams: options.runtimeSearchParams,
+    });
+    nextBlock = {
+      ...block,
+      data: {
+        ...normalizedData,
+        resolved,
+      },
+    };
+  }
+  if (block.type === "posts-feed") {
+    const normalizedData = normalizePostsFeedData(
+      ensureRecord(block.data) as PostsFeedData
+    );
+    const resolved = await resolvePostsFeedRuntimeData(normalizedData, {
+      preview: options.preview,
+      contentRoutes: options.contentRoutes,
     });
     nextBlock = {
       ...block,

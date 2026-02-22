@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
-- **In Progress:** 3 tasks
-- **Done:** 440 tasks
+- **To Do:** 16 tasks
+- **In Progress:** 2 tasks
+- **Done:** 443 tasks
 
 ---
 
@@ -39,8 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-059-07 | Posts Embed Widget and Page Integration | High | Medium | Dedykowany widget do osadzania postow na stronach |
-| TASK-059-08 | Posts Decoupling QA, Docs, and Closure | Medium | Medium | Full regression + docs/changelog/kanban closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
@@ -64,7 +62,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-059 | Posts Domain Decoupling From Entries | High | Large | In progress: DB + service + admin API/UI + runtime/listings/search + backfill done; widget + closure pending |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -74,6 +71,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-059-08 | Posts Decoupling QA, Docs, and Closure | Medium | Medium | Full lint/types/tests regression + final docs/changelog/kanban sync |
+| TASK-059 | Posts Domain Decoupling From Entries | High | Large | Closed: posts domain fully decoupled from entries (schema/service/API/UI/runtime/backfill/widget) |
+| TASK-059-07 | Posts Embed Widget and Page Integration | High | Medium | Added `posts-feed` widget (latest/featured/category/manual) + SSR runtime resolver + page builder integration |
 | TASK-059-06 | Posts Data Backfill and Cutover | High | Medium | Idempotent backfill (`entries -> posts`) + shadow-read parity report + internal trigger endpoint |
 | TASK-059-05 | Posts Runtime, Listings, and Search Source Cutover | High | Medium | Runtime/listings/search source `posts` przepiety na dedykowany storage (`posts`), bez `entries` dependency |
 | TASK-059-04 | Posts Admin UI Decoupling From Entries | High | Large | `PostEditorPage` classic fallback przeniesiony do `PostClassicEditorShell`; `EntryEditor` uproszczony do entries-only |

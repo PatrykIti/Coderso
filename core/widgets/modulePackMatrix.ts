@@ -49,7 +49,7 @@ export const WIDGET_PACK_MATRIX: ModuleWidgetPackDefinition[] = [
     minimum: DEFAULT_MINIMUM,
     pagePresets: ["listings:directory-index"],
     sectionPresets: ["listings:grid-filters", "listings:teaser-stack"],
-    compositeWidgets: ["content-list", "entry-teaser", "listing-filters"],
+    compositeWidgets: ["content-list", "posts-feed", "entry-teaser", "listing-filters"],
   },
   {
     module: "commerce",

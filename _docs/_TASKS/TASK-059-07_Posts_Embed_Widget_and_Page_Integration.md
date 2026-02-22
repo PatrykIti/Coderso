@@ -5,7 +5,7 @@
 **Category:** CMS/Widgets  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-059-05  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -33,24 +33,34 @@ Dodac dedykowany widget do osadzania listy postow na stronach, z prostym UX dla 
    - widget dostepny na liscie widgetow,
    - jasna etykieta/opis dla usera.
 
-## Files to Create / Change
-- `core/services/widgets/registry.ts`
-- `core/services/widgets/core/postsFeed/*` (new)
-- `core/admin/ui/widgets/editors/*` (widget editor controls)
-- `core/services/site/publicRenderer.tsx` (runtime mapping)
-- `tests/unit/widgets/postsFeedWidget.test.ts`
-- `tests/unit/site/publicRenderer.test.tsx` (posts-feed cases)
+## Files Created / Changed
+- `core/widgets/core/postsFeed.tsx` (new)
+- `core/services/content/postsFeedResolver.ts` (new)
+- `core/server/publicSite.tsx` (runtime hydration for `posts-feed`)
+- `core/widgets/core/index.ts` (core widget registration + metadata)
+- `core/widgets/runtime.tsx` (runtime registry wiring)
+- `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` (new)
+- `core/admin/ui/widgets/editors/index.ts`
+- `core/admin/ui/widgets/registry.ts`
+- `core/widgets/modulePackMatrix.ts` (listings pack includes `posts-feed`)
+- `tests/unit/widgets/postsFeedWidget.test.tsx` (new)
+- `tests/unit/site/publicRenderer.test.tsx` (added `posts-feed` case)
 
-## Pseudocode
+## Final Pseudocode
 ```ts
 registerWidget({
   type: "posts-feed",
   schema: postsFeedSchema,
-  render: ({ data, context }) => {
-    const posts = resolvePostsFeed(data, context.preview);
-    return renderPostsFeed(posts, data.layout);
-  }
+  render: PostsFeedBlock // mapped internally to ContentListBlock for deterministic UI parity
 });
+
+resolvePostsFeedRuntimeData(input, { preview, contentRoutes }) {
+  posts = listPosts();
+  visible = preview ? posts : posts.filter(status==="published");
+  filtered = sourceModeFilter(visible, source.mode, source.category, source.manualPostIds);
+  ordered = source.mode==="manual" ? keepManualOrder(filtered) : sort(filtered, source.sort);
+  return mapToRuntimeItems(ordered.slice(0, source.limit));
+}
 ```
 
 ## Acceptance Criteria
@@ -65,7 +75,18 @@ registerWidget({
 - Integration:
   - page runtime render with embedded posts widget.
 
+## Validation Executed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test tests/unit/widgets/postsFeedWidget.test.tsx tests/unit/site/publicRenderer.test.tsx tests/unit/widgets/modulePackMatrix.test.ts tests/unit/widgets/contentList.test.tsx`
+
 ## Documentation Updates Required
 - `_docs/_WIDGETS` (nowy kontrakt widgetu)
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes
+- Added user-friendly `posts-feed` widget with source modes:
+  - `latest`, `featured`, `category`, `manual`.
+- Runtime hydration is server-side via dedicated resolver (`postsFeedResolver`) and keeps preview/published parity.
+- Rendering reuses `ContentListBlock` to keep deterministic output/state markers and avoid style regressions.

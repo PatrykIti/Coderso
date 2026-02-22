@@ -9,6 +9,7 @@ import type {
 import { getWidget, registerWidget } from "../registry";
 import { createCompareTimelineWidget, type CompareTimelineData } from "./compareTimeline";
 import { createContentListWidget, type ContentListData } from "./contentList";
+import { createPostsFeedWidget, type PostsFeedData } from "./postsFeed";
 import { createProductGalleryWidget, type ProductGalleryData } from "./productGallery";
 import { createProductCompareWidget, type ProductCompareData } from "./productCompare";
 import { createProductTableWidget, type ProductTableData } from "./productTable";
@@ -186,6 +187,12 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     module: "listings",
     requires: ["entries"],
   },
+  "posts-feed": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "listings",
+    requires: ["posts"],
+  },
   "entry-teaser": {
     complexity: "composite",
     audience: "intermediate",
@@ -297,6 +304,7 @@ export type CoreWidgetEditors = {
   team: EditorBundle<TeamData>;
   richTextSection: EditorBundle<RichTextSectionData>;
   contentList: EditorBundle<ContentListData>;
+  postsFeed: EditorBundle<PostsFeedData>;
   entryTeaser: EditorBundle<EntryTeaserData>;
   productGallery: EditorBundle<ProductGalleryData>;
   productCompare: EditorBundle<ProductCompareData>;
@@ -340,6 +348,7 @@ export function createCoreWidgetDefinitions(
     createTeamWidget(editors.team),
     createRichTextSectionWidget(editors.richTextSection),
     createContentListWidget(editors.contentList),
+    createPostsFeedWidget(editors.postsFeed),
     createEntryTeaserWidget(editors.entryTeaser),
     createProductGalleryWidget(editors.productGallery),
     createProductCompareWidget(editors.productCompare),

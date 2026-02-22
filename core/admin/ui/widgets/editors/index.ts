@@ -130,6 +130,11 @@ export {
   ContentListWizardEditor,
 } from "./ContentListEditors";
 export {
+  PostsFeedAdvancedEditor,
+  PostsFeedVisualEditor,
+  PostsFeedWizardEditor,
+} from "./PostsFeedEditors";
+export {
   EntryTeaserAdvancedEditor,
   EntryTeaserVisualEditor,
   EntryTeaserWizardEditor,

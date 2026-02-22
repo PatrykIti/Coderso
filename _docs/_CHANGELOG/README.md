@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 302 | 2026-02-22 | TASK-059-08 posts decoupling QA docs and closure | QA/Docs |
+| 301 | 2026-02-22 | TASK-059-07 posts feed widget and page integration | CMS/Widgets |
 | 300 | 2026-02-22 | TASK-059-06 posts data backfill and cutover | Core/Migration |
 | 299 | 2026-02-22 | TASK-059-05 posts runtime listings search cutover | Runtime/Search |
 | 298 | 2026-02-22 | TASK-059-04 posts admin ui decoupling from entries | Admin/UI |

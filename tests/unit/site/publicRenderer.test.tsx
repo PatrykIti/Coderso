@@ -12,6 +12,10 @@ import {
   type ContentListData,
 } from "../../../core/widgets/core/contentList";
 import {
+  createPostsFeedWidget,
+  type PostsFeedData,
+} from "../../../core/widgets/core/postsFeed";
+import {
   createEntryTeaserWidget,
   type EntryTeaserData,
 } from "../../../core/widgets/core/entryTeaser";
@@ -24,6 +28,8 @@ import type { WidgetEditorProps } from "../../../core/widgets/types";
 
 const StubEditor: ComponentType<WidgetEditorProps<HeroData>> = () => null;
 const StubContentListEditor: ComponentType<WidgetEditorProps<ContentListData>> = () =>
+  null;
+const StubPostsFeedEditor: ComponentType<WidgetEditorProps<PostsFeedData>> = () =>
   null;
 const StubEntryTeaserEditor: ComponentType<WidgetEditorProps<EntryTeaserData>> = () =>
   null;
@@ -355,6 +361,76 @@ test("renderPublicPageHtml renders entry teaser resolved payload deterministical
   expect(html).toContain('data-entry-teaser-variant="horizontal"');
   expect(html).toContain('data-entry-teaser-source-mode="manual"');
   expect(html).toContain('data-entry-teaser-state="ready"');
+});
+
+test("renderPublicPageHtml renders posts feed resolved payload deterministically", () => {
+  clearWidgets();
+  registerWidget(
+    createPostsFeedWidget({
+      wizard: StubPostsFeedEditor,
+      visual: StubPostsFeedEditor,
+      advanced: StubPostsFeedEditor,
+    })
+  );
+
+  const html = renderPublicPageHtml({
+    title: "News",
+    blocks: [
+      {
+        id: "posts-feed-1",
+        type: "posts-feed",
+        variant: "cards",
+        data: {
+          source: {
+            mode: "latest",
+            limit: 3,
+            sort: "published-desc",
+          },
+          fields: {
+            showExcerpt: true,
+            showAuthor: true,
+            showDate: true,
+            showCta: true,
+          },
+          emptyState: {
+            title: "No posts found",
+            description: "Publish your first post.",
+          },
+          style: {
+            columns: "2",
+            gap: "md",
+            cardStyle: "outlined",
+            ctaLabel: "Read post",
+            backgroundColor: "var(--color-bg)",
+            borderColor: "var(--color-border)",
+            textColor: "var(--color-text)",
+          },
+          resolved: {
+            items: [
+              {
+                id: "post-1",
+                title: "Latest update",
+                href: "/news/latest-update",
+                excerpt: "Highlights from this week.",
+                status: "published",
+                authorName: "Editor",
+                publishedAt: "2026-02-22T08:00:00.000Z",
+              },
+            ],
+            total: 1,
+            sourceMode: "latest",
+            resolvedAt: "2026-02-22T08:01:00.000Z",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(html).toContain("Latest update");
+  expect(html).toContain("Read post");
+  expect(html).toContain('data-content-list-source="post"');
+  expect(html).toContain('data-content-list-items="1"');
+  expect(html).toContain('data-content-list-state="ready"');
 });
 
 test("renderPublicPageRuntimeHtml renders deterministic template marker", async () => {

@@ -43,6 +43,9 @@ import {
   ContentListAdvancedEditor,
   ContentListVisualEditor,
   ContentListWizardEditor,
+  PostsFeedAdvancedEditor,
+  PostsFeedVisualEditor,
+  PostsFeedWizardEditor,
   ProductGalleryAdvancedEditor,
   ProductGalleryVisualEditor,
   ProductGalleryWizardEditor,
@@ -225,6 +228,11 @@ export function ensureCoreWidgetsRegistered() {
       wizard: ContentListWizardEditor,
       visual: ContentListVisualEditor,
       advanced: ContentListAdvancedEditor,
+    },
+    postsFeed: {
+      wizard: PostsFeedWizardEditor,
+      visual: PostsFeedVisualEditor,
+      advanced: PostsFeedAdvancedEditor,
     },
     entryTeaser: {
       wizard: EntryTeaserWizardEditor,

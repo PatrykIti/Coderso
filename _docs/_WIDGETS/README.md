@@ -20,6 +20,7 @@
 - `TEAM.md` - Team
 - `RICH_TEXT_SECTION.md` - Rich text section
 - `CONTENT_LIST.md` - Dynamic content list
+- `POSTS_FEED.md` - Dynamic posts feed (latest/featured/category/manual)
 - `ENTRY_TEASER.md` - Dynamic single-entry teaser
 - `NAVIGATION.md` - Menu/Nawigacja
 - `FOOTER.md` - Stopka

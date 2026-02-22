@@ -5,7 +5,7 @@
 **Category:** QA/Documentation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-059-01, TASK-059-02, TASK-059-03, TASK-059-04, TASK-059-05, TASK-059-06, TASK-059-07  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -26,6 +26,14 @@ Domknac caly TASK-059 przez pelne testy, finalna dokumentacje i wpisy changelog 
    - architektura finalna po decouplingu,
    - kontrakt API/posts runtime/widget.
 4. Changelog + task board closure.
+
+## Security Contract
+- **Visibility:** n/a (QA/docs closure task)
+- **Auth path:** n/a
+- **Rate-limit bucket:** n/a
+- **Nonce/HMAC:** n/a
+- **reCAPTCHA:** n/a
+- **Internal mode:** n/a
 
 ## Files to Create / Change
 - `_docs/ARCHITECTURE.md`
@@ -54,3 +62,17 @@ bun test
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Validation Executed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test`
+  - Result: `1353 pass`, `149 skip`, `0 fail` (DB-gated tests skipped without active DB connectivity).
+
+## Closure Notes
+- Parent task `TASK-059` closed as completed:
+  - posts storage decoupled from entries,
+  - runtime/listings/search cutover complete,
+  - idempotent backfill + rollback playbook documented,
+  - dedicated `posts-feed` widget delivered with SSR runtime hydration.
+- Final docs/changelog/kanban sync completed.

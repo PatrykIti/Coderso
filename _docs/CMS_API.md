@@ -811,6 +811,12 @@ Back-compat:
 Public runtime safety:
 - dla source `entries/posts` runtime wymusza `includeDrafts=false` poza preview.
 
+`posts-feed` (TASK-059-07):
+- dedykowany widget postow bez wymagania query buildera/listing template,
+- source modes: `latest | featured | category | manual`,
+- runtime hydration: `resolvePostsFeedRuntimeData` (SSR, public runtime),
+- public output (`preview=false`) filtruje do `status=published`; preview moze pokazywac wszystkie statusy.
+
 ## Coderso Filters & Search (v2 beta)
 
 Filters preview (internal API, session/RBAC):

@@ -54,7 +54,7 @@ przez `setup.completed=true`.
   - `Widgets` (`/admin/coderso/widgets`) - biblioteka widgetow i template editor.
   - `Forms` (`/admin/coderso/forms`) - lista i edytor formularzy.
 - `Posts` jest eksponowany jako top-level pozycja w `Main` (obok `Pages`) i nie jest czescia grupy `Coderso`.
-  - **TASK-059 (in progress):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` sa aktywnie wykorzystywane przez posts domain service + admin posts API (TASK-059-02 i TASK-059-03),
+  - **TASK-059 (done):** dedykowane tabele `posts`, `post_revisions`, `post_preview_tokens`, `post_term_assignments` sa aktywnie wykorzystywane przez posts domain service + admin posts API (TASK-059-02 i TASK-059-03),
   - UI editor posts jest odciety od `EntryEditor` (`TASK-059-04`): classic fallback realizuje `PostClassicEditorShell`, a `EntryEditor` jest entries-only,
   - runtime/listings/search source `posts` sa odciete od `content_entries` (`TASK-059-05`): public routes i listing query source `posts` czytaja dedykowane `posts` storage,
   - migracja danych historycznych posts (`TASK-059-06`) jest realizowana przez idempotentny backfill service:
@@ -62,8 +62,9 @@ przez `setup.completed=true`.
     - target: `posts/post_revisions/post_preview_tokens/post_term_assignments/posts.seo`,
     - trigger internal: `POST /admin/api/posts/migration/backfill` (`settings:write`, domyslnie `dryRun=true`),
     - parity mode: `shadowRead=true` zapisuje mismatch/failure report bez destrukcji legacy danych,
+  - widget embedding (`TASK-059-07`): `posts-feed` jest dedykowanym widgetem dla pages buildera (source modes: latest/featured/category/manual) z runtime resolverem `resolvePostsFeedRuntimeData`,
   - internal API: `/admin/api/posts*` (CRUD + autosave/revisions/restore + publish/preview/duplicate/delete) pozostaje `internal` i egzekwuje RBAC `content:read/write/publish`,
-  - pozostale: widget embed posts + final QA/closure (subtaski 059-07..059-08).
+  - final QA/closure (`TASK-059-08`) zakonczone: lint/types/full-tests + dokumentacja/changelog/kanban sa zsynchronizowane.
   - fallback mode flag: `settings["posts.editor.mode"] = "blocks" | "classic"` (query override: `?editor=classic` dla awaryjnego rollbacku),
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)

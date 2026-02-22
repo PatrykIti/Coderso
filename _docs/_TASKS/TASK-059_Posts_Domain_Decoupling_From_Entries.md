@@ -5,7 +5,7 @@
 **Category:** Architecture/Data Model  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-055, TASK-057  
-**Status:** In Progress (2026-02-22)
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -87,3 +87,5 @@ Przebudowac modul Posts tak, aby byl niezaleznym bytem CMS (WordPress-like core)
   - `TASK-059-04` completed (posts editor UI no longer depends on `EntryEditor mode=\"posts\"`; dedicated classic shell + entries-only EntryEditor cleanup).
   - `TASK-059-05` completed (runtime/listings/search source `posts` cut over to dedicated posts storage; public site + listing route meta + public search aligned).
   - `TASK-059-06` completed (idempotent legacy backfill service + mismatch/failure reporting + internal admin trigger `/admin/api/posts/migration/backfill` + rollback playbook documentation).
+  - `TASK-059-07` completed (dedicated `posts-feed` widget with runtime resolver + page builder integration + docs/tests).
+  - `TASK-059-08` completed (full lint/types/tests regression, final docs/changelog/kanban closure).
