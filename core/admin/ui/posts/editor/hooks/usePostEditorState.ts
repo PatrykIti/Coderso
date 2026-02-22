@@ -20,6 +20,7 @@ import {
 } from "@/services/postsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { uploadClipboardImage } from "@/services/mediaClient";
 
 import { coercePostDocument } from "../../../../../services/posts/editor/postBlockLegacyAdapter";
 import { POST_BLOCK_TYPES, type PostBlock, type PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
@@ -178,6 +179,7 @@ export type UsePostEditorStateResult = {
   undo: () => void;
   redo: () => void;
   markReloadRemote: () => Promise<void>;
+  uploadClipboardImage: (file: File) => Promise<{ id: string; key: string; url: string }>;
 };
 
 export function usePostEditorState(): UsePostEditorStateResult {
@@ -722,6 +724,20 @@ export function usePostEditorState(): UsePostEditorStateResult {
     setRemoteUpdatePending(false);
   }, [refresh]);
 
+  const handleUploadClipboardImage = useCallback(
+    async (file: File) => {
+      try {
+        return await uploadClipboardImage(file);
+      } catch (err) {
+        if (isApiClientError(err)) {
+          throw new Error(err.message);
+        }
+        throw err;
+      }
+    },
+    []
+  );
+
   return {
     postId,
     post,
@@ -784,5 +800,6 @@ export function usePostEditorState(): UsePostEditorStateResult {
     undo: () => dispatch({ type: "undo" }),
     redo: () => dispatch({ type: "redo" }),
     markReloadRemote,
+    uploadClipboardImage: handleUploadClipboardImage,
   };
 }

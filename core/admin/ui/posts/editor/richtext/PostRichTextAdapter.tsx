@@ -38,6 +38,18 @@ type PostRichTextAdapterProps = {
   minHeightClassName?: string;
   onSlashInsertBlock?: (type: PostBlockType) => void;
   onFocus?: () => void;
+  onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
+};
+
+type ClipboardItemLike = {
+  kind?: string;
+  type?: string;
+  getAsFile?: () => File | null;
+};
+
+type ClipboardDataLike = {
+  items?: ArrayLike<ClipboardItemLike> | null;
+  files?: ArrayLike<File> | null;
 };
 
 const escapeHtml = (value: string) =>
@@ -108,6 +120,42 @@ const insertHtmlAtCursor = (html: string) => {
   return true;
 };
 
+export const extractClipboardImageFiles = (clipboard: ClipboardDataLike | null | undefined) => {
+  if (!clipboard) return [] as File[];
+
+  const fromItems: File[] = [];
+  for (const item of Array.from(clipboard.items ?? [])) {
+    if (!item) continue;
+    const itemType = (item.type ?? "").toLowerCase();
+    if (item.kind !== "file" && !itemType.startsWith("image/")) continue;
+    const file = item.getAsFile?.() ?? null;
+    if (!file) continue;
+    if (!file.type.toLowerCase().startsWith("image/")) continue;
+    fromItems.push(file);
+  }
+
+  if (fromItems.length > 0) {
+    return fromItems;
+  }
+
+  return Array.from(clipboard.files ?? []).filter((file) =>
+    file.type.toLowerCase().startsWith("image/")
+  );
+};
+
+const deriveClipboardImageAlt = (file: File) => {
+  const base = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ").trim();
+  return (base || "Pasted image").slice(0, 200);
+};
+
+export const buildClipboardImageInsertHtml = (
+  asset: { id: string; url: string },
+  alt: string
+) => {
+  const safeAlt = alt.trim().slice(0, 500);
+  return `<img src="${escapeHtml(asset.url)}" data-media-id="${escapeHtml(asset.id)}" alt="${escapeHtml(safeAlt)}" loading="lazy">`;
+};
+
 export const buildPostRichTextPasteInsert = (input: NormalizePostPastePayloadInput) => {
   const normalized = normalizePostPastePayload(input);
   return {
@@ -128,11 +176,13 @@ export function PostRichTextAdapter({
   minHeightClassName = "min-h-[18rem]",
   onSlashInsertBlock,
   onFocus,
+  onUploadClipboardImage,
 }: PostRichTextAdapterProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashOpen, setSlashOpen] = useState(false);
   const [pasteHint, setPasteHint] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
 
   const emitChange = useCallback(() => {
     const current = editorRef.current;
@@ -336,8 +386,56 @@ export function PostRichTextAdapter({
   );
 
   const handlePaste = useCallback(
-    (event: ClipboardEvent<HTMLDivElement>) => {
+    async (event: ClipboardEvent<HTMLDivElement>) => {
       if (disabled) return;
+
+      const imageFiles = extractClipboardImageFiles(event.clipboardData);
+      if (imageFiles.length > 0) {
+        event.preventDefault();
+        if (!onUploadClipboardImage) {
+          setPasteHint("Image paste is unavailable in this editor context.");
+          return;
+        }
+
+        setImageUploading(true);
+        setPasteHint(
+          imageFiles.length === 1
+            ? "Uploading image from clipboard..."
+            : `Uploading ${imageFiles.length} images from clipboard...`
+        );
+
+        let insertedCount = 0;
+        try {
+          for (const file of imageFiles) {
+            const uploaded = await onUploadClipboardImage(file);
+            const inserted = insertHtmlAtCursor(
+              buildClipboardImageInsertHtml(uploaded, deriveClipboardImageAlt(file))
+            );
+            if (inserted) {
+              insertedCount += 1;
+            }
+          }
+
+          if (insertedCount > 0) {
+            emitChange();
+            updateSlashState();
+          }
+
+          if (insertedCount === 0) {
+            setPasteHint("Image upload finished but insertion failed. Try paste again.");
+          } else if (insertedCount === 1) {
+            setPasteHint("Image uploaded and inserted.");
+          } else {
+            setPasteHint(`${insertedCount} images uploaded and inserted.`);
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "Image upload failed.";
+          setPasteHint(`Image upload failed: ${message}. Paste again to retry.`);
+        } finally {
+          setImageUploading(false);
+        }
+        return;
+      }
 
       const html = event.clipboardData.getData("text/html");
       const text = event.clipboardData.getData("text/plain");
@@ -364,7 +462,7 @@ export function PostRichTextAdapter({
         setPasteHint(null);
       }
     },
-    [disabled, emitChange, updateSlashState]
+    [disabled, emitChange, onUploadClipboardImage, updateSlashState]
   );
 
   const handleSlashSelect = useCallback(
@@ -388,7 +486,7 @@ export function PostRichTextAdapter({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <PostRichTextToolbar onCommand={executeCommand} disabled={disabled} />
+      <PostRichTextToolbar onCommand={executeCommand} disabled={disabled || imageUploading} />
       <div className="relative rounded-lg border bg-background">
         {!hasValue ? (
           <div className="pointer-events-none absolute inset-0 flex items-start px-3 py-2 text-sm text-muted-foreground">
@@ -397,7 +495,7 @@ export function PostRichTextAdapter({
         ) : null}
         <div
           ref={editorRef}
-          contentEditable={!disabled}
+          contentEditable={!disabled && !imageUploading}
           suppressContentEditableWarning
           aria-label={ariaLabel}
           className={cn(

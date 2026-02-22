@@ -571,6 +571,11 @@ Smart paste contract (update `TASK-061-03`):
 - bezpieczny output mapuje sie do writing nodes + rich text insertion HTML,
 - dla payloadow duzych lub degradacji parser zwraca warningi (`html_truncated`, `fallback_to_plain_text`, `unsupported_markup_removed`, itd.).
 
+Clipboard image paste contract (update `TASK-061-04`):
+- image clipboard uploads uzywaja internal endpointu `POST /media` (existing admin media contract),
+- editor wykonuje image-only guard po stronie klienta i fallback filename dla unnamed clipboard files,
+- wstawiany rich-text payload to bezpieczny `img` (`src`, `data-media-id`, `alt`, `loading`) po sanitizacji allowlist.
+
 Routes:
 - `GET /posts`
 - `POST /posts`

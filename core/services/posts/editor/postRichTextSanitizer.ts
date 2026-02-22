@@ -35,13 +35,21 @@ const sanitizeAnchorHref = (value: string | undefined) => {
   return "#";
 };
 
+const sanitizeImageSrc = (value: string | undefined) => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^(https?:|\/)/i.test(trimmed)) return trimmed;
+  return undefined;
+};
+
 const sanitizeAlignment = (value: string | undefined) => {
   if (typeof value !== "string") return undefined;
   const normalized = value.trim().toLowerCase();
   return postRichTextAlignmentSet.has(normalized) ? normalized : undefined;
 };
 
-const sanitizeTagAttributes = (tagName: string, rawAttrs: string) => {
+const sanitizeTagAttributes = (tagName: string, rawAttrs: string): string | null => {
   const attributes = parseAttributes(rawAttrs);
   const chunks: string[] = [];
 
@@ -67,6 +75,44 @@ const sanitizeTagAttributes = (tagName: string, rawAttrs: string) => {
       sanitizeAlignment(attributes.get("align"));
     if (align) {
       chunks.push(`data-align="${align}"`);
+    }
+  }
+
+  if (tagName === "img") {
+    const src = sanitizeImageSrc(attributes.get("src"));
+    if (!src) return null;
+    chunks.push(`src="${escapeHtml(src)}"`);
+
+    const mediaId = attributes.get("data-media-id");
+    if (typeof mediaId === "string" && /^[a-zA-Z0-9._:-]{1,128}$/.test(mediaId.trim())) {
+      chunks.push(`data-media-id="${escapeHtml(mediaId.trim())}"`);
+    }
+
+    const alt = attributes.get("alt");
+    if (typeof alt === "string") {
+      chunks.push(`alt="${escapeHtml(alt.trim().slice(0, 500))}"`);
+    }
+
+    const title = attributes.get("title");
+    if (typeof title === "string" && title.trim().length > 0) {
+      chunks.push(`title="${escapeHtml(title.trim().slice(0, 300))}"`);
+    }
+
+    const loading = attributes.get("loading")?.trim().toLowerCase();
+    if (loading === "eager") {
+      chunks.push('loading="eager"');
+    } else {
+      chunks.push('loading="lazy"');
+    }
+
+    const width = Number(attributes.get("width"));
+    if (Number.isFinite(width) && width > 0 && width <= 4096) {
+      chunks.push(`width="${Math.round(width)}"`);
+    }
+
+    const height = Number(attributes.get("height"));
+    if (Number.isFinite(height) && height > 0 && height <= 4096) {
+      chunks.push(`height="${Math.round(height)}"`);
     }
   }
 
@@ -123,9 +169,9 @@ export function sanitizePostRichTextHtml(rawHtml: string | undefined): string {
 
     if (!postRichTextAllowedTagSet.has(tag)) return "";
     if (isClosing) return `</${tag}>`;
-    if (postRichTextSelfClosingTagSet.has(tag)) return `<${tag}>`;
-
     const attrs = sanitizeTagAttributes(tag, String(rawAttrs));
+    if (attrs === null) return "";
+    if (postRichTextSelfClosingTagSet.has(tag)) return `<${tag}${attrs}>`;
     return `<${tag}${attrs}>`;
   });
 

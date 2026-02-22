@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test";
 
 import {
+  createClipboardImageFilename,
   clearMediaCache,
   deleteMedia,
   listMedia,
   listMediaCached,
+  normalizeClipboardImageFile,
   updateMedia,
+  uploadClipboardImage,
   uploadMedia,
 } from "../../../core/admin/services/mediaClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
@@ -80,6 +83,50 @@ test("uploadMedia uses CSRF and multipart body", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test("uploadClipboardImage rejects non-image files", async () => {
+  const file = new File(["hello"], "hello.txt", { type: "text/plain" });
+  await expect(uploadClipboardImage(file)).rejects.toThrow("clipboard_image_type_invalid");
+});
+
+test("uploadClipboardImage generates deterministic filename when clipboard file has no name", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ id: "media-2", url: "/media/2", key: "2" });
+  };
+
+  try {
+    resetCsrfToken();
+    const file = new File(["img"], "", { type: "image/png" });
+    await uploadClipboardImage(file);
+
+    const formData = calls[1]?.init?.body as FormData;
+    const uploaded = formData.get("file");
+    expect(uploaded).toBeInstanceOf(File);
+    expect((uploaded as File).name.startsWith("clipboard-image-")).toBe(true);
+    expect((uploaded as File).name.endsWith(".png")).toBe(true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("clipboard filename helpers keep stable naming rules", () => {
+  const fixedDate = new Date("2026-02-22T21:15:20.100Z");
+  expect(createClipboardImageFilename("image/webp", fixedDate)).toBe(
+    "clipboard-image-2026-02-22T21-15-20-100Z.webp"
+  );
+
+  const unnamed = new File(["img"], "", { type: "image/jpeg" });
+  const normalized = normalizeClipboardImageFile(unnamed, fixedDate);
+  expect(normalized.name).toBe("clipboard-image-2026-02-22T21-15-20-100Z.jpg");
 });
 
 test("updateMedia posts JSON with CSRF", async () => {

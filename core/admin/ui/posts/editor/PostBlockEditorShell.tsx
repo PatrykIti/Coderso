@@ -168,6 +168,7 @@ export function PostBlockEditorShell() {
             selectedBlockId={editor.state.selectedBlockId}
             onSelectBlock={(id) => editor.selectBlock(id)}
             onUpdateBlockContent={editor.updateBlockContent}
+            onUploadClipboardImage={editor.uploadClipboardImage}
             onMoveBlock={editor.moveBlock}
             onMoveBlockToIndex={editor.moveBlockToIndex}
             onTransformBlock={editor.transformBlock}

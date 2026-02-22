@@ -19,9 +19,10 @@ export const POST_RICH_TEXT_ALLOWED_TAGS = [
   "h5",
   "h6",
   "span",
+  "img",
 ] as const;
 
-export const POST_RICH_TEXT_SELF_CLOSING_TAGS = ["br"] as const;
+export const POST_RICH_TEXT_SELF_CLOSING_TAGS = ["br", "img"] as const;
 
 export const POST_RICH_TEXT_ALIGNMENT_VALUES = ["left", "center", "right"] as const;
 

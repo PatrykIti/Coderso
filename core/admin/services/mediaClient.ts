@@ -32,6 +32,43 @@ export type MediaUpdatePayload = {
   caption?: string | null;
 };
 
+const clipboardMimeToExtension = (mimeType: string) => {
+  const normalized = mimeType.trim().toLowerCase();
+  if (normalized === "image/jpeg" || normalized === "image/jpg") return "jpg";
+  if (normalized === "image/png") return "png";
+  if (normalized === "image/webp") return "webp";
+  if (normalized === "image/gif") return "gif";
+  if (normalized === "image/avif") return "avif";
+  if (normalized === "image/svg+xml") return "svg";
+  return "png";
+};
+
+export const createClipboardImageFilename = (
+  mimeType: string,
+  now = new Date()
+) => {
+  const iso = now.toISOString().replace(/[:.]/g, "-");
+  const extension = clipboardMimeToExtension(mimeType);
+  return `clipboard-image-${iso}.${extension}`;
+};
+
+export const normalizeClipboardImageFile = (file: File, now = new Date()) => {
+  const type = file.type || "application/octet-stream";
+  if (!type.toLowerCase().startsWith("image/")) {
+    throw new Error("clipboard_image_type_invalid");
+  }
+  const rawName = typeof file.name === "string" ? file.name : "";
+  const filename =
+    rawName.trim().length > 0 ? rawName.trim() : createClipboardImageFilename(type, now);
+  if (filename === rawName) {
+    return file;
+  }
+  return new File([file], filename, {
+    type,
+    lastModified: file.lastModified || now.getTime(),
+  });
+};
+
 let cachedMedia: MediaRecord[] | null = null;
 let cachedMediaPromise: Promise<MediaRecord[]> | null = null;
 
@@ -114,6 +151,11 @@ export async function uploadMedia(file: File, meta?: MediaUpdatePayload) {
     broadcastCacheEvent({ key: cacheKeys.mediaList, action: "invalidate" });
   }
   return result;
+}
+
+export async function uploadClipboardImage(file: File, meta?: MediaUpdatePayload) {
+  const normalizedFile = normalizeClipboardImageFile(file);
+  return uploadMedia(normalizedFile, meta);
 }
 
 export async function updateMedia(id: string, payload: MediaUpdatePayload) {

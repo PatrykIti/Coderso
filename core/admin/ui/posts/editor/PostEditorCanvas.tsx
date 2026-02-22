@@ -20,6 +20,7 @@ type PostEditorCanvasProps = {
   selectedBlockId: string | null;
   onSelectBlock: (id: string) => void;
   onUpdateBlockContent: (id: string, content: unknown) => void;
+  onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   onMoveBlock: (id: string, direction: "up" | "down") => void;
   onMoveBlockToIndex: (id: string, targetIndex: number) => void;
   onTransformBlock: (id: string, targetType: PostBlockType) => void;
@@ -61,6 +62,7 @@ function PostCanvasBlockItem({
   selected,
   onSelect,
   onUpdateBlockContent,
+  onUploadClipboardImage,
   onMoveBlock,
   onTransformBlock,
   onDeleteBlock,
@@ -70,6 +72,7 @@ function PostCanvasBlockItem({
   selected: boolean;
   onSelect: () => void;
   onUpdateBlockContent: (content: unknown) => void;
+  onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   onMoveBlock: (direction: "up" | "down") => void;
   onTransformBlock: (targetType: PostBlockType) => void;
   onDeleteBlock: () => void;
@@ -158,6 +161,7 @@ function PostCanvasBlockItem({
             <PostRichTextAdapter
               value={asString(block.content)}
               onChange={onUpdateBlockContent}
+              onUploadClipboardImage={onUploadClipboardImage}
               placeholder="Write content for this block..."
               minHeightClassName="min-h-[9rem]"
               onSlashInsertBlock={onInsertBlockAfterSelected}
@@ -245,6 +249,7 @@ export function PostEditorCanvas({
   selectedBlockId,
   onSelectBlock,
   onUpdateBlockContent,
+  onUploadClipboardImage,
   onMoveBlock,
   onMoveBlockToIndex,
   onTransformBlock,
@@ -323,6 +328,7 @@ export function PostEditorCanvas({
                       selected={selectedBlockId === block.id}
                       onSelect={() => onSelectBlock(block.id)}
                       onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
+                      onUploadClipboardImage={onUploadClipboardImage}
                       onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
                       onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
                       onDeleteBlock={() => onDeleteBlock(block.id)}

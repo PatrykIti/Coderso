@@ -86,6 +86,10 @@ przez `setup.completed=true`.
     - payload z Word/Docs jest czyszczony przez `stripPostOfficeHtmlArtifacts` + rich-text sanitizer,
     - pipeline stosuje deterministic budgets (`html/text/node/list`) + graceful warnings,
     - `PostRichTextAdapter` interceptuje clipboard paste i wstawia bezpieczny payload z hintem dla usera przy degradacji.
+  - **TASK-061-04 (done):** clipboard image paste dla post editora:
+    - `PostRichTextAdapter` wykrywa obrazy w clipboard i wysyla je przez internal media upload,
+    - `mediaClient.uploadClipboardImage` normalizuje obraz z clipboard (mime guard + deterministic filename fallback),
+    - rich text schema/sanitizer wspiera bezpieczne inline `img` (`src`, `data-media-id`, `alt`, `loading`, optional dimensions).
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

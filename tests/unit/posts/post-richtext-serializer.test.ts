@@ -38,6 +38,19 @@ test("serializePostRichText keeps contenteditable entities stable", () => {
   expect(second).toBe(first);
 });
 
+test("serializePostRichText keeps safe inline images and strips unsafe sources", () => {
+  const safe = serializePostRichText(
+    `<p>Test <img src="/media/a.png" data-media-id="media-1" alt="A" loading="eager"></p>`
+  );
+  const unsafe = serializePostRichText(
+    `<p><img src="javascript:alert(1)" onerror="alert(1)" alt="X"></p>`
+  );
+
+  expect(safe).toContain('<img src="/media/a.png" data-media-id="media-1" alt="A"');
+  expect(safe).toContain('loading="eager"');
+  expect(unsafe).toBe("<p></p>");
+});
+
 test("postRichTextToPlainText strips tags and decodes entities", () => {
   const text = postRichTextToPlainText("<p>Hello <strong>world</strong> &amp; team</p>");
   expect(text).toBe("Hello world & team");

@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 21 tasks
+- **To Do:** 20 tasks
 - **In Progress:** 3 tasks
-- **Done:** 453 tasks
+- **Done:** 454 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-061-04 | Clipboard Image Upload and Inline Media Insertion | High | Medium | Clipboard image -> media upload -> inline node insertion |
 | TASK-061-05 | Image Wrap Controls and Layout Semantics | High | Medium | `wrap none/left/right` + width controls + mobile fallback |
 | TASK-061-06 | Editor UI Integration (Ribbon + Canvas + List View) | High | Large | Writing-first editor flow integrated with ribbon/list/details |
 | TASK-061-07 | Runtime Renderer Parity and Backward Compatibility | High | Medium | Writing canvas runtime rendering + legacy adapter path |
@@ -77,6 +76,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-061-04 | Clipboard Image Upload and Inline Media Insertion | High | Medium | Done: clipboard image detection, internal media upload, inline image insertion, and sanitizer/schema updates |
 | TASK-061-03 | Smart Paste (Word/Docs/HTML) Parsing and Sanitization | High | Large | Done: deterministic paste normalizer, Office artifact stripping, adapter paste integration, and tests |
 | TASK-061-02 | Writing Canvas Block Contract and Normalization | High | Large | Done: `writing-canvas` type + normalization + compatibility hooks for legacy/runtime text extraction |
 | TASK-061-01 | Writing Canvas UX Contract and User Flows | High | Medium | Done: writing-first UX contract, flow boundaries, and editor anchors documented |

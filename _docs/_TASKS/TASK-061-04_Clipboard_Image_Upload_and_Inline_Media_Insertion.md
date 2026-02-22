@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Media  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-061-03  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -58,3 +58,23 @@ onPaste(event):
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
+
+## Validation Executed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test`
+  - Result: `1374 pass`, `149 skip`, `0 fail`
+
+## Closure Notes
+- Added clipboard image upload path for post rich-text editing:
+  - image detection from `clipboardData.items/files`,
+  - upload through internal `/admin/api/media` via `uploadClipboardImage`,
+  - inline insertion as sanitized `<img>` with `data-media-id`.
+- Extended media client helpers for clipboard image normalization:
+  - deterministic filename fallback for unnamed clipboard files,
+  - MIME guard for image-only uploads.
+- Extended rich-text sanitizer/schema to support safe inline images (`img` allowlist with strict attrs).
+- Added tests:
+  - `tests/integration/ui/post-editor-paste-image.test.tsx`,
+  - `tests/unit/admin/mediaClient.test.ts` (extended),
+  - `tests/unit/posts/post-richtext-serializer.test.ts` (extended).
