@@ -6,10 +6,10 @@ import {
   postEditorReducer,
 } from "../../../core/admin/ui/posts/editor/postEditorStore";
 
-test("postEditorStore initializes with default paragraph block", () => {
+test("postEditorStore initializes with default writing-canvas block", () => {
   const state = createInitialPostEditorState();
   expect(state.document.blocks.length).toBe(1);
-  expect(state.document.blocks[0]?.type).toBe("paragraph");
+  expect(state.document.blocks[0]?.type).toBe("writing-canvas");
   expect(state.selectedBlockId).toBe(state.document.blocks[0]?.id ?? null);
 });
 
@@ -45,28 +45,35 @@ test("postEditorStore insert/delete keeps selection and minimum one block", () =
   });
 
   expect(deletedSecond.document.blocks.length).toBe(1);
-  expect(deletedSecond.document.blocks[0]?.type).toBe("paragraph");
+  expect(deletedSecond.document.blocks[0]?.type).toBe("writing-canvas");
 });
 
 test("postEditorStore supports undo and redo", () => {
   const initial = createInitialPostEditorState();
-  const updated = postEditorReducer(initial, {
+  const withParagraph = postEditorReducer(initial, {
+    type: "insert_block",
+    mutation: { block: createPostBlock("paragraph"), afterId: initial.selectedBlockId },
+  });
+  const paragraphId = withParagraph.selectedBlockId ?? "";
+  const updated = postEditorReducer(withParagraph, {
     type: "update_block",
     mutation: {
-      id: initial.selectedBlockId ?? "",
+      id: paragraphId,
       mutate: (block) => ({ ...block, content: "Hello world" }),
     },
   });
 
   expect(updated.dirty).toBe(true);
-  expect(updated.history.past.length).toBe(1);
+  expect(updated.history.past.length).toBe(2);
 
   const undone = postEditorReducer(updated, { type: "undo" });
   expect(undone.history.future.length).toBe(1);
-  expect(undone.document.blocks[0]?.content).toBe("");
+  const undoneParagraph = undone.document.blocks.find((block) => block.id === paragraphId);
+  expect(undoneParagraph?.content).toBe("");
 
   const redone = postEditorReducer(undone, { type: "redo" });
-  expect(redone.document.blocks[0]?.content).toBe("Hello world");
+  const redoneParagraph = redone.document.blocks.find((block) => block.id === paragraphId);
+  expect(redoneParagraph?.content).toBe("Hello world");
 });
 
 test("postEditorStore moves blocks by target index", () => {
@@ -88,14 +95,18 @@ test("postEditorStore moves blocks by target index", () => {
   expect(moved.document.blocks.map((block) => block.type)).toEqual([
     "heading",
     "quote",
-    "paragraph",
+    "writing-canvas",
   ]);
 });
 
 test("postEditorStore transforms selected block without changing id", () => {
   const initial = createInitialPostEditorState();
-  const blockId = initial.selectedBlockId ?? "";
-  const updated = postEditorReducer(initial, {
+  const withParagraph = postEditorReducer(initial, {
+    type: "insert_block",
+    mutation: { block: createPostBlock("paragraph"), afterId: initial.selectedBlockId },
+  });
+  const blockId = withParagraph.selectedBlockId ?? "";
+  const updated = postEditorReducer(withParagraph, {
     type: "update_block",
     mutation: {
       id: blockId,
@@ -108,7 +119,8 @@ test("postEditorStore transforms selected block without changing id", () => {
     mutation: { id: blockId, targetType: "list" },
   });
 
-  expect(transformed.document.blocks[0]?.id).toBe(blockId);
-  expect(transformed.document.blocks[0]?.type).toBe("list");
-  expect(transformed.document.blocks[0]?.content).toEqual(["Item one", "Item two"]);
+  const transformedBlock = transformed.document.blocks.find((block) => block.id === blockId);
+  expect(transformedBlock?.id).toBe(blockId);
+  expect(transformedBlock?.type).toBe("list");
+  expect(transformedBlock?.content).toEqual(["Item one", "Item two"]);
 });

@@ -10,7 +10,15 @@ test("PostEditorCanvas renders unified document canvas with outline", () => {
         version: 1,
         meta: {},
         blocks: [
-          { id: "block-1", type: "paragraph", attrs: {}, content: "<p>Intro</p>" },
+          {
+            id: "block-1",
+            type: "writing-canvas",
+            attrs: {},
+            content: {
+              version: 1,
+              nodes: [{ id: "node-1", type: "paragraph", text: "<p>Intro</p>" }],
+            },
+          },
           { id: "block-2", type: "heading", attrs: { level: 2 }, content: "<h2>Title</h2>" },
         ],
       }}
@@ -28,7 +36,7 @@ test("PostEditorCanvas renders unified document canvas with outline", () => {
 
   expect(html).toContain("Document canvas");
   expect(html).toContain("List view");
-  expect(html).toContain("Paragraph");
+  expect(html).toContain("Writing canvas");
   expect(html).toContain("Heading");
 });
 
@@ -38,7 +46,17 @@ test("PostEditorCanvas can hide outline panel", () => {
       document={{
         version: 1,
         meta: {},
-        blocks: [{ id: "block-1", type: "paragraph", attrs: {}, content: "" }],
+        blocks: [
+          {
+            id: "block-1",
+            type: "writing-canvas",
+            attrs: {},
+            content: {
+              version: 1,
+              nodes: [{ id: "node-1", type: "paragraph", text: "" }],
+            },
+          },
+        ],
       }}
       selectedBlockId="block-1"
       onSelectBlock={() => undefined}

@@ -62,3 +62,22 @@ test("BlockInspector renders image wrap controls", () => {
   expect(html).toContain("Image width");
   expect(html).toContain("Image spacing");
 });
+
+test("BlockInspector shows writing-canvas guidance", () => {
+  const html = renderToString(
+    <BlockInspector
+      block={{
+        id: "writing-1",
+        type: "writing-canvas",
+        attrs: {},
+        content: {
+          version: 1,
+          nodes: [{ id: "node-1", type: "paragraph", text: "<p>Body</p>" }],
+        },
+      }}
+      onChangeAttrs={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Use the canvas editor to format paragraphs");
+});

@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-061-01, TASK-061-02, TASK-061-03, TASK-061-05  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -56,3 +56,27 @@ onPasteLargeDocument:
 - `_docs/ARCHITECTURE.md`
 - `_docs/CODERSO_MODULES.md`
 - `_docs/_TASKS/README.md`
+
+## Validation Executed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test`
+  - Result: `1384 pass`, `149 skip`, `0 fail`
+
+## Closure Notes
+- Writing-first default state:
+  - empty post documents now initialize with a `writing-canvas` block (`block-1`) instead of `paragraph`,
+  - reducer fallback after deleting all blocks also restores `writing-canvas`.
+- Ribbon insert flow updated to non-technical quick actions:
+  - `Add writing section`,
+  - `Add CTA block`,
+  - `Add embed block`,
+  - `Add image block`.
+- Canvas/list/details integration:
+  - `writing-canvas` block is editable inline through `PostRichTextAdapter`,
+  - list view labels are user-facing (`Writing canvas`, `CTA block`, `Embed block`),
+  - block inspector includes writing-canvas guidance and keeps image wrap controls for image blocks.
+- Added/updated tests:
+  - new `tests/integration/ui/post-editor-writing-canvas-flow.test.tsx`,
+  - updated post editor shell/page/smoke tests,
+  - updated store/canvas/inspector tests for writing-first defaults and labels.

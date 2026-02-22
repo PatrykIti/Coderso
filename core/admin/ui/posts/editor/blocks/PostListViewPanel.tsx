@@ -14,6 +14,13 @@ type PostListViewPanelProps = {
   onMoveBlockToIndex: (id: string, targetIndex: number) => void;
 };
 
+const resolveOutlineBlockLabel = (block: PostBlock) => {
+  if (block.type === "writing-canvas") return "Writing canvas";
+  if (block.type === "button") return "CTA block";
+  if (block.type === "embed") return "Embed block";
+  return getPostBlockLabel(block.type);
+};
+
 export function PostListViewPanel({
   blocks,
   selectedBlockId,
@@ -102,12 +109,12 @@ export function PostListViewPanel({
                 className={`group flex w-full cursor-grab items-start gap-2 px-3 py-2 text-left transition active:cursor-grabbing ${
                   draggingId === block.id ? "opacity-60" : ""
                 }`}
-                aria-label={`Select block ${index + 1}: ${getPostBlockLabel(block.type)}`}
+                aria-label={`Select block ${index + 1}: ${resolveOutlineBlockLabel(block)}`}
               >
                 <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-foreground">
-                    {index + 1}. {getPostBlockLabel(block.type)}
+                    {index + 1}. {resolveOutlineBlockLabel(block)}
                   </p>
                 </div>
               </button>

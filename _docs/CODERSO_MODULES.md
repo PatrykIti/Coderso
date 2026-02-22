@@ -153,3 +153,7 @@ const sections = buildDefaultNavSections({
   - insert flow moved fully into ribbon (`Add block` + `Block library`), without left inserter drawer,
   - list view outline w kompaktowym ratio (`min 220`, `max 320`) i labels-only rows,
   - contextual details behavior (`Document`/`Block`) przy zachowaniu focusu/selekcji.
+- 061 (in progress): Writing Canvas + smart paste hardening:
+  - 061-01..061-06 done: UX contract, writing-canvas block model, smart paste pipeline, clipboard image upload, image wrap semantics, and writing-first shell integration,
+  - posts now default to `writing-canvas` on empty document and expose writing-first insert actions (`Add writing section`, `Add CTA block`, `Add embed block`, `Add image block`),
+  - pending 061-07..061-08: final runtime parity closure and rollout QA/docs closure.

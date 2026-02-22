@@ -17,6 +17,7 @@ test("PostEditorPage renders post editor shell", () => {
   expect(html).toContain("Insert");
   expect(html).toContain("Review");
   expect(html).toContain("View");
+  expect(html).toContain("Add writing section");
 });
 
 test("PostEditorPage supports query override for classic editor", () => {

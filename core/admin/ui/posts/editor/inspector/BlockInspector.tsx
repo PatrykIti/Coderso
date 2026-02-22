@@ -100,6 +100,12 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
   }
 
   const attrs = (block.attrs ?? {}) as Record<string, unknown>;
+  const hasAlignmentControl = hasScope(block.type, "alignment");
+  const hasWidthControl = hasScope(block.type, "width");
+  const hasSpacingControl = hasScope(block.type, "spacing");
+  const hasTextScaleControl = hasScope(block.type, "textScale");
+  const hasAnyLayoutControl =
+    hasAlignmentControl || hasWidthControl || hasSpacingControl || hasTextScaleControl;
 
   return (
     <div className="space-y-4 p-4">
@@ -117,7 +123,7 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
           <p className="text-xs font-semibold uppercase text-muted-foreground">Layout and style</p>
           <InfoTip content="Control spacing and width before tweaking advanced options." />
         </div>
-        {hasScope(block.type, "alignment") ? (
+        {hasAlignmentControl ? (
           <SelectField
             label="Alignment"
             value={readString(attrs.align, "left")}
@@ -125,7 +131,7 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
             options={ALIGNMENT_OPTIONS}
           />
         ) : null}
-        {hasScope(block.type, "width") ? (
+        {hasWidthControl ? (
           <SelectField
             label="Width"
             value={readString(attrs.width, "auto")}
@@ -133,7 +139,7 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
             options={WIDTH_OPTIONS}
           />
         ) : null}
-        {hasScope(block.type, "spacing") ? (
+        {hasSpacingControl ? (
           <div className="grid gap-2 sm:grid-cols-2">
             <SelectField
               label="Spacing top"
@@ -149,13 +155,18 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
             />
           </div>
         ) : null}
-        {hasScope(block.type, "textScale") ? (
+        {hasTextScaleControl ? (
           <SelectField
             label="Text size"
             value={readString(attrs.textScale, "md")}
             onChange={(value) => onChangeAttrs({ textScale: value })}
             options={TEXT_SCALE_OPTIONS}
           />
+        ) : null}
+        {!hasAnyLayoutControl ? (
+          <p className="text-xs text-muted-foreground">
+            This block uses a fixed layout. Edit content directly on the canvas.
+          </p>
         ) : null}
       </section>
 
@@ -355,6 +366,13 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
               onCheckedChange={(checked) => onChangeAttrs({ showLineNumbers: checked })}
             />
           </>
+        ) : null}
+
+        {block.type === "writing-canvas" ? (
+          <p className="text-xs text-muted-foreground">
+            Use the canvas editor to format paragraphs, headings, lists, and inline images.
+            Select an image in the canvas to adjust wrap and width.
+          </p>
         ) : null}
 
         {(block.type === "paragraph" || block.type === "quote") ? (

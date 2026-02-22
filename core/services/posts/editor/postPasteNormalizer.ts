@@ -254,7 +254,7 @@ const mapSanitizedHtmlToNodes = (
   return nodes;
 };
 
-const nodesToHtml = (nodes: WritingCanvasNode[]) =>
+export const serializeWritingCanvasNodesToHtml = (nodes: WritingCanvasNode[]) =>
   nodes
     .map((node) => {
       if (node.type === "heading") {
@@ -276,6 +276,15 @@ const nodesToHtml = (nodes: WritingCanvasNode[]) =>
       return `<p>${node.text}</p>`;
     })
     .join("");
+
+export const serializeWritingCanvasContentToHtml = (content: unknown) => {
+  if (!content || typeof content !== "object" || Array.isArray(content)) return "";
+  const nodes = Array.isArray((content as { nodes?: unknown }).nodes)
+    ? ((content as { nodes: unknown[] }).nodes as WritingCanvasNode[])
+    : [];
+  if (nodes.length === 0) return "";
+  return serializeWritingCanvasNodesToHtml(nodes);
+};
 
 export const createWritingCanvasContentFromPaste = (
   input: NormalizePostPastePayloadInput
@@ -384,7 +393,7 @@ export function normalizePostPastePayload(
     };
   }
 
-  const html = nodesToHtml(nodes);
+  const html = serializeWritingCanvasNodesToHtml(nodes);
   return {
     source,
     mode: "writing-canvas",

@@ -94,6 +94,11 @@ przez `setup.completed=true`.
     - wspolny kontrakt `postImageWrapLayout` normalizuje `wrap`, `widthPercent`, `marginPreset`,
     - inspector i rich-text image controls wystawiaja user-friendly ustawienia (`Text wrap`, `Image width`, `Image spacing`),
     - renderer/canvas uzywaja wspolnych klas (`post-image-wrap-*`, `post-image-width-*`, `post-image-margin-*`) z mobile fallback (`max-width: 767px` => stacked/full-width).
+  - **TASK-061-06 (done):** writing-first UI integration dla posts editora:
+    - domyslny pusty dokument posta startuje od bloku `writing-canvas` (takze fallback po usunieciu wszystkich blokow),
+    - ribbon `Insert` eksponuje quick actions dla nietechnicznego flow (`Add writing section`, `Add CTA block`, `Add embed block`, `Add image block`),
+    - outline/list view pokazuje logiczne etykiety sekcji (`Writing canvas`, `CTA block`, `Embed block`),
+    - `writing-canvas` jest edytowalny inline na wspolnym canvasie, a details panel pokazuje kontekstowe wskazowki dla writing flow.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

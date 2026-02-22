@@ -49,7 +49,7 @@ const getPostDataRecord = (post: PostDetail | null): Record<string, unknown> => 
 };
 
 const createSafeBlockType = (value: string): PostBlockType => {
-  const fallback: PostBlockType = "paragraph";
+  const fallback: PostBlockType = "writing-canvas";
   if ((POST_BLOCK_TYPES as readonly string[]).includes(value)) {
     return value as PostBlockType;
   }

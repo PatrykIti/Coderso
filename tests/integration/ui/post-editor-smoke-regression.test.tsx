@@ -14,6 +14,7 @@ test("post editor smoke: blocks mode renders canonical editor layout", () => {
   expect(html).toContain("Review");
   expect(html).toContain("View");
   expect(html).toContain("Save draft");
+  expect(html).toContain("Add writing section");
 });
 
 test("post editor smoke: classic override route still opens legacy editor", () => {
@@ -34,4 +35,5 @@ test("post editor smoke: shell action controls stay visible", () => {
   expect(html).toContain("Undo");
   expect(html).toContain("Save draft");
   expect(html).toContain("Publish");
+  expect(html).toContain("Add writing section");
 });

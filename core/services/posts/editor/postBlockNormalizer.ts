@@ -447,15 +447,15 @@ const normalizeDocumentMeta = (
   return normalized;
 };
 
-const createDefaultParagraphBlock = (): PostBlock => ({
+const createDefaultWritingCanvasBlock = (): PostBlock => ({
   id: "block-1",
-  type: "paragraph",
+  type: "writing-canvas",
   attrs: {},
-  content: "",
+  content: createEmptyWritingCanvasContent(),
 });
 
 export function createEmptyPostBlockDocument(): PostBlockDocument {
-  const blocks = [createDefaultParagraphBlock()];
+  const blocks = [createDefaultWritingCanvasBlock()];
   return {
     version: POST_BLOCK_DOCUMENT_VERSION,
     blocks,
@@ -488,7 +488,7 @@ export function normalizePostBlockDocument(
   const usedIds = new Set<string>();
   const blocks = rawBlocks.map((block, index) => normalizeBlock(block, index, usedIds));
   if (blocks.length === 0) {
-    blocks.push(createDefaultParagraphBlock());
+    blocks.push(createDefaultWritingCanvasBlock());
   }
 
   const meta = normalizeDocumentMeta(input.meta, blocks);

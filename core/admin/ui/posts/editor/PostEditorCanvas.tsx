@@ -15,6 +15,10 @@ import {
   resolvePostImageLayoutFromAttrs,
 } from "../../../../services/posts/postImageWrapLayout";
 import { postRichTextToPlainText } from "../../../../services/posts/editor/postRichTextSerializer";
+import {
+  createWritingCanvasContentFromPaste,
+  serializeWritingCanvasContentToHtml,
+} from "../../../../services/posts/editor/postPasteNormalizer";
 import { getTransformTargetTypes } from "./blocks/blockTransforms";
 import { getPostBlockLabel } from "./blocks/blockCatalog";
 import { PostListViewPanel } from "./blocks/PostListViewPanel";
@@ -89,6 +93,10 @@ function PostCanvasBlockItem({
   );
 
   const attrs = (block.attrs ?? {}) as Record<string, unknown>;
+  const writingCanvasHtml =
+    block.type === "writing-canvas"
+      ? serializeWritingCanvasContentToHtml(block.content)
+      : "";
 
   return (
     <section
@@ -161,6 +169,28 @@ function PostCanvasBlockItem({
       </header>
 
       <div className="space-y-3" onClick={(event) => event.stopPropagation()}>
+        {block.type === "writing-canvas" ? (
+          selected ? (
+            <PostRichTextAdapter
+              value={writingCanvasHtml}
+              onChange={(nextHtml) => {
+                const nextContent = createWritingCanvasContentFromPaste({
+                  html: nextHtml,
+                  text: postRichTextToPlainText(nextHtml),
+                }).content;
+                onUpdateBlockContent(nextContent);
+              }}
+              onUploadClipboardImage={onUploadClipboardImage}
+              placeholder="Write your post content..."
+              minHeightClassName="min-h-[16rem]"
+              onSlashInsertBlock={onInsertBlockAfterSelected}
+              onFocus={onSelect}
+            />
+          ) : (
+            renderReadOnlyText(writingCanvasHtml, "Empty writing section")
+          )
+        ) : null}
+
         {richTextBlockTypes.has(block.type) ? (
           selected ? (
             <PostRichTextAdapter
@@ -348,10 +378,10 @@ export function PostEditorCanvas({
                   type="button"
                   variant="outline"
                   className="mt-3"
-                  onClick={() => onInsertBlockAfterSelected("paragraph")}
+                  onClick={() => onInsertBlockAfterSelected("writing-canvas")}
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add first block
+                  Add writing section
                 </Button>
               </div>
             ) : (

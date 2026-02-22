@@ -128,13 +128,11 @@ export function PostEditorTopBar({
     }, {})
   );
 
-  const quickInsertTypes: PostBlockType[] = [
-    "paragraph",
-    "heading",
-    "list",
-    "quote",
-    "image",
-    "button",
+  const quickInsertActions: Array<{ type: PostBlockType; label: string }> = [
+    { type: "writing-canvas", label: "Add writing section" },
+    { type: "button", label: "Add CTA block" },
+    { type: "embed", label: "Add embed block" },
+    { type: "image", label: "Add image block" },
   ];
 
   return (
@@ -149,7 +147,7 @@ export function PostEditorTopBar({
           </TabsList>
         </div>
 
-        <TabsContent value="home" className="m-0 border-b px-4 py-3 sm:px-6">
+        <TabsContent value="home" forceMount className="m-0 border-b px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-start gap-3">
             <RibbonGroup title="Publish">
               <Button
@@ -205,10 +203,10 @@ export function PostEditorTopBar({
           </div>
         </TabsContent>
 
-        <TabsContent value="insert" className="m-0 border-b px-4 py-3 sm:px-6">
+        <TabsContent value="insert" forceMount className="m-0 border-b px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-start gap-3">
-            <RibbonGroup title="Quick blocks">
-              {quickInsertTypes.map((type) => {
+            <RibbonGroup title="Writing flow">
+              {quickInsertActions.map(({ type, label }) => {
                 const item = POST_BLOCK_CATALOG.find((entry) => entry.type === type);
                 if (!item) return null;
                 return (
@@ -220,7 +218,7 @@ export function PostEditorTopBar({
                     onClick={() => onInsertBlock(type)}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                    {item.label}
+                    {label}
                   </Button>
                 );
               })}
@@ -264,7 +262,7 @@ export function PostEditorTopBar({
           </div>
         </TabsContent>
 
-        <TabsContent value="review" className="m-0 border-b px-4 py-3 sm:px-6">
+        <TabsContent value="review" forceMount className="m-0 border-b px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-start gap-3">
             <RibbonGroup title="History">
               <Button
@@ -291,7 +289,7 @@ export function PostEditorTopBar({
           </div>
         </TabsContent>
 
-        <TabsContent value="view" className="m-0 px-4 py-3 sm:px-6">
+        <TabsContent value="view" forceMount className="m-0 px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-start gap-3">
             <RibbonGroup title="Panels">
               <Button

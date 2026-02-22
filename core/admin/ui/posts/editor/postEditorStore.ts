@@ -231,7 +231,7 @@ const mutateDeleteBlock = (state: PostEditorState, id: string) => {
   nextDocument.blocks =
     nextBlocks.length > 0
       ? nextBlocks
-      : [createPostBlock("paragraph", `block-${getNextBlockNumericId(nextDocument)}`)];
+      : [createPostBlock("writing-canvas", `block-${getNextBlockNumericId(nextDocument)}`)];
 
   const next = withHistory(state, normalizePostBlockDocument(nextDocument));
   return {
