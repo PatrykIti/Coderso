@@ -16,6 +16,8 @@ const createBaseProps = () => ({
   onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
+  onOpenBlocks: () => undefined,
+  onOpenDetails: () => undefined,
 });
 
 test("PostEditorTopBar renders autosave and revisions status", () => {

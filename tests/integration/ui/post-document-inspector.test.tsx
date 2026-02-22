@@ -6,6 +6,7 @@ import { DocumentInspector } from "../../../core/admin/ui/posts/editor/inspector
 test("DocumentInspector renders user-friendly document controls", () => {
   const html = renderToString(
     <DocumentInspector
+      title="Hello world"
       status="draft"
       slug="hello-world"
       excerpt="Sample excerpt"
@@ -19,6 +20,7 @@ test("DocumentInspector renders user-friendly document controls", () => {
         robots: "index,follow",
       }}
       taxonomySummary={{ categoryName: "Announcements", tagCount: 2 }}
+      onTitleChange={() => undefined}
       onSlugChange={() => undefined}
       onExcerptChange={() => undefined}
       onFeaturedImageChange={() => undefined}
@@ -29,10 +31,11 @@ test("DocumentInspector renders user-friendly document controls", () => {
   );
 
   expect(html).toContain("Publishing");
-  expect(html).toContain("URL and excerpt");
+  expect(html).toContain("Title, URL and excerpt");
   expect(html).toContain("Featured image");
   expect(html).toContain("Taxonomy and tags");
   expect(html).toContain("SEO summary");
   expect(html).toContain("SEO fields completed");
+  expect(html).toContain("Post title");
   expect(html).toContain("Slug");
 });

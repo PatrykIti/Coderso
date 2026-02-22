@@ -1,8 +1,6 @@
-import { PanelLeftOpen, PanelRightOpen, RefreshCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -22,8 +20,8 @@ import { PostRevisionDrawer } from "./PostRevisionDrawer";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 
 export function PostBlockEditorShell() {
-  const [mobileBlocksOpen, setMobileBlocksOpen] = useState(false);
-  const [mobileInspectorOpen, setMobileInspectorOpen] = useState(false);
+  const [blocksPanelOpen, setBlocksPanelOpen] = useState(false);
+  const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
 
   const editor = usePostEditorState();
 
@@ -31,7 +29,7 @@ export function PostBlockEditorShell() {
     <BlockInserter
       onInsertBlock={(type) => {
         editor.insertBlock(type);
-        setMobileBlocksOpen(false);
+        setBlocksPanelOpen(false);
       }}
       disabled={editor.loading}
     />
@@ -48,6 +46,7 @@ export function PostBlockEditorShell() {
         </div>
         <TabsContent value="document" className="m-0 min-h-0 flex-1 overflow-auto">
           <DocumentInspector
+            title={editor.title}
             status={editor.status}
             slug={editor.slug}
             excerpt={editor.state.document.meta.excerpt ?? ""}
@@ -56,6 +55,7 @@ export function PostBlockEditorShell() {
             categoryId={editor.categoryId}
             seo={editor.seoDraft}
             taxonomySummary={editor.taxonomySummary}
+            onTitleChange={editor.setTitle}
             onSlugChange={editor.setSlug}
             onExcerptChange={editor.setExcerpt}
             onFeaturedImageChange={editor.setFeaturedImage}
@@ -93,53 +93,15 @@ export function PostBlockEditorShell() {
       breadcrumbs={breadcrumbs}
       leftPanel={blockLibrary}
       rightPanel={inspectorPanel}
+      leftPanelClassName="lg:!hidden"
+      rightPanelClassName="lg:!hidden"
     >
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="border-b bg-background px-4 py-2 lg:hidden">
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileBlocksOpen(true)}
-            >
-              <PanelLeftOpen className="mr-2 h-4 w-4" />
-              Blocks
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setMobileInspectorOpen(true)}
-            >
-              <PanelRightOpen className="mr-2 h-4 w-4" />
-              Inspector
-            </Button>
-          </div>
-        </div>
-
         {editor.error ? (
           <div className="px-4 pt-4 sm:px-6">
             <Alert variant="destructive">
               <AlertTitle>Post editor error</AlertTitle>
               <AlertDescription>{editor.error}</AlertDescription>
-            </Alert>
-          </div>
-        ) : null}
-
-        {editor.remoteUpdatePending ? (
-          <div className="px-4 pt-4 sm:px-6">
-            <Alert>
-              <AlertTitle>Remote update detected</AlertTitle>
-              <AlertDescription>
-                This post changed in the background. Reload to synchronize editor state.
-              </AlertDescription>
-              <div className="mt-3">
-                <Button type="button" variant="outline" size="sm" onClick={editor.markReloadRemote}>
-                  <RefreshCcw className="mr-2 h-4 w-4" />
-                  Reload now
-                </Button>
-              </div>
             </Alert>
           </div>
         ) : null}
@@ -176,6 +138,8 @@ export function PostBlockEditorShell() {
           onPublish={() => {
             editor.publish().catch(() => undefined);
           }}
+          onOpenBlocks={() => setBlocksPanelOpen(true)}
+          onOpenDetails={() => setDetailsPanelOpen(true)}
         />
 
         <PostRevisionDrawer
@@ -196,10 +160,6 @@ export function PostBlockEditorShell() {
           </div>
         ) : (
           <PostEditorCanvas
-            title={editor.title}
-            slug={editor.slug}
-            onTitleChange={editor.setTitle}
-            onSlugChange={editor.setSlug}
             document={editor.state.document}
             selectedBlockId={editor.state.selectedBlockId}
             onSelectBlock={(id) => editor.selectBlock(id)}
@@ -224,7 +184,7 @@ export function PostBlockEditorShell() {
         />
       </div>
 
-      <Sheet open={mobileBlocksOpen} onOpenChange={setMobileBlocksOpen}>
+      <Sheet open={blocksPanelOpen} onOpenChange={setBlocksPanelOpen}>
         <SheetContent side="left" className="w-full max-w-sm p-0" showCloseButton={false}>
           <SheetTitle className="sr-only">Blocks</SheetTitle>
           <SheetDescription className="sr-only">
@@ -234,11 +194,11 @@ export function PostBlockEditorShell() {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={mobileInspectorOpen} onOpenChange={setMobileInspectorOpen}>
+      <Sheet open={detailsPanelOpen} onOpenChange={setDetailsPanelOpen}>
         <SheetContent side="right" className="w-full max-w-sm p-0" showCloseButton={false}>
-          <SheetTitle className="sr-only">Inspector</SheetTitle>
+          <SheetTitle className="sr-only">Details</SheetTitle>
           <SheetDescription className="sr-only">
-            Edit document and selected block settings.
+            Edit post and selected block settings.
           </SheetDescription>
           {inspectorPanel}
         </SheetContent>

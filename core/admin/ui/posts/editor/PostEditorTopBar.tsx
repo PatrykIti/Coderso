@@ -16,6 +16,8 @@ type PostEditorTopBarProps = {
   onSaveDraft: () => void;
   onPreview: () => void;
   onPublish: () => void;
+  onOpenBlocks: () => void;
+  onOpenDetails: () => void;
 };
 
 const statusLabel: Record<string, string> = {
@@ -54,6 +56,8 @@ export function PostEditorTopBar({
   onSaveDraft,
   onPreview,
   onPublish,
+  onOpenBlocks,
+  onOpenDetails,
 }: PostEditorTopBarProps) {
   const syncLabel = saving
     ? "Saving..."
@@ -72,18 +76,39 @@ export function PostEditorTopBar({
       : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600";
 
   return (
-    <div className="border-b bg-background px-4 py-3 sm:px-6">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge
-          variant="outline"
-          className={statusStyle[status] ?? statusStyle.draft}
-        >
-          {statusLabel[status] ?? status}
-        </Badge>
-        <Badge variant="outline" className={syncBadgeClass}>
-          {syncLabel}
-        </Badge>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+    <div className="border-y bg-background">
+      <div className="border-b px-4 py-2 sm:px-6">
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onSaveDraft}
+            disabled={saving}
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {saving ? "Saving..." : "Save draft"}
+          </Button>
+          <div className="hidden items-center gap-2 md:flex">
+            <Badge
+              variant="outline"
+              className={statusStyle[status] ?? statusStyle.draft}
+            >
+              {statusLabel[status] ?? status}
+            </Badge>
+            <Badge variant="outline" className={syncBadgeClass}>
+              {syncLabel}
+            </Badge>
+          </div>
+          <Button type="button" size="sm" onClick={onPublish}>
+            <Send className="mr-2 h-4 w-4" />
+            Publish
+          </Button>
+        </div>
+      </div>
+
+      <div className="border-b px-4 py-2 sm:px-6">
+        <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -104,6 +129,11 @@ export function PostEditorTopBar({
             <Redo2 className="mr-2 h-4 w-4" />
             Redo
           </Button>
+        </div>
+      </div>
+
+      <div className="border-b px-4 py-2 sm:px-6">
+        <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="outline"
@@ -122,19 +152,16 @@ export function PostEditorTopBar({
             <Eye className="mr-2 h-4 w-4" />
             Runtime preview
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={onSaveDraft}
-            disabled={saving}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save draft"}
+        </div>
+      </div>
+
+      <div className="px-4 py-2 sm:px-6">
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" onClick={onOpenBlocks}>
+            Blocks
           </Button>
-          <Button type="button" size="sm" onClick={onPublish}>
-            <Send className="mr-2 h-4 w-4" />
-            Publish
+          <Button type="button" variant="outline" size="sm" onClick={onOpenDetails}>
+            Details
           </Button>
         </div>
       </div>

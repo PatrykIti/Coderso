@@ -1,7 +1,6 @@
 import { MoveDown, MoveUp, Shuffle, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
 import type {
@@ -27,10 +26,6 @@ const blockTypeLabel: Record<PostBlockType, string> = {
 };
 
 type PostEditorCanvasProps = {
-  title: string;
-  slug: string;
-  onTitleChange: (value: string) => void;
-  onSlugChange: (value: string) => void;
   document: PostBlockDocument;
   selectedBlockId: string | null;
   onSelectBlock: (id: string) => void;
@@ -48,10 +43,6 @@ const normalizeListForEdit = (value: unknown) => {
 };
 
 export function PostEditorCanvas({
-  title,
-  slug,
-  onTitleChange,
-  onSlugChange,
   document,
   selectedBlockId,
   onSelectBlock,
@@ -70,32 +61,7 @@ export function PostEditorCanvas({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:p-6">
-      <div className="rounded-xl border bg-background p-4 shadow-sm">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Post title
-            </label>
-            <Input
-              value={title}
-              onChange={(event) => onTitleChange(event.target.value)}
-              placeholder="Write post title"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Slug
-            </label>
-            <Input
-              value={slug}
-              onChange={(event) => onSlugChange(event.target.value)}
-              placeholder="post-slug"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
         <PostListViewPanel
           blocks={document.blocks}
           selectedBlockId={selectedBlockId}

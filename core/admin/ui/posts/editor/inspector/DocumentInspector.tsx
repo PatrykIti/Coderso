@@ -14,6 +14,7 @@ import { InfoTip } from "@/ui/shared/InfoTip";
 import { BLOG_SEO_ROBOTS_OPTIONS } from "./inspectorSchemas";
 
 type DocumentInspectorProps = {
+  title: string;
   status: PostStatus;
   slug: string;
   excerpt: string;
@@ -30,6 +31,7 @@ type DocumentInspectorProps = {
     categoryName: string | null;
     tagCount: number;
   };
+  onTitleChange: (value: string) => void;
   onSlugChange: (value: string) => void;
   onExcerptChange: (value: string) => void;
   onFeaturedImageChange: (value: string) => void;
@@ -53,6 +55,7 @@ const statusClass: Record<PostStatus, string> = {
 };
 
 export function DocumentInspector({
+  title,
   status,
   slug,
   excerpt,
@@ -61,6 +64,7 @@ export function DocumentInspector({
   categoryId,
   seo,
   taxonomySummary,
+  onTitleChange,
   onSlugChange,
   onExcerptChange,
   onFeaturedImageChange,
@@ -88,8 +92,12 @@ export function DocumentInspector({
 
       <section className="space-y-3 rounded-xl border bg-background p-3">
         <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">URL and excerpt</p>
-          <InfoTip content="Slug defines post URL. Excerpt is a short summary for lists and previews." />
+          <p className="text-xs font-semibold uppercase text-muted-foreground">Title, URL and excerpt</p>
+          <InfoTip content="Title is post headline. Slug defines post URL. Excerpt is a short summary for lists and previews." />
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground">Post title</label>
+          <Input value={title} onChange={(event) => onTitleChange(event.target.value)} />
         </div>
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground">Slug</label>

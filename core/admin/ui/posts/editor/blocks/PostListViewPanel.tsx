@@ -14,21 +14,6 @@ type PostListViewPanelProps = {
   onMoveBlockToIndex: (id: string, targetIndex: number) => void;
 };
 
-const extractPreview = (block: PostBlock) => {
-  if (typeof block.content === "string") {
-    const plain = block.content.replace(/<[^>]+>/g, "").trim();
-    return plain || "Empty block";
-  }
-  if (Array.isArray(block.content)) {
-    if (block.content.length === 0) return "Empty list";
-    return block.content
-      .filter((item): item is string => typeof item === "string")
-      .slice(0, 2)
-      .join(", ");
-  }
-  return "No preview";
-};
-
 export function PostListViewPanel({
   blocks,
   selectedBlockId,
@@ -94,7 +79,6 @@ export function PostListViewPanel({
       <div className="max-h-[30rem] space-y-2 overflow-auto p-3">
         {blocks.map((block, index) => {
           const active = block.id === selectedBlockId;
-          const preview = extractPreview(block);
           const showDropBefore = dropIndex === index;
           const showDropAfter = dropIndex === index + 1;
 
@@ -125,7 +109,6 @@ export function PostListViewPanel({
                   <p className="text-sm font-semibold text-foreground">
                     #{index + 1} {getPostBlockLabel(block.type)}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground">{preview}</p>
                 </div>
               </button>
               {showDropAfter ? <div className="h-0.5 bg-primary" /> : null}
