@@ -9,12 +9,30 @@ import {
 } from "react";
 
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   deserializePostRichText,
   postRichTextToPlainText,
   serializePostRichText,
 } from "../../../../../services/posts/editor/postRichTextSerializer";
+import {
+  DEFAULT_POST_IMAGE_LAYOUT,
+  normalizePostImageLayout,
+  normalizePostImageMargin,
+  normalizePostImageWidth,
+  normalizePostImageWrap,
+  POST_IMAGE_MARGIN_VALUES,
+  POST_IMAGE_WIDTH_VALUES,
+  POST_IMAGE_WRAP_VALUES,
+  type PostImageLayout,
+} from "../../../../../services/posts/postImageWrapLayout";
 import {
   normalizePostPastePayload,
   type NormalizePostPastePayloadInput,
@@ -150,10 +168,68 @@ const deriveClipboardImageAlt = (file: File) => {
 
 export const buildClipboardImageInsertHtml = (
   asset: { id: string; url: string },
-  alt: string
+  alt: string,
+  layout: PostImageLayout = DEFAULT_POST_IMAGE_LAYOUT
 ) => {
   const safeAlt = alt.trim().slice(0, 500);
-  return `<img src="${escapeHtml(asset.url)}" data-media-id="${escapeHtml(asset.id)}" alt="${escapeHtml(safeAlt)}" loading="lazy">`;
+  return `<img src="${escapeHtml(asset.url)}" data-media-id="${escapeHtml(asset.id)}" alt="${escapeHtml(safeAlt)}" data-wrap="${layout.wrap}" data-width="${layout.widthPercent}" data-margin="${layout.marginPreset}" loading="lazy">`;
+};
+
+const findClosestImageFromNode = (
+  node: Node | null,
+  editorRoot: HTMLElement
+): HTMLImageElement | null => {
+  let cursor: Node | null = node;
+  while (cursor && cursor !== editorRoot) {
+    if (cursor instanceof HTMLImageElement) {
+      return cursor;
+    }
+    if (
+      cursor instanceof HTMLElement &&
+      cursor.tagName.toLowerCase() === "img"
+    ) {
+      return cursor as HTMLImageElement;
+    }
+    cursor = cursor.parentNode;
+  }
+  return null;
+};
+
+const findSelectedImageElement = (editorRoot: HTMLElement) => {
+  if (typeof window === "undefined") return null;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+
+  const anchor = findClosestImageFromNode(selection.anchorNode, editorRoot);
+  if (anchor) return anchor;
+  const focus = findClosestImageFromNode(selection.focusNode, editorRoot);
+  if (focus) return focus;
+
+  const range = selection.getRangeAt(0);
+  const fromStart =
+    range.startContainer instanceof Element
+      ? (range.startContainer.querySelector("img") as HTMLImageElement | null)
+      : null;
+  if (fromStart && editorRoot.contains(fromStart)) {
+    return fromStart;
+  }
+  return null;
+};
+
+const readImageLayoutFromElement = (image: HTMLImageElement): PostImageLayout =>
+  normalizePostImageLayout({
+    wrap: image.getAttribute("data-wrap"),
+    widthPercent: image.getAttribute("data-width"),
+    marginPreset: image.getAttribute("data-margin"),
+  });
+
+const applyImageLayoutToElement = (
+  image: HTMLImageElement,
+  layout: PostImageLayout
+) => {
+  image.setAttribute("data-wrap", layout.wrap);
+  image.setAttribute("data-width", String(layout.widthPercent));
+  image.setAttribute("data-margin", layout.marginPreset);
 };
 
 export const buildPostRichTextPasteInsert = (input: NormalizePostPastePayloadInput) => {
@@ -179,10 +255,14 @@ export function PostRichTextAdapter({
   onUploadClipboardImage,
 }: PostRichTextAdapterProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
+  const selectedImageRef = useRef<HTMLImageElement | null>(null);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashOpen, setSlashOpen] = useState(false);
   const [pasteHint, setPasteHint] = useState<string | null>(null);
   const [imageUploading, setImageUploading] = useState(false);
+  const [selectedImageLayout, setSelectedImageLayout] = useState<PostImageLayout | null>(
+    null
+  );
 
   const emitChange = useCallback(() => {
     const current = editorRef.current;
@@ -200,6 +280,19 @@ export function PostRichTextAdapter({
       current.innerHTML = nextHtml;
     }
   }, [value]);
+
+  const updateSelectedImageState = useCallback(() => {
+    const editorRoot = editorRef.current;
+    if (!editorRoot) return;
+    const selectedImage = findSelectedImageElement(editorRoot);
+    if (!selectedImage) {
+      selectedImageRef.current = null;
+      setSelectedImageLayout(null);
+      return;
+    }
+    selectedImageRef.current = selectedImage;
+    setSelectedImageLayout(readImageLayoutFromElement(selectedImage));
+  }, []);
 
   useEffect(() => {
     if (!pasteHint || typeof window === "undefined") return;
@@ -385,6 +478,29 @@ export function PostRichTextAdapter({
     [slashQuery]
   );
 
+  const applySelectedImageLayout = useCallback(
+    (patch: Partial<PostImageLayout>) => {
+      const selectedImage = selectedImageRef.current;
+      if (!selectedImage) return;
+      const currentLayout = readImageLayoutFromElement(selectedImage);
+      const nextLayout: PostImageLayout = {
+        wrap: patch.wrap ?? currentLayout.wrap,
+        widthPercent: patch.widthPercent ?? currentLayout.widthPercent,
+        marginPreset: patch.marginPreset ?? currentLayout.marginPreset,
+      };
+      const normalized: PostImageLayout = {
+        wrap: normalizePostImageWrap(nextLayout.wrap),
+        widthPercent: normalizePostImageWidth(nextLayout.widthPercent),
+        marginPreset: normalizePostImageMargin(nextLayout.marginPreset),
+      };
+
+      applyImageLayoutToElement(selectedImage, normalized);
+      setSelectedImageLayout(normalized);
+      emitChange();
+    },
+    [emitChange]
+  );
+
   const handlePaste = useCallback(
     async (event: ClipboardEvent<HTMLDivElement>) => {
       if (disabled) return;
@@ -409,7 +525,11 @@ export function PostRichTextAdapter({
           for (const file of imageFiles) {
             const uploaded = await onUploadClipboardImage(file);
             const inserted = insertHtmlAtCursor(
-              buildClipboardImageInsertHtml(uploaded, deriveClipboardImageAlt(file))
+              buildClipboardImageInsertHtml(
+                uploaded,
+                deriveClipboardImageAlt(file),
+                DEFAULT_POST_IMAGE_LAYOUT
+              )
             );
             if (inserted) {
               insertedCount += 1;
@@ -419,6 +539,7 @@ export function PostRichTextAdapter({
           if (insertedCount > 0) {
             emitChange();
             updateSlashState();
+            updateSelectedImageState();
           }
 
           if (insertedCount === 0) {
@@ -462,7 +583,13 @@ export function PostRichTextAdapter({
         setPasteHint(null);
       }
     },
-    [disabled, emitChange, onUploadClipboardImage, updateSlashState]
+    [
+      disabled,
+      emitChange,
+      onUploadClipboardImage,
+      updateSelectedImageState,
+      updateSlashState,
+    ]
   );
 
   const handleSlashSelect = useCallback(
@@ -499,20 +626,32 @@ export function PostRichTextAdapter({
           suppressContentEditableWarning
           aria-label={ariaLabel}
           className={cn(
-            "w-full rounded-lg px-3 py-2 text-sm leading-relaxed focus:outline-none",
+            "post-editor-richtext w-full rounded-lg px-3 py-2 text-sm leading-relaxed focus:outline-none",
             minHeightClassName
           )}
           onInput={() => {
             emitChange();
             updateSlashState();
+            updateSelectedImageState();
           }}
           onBlur={() => {
             emitChange();
             setSlashOpen(false);
             setSlashQuery("");
+            selectedImageRef.current = null;
+            setSelectedImageLayout(null);
           }}
           onKeyDown={handleKeyDown}
-          onFocus={onFocus}
+          onKeyUp={() => {
+            updateSelectedImageState();
+          }}
+          onMouseUp={() => {
+            updateSelectedImageState();
+          }}
+          onFocus={() => {
+            onFocus?.();
+            updateSelectedImageState();
+          }}
           onPaste={handlePaste}
         />
         <SlashCommandMenu
@@ -529,6 +668,89 @@ export function PostRichTextAdapter({
       <p className="text-xs text-muted-foreground">
         Shortcuts: Ctrl/Cmd+B, Ctrl/Cmd+I, Ctrl/Cmd+K, Shift+Alt+5.
       </p>
+      {selectedImageLayout ? (
+        <div className="space-y-2 rounded-lg border border-dashed bg-muted/20 p-2">
+          <p className="text-xs font-semibold text-muted-foreground">Selected image layout</p>
+          <div className="grid gap-2 md:grid-cols-3">
+            <div className="space-y-1">
+              <p className="text-[11px] text-muted-foreground">Wrap</p>
+              <Select
+                value={selectedImageLayout.wrap}
+                onValueChange={(value) =>
+                  applySelectedImageLayout({
+                    wrap: normalizePostImageWrap(value),
+                  })
+                }
+              >
+                <SelectTrigger className="h-8 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {POST_IMAGE_WRAP_VALUES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value === "none"
+                        ? "No wrap"
+                        : value === "left"
+                          ? "Left"
+                          : "Right"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[11px] text-muted-foreground">Width</p>
+              <Select
+                value={String(selectedImageLayout.widthPercent)}
+                onValueChange={(value) =>
+                  applySelectedImageLayout({
+                    widthPercent: normalizePostImageWidth(value),
+                  })
+                }
+              >
+                <SelectTrigger className="h-8 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {POST_IMAGE_WIDTH_VALUES.map((value) => (
+                    <SelectItem key={value} value={String(value)}>
+                      {value}%
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[11px] text-muted-foreground">Spacing</p>
+              <Select
+                value={selectedImageLayout.marginPreset}
+                onValueChange={(value) =>
+                  applySelectedImageLayout({
+                    marginPreset: normalizePostImageMargin(value),
+                  })
+                }
+              >
+                <SelectTrigger className="h-8 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {POST_IMAGE_MARGIN_VALUES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value === "sm"
+                        ? "Compact"
+                        : value === "md"
+                          ? "Balanced"
+                          : "Spacious"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {pasteHint ? (
         <p className="text-xs text-amber-500">
           Paste notice: {pasteHint}

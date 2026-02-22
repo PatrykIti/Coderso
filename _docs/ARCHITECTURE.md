@@ -90,6 +90,10 @@ przez `setup.completed=true`.
     - `PostRichTextAdapter` wykrywa obrazy w clipboard i wysyla je przez internal media upload,
     - `mediaClient.uploadClipboardImage` normalizuje obraz z clipboard (mime guard + deterministic filename fallback),
     - rich text schema/sanitizer wspiera bezpieczne inline `img` (`src`, `data-media-id`, `alt`, `loading`, optional dimensions).
+  - **TASK-061-05 (done):** image wrap layout semantics dla writing canvas i runtime:
+    - wspolny kontrakt `postImageWrapLayout` normalizuje `wrap`, `widthPercent`, `marginPreset`,
+    - inspector i rich-text image controls wystawiaja user-friendly ustawienia (`Text wrap`, `Image width`, `Image spacing`),
+    - renderer/canvas uzywaja wspolnych klas (`post-image-wrap-*`, `post-image-width-*`, `post-image-margin-*`) z mobile fallback (`max-width: 767px` => stacked/full-width).
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

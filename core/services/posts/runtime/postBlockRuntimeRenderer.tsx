@@ -1,5 +1,6 @@
 import type { PostRuntimeMappedBlock, PostRuntimeMappedDocument } from "./postBlockRuntimeMapper";
 import { postRichTextToPlainText } from "../editor/postRichTextSerializer";
+import { buildPostImageLayoutClasses } from "../postImageWrapLayout";
 
 const cx = (...parts: Array<string | false | null | undefined>) =>
   parts.filter(Boolean).join(" ");
@@ -169,13 +170,18 @@ const renderBlockContent = (block: PostRuntimeMappedBlock) => {
   if (block.type === "image") {
     const image = block.content.image;
     if (!image?.src) return null;
+    const layoutClasses = buildPostImageLayoutClasses({
+      wrap: image.wrap,
+      widthPercent: image.widthPercent,
+      marginPreset: image.marginPreset,
+    });
     return (
-      <figure className="space-y-2">
+      <figure className={cx("space-y-2", layoutClasses)}>
         <img
           src={image.src}
           alt={image.alt}
           loading="lazy"
-          className="h-auto w-full rounded-lg border object-cover"
+          className="post-runtime-image h-auto w-full rounded-lg border object-cover"
         />
         {image.caption ? (
           <figcaption className="text-sm text-muted-foreground">{image.caption}</figcaption>

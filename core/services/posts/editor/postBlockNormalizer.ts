@@ -18,6 +18,11 @@ import {
   type WritingCanvasWrap,
 } from "./postBlockDocument";
 import {
+  normalizePostImageMargin,
+  normalizePostImageWidth,
+  normalizePostImageWrap,
+} from "../postImageWrapLayout";
+import {
   postRichTextToPlainText,
   serializePostRichText,
 } from "./postRichTextSerializer";
@@ -138,6 +143,17 @@ const normalizeBlockAttrs = (type: PostBlockType, attrs: unknown) => {
             ? source.mediaId.trim()
             : null,
         alt: normalizeString(source.alt, 500),
+        ...(normalizeOptionalString(source.caption, MAX_WRITING_CANVAS_CAPTION_LENGTH)
+          ? {
+              caption: normalizeOptionalString(
+                source.caption,
+                MAX_WRITING_CANVAS_CAPTION_LENGTH
+              ),
+            }
+          : {}),
+        wrap: normalizePostImageWrap(source.wrap),
+        widthPercent: normalizePostImageWidth(source.widthPercent),
+        marginPreset: normalizePostImageMargin(source.marginPreset),
       };
     case "callout":
       return { tone: normalizeCalloutTone(source.tone) };

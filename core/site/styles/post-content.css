@@ -1,0 +1,108 @@
+.post-runtime-richtext::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+.post-runtime-richtext img,
+.post-runtime-image {
+  max-width: 100%;
+  height: auto;
+}
+
+.post-runtime-richtext img[data-wrap="none"],
+.post-image-layout.post-image-wrap-none {
+  float: none;
+  display: block;
+  margin-inline: auto;
+}
+
+.post-runtime-richtext img[data-wrap="left"],
+.post-image-layout.post-image-wrap-left {
+  float: left;
+}
+
+.post-runtime-richtext img[data-wrap="right"],
+.post-image-layout.post-image-wrap-right {
+  float: right;
+}
+
+.post-runtime-richtext img[data-width="25"],
+.post-image-layout.post-image-width-25 {
+  width: 25%;
+}
+
+.post-runtime-richtext img[data-width="33"],
+.post-image-layout.post-image-width-33 {
+  width: 33%;
+}
+
+.post-runtime-richtext img[data-width="50"],
+.post-image-layout.post-image-width-50 {
+  width: 50%;
+}
+
+.post-runtime-richtext img[data-width="66"],
+.post-image-layout.post-image-width-66 {
+  width: 66%;
+}
+
+.post-runtime-richtext img[data-width="100"],
+.post-image-layout.post-image-width-100 {
+  width: 100%;
+}
+
+.post-runtime-richtext img[data-margin="sm"],
+.post-image-layout.post-image-margin-sm {
+  margin-bottom: 0.5rem;
+}
+
+.post-runtime-richtext img[data-margin="md"],
+.post-image-layout.post-image-margin-md {
+  margin-bottom: 1rem;
+}
+
+.post-runtime-richtext img[data-margin="lg"],
+.post-image-layout.post-image-margin-lg {
+  margin-bottom: 1.5rem;
+}
+
+.post-runtime-richtext img[data-wrap="left"][data-margin="sm"],
+.post-image-layout.post-image-wrap-left.post-image-margin-sm {
+  margin-right: 0.5rem;
+}
+
+.post-runtime-richtext img[data-wrap="left"][data-margin="md"],
+.post-image-layout.post-image-wrap-left.post-image-margin-md {
+  margin-right: 1rem;
+}
+
+.post-runtime-richtext img[data-wrap="left"][data-margin="lg"],
+.post-image-layout.post-image-wrap-left.post-image-margin-lg {
+  margin-right: 1.5rem;
+}
+
+.post-runtime-richtext img[data-wrap="right"][data-margin="sm"],
+.post-image-layout.post-image-wrap-right.post-image-margin-sm {
+  margin-left: 0.5rem;
+}
+
+.post-runtime-richtext img[data-wrap="right"][data-margin="md"],
+.post-image-layout.post-image-wrap-right.post-image-margin-md {
+  margin-left: 1rem;
+}
+
+.post-runtime-richtext img[data-wrap="right"][data-margin="lg"],
+.post-image-layout.post-image-wrap-right.post-image-margin-lg {
+  margin-left: 1.5rem;
+}
+
+@media (max-width: 767px) {
+  .post-runtime-richtext img[data-wrap],
+  .post-image-layout {
+    float: none !important;
+    width: 100% !important;
+    margin-inline: 0 !important;
+    margin-bottom: 1rem !important;
+  }
+}

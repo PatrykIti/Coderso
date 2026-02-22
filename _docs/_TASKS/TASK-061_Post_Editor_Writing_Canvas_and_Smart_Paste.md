@@ -103,3 +103,4 @@ Obecny model jest technicznie poprawny, ale mniej intuicyjny dla scenariusza:
 - `TASK-061-02` completed: `writing-canvas` block contract + normalizer + compatibility hooks implemented.
 - `TASK-061-03` completed: smart-paste pipeline (Word/Docs/HTML), sanitizer hardening, adapter integration, and coverage tests delivered.
 - `TASK-061-04` completed: clipboard image paste now uploads via internal media API and inserts safe inline media markup in the editor.
+- `TASK-061-05` completed: image wrap/width/margin layout semantics wired end-to-end (inspector + rich-text controls + runtime/canvas CSS parity + mobile fallback).

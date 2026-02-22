@@ -125,3 +125,90 @@
     --color-border: var(--admin-card-border);
   }
 }
+
+@layer components {
+  .post-editor-richtext::after {
+    content: "";
+    display: block;
+    clear: both;
+  }
+
+  .post-editor-richtext img[data-wrap="none"] {
+    float: none;
+    display: block;
+    margin-inline: auto;
+  }
+
+  .post-editor-richtext img[data-wrap="left"] {
+    float: left;
+  }
+
+  .post-editor-richtext img[data-wrap="right"] {
+    float: right;
+  }
+
+  .post-editor-richtext img[data-width="25"] {
+    width: 25%;
+  }
+
+  .post-editor-richtext img[data-width="33"] {
+    width: 33%;
+  }
+
+  .post-editor-richtext img[data-width="50"] {
+    width: 50%;
+  }
+
+  .post-editor-richtext img[data-width="66"] {
+    width: 66%;
+  }
+
+  .post-editor-richtext img[data-width="100"] {
+    width: 100%;
+  }
+
+  .post-editor-richtext img[data-margin="sm"] {
+    margin-bottom: 0.5rem;
+  }
+
+  .post-editor-richtext img[data-margin="md"] {
+    margin-bottom: 1rem;
+  }
+
+  .post-editor-richtext img[data-margin="lg"] {
+    margin-bottom: 1.5rem;
+  }
+
+  .post-editor-richtext img[data-wrap="left"][data-margin="sm"] {
+    margin-right: 0.5rem;
+  }
+
+  .post-editor-richtext img[data-wrap="left"][data-margin="md"] {
+    margin-right: 1rem;
+  }
+
+  .post-editor-richtext img[data-wrap="left"][data-margin="lg"] {
+    margin-right: 1.5rem;
+  }
+
+  .post-editor-richtext img[data-wrap="right"][data-margin="sm"] {
+    margin-left: 0.5rem;
+  }
+
+  .post-editor-richtext img[data-wrap="right"][data-margin="md"] {
+    margin-left: 1rem;
+  }
+
+  .post-editor-richtext img[data-wrap="right"][data-margin="lg"] {
+    margin-left: 1.5rem;
+  }
+
+  @media (max-width: 767px) {
+    .post-editor-richtext img[data-wrap] {
+      float: none !important;
+      width: 100% !important;
+      margin-inline: 0 !important;
+      margin-bottom: 1rem !important;
+    }
+  }
+}

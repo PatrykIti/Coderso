@@ -38,3 +38,27 @@ test("BlockInspector renders empty state when no block selected", () => {
 
   expect(html).toContain("Select a block on canvas or list view");
 });
+
+test("BlockInspector renders image wrap controls", () => {
+  const html = renderToString(
+    <BlockInspector
+      block={{
+        id: "image-1",
+        type: "image",
+        attrs: {
+          mediaId: "media-1",
+          wrap: "left",
+          widthPercent: 33,
+          marginPreset: "sm",
+          alt: "Image",
+        },
+        content: null,
+      }}
+      onChangeAttrs={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Text wrap");
+  expect(html).toContain("Image width");
+  expect(html).toContain("Image spacing");
+});

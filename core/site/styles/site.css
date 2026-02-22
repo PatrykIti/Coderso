@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./post-content.css";
 
 @source "../**/*.{ts,tsx}";
 @source "../../widgets/**/*.{ts,tsx}";

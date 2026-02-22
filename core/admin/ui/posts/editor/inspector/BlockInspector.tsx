@@ -22,6 +22,9 @@ import {
   CALLOUT_TONE_OPTIONS,
   EMBED_ASPECT_OPTIONS,
   EMBED_PROVIDER_OPTIONS,
+  IMAGE_MARGIN_OPTIONS,
+  IMAGE_WIDTH_OPTIONS,
+  IMAGE_WRAP_OPTIONS,
   SEPARATOR_STYLE_OPTIONS,
   SPACING_OPTIONS,
   TEXT_SCALE_OPTIONS,
@@ -199,6 +202,24 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
                 onChange={(event) => onChangeAttrs({ mediaId: event.target.value })}
               />
             </div>
+            <SelectField
+              label="Text wrap"
+              value={readString(attrs.wrap, "none")}
+              onChange={(value) => onChangeAttrs({ wrap: value })}
+              options={IMAGE_WRAP_OPTIONS}
+            />
+            <SelectField
+              label="Image width"
+              value={String(readNumber(attrs.widthPercent, 50))}
+              onChange={(value) => onChangeAttrs({ widthPercent: Number(value) })}
+              options={IMAGE_WIDTH_OPTIONS}
+            />
+            <SelectField
+              label="Image spacing"
+              value={readString(attrs.marginPreset, "md")}
+              onChange={(value) => onChangeAttrs({ marginPreset: value })}
+              options={IMAGE_MARGIN_OPTIONS}
+            />
             <div className="space-y-2">
               <label className="text-xs text-muted-foreground">Alt text</label>
               <Input

@@ -5,6 +5,12 @@ import {
   serializePostRichText,
 } from "../editor/postRichTextSerializer";
 import { getMediaById } from "../../media/mediaService";
+import {
+  resolvePostImageLayoutFromAttrs,
+  type PostImageMargin,
+  type PostImageWidth,
+  type PostImageWrap,
+} from "../postImageWrapLayout";
 
 const DEFAULT_EXCERPT_MAX_LENGTH = 220;
 const META_DESCRIPTION_MAX_LENGTH = 160;
@@ -195,6 +201,9 @@ type RuntimeBlockContent = {
     src: string | null;
     alt: string;
     caption?: string;
+    wrap: PostImageWrap;
+    widthPercent: PostImageWidth;
+    marginPreset: PostImageMargin;
   };
   calloutTone?: "info" | "success" | "warning" | "danger" | "neutral";
   separatorStyle?: "solid" | "dashed" | "dotted";
@@ -384,11 +393,15 @@ export async function mapPostDocumentForRuntime(
         };
       } else if (block.type === "image") {
         const mediaId = toTrimmedOptional(attrs.mediaId) ?? null;
+        const imageLayout = resolvePostImageLayoutFromAttrs(attrs);
         mapped.content = {
           image: {
             src: await resolveImageSrc(mediaId, mediaCache, readMedia),
             alt: toTrimmedOptional(attrs.alt) ?? "",
             caption: toTrimmedOptional(attrs.caption),
+            wrap: imageLayout.wrap,
+            widthPercent: imageLayout.widthPercent,
+            marginPreset: imageLayout.marginPreset,
           },
         };
       } else if (block.type === "separator") {

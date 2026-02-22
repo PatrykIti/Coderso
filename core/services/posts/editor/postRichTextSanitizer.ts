@@ -4,6 +4,11 @@ import {
   postRichTextBlockTagSet,
   postRichTextSelfClosingTagSet,
 } from "./postRichTextSchema";
+import {
+  normalizePostImageMargin,
+  normalizePostImageWidth,
+  normalizePostImageWrap,
+} from "../postImageWrapLayout";
 
 const escapeHtml = (value: string) =>
   value
@@ -98,6 +103,15 @@ const sanitizeTagAttributes = (tagName: string, rawAttrs: string): string | null
       chunks.push(`title="${escapeHtml(title.trim().slice(0, 300))}"`);
     }
 
+    const wrap = normalizePostImageWrap(attributes.get("data-wrap"));
+    chunks.push(`data-wrap="${wrap}"`);
+
+    const width = normalizePostImageWidth(attributes.get("data-width"));
+    chunks.push(`data-width="${width}"`);
+
+    const margin = normalizePostImageMargin(attributes.get("data-margin"));
+    chunks.push(`data-margin="${margin}"`);
+
     const loading = attributes.get("loading")?.trim().toLowerCase();
     if (loading === "eager") {
       chunks.push('loading="eager"');
@@ -105,9 +119,9 @@ const sanitizeTagAttributes = (tagName: string, rawAttrs: string): string | null
       chunks.push('loading="lazy"');
     }
 
-    const width = Number(attributes.get("width"));
-    if (Number.isFinite(width) && width > 0 && width <= 4096) {
-      chunks.push(`width="${Math.round(width)}"`);
+    const widthAttr = Number(attributes.get("width"));
+    if (Number.isFinite(widthAttr) && widthAttr > 0 && widthAttr <= 4096) {
+      chunks.push(`width="${Math.round(widthAttr)}"`);
     }
 
     const height = Number(attributes.get("height"));

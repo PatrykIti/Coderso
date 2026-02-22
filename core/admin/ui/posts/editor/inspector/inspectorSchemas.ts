@@ -1,4 +1,9 @@
 import type { PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
+import {
+  POST_IMAGE_MARGIN_VALUES,
+  POST_IMAGE_WIDTH_VALUES,
+  POST_IMAGE_WRAP_VALUES,
+} from "../../../../../services/posts/postImageWrapLayout";
 
 export type SelectOption = {
   value: string;
@@ -72,6 +77,31 @@ export const EMBED_ASPECT_OPTIONS: SelectOption[] = [
   { value: "4:3", label: "4:3 (classic)" },
   { value: "1:1", label: "1:1 (square)" },
 ];
+
+export const IMAGE_WRAP_OPTIONS: SelectOption[] = POST_IMAGE_WRAP_VALUES.map((value) => ({
+  value,
+  label:
+    value === "none"
+      ? "No wrap"
+      : value === "left"
+        ? "Wrap left"
+        : "Wrap right",
+}));
+
+export const IMAGE_WIDTH_OPTIONS: SelectOption[] = POST_IMAGE_WIDTH_VALUES.map((value) => ({
+  value: String(value),
+  label: `${value}%`,
+}));
+
+export const IMAGE_MARGIN_OPTIONS: SelectOption[] = POST_IMAGE_MARGIN_VALUES.map((value) => ({
+  value,
+  label:
+    value === "sm"
+      ? "Compact"
+      : value === "md"
+        ? "Balanced"
+        : "Spacious",
+}));
 
 export const BLOCK_STYLE_SCOPE: Record<PostBlockType, readonly string[]> = {
   paragraph: ["alignment", "width", "spacing", "textScale"],

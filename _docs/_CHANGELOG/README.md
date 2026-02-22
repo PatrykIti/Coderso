@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 309 | 2026-02-22 | TASK-061-05 image wrap controls and layout semantics | Core/Editor |
 | 308 | 2026-02-22 | TASK-061-04 clipboard image upload and inline media insertion | Admin/UI |
 | 307 | 2026-02-22 | TASK-061-03 smart paste word/docs/html parsing and sanitization | Core/Editor |
 | 306 | 2026-02-22 | TASK-061-02 writing canvas block contract and normalization | Core/Content |

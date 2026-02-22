@@ -3,12 +3,17 @@ import { useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 import type {
   PostBlock,
   PostBlockDocument,
   PostBlockType,
 } from "../../../../services/posts/editor/postBlockDocument";
+import {
+  buildPostImageLayoutClasses,
+  resolvePostImageLayoutFromAttrs,
+} from "../../../../services/posts/postImageWrapLayout";
 import { postRichTextToPlainText } from "../../../../services/posts/editor/postRichTextSerializer";
 import { getTransformTargetTypes } from "./blocks/blockTransforms";
 import { getPostBlockLabel } from "./blocks/blockCatalog";
@@ -217,11 +222,50 @@ function PostCanvasBlockItem({
         ) : null}
 
         {block.type === "image" ? (
-          <div className="rounded-lg border p-4 text-sm text-muted-foreground">
-            {typeof attrs.mediaId === "string" && attrs.mediaId.trim().length > 0
-              ? `Image media selected: ${attrs.mediaId}`
-              : "No media selected yet. Configure this block in Details -> Block."}
-          </div>
+          (() => {
+            const imageLayout = resolvePostImageLayoutFromAttrs(attrs);
+            const src =
+              typeof attrs.mediaId === "string" &&
+              (attrs.mediaId.startsWith("/") || attrs.mediaId.startsWith("http"))
+                ? attrs.mediaId
+                : null;
+            const alt =
+              typeof attrs.alt === "string" && attrs.alt.trim().length > 0
+                ? attrs.alt
+                : "Selected image";
+            return (
+              <div className="rounded-lg border p-4">
+                <div className="overflow-hidden text-sm text-muted-foreground">
+                  <figure
+                    className={cn(
+                      "post-editor-richtext",
+                      buildPostImageLayoutClasses(imageLayout)
+                    )}
+                  >
+                    {src ? (
+                      <img
+                        src={src}
+                        alt={alt}
+                        className="h-auto w-full rounded-lg border object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="rounded-lg border border-dashed px-3 py-5 text-sm">
+                        No image URL preview yet. Add media ID or URL in block settings.
+                      </div>
+                    )}
+                    {typeof attrs.caption === "string" && attrs.caption.trim().length > 0 ? (
+                      <figcaption className="pt-2 text-xs">{attrs.caption}</figcaption>
+                    ) : null}
+                  </figure>
+                  <p className="pt-3 text-xs">
+                    Wrap: {imageLayout.wrap} · Width: {imageLayout.widthPercent}% · Spacing:{" "}
+                    {imageLayout.marginPreset}
+                  </p>
+                </div>
+              </div>
+            );
+          })()
         ) : null}
 
         {block.type === "button" ? (

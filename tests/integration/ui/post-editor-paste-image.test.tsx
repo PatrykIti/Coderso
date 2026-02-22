@@ -40,5 +40,8 @@ test("clipboard image helper renders safe html payload", () => {
   expect(html).toContain('src="/media/example.png"');
   expect(html).toContain('data-media-id="media-1"');
   expect(html).toContain('alt="Alt &quot;quoted&quot; &lt;text&gt;"');
+  expect(html).toContain('data-wrap="none"');
+  expect(html).toContain('data-width="50"');
+  expect(html).toContain('data-margin="md"');
   expect(html).toContain('loading="lazy"');
 });

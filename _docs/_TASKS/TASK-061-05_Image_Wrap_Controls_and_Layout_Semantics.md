@@ -5,7 +5,7 @@
 **Category:** Editor UX / Runtime CSS  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-061-02, TASK-061-04  
-**Status:** To Do
+**Status:** Done (2026-02-22)
 
 ---
 
@@ -50,3 +50,26 @@ resolveImageClass(node, viewport):
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+## Validation Executed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test`
+  - Result: `1381 pass`, `149 skip`, `0 fail`
+
+## Closure Notes
+- Added shared image layout contract in `core/services/posts/postImageWrapLayout.ts`:
+  - typed wrap/width/margin enums,
+  - deterministic normalizers,
+  - shared renderer class builder.
+- Extended editor controls for image layout:
+  - inspector `Text wrap`, `Image width`, `Image spacing` options,
+  - rich-text selected-image controls to set `data-wrap`, `data-width`, `data-margin`.
+- Runtime and canvas parity:
+  - block image runtime mapper/renderer now respects wrap/width/margin attrs,
+  - shared CSS hooks added for inline rich-text images and image blocks,
+  - mobile fallback forces stacked full-width rendering below `767px`.
+- Added tests:
+  - `tests/unit/posts/post-image-wrap-layout.test.ts`,
+  - `tests/integration/runtime/post-writing-canvas-wrap.test.tsx`,
+  - extended serializer and editor integration coverage for image layout attrs.

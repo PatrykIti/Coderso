@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 20 tasks
+- **To Do:** 19 tasks
 - **In Progress:** 3 tasks
-- **Done:** 454 tasks
+- **Done:** 455 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-061-05 | Image Wrap Controls and Layout Semantics | High | Medium | `wrap none/left/right` + width controls + mobile fallback |
 | TASK-061-06 | Editor UI Integration (Ribbon + Canvas + List View) | High | Large | Writing-first editor flow integrated with ribbon/list/details |
 | TASK-061-07 | Runtime Renderer Parity and Backward Compatibility | High | Medium | Writing canvas runtime rendering + legacy adapter path |
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
@@ -66,7 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: contract + block model done, implementation continues in 061-03+ |
+| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-05 done, pending 061-06..061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -76,6 +75,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-061-05 | Image Wrap Controls and Layout Semantics | High | Medium | Done: shared image wrap layout contract, inspector/rich-text controls, runtime+canvas CSS parity, and mobile fallback |
 | TASK-061-04 | Clipboard Image Upload and Inline Media Insertion | High | Medium | Done: clipboard image detection, internal media upload, inline image insertion, and sanitizer/schema updates |
 | TASK-061-03 | Smart Paste (Word/Docs/HTML) Parsing and Sanitization | High | Large | Done: deterministic paste normalizer, Office artifact stripping, adapter paste integration, and tests |
 | TASK-061-02 | Writing Canvas Block Contract and Normalization | High | Large | Done: `writing-canvas` type + normalization + compatibility hooks for legacy/runtime text extraction |

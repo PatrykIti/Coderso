@@ -576,6 +576,15 @@ Clipboard image paste contract (update `TASK-061-04`):
 - editor wykonuje image-only guard po stronie klienta i fallback filename dla unnamed clipboard files,
 - wstawiany rich-text payload to bezpieczny `img` (`src`, `data-media-id`, `alt`, `loading`) po sanitizacji allowlist.
 
+Image wrap layout contract (update `TASK-061-05`):
+- image nodes/rich-text images wspieraja:
+  - `wrap`: `none | left | right`,
+  - `widthPercent`: `25 | 33 | 50 | 66 | 100`,
+  - `marginPreset`: `sm | md | lg`,
+- runtime renderer mapuje te pola do klas layoutu:
+  - `post-image-wrap-*`, `post-image-width-*`, `post-image-margin-*`,
+- mobile fallback (`<= 767px`) wymusza stacked full-width rendering niezaleznie od wrap.
+
 Routes:
 - `GET /posts`
 - `POST /posts`

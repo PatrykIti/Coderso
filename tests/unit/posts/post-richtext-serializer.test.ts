@@ -40,13 +40,16 @@ test("serializePostRichText keeps contenteditable entities stable", () => {
 
 test("serializePostRichText keeps safe inline images and strips unsafe sources", () => {
   const safe = serializePostRichText(
-    `<p>Test <img src="/media/a.png" data-media-id="media-1" alt="A" loading="eager"></p>`
+    `<p>Test <img src="/media/a.png" data-media-id="media-1" data-wrap="right" data-width="66" data-margin="lg" alt="A" loading="eager"></p>`
   );
   const unsafe = serializePostRichText(
     `<p><img src="javascript:alert(1)" onerror="alert(1)" alt="X"></p>`
   );
 
   expect(safe).toContain('<img src="/media/a.png" data-media-id="media-1" alt="A"');
+  expect(safe).toContain('data-wrap="right"');
+  expect(safe).toContain('data-width="66"');
+  expect(safe).toContain('data-margin="lg"');
   expect(safe).toContain('loading="eager"');
   expect(unsafe).toBe("<p></p>");
 });
