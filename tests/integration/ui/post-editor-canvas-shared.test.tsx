@@ -36,7 +36,7 @@ test("PostEditorCanvas renders unified document canvas with outline", () => {
 
   expect(html).toContain("Document canvas");
   expect(html).toContain("List view");
-  expect(html).toContain("Writing canvas");
+  expect(html).toContain("aria-label=\"Select block 1: Section\"");
   expect(html).toContain("Heading");
 });
 

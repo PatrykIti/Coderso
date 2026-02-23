@@ -74,6 +74,13 @@ test("coercePostDocument always returns a valid document", () => {
   expect(document.blocks.length).toBeGreaterThan(0);
 });
 
+test("ensurePostDocumentForWrite uses writing-canvas as default for empty payload", () => {
+  const data = ensurePostDocumentForWrite({});
+  const document = data.document as { blocks: Array<{ type: string }> };
+  expect(document.blocks.length).toBe(1);
+  expect(document.blocks[0]?.type).toBe("writing-canvas");
+});
+
 test("ensurePostDocumentForWrite collects text fallback from writing-canvas nodes", () => {
   const data = ensurePostDocumentForWrite({
     document: {

@@ -13,10 +13,10 @@ export type PostBlockCatalogItem = {
 export const POST_BLOCK_CATALOG: PostBlockCatalogItem[] = [
   {
     type: "writing-canvas",
-    label: "Writing canvas",
+    label: "Section",
     description: "Primary writing section for long-form post content.",
     category: "text",
-    keywords: ["writing", "canvas", "article", "content"],
+    keywords: ["writing", "section", "article", "content"],
   },
   {
     type: "paragraph",

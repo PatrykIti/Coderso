@@ -176,6 +176,17 @@ const normalizeDocumentFromLegacyFields = (data: Record<string, unknown>) => {
   const excerpt = readOptionalString(data.excerpt);
   const title = readOptionalString(data.title);
 
+  if (!content && !excerpt) {
+    const emptyDocument = createEmptyPostBlockDocument();
+    return normalizePostBlockDocument({
+      ...emptyDocument,
+      meta: {
+        ...emptyDocument.meta,
+        ...(title ? { title } : {}),
+      },
+    });
+  }
+
   return normalizePostBlockDocument({
     version: 1,
     blocks: buildLegacyParagraphBlocks(content, excerpt),

@@ -74,7 +74,7 @@ test("post editor canvas list view uses logical writing-first labels", () => {
     />
   );
 
-  expect(html).toContain("Writing canvas");
+  expect(html).toContain("Section");
   expect(html).toContain("CTA block");
   expect(html).toContain("Embed block");
 });

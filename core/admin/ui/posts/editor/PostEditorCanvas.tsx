@@ -93,82 +93,92 @@ function PostCanvasBlockItem({
   );
 
   const attrs = (block.attrs ?? {}) as Record<string, unknown>;
+  const isWritingCanvas = block.type === "writing-canvas";
   const writingCanvasHtml =
-    block.type === "writing-canvas"
+    isWritingCanvas
       ? serializeWritingCanvasContentToHtml(block.content)
       : "";
 
   return (
     <section
       data-post-editor-block-id={block.id}
-      className={`rounded-xl border bg-background/60 p-4 transition ${
-        selected ? "border-primary/60 ring-1 ring-primary/20" : "border-border/70"
-      }`}
+      className={cn(
+        "transition",
+        isWritingCanvas
+          ? "bg-transparent p-0"
+          : "rounded-xl border bg-background/60 p-4",
+        !isWritingCanvas && (selected ? "border-primary/60 ring-1 ring-primary/20" : "border-border/70")
+      )}
       onClick={onSelect}
     >
-      <header className="mb-3 flex flex-wrap items-center gap-2 border-b pb-3">
-        <p className="text-sm font-semibold text-foreground">{getPostBlockLabel(block.type)}</p>
-        <div className="ml-auto flex flex-wrap items-center gap-1">
-          {selected && transformTargets.length > 0 ? (
-            <div className="mr-1 hidden items-center gap-1 xl:flex">
-              <span className="text-xs text-muted-foreground">Transform:</span>
-              {transformTargets.map((type) => (
-                <Button
-                  key={type}
-                  type="button"
-                  variant="outline"
-                  size="xs"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onTransformBlock(type);
-                  }}
-                >
-                  <Shuffle className="h-3 w-3" />
-                  {getPostBlockLabel(type)}
-                </Button>
-              ))}
-            </div>
-          ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label="Move block up"
-            onClick={(event) => {
-              event.stopPropagation();
-              onMoveBlock("up");
-            }}
-          >
-            <MoveUp className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label="Move block down"
-            onClick={(event) => {
-              event.stopPropagation();
-              onMoveBlock("down");
-            }}
-          >
-            <MoveDown className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            aria-label="Delete block"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDeleteBlock();
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </header>
+      {!isWritingCanvas ? (
+        <header className="mb-3 flex flex-wrap items-center gap-2 border-b pb-3">
+          <p className="text-sm font-semibold text-foreground">{getPostBlockLabel(block.type)}</p>
+          <div className="ml-auto flex flex-wrap items-center gap-1">
+            {selected && transformTargets.length > 0 ? (
+              <div className="mr-1 hidden items-center gap-1 xl:flex">
+                <span className="text-xs text-muted-foreground">Transform:</span>
+                {transformTargets.map((type) => (
+                  <Button
+                    key={type}
+                    type="button"
+                    variant="outline"
+                    size="xs"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onTransformBlock(type);
+                    }}
+                  >
+                    <Shuffle className="h-3 w-3" />
+                    {getPostBlockLabel(type)}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Move block up"
+              onClick={(event) => {
+                event.stopPropagation();
+                onMoveBlock("up");
+              }}
+            >
+              <MoveUp className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Move block down"
+              onClick={(event) => {
+                event.stopPropagation();
+                onMoveBlock("down");
+              }}
+            >
+              <MoveDown className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              aria-label="Delete block"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteBlock();
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </header>
+      ) : null}
 
-      <div className="space-y-3" onClick={(event) => event.stopPropagation()}>
+      <div
+        className={cn("space-y-3", isWritingCanvas && "space-y-0")}
+        onClick={(event) => event.stopPropagation()}
+      >
         {block.type === "writing-canvas" ? (
           selected ? (
             <PostRichTextAdapter
