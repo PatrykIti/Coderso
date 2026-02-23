@@ -24,6 +24,8 @@ import { uploadClipboardImage } from "@/services/mediaClient";
 
 import { coercePostDocument } from "../../../../../services/posts/editor/postBlockLegacyAdapter";
 import { POST_BLOCK_TYPES, type PostBlock, type PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
+import { normalizePostBlockDocument } from "../../../../../services/posts/editor/postBlockNormalizer";
+import { postRichTextToPlainText } from "../../../../../services/posts/editor/postRichTextSerializer";
 import {
   createInitialPostEditorState,
   createPostBlock,
@@ -54,6 +56,51 @@ const createSafeBlockType = (value: string): PostBlockType => {
     return value as PostBlockType;
   }
   return fallback;
+};
+
+const isEmptyParagraphBlock = (block: PostBlock) => {
+  if (block.type !== "paragraph") return false;
+  const plainText = postRichTextToPlainText(typeof block.content === "string" ? block.content : "");
+  const attrs = isRecord(block.attrs) ? block.attrs : {};
+  return plainText.trim().length === 0 && Object.keys(attrs).length === 0;
+};
+
+export const normalizeEditorDocumentForWritingFlow = (input: unknown) => {
+  const document = coercePostDocument(input);
+  const firstWritingCanvasIndex = document.blocks.findIndex(
+    (block) => block.type === "writing-canvas"
+  );
+
+  if (firstWritingCanvasIndex !== -1) {
+    const nextBlocks = document.blocks.filter(
+      (block, index) => !(index < firstWritingCanvasIndex && isEmptyParagraphBlock(block))
+    );
+    if (nextBlocks.length !== document.blocks.length) {
+      return normalizePostBlockDocument(
+        {
+          version: document.version,
+          blocks: nextBlocks,
+          meta: document.meta,
+        },
+        { fallbackToEmpty: true }
+      );
+    }
+    return document;
+  }
+
+  if (document.blocks.length === 1 && isEmptyParagraphBlock(document.blocks[0] as PostBlock)) {
+    const paragraphId = (document.blocks[0] as PostBlock).id || "block-1";
+    return normalizePostBlockDocument(
+      {
+        version: document.version,
+        blocks: [createPostBlock("writing-canvas", paragraphId)],
+        meta: document.meta,
+      },
+      { fallbackToEmpty: true }
+    );
+  }
+
+  return document;
 };
 
 const readOptionalString = (value: unknown) => (typeof value === "string" ? value : "");
@@ -220,7 +267,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
 
   const [state, dispatch] = useReducer(
     postEditorReducer,
-    createInitialPostEditorState(coercePostDocument(initialCachedPost?.data))
+    createInitialPostEditorState(normalizeEditorDocumentForWritingFlow(initialCachedPost?.data))
   );
 
   const baseDataRef = useRef<Record<string, unknown>>(getPostDataRecord(initialCachedPost));
@@ -246,7 +293,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     baseMetadataSignatureRef.current = serializeMetadataDraft(nextMetadataDraft);
     dispatch({
       type: "hydrate",
-      document: coercePostDocument(nextPost.data),
+      document: normalizeEditorDocumentForWritingFlow(nextPost.data),
     });
   }, []);
 
