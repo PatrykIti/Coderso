@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 22 tasks
+- **To Do:** 32 tasks
 - **In Progress:** 3 tasks
 - **Done:** 458 tasks
 
@@ -45,6 +45,16 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-062-02 | Stable Heading Anchor IDs and Linking | High | Medium | Deterministic anchor IDs + editor/runtime link parity |
 | TASK-062-03 | Replace Pasted Word TOC with Dynamic TOC | High | Large | Detect Word TOC and convert to dynamic TOC block |
 | TASK-062-04 | TOC QA, Docs, Changelog, and Closure | Medium | Medium | Full regression + docs/changelog/board sync |
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | Gutenberg-like shell, sidebars, tools, outline, and a11y workflow |
+| TASK-063-01 | Gutenberg Reference Audit and Gap Matrix | High | Medium | Source-to-target matrix for editor parity rollout |
+| TASK-063-02 | Editor Shell Composition and Regions | High | Large | Interface-skeleton style regions and centralized layout state |
+| TASK-063-03 | Header, DocumentTools, and Save/Publish Parity | High | Large | Add/Undo/Redo/Overview + save-preview-publish cluster |
+| TASK-063-04 | Inserter Sidebar and Block Library Parity | High | Medium | Dismissible inserter sidebar with search and focus return |
+| TASK-063-05 | List View, Outline, and Document Stats | High | Large | List view tabs + document outline validation + stats panel |
+| TASK-063-06 | Writing Canvas Appender and Smart Paste Parity | High | Large | Inline appender + slash/inserter parity + Word paste hardening |
+| TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
+| TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
+| TASK-063-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Full lint/types/tests, docs sync, and kanban closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
