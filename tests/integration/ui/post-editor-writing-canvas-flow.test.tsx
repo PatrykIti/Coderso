@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { renderToString } from "react-dom/server";
 
-import { PostEditorCanvas } from "../../../core/admin/ui/posts/editor/PostEditorCanvas";
+import { PostListViewPanel } from "../../../core/admin/ui/posts/editor/blocks/PostListViewPanel";
 import { PostEditorTopBar } from "../../../core/admin/ui/posts/editor/PostEditorTopBar";
 
 const createTopBarProps = () => ({
@@ -18,6 +18,8 @@ const createTopBarProps = () => ({
   onPreview: () => undefined,
   onPublish: () => undefined,
   onInsertBlock: () => undefined,
+  onToggleInserter: () => undefined,
+  inserterVisible: false,
   onToggleOutline: () => undefined,
   outlineVisible: true,
   onOpenDetails: () => undefined,
@@ -32,45 +34,35 @@ test("post editor top bar exposes writing-first insert actions", () => {
   expect(html).toContain("Add embed block");
 });
 
-test("post editor canvas list view uses logical writing-first labels", () => {
+test("post list view panel uses logical writing-first labels", () => {
   const html = renderToString(
-    <PostEditorCanvas
-      document={{
-        version: 1,
-        meta: {},
-        blocks: [
-          {
-            id: "block-1",
-            type: "writing-canvas",
-            attrs: {},
-            content: {
-              version: 1,
-              nodes: [{ id: "node-1", type: "paragraph", text: "<p>Body</p>" }],
-            },
+    <PostListViewPanel
+      blocks={[
+        {
+          id: "block-1",
+          type: "writing-canvas",
+          attrs: {},
+          content: {
+            version: 1,
+            nodes: [{ id: "node-1", type: "paragraph", text: "<p>Body</p>" }],
           },
-          {
-            id: "block-2",
-            type: "button",
-            attrs: { label: "Contact", url: "/contact" },
-            content: null,
-          },
-          {
-            id: "block-3",
-            type: "embed",
-            attrs: { provider: "youtube", url: "https://youtu.be/demo" },
-            content: null,
-          },
-        ],
-      }}
+        },
+        {
+          id: "block-2",
+          type: "button",
+          attrs: { label: "Contact", url: "/contact" },
+          content: null,
+        },
+        {
+          id: "block-3",
+          type: "embed",
+          attrs: { provider: "youtube", url: "https://youtu.be/demo" },
+          content: null,
+        },
+      ]}
       selectedBlockId="block-1"
       onSelectBlock={() => undefined}
-      onUpdateBlockContent={() => undefined}
-      onMoveBlock={() => undefined}
       onMoveBlockToIndex={() => undefined}
-      onTransformBlock={() => undefined}
-      onDeleteBlock={() => undefined}
-      onInsertBlockAfterSelected={() => undefined}
-      outlineVisible
     />
   );
 

@@ -38,6 +38,8 @@ type PostEditorTopBarProps = {
   onPreview: () => void;
   onPublish: () => void;
   onInsertBlock: (type: PostBlockType) => void;
+  onToggleInserter?: () => void;
+  inserterVisible?: boolean;
   onToggleOutline: () => void;
   outlineVisible: boolean;
   onOpenDetails: () => void;
@@ -96,6 +98,8 @@ export function PostEditorTopBar({
   onPreview,
   onPublish,
   onInsertBlock,
+  onToggleInserter,
+  inserterVisible = false,
   onToggleOutline,
   outlineVisible,
   onOpenDetails,
@@ -135,6 +139,7 @@ export function PostEditorTopBar({
     { type: "embed", label: "Add embed block" },
     { type: "image", label: "Add image block" },
   ];
+  const hasSidebarInserter = typeof onToggleInserter === "function";
 
   return (
     <div className="border-y bg-background">
@@ -255,9 +260,19 @@ export function PostEditorTopBar({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setLibraryOpen(true)}
+                onClick={() => {
+                  if (hasSidebarInserter) {
+                    onToggleInserter?.();
+                    return;
+                  }
+                  setLibraryOpen(true);
+                }}
               >
-                Block library
+                {hasSidebarInserter
+                  ? inserterVisible
+                    ? "Hide inserter"
+                    : "Open inserter"
+                  : "Block library"}
               </Button>
             </RibbonGroup>
           </div>
@@ -293,6 +308,16 @@ export function PostEditorTopBar({
         <TabsContent value="view" forceMount className="m-0 px-4 py-3 sm:px-6">
           <div className="flex flex-wrap items-start gap-3">
             <RibbonGroup title="Panels">
+              {hasSidebarInserter ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onToggleInserter?.()}
+                >
+                  Inserter
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -314,12 +339,20 @@ export function PostEditorTopBar({
               <Badge variant="outline">
                 {outlineVisible ? "Outline visible" : "Outline hidden"}
               </Badge>
+              {hasSidebarInserter ? (
+                <Badge variant="outline">
+                  {inserterVisible ? "Inserter visible" : "Inserter hidden"}
+                </Badge>
+              ) : null}
             </RibbonGroup>
           </div>
         </TabsContent>
       </Tabs>
 
-      <Dialog open={libraryOpen} onOpenChange={setLibraryOpen}>
+      <Dialog
+        open={!hasSidebarInserter && libraryOpen}
+        onOpenChange={setLibraryOpen}
+      >
         <DialogContent className="max-w-3xl p-0">
           <DialogHeader className="px-4 pt-4">
             <DialogTitle>Block library</DialogTitle>

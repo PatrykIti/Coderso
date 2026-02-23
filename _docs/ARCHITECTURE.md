@@ -113,6 +113,10 @@ przez `setup.completed=true`.
     - runtime buduje heading index z `heading` blocks i `writing-canvas` heading nodes, a `toc` renderuje dynamiczne linki bez recznej synchronizacji,
     - anchor IDs sa deterministyczne i stabilne (`slug + dedupe`), z obsluga custom `anchorId` dla `heading` block attrs i `writing-canvas` heading nodes,
     - smart paste wykrywa statyczny Word TOC (`href="#_Toc..."`), usuwa martwe linki i emituje dyrektywe wstawienia dynamicznego `toc` blocka (idempotentnie, bez duplikatow).
+  - **TASK-063-02 (done):** posts editor shell ma region architecture wzorowane na interface skeleton:
+    - centralny state paneli jest utrzymywany przez `usePostEditorLayout` (list-view/inserter/details),
+    - layout warstwa (`PostEditorLayout`, `PostEditorRegions`) rozdziela regiony `header/content/secondary-sidebar/sidebar/footer`,
+    - secondary/details sidebary maja jeden kontrakt stanu dla desktop (`aside`) i mobile (`sheet`) bez duplikacji logiki panel actions.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

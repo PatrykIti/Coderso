@@ -3,19 +3,16 @@ import { expect, test } from "bun:test";
 import { PostBlockEditorShell } from "../../../core/admin/ui/posts/editor/PostBlockEditorShell";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
-test("PostBlockEditorShell renders Gutenberg-like frame", () => {
+test("PostBlockEditorShell renders region-based layout shell", () => {
   const html = renderAdminUi(<PostBlockEditorShell />, {
     path: "/admin/coderso/posts/post-1",
   });
 
-  expect(html).toContain("Home");
-  expect(html).toContain("Insert");
-  expect(html).toContain("Review");
-  expect(html).toContain("View");
-  expect(html).toContain("Save draft");
-  expect(html).toContain("Publish");
-  expect(html).toContain("Undo");
-  expect(html).toContain("Add writing section");
+  expect(html).toContain("data-post-editor-region=\"header\"");
+  expect(html).toContain("data-post-editor-region=\"content\"");
+  expect(html).toContain("data-post-editor-region=\"footer\"");
   expect(html).toContain("data-post-editor-region=\"secondary-sidebar\"");
   expect(html).toContain("List view");
+  expect(html).toContain("Loading post editor");
+  expect(html).toContain("List view panel");
 });

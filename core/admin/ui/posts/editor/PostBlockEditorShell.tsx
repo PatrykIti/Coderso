@@ -1,18 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EditorShell } from "@/ui/layouts/EditorShell";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
+import { BlockInserter } from "./blocks/BlockInserter";
+import { PostListViewPanel } from "./blocks/PostListViewPanel";
+import { usePostEditorLayout } from "./hooks/usePostEditorLayout";
 import { BlockInspector } from "./inspector/BlockInspector";
 import { DocumentInspector } from "./inspector/DocumentInspector";
+import { PostEditorLayout } from "./layout/PostEditorLayout";
 import { PostEditorCanvas } from "./PostEditorCanvas";
 import { PostEditorTopBar } from "./PostEditorTopBar";
 import { PostRevisionDrawer } from "./PostRevisionDrawer";
@@ -24,20 +21,18 @@ import { usePostEditorState } from "./hooks/usePostEditorState";
 // - outline/list view remains informational + navigational,
 // - details opens contextually without changing canvas mode.
 export function PostBlockEditorShell() {
-  const [detailsPanelOpen, setDetailsPanelOpen] = useState(false);
-  const [outlineVisible, setOutlineVisible] = useState(true);
-  const [inspectorTab, setInspectorTab] = useState<"document" | "block">(
-    "document"
-  );
-
   const editor = usePostEditorState();
+  const layout = usePostEditorLayout({
+    initialSecondarySidebar: "list-view",
+    initialDetailsTab: "document",
+  });
 
-  const inspectorPanel = (
+  const detailsSidebar = (
     <div className="flex h-full flex-col">
       <Tabs
-        value={inspectorTab}
+        value={layout.state.detailsTab}
         onValueChange={(value) =>
-          setInspectorTab(value === "block" ? "block" : "document")
+          layout.setDetailsTab(value === "block" ? "block" : "document")
         }
         className="flex min-h-0 flex-1 flex-col"
       >
@@ -47,7 +42,10 @@ export function PostBlockEditorShell() {
             <TabsTrigger value="block">Block</TabsTrigger>
           </TabsList>
         </div>
-        <TabsContent value="document" className="m-0 min-h-0 flex-1 overflow-auto">
+        <TabsContent
+          value="document"
+          className="m-0 min-h-0 flex-1 overflow-auto"
+        >
           <DocumentInspector
             title={editor.title}
             status={editor.status}
@@ -77,6 +75,20 @@ export function PostBlockEditorShell() {
     </div>
   );
 
+  const secondarySidebar = layout.showInserter ? (
+    <BlockInserter
+      onInsertBlock={(type) => editor.insertBlock(type)}
+      disabled={editor.state.saving || editor.autosaveSaving}
+    />
+  ) : (
+    <PostListViewPanel
+      blocks={editor.state.document.blocks}
+      selectedBlockId={editor.state.selectedBlockId}
+      onSelectBlock={(id) => editor.selectBlock(id)}
+      onMoveBlockToIndex={editor.moveBlockToIndex}
+    />
+  );
+
   const breadcrumbs = useMemo(
     () => (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -90,30 +102,88 @@ export function PostBlockEditorShell() {
     [editor.title]
   );
 
+  const footer = (
+    <div className="flex items-center justify-between gap-4 px-4 py-2 text-xs text-muted-foreground sm:px-6">
+      <span>{editor.state.document.blocks.length} blocks</span>
+      <span>
+        {layout.showInserter
+          ? "Inserter panel"
+          : layout.showListView
+            ? "List view panel"
+            : "Panels hidden"}
+      </span>
+    </div>
+  );
+
+  const content = (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {editor.error ? (
+        <div className="px-4 pt-4 sm:px-6">
+          <Alert variant="destructive">
+            <AlertTitle>Post editor error</AlertTitle>
+            <AlertDescription>{editor.error}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
+
+      {editor.autosaveError ? (
+        <div className="px-4 pt-4 sm:px-6">
+          <Alert variant="destructive">
+            <AlertTitle>Autosave paused</AlertTitle>
+            <AlertDescription>{editor.autosaveError}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
+
+      <PostRevisionDrawer
+        open={editor.revisionsOpen}
+        onOpenChange={editor.setRevisionsOpen}
+        revisions={editor.revisions}
+        isLoading={editor.revisionsLoading}
+        error={editor.revisionsError}
+        restoringId={editor.restoringRevisionId}
+        onRestore={(revisionId) => {
+          editor.restoreRevision(revisionId).catch(() => undefined);
+        }}
+      />
+
+      {editor.loading ? (
+        <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+          Loading post editor...
+        </div>
+      ) : (
+        <PostEditorCanvas
+          document={editor.state.document}
+          selectedBlockId={editor.state.selectedBlockId}
+          onSelectBlock={(id) => editor.selectBlock(id)}
+          onUpdateBlockContent={editor.updateBlockContent}
+          onUploadClipboardImage={editor.uploadClipboardImage}
+          onMoveBlock={editor.moveBlock}
+          onTransformBlock={editor.transformBlock}
+          onDeleteBlock={editor.deleteBlock}
+          onInsertBlockAfterSelected={editor.insertBlock}
+          onEnsureDynamicTocBlock={editor.ensureDynamicTocBlock}
+        />
+      )}
+
+      <RuntimePreviewDialog
+        open={editor.previewOpen}
+        onOpenChange={editor.setPreviewOpen}
+        title="Runtime preview"
+        subtitle="Rendered post view for current draft."
+        canPreview={Boolean(editor.postId)}
+        previewUrl={editor.previewUrl}
+        isLoading={editor.previewLoading}
+        error={editor.previewError}
+      />
+    </div>
+  );
+
   return (
-    <EditorShell
+    <PostEditorLayout
       activeHref="/admin/posts"
       breadcrumbs={breadcrumbs}
-    >
-      <div className="flex min-h-0 flex-1 flex-col">
-        {editor.error ? (
-          <div className="px-4 pt-4 sm:px-6">
-            <Alert variant="destructive">
-              <AlertTitle>Post editor error</AlertTitle>
-              <AlertDescription>{editor.error}</AlertDescription>
-            </Alert>
-          </div>
-        ) : null}
-
-        {editor.autosaveError ? (
-          <div className="px-4 pt-4 sm:px-6">
-            <Alert variant="destructive">
-              <AlertTitle>Autosave paused</AlertTitle>
-              <AlertDescription>{editor.autosaveError}</AlertDescription>
-            </Alert>
-          </div>
-        ) : null}
-
+      header={
         <PostEditorTopBar
           status={editor.status}
           dirty={editor.hasUnsavedChanges}
@@ -138,68 +208,35 @@ export function PostBlockEditorShell() {
             editor.publish().catch(() => undefined);
           }}
           onInsertBlock={(type) => editor.insertBlock(type)}
-          onToggleOutline={() => setOutlineVisible((prev) => !prev)}
-          outlineVisible={outlineVisible}
-          onOpenDetails={() => {
-            setInspectorTab(editor.selectedBlock ? "block" : "document");
-            setDetailsPanelOpen(true);
-          }}
+          onToggleInserter={layout.toggleInserter}
+          inserterVisible={layout.showInserter}
+          onToggleOutline={layout.toggleListView}
+          outlineVisible={layout.showListView}
+          onOpenDetails={() =>
+            layout.openDetailsForSelection(Boolean(editor.selectedBlock))
+          }
         />
-
-        <PostRevisionDrawer
-          open={editor.revisionsOpen}
-          onOpenChange={editor.setRevisionsOpen}
-          revisions={editor.revisions}
-          isLoading={editor.revisionsLoading}
-          error={editor.revisionsError}
-          restoringId={editor.restoringRevisionId}
-          onRestore={(revisionId) => {
-            editor.restoreRevision(revisionId).catch(() => undefined);
-          }}
-        />
-
-        {editor.loading ? (
-          <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-            Loading post editor...
-          </div>
-        ) : (
-          <PostEditorCanvas
-            document={editor.state.document}
-            selectedBlockId={editor.state.selectedBlockId}
-            onSelectBlock={(id) => editor.selectBlock(id)}
-            onUpdateBlockContent={editor.updateBlockContent}
-            onUploadClipboardImage={editor.uploadClipboardImage}
-            onMoveBlock={editor.moveBlock}
-            onMoveBlockToIndex={editor.moveBlockToIndex}
-            onTransformBlock={editor.transformBlock}
-            onDeleteBlock={editor.deleteBlock}
-            onInsertBlockAfterSelected={editor.insertBlock}
-            onEnsureDynamicTocBlock={editor.ensureDynamicTocBlock}
-            outlineVisible={outlineVisible}
-          />
-        )}
-
-        <RuntimePreviewDialog
-          open={editor.previewOpen}
-          onOpenChange={editor.setPreviewOpen}
-          title="Runtime preview"
-          subtitle="Rendered post view for current draft."
-          canPreview={Boolean(editor.postId)}
-          previewUrl={editor.previewUrl}
-          isLoading={editor.previewLoading}
-          error={editor.previewError}
-        />
-      </div>
-
-      <Sheet open={detailsPanelOpen} onOpenChange={setDetailsPanelOpen}>
-        <SheetContent side="right" className="w-full max-w-sm p-0" showCloseButton={false}>
-          <SheetTitle className="sr-only">Details</SheetTitle>
-          <SheetDescription className="sr-only">
-            Edit post and selected block settings.
-          </SheetDescription>
-          {inspectorPanel}
-        </SheetContent>
-      </Sheet>
-    </EditorShell>
+      }
+      content={content}
+      footer={footer}
+      secondarySidebar={secondarySidebar}
+      secondarySidebarOpen={layout.secondarySidebarOpen}
+      onSecondarySidebarOpenChange={(open) => {
+        if (!open) {
+          layout.closeSecondarySidebar();
+          return;
+        }
+        if (!layout.secondarySidebarOpen) {
+          layout.openListView();
+        }
+      }}
+      detailsSidebar={detailsSidebar}
+      detailsSidebarOpen={layout.detailsSidebarOpen}
+      onDetailsSidebarOpenChange={(open) => {
+        if (!open) {
+          layout.closeDetails();
+        }
+      }}
+    />
   );
 }

@@ -21,7 +21,6 @@ import {
 } from "../../../../services/posts/editor/postPasteNormalizer";
 import { getTransformTargetTypes } from "./blocks/blockTransforms";
 import { getPostBlockLabel } from "./blocks/blockCatalog";
-import { PostListViewPanel } from "./blocks/PostListViewPanel";
 import { PostRichTextAdapter } from "./richtext/PostRichTextAdapter";
 
 type PostEditorCanvasProps = {
@@ -31,12 +30,10 @@ type PostEditorCanvasProps = {
   onUpdateBlockContent: (id: string, content: unknown) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   onMoveBlock: (id: string, direction: "up" | "down") => void;
-  onMoveBlockToIndex: (id: string, targetIndex: number) => void;
   onTransformBlock: (id: string, targetType: PostBlockType) => void;
   onDeleteBlock: (id: string) => void;
   onInsertBlockAfterSelected: (type: string) => void;
   onEnsureDynamicTocBlock?: () => void;
-  outlineVisible: boolean;
 };
 
 const richTextBlockTypes = new Set<PostBlockType>([
@@ -360,12 +357,10 @@ export function PostEditorCanvas({
   onUpdateBlockContent,
   onUploadClipboardImage,
   onMoveBlock,
-  onMoveBlockToIndex,
   onTransformBlock,
   onDeleteBlock,
   onInsertBlockAfterSelected,
   onEnsureDynamicTocBlock,
-  outlineVisible,
 }: PostEditorCanvasProps) {
   // TASK-061-01 UX contract anchor:
   // this canvas is the single writing surface. Future smart-paste and
@@ -380,66 +375,50 @@ export function PostEditorCanvas({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:p-6">
-      <div
-        className={`grid min-h-0 flex-1 gap-4 ${
-          outlineVisible
-            ? "grid-cols-1 lg:grid-cols-[minmax(220px,320px)_minmax(0,1fr)]"
-            : "grid-cols-1"
-        }`}
-      >
-        {outlineVisible ? (
-          <PostListViewPanel
-            blocks={document.blocks}
-            selectedBlockId={selectedBlockId}
-            onSelectBlock={onSelectBlock}
-            onMoveBlockToIndex={onMoveBlockToIndex}
-          />
-        ) : null}
-
-        <div className="min-h-0 overflow-hidden rounded-xl border bg-background shadow-sm">
-          <div className="flex items-center border-b px-4 py-3">
-            <div>
-              <p className="text-xs font-semibold uppercase text-muted-foreground">Document canvas</p>
-              <p className="text-sm font-semibold text-foreground">
-                Edit the full post flow in one view.
-              </p>
-            </div>
+      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-background shadow-sm">
+        <div className="flex items-center border-b px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Document canvas</p>
+            <p className="text-sm font-semibold text-foreground">
+              Edit the full post flow in one view.
+            </p>
           </div>
+        </div>
 
-          <div className="max-h-[calc(100vh-23rem)] overflow-auto p-4">
-            {document.blocks.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-6 text-center">
-                <p className="text-sm text-muted-foreground">No blocks yet.</p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-3"
-                  onClick={() => onInsertBlockAfterSelected("writing-canvas")}
+        <div className="max-h-[calc(100vh-23rem)] overflow-auto p-4">
+          {document.blocks.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <p className="text-sm text-muted-foreground">No blocks yet.</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3"
+                onClick={() => onInsertBlockAfterSelected("writing-canvas")}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add writing section
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {document.blocks.map((block) => (
+                <div
+                  key={block.id}
+                  ref={(element) => {
+                    if (element) {
+                      blockRefs.current.set(block.id, element);
+                    } else {
+                      blockRefs.current.delete(block.id);
+                    }
+                  }}
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add writing section
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {document.blocks.map((block) => (
-                  <div
-                    key={block.id}
-                    ref={(element) => {
-                      if (element) {
-                        blockRefs.current.set(block.id, element);
-                      } else {
-                        blockRefs.current.delete(block.id);
-                      }
-                    }}
-                  >
-                    <PostCanvasBlockItem
-                      block={block}
-                      selected={selectedBlockId === block.id}
-                      onSelect={() => onSelectBlock(block.id)}
-                      onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
-                      onUploadClipboardImage={onUploadClipboardImage}
-                      onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
+                  <PostCanvasBlockItem
+                    block={block}
+                    selected={selectedBlockId === block.id}
+                    onSelect={() => onSelectBlock(block.id)}
+                    onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
+                    onUploadClipboardImage={onUploadClipboardImage}
+                    onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
                     onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
                     onDeleteBlock={() => onDeleteBlock(block.id)}
                     onInsertBlockAfterSelected={onInsertBlockAfterSelected}
@@ -447,9 +426,8 @@ export function PostEditorCanvas({
                   />
                 </div>
               ))}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -158,3 +158,7 @@ const sections = buildDefaultNavSections({
   - posts now default to `writing-canvas` on empty document and expose writing-first insert actions (`Add writing section`, `Add CTA block`, `Add embed block`, `Add image block`),
   - runtime read path converts legacy text blocks to `writing-canvas` segments without destructive migration and exposes runtime warning diagnostics,
   - pending 061-08: final rollout QA/docs/changelog closure.
+- 063-02 done: Gutenberg-parity shell region foundation delivered:
+  - centralized panel state hook `usePostEditorLayout` (`list-view`, `inserter`, `details`),
+  - regionized shell composition (`PostEditorLayout`, `PostEditorRegions`) with explicit `header/content/secondary-sidebar/sidebar/footer`,
+  - responsive region behavior: desktop sidebars + mobile sheets share the same state contract.
