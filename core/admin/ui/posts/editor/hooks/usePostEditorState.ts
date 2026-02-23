@@ -204,6 +204,11 @@ export const buildSilentSyncSnapshot = (
   };
 };
 
+export const shouldDeferRefreshForDirtyState = (
+  options: { allowDirty?: boolean } | undefined,
+  hasUnsavedChanges: boolean
+) => options?.allowDirty !== true && hasUnsavedChanges;
+
 export type UsePostEditorStateResult = {
   postId: string | null;
   post: PostDetail | null;
@@ -374,6 +379,10 @@ export function usePostEditorState(): UsePostEditorStateResult {
   const metadataDirty = metadataSignature !== baseMetadataSignatureRef.current;
   const hasUnsavedChanges =
     state.dirty || titleDirty || slugDirty || featuredImageDirty || metadataDirty;
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
 
   const taxonomySummary = useMemo(
     () => ({
@@ -400,7 +409,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
           setError("Post not found.");
           return;
         }
-        if (!options?.allowDirty && hasUnsavedChanges) {
+        if (shouldDeferRefreshForDirtyState(options, hasUnsavedChangesRef.current)) {
           setRemoteUpdatePending(true);
           return;
         }
@@ -418,7 +427,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
         }
       }
     },
-    [applyLoadedPost, hasUnsavedChanges, postId]
+    [applyLoadedPost, postId]
   );
 
   useEffect(() => {

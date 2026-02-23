@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import {
   buildSilentSyncSnapshot,
   normalizePostDraftSyncMode,
+  shouldDeferRefreshForDirtyState,
 } from "../../../core/admin/ui/posts/editor/hooks/usePostEditorState";
 import type { PostDetail } from "../../../core/admin/services/postsClient";
 
@@ -74,4 +75,11 @@ test("buildSilentSyncSnapshot falls back to post updatedAt and default robots", 
   expect(snapshot.metadataDraft.tagsInput).toBe("");
   expect(snapshot.metadataDraft.seo.robots).toBe("index,follow");
   expect(snapshot.savedAt).toBe(post.updatedAt);
+});
+
+test("shouldDeferRefreshForDirtyState follows allowDirty contract", () => {
+  expect(shouldDeferRefreshForDirtyState(undefined, true)).toBe(true);
+  expect(shouldDeferRefreshForDirtyState({ allowDirty: false }, true)).toBe(true);
+  expect(shouldDeferRefreshForDirtyState({ allowDirty: true }, true)).toBe(false);
+  expect(shouldDeferRefreshForDirtyState(undefined, false)).toBe(false);
 });

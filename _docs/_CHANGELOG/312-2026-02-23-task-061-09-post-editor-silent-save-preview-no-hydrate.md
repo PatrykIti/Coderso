@@ -15,6 +15,9 @@
 ### Editor State
 - Dodano helper snapshotu save-sync, ktory aktualizuje baseline (`baseData`, metadata signature, saved timestamp) bez przepinania lokalnego dokumentu.
 - Full hydrate pozostaje tylko dla refresh/revision restore paths.
+- Naprawiono trigger refresh hooka:
+  - dirty-state jest czytany z ref, a nie z dependency callbacku,
+  - wyeliminowano przypadki losowego `Loading post editor...` po kolejnych paste/preview sekwencjach.
 
 ### Tests
 - Dodano unit tests dla save-sync helperow:

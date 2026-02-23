@@ -142,3 +142,6 @@ async function runAutosave() {
 - Autosave i save-before-preview przeszly na `silent sync` (bez `hydrate` reducera), co usuwa reset canvasu podczas pracy.
 - Dodano jawny kontrakt sync mode (`silent | hydrate`) dla zapisu draftu; domyslnie editor uzywa `silent`.
 - Dodano helper snapshotu save-sync i testy jednostkowe dla normalizacji/wyliczania baseline po zapisie.
+- Stabilized refresh trigger:
+  - `refresh` callback nie jest juz re-created na kazda zmiane `hasUnsavedChanges`,
+  - dirty-state check opiera sie o ref (`hasUnsavedChangesRef`), co eliminuje niechciane ponowne `Loading post editor...` po paste/preview flow.
