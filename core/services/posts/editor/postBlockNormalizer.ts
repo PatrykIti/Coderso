@@ -121,6 +121,14 @@ const normalizeHeadingLevel = (value: unknown) => {
   return rounded;
 };
 
+const normalizeTocLevel = (value: unknown, fallback: number) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  const rounded = Math.round(value);
+  if (rounded < 1) return 1;
+  if (rounded > 6) return 6;
+  return rounded;
+};
+
 const normalizeCalloutTone = (value: unknown): CalloutTone => {
   if (typeof value !== "string") return "info";
   return (CALL_OUT_TONES as readonly string[]).includes(value)
@@ -132,6 +140,17 @@ const normalizeBlockAttrs = (type: PostBlockType, attrs: unknown) => {
   const source = isRecord(attrs) ? attrs : {};
 
   switch (type) {
+    case "toc": {
+      const minLevel = normalizeTocLevel(source.minLevel, 1);
+      const maxLevel = Math.max(minLevel, normalizeTocLevel(source.maxLevel, 3));
+      return {
+        title: normalizeOptionalString(source.title, 120) ?? "Table of contents",
+        minLevel,
+        maxLevel,
+        ordered: source.ordered === true,
+        hideIfEmpty: source.hideIfEmpty !== false,
+      };
+    }
     case "heading":
       return { level: normalizeHeadingLevel(source.level) };
     case "list":
@@ -381,6 +400,7 @@ const normalizeBlockContent = (type: PostBlockType, content: unknown) => {
       return normalizeString(content);
     case "separator":
       return null;
+    case "toc":
     case "image":
     case "button":
     case "embed":

@@ -105,6 +105,18 @@ export const createPostBlock = (type: PostBlockType, id?: string): PostBlock => 
       return { ...base, content: "" };
     case "writing-canvas":
       return { ...base, content: createEmptyWritingCanvasContent() };
+    case "toc":
+      return {
+        ...base,
+        attrs: {
+          title: "Table of contents",
+          minLevel: 1,
+          maxLevel: 3,
+          ordered: false,
+          hideIfEmpty: true,
+        },
+        content: null,
+      };
     case "heading":
       return { ...base, attrs: { level: 2 }, content: "" };
     case "list":

@@ -2,6 +2,7 @@ node_modules/
 dist/
 core/dist/
 store/dist/
+_docs/ui/gutenberg-trunk
 .env
 .env.*
 !.env.example

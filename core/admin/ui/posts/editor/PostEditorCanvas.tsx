@@ -201,6 +201,23 @@ function PostCanvasBlockItem({
           )
         ) : null}
 
+        {block.type === "toc" ? (
+          <div className="rounded-lg border border-dashed bg-muted/20 p-4">
+            <p className="text-sm font-semibold text-foreground">
+              {typeof attrs.title === "string" && attrs.title.trim().length > 0
+                ? attrs.title
+                : "Table of contents"}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Dynamic table of contents is generated from heading blocks and heading nodes in
+              writing sections.
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Configure heading range in Details -&gt; Block.
+            </p>
+          </div>
+        ) : null}
+
         {richTextBlockTypes.has(block.type) ? (
           selected ? (
             <PostRichTextAdapter

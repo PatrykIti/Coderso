@@ -202,6 +202,7 @@ type RuntimeWritingCanvasHeadingNode = {
   type: "heading";
   level: 1 | 2 | 3 | 4 | 5 | 6;
   html: string;
+  anchorId?: string;
 };
 
 type RuntimeWritingCanvasListNode = {
@@ -235,11 +236,17 @@ export type RuntimeWritingCanvasNode =
   | RuntimeWritingCanvasQuoteNode
   | RuntimeWritingCanvasImageNode;
 
+type RuntimeTocItem = {
+  anchorId: string;
+  level: 1 | 2 | 3 | 4 | 5 | 6;
+  text: string;
+};
+
 type RuntimeBlockContent = {
   html?: string;
   listItems?: string[];
   code?: string;
-  headingLevel?: 2 | 3 | 4 | 5 | 6;
+  headingLevel?: 1 | 2 | 3 | 4 | 5 | 6;
   ordered?: boolean;
   image?: {
     src: string | null;
@@ -258,6 +265,14 @@ type RuntimeBlockContent = {
   showLineNumbers?: boolean;
   writingCanvas?: {
     nodes: RuntimeWritingCanvasNode[];
+  };
+  toc?: {
+    title: string;
+    minLevel: 1 | 2 | 3 | 4 | 5 | 6;
+    maxLevel: 1 | 2 | 3 | 4 | 5 | 6;
+    ordered: boolean;
+    hideIfEmpty: boolean;
+    items: RuntimeTocItem[];
   };
 };
 
@@ -362,6 +377,55 @@ const toHeadingLevel = (value: unknown): 1 | 2 | 3 | 4 | 5 | 6 => {
   if (rounded === 4) return 4;
   if (rounded === 5) return 5;
   return 6;
+};
+
+const toHeadingBoundLevel = (value: unknown, fallback: 1 | 2 | 3 | 4 | 5 | 6) => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+  return toHeadingLevel(value);
+};
+
+const toAnchorSlug = (value: string) =>
+  value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+
+const ensureUniqueAnchorId = (base: string, used: Set<string>) => {
+  if (!used.has(base)) {
+    used.add(base);
+    return base;
+  }
+  let suffix = 2;
+  while (used.has(`${base}-${suffix}`)) {
+    suffix += 1;
+  }
+  const unique = `${base}-${suffix}`;
+  used.add(unique);
+  return unique;
+};
+
+const resolveStableAnchorId = (
+  preferred: unknown,
+  text: string,
+  fallback: string,
+  used: Set<string>
+) => {
+  const preferredSanitized = sanitizeAnchorId(preferred);
+  if (preferredSanitized) {
+    return ensureUniqueAnchorId(preferredSanitized, used);
+  }
+
+  const fromText = toAnchorSlug(text);
+  if (fromText) {
+    return ensureUniqueAnchorId(fromText, used);
+  }
+
+  const fromFallback = toAnchorSlug(fallback) || "section";
+  return ensureUniqueAnchorId(fromFallback, used);
 };
 
 const mapWritingCanvasNodesForRuntime = async (
@@ -528,6 +592,57 @@ const readRuntimeWritingCanvasText = (nodes: RuntimeWritingCanvasNode[]) =>
     .filter(Boolean)
     .join(" ");
 
+const buildRuntimeHeadingIndex = (blocks: PostRuntimeMappedBlock[]) => {
+  const usedAnchors = new Set<string>();
+  const items: RuntimeTocItem[] = [];
+
+  for (const block of blocks) {
+    if (block.type === "heading") {
+      const text = postRichTextToPlainText(block.content.html ?? "").trim();
+      if (!text) continue;
+      const level = block.content.headingLevel ?? 2;
+      const anchorId = resolveStableAnchorId(
+        block.layout.anchorId,
+        text,
+        `heading-${block.id}`,
+        usedAnchors
+      );
+      block.layout.anchorId = anchorId;
+      items.push({
+        anchorId,
+        level,
+        text,
+      });
+      continue;
+    }
+
+    if (block.type !== "writing-canvas") {
+      continue;
+    }
+
+    const nodes = block.content.writingCanvas?.nodes ?? [];
+    for (const node of nodes) {
+      if (node.type !== "heading") continue;
+      const text = postRichTextToPlainText(node.html).trim();
+      if (!text) continue;
+      const anchorId = resolveStableAnchorId(
+        node.anchorId,
+        text,
+        `heading-${block.id}-${node.id}`,
+        usedAnchors
+      );
+      node.anchorId = anchorId;
+      items.push({
+        anchorId,
+        level: node.level,
+        text,
+      });
+    }
+  }
+
+  return items;
+};
+
 const readBlockPlainText = (block: PostRuntimeMappedBlock) => {
   if (block.content.writingCanvas?.nodes) {
     return readRuntimeWritingCanvasText(block.content.writingCanvas.nodes);
@@ -540,6 +655,9 @@ const readBlockPlainText = (block: PostRuntimeMappedBlock) => {
   }
   if (block.content.code) {
     return block.content.code.trim();
+  }
+  if (block.content.toc?.items) {
+    return block.content.toc.items.map((item) => item.text).join(" ").trim();
   }
   if (block.content.button?.label) {
     return block.content.button.label.trim();
@@ -673,6 +791,26 @@ export async function mapPostDocumentForRuntime(
             lazy: attrs.lazy !== false,
           },
         };
+      } else if (block.type === "toc") {
+        const minLevel = toHeadingBoundLevel(attrs.minLevel, 1);
+        const maxLevelCandidate = toHeadingBoundLevel(attrs.maxLevel, 3);
+        const maxLevel = (maxLevelCandidate < minLevel ? minLevel : maxLevelCandidate) as
+          | 1
+          | 2
+          | 3
+          | 4
+          | 5
+          | 6;
+        mapped.content = {
+          toc: {
+            title: toTrimmedOptional(attrs.title) ?? "Table of contents",
+            minLevel,
+            maxLevel,
+            ordered: attrs.ordered === true,
+            hideIfEmpty: attrs.hideIfEmpty !== false,
+            items: [],
+          },
+        };
       } else {
         pushRuntimeWarning(warnings, `runtime_block_unsupported:${block.id}:${block.type}`);
       }
@@ -682,12 +820,22 @@ export async function mapPostDocumentForRuntime(
           typeof attrs.level === "number" && Number.isFinite(attrs.level)
             ? Math.round(attrs.level)
             : 2;
-        mapped.content.headingLevel = clamp(headingLevel, 2, 6) as 2 | 3 | 4 | 5 | 6;
+        mapped.content.headingLevel = clamp(headingLevel, 1, 6) as 1 | 2 | 3 | 4 | 5 | 6;
       }
 
       return mapped;
     })
   );
+
+  const headingIndex = buildRuntimeHeadingIndex(blocks);
+  for (const block of blocks) {
+    if (block.type !== "toc") continue;
+    const toc = block.content.toc;
+    if (!toc) continue;
+    toc.items = headingIndex.filter(
+      (item) => item.level >= toc.minLevel && item.level <= toc.maxLevel
+    );
+  }
 
   return {
     version: document.version,

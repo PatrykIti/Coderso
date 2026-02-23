@@ -19,6 +19,13 @@ export const POST_BLOCK_CATALOG: PostBlockCatalogItem[] = [
     keywords: ["writing", "section", "article", "content"],
   },
   {
+    type: "toc",
+    label: "Table of contents",
+    description: "Dynamic table of contents generated from post headings.",
+    category: "text",
+    keywords: ["toc", "table of contents", "headings", "navigation"],
+  },
+  {
     type: "paragraph",
     label: "Paragraph",
     description: "Standard text paragraph with rich formatting.",
@@ -28,9 +35,9 @@ export const POST_BLOCK_CATALOG: PostBlockCatalogItem[] = [
   {
     type: "heading",
     label: "Heading",
-    description: "Section heading (H2-H6) for document structure.",
+    description: "Section heading (H1-H6) for document structure.",
     category: "text",
-    keywords: ["title", "heading", "h2", "h3"],
+    keywords: ["title", "heading", "h1", "h2", "h3"],
   },
   {
     type: "list",

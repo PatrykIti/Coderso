@@ -130,6 +130,7 @@ export function PostEditorTopBar({
 
   const quickInsertActions: Array<{ type: PostBlockType; label: string }> = [
     { type: "writing-canvas", label: "Add writing section" },
+    { type: "toc", label: "Add table of contents" },
     { type: "button", label: "Add CTA block" },
     { type: "embed", label: "Add embed block" },
     { type: "image", label: "Add image block" },

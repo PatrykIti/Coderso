@@ -178,15 +178,59 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
 
         {block.type === "heading" ? (
           <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">Heading level (2-6)</label>
+            <label className="text-xs text-muted-foreground">Heading level (1-6)</label>
             <Input
               type="number"
-              min={2}
+              min={1}
               max={6}
               value={readNumber(attrs.level, 2)}
               onChange={(event) => onChangeAttrs({ level: Number(event.target.value) })}
             />
           </div>
+        ) : null}
+
+        {block.type === "toc" ? (
+          <>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Title</label>
+              <Input
+                value={readString(attrs.title, "Table of contents")}
+                onChange={(event) => onChangeAttrs({ title: event.target.value })}
+              />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Minimum heading level</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={6}
+                  value={readNumber(attrs.minLevel, 1)}
+                  onChange={(event) => onChangeAttrs({ minLevel: Number(event.target.value) })}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground">Maximum heading level</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={6}
+                  value={readNumber(attrs.maxLevel, 3)}
+                  onChange={(event) => onChangeAttrs({ maxLevel: Number(event.target.value) })}
+                />
+              </div>
+            </div>
+            <ToggleField
+              label="Numbered list"
+              checked={readBoolean(attrs.ordered, false)}
+              onCheckedChange={(checked) => onChangeAttrs({ ordered: checked })}
+            />
+            <ToggleField
+              label="Hide when empty"
+              checked={readBoolean(attrs.hideIfEmpty, true)}
+              onCheckedChange={(checked) => onChangeAttrs({ hideIfEmpty: checked })}
+            />
+          </>
         ) : null}
 
         {block.type === "list" ? (

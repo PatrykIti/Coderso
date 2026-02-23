@@ -78,37 +78,64 @@ type PostBlockRuntimeRendererProps = {
 const renderHeadingBlock = (block: PostRuntimeMappedBlock) => {
   const level = block.content.headingLevel ?? 2;
   const text = postRichTextToPlainText(block.content.html ?? "");
+  const headingId = block.layout.anchorId;
+
+  if (level === 1) {
+    return (
+      <h1
+        id={headingId}
+        className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}
+      >
+        {text}
+      </h1>
+    );
+  }
 
   if (level === 2) {
     return (
-      <h2 className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}>
+      <h2
+        id={headingId}
+        className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}
+      >
         {text}
       </h2>
     );
   }
   if (level === 3) {
     return (
-      <h3 className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}>
+      <h3
+        id={headingId}
+        className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}
+      >
         {text}
       </h3>
     );
   }
   if (level === 4) {
     return (
-      <h4 className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}>
+      <h4
+        id={headingId}
+        className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}
+      >
         {text}
       </h4>
     );
   }
   if (level === 5) {
     return (
-      <h5 className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}>
+      <h5
+        id={headingId}
+        className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}
+      >
         {text}
       </h5>
     );
   }
   return (
-    <h6 className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}>
+    <h6
+      id={headingId}
+      className={cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])}
+    >
       {text}
     </h6>
   );
@@ -117,24 +144,25 @@ const renderHeadingBlock = (block: PostRuntimeMappedBlock) => {
 const renderWritingHeadingNode = (
   level: 1 | 2 | 3 | 4 | 5 | 6,
   html: string,
-  className: string
+  className: string,
+  anchorId?: string
 ) => {
   if (level === 1) {
-    return <h1 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h1 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
   }
   if (level === 2) {
-    return <h2 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h2 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
   }
   if (level === 3) {
-    return <h3 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h3 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
   }
   if (level === 4) {
-    return <h4 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h4 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
   }
   if (level === 5) {
-    return <h5 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h5 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
   }
-  return <h6 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <h6 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 };
 
 const renderWritingCanvasNode = (
@@ -157,7 +185,8 @@ const renderWritingCanvasNode = (
         {renderWritingHeadingNode(
           node.level,
           node.html,
-          cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])
+          cx("font-semibold leading-tight", textScaleClass[block.layout.textScale]),
+          node.anchorId
         )}
       </div>
     );
@@ -387,6 +416,49 @@ const renderBlockContent = (block: PostRuntimeMappedBlock) => {
           />
         </div>
       </div>
+    );
+  }
+
+  if (block.type === "toc") {
+    const toc = block.content.toc;
+    if (!toc) return null;
+    const items = toc.items ?? [];
+    if (items.length === 0 && toc.hideIfEmpty) {
+      return null;
+    }
+    const ListTag = toc.ordered ? "ol" : "ul";
+    const minLevel = items.reduce((acc, item) => Math.min(acc, item.level), 6);
+    const levelPaddingClass = ["pl-0", "pl-3", "pl-6", "pl-9", "pl-12", "pl-[3.75rem]"] as const;
+
+    return (
+      <nav className="rounded-lg border bg-muted/20 p-4" aria-label={toc.title}>
+        <p className="text-sm font-semibold text-foreground">{toc.title}</p>
+        {items.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">No headings found for this range.</p>
+        ) : (
+          <ListTag
+            className={cx(
+              "mt-2 space-y-1",
+              toc.ordered ? "list-decimal pl-5" : "list-disc pl-5",
+              textScaleClass[block.layout.textScale]
+            )}
+          >
+            {items.map((item) => {
+              const depth = Math.max(0, Math.min(5, item.level - minLevel));
+              return (
+                <li key={`${block.id}-${item.anchorId}`} className={levelPaddingClass[depth]}>
+                  <a
+                    href={`#${item.anchorId}`}
+                    className="text-[var(--color-primary)] underline-offset-2 hover:underline"
+                  >
+                    {item.text}
+                  </a>
+                </li>
+              );
+            })}
+          </ListTag>
+        )}
+      </nav>
     );
   }
 

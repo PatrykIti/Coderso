@@ -16,6 +16,7 @@ type PostListViewPanelProps = {
 
 const resolveOutlineBlockLabel = (block: PostBlock) => {
   if (block.type === "writing-canvas") return "Section";
+  if (block.type === "toc") return "Table of contents";
   if (block.type === "button") return "CTA block";
   if (block.type === "embed") return "Embed block";
   return getPostBlockLabel(block.type);

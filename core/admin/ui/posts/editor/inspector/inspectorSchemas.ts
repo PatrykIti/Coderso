@@ -106,6 +106,7 @@ export const IMAGE_MARGIN_OPTIONS: SelectOption[] = POST_IMAGE_MARGIN_VALUES.map
 export const BLOCK_STYLE_SCOPE: Record<PostBlockType, readonly string[]> = {
   paragraph: ["alignment", "width", "spacing", "textScale"],
   "writing-canvas": [],
+  toc: ["alignment", "width", "spacing", "textScale"],
   heading: ["alignment", "width", "spacing", "textScale"],
   list: ["alignment", "width", "spacing", "textScale"],
   quote: ["alignment", "width", "spacing", "textScale"],

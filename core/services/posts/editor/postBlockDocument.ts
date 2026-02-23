@@ -3,6 +3,7 @@ export const POST_BLOCK_DOCUMENT_VERSION = 1 as const;
 export const POST_BLOCK_TYPES = [
   "paragraph",
   "writing-canvas",
+  "toc",
   "heading",
   "list",
   "quote",
