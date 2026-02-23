@@ -77,3 +77,21 @@ test("createWritingCanvasContentFromPaste returns versioned content envelope", (
   expect(result.content.nodes.length).toBe(1);
   expect(result.content.nodes[0]?.type).toBe("paragraph");
 });
+
+test("normalizePostPastePayload preserves image-only html as writing content", () => {
+  const result = normalizePostPastePayload({
+    html: '<img src="/media/clipboard.png" alt="Clipboard image" data-wrap="left" data-width="66" data-margin="lg">',
+    text: "",
+  });
+
+  expect(result.mode).toBe("writing-canvas");
+  expect(result.source).toBe("html");
+  expect(result.nodes.length).toBe(1);
+  expect(result.nodes[0]?.type).toBe("paragraph");
+  const paragraph = result.nodes[0];
+  if (!paragraph || paragraph.type !== "paragraph") {
+    throw new Error("expected paragraph node");
+  }
+  expect(paragraph.text).toContain("<img");
+  expect(result.html).toContain("<img");
+});

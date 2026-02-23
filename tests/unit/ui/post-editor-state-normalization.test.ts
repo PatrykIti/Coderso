@@ -38,3 +38,19 @@ test("normalizeEditorDocumentForWritingFlow upgrades single empty paragraph docu
   expect(document.blocks.length).toBe(1);
   expect(document.blocks[0]?.type).toBe("writing-canvas");
 });
+
+test("normalizeEditorDocumentForWritingFlow upgrades single paragraph with content to writing-canvas", () => {
+  const document = normalizeEditorDocumentForWritingFlow({
+    document: {
+      version: 1,
+      blocks: [{ id: "block-1", type: "paragraph", attrs: {}, content: "<p>Legacy body</p>" }],
+      meta: {},
+    },
+  });
+
+  expect(document.blocks.length).toBe(1);
+  expect(document.blocks[0]?.type).toBe("writing-canvas");
+  const content = document.blocks[0]?.content as { nodes?: Array<{ type?: string; text?: string }> };
+  expect(content.nodes?.[0]?.type).toBe("paragraph");
+  expect(content.nodes?.[0]?.text).toContain("Legacy body");
+});

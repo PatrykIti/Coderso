@@ -361,6 +361,19 @@ export function normalizePostPastePayload(
       });
     }
     nodes = mapSanitizedHtmlToNodes(sanitized, warnings);
+
+    if (nodes.length === 0 && /<img\b/i.test(sanitized)) {
+      const richText = serializePostRichText(sanitized);
+      if (postRichTextToPlainText(richText).trim().length > 0 || /<img\b/i.test(richText)) {
+        nodes = [
+          {
+            id: "node-1",
+            type: "paragraph",
+            text: richText,
+          },
+        ];
+      }
+    }
   }
 
   if (nodes.length === 0 && textCandidate) {

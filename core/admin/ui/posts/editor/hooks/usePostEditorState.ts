@@ -23,7 +23,12 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { uploadClipboardImage } from "@/services/mediaClient";
 
 import { coercePostDocument } from "../../../../../services/posts/editor/postBlockLegacyAdapter";
-import { POST_BLOCK_TYPES, type PostBlock, type PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
+import {
+  POST_BLOCK_TYPES,
+  WRITING_CANVAS_VERSION,
+  type PostBlock,
+  type PostBlockType,
+} from "../../../../../services/posts/editor/postBlockDocument";
 import { normalizePostBlockDocument } from "../../../../../services/posts/editor/postBlockNormalizer";
 import { postRichTextToPlainText } from "../../../../../services/posts/editor/postRichTextSerializer";
 import {
@@ -88,12 +93,29 @@ export const normalizeEditorDocumentForWritingFlow = (input: unknown) => {
     return document;
   }
 
-  if (document.blocks.length === 1 && isEmptyParagraphBlock(document.blocks[0] as PostBlock)) {
-    const paragraphId = (document.blocks[0] as PostBlock).id || "block-1";
+  if (document.blocks.length === 1 && (document.blocks[0] as PostBlock).type === "paragraph") {
+    const paragraphBlock = document.blocks[0] as PostBlock;
+    const paragraphId = paragraphBlock.id || "block-1";
+    const paragraphText =
+      typeof paragraphBlock.content === "string" ? paragraphBlock.content : "";
     return normalizePostBlockDocument(
       {
         version: document.version,
-        blocks: [createPostBlock("writing-canvas", paragraphId)],
+        blocks: [
+          {
+            ...createPostBlock("writing-canvas", paragraphId),
+            content: {
+              version: WRITING_CANVAS_VERSION,
+              nodes: [
+                {
+                  id: "node-1",
+                  type: "paragraph",
+                  text: paragraphText,
+                },
+              ],
+            },
+          },
+        ],
         meta: document.meta,
       },
       { fallbackToEmpty: true }

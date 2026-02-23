@@ -242,6 +242,15 @@ export const buildPostRichTextPasteInsert = (input: NormalizePostPastePayloadInp
   };
 };
 
+export const resolveClipboardPasteMode = (input: {
+  normalizedHtml: string;
+  imageFilesCount: number;
+}): "rich-text" | "images" | "none" => {
+  if (input.normalizedHtml.trim().length > 0) return "rich-text";
+  if (input.imageFilesCount > 0) return "images";
+  return "none";
+};
+
 export function PostRichTextAdapter({
   value,
   onChange,
@@ -505,8 +514,17 @@ export function PostRichTextAdapter({
     async (event: ClipboardEvent<HTMLDivElement>) => {
       if (disabled) return;
 
+      const html = event.clipboardData.getData("text/html");
+      const text = event.clipboardData.getData("text/plain");
+      const normalized = buildPostRichTextPasteInsert({ html, text });
       const imageFiles = extractClipboardImageFiles(event.clipboardData);
-      if (imageFiles.length > 0) {
+
+      const pasteMode = resolveClipboardPasteMode({
+        normalizedHtml: normalized.html,
+        imageFilesCount: imageFiles.length,
+      });
+
+      if (pasteMode === "images") {
         event.preventDefault();
         if (!onUploadClipboardImage) {
           setPasteHint("Image paste is unavailable in this editor context.");
@@ -558,12 +576,7 @@ export function PostRichTextAdapter({
         return;
       }
 
-      const html = event.clipboardData.getData("text/html");
-      const text = event.clipboardData.getData("text/plain");
-      if (!html.trim() && !text.trim()) return;
-
-      const normalized = buildPostRichTextPasteInsert({ html, text });
-      if (!normalized.html) return;
+      if (pasteMode !== "rich-text") return;
 
       event.preventDefault();
       const inserted = insertHtmlAtCursor(normalized.html);

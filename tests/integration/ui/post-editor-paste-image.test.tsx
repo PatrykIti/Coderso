@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import {
   buildClipboardImageInsertHtml,
   extractClipboardImageFiles,
+  resolveClipboardPasteMode,
 } from "../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter";
 
 test("clipboard image helper extracts only image files from items", () => {
@@ -44,4 +45,22 @@ test("clipboard image helper renders safe html payload", () => {
   expect(html).toContain('data-width="50"');
   expect(html).toContain('data-margin="md"');
   expect(html).toContain('loading="lazy"');
+});
+
+test("clipboard mode prefers rich-text when both text/html and image files exist", () => {
+  const mode = resolveClipboardPasteMode({
+    normalizedHtml: "<p>Heading from clipboard</p>",
+    imageFilesCount: 1,
+  });
+
+  expect(mode).toBe("rich-text");
+});
+
+test("clipboard mode falls back to image upload when normalized text payload is empty", () => {
+  const mode = resolveClipboardPasteMode({
+    normalizedHtml: "",
+    imageFilesCount: 2,
+  });
+
+  expect(mode).toBe("images");
 });
