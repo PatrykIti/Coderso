@@ -33,6 +33,13 @@ Ujednolicic prawy panel `Details`:
 
 ---
 
+## Detailed Sub-Tasks
+- `TASK-063-07-01_Tabbed_Details_Sidebar_Shell.md`
+- `TASK-063-07-02_Inspector_Refactor_Document_vs_Block.md`
+- `TASK-063-07-03_Details_Preferences_Persistence.md`
+
+---
+
 ## Files to Create / Change
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx`
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx`

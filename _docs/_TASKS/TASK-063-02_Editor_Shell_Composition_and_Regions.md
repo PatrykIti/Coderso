@@ -27,6 +27,13 @@ Wdrozyc layout posts editora wzorowany na `InterfaceSkeleton`:
 
 ---
 
+## Detailed Sub-Tasks
+- `TASK-063-02-01_Layout_State_Model_and_Hooks.md`
+- `TASK-063-02-02_Region_Components_and_Composition.md`
+- `TASK-063-02-03_Responsive_Region_Behavior.md`
+
+---
+
 ## Files to Create / Change
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
 - `core/admin/ui/posts/editor/layout/PostEditorLayout.tsx` (new)

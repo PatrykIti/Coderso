@@ -67,6 +67,34 @@ Referencja funkcjonalna i UX:
 8. `TASK-063-08` - Keyboard shortcuts, focus management, and accessibility.
 9. `TASK-063-09` - QA, docs, changelog, and closure.
 
+## Detailed Sub-Task Files
+1. `TASK-063-01-01_Gutenberg_Component_Inventory.md`
+2. `TASK-063-01-02_Nextless_Current-State_Inventory.md`
+3. `TASK-063-01-03_Gap_Prioritization_and_Migration_Plan.md`
+4. `TASK-063-02-01_Layout_State_Model_and_Hooks.md`
+5. `TASK-063-02-02_Region_Components_and_Composition.md`
+6. `TASK-063-02-03_Responsive_Region_Behavior.md`
+7. `TASK-063-03-01_Document_Tools_Cluster.md`
+8. `TASK-063-03-02_Save_Preview_Publish_Cluster.md`
+9. `TASK-063-03-03_Header_Integration_and_Regression_Guards.md`
+10. `TASK-063-04-01_Inserter_Sidebar_Shell.md`
+11. `TASK-063-04-02_Block_Library_Search_and_Categories.md`
+12. `TASK-063-04-03_Inserter_Focus_and_A11y_Contracts.md`
+13. `TASK-063-05-01_Document_Stats_Selectors.md`
+14. `TASK-063-05-02_Outline_Builder_and_Validation_Rules.md`
+15. `TASK-063-05-03_ListView_and_Outline_Sidebar_UI.md`
+16. `TASK-063-06-01_Inline_Appender_Insert_Points.md`
+17. `TASK-063-06-02_Unified_Inserter_Slash_Appender_Flow.md`
+18. `TASK-063-06-03_Smart_Paste_Hardening_and_TOC_Directives.md`
+19. `TASK-063-07-01_Tabbed_Details_Sidebar_Shell.md`
+20. `TASK-063-07-02_Inspector_Refactor_Document_vs_Block.md`
+21. `TASK-063-07-03_Details_Preferences_Persistence.md`
+22. `TASK-063-08-01_Shortcut_Registry_and_Keymaps.md`
+23. `TASK-063-08-02_Focus_Return_and_Escape_Contracts.md`
+24. `TASK-063-08-03_ARIA_Landmarks_and_Accessibility_Labels.md`
+25. `TASK-063-09-01_Regression_Test_Execution_Plan.md`
+26. `TASK-063-09-02_Docs_Changelog_and_Kanban_Closure.md`
+
 ---
 
 ## Implementation Order
@@ -103,4 +131,3 @@ Referencja funkcjonalna i UX:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/<new-entry>.md`
-

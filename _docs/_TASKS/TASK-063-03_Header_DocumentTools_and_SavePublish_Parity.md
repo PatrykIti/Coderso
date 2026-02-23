@@ -39,6 +39,13 @@ Przebudowac gore edytora (header) na model Gutenberg-like:
 
 ---
 
+## Detailed Sub-Tasks
+- `TASK-063-03-01_Document_Tools_Cluster.md`
+- `TASK-063-03-02_Save_Preview_Publish_Cluster.md`
+- `TASK-063-03-03_Header_Integration_and_Regression_Guards.md`
+
+---
+
 ## Files to Create / Change
 - `core/admin/ui/posts/editor/PostEditorTopBar.tsx`
 - `core/admin/ui/posts/editor/header/PostEditorHeader.tsx` (new)

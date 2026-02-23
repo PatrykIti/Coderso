@@ -26,6 +26,13 @@ Wdrozyc sidebar `Document Overview` i panel statystyk dokumentu:
 
 ---
 
+## Detailed Sub-Tasks
+- `TASK-063-05-01_Document_Stats_Selectors.md`
+- `TASK-063-05-02_Outline_Builder_and_Validation_Rules.md`
+- `TASK-063-05-03_ListView_and_Outline_Sidebar_UI.md`
+
+---
+
 ## Files to Create / Change
 - `core/admin/ui/posts/editor/sidebars/PostListViewSidebar.tsx` (new)
 - `core/admin/ui/posts/editor/outline/PostDocumentOutline.tsx` (new)

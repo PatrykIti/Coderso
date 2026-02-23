@@ -22,6 +22,13 @@ Przygotowac szczegolowa mape roznic miedzy obecnym Nextless posts editor a refer
 
 ---
 
+## Detailed Sub-Tasks
+- `TASK-063-01-01_Gutenberg_Component_Inventory.md`
+- `TASK-063-01-02_Nextless_Current-State_Inventory.md`
+- `TASK-063-01-03_Gap_Prioritization_and_Migration_Plan.md`
+
+---
+
 ## Files to Create / Change
 - `_docs/UI/POST_EDITOR_GUTENBERG_GAP_MATRIX.md` (new)
 - `_docs/_TASKS/TASK-063_Gutenberg_Parity_Post_Editor_Rearchitecture.md`

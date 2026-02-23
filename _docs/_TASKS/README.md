@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 32 tasks
+- **To Do:** 58 tasks
 - **In Progress:** 3 tasks
 - **Done:** 458 tasks
 
@@ -55,6 +55,32 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
 | TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
 | TASK-063-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Full lint/types/tests, docs sync, and kanban closure |
+| TASK-063-01-01 | Gutenberg Component Inventory | High | Small | Inventory of reference editor components and responsibilities |
+| TASK-063-01-02 | Nextless Current-State Inventory | High | Small | Current posts editor architecture/component graph |
+| TASK-063-01-03 | Gap Prioritization and Migration Plan | High | Medium | Must/Should/Out matrix with owner subtasks |
+| TASK-063-02-01 | Layout State Model and Hooks | High | Medium | Centralized layout state for editor regions |
+| TASK-063-02-02 | Region Components and Composition | High | Medium | Interface-skeleton style shell composition |
+| TASK-063-02-03 | Responsive Region Behavior | High | Medium | Mobile/desktop behavior for sidebars and regions |
+| TASK-063-03-01 | Document Tools Cluster | High | Medium | Add, Undo/Redo, and Document Overview controls |
+| TASK-063-03-02 | Save Preview Publish Cluster | High | Medium | Saved state + preview + publish workflow controls |
+| TASK-063-03-03 | Header Integration and Regression Guards | High | Small | Modular header assembly and regression tests |
+| TASK-063-04-01 | Inserter Sidebar Shell | High | Small | Open/close/escape shell for inserter sidebar |
+| TASK-063-04-02 | Block Library Search and Categories | High | Medium | Searchable grouped block library in inserter |
+| TASK-063-04-03 | Inserter Focus and A11y Contracts | High | Small | Focus return and accessibility behavior |
+| TASK-063-05-01 | Document Stats Selectors | High | Small | Words/chars/read-time/headings/blocks selectors |
+| TASK-063-05-02 | Outline Builder and Validation Rules | High | Medium | Heading outline model and hierarchy warnings |
+| TASK-063-05-03 | ListView and Outline Sidebar UI | High | Medium | Tabs + stats panel + outline navigation |
+| TASK-063-06-01 | Inline Appender Insert Points | High | Medium | In-canvas add points between/after blocks |
+| TASK-063-06-02 | Unified Inserter Slash Appender Flow | High | Medium | Single insert orchestration across all entry points |
+| TASK-063-06-03 | Smart Paste Hardening and TOC Directives | High | Large | Word paste hardening + dynamic TOC directives |
+| TASK-063-07-01 | Tabbed Details Sidebar Shell | High | Small | Details panel shell with Document/Block tabs |
+| TASK-063-07-02 | Inspector Refactor Document vs Block | High | Medium | Shared controls and cleaner inspector ownership |
+| TASK-063-07-03 | Details Preferences Persistence | High | Medium | Persisted inspector preferences per user |
+| TASK-063-08-01 | Shortcut Registry and Keymaps | High | Small | Centralized keyboard shortcuts for posts editor |
+| TASK-063-08-02 | Focus Return and Escape Contracts | High | Small | Deterministic focus return on panel close |
+| TASK-063-08-03 | ARIA Landmarks and Accessibility Labels | High | Small | Semantic landmarks and aria coverage |
+| TASK-063-09-01 | Regression Test Execution Plan | High | Medium | Full gate run + rollout QA report |
+| TASK-063-09-02 | Docs Changelog and Kanban Closure | High | Medium | Final docs/changelog/board synchronization |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |

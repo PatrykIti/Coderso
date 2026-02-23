@@ -29,6 +29,13 @@ Doprowadzic writing flow do Gutenberg-like ergonomii:
 
 ---
 
+## Detailed Sub-Tasks
+- `TASK-063-06-01_Inline_Appender_Insert_Points.md`
+- `TASK-063-06-02_Unified_Inserter_Slash_Appender_Flow.md`
+- `TASK-063-06-03_Smart_Paste_Hardening_and_TOC_Directives.md`
+
+---
+
 ## Files to Create / Change
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx`

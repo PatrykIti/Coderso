@@ -29,6 +29,13 @@ Domknac UX editora od strony klawiatury i accessibility:
 
 ---
 
+## Detailed Sub-Tasks
+- `TASK-063-08-01_Shortcut_Registry_and_Keymaps.md`
+- `TASK-063-08-02_Focus_Return_and_Escape_Contracts.md`
+- `TASK-063-08-03_ARIA_Landmarks_and_Accessibility_Labels.md`
+
+---
+
 ## Files to Create / Change
 - `core/admin/ui/posts/editor/hooks/usePostEditorShortcuts.ts` (new)
 - `core/admin/ui/posts/editor/hooks/useFocusReturn.ts` (new)

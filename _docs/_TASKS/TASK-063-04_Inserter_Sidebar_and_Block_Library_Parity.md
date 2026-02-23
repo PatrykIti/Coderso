@@ -26,6 +26,13 @@ Przeniesc inserter do dedykowanego sidebaru jak w Gutenberg:
 
 ---
 
+## Detailed Sub-Tasks
+- `TASK-063-04-01_Inserter_Sidebar_Shell.md`
+- `TASK-063-04-02_Block_Library_Search_and_Categories.md`
+- `TASK-063-04-03_Inserter_Focus_and_A11y_Contracts.md`
+
+---
+
 ## Files to Create / Change
 - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx`
 - `core/admin/ui/posts/editor/sidebars/PostInserterSidebar.tsx` (new)
