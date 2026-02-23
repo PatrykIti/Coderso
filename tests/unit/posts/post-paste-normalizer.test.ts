@@ -25,6 +25,7 @@ test("normalizePostPastePayload sanitizes Word-like HTML and maps core structure
 
   expect(result.mode).toBe("writing-canvas");
   expect(result.source).toBe("html");
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
   expect(result.nodes.length).toBeGreaterThanOrEqual(3);
   expect(result.nodes[0]?.type).toBe("heading");
   expect(result.nodes.some((node) => node.type === "list")).toBe(true);
@@ -46,6 +47,7 @@ test("normalizePostPastePayload falls back to plain text sections when HTML cann
 
   expect(result.mode).toBe("writing-canvas");
   expect(result.source).toBe("text");
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
   expect(result.nodes.length).toBe(2);
   expect(result.nodes[0]?.type).toBe("paragraph");
   expect(result.nodes[1]?.type).toBe("list");
@@ -64,6 +66,7 @@ test("normalizePostPastePayload truncates very large paste payloads to node budg
   });
 
   expect(result.mode).toBe("writing-canvas");
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
   expect(result.nodes.length).toBe(200);
   expect(result.warnings.map((warning) => warning.code)).toContain("nodes_truncated");
 });
@@ -76,6 +79,7 @@ test("createWritingCanvasContentFromPaste returns versioned content envelope", (
   expect(result.content.version).toBe(1);
   expect(result.content.nodes.length).toBe(1);
   expect(result.content.nodes[0]?.type).toBe("paragraph");
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
 });
 
 test("normalizePostPastePayload preserves image-only html as writing content", () => {
@@ -86,6 +90,7 @@ test("normalizePostPastePayload preserves image-only html as writing content", (
 
   expect(result.mode).toBe("writing-canvas");
   expect(result.source).toBe("html");
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
   expect(result.nodes.length).toBe(1);
   expect(result.nodes[0]?.type).toBe("paragraph");
   const paragraph = result.nodes[0];
@@ -103,6 +108,7 @@ test("normalizePostPastePayload maps h1 from Word payload into heading node", ()
   });
 
   expect(result.mode).toBe("writing-canvas");
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
   expect(result.nodes[0]?.type).toBe("heading");
   const heading = result.nodes[0];
   if (!heading || heading.type !== "heading") {
@@ -119,6 +125,7 @@ test("normalizePostPastePayload maps Word heading-like paragraph classes into he
   });
 
   expect(result.mode).toBe("writing-canvas");
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
   expect(result.nodes[0]?.type).toBe("heading");
   const heading = result.nodes[0];
   if (!heading || heading.type !== "heading") {
@@ -142,4 +149,28 @@ test("normalizePostPastePayload keeps Word heading hierarchy from outline style"
   }
   expect(section.level).toBe(2);
   expect(subsection.level).toBe(3);
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
+});
+
+test("normalizePostPastePayload detects Word TOC links and replaces static TOC with directive", () => {
+  const result = normalizePostPastePayload({
+    html: `
+      <p>Spis tresci</p>
+      <p><a href="#_Toc111">1. Wstep 1</a></p>
+      <p><a href="#_Toc222">2. Zakres 2</a></p>
+      <p><a href="#_Toc333">3. Wyniki 3</a></p>
+      <h1>Wstep</h1>
+      <p>Body content</p>
+    `,
+    text: "",
+  });
+
+  expect(result.mode).toBe("writing-canvas");
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(true);
+  expect(result.warnings.map((warning) => warning.code)).toContain("word_toc_replaced");
+  expect(result.diagnostics.wordTocDetectedLinks).toBe(3);
+  expect(result.diagnostics.wordTocRemovedNodes).toBeGreaterThanOrEqual(3);
+  expect(result.html).not.toContain("#_Toc");
+  expect(result.nodes.some((node) => node.type === "heading")).toBe(true);
+  expect(result.nodes.some((node) => node.type === "paragraph")).toBe(true);
 });

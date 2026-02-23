@@ -61,6 +61,12 @@ const normalizeOptionalString = (value: unknown, maxLength: number) => {
   return trimmed.length > maxLength ? trimmed.slice(0, maxLength) : trimmed;
 };
 
+const normalizeOptionalAnchorId = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+  return normalized.length > 0 ? normalized : undefined;
+};
+
 const sanitizeBlockId = (value: unknown, index: number) => {
   if (typeof value !== "string") return `block-${index + 1}`;
   const normalized = value
@@ -151,8 +157,13 @@ const normalizeBlockAttrs = (type: PostBlockType, attrs: unknown) => {
         hideIfEmpty: source.hideIfEmpty !== false,
       };
     }
-    case "heading":
-      return { level: normalizeHeadingLevel(source.level) };
+    case "heading": {
+      const anchorId = normalizeOptionalAnchorId(source.anchorId);
+      return {
+        level: normalizeHeadingLevel(source.level),
+        ...(anchorId ? { anchorId } : {}),
+      };
+    }
     case "list":
       return { ordered: source.ordered === true };
     case "image":
@@ -271,11 +282,13 @@ const normalizeWritingNode = (
   }
 
   if (type === "heading") {
+    const anchorId = normalizeOptionalAnchorId(input.anchorId);
     return {
       id,
       type,
       level: normalizeWritingHeadingLevel(input.level),
       text: normalizeRichTextContent(input.text ?? input.content ?? ""),
+      ...(anchorId ? { anchorId } : {}),
     };
   }
 

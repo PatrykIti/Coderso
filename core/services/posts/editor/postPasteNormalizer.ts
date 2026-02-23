@@ -27,6 +27,10 @@ const headingLevelStyleMatcher = /\bmso-outline-level\s*:\s*([1-6])\b/i;
 const headingStyleNameMatcher =
   /\bmso-style-name\s*:\s*["']?\s*(?:heading|naglowek)\s*([1-6])\b/i;
 const headingTitleMatcher = /\bmso-title\b/i;
+const wordTocHrefMatcher = /href\s*=\s*["']#_toc[\w-]*["']/i;
+const tocTitleMatcher = /^(table\s+of\s+contents|spis\s+tre[sś]ci)$/i;
+const tocNumberedLineMatcher = /^\d+(?:\.\d+)*\.?\s+\S+/;
+const tocDottedLeaderMatcher = /\.{2,}\s*\d+\s*$/;
 
 const textTrim = (value: string) => value.replace(/\r\n/g, "\n").trim();
 
@@ -38,7 +42,8 @@ export type PostPasteWarningCode =
   | "nodes_truncated"
   | "list_items_truncated"
   | "fallback_to_plain_text"
-  | "empty_payload";
+  | "empty_payload"
+  | "word_toc_replaced";
 
 export type PostPasteWarning = {
   code: PostPasteWarningCode;
@@ -56,6 +61,23 @@ export type NormalizePostPastePayloadResult = {
   html: string;
   nodes: WritingCanvasNode[];
   warnings: PostPasteWarning[];
+  directives: PostPasteDirectives;
+  diagnostics: PostPasteDiagnostics;
+};
+
+export type PostPasteDirectives = {
+  replaceWordTocWithDynamicToc: boolean;
+};
+
+export type PostPasteDiagnostics = {
+  wordTocDetectedLinks?: number;
+  wordTocRemovedNodes?: number;
+};
+
+type WordTocStripResult = {
+  nodes: WritingCanvasNode[];
+  detectedLinkCount: number;
+  removedNodeCount: number;
 };
 
 const pushWarning = (
@@ -87,6 +109,10 @@ const clampHeadingLevel = (level: number): 1 | 2 | 3 | 4 | 5 | 6 => {
   if (level === 5) return 5;
   return 6;
 };
+
+const createPostPasteDirectives = (): PostPasteDirectives => ({
+  replaceWordTocWithDynamicToc: false,
+});
 
 const parseHeadingLevelFromWordAttrs = (rawAttrs: string): 1 | 2 | 3 | 4 | 5 | 6 | null => {
   if (!rawAttrs) return null;
@@ -133,6 +159,85 @@ const normalizeInlineRichText = (value: string) => {
     return "";
   }
   return serializePostRichText(sanitized);
+};
+
+const readNodeRichText = (node: WritingCanvasNode) => {
+  if (node.type === "paragraph" || node.type === "heading" || node.type === "quote") {
+    return node.text;
+  }
+  return "";
+};
+
+const normalizePlainLine = (value: string) =>
+  value
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const isLikelyWordTocTitle = (plain: string) => tocTitleMatcher.test(normalizePlainLine(plain));
+
+const isLikelyWordTocLine = (plain: string) => {
+  const normalized = normalizePlainLine(plain);
+  if (!normalized) return false;
+  if (tocDottedLeaderMatcher.test(normalized)) return true;
+  return tocNumberedLineMatcher.test(normalized) && /\s\d+$/.test(normalized);
+};
+
+const reindexWritingCanvasNodes = (nodes: WritingCanvasNode[]) =>
+  nodes.map((node, index) => ({
+    ...node,
+    id: `node-${index + 1}`,
+  }));
+
+const stripWordTocNodes = (nodes: WritingCanvasNode[]): WordTocStripResult | null => {
+  if (nodes.length === 0) return null;
+
+  const linkIndexes: number[] = [];
+  for (const [index, node] of nodes.entries()) {
+    if (node.type !== "paragraph" && node.type !== "heading") continue;
+    if (wordTocHrefMatcher.test(readNodeRichText(node))) {
+      linkIndexes.push(index);
+    }
+  }
+
+  if (linkIndexes.length < 3) {
+    return null;
+  }
+
+  const removeIndexes = new Set<number>(linkIndexes);
+  const first = Math.min(...linkIndexes);
+  const last = Math.max(...linkIndexes);
+
+  if (first > 0) {
+    const previous = nodes[first - 1];
+    if (previous) {
+      const previousPlain = postRichTextToPlainText(readNodeRichText(previous));
+      if (isLikelyWordTocTitle(previousPlain)) {
+        removeIndexes.add(first - 1);
+      }
+    }
+  }
+
+  for (let index = first; index <= last; index += 1) {
+    if (removeIndexes.has(index)) continue;
+    const node = nodes[index];
+    if (!node || (node.type !== "paragraph" && node.type !== "heading")) continue;
+    const plain = postRichTextToPlainText(readNodeRichText(node));
+    if (isLikelyWordTocTitle(plain) || isLikelyWordTocLine(plain)) {
+      removeIndexes.add(index);
+    }
+  }
+
+  if (removeIndexes.size === 0) {
+    return null;
+  }
+
+  const nextNodes = nodes.filter((_, index) => !removeIndexes.has(index));
+  return {
+    nodes: reindexWritingCanvasNodes(nextNodes),
+    detectedLinkCount: linkIndexes.length,
+    removedNodeCount: removeIndexes.size,
+  };
 };
 
 const buildParagraphNodesFromText = (
@@ -338,7 +443,13 @@ export const serializeWritingCanvasContentToHtml = (content: unknown) => {
 
 export const createWritingCanvasContentFromPaste = (
   input: NormalizePostPastePayloadInput
-): { content: WritingCanvasContent; warnings: PostPasteWarning[]; source: "html" | "text" | "empty" } => {
+): {
+  content: WritingCanvasContent;
+  warnings: PostPasteWarning[];
+  source: "html" | "text" | "empty";
+  directives: PostPasteDirectives;
+  diagnostics: PostPasteDiagnostics;
+} => {
   const result = normalizePostPastePayload(input);
   return {
     content: {
@@ -347,6 +458,8 @@ export const createWritingCanvasContentFromPaste = (
     },
     warnings: result.warnings,
     source: result.source,
+    directives: result.directives,
+    diagnostics: result.diagnostics,
   };
 };
 
@@ -354,6 +467,8 @@ export function normalizePostPastePayload(
   input: NormalizePostPastePayloadInput
 ): NormalizePostPastePayloadResult {
   const warnings: PostPasteWarning[] = [];
+  const directives = createPostPasteDirectives();
+  const diagnostics: PostPasteDiagnostics = {};
 
   const htmlRaw = typeof input.html === "string" ? input.html : "";
   const textRaw = typeof input.text === "string" ? input.text : "";
@@ -388,6 +503,8 @@ export function normalizePostPastePayload(
       html: "",
       nodes: [],
       warnings,
+      directives,
+      diagnostics,
     };
   }
 
@@ -435,6 +552,20 @@ export function normalizePostPastePayload(
     nodes = buildParagraphNodesFromText(textCandidate);
   }
 
+  if (source === "html" && nodes.length > 0) {
+    const strippedWordToc = stripWordTocNodes(nodes);
+    if (strippedWordToc) {
+      nodes = strippedWordToc.nodes;
+      directives.replaceWordTocWithDynamicToc = true;
+      diagnostics.wordTocDetectedLinks = strippedWordToc.detectedLinkCount;
+      diagnostics.wordTocRemovedNodes = strippedWordToc.removedNodeCount;
+      pushWarning(warnings, {
+        code: "word_toc_replaced",
+        message: "Detected Word table of contents. Replaced with dynamic TOC.",
+      });
+    }
+  }
+
   if (nodes.length > MAX_WRITING_NODES) {
     nodes = nodes.slice(0, MAX_WRITING_NODES).map((node, index) => ({
       ...node,
@@ -449,10 +580,12 @@ export function normalizePostPastePayload(
   if (nodes.length === 0) {
     return {
       source,
-      mode: "empty",
+      mode: directives.replaceWordTocWithDynamicToc ? "writing-canvas" : "empty",
       html: "",
       nodes: [],
       warnings,
+      directives,
+      diagnostics,
     };
   }
 
@@ -463,5 +596,7 @@ export function normalizePostPastePayload(
     html,
     nodes,
     warnings,
+    directives,
+    diagnostics,
   };
 }

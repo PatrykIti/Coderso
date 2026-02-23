@@ -67,6 +67,7 @@ export type PostEditorAction =
   | { type: "move_block"; mutation: MoveBlockMutation }
   | { type: "move_block_to_index"; mutation: MoveBlockToIndexMutation }
   | { type: "transform_block"; mutation: TransformBlockMutation }
+  | { type: "ensure_toc_block"; afterBlockId?: string | null }
   | { type: "undo" }
   | { type: "redo" };
 
@@ -299,6 +300,42 @@ const mutateTransformBlock = (state: PostEditorState, mutation: TransformBlockMu
   return withHistory(state, normalizePostBlockDocument(nextDocument));
 };
 
+const mutateEnsureTocBlock = (
+  state: PostEditorState,
+  afterBlockId?: string | null
+) => {
+  const existingToc = state.document.blocks.find((block) => block.type === "toc");
+  if (existingToc) {
+    return {
+      ...state,
+      selectedBlockId: existingToc.id,
+    };
+  }
+
+  const nextDocument = cloneDocument(state.document);
+  const generatedId = `block-${getNextBlockNumericId(nextDocument)}`;
+  const tocBlock = normalizePostBlockDocument({
+    version: 1,
+    blocks: [createPostBlock("toc", generatedId)],
+  }).blocks[0] as PostBlock;
+
+  let insertIndex = 0;
+  if (afterBlockId) {
+    const index = nextDocument.blocks.findIndex((block) => block.id === afterBlockId);
+    insertIndex = index === -1 ? 0 : index + 1;
+  }
+  nextDocument.blocks.splice(insertIndex, 0, tocBlock);
+
+  const normalizedNextDocument = normalizePostBlockDocument(nextDocument);
+  const next = withHistory(state, normalizedNextDocument);
+  return {
+    ...next,
+    selectedBlockId:
+      normalizedNextDocument.blocks[insertIndex]?.id ??
+      ensureSelectedBlock(next.selectedBlockId, normalizedNextDocument),
+  };
+};
+
 export const createInitialPostEditorState = (
   document?: PostBlockDocument,
   selectedBlockId?: string | null
@@ -365,6 +402,8 @@ export const postEditorReducer = (
       return mutateMoveBlockToIndex(state, action.mutation);
     case "transform_block":
       return mutateTransformBlock(state, action.mutation);
+    case "ensure_toc_block":
+      return mutateEnsureTocBlock(state, action.afterBlockId);
     case "undo": {
       if (state.history.past.length === 0) return state;
       const previous = state.history.past[state.history.past.length - 1] as PostBlockDocument;

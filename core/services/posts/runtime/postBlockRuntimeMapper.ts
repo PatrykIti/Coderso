@@ -469,6 +469,7 @@ const mapWritingCanvasNodesForRuntime = async (
         type: "heading",
         level: toHeadingLevel(node.level),
         html: serializePostRichText(typeof node.text === "string" ? node.text : ""),
+        anchorId: sanitizeAnchorId(node.anchorId),
       });
       ordinal += 1;
       continue;

@@ -5,7 +5,7 @@
 **Category:** Core/Editor + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-062-01, TASK-062-02  
-**Status:** To Do
+**Status:** Done (2026-02-23)
 
 ---
 
@@ -88,4 +88,3 @@ function applyPasteToEditor(result) {
 ## Documentation Updates Required
 - `_docs/CMS_API.md` (smart paste directives + TOC replacement behavior)
 - `_docs/ARCHITECTURE.md` (paste pipeline extension)
-

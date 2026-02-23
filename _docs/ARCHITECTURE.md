@@ -108,6 +108,11 @@ przez `setup.completed=true`.
     - autosave i save-before-preview uzywaja `silent sync` (bez `hydrate` reducera),
     - editor zachowuje lokalny canvas state bez wizualnego reloadu sekcji podczas runtime preview,
     - full `hydrate` pozostaje dla explicit refresh/restore flow.
+  - **TASK-062 (done):** dynamiczny spis tresci (TOC) dla posts:
+    - nowy `toc` block type jest dostepny w inserterze/ribbon i moze byc umieszczony w dowolnym miejscu dokumentu,
+    - runtime buduje heading index z `heading` blocks i `writing-canvas` heading nodes, a `toc` renderuje dynamiczne linki bez recznej synchronizacji,
+    - anchor IDs sa deterministyczne i stabilne (`slug + dedupe`), z obsluga custom `anchorId` dla `heading` block attrs i `writing-canvas` heading nodes,
+    - smart paste wykrywa statyczny Word TOC (`href="#_Toc..."`), usuwa martwe linki i emituje dyrektywe wstawienia dynamicznego `toc` blocka (idempotentnie, bez duplikatow).
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

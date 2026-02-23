@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Runtime  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-062  
-**Status:** To Do
+**Status:** Done (2026-02-23)
 
 ---
 
@@ -85,4 +85,3 @@ function mapRuntimeTocBlock(block, document) {
 ## Documentation Updates Required
 - `_docs/CMS_API.md` (post block contract + runtime payload)
 - `_docs/ARCHITECTURE.md` (runtime mapping flow)
-

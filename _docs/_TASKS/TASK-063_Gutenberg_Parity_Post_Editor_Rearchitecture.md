@@ -5,7 +5,7 @@
 **Category:** Admin/UI + CMS/Posts  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-060, TASK-061, TASK-062  
-**Status:** To Do
+**Status:** In Progress (2026-02-23)
 
 ---
 

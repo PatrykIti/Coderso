@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 314 | 2026-02-23 | TASK-062 posts dynamic table of contents | CMS/Posts |
+| 313 | 2026-02-23 | TASK-063-01 gutenberg reference audit and gap matrix | Docs/Architecture |
 | 312 | 2026-02-23 | TASK-061-09 post editor silent save and preview without hydrate reload | Admin/UI |
 | 311 | 2026-02-23 | TASK-061-07 runtime renderer parity and backward compatibility | Runtime/Compatibility |
 | 310 | 2026-02-22 | TASK-061-06 editor ui integration ribbon canvas list view | Admin/UI |

@@ -45,6 +45,7 @@ export type WritingCanvasHeadingNode = {
   type: "heading";
   level: 1 | 2 | 3 | 4 | 5 | 6;
   text: string;
+  anchorId?: string;
 };
 
 export type WritingCanvasListNode = {

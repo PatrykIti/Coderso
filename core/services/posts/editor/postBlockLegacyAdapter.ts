@@ -75,6 +75,12 @@ const normalizeNodeId = (value: unknown, fallback: string) => {
   return trimmed.length > 0 ? trimmed : fallback;
 };
 
+const normalizeOptionalAnchorId = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
+  return normalized.length > 0 ? normalized : undefined;
+};
+
 const mapLegacyBlockToWritingNode = (
   block: PostBlock,
   nodeId: string
@@ -92,12 +98,14 @@ const mapLegacyBlockToWritingNode = (
   }
 
   if (block.type === "heading") {
+    const anchorId = normalizeOptionalAnchorId(attrs.anchorId);
     return {
       node: {
         id: nodeId,
         type: "heading",
         level: clampHeadingLevel(attrs.level),
         text: normalizeRichTextString(block.content),
+        ...(anchorId ? { anchorId } : {}),
       },
     };
   }

@@ -124,3 +124,31 @@ test("postEditorStore transforms selected block without changing id", () => {
   expect(transformedBlock?.type).toBe("list");
   expect(transformedBlock?.content).toEqual(["Item one", "Item two"]);
 });
+
+test("postEditorStore ensure_toc_block inserts toc once and keeps idempotency", () => {
+  const initial = createInitialPostEditorState();
+  const withHeading = postEditorReducer(initial, {
+    type: "insert_block",
+    mutation: { block: createPostBlock("heading"), afterId: initial.selectedBlockId },
+  });
+
+  const withToc = postEditorReducer(withHeading, {
+    type: "ensure_toc_block",
+    afterBlockId: null,
+  });
+  const tocBlocks = withToc.document.blocks.filter((block) => block.type === "toc");
+
+  expect(tocBlocks).toHaveLength(1);
+  expect(withToc.document.blocks[0]?.type).toBe("toc");
+  expect(withToc.selectedBlockId).toBe(tocBlocks[0]?.id ?? null);
+
+  const secondEnsure = postEditorReducer(withToc, {
+    type: "ensure_toc_block",
+    afterBlockId: null,
+  });
+  const tocBlocksAfterSecondEnsure = secondEnsure.document.blocks.filter(
+    (block) => block.type === "toc"
+  );
+  expect(tocBlocksAfterSecondEnsure).toHaveLength(1);
+  expect(secondEnsure.selectedBlockId).toBe(tocBlocksAfterSecondEnsure[0]?.id ?? null);
+});

@@ -36,6 +36,7 @@ import {
 import {
   normalizePostPastePayload,
   type NormalizePostPastePayloadInput,
+  type PostPasteDirectives,
 } from "../../../../../services/posts/editor/postPasteNormalizer";
 import { postRichTextBlockTagSet } from "../../../../../services/posts/editor/postRichTextSchema";
 import type { PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
@@ -55,6 +56,7 @@ type PostRichTextAdapterProps = {
   className?: string;
   minHeightClassName?: string;
   onSlashInsertBlock?: (type: PostBlockType) => void;
+  onPasteDirectives?: (directives: PostPasteDirectives) => void;
   onFocus?: () => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
 };
@@ -239,14 +241,18 @@ export const buildPostRichTextPasteInsert = (input: NormalizePostPastePayloadInp
     warnings: normalized.warnings.map((warning) => warning.message),
     mode: normalized.mode,
     source: normalized.source,
+    directives: normalized.directives,
+    diagnostics: normalized.diagnostics,
   };
 };
 
 export const resolveClipboardPasteMode = (input: {
   normalizedHtml: string;
   imageFilesCount: number;
+  hasPostPasteDirectives?: boolean;
 }): "rich-text" | "images" | "none" => {
   if (input.normalizedHtml.trim().length > 0) return "rich-text";
+  if (input.hasPostPasteDirectives) return "rich-text";
   if (input.imageFilesCount > 0) return "images";
   return "none";
 };
@@ -260,6 +266,7 @@ export function PostRichTextAdapter({
   className,
   minHeightClassName = "min-h-[18rem]",
   onSlashInsertBlock,
+  onPasteDirectives,
   onFocus,
   onUploadClipboardImage,
 }: PostRichTextAdapterProps) {
@@ -525,6 +532,7 @@ export function PostRichTextAdapter({
       const pasteMode = resolveClipboardPasteMode({
         normalizedHtml: normalized.html,
         imageFilesCount: imageFiles.length,
+        hasPostPasteDirectives: normalized.directives.replaceWordTocWithDynamicToc,
       });
 
       if (pasteMode === "images") {
@@ -582,11 +590,18 @@ export function PostRichTextAdapter({
       if (pasteMode !== "rich-text") return;
 
       event.preventDefault();
-      const inserted = insertHtmlAtCursor(normalized.html);
-      if (!inserted) return;
+      const canInsertHtml = normalized.html.trim().length > 0;
+      const inserted = canInsertHtml ? insertHtmlAtCursor(normalized.html) : true;
+      if (!inserted && !normalized.directives.replaceWordTocWithDynamicToc) return;
 
-      emitChange();
-      updateSlashState();
+      if (inserted && canInsertHtml) {
+        emitChange();
+        updateSlashState();
+      }
+
+      if (normalized.directives.replaceWordTocWithDynamicToc) {
+        onPasteDirectives?.(normalized.directives);
+      }
 
       if (normalized.warnings.length > 0) {
         const firstWarning = normalized.warnings[0] ?? "";
@@ -602,6 +617,7 @@ export function PostRichTextAdapter({
     [
       disabled,
       emitChange,
+      onPasteDirectives,
       onUploadClipboardImage,
       updateSelectedImageState,
       updateSlashState,

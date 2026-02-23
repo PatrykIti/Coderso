@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-062-01, TASK-062-02, TASK-062-03  
-**Status:** To Do
+**Status:** Done (2026-02-23)
 
 ---
 
@@ -43,4 +43,3 @@ Domknac wdrozenie dynamicznego TOC przez pelna walidacje techniczna, aktualizacj
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/<new-entry>.md`
-

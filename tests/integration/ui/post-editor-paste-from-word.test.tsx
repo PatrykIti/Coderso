@@ -15,10 +15,29 @@ test("post editor smart paste converts Word-like HTML into safe insert payload",
 
   expect(payload.mode).toBe("writing-canvas");
   expect(payload.source).toBe("html");
+  expect(payload.directives.replaceWordTocWithDynamicToc).toBe(false);
   expect(payload.html).toContain("<h1>");
   expect(payload.html).toContain("<p>");
   expect(payload.html).toContain("<ol>");
   expect(payload.warnings.length).toBeGreaterThan(0);
+});
+
+test("post editor smart paste sets dynamic toc directive for Word TOC links", () => {
+  const payload = buildPostRichTextPasteInsert({
+    html: `
+      <p>Table of contents</p>
+      <p><a href="#_Toc100">1. Intro 1</a></p>
+      <p><a href="#_Toc200">2. Setup 3</a></p>
+      <p><a href="#_Toc300">3. Output 5</a></p>
+      <h1>Intro</h1>
+      <p>Body</p>
+    `,
+    text: "",
+  });
+
+  expect(payload.directives.replaceWordTocWithDynamicToc).toBe(true);
+  expect(payload.html).not.toContain("#_Toc");
+  expect(payload.warnings.some((warning) => warning.includes("dynamic TOC"))).toBe(true);
 });
 
 test("post editor smart paste returns empty payload for empty clipboard", () => {
@@ -29,4 +48,5 @@ test("post editor smart paste returns empty payload for empty clipboard", () => 
 
   expect(payload.mode).toBe("empty");
   expect(payload.html).toBe("");
+  expect(payload.directives.replaceWordTocWithDynamicToc).toBe(false);
 });

@@ -95,3 +95,48 @@ test("normalizePostBlockDocument uses default writing-canvas node for invalid pa
   expect(content.nodes).toHaveLength(1);
   expect(content.nodes[0]?.type).toBe("paragraph");
 });
+
+test("normalizePostBlockDocument keeps heading anchor ids for block and writing-canvas nodes", () => {
+  const normalized = normalizePostBlockDocument({
+    version: 1,
+    blocks: [
+      {
+        id: "heading-1",
+        type: "heading",
+        attrs: { level: 2, anchorId: "manual-anchor" },
+        content: "Section heading",
+      },
+      {
+        id: "writing-1",
+        type: "writing-canvas",
+        attrs: {},
+        content: {
+          version: 1,
+          nodes: [
+            {
+              id: "node-1",
+              type: "heading",
+              level: 2,
+              text: "Inline heading",
+              anchorId: "inline-anchor",
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  const headingBlock = normalized.blocks[0];
+  expect(headingBlock?.type).toBe("heading");
+  expect((headingBlock?.attrs as { anchorId?: string }).anchorId).toBe("manual-anchor");
+
+  const writingBlock = normalized.blocks[1];
+  if (!writingBlock || writingBlock.type !== "writing-canvas") {
+    throw new Error("expected writing-canvas block");
+  }
+  const content = writingBlock.content as {
+    nodes: Array<{ type: string; anchorId?: string }>;
+  };
+  expect(content.nodes[0]?.type).toBe("heading");
+  expect(content.nodes[0]?.anchorId).toBe("inline-anchor");
+});

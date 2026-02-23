@@ -5,7 +5,7 @@
 **Category:** Core/Editor + Runtime  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-062-01  
-**Status:** To Do
+**Status:** Done (2026-02-23)
 
 ---
 
@@ -87,4 +87,3 @@ function reconcileHeadingAnchors(document) {
 ## Documentation Updates Required
 - `_docs/CMS_API.md` (heading schema with `anchorId`)
 - `_docs/ARCHITECTURE.md` (anchor reconciliation flow)
-

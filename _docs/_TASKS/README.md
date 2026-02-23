@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 58 tasks
-- **In Progress:** 3 tasks
-- **Done:** 458 tasks
+- **To Do:** 48 tasks
+- **In Progress:** 4 tasks
+- **Done:** 467 tasks
 
 ---
 
@@ -40,13 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
-| TASK-062 | Posts Dynamic Table of Contents (TOC) | High | Large | Dynamic TOC from headings, stable anchors, Word TOC replacement |
-| TASK-062-01 | Dynamic TOC Generation from Post Headings | High | Medium | Runtime-generated TOC from heading index |
-| TASK-062-02 | Stable Heading Anchor IDs and Linking | High | Medium | Deterministic anchor IDs + editor/runtime link parity |
-| TASK-062-03 | Replace Pasted Word TOC with Dynamic TOC | High | Large | Detect Word TOC and convert to dynamic TOC block |
-| TASK-062-04 | TOC QA, Docs, Changelog, and Closure | Medium | Medium | Full regression + docs/changelog/board sync |
-| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | Gutenberg-like shell, sidebars, tools, outline, and a11y workflow |
-| TASK-063-01 | Gutenberg Reference Audit and Gap Matrix | High | Medium | Source-to-target matrix for editor parity rollout |
 | TASK-063-02 | Editor Shell Composition and Regions | High | Large | Interface-skeleton style regions and centralized layout state |
 | TASK-063-03 | Header, DocumentTools, and Save/Publish Parity | High | Large | Add/Undo/Redo/Overview + save-preview-publish cluster |
 | TASK-063-04 | Inserter Sidebar and Block Library Parity | High | Medium | Dismissible inserter sidebar with search and focus return |
@@ -55,9 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
 | TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
 | TASK-063-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Full lint/types/tests, docs sync, and kanban closure |
-| TASK-063-01-01 | Gutenberg Component Inventory | High | Small | Inventory of reference editor components and responsibilities |
-| TASK-063-01-02 | Nextless Current-State Inventory | High | Small | Current posts editor architecture/component graph |
-| TASK-063-01-03 | Gap Prioritization and Migration Plan | High | Medium | Must/Should/Out matrix with owner subtasks |
 | TASK-063-02-01 | Layout State Model and Hooks | High | Medium | Centralized layout state for editor regions |
 | TASK-063-02-02 | Region Components and Composition | High | Medium | Interface-skeleton style shell composition |
 | TASK-063-02-03 | Responsive Region Behavior | High | Medium | Mobile/desktop behavior for sidebars and regions |
@@ -104,6 +94,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01 completed (inventory + current-state + gap matrix), next: 063-02 shell regions |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -114,6 +105,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-062 | Posts Dynamic Table of Contents (TOC) | High | Large | Done: dynamic TOC block contract + runtime heading index + Word TOC replacement + closure/docs |
+| TASK-062-04 | TOC QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint/types/tests + architecture/API/changelog/task board sync |
+| TASK-062-03 | Replace Pasted Word TOC with Dynamic TOC | High | Large | Done: smart paste detects `#_Toc...`, strips static TOC, emits dynamic TOC directive and idempotent insertion |
+| TASK-062-02 | Stable Heading Anchor IDs and Linking | High | Medium | Done: stable anchor generation/dedupe + custom anchors for heading block and writing-canvas heading nodes |
+| TASK-062-01 | Dynamic TOC Generation from Post Headings | High | Medium | Done: `toc` block available in editor and mapped in runtime from live heading index |
+| TASK-063-01 | Gutenberg Reference Audit and Gap Matrix | High | Medium | Done: reference audit, current-state inventory, and migration gap matrix published |
+| TASK-063-01-03 | Gap Prioritization and Migration Plan | High | Medium | Done: Must/Should/Out matrix with owner subtasks and execution slices |
+| TASK-063-01-02 | Nextless Current-State Inventory | High | Small | Done: posts editor component/state/data-flow baseline documented |
+| TASK-063-01-01 | Gutenberg Component Inventory | High | Small | Done: core Gutenberg editor component responsibilities and UX contracts mapped |
 | TASK-061-09 | Post Editor Silent Save and Preview Without Hydrate Reload | High | Medium | Done: autosave i save-before-preview korzystaja z silent sync bez hydrate resetu canvasu |
 | TASK-061-07 | Runtime Renderer Parity and Backward Compatibility | High | Medium | Done: writing-canvas runtime mapper/renderer parity, legacy read-path adapter (non-destructive), and runtime warning diagnostics |
 | TASK-061-06 | Editor UI Integration (Ribbon + Canvas + List View) | High | Large | Done: writing-first editor integration (default writing-canvas, ribbon quick actions, logical outline labels, and inline canvas/details context) |

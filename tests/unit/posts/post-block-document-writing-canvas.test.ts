@@ -9,6 +9,8 @@ import {
 test("post block types include writing-canvas", () => {
   expect(POST_BLOCK_TYPES).toContain("writing-canvas");
   expect(isPostBlockType("writing-canvas")).toBe(true);
+  expect(POST_BLOCK_TYPES).toContain("toc");
+  expect(isPostBlockType("toc")).toBe(true);
 });
 
 test("createEmptyWritingCanvasContent returns deterministic initial node", () => {

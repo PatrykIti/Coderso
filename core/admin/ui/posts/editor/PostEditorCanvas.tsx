@@ -35,6 +35,7 @@ type PostEditorCanvasProps = {
   onTransformBlock: (id: string, targetType: PostBlockType) => void;
   onDeleteBlock: (id: string) => void;
   onInsertBlockAfterSelected: (type: string) => void;
+  onEnsureDynamicTocBlock?: () => void;
   outlineVisible: boolean;
 };
 
@@ -76,6 +77,7 @@ function PostCanvasBlockItem({
   onTransformBlock,
   onDeleteBlock,
   onInsertBlockAfterSelected,
+  onEnsureDynamicTocBlock,
 }: {
   block: PostBlock;
   selected: boolean;
@@ -86,6 +88,7 @@ function PostCanvasBlockItem({
   onTransformBlock: (targetType: PostBlockType) => void;
   onDeleteBlock: () => void;
   onInsertBlockAfterSelected: (type: string) => void;
+  onEnsureDynamicTocBlock?: () => void;
 }) {
   const transformTargets = useMemo(
     () => getTransformTargetTypes(block.type),
@@ -189,6 +192,11 @@ function PostCanvasBlockItem({
                   text: postRichTextToPlainText(nextHtml),
                 }).content;
                 onUpdateBlockContent(nextContent);
+              }}
+              onPasteDirectives={(directives) => {
+                if (directives.replaceWordTocWithDynamicToc) {
+                  onEnsureDynamicTocBlock?.();
+                }
               }}
               onUploadClipboardImage={onUploadClipboardImage}
               placeholder="Write your post content..."
@@ -356,6 +364,7 @@ export function PostEditorCanvas({
   onTransformBlock,
   onDeleteBlock,
   onInsertBlockAfterSelected,
+  onEnsureDynamicTocBlock,
   outlineVisible,
 }: PostEditorCanvasProps) {
   // TASK-061-01 UX contract anchor:
@@ -431,12 +440,13 @@ export function PostEditorCanvas({
                       onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
                       onUploadClipboardImage={onUploadClipboardImage}
                       onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
-                      onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
-                      onDeleteBlock={() => onDeleteBlock(block.id)}
-                      onInsertBlockAfterSelected={onInsertBlockAfterSelected}
-                    />
-                  </div>
-                ))}
+                    onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
+                    onDeleteBlock={() => onDeleteBlock(block.id)}
+                    onInsertBlockAfterSelected={onInsertBlockAfterSelected}
+                    onEnsureDynamicTocBlock={onEnsureDynamicTocBlock}
+                  />
+                </div>
+              ))}
               </div>
             )}
           </div>

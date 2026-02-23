@@ -558,11 +558,19 @@ Posts API jest niezaleznym, internal kontraktem dla domeny posts:
 - brak runtime/API dependency `posts -> content_entries`,
 - payloady i endpointy zostaja kompatybilne dla klienta admin (`postsClient`).
 
-Post document contract (update `TASK-061-02`):
-- `PostBlockType` zawiera nowy typ `writing-canvas`,
+Post document contract (update `TASK-061-02` + `TASK-062`):
+- `PostBlockType` zawiera typy `writing-canvas` i `toc`,
 - `writing-canvas` przechowuje typed payload:
   - `version: 1`,
   - `nodes[]` (`paragraph`, `heading`, `list`, `quote`, `image`),
+- heading contracts wspieraja opcjonalny `anchorId`:
+  - `heading` block: `attrs.anchorId?: string`,
+  - `writing-canvas` heading node: `anchorId?: string`,
+- `toc` block attrs:
+  - `title` (string, default: `Table of contents`),
+  - `minLevel`/`maxLevel` (1..6, `maxLevel >= minLevel`),
+  - `ordered` (boolean),
+  - `hideIfEmpty` (boolean),
 - normalizer egzekwuje deterministic limits/sanitization dla nodow i zachowuje compatibility z legacy data.
 
 Smart paste contract (update `TASK-061-03`):
@@ -573,6 +581,16 @@ Smart paste contract (update `TASK-061-03`):
   - `<h1>` z paste jest mapowane do `heading(level=1)`,
   - Word heading-like paragrafy (`MsoHeading*`, `Heading 1..6`, `mso-outline-level:1..6`) sa mapowane do odpowiadajacego `heading(level=1..6)`,
 - dla payloadow duzych lub degradacji parser zwraca warningi (`html_truncated`, `fallback_to_plain_text`, `unsupported_markup_removed`, itd.).
+
+Word TOC replacement contract (update `TASK-062-03`):
+- smart paste zwraca dyrektywy i diagnostyke:
+  - `directives.replaceWordTocWithDynamicToc: boolean`,
+  - `diagnostics.wordTocDetectedLinks?: number`,
+  - `diagnostics.wordTocRemovedNodes?: number`,
+- przy wykryciu statycznego Word TOC (`href="#_Toc..."`) parser:
+  - usuwa statyczne linki TOC z payloadu,
+  - emituje warning `word_toc_replaced`,
+  - przekazuje dyrektywe, aby editor zapewnil dynamiczny `toc` block (idempotentnie, bez duplikatow).
 
 Clipboard image paste contract (update `TASK-061-04`):
 - image clipboard uploads uzywaja internal endpointu `POST /media` (existing admin media contract),
@@ -726,6 +744,11 @@ Runtime rendering contract (posts):
 - `writing-canvas` jest first-class runtime payloadem:
   - nodes (`paragraph`, `heading`, `list`, `quote`, `image`) sa mapowane i renderowane bez fallbacku do legacy string fields,
   - inline image nodes zachowuja shared wrap layout semantics (`wrap`, `widthPercent`, `marginPreset`).
+- dynamic TOC runtime:
+  - `toc` block renderuje `content.toc.items[]` budowane z aktualnego heading index dokumentu (`heading` blocks + `writing-canvas` heading nodes),
+  - link targets sa deterministyczne (`anchorId`), z deduplikacja (`intro`, `intro-2`, ...),
+  - custom `anchorId` jest respektowany i tylko deduplikowany gdy wystapi konflikt,
+  - dla pustego zakresu headingow renderer zwraca empty-state lub ukrywa TOC, zgodnie z `hideIfEmpty`.
 - legacy posts without `data.document` are auto-coerced from legacy fields (`content`/`excerpt`) before runtime rendering.
 - read-path compatibility adapter:
   - legacy text blocks (`paragraph`, `heading`, `list`, `quote`, `image`) sa grupowane do segmentow `writing-canvas` bez zapisu migracyjnego,

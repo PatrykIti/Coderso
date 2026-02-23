@@ -11,7 +11,12 @@
     "dev:core": "bun --cwd core dev",
     "dev:store": "bun --cwd store dev",
     "lint": "bun --cwd core lint && bun --cwd core lint:types && bun --cwd store lint",
-    "test": "bun --cwd core test && bun --cwd store test",
+    "test": "bun test tests/unit tests/integration tests/perf tests/security",
+    "test:full": "bun test tests/unit tests/integration tests/perf tests/security",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:perf": "bun test tests/perf",
+    "test:security": "bun test tests/security",
     "gates:coderso": "bun scripts/coderso-release-gates.ts --report .tmp/coderso-release-gates.json",
     "gates:coderso:perf": "bun scripts/coderso-release-gates.ts --gate performance",
     "gates:coderso:security": "bun scripts/coderso-release-gates.ts --gate security"

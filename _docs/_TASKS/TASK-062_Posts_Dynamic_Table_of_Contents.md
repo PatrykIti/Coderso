@@ -5,7 +5,7 @@
 **Category:** CMS/Posts + Runtime + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-061  
-**Status:** To Do
+**Status:** Done (2026-02-23)
 
 ---
 
@@ -62,4 +62,3 @@ Wdrozyc WordPress-like, dynamiczny spis tresci dla postow:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/<new-entry>.md`
-

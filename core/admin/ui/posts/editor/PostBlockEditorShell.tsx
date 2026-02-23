@@ -174,6 +174,7 @@ export function PostBlockEditorShell() {
             onTransformBlock={editor.transformBlock}
             onDeleteBlock={editor.deleteBlock}
             onInsertBlockAfterSelected={editor.insertBlock}
+            onEnsureDynamicTocBlock={editor.ensureDynamicTocBlock}
             outlineVisible={outlineVisible}
           />
         )}

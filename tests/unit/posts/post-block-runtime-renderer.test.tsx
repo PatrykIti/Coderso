@@ -196,3 +196,100 @@ test("mapPostDocumentForRuntime falls back to legacy content and excerpt helpers
   expect(excerpt).toContain("Excerpt from runtime document body.");
   expect(getPostRuntimePlainText(mapped)).toContain("Legacy paragraph content");
 });
+
+test("mapPostDocumentForRuntime builds dynamic toc from heading index with stable anchors", async () => {
+  const mapped = await mapPostDocumentForRuntime({
+    document: {
+      version: 1,
+      blocks: [
+        {
+          id: "toc-1",
+          type: "toc",
+          attrs: {
+            title: "On this page",
+            minLevel: 1,
+            maxLevel: 3,
+          },
+          content: null,
+        },
+        {
+          id: "heading-1",
+          type: "heading",
+          attrs: { level: 2 },
+          content: "Intro",
+        },
+        {
+          id: "heading-2",
+          type: "heading",
+          attrs: { level: 2, anchorId: "custom-anchor" },
+          content: "Manual anchor",
+        },
+        {
+          id: "writing-1",
+          type: "writing-canvas",
+          attrs: {},
+          content: {
+            version: 1,
+            nodes: [
+              {
+                id: "node-1",
+                type: "heading",
+                level: 2,
+                text: "Intro",
+              },
+            ],
+          },
+        },
+      ],
+      meta: {},
+    },
+  });
+
+  const tocBlock = mapped.blocks.find((block) => block.type === "toc");
+  if (!tocBlock?.content.toc) {
+    throw new Error("expected toc block");
+  }
+
+  expect(tocBlock.content.toc.items).toEqual([
+    { anchorId: "intro", level: 2, text: "Intro" },
+    { anchorId: "custom-anchor", level: 2, text: "Manual anchor" },
+    { anchorId: "intro-2", level: 2, text: "Intro" },
+  ]);
+
+  const html = renderToString(<PostBlockRuntimeRenderer document={mapped} />);
+  expect(html).toContain('href="#intro"');
+  expect(html).toContain('href="#intro-2"');
+  expect(html).toContain('href="#custom-anchor"');
+  expect(html).toContain('id="intro"');
+  expect(html).toContain('id="intro-2"');
+});
+
+test("mapPostDocumentForRuntime renders toc empty state when heading range has no matches", async () => {
+  const mapped = await mapPostDocumentForRuntime({
+    document: {
+      version: 1,
+      blocks: [
+        {
+          id: "toc-1",
+          type: "toc",
+          attrs: {
+            minLevel: 3,
+            maxLevel: 6,
+            hideIfEmpty: false,
+          },
+          content: null,
+        },
+        {
+          id: "heading-1",
+          type: "heading",
+          attrs: { level: 1 },
+          content: "Title",
+        },
+      ],
+      meta: {},
+    },
+  });
+
+  const html = renderToString(<PostBlockRuntimeRenderer document={mapped} />);
+  expect(html).toContain("No headings found for this range.");
+});

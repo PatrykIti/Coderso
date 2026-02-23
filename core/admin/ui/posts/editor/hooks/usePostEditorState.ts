@@ -269,6 +269,7 @@ export type UsePostEditorStateResult = {
   updateSelectedBlockAttrs: (patch: Record<string, unknown>) => void;
   setExcerpt: (value: string) => void;
   insertBlock: (type: string) => void;
+  ensureDynamicTocBlock: () => void;
   deleteBlock: (id: string) => void;
   deleteSelectedBlock: () => void;
   moveBlock: (id: string, direction: "up" | "down") => void;
@@ -727,6 +728,13 @@ export function usePostEditorState(): UsePostEditorStateResult {
     [state.selectedBlockId]
   );
 
+  const ensureDynamicTocBlock = useCallback(() => {
+    dispatch({
+      type: "ensure_toc_block",
+      afterBlockId: null,
+    });
+  }, []);
+
   const deleteBlock = useCallback((id: string) => {
     dispatch({ type: "delete_block", id });
   }, []);
@@ -912,6 +920,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     updateSelectedBlockAttrs,
     setExcerpt,
     insertBlock,
+    ensureDynamicTocBlock,
     deleteBlock,
     deleteSelectedBlock,
     moveBlock,
