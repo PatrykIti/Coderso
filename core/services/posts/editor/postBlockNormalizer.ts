@@ -37,7 +37,7 @@ const MAX_WRITING_CANVAS_LIST_ITEMS = 200;
 const MAX_WRITING_CANVAS_CAPTION_LENGTH = 320;
 
 const CALL_OUT_TONES = ["info", "success", "warning", "danger", "neutral"] as const;
-const WRITING_CANVAS_LEVEL_VALUES = new Set([2, 3, 4, 5, 6]);
+const WRITING_CANVAS_LEVEL_VALUES = new Set([1, 2, 3, 4, 5, 6]);
 const writingCanvasNodeTypeSet = new Set<string>(WRITING_CANVAS_NODE_TYPES);
 const writingCanvasWrapSet = new Set<string>(WRITING_CANVAS_WRAP_VALUES);
 const writingCanvasWidthSet = new Set<number>(WRITING_CANVAS_WIDTH_VALUES);
@@ -217,7 +217,7 @@ const normalizeWritingHeadingLevel = (value: unknown) => {
   if (typeof value !== "number" || !Number.isFinite(value)) return 2 as const;
   const rounded = Math.round(value);
   if (!WRITING_CANVAS_LEVEL_VALUES.has(rounded)) return 2 as const;
-  return rounded as 2 | 3 | 4 | 5 | 6;
+  return rounded as 1 | 2 | 3 | 4 | 5 | 6;
 };
 
 const normalizeWritingListItems = (value: unknown) => {

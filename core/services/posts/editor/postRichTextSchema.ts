@@ -13,6 +13,7 @@ export const POST_RICH_TEXT_ALLOWED_TAGS = [
   "blockquote",
   "code",
   "pre",
+  "h1",
   "h2",
   "h3",
   "h4",
@@ -37,6 +38,7 @@ export const postRichTextAlignmentSet = new Set<string>(POST_RICH_TEXT_ALIGNMENT
 
 export const POST_RICH_TEXT_BLOCK_TAGS = [
   "p",
+  "h1",
   "h2",
   "h3",
   "h4",

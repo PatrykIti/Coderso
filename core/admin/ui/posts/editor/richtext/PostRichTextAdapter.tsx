@@ -354,6 +354,9 @@ export function PostRichTextAdapter({
         case "paragraph":
           runCommand("formatBlock", "<p>");
           break;
+        case "heading-1":
+          runCommand("formatBlock", "<h1>");
+          break;
         case "heading-2":
           runCommand("formatBlock", "<h2>");
           break;

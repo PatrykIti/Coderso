@@ -41,7 +41,7 @@ const toTextLines = (value: unknown): string[] => {
 
   const lineBreakAware = serialized
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|h2|h3|h4|h5|h6|blockquote|li|pre)>/gi, "\n");
+    .replace(/<\/(p|h1|h2|h3|h4|h5|h6|blockquote|li|pre)>/gi, "\n");
 
   const plain = decodeHtmlEntities(lineBreakAware.replace(/<[^>]+>/g, ""));
   return plain

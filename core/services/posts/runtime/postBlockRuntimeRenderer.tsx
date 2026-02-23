@@ -115,10 +115,13 @@ const renderHeadingBlock = (block: PostRuntimeMappedBlock) => {
 };
 
 const renderWritingHeadingNode = (
-  level: 2 | 3 | 4 | 5 | 6,
+  level: 1 | 2 | 3 | 4 | 5 | 6,
   html: string,
   className: string
 ) => {
+  if (level === 1) {
+    return <h1 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  }
   if (level === 2) {
     return <h2 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
   }

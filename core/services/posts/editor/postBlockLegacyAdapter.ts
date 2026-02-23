@@ -53,10 +53,11 @@ const isConvertibleLegacyBlockType = (type: PostBlock["type"]) =>
   type === "list" ||
   type === "quote";
 
-const clampHeadingLevel = (value: unknown): 2 | 3 | 4 | 5 | 6 => {
+const clampHeadingLevel = (value: unknown): 1 | 2 | 3 | 4 | 5 | 6 => {
   if (typeof value !== "number" || !Number.isFinite(value)) return 2;
   const rounded = Math.round(value);
-  if (rounded <= 2) return 2;
+  if (rounded <= 1) return 1;
+  if (rounded === 2) return 2;
   if (rounded === 3) return 3;
   if (rounded === 4) return 4;
   if (rounded === 5) return 5;

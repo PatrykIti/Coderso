@@ -6,7 +6,7 @@ test("post editor smart paste converts Word-like HTML into safe insert payload",
   const payload = buildPostRichTextPasteInsert({
     html: `
       <!--[if gte mso 9]><xml><w:WordDocument></w:WordDocument></xml><![endif]-->
-      <h2 class="MsoHeading">Heading</h2>
+      <h1 class="MsoHeading1">Heading</h1>
       <p class="MsoNormal">Paragraph <strong>text</strong>.</p>
       <ol><li>One</li><li>Two</li></ol>
     `,
@@ -15,7 +15,7 @@ test("post editor smart paste converts Word-like HTML into safe insert payload",
 
   expect(payload.mode).toBe("writing-canvas");
   expect(payload.source).toBe("html");
-  expect(payload.html).toContain("<h2>");
+  expect(payload.html).toContain("<h1>");
   expect(payload.html).toContain("<p>");
   expect(payload.html).toContain("<ol>");
   expect(payload.warnings.length).toBeGreaterThan(0);

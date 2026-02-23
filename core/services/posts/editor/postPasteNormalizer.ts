@@ -18,10 +18,15 @@ const MAX_TEXT_INPUT_LENGTH = 150_000;
 const MAX_WRITING_NODES = 200;
 const MAX_LIST_ITEMS = 120;
 
-const blockMatcher = /<(p|h2|h3|h4|h5|h6|blockquote|pre|ul|ol)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+const blockMatcher = /<(p|h1|h2|h3|h4|h5|h6|blockquote|pre|ul|ol)\b[^>]*>([\s\S]*?)<\/\1>/gi;
 const listItemMatcher = /<li\b[^>]*>([\s\S]*?)<\/li>/gi;
-const blockLikeTagsMatcher = /<\/?(p|h[2-6]|blockquote|pre|ul|ol|li)\b[^>]*>/gi;
+const blockLikeTagsMatcher = /<\/?(p|h[1-6]|blockquote|pre|ul|ol|li)\b[^>]*>/gi;
 const spanTagMatcher = /<\/?span\b[^>]*>/gi;
+const headingLevelClassMatcher = /\b(?:msoheading|heading)\s*[-_]?([1-6])\b/i;
+const headingLevelStyleMatcher = /\bmso-outline-level\s*:\s*([1-6])\b/i;
+const headingStyleNameMatcher =
+  /\bmso-style-name\s*:\s*["']?\s*(?:heading|naglowek)\s*([1-6])\b/i;
+const headingTitleMatcher = /\bmso-title\b/i;
 
 const textTrim = (value: string) => value.replace(/\r\n/g, "\n").trim();
 
@@ -72,6 +77,51 @@ const normalizeInputChunk = (value: string, maxLength: number) => {
     value: normalized.slice(0, maxLength),
     truncated: true,
   };
+};
+
+const clampHeadingLevel = (level: number): 1 | 2 | 3 | 4 | 5 | 6 => {
+  if (level <= 1) return 1;
+  if (level === 2) return 2;
+  if (level === 3) return 3;
+  if (level === 4) return 4;
+  if (level === 5) return 5;
+  return 6;
+};
+
+const parseHeadingLevelFromWordAttrs = (rawAttrs: string): 1 | 2 | 3 | 4 | 5 | 6 | null => {
+  if (!rawAttrs) return null;
+  const attrs = rawAttrs.toLowerCase();
+
+  const outlineMatch = attrs.match(headingLevelStyleMatcher);
+  if (outlineMatch?.[1]) {
+    return clampHeadingLevel(Number(outlineMatch[1]));
+  }
+
+  const classMatch = attrs.match(headingLevelClassMatcher);
+  if (classMatch?.[1]) {
+    return clampHeadingLevel(Number(classMatch[1]));
+  }
+
+  const styleNameMatch = attrs.match(headingStyleNameMatcher);
+  if (styleNameMatch?.[1]) {
+    return clampHeadingLevel(Number(styleNameMatch[1]));
+  }
+
+  if (/\bmsoheading\b/i.test(attrs) || headingTitleMatcher.test(attrs)) {
+    return 1;
+  }
+
+  return null;
+};
+
+const normalizeWordHeadingMarkup = (value: string) => {
+  if (!value) return value;
+
+  return value.replace(/<p\b([^>]*)>([\s\S]*?)<\/p>/gi, (match, rawAttrs, innerHtml) => {
+    const level = parseHeadingLevelFromWordAttrs(String(rawAttrs ?? ""));
+    if (!level) return match;
+    return `<h${level}>${innerHtml ?? ""}</h${level}>`;
+  });
 };
 
 const normalizeInlineRichText = (value: string) => {
@@ -216,11 +266,11 @@ const mapSanitizedHtmlToNodes = (
 
     if (tag.startsWith("h")) {
       const levelRaw = Number(tag.slice(1));
-      const level = Number.isFinite(levelRaw) && levelRaw >= 2 && levelRaw <= 6 ? levelRaw : 2;
+      const level = Number.isFinite(levelRaw) && levelRaw >= 1 && levelRaw <= 6 ? levelRaw : 2;
       nodes.push({
         id: `node-${nodes.length + 1}`,
         type: "heading",
-        level: level as 2 | 3 | 4 | 5 | 6,
+        level: level as 1 | 2 | 3 | 4 | 5 | 6,
         text: normalized,
       });
     } else if (tag === "blockquote" || tag === "pre") {
@@ -324,7 +374,7 @@ export function normalizePostPastePayload(
     });
   }
 
-  const htmlCandidate = textTrim(normalizedHtmlInput.value);
+  const htmlCandidate = textTrim(normalizeWordHeadingMarkup(normalizedHtmlInput.value));
   const textCandidate = textTrim(normalizedTextInput.value);
 
   if (!htmlCandidate && !textCandidate) {

@@ -19,6 +19,12 @@
   - dirty-state jest czytany z ref, a nie z dependency callbacku,
   - wyeliminowano przypadki losowego `Loading post editor...` po kolejnych paste/preview sekwencjach.
 
+### Validation + Smart Paste Follow-up
+- Autosave/metadata schema dla posts akceptuje nullable SEO fields (`title`, `description`, `canonicalUrl`, `robots`), co usuwa bledy `validation_error` przy pustych wartosciach SEO.
+- Smart paste rozszerzono o Word heading normalization:
+  - `<h1>` z payloadu jest mapowane do `heading(level=1)`,
+  - heading-like paragrafy Word (`MsoHeading*`, `Heading 1..6`, `mso-outline-level:1..6`) sa mapowane do odpowiadajacego `heading(level=1..6)`.
+
 ### Tests
 - Dodano unit tests dla save-sync helperow:
   - mode normalization,

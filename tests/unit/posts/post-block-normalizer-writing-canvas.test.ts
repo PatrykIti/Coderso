@@ -25,6 +25,12 @@ test("normalizePostBlockDocument normalizes writing-canvas nodes and limits", ()
               text: "<h2>Title</h2>",
             },
             {
+              id: "Main-title",
+              type: "heading",
+              level: 1,
+              text: "<h1>Main title</h1>",
+            },
+            {
               id: "List-1",
               type: "list",
               ordered: true,
@@ -60,14 +66,15 @@ test("normalizePostBlockDocument normalizes writing-canvas nodes and limits", ()
   };
 
   expect(content.version).toBe(1);
-  expect(content.nodes).toHaveLength(4);
+  expect(content.nodes).toHaveLength(5);
   expect(content.nodes[0]?.id).toBe("intro");
   expect(content.nodes[1]?.id).toBe("intro-2");
   expect(content.nodes[1]?.level).toBe(2);
-  expect(content.nodes[2]?.items).toEqual(["<p>One</p>", "<p>Two</p>"]);
-  expect(content.nodes[3]?.mediaId).toBe("media-1");
-  expect(content.nodes[3]?.wrap).toBe("right");
-  expect(content.nodes[3]?.widthPercent).toBe(50);
+  expect(content.nodes[2]?.level).toBe(1);
+  expect(content.nodes[3]?.items).toEqual(["<p>One</p>", "<p>Two</p>"]);
+  expect(content.nodes[4]?.mediaId).toBe("media-1");
+  expect(content.nodes[4]?.wrap).toBe("right");
+  expect(content.nodes[4]?.widthPercent).toBe(50);
 });
 
 test("normalizePostBlockDocument uses default writing-canvas node for invalid payload", () => {

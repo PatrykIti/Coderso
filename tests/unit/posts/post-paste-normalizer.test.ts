@@ -95,3 +95,51 @@ test("normalizePostPastePayload preserves image-only html as writing content", (
   expect(paragraph.text).toContain("<img");
   expect(result.html).toContain("<img");
 });
+
+test("normalizePostPastePayload maps h1 from Word payload into heading node", () => {
+  const result = normalizePostPastePayload({
+    html: "<h1>Primary heading</h1><p>Body text</p>",
+    text: "",
+  });
+
+  expect(result.mode).toBe("writing-canvas");
+  expect(result.nodes[0]?.type).toBe("heading");
+  const heading = result.nodes[0];
+  if (!heading || heading.type !== "heading") {
+    throw new Error("expected heading node");
+  }
+  expect(heading.level).toBe(1);
+  expect(postRichTextToPlainText(heading.text)).toContain("Primary heading");
+});
+
+test("normalizePostPastePayload maps Word heading-like paragraph classes into heading node", () => {
+  const result = normalizePostPastePayload({
+    html: '<p class="MsoHeading1">Offer title</p><p>Paragraph</p>',
+    text: "",
+  });
+
+  expect(result.mode).toBe("writing-canvas");
+  expect(result.nodes[0]?.type).toBe("heading");
+  const heading = result.nodes[0];
+  if (!heading || heading.type !== "heading") {
+    throw new Error("expected heading node");
+  }
+  expect(heading.level).toBe(1);
+  expect(postRichTextToPlainText(heading.text)).toContain("Offer title");
+});
+
+test("normalizePostPastePayload keeps Word heading hierarchy from outline style", () => {
+  const result = normalizePostPastePayload({
+    html: '<p style="mso-outline-level:2">Section</p><p style="mso-outline-level:3">Subsection</p>',
+    text: "",
+  });
+
+  expect(result.mode).toBe("writing-canvas");
+  const section = result.nodes[0];
+  const subsection = result.nodes[1];
+  if (!section || section.type !== "heading" || !subsection || subsection.type !== "heading") {
+    throw new Error("expected heading nodes");
+  }
+  expect(section.level).toBe(2);
+  expect(subsection.level).toBe(3);
+});

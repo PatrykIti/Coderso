@@ -47,10 +47,10 @@ export const postMetadataSchema = {
     seo: {
       type: "object",
       properties: {
-        title: { type: "string" },
-        description: { type: "string" },
-        canonicalUrl: { type: "string" },
-        robots: { type: "string" },
+        title: { type: ["string", "null"] },
+        description: { type: ["string", "null"] },
+        canonicalUrl: { type: ["string", "null"] },
+        robots: { type: ["string", "null"] },
       },
       additionalProperties: false,
     },
@@ -92,10 +92,10 @@ export const postAutosaveSchema = {
     seo: {
       type: "object",
       properties: {
-        title: { type: "string" },
-        description: { type: "string" },
-        canonicalUrl: { type: "string" },
-        robots: { type: "string" },
+        title: { type: ["string", "null"] },
+        description: { type: ["string", "null"] },
+        canonicalUrl: { type: ["string", "null"] },
+        robots: { type: ["string", "null"] },
       },
       additionalProperties: false,
     },

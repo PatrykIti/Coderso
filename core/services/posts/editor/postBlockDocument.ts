@@ -42,7 +42,7 @@ export type WritingCanvasParagraphNode = {
 export type WritingCanvasHeadingNode = {
   id: string;
   type: "heading";
-  level: 2 | 3 | 4 | 5 | 6;
+  level: 1 | 2 | 3 | 4 | 5 | 6;
   text: string;
 };
 

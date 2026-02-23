@@ -5,6 +5,7 @@ import {
   Bold,
   Code2,
   Eraser,
+  Heading1,
   Heading2,
   Heading3,
   Heading4,
@@ -32,6 +33,7 @@ export type PostRichTextCommand =
   | "link"
   | "highlight"
   | "paragraph"
+  | "heading-1"
   | "heading-2"
   | "heading-3"
   | "heading-4"
@@ -63,6 +65,7 @@ const primaryActions: ActionButton[] = [
   { id: "italic", label: "Italic", icon: Italic },
   { id: "link", label: "Link", icon: Link2 },
   { id: "paragraph", label: "Paragraph", icon: Pilcrow },
+  { id: "heading-1", label: "Heading 1", icon: Heading1 },
   { id: "heading-2", label: "Heading 2", icon: Heading2 },
   { id: "bullet-list", label: "Bullet list", icon: List },
   { id: "quote", label: "Quote", icon: Quote },

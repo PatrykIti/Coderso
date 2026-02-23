@@ -78,7 +78,7 @@ test("mapPostDocumentForRuntime renders writing-canvas nodes and keeps parity me
                 {
                   id: "node-2",
                   type: "heading",
-                  level: 3,
+                  level: 1,
                   text: "<em>Writing heading</em>",
                 },
                 {
@@ -116,6 +116,7 @@ test("mapPostDocumentForRuntime renders writing-canvas nodes and keeps parity me
   const html = renderToString(<PostBlockRuntimeRenderer document={mapped} />);
   expect(html).toContain("Writing canvas paragraph");
   expect(html).toContain("Writing heading");
+  expect(html).toContain("<h1");
   expect(html).toContain("Point A");
   expect(html).toContain("https://cdn.example.com/media/writing.jpg");
   expect(html).toContain('data-post-runtime-warning-count="0"');
