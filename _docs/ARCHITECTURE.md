@@ -104,6 +104,10 @@ przez `setup.completed=true`.
     - read-path adapter (`adaptLegacyDocumentForRuntime`) grupuje legacy text blocks do segmentow `writing-canvas` bez destrukcyjnej migracji danych,
     - unsupported/non-convertible legacy blocks pozostaja renderowane w trybie legacy (bez utraty tresci),
     - runtime dokument niesie instrumentacje warningow (`warnings[]`) i publikuje diagnostyczne data-attrs w HTML.
+  - **TASK-061-09 (done):** save sync strategy dla post editora:
+    - autosave i save-before-preview uzywaja `silent sync` (bez `hydrate` reducera),
+    - editor zachowuje lokalny canvas state bez wizualnego reloadu sekcji podczas runtime preview,
+    - full `hydrate` pozostaje dla explicit refresh/restore flow.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

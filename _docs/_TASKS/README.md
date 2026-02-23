@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 17 tasks
 - **In Progress:** 3 tasks
-- **Done:** 457 tasks
+- **Done:** 458 tasks
 
 ---
 
@@ -73,6 +73,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-061-09 | Post Editor Silent Save and Preview Without Hydrate Reload | High | Medium | Done: autosave i save-before-preview korzystaja z silent sync bez hydrate resetu canvasu |
 | TASK-061-07 | Runtime Renderer Parity and Backward Compatibility | High | Medium | Done: writing-canvas runtime mapper/renderer parity, legacy read-path adapter (non-destructive), and runtime warning diagnostics |
 | TASK-061-06 | Editor UI Integration (Ribbon + Canvas + List View) | High | Large | Done: writing-first editor integration (default writing-canvas, ribbon quick actions, logical outline labels, and inline canvas/details context) |
 | TASK-061-05 | Image Wrap Controls and Layout Semantics | High | Medium | Done: shared image wrap layout contract, inspector/rich-text controls, runtime+canvas CSS parity, and mobile fallback |

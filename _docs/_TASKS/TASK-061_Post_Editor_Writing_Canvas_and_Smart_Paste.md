@@ -55,6 +55,7 @@ Obecny model jest technicznie poprawny, ale mniej intuicyjny dla scenariusza:
 - `TASK-061-05`: Image Wrap Controls and Layout Semantics
 - `TASK-061-06`: Editor UI Integration (Ribbon + Canvas + List View)
 - `TASK-061-07`: Runtime Renderer Parity and Backward Compatibility
+- `TASK-061-09`: Silent Save and Preview Without Hydrate Reload
 - `TASK-061-08`: QA, Docs, Changelog, and Closure
 
 ## Implementation Order
@@ -65,7 +66,8 @@ Obecny model jest technicznie poprawny, ale mniej intuicyjny dla scenariusza:
 5. `061-05` wrap/layout semantics.
 6. `061-06` integracja edytora.
 7. `061-07` runtime + compatibility.
-8. `061-08` testy, dokumentacja, closure.
+8. `061-09` save strategy UX hardening (silent sync for autosave/preview).
+9. `061-08` testy, dokumentacja, closure.
 
 ## Acceptance Criteria
 1. Paste duzego dokumentu z Word tworzy czytelny writing canvas bez smieciowego markupu.
@@ -106,3 +108,4 @@ Obecny model jest technicznie poprawny, ale mniej intuicyjny dla scenariusza:
 - `TASK-061-05` completed: image wrap/width/margin layout semantics wired end-to-end (inspector + rich-text controls + runtime/canvas CSS parity + mobile fallback).
 - `TASK-061-06` completed: writing-first editor integration delivered (default writing-canvas, ribbon quick actions, logical list view labels, and canvas/details context updates).
 - `TASK-061-07` completed: runtime parity and compatibility layer delivered (`writing-canvas` runtime mapping/renderer, legacy read-path adapter to writing segments, and runtime warning instrumentation).
+- `TASK-061-09` completed: autosave i save-before-preview przeszly na silent sync (bez hydrate), co usuwa reload canvasu podczas runtime preview i regularnego autosave.

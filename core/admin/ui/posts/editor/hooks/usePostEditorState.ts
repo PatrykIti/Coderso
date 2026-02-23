@@ -178,6 +178,32 @@ const serializeMetadataDraft = (draft: MetadataDraftState) =>
     },
   });
 
+export type PostDraftSyncMode = "silent" | "hydrate";
+
+export const normalizePostDraftSyncMode = (
+  mode: PostDraftSyncMode | undefined
+): PostDraftSyncMode => (mode === "hydrate" ? "hydrate" : "silent");
+
+export const buildSilentSyncSnapshot = (
+  post: PostDetail,
+  savedAt?: string
+) => {
+  const metadataDraft = createMetadataDraftState(post);
+  return {
+    title: post.title,
+    slug: post.slug,
+    status: post.status,
+    featuredImage:
+      isRecord(post.data) && typeof post.data.featuredImage === "string"
+        ? post.data.featuredImage
+        : "",
+    metadataDraft,
+    metadataSignature: serializeMetadataDraft(metadataDraft),
+    baseData: getPostDataRecord(post),
+    savedAt: savedAt ?? post.updatedAt,
+  };
+};
+
 export type UsePostEditorStateResult = {
   postId: string | null;
   post: PostDetail | null;
@@ -319,6 +345,21 @@ export function usePostEditorState(): UsePostEditorStateResult {
     });
   }, []);
 
+  const applySavedPostSilently = useCallback((nextPost: PostDetail, savedAt?: string) => {
+    const snapshot = buildSilentSyncSnapshot(nextPost, savedAt);
+    setPost(nextPost);
+    setTitle(snapshot.title);
+    setSlug(snapshot.slug);
+    setStatus(snapshot.status);
+    setFeaturedImage(snapshot.featuredImage);
+    setMetadataDraft(snapshot.metadataDraft);
+    baseDataRef.current = snapshot.baseData;
+    baseMetadataSignatureRef.current = snapshot.metadataSignature;
+    dispatch({ type: "mark_saved", at: snapshot.savedAt });
+    setLastSavedAt(snapshot.savedAt);
+    setRemoteUpdatePending(false);
+  }, []);
+
   const titleDirty = title !== (post?.title ?? "");
   const slugDirty = slug !== (post?.slug ?? "");
   const baselineFeaturedImage =
@@ -451,10 +492,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     setAutosaveError(null);
     try {
       const result = await autosavePost(postId, buildAutosavePayload());
-      applyLoadedPost(result.post);
-      dispatch({ type: "mark_saved", at: result.savedAt });
-      setLastSavedAt(result.savedAt);
-      setRemoteUpdatePending(false);
+      applySavedPostSilently(result.post, result.savedAt);
     } catch (err) {
       if (isApiClientError(err)) {
         setAutosaveError(err.message);
@@ -465,7 +503,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
       autosaveInFlightRef.current = false;
       setAutosaveSaving(false);
     }
-  }, [applyLoadedPost, buildAutosavePayload, hasUnsavedChanges, postId, state.saving]);
+  }, [applySavedPostSilently, buildAutosavePayload, hasUnsavedChanges, postId, state.saving]);
 
   const { cancel: cancelAutosave } = usePostAutosave({
     enabled: Boolean(postId) && !loading && !remoteUpdatePending,
@@ -499,8 +537,9 @@ export function usePostEditorState(): UsePostEditorStateResult {
     [postId]
   );
 
-  const saveDraft = useCallback(async () => {
+  const saveDraftInternal = useCallback(async (options?: { syncMode?: PostDraftSyncMode }) => {
     if (!postId) return;
+    const syncMode = normalizePostDraftSyncMode(options?.syncMode);
     cancelAutosave();
     dispatch({ type: "set_saving", saving: true });
     setAutosaveError(null);
@@ -514,11 +553,11 @@ export function usePostEditorState(): UsePostEditorStateResult {
       const synchronizedPost = metadataDirty
         ? await updatePostMetadata(postId, buildMetadataPayload())
         : updatedDraft;
-      applyLoadedPost(synchronizedPost);
-      const savedAt = new Date().toISOString();
-      dispatch({ type: "mark_saved", at: savedAt });
-      setLastSavedAt(savedAt);
-      setRemoteUpdatePending(false);
+      if (syncMode === "hydrate") {
+        applyLoadedPost(synchronizedPost);
+      } else {
+        applySavedPostSilently(synchronizedPost);
+      }
     } catch (err) {
       dispatch({ type: "set_saving", saving: false });
       if (isApiClientError(err)) {
@@ -537,7 +576,12 @@ export function usePostEditorState(): UsePostEditorStateResult {
     postId,
     slug,
     title,
+    applySavedPostSilently,
   ]);
+
+  const saveDraft = useCallback(async () => {
+    await saveDraftInternal({ syncMode: "silent" });
+  }, [saveDraftInternal]);
 
   const publish = useCallback(async () => {
     if (!postId) return;
@@ -582,7 +626,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     setError(null);
     try {
       if (hasUnsavedChanges) {
-        await saveDraft();
+        await saveDraftInternal({ syncMode: "silent" });
       }
       const result = await previewPost(postId, 30);
       setPreviewUrl(result.previewUrl);
@@ -596,7 +640,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     } finally {
       setPreviewLoading(false);
     }
-  }, [hasUnsavedChanges, postId, saveDraft]);
+  }, [hasUnsavedChanges, postId, saveDraftInternal]);
 
   const selectedBlock = useMemo(() => {
     if (!state.selectedBlockId) return null;

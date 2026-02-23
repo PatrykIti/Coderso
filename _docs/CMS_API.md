@@ -601,6 +601,11 @@ Routes:
 - `POST /posts/:id/duplicate`
 - `DELETE /posts/:id`
 
+Editor save behavior (update `TASK-061-09`):
+- autosave i save-before-preview dzialaja jako client-side `silent sync` (bez ponownego hydrate dokumentu w editor state),
+- endpointy API i payloady pozostaja bez zmian,
+- full hydrate jest wykorzystywany tylko dla explicit refresh/restore konfliktow.
+
 Backfill endpoint (`POST /posts/migration/backfill`) - request payload:
 
 ```json
