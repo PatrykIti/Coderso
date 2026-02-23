@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 17 tasks
+- **To Do:** 22 tasks
 - **In Progress:** 3 tasks
 - **Done:** 458 tasks
 
@@ -40,6 +40,11 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
+| TASK-062 | Posts Dynamic Table of Contents (TOC) | High | Large | Dynamic TOC from headings, stable anchors, Word TOC replacement |
+| TASK-062-01 | Dynamic TOC Generation from Post Headings | High | Medium | Runtime-generated TOC from heading index |
+| TASK-062-02 | Stable Heading Anchor IDs and Linking | High | Medium | Deterministic anchor IDs + editor/runtime link parity |
+| TASK-062-03 | Replace Pasted Word TOC with Dynamic TOC | High | Large | Detect Word TOC and convert to dynamic TOC block |
+| TASK-062-04 | TOC QA, Docs, Changelog, and Closure | Medium | Medium | Full regression + docs/changelog/board sync |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
