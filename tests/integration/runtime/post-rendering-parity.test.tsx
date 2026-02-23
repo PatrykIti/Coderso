@@ -26,16 +26,25 @@ test("post detail rendering uses the same block runtime for preview and publishe
       version: 1,
       blocks: [
         {
-          id: "heading-1",
-          type: "heading",
-          attrs: { level: 2 },
-          content: "<h2>Runtime heading</h2>",
-        },
-        {
-          id: "paragraph-1",
-          type: "paragraph",
+          id: "writing-1",
+          type: "writing-canvas",
           attrs: {},
-          content: "<p>Runtime paragraph for preview parity.</p>",
+          content: {
+            version: 1,
+            nodes: [
+              {
+                id: "node-1",
+                type: "heading",
+                level: 2,
+                text: "<p>Runtime heading</p>",
+              },
+              {
+                id: "node-2",
+                type: "paragraph",
+                text: "<p>Runtime paragraph for preview parity.</p>",
+              },
+            ],
+          },
         },
       ],
       meta: {},
@@ -67,6 +76,7 @@ test("post detail rendering uses the same block runtime for preview and publishe
 
   expect(publishedHtml).toContain("post-runtime-blocks");
   expect(previewHtml).toContain("post-runtime-blocks");
+  expect(publishedHtml).toContain('data-post-runtime-warning-count="0"');
   expect(publishedHtml).toContain("Runtime heading");
   expect(previewHtml).toContain("Runtime heading");
   expect(previewHtml).toContain("Preview mode");
@@ -96,4 +106,5 @@ test("legacy post data still renders through runtime fallback", async () => {
 
   expect(html).toContain("Legacy post body fallback.");
   expect(html).toContain("post-runtime-blocks");
+  expect(html).toContain('data-post-runtime-warning-count="0"');
 });

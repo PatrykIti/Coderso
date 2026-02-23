@@ -57,6 +57,70 @@ test("mapPostDocumentForRuntime renders sanitized rich blocks", async () => {
   expect(html).not.toContain("<script>");
 });
 
+test("mapPostDocumentForRuntime renders writing-canvas nodes and keeps parity metadata", async () => {
+  const mapped = await mapPostDocumentForRuntime(
+    {
+      document: {
+        version: 1,
+        blocks: [
+          {
+            id: "writing-1",
+            type: "writing-canvas",
+            attrs: {},
+            content: {
+              version: 1,
+              nodes: [
+                {
+                  id: "node-1",
+                  type: "paragraph",
+                  text: "<p>Writing canvas paragraph</p>",
+                },
+                {
+                  id: "node-2",
+                  type: "heading",
+                  level: 3,
+                  text: "<em>Writing heading</em>",
+                },
+                {
+                  id: "node-3",
+                  type: "list",
+                  ordered: false,
+                  items: ["<p>Point A</p>", "<p>Point B</p>"],
+                },
+                {
+                  id: "node-4",
+                  type: "image",
+                  mediaId: "media-writing",
+                  alt: "Writing image",
+                  caption: "Inline media",
+                  wrap: "right",
+                  widthPercent: 33,
+                },
+              ],
+            },
+          },
+        ],
+        meta: {},
+      },
+    },
+    {
+      getMediaById: async () =>
+        ({
+          id: "media-writing",
+          url: "https://cdn.example.com/media/writing.jpg",
+          alt: "Writing media alt",
+        }) as Awaited<ReturnType<typeof getMediaById>>,
+    }
+  );
+
+  const html = renderToString(<PostBlockRuntimeRenderer document={mapped} />);
+  expect(html).toContain("Writing canvas paragraph");
+  expect(html).toContain("Writing heading");
+  expect(html).toContain("Point A");
+  expect(html).toContain("https://cdn.example.com/media/writing.jpg");
+  expect(html).toContain('data-post-runtime-warning-count="0"');
+});
+
 test("mapPostDocumentForRuntime resolves image media id and embed providers", async () => {
   const mapped = await mapPostDocumentForRuntime(
     {

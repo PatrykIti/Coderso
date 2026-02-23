@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
+- **To Do:** 17 tasks
 - **In Progress:** 3 tasks
-- **Done:** 456 tasks
+- **Done:** 457 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-061-07 | Runtime Renderer Parity and Backward Compatibility | High | Medium | Writing canvas runtime rendering + legacy adapter path |
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
@@ -64,7 +63,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-06 done, pending 061-07..061-08 |
+| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -74,6 +73,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-061-07 | Runtime Renderer Parity and Backward Compatibility | High | Medium | Done: writing-canvas runtime mapper/renderer parity, legacy read-path adapter (non-destructive), and runtime warning diagnostics |
 | TASK-061-06 | Editor UI Integration (Ribbon + Canvas + List View) | High | Large | Done: writing-first editor integration (default writing-canvas, ribbon quick actions, logical outline labels, and inline canvas/details context) |
 | TASK-061-05 | Image Wrap Controls and Layout Semantics | High | Medium | Done: shared image wrap layout contract, inspector/rich-text controls, runtime+canvas CSS parity, and mobile fallback |
 | TASK-061-04 | Clipboard Image Upload and Inline Media Insertion | High | Medium | Done: clipboard image detection, internal media upload, inline image insertion, and sanitizer/schema updates |

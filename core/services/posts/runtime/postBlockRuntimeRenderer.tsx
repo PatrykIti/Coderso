@@ -1,4 +1,8 @@
-import type { PostRuntimeMappedBlock, PostRuntimeMappedDocument } from "./postBlockRuntimeMapper";
+import type {
+  PostRuntimeMappedBlock,
+  PostRuntimeMappedDocument,
+  RuntimeWritingCanvasNode,
+} from "./postBlockRuntimeMapper";
 import { postRichTextToPlainText } from "../editor/postRichTextSerializer";
 import { buildPostImageLayoutClasses } from "../postImageWrapLayout";
 
@@ -110,7 +114,124 @@ const renderHeadingBlock = (block: PostRuntimeMappedBlock) => {
   );
 };
 
+const renderWritingHeadingNode = (
+  level: 2 | 3 | 4 | 5 | 6,
+  html: string,
+  className: string
+) => {
+  if (level === 2) {
+    return <h2 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  }
+  if (level === 3) {
+    return <h3 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  }
+  if (level === 4) {
+    return <h4 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  }
+  if (level === 5) {
+    return <h5 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  }
+  return <h6 className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
+const renderWritingCanvasNode = (
+  block: PostRuntimeMappedBlock,
+  node: RuntimeWritingCanvasNode
+) => {
+  if (node.type === "paragraph") {
+    return (
+      <div
+        key={node.id}
+        className={cx("post-runtime-richtext leading-7", textScaleClass[block.layout.textScale])}
+        dangerouslySetInnerHTML={{ __html: node.html }}
+      />
+    );
+  }
+
+  if (node.type === "heading") {
+    return (
+      <div key={node.id}>
+        {renderWritingHeadingNode(
+          node.level,
+          node.html,
+          cx("font-semibold leading-tight", textScaleClass[block.layout.textScale])
+        )}
+      </div>
+    );
+  }
+
+  if (node.type === "quote") {
+    return (
+      <blockquote
+        key={node.id}
+        className={cx(
+          "rounded-r-lg border-l-4 border-[var(--color-primary)]/60 pl-4 italic",
+          textScaleClass[block.layout.textScale]
+        )}
+        dangerouslySetInnerHTML={{ __html: node.html }}
+      />
+    );
+  }
+
+  if (node.type === "list") {
+    const ListTag = node.ordered ? "ol" : "ul";
+    return (
+      <ListTag
+        key={node.id}
+        className={cx(
+          "space-y-2 pl-6",
+          node.ordered ? "list-decimal" : "list-disc",
+          textScaleClass[block.layout.textScale]
+        )}
+      >
+        {node.items.map((item, index) => (
+          <li key={`${node.id}-${index}`} dangerouslySetInnerHTML={{ __html: item }} />
+        ))}
+      </ListTag>
+    );
+  }
+
+  if (!node.src) {
+    return null;
+  }
+
+  const layoutClasses = buildPostImageLayoutClasses({
+    wrap: node.wrap,
+    widthPercent: node.widthPercent,
+    marginPreset: node.marginPreset,
+  });
+
+  return (
+    <figure key={node.id} className={cx("space-y-2", layoutClasses)}>
+      <img
+        src={node.src}
+        alt={node.alt}
+        loading="lazy"
+        className="post-runtime-image h-auto w-full rounded-lg border object-cover"
+      />
+      {node.caption ? (
+        <figcaption className="text-sm text-muted-foreground">{node.caption}</figcaption>
+      ) : null}
+    </figure>
+  );
+};
+
 const renderBlockContent = (block: PostRuntimeMappedBlock) => {
+  if (block.type === "writing-canvas") {
+    const nodes = block.content.writingCanvas?.nodes ?? [];
+    if (nodes.length === 0) return null;
+    return (
+      <div
+        className={cx(
+          "post-runtime-writing-canvas space-y-4",
+          block.layout.highlight && "rounded-lg border border-amber-300/40 bg-amber-50/40 px-4 py-3"
+        )}
+      >
+        {nodes.map((node) => renderWritingCanvasNode(block, node))}
+      </div>
+    );
+  }
+
   if (block.type === "paragraph") {
     return (
       <div
@@ -297,8 +418,15 @@ export function PostBlockRuntimeRenderer({ document, className }: PostBlockRunti
   if (!Array.isArray(document.blocks) || document.blocks.length === 0) {
     return null;
   }
+  const runtimeWarnings = Array.isArray(document.warnings) ? document.warnings : [];
   return (
-    <article className={cx("post-runtime-blocks mx-auto w-full max-w-4xl space-y-2", className)}>
+    <article
+      className={cx("post-runtime-blocks mx-auto w-full max-w-4xl space-y-2", className)}
+      data-post-runtime-warning-count={runtimeWarnings.length}
+      data-post-runtime-warnings={
+        runtimeWarnings.length > 0 ? runtimeWarnings.join(",") : undefined
+      }
+    >
       {document.blocks.map((block) => renderBlock(block))}
     </article>
   );

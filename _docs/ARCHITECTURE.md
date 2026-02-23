@@ -99,6 +99,11 @@ przez `setup.completed=true`.
     - ribbon `Insert` eksponuje quick actions dla nietechnicznego flow (`Add writing section`, `Add CTA block`, `Add embed block`, `Add image block`),
     - outline/list view pokazuje logiczne etykiety sekcji (`Writing canvas`, `CTA block`, `Embed block`),
     - `writing-canvas` jest edytowalny inline na wspolnym canvasie, a details panel pokazuje kontekstowe wskazowki dla writing flow.
+  - **TASK-061-07 (done):** runtime renderer parity + backward compatibility:
+    - `postBlockRuntimeMapper` i `postBlockRuntimeRenderer` obsluguja `writing-canvas` jako first-class runtime block (paragraph/heading/list/quote/image nodes),
+    - read-path adapter (`adaptLegacyDocumentForRuntime`) grupuje legacy text blocks do segmentow `writing-canvas` bez destrukcyjnej migracji danych,
+    - unsupported/non-convertible legacy blocks pozostaja renderowane w trybie legacy (bez utraty tresci),
+    - runtime dokument niesie instrumentacje warningow (`warnings[]`) i publikuje diagnostyczne data-attrs w HTML.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

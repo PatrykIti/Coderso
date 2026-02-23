@@ -715,7 +715,16 @@ Preview response:
 
 Runtime rendering contract (posts):
 - post detail runtime (`/preview?type=content...` and published content routes) renders `data.document` block document with the same pipeline in preview and published mode,
+- `writing-canvas` jest first-class runtime payloadem:
+  - nodes (`paragraph`, `heading`, `list`, `quote`, `image`) sa mapowane i renderowane bez fallbacku do legacy string fields,
+  - inline image nodes zachowuja shared wrap layout semantics (`wrap`, `widthPercent`, `marginPreset`).
 - legacy posts without `data.document` are auto-coerced from legacy fields (`content`/`excerpt`) before runtime rendering.
+- read-path compatibility adapter:
+  - legacy text blocks (`paragraph`, `heading`, `list`, `quote`, `image`) sa grupowane do segmentow `writing-canvas` bez zapisu migracyjnego,
+  - unsupported/non-convertible blocks pozostaja w legacy render path (non-destructive fallback).
+- runtime diagnostics:
+  - mapper zwraca `warnings[]` dla dropped/invalid runtime nodes,
+  - renderer publikuje `data-post-runtime-warning-count` oraz `data-post-runtime-warnings` na root `post-runtime-blocks`.
 - public list/detail dla content route typu `post/posts` jest rozwiązywany przez dedykowany posts storage (`posts*`), bez odwołania do `content_entries`.
 
 ---

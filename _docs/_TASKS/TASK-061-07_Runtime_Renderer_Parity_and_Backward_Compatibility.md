@@ -5,7 +5,7 @@
 **Category:** Runtime/Compatibility  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-061-02, TASK-061-05, TASK-061-06  
-**Status:** To Do
+**Status:** Done (2026-02-23)
 
 ---
 
@@ -58,4 +58,28 @@ legacyAdapter(blocks):
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
+- `_docs/CODERSO_MODULES.md`
 - `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/README.md`
+
+## Validation Executed
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun test tests/unit/posts/post-legacy-adapter-writing-canvas.test.ts tests/unit/posts/post-block-runtime-renderer.test.tsx tests/integration/runtime/post-rendering-parity.test.tsx`
+  - Result: `8 pass`, `0 fail`
+- `bun test`
+  - Result: `1384 pass`, `149 skip`, `0 fail`
+
+## Closure Notes
+- Runtime mapper/rendering now supports `writing-canvas` as first-class runtime block content:
+  - typed writing nodes (`paragraph`, `heading`, `list`, `quote`, `image`) are mapped deterministically,
+  - renderer preserves shared image wrap semantics for inline writing-canvas images.
+- Added non-destructive runtime legacy adapter path:
+  - legacy text blocks are grouped into `writing-canvas` segments on read path,
+  - unsupported/non-convertible blocks remain unchanged and continue rendering.
+- Added runtime instrumentation:
+  - mapper collects warning codes for invalid/dropped legacy or writing nodes,
+  - runtime HTML includes warning metadata attributes (`data-post-runtime-warning-count`, `data-post-runtime-warnings`) for diagnostics.
+- Extended parity coverage:
+  - preview/published detail rendering parity now validated on `writing-canvas` payloads,
+  - dedicated adapter tests verify legacy-to-writing conversion and safe fallback behavior.

@@ -1,5 +1,5 @@
 import type { PostBlockType } from "../editor/postBlockDocument";
-import { coercePostDocument } from "../editor/postBlockLegacyAdapter";
+import { coercePostDocument, adaptLegacyDocumentForRuntime } from "../editor/postBlockLegacyAdapter";
 import {
   postRichTextToPlainText,
   serializePostRichText,
@@ -191,6 +191,50 @@ type RuntimeEmbedConfig = {
   lazy: boolean;
 };
 
+type RuntimeWritingCanvasParagraphNode = {
+  id: string;
+  type: "paragraph";
+  html: string;
+};
+
+type RuntimeWritingCanvasHeadingNode = {
+  id: string;
+  type: "heading";
+  level: 2 | 3 | 4 | 5 | 6;
+  html: string;
+};
+
+type RuntimeWritingCanvasListNode = {
+  id: string;
+  type: "list";
+  ordered: boolean;
+  items: string[];
+};
+
+type RuntimeWritingCanvasQuoteNode = {
+  id: string;
+  type: "quote";
+  html: string;
+};
+
+type RuntimeWritingCanvasImageNode = {
+  id: string;
+  type: "image";
+  src: string | null;
+  alt: string;
+  caption?: string;
+  wrap: PostImageWrap;
+  widthPercent: PostImageWidth;
+  marginPreset: PostImageMargin;
+};
+
+export type RuntimeWritingCanvasNode =
+  | RuntimeWritingCanvasParagraphNode
+  | RuntimeWritingCanvasHeadingNode
+  | RuntimeWritingCanvasListNode
+  | RuntimeWritingCanvasQuoteNode
+  | RuntimeWritingCanvasImageNode;
+
 type RuntimeBlockContent = {
   html?: string;
   listItems?: string[];
@@ -212,6 +256,9 @@ type RuntimeBlockContent = {
   embed?: RuntimeEmbedConfig;
   language?: string;
   showLineNumbers?: boolean;
+  writingCanvas?: {
+    nodes: RuntimeWritingCanvasNode[];
+  };
 };
 
 export type PostRuntimeMappedBlock = {
@@ -224,6 +271,7 @@ export type PostRuntimeMappedBlock = {
 export type PostRuntimeMappedDocument = {
   version: number;
   blocks: PostRuntimeMappedBlock[];
+  warnings: string[];
   meta: {
     title?: string;
     excerpt?: string;
@@ -293,6 +341,138 @@ const resolveImageSrc = async (
   }
 };
 
+const pushRuntimeWarning = (warnings: string[], warning: string | undefined) => {
+  if (!warning) return;
+  if (warnings.includes(warning)) return;
+  warnings.push(warning);
+};
+
+const toNodeId = (value: unknown, fallback: string) => {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+};
+
+const toHeadingLevel = (value: unknown): 2 | 3 | 4 | 5 | 6 => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 2;
+  const rounded = Math.round(value);
+  if (rounded <= 2) return 2;
+  if (rounded === 3) return 3;
+  if (rounded === 4) return 4;
+  if (rounded === 5) return 5;
+  return 6;
+};
+
+const mapWritingCanvasNodesForRuntime = async (
+  content: unknown,
+  blockId: string,
+  mediaCache: Map<string, string | null>,
+  readMedia: typeof getMediaById,
+  warnings: string[]
+): Promise<RuntimeWritingCanvasNode[]> => {
+  if (!isRecord(content) || !Array.isArray(content.nodes)) {
+    pushRuntimeWarning(warnings, `runtime_writing_canvas_invalid_content:${blockId}`);
+    return [];
+  }
+
+  const nodes: RuntimeWritingCanvasNode[] = [];
+  let ordinal = 1;
+
+  for (const node of content.nodes) {
+    if (!isRecord(node)) {
+      pushRuntimeWarning(warnings, `runtime_writing_canvas_invalid_node:${blockId}:${ordinal}`);
+      ordinal += 1;
+      continue;
+    }
+
+    const type = typeof node.type === "string" ? node.type.trim().toLowerCase() : "";
+    const nodeId = toNodeId(node.id, `${blockId}-node-${ordinal}`);
+
+    if (type === "paragraph") {
+      nodes.push({
+        id: nodeId,
+        type: "paragraph",
+        html: serializePostRichText(typeof node.text === "string" ? node.text : ""),
+      });
+      ordinal += 1;
+      continue;
+    }
+
+    if (type === "heading") {
+      nodes.push({
+        id: nodeId,
+        type: "heading",
+        level: toHeadingLevel(node.level),
+        html: serializePostRichText(typeof node.text === "string" ? node.text : ""),
+      });
+      ordinal += 1;
+      continue;
+    }
+
+    if (type === "quote") {
+      nodes.push({
+        id: nodeId,
+        type: "quote",
+        html: serializePostRichText(typeof node.text === "string" ? node.text : ""),
+      });
+      ordinal += 1;
+      continue;
+    }
+
+    if (type === "list") {
+      const items = Array.isArray(node.items)
+        ? node.items
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => serializePostRichText(item))
+            .filter((item) => postRichTextToPlainText(item).trim().length > 0)
+        : [];
+      if (items.length === 0) {
+        pushRuntimeWarning(warnings, `runtime_writing_canvas_empty_list:${blockId}:${nodeId}`);
+      } else {
+        nodes.push({
+          id: nodeId,
+          type: "list",
+          ordered: node.ordered === true,
+          items,
+        });
+      }
+      ordinal += 1;
+      continue;
+    }
+
+    if (type === "image") {
+      const mediaId =
+        typeof node.mediaId === "string" && node.mediaId.trim().length > 0
+          ? node.mediaId.trim()
+          : null;
+      const imageLayout = resolvePostImageLayoutFromAttrs({
+        wrap: node.wrap,
+        widthPercent: node.widthPercent,
+        marginPreset: node.marginPreset,
+      });
+      nodes.push({
+        id: nodeId,
+        type: "image",
+        src: await resolveImageSrc(mediaId, mediaCache, readMedia),
+        alt: typeof node.alt === "string" ? node.alt : "",
+        ...(typeof node.caption === "string" && node.caption.trim().length > 0
+          ? { caption: node.caption.trim() }
+          : {}),
+        wrap: imageLayout.wrap,
+        widthPercent: imageLayout.widthPercent,
+        marginPreset: imageLayout.marginPreset,
+      });
+      ordinal += 1;
+      continue;
+    }
+
+    pushRuntimeWarning(warnings, `runtime_writing_canvas_node_dropped:${blockId}:${nodeId}:${type}`);
+    ordinal += 1;
+  }
+
+  return nodes;
+};
+
 const readListItemText = (items: string[]) =>
   items
     .map((item) => postRichTextToPlainText(item))
@@ -327,7 +507,30 @@ const readWritingCanvasText = (content: unknown) => {
     .join(" ");
 };
 
+const readRuntimeWritingCanvasText = (nodes: RuntimeWritingCanvasNode[]) =>
+  nodes
+    .map((node) => {
+      if (node.type === "paragraph" || node.type === "heading" || node.type === "quote") {
+        return postRichTextToPlainText(node.html);
+      }
+      if (node.type === "list") {
+        return node.items
+          .map((item) => postRichTextToPlainText(item))
+          .join(" ");
+      }
+      if (node.type === "image") {
+        return `${node.alt} ${node.caption ?? ""}`.trim();
+      }
+      return "";
+    })
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(" ");
+
 const readBlockPlainText = (block: PostRuntimeMappedBlock) => {
+  if (block.content.writingCanvas?.nodes) {
+    return readRuntimeWritingCanvasText(block.content.writingCanvas.nodes);
+  }
   if (block.content.html) {
     return postRichTextToPlainText(block.content.html);
   }
@@ -347,9 +550,12 @@ export async function mapPostDocumentForRuntime(
   data: unknown,
   options?: MapRuntimeOptions
 ): Promise<PostRuntimeMappedDocument> {
-  const document = coercePostDocument(data);
+  const baseDocument = coercePostDocument(data);
+  const runtimeLegacy = adaptLegacyDocumentForRuntime(baseDocument);
+  const document = runtimeLegacy.document;
   const readMedia = options?.getMediaById ?? getMediaById;
   const mediaCache = new Map<string, string | null>();
+  const warnings = [...runtimeLegacy.warnings];
 
   const blocks = await Promise.all(
     document.blocks.map(async (block) => {
@@ -362,7 +568,19 @@ export async function mapPostDocumentForRuntime(
         content: {},
       };
 
-      if (
+      if (block.type === "writing-canvas") {
+        mapped.content = {
+          writingCanvas: {
+            nodes: await mapWritingCanvasNodesForRuntime(
+              block.content,
+              block.id,
+              mediaCache,
+              readMedia,
+              warnings
+            ),
+          },
+        };
+      } else if (
         block.type === "paragraph" ||
         block.type === "heading" ||
         block.type === "quote" ||
@@ -454,6 +672,8 @@ export async function mapPostDocumentForRuntime(
             lazy: attrs.lazy !== false,
           },
         };
+      } else {
+        pushRuntimeWarning(warnings, `runtime_block_unsupported:${block.id}:${block.type}`);
       }
 
       if (block.type === "heading") {
@@ -471,6 +691,7 @@ export async function mapPostDocumentForRuntime(
   return {
     version: document.version,
     blocks,
+    warnings,
     meta: {
       ...(typeof document.meta.title === "string"
         ? { title: document.meta.title }

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 311 | 2026-02-23 | TASK-061-07 runtime renderer parity and backward compatibility | Runtime/Compatibility |
 | 310 | 2026-02-22 | TASK-061-06 editor ui integration ribbon canvas list view | Admin/UI |
 | 309 | 2026-02-22 | TASK-061-05 image wrap controls and layout semantics | Core/Editor |
 | 308 | 2026-02-22 | TASK-061-04 clipboard image upload and inline media insertion | Admin/UI |
