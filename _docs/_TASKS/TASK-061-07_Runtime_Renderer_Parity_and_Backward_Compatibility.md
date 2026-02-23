@@ -68,7 +68,7 @@ legacyAdapter(blocks):
 - `bun test tests/unit/posts/post-legacy-adapter-writing-canvas.test.ts tests/unit/posts/post-block-runtime-renderer.test.tsx tests/integration/runtime/post-rendering-parity.test.tsx`
   - Result: `8 pass`, `0 fail`
 - `bun test`
-  - Result: `1384 pass`, `149 skip`, `0 fail`
+  - Result: `1387 pass`, `149 skip`, `0 fail`
 
 ## Closure Notes
 - Runtime mapper/rendering now supports `writing-canvas` as first-class runtime block content:

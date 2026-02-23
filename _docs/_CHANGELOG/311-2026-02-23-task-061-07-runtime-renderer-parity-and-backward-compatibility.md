@@ -33,7 +33,7 @@
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
   - `bun test tests/unit/posts/post-legacy-adapter-writing-canvas.test.ts tests/unit/posts/post-block-runtime-renderer.test.tsx tests/integration/runtime/post-rendering-parity.test.tsx` (`8 pass`)
-  - `bun test` (`1384 pass`, `149 skip`, `0 fail`)
+  - `bun test` (`1387 pass`, `149 skip`, `0 fail`)
 
 ## Result
 - Preview and published post runtime now share a writing-canvas-first renderer with safe legacy read compatibility and explicit runtime diagnostics.

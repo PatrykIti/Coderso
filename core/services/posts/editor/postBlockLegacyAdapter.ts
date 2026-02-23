@@ -51,8 +51,7 @@ const isConvertibleLegacyBlockType = (type: PostBlock["type"]) =>
   type === "paragraph" ||
   type === "heading" ||
   type === "list" ||
-  type === "quote" ||
-  type === "image";
+  type === "quote";
 
 const clampHeadingLevel = (value: unknown): 2 | 3 | 4 | 5 | 6 => {
   if (typeof value !== "number" || !Number.isFinite(value)) return 2;
