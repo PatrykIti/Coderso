@@ -627,6 +627,23 @@ Editor save behavior (update `TASK-061-09`):
 - endpointy API i payloady pozostaja bez zmian,
 - full hydrate jest wykorzystywany tylko dla explicit refresh/restore konfliktow.
 
+Editor header action flow (update `TASK-063-03`):
+- header workflow zostaje podzielony na dwa clustery:
+  - document tools: `Add` (toggle inserter), `Undo/Redo`, `Document overview` (toggle list view),
+  - action cluster: status/sync badges + `Save draft`, `Runtime preview`, `Publish`/`Update`,
+- action cluster korzysta z istniejacych internal routes (`PATCH /posts/:id`, `POST /posts/:id/autosave`, `POST /posts/:id/preview`, `POST /posts/:id/publish`) i nie wprowadza nowych API endpointow.
+
+Editor inserter sidebar flow (update `TASK-063-04`):
+- `Add` otwiera dedykowany inserter sidebar (`PostInserterSidebar`) z kontraktem zamkniecia:
+  - explicit close button,
+  - `Escape` key close,
+  - focus return na `Add` trigger,
+- block library behavior:
+  - search po `label/description/keywords`,
+  - category filter (`all`, `text`, `media`, `interactive`),
+  - deterministic grouped listing i optional `Most used` section (client-provided hints),
+- zmiana dotyczy tylko admin UI orchestration; brak nowych endpointow API.
+
 Backfill endpoint (`POST /posts/migration/backfill`) - request payload:
 
 ```json

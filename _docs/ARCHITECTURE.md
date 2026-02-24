@@ -117,6 +117,14 @@ przez `setup.completed=true`.
     - centralny state paneli jest utrzymywany przez `usePostEditorLayout` (list-view/inserter/details),
     - layout warstwa (`PostEditorLayout`, `PostEditorRegions`) rozdziela regiony `header/content/secondary-sidebar/sidebar/footer`,
     - secondary/details sidebary maja jeden kontrakt stanu dla desktop (`aside`) i mobile (`sheet`) bez duplikacji logiki panel actions.
+  - **TASK-063-03 (done):** posts editor header zostal zmodularyzowany do Gutenberg-like clusters:
+    - `PostEditorHeader` sklada `PostEditorDocumentTools` (Add, Undo/Redo, Document overview), centralny context i sekcje `Revisions/Details`,
+    - `PostEditorActionCluster` utrzymuje status dokumentu + sync status i akcje `Save draft`, `Runtime preview`, `Publish/Update`,
+    - flow save/preview/publish pozostaje bez nowych endpointow i korzysta z istniejacej strategii `silent sync` (bez hydrate reload canvasu).
+  - **TASK-063-04 (done):** inserter zostal przeniesiony do dedykowanego sidebar flow:
+    - `PostInserterSidebar` jest explicit secondary-sidebar dialogiem z close buttonem i `Escape` close contract,
+    - block library (`BlockInserter`) wspiera category filters, searchable catalog i optional `Most used` sekcje,
+    - focus return po zamknieciu insertera jest centralnie realizowany przez `useFocusReturn` (powrot na `Add` trigger).
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

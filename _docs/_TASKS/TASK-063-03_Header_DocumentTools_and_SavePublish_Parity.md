@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Workflow  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-02  
-**Status:** To Do
+**Status:** Done (2026-02-24)
 
 ---
 
@@ -103,4 +103,3 @@ function PostEditorActionCluster() {
 ## Documentation Updates Required
 - `_docs/CMS_API.md` (posts editor action flow)
 - `_docs/ARCHITECTURE.md` (header workflow ownership)
-

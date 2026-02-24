@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
-import { BlockInserter } from "./blocks/BlockInserter";
 import { PostListViewPanel } from "./blocks/PostListViewPanel";
+import { useFocusReturn } from "./hooks/useFocusReturn";
 import { usePostEditorLayout } from "./hooks/usePostEditorLayout";
 import { BlockInspector } from "./inspector/BlockInspector";
 import { DocumentInspector } from "./inspector/DocumentInspector";
@@ -13,6 +13,7 @@ import { PostEditorLayout } from "./layout/PostEditorLayout";
 import { PostEditorCanvas } from "./PostEditorCanvas";
 import { PostEditorTopBar } from "./PostEditorTopBar";
 import { PostRevisionDrawer } from "./PostRevisionDrawer";
+import { PostInserterSidebar } from "./sidebars/PostInserterSidebar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 
 // TASK-061-01 UX contract anchor:
@@ -25,6 +26,12 @@ export function PostBlockEditorShell() {
   const layout = usePostEditorLayout({
     initialSecondarySidebar: "list-view",
     initialDetailsTab: "document",
+  });
+  const addButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useFocusReturn({
+    active: layout.showInserter,
+    targetRef: addButtonRef,
   });
 
   const detailsSidebar = (
@@ -76,9 +83,12 @@ export function PostBlockEditorShell() {
   );
 
   const secondarySidebar = layout.showInserter ? (
-    <BlockInserter
+    <PostInserterSidebar
+      open={layout.showInserter}
+      onClose={layout.closeSecondarySidebar}
       onInsertBlock={(type) => editor.insertBlock(type)}
       disabled={editor.state.saving || editor.autosaveSaving}
+      recentlyUsedTypes={["writing-canvas", "heading", "image", "button"]}
     />
   ) : (
     <PostListViewPanel
@@ -185,6 +195,8 @@ export function PostBlockEditorShell() {
       breadcrumbs={breadcrumbs}
       header={
         <PostEditorTopBar
+          addButtonRef={addButtonRef}
+          title={editor.title}
           status={editor.status}
           dirty={editor.hasUnsavedChanges}
           saving={
@@ -207,7 +219,6 @@ export function PostBlockEditorShell() {
           onPublish={() => {
             editor.publish().catch(() => undefined);
           }}
-          onInsertBlock={(type) => editor.insertBlock(type)}
           onToggleInserter={layout.toggleInserter}
           inserterVisible={layout.showInserter}
           onToggleOutline={layout.toggleListView}

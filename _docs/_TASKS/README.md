@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 44 tasks
+- **To Do:** 36 tasks
 - **In Progress:** 4 tasks
-- **Done:** 471 tasks
+- **Done:** 479 tasks
 
 ---
 
@@ -40,19 +40,11 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
-| TASK-063-03 | Header, DocumentTools, and Save/Publish Parity | High | Large | Add/Undo/Redo/Overview + save-preview-publish cluster |
-| TASK-063-04 | Inserter Sidebar and Block Library Parity | High | Medium | Dismissible inserter sidebar with search and focus return |
 | TASK-063-05 | List View, Outline, and Document Stats | High | Large | List view tabs + document outline validation + stats panel |
 | TASK-063-06 | Writing Canvas Appender and Smart Paste Parity | High | Large | Inline appender + slash/inserter parity + Word paste hardening |
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
 | TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
 | TASK-063-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Full lint/types/tests, docs sync, and kanban closure |
-| TASK-063-03-01 | Document Tools Cluster | High | Medium | Add, Undo/Redo, and Document Overview controls |
-| TASK-063-03-02 | Save Preview Publish Cluster | High | Medium | Saved state + preview + publish workflow controls |
-| TASK-063-03-03 | Header Integration and Regression Guards | High | Small | Modular header assembly and regression tests |
-| TASK-063-04-01 | Inserter Sidebar Shell | High | Small | Open/close/escape shell for inserter sidebar |
-| TASK-063-04-02 | Block Library Search and Categories | High | Medium | Searchable grouped block library in inserter |
-| TASK-063-04-03 | Inserter Focus and A11y Contracts | High | Small | Focus return and accessibility behavior |
 | TASK-063-05-01 | Document Stats Selectors | High | Small | Words/chars/read-time/headings/blocks selectors |
 | TASK-063-05-02 | Outline Builder and Validation Rules | High | Medium | Heading outline model and hierarchy warnings |
 | TASK-063-05-03 | ListView and Outline Sidebar UI | High | Medium | Tabs + stats panel + outline navigation |
@@ -90,7 +82,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01 and 063-02 completed, next: 063-03 header/document tools |
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-04 completed, next: 063-05 list view/outline/stats |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -101,6 +93,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-04 | Inserter Sidebar and Block Library Parity | High | Medium | Done: dedicated inserter sidebar shell, searchable/category block library, and focus-return/a11y contracts |
+| TASK-063-04-03 | Inserter Focus and A11y Contracts | High | Small | Done: escape-close contract, focus return hook, and sidebar ARIA dialog semantics |
+| TASK-063-04-02 | Block Library Search and Categories | High | Medium | Done: catalog search helpers, category filtering, and optional most-used section |
+| TASK-063-04-01 | Inserter Sidebar Shell | High | Small | Done: `PostInserterSidebar` with close controls and layout integration |
+| TASK-063-03 | Header, DocumentTools, and Save/Publish Parity | High | Large | Done: modular post editor header with document tools, revisions/details controls, and save-preview-publish cluster |
+| TASK-063-03-03 | Header Integration and Regression Guards | High | Small | Done: composed `PostEditorHeader` integrated into shell with regression coverage |
+| TASK-063-03-02 | Save Preview Publish Cluster | High | Medium | Done: dedicated action cluster with status/sync badges and save/preview/publish parity |
+| TASK-063-03-01 | Document Tools Cluster | High | Medium | Done: Add/Undo/Redo/Document overview controls with a11y labels and shortcut hints |
 | TASK-063-02 | Editor Shell Composition and Regions | High | Large | Done: centralized layout state, region components, responsive desktop/mobile sidebar behavior |
 | TASK-063-02-03 | Responsive Region Behavior | High | Medium | Done: desktop sidebars + mobile sheet fallback with shared region state |
 | TASK-063-02-02 | Region Components and Composition | High | Medium | Done: `PostEditorLayout` + region wrappers (`header/content/secondary/sidebar/footer`) |

@@ -13,11 +13,9 @@ test("PostEditorPage renders post editor shell", () => {
 
   expect(html).toContain("Edit Post");
   expect(html).toContain("Loading post editor");
-  expect(html).toContain("Home");
-  expect(html).toContain("Insert");
-  expect(html).toContain("Review");
-  expect(html).toContain("View");
-  expect(html).toContain("Add writing section");
+  expect(html).toContain("Post editor");
+  expect(html).toContain("Document overview");
+  expect(html).toContain("Runtime preview");
 });
 
 test("PostEditorPage supports query override for classic editor", () => {
@@ -26,7 +24,7 @@ test("PostEditorPage supports query override for classic editor", () => {
   });
 
   expect(html).toContain("Enter post title...");
-  expect(html).not.toContain("Home");
+  expect(html).not.toContain("Post editor");
 });
 
 test("resolvePostEditorMode prioritizes query override over settings", () => {

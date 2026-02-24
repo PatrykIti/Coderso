@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 317 | 2026-02-24 | TASK-063-04 post editor inserter sidebar and library | Admin/UI |
+| 316 | 2026-02-24 | TASK-063-03 post editor header document tools and actions | Admin/UI |
 | 315 | 2026-02-23 | TASK-063-02 post editor shell regions | Admin/UI |
 | 314 | 2026-02-23 | TASK-062 posts dynamic table of contents | CMS/Posts |
 | 313 | 2026-02-23 | TASK-063-01 gutenberg reference audit and gap matrix | Docs/Architecture |

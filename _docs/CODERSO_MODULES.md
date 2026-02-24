@@ -162,3 +162,12 @@ const sections = buildDefaultNavSections({
   - centralized panel state hook `usePostEditorLayout` (`list-view`, `inserter`, `details`),
   - regionized shell composition (`PostEditorLayout`, `PostEditorRegions`) with explicit `header/content/secondary-sidebar/sidebar/footer`,
   - responsive region behavior: desktop sidebars + mobile sheets share the same state contract.
+- 063-03 done: Gutenberg-like header workflow delivered:
+  - modular header composition (`PostEditorHeader`) with dedicated clusters for document tools and publish actions,
+  - document tools cluster: `Add`, `Undo`, `Redo`, `Document overview` wired to shared layout/editor state,
+  - actions cluster: status + sync badges and `Save draft` / `Runtime preview` / `Publish` (`Update` for published posts),
+  - revisions and details entry points are now first-class header actions with regression coverage.
+- 063-04 done: Gutenberg-like inserter sidebar delivered:
+  - dedicated `PostInserterSidebar` shell with explicit close button and `Escape` close behavior,
+  - block library supports category filters (`All/Text/Media/Interactive`), search, grouped rendering, and optional `Most used`,
+  - focus return after closing inserter is standardized via `useFocusReturn` and returns to `Add` trigger in header tools.

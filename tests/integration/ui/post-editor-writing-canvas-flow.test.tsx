@@ -5,6 +5,7 @@ import { PostListViewPanel } from "../../../core/admin/ui/posts/editor/blocks/Po
 import { PostEditorTopBar } from "../../../core/admin/ui/posts/editor/PostEditorTopBar";
 
 const createTopBarProps = () => ({
+  title: "Test post",
   status: "draft",
   dirty: false,
   saving: false,
@@ -17,7 +18,6 @@ const createTopBarProps = () => ({
   onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
-  onInsertBlock: () => undefined,
   onToggleInserter: () => undefined,
   inserterVisible: false,
   onToggleOutline: () => undefined,
@@ -25,13 +25,13 @@ const createTopBarProps = () => ({
   onOpenDetails: () => undefined,
 });
 
-test("post editor top bar exposes writing-first insert actions", () => {
+test("post editor top bar exposes document tools and publish actions", () => {
   const html = renderToString(<PostEditorTopBar {...createTopBarProps()} />);
 
-  expect(html).toContain("Writing flow");
-  expect(html).toContain("Add writing section");
-  expect(html).toContain("Add CTA block");
-  expect(html).toContain("Add embed block");
+  expect(html).toContain("Add");
+  expect(html).toContain("Document overview");
+  expect(html).toContain("Runtime preview");
+  expect(html).toContain("Publish");
 });
 
 test("post list view panel uses logical writing-first labels", () => {

@@ -10,6 +10,15 @@ export type PostBlockCatalogItem = {
   keywords: string[];
 };
 
+export type PostBlockCatalogSearchOptions = {
+  category?: PostBlockCategory | "all";
+};
+
+export type PostBlockCatalogGroup = {
+  category: PostBlockCategory;
+  items: PostBlockCatalogItem[];
+};
+
 export const POST_BLOCK_CATALOG: PostBlockCatalogItem[] = [
   {
     type: "writing-canvas",
@@ -103,16 +112,53 @@ export const BLOCK_CATEGORY_LABELS: Record<PostBlockCategory, string> = {
   interactive: "Interactive",
 };
 
+export const POST_BLOCK_CATEGORY_ORDER: PostBlockCategory[] = [
+  "text",
+  "media",
+  "interactive",
+];
+
 export const getPostBlockLabel = (type: string) =>
   POST_BLOCK_CATALOG.find((item) => item.type === type)?.label ?? "Block";
 
-export const searchPostBlockCatalog = (query: string) => {
-  const normalized = query.trim().toLowerCase();
-  if (!normalized) return POST_BLOCK_CATALOG;
+const normalizeCategory = (value: PostBlockCategory | "all" | undefined) =>
+  value === "text" || value === "media" || value === "interactive"
+    ? value
+    : "all";
+
+const matchesQuery = (item: PostBlockCatalogItem, query: string) => {
+  if (!query) return true;
+  if (item.label.toLowerCase().includes(query)) return true;
+  if (item.description.toLowerCase().includes(query)) return true;
+  return item.keywords.some((keyword) => keyword.toLowerCase().includes(query));
+};
+
+export const searchPostBlockCatalog = (
+  query: string,
+  options: PostBlockCatalogSearchOptions = {}
+) => {
+  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedCategory = normalizeCategory(options.category);
 
   return POST_BLOCK_CATALOG.filter((item) => {
-    if (item.label.toLowerCase().includes(normalized)) return true;
-    if (item.description.toLowerCase().includes(normalized)) return true;
-    return item.keywords.some((keyword) => keyword.includes(normalized));
+    if (normalizedCategory !== "all" && item.category !== normalizedCategory) {
+      return false;
+    }
+    return matchesQuery(item, normalizedQuery);
   });
+};
+
+export const groupPostBlockCatalogByCategory = (
+  items: PostBlockCatalogItem[]
+): PostBlockCatalogGroup[] =>
+  POST_BLOCK_CATEGORY_ORDER.map((category) => ({
+    category,
+    items: items.filter((item) => item.category === category),
+  }));
+
+export const resolveMostUsedPostBlocks = (types: PostBlockType[]) => {
+  const uniqueTypes = Array.from(new Set(types));
+  return uniqueTypes
+    .map((type) => POST_BLOCK_CATALOG.find((item) => item.type === type))
+    .filter((item): item is PostBlockCatalogItem => Boolean(item));
 };

@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-063-04  
-**Status:** To Do
+**Status:** Done (2026-02-24)
 
 ---
 

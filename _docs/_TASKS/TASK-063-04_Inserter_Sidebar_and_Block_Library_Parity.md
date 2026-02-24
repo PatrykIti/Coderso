@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-02, TASK-063-03  
-**Status:** To Do
+**Status:** Done (2026-02-24)
 
 ---
 
@@ -75,4 +75,3 @@ return (
 ## Documentation Updates Required
 - `_docs/CODERSO_MODULES.md` (posts editor inserter UX)
 - `_docs/ARCHITECTURE.md` (sidebar ownership)
-
