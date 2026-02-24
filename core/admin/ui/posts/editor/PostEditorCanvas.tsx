@@ -1,15 +1,7 @@
-import { MoveDown, MoveUp, Plus, Shuffle, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { Image as ImageIcon, PlayCircle } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -22,36 +14,30 @@ import {
   buildPostImageLayoutClasses,
   resolvePostImageLayoutFromAttrs,
 } from "../../../../services/posts/postImageWrapLayout";
-import { postRichTextToPlainText } from "../../../../services/posts/editor/postRichTextSerializer";
+import {
+  postRichTextToPlainText,
+  serializePostRichText,
+} from "../../../../services/posts/editor/postRichTextSerializer";
 import {
   createWritingCanvasContentFromPaste,
   serializeWritingCanvasContentToHtml,
 } from "../../../../services/posts/editor/postPasteNormalizer";
-import { getTransformTargetTypes } from "./blocks/blockTransforms";
-import {
-  BLOCK_CATEGORY_LABELS,
-  getPostBlockLabel,
-  groupPostBlockCatalogByCategory,
-  POST_BLOCK_CATALOG,
-} from "./blocks/blockCatalog";
 import { PostRichTextAdapter } from "./richtext/PostRichTextAdapter";
 import type { PostInsertOptions } from "./hooks/usePostEditorState";
 
 type PostEditorCanvasProps = {
   document: PostBlockDocument;
+  title: string;
+  onTitleChange: (value: string) => void;
   selectedBlockId: string | null;
   insertFocusToken: number;
-  onSelectBlock: (id: string) => void;
+  onSelectBlock: (id: string | null) => void;
   onUpdateBlockContent: (id: string, content: unknown) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
-  onMoveBlock: (id: string, direction: "up" | "down") => void;
-  onTransformBlock: (id: string, targetType: PostBlockType) => void;
-  onDeleteBlock: (id: string) => void;
   onInsertBlock: (type: PostBlockType, options?: PostInsertOptions) => void;
   onEnsureDynamicTocBlock?: () => void;
+  onOpenBlockDetails?: (blockId: string) => void;
 };
-
-const appenderCatalogGroups = groupPostBlockCatalogByCategory(POST_BLOCK_CATALOG);
 
 const richTextBlockTypes = new Set<PostBlockType>([
   "paragraph",
@@ -59,6 +45,8 @@ const richTextBlockTypes = new Set<PostBlockType>([
   "quote",
   "callout",
 ]);
+
+const asString = (value: unknown) => (typeof value === "string" ? value : "");
 
 const normalizeListForEdit = (value: unknown) => {
   if (!Array.isArray(value)) return "";
@@ -71,62 +59,21 @@ const parseListItems = (value: string) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-const asString = (value: unknown) => (typeof value === "string" ? value : "");
-
-const renderReadOnlyText = (value: unknown, emptyLabel: string) => {
-  const text = postRichTextToPlainText(value);
-  if (!text) {
+const renderHtmlPreview = (value: unknown, emptyLabel: string) => {
+  const html = serializePostRichText(value);
+  if (!html) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
   }
-  return <p className="whitespace-pre-wrap text-sm leading-relaxed">{text}</p>;
+  return (
+    <div
+      className="prose prose-slate max-w-none text-slate-800"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 };
 
-function CanvasInlineAppender({
-  onInsert,
-}: {
-  onInsert: (type: PostBlockType) => void;
-}) {
-  return (
-    <div className="group relative flex h-10 items-center justify-center">
-      <div className="h-px w-full bg-border/60 transition group-hover:bg-primary/30" />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="absolute h-8 w-8 rounded-full border bg-background shadow-sm"
-            aria-label="Insert block"
-            data-post-editor-appender="true"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="sr-only">Add block</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" className="w-72">
-          {appenderCatalogGroups.map((group, index) => (
-            <div key={group.category}>
-              {index > 0 ? <DropdownMenuSeparator /> : null}
-              <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">
-                {BLOCK_CATEGORY_LABELS[group.category]}
-              </DropdownMenuLabel>
-              {group.items.map((item) => (
-                <DropdownMenuItem key={item.type} onClick={() => onInsert(item.type)}>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{item.label}</p>
-                    <p className="line-clamp-2 text-xs text-muted-foreground">
-                      {item.description}
-                    </p>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </div>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
+const mediaPlaceholderClassName =
+  "group flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-500 transition hover:border-primary/40 hover:bg-slate-100";
 
 function PostCanvasBlockItem({
   block,
@@ -134,314 +81,253 @@ function PostCanvasBlockItem({
   onSelect,
   onUpdateBlockContent,
   onUploadClipboardImage,
-  onMoveBlock,
-  onTransformBlock,
-  onDeleteBlock,
   onInsertBlock,
   onEnsureDynamicTocBlock,
+  onOpenBlockDetails,
 }: {
   block: PostBlock;
   selected: boolean;
   onSelect: () => void;
   onUpdateBlockContent: (content: unknown) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
-  onMoveBlock: (direction: "up" | "down") => void;
-  onTransformBlock: (targetType: PostBlockType) => void;
-  onDeleteBlock: () => void;
   onInsertBlock: (type: PostBlockType, options?: PostInsertOptions) => void;
   onEnsureDynamicTocBlock?: () => void;
+  onOpenBlockDetails?: (blockId: string) => void;
 }) {
-  const transformTargets = useMemo(
-    () => getTransformTargetTypes(block.type),
-    [block.type]
-  );
-
   const attrs = (block.attrs ?? {}) as Record<string, unknown>;
   const isWritingCanvas = block.type === "writing-canvas";
   const writingCanvasHtml =
-    isWritingCanvas
-      ? serializeWritingCanvasContentToHtml(block.content)
-      : "";
+    isWritingCanvas ? serializeWritingCanvasContentToHtml(block.content) : "";
 
   return (
     <section
       data-post-editor-block-id={block.id}
       className={cn(
-        "transition",
-        isWritingCanvas
-          ? "bg-transparent p-0"
-          : "rounded-xl border bg-background/60 p-4",
-        !isWritingCanvas && (selected ? "border-primary/60 ring-1 ring-primary/20" : "border-border/70")
+        "relative rounded-md px-1 py-2 transition",
+        selected ? "ring-1 ring-primary/30" : "ring-0"
       )}
-      onClick={onSelect}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect();
+      }}
     >
-      {!isWritingCanvas ? (
-        <header className="mb-3 flex flex-wrap items-center gap-2 border-b pb-3">
-          <p className="text-sm font-semibold text-foreground">{getPostBlockLabel(block.type)}</p>
-          <div className="ml-auto flex flex-wrap items-center gap-1">
-            {selected && transformTargets.length > 0 ? (
-              <div className="mr-1 hidden items-center gap-1 xl:flex">
-                <span className="text-xs text-muted-foreground">Transform:</span>
-                {transformTargets.map((type) => (
-                  <Button
-                    key={type}
-                    type="button"
-                    variant="outline"
-                    size="xs"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onTransformBlock(type);
-                    }}
-                  >
-                    <Shuffle className="h-3 w-3" />
-                    {getPostBlockLabel(type)}
-                  </Button>
-                ))}
-              </div>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Move block up"
-              onClick={(event) => {
-                event.stopPropagation();
-                onMoveBlock("up");
-              }}
-            >
-              <MoveUp className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Move block down"
-              onClick={(event) => {
-                event.stopPropagation();
-                onMoveBlock("down");
-              }}
-            >
-              <MoveDown className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              aria-label="Delete block"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDeleteBlock();
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </header>
+      {block.type === "writing-canvas" ? (
+        selected ? (
+          <PostRichTextAdapter
+            value={writingCanvasHtml}
+            onChange={(nextHtml) => {
+              const nextContent = createWritingCanvasContentFromPaste({
+                html: nextHtml,
+                text: postRichTextToPlainText(nextHtml),
+              }).content;
+              onUpdateBlockContent(nextContent);
+            }}
+            onPasteDirectives={(directives) => {
+              if (directives.replaceWordTocWithDynamicToc) {
+                onEnsureDynamicTocBlock?.();
+              }
+            }}
+            onUploadClipboardImage={onUploadClipboardImage}
+            placeholder="Start writing or paste content from Word..."
+            minHeightClassName="min-h-[16rem]"
+            onSlashInsertBlock={(type) =>
+              onInsertBlock(type, {
+                source: "slash",
+                target: { mode: "after-block", blockId: block.id },
+              })
+            }
+            onFocus={onSelect}
+          />
+        ) : (
+          renderHtmlPreview(writingCanvasHtml, "Empty section")
+        )
       ) : null}
 
-      <div
-        className={cn("space-y-3", isWritingCanvas && "space-y-0")}
-        onClick={(event) => event.stopPropagation()}
-      >
-        {block.type === "writing-canvas" ? (
-          selected ? (
-            <PostRichTextAdapter
-              value={writingCanvasHtml}
-              onChange={(nextHtml) => {
-                const nextContent = createWritingCanvasContentFromPaste({
-                  html: nextHtml,
-                  text: postRichTextToPlainText(nextHtml),
-                }).content;
-                onUpdateBlockContent(nextContent);
-              }}
-              onPasteDirectives={(directives) => {
-                if (directives.replaceWordTocWithDynamicToc) {
-                  onEnsureDynamicTocBlock?.();
-                }
-              }}
-              onUploadClipboardImage={onUploadClipboardImage}
-              placeholder="Write your post content..."
-              minHeightClassName="min-h-[16rem]"
-              onSlashInsertBlock={(type) =>
-                onInsertBlock(type, {
-                  source: "slash",
-                  target: { mode: "after-block", blockId: block.id },
-                })
-              }
-              onFocus={onSelect}
-            />
-          ) : (
-            renderReadOnlyText(writingCanvasHtml, "Empty writing section")
-          )
-        ) : null}
+      {block.type === "toc" ? (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-slate-700">
+            {typeof attrs.title === "string" && attrs.title.trim().length > 0
+              ? attrs.title
+              : "Table of contents"}
+          </p>
+          <p className="mt-2 text-xs text-slate-500">
+            Dynamic table of contents is generated from heading blocks and heading nodes.
+          </p>
+        </div>
+      ) : null}
 
-        {block.type === "toc" ? (
-          <div className="rounded-lg border border-dashed bg-muted/20 p-4">
-            <p className="text-sm font-semibold text-foreground">
-              {typeof attrs.title === "string" && attrs.title.trim().length > 0
-                ? attrs.title
-                : "Table of contents"}
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Dynamic table of contents is generated from heading blocks and heading nodes in
-              writing sections.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Configure heading range in Details -&gt; Block.
-            </p>
-          </div>
-        ) : null}
+      {richTextBlockTypes.has(block.type) ? (
+        selected ? (
+          <PostRichTextAdapter
+            value={asString(block.content)}
+            onChange={onUpdateBlockContent}
+            onUploadClipboardImage={onUploadClipboardImage}
+            placeholder="Write content for this block..."
+            minHeightClassName="min-h-[8rem]"
+            onSlashInsertBlock={(type) =>
+              onInsertBlock(type, {
+                source: "slash",
+                target: { mode: "after-block", blockId: block.id },
+              })
+            }
+            onFocus={onSelect}
+          />
+        ) : (
+          renderHtmlPreview(block.content, "Empty block")
+        )
+      ) : null}
 
-        {richTextBlockTypes.has(block.type) ? (
-          selected ? (
-            <PostRichTextAdapter
-              value={asString(block.content)}
-              onChange={onUpdateBlockContent}
-              onUploadClipboardImage={onUploadClipboardImage}
-              placeholder="Write content for this block..."
-              minHeightClassName="min-h-[9rem]"
-              onSlashInsertBlock={(type) =>
-                onInsertBlock(type, {
-                  source: "slash",
-                  target: { mode: "after-block", blockId: block.id },
-                })
-              }
-              onFocus={onSelect}
-            />
-          ) : (
-            renderReadOnlyText(block.content, "Empty block")
-          )
-        ) : null}
+      {block.type === "code" ? (
+        selected ? (
+          <Textarea
+            value={asString(block.content)}
+            onChange={(event) => onUpdateBlockContent(event.target.value)}
+            onFocus={onSelect}
+            className="min-h-[12rem] font-mono"
+            data-post-editor-primary-editable="true"
+            placeholder="Write code block content"
+          />
+        ) : (
+          <pre className="overflow-x-auto rounded-lg border bg-slate-50 p-3 text-xs text-slate-700">
+            {asString(block.content) || "Empty code block"}
+          </pre>
+        )
+      ) : null}
 
-        {block.type === "code" ? (
-          selected ? (
-            <Textarea
-              value={asString(block.content)}
-              onChange={(event) => onUpdateBlockContent(event.target.value)}
-              onFocus={onSelect}
-              className="min-h-[12rem] font-mono"
-              data-post-editor-primary-editable="true"
-              placeholder="Write code block content"
-            />
-          ) : (
-            <pre className="overflow-x-auto rounded-lg border bg-muted/20 p-3 text-xs">
-              {asString(block.content) || "Empty code block"}
-            </pre>
-          )
-        ) : null}
+      {block.type === "list" ? (
+        selected ? (
+          <Textarea
+            value={normalizeListForEdit(block.content)}
+            onChange={(event) => onUpdateBlockContent(parseListItems(event.target.value))}
+            onFocus={onSelect}
+            className="min-h-[10rem]"
+            data-post-editor-primary-editable="true"
+            placeholder="One item per line"
+          />
+        ) : (
+          <ul className="list-disc space-y-1 pl-6 text-slate-700">
+            {Array.isArray(block.content) && block.content.length > 0 ? (
+              block.content
+                .filter((item): item is string => typeof item === "string")
+                .map((item, index) => <li key={`${block.id}-${index}`}>{item}</li>)
+            ) : (
+              <li className="list-none text-sm text-muted-foreground">Empty list</li>
+            )}
+          </ul>
+        )
+      ) : null}
 
-        {block.type === "list" ? (
-          selected ? (
-            <Textarea
-              value={normalizeListForEdit(block.content)}
-              onChange={(event) => onUpdateBlockContent(parseListItems(event.target.value))}
-              onFocus={onSelect}
-              className="min-h-[12rem]"
-              data-post-editor-primary-editable="true"
-              placeholder="One item per line"
-            />
-          ) : (
-            <ul className="list-disc space-y-1 pl-5 text-sm">
-              {Array.isArray(block.content) && block.content.length > 0 ? (
-                block.content
-                  .filter((item): item is string => typeof item === "string")
-                  .map((item, index) => <li key={`${block.id}-${index}`}>{item}</li>)
-              ) : (
-                <li className="list-none text-muted-foreground">Empty list</li>
-              )}
-            </ul>
-          )
-        ) : null}
+      {block.type === "separator" ? (
+        <div className="py-3">
+          <hr className="border-t border-slate-200" />
+        </div>
+      ) : null}
 
-        {block.type === "separator" ? (
-          <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            Horizontal separator block.
-          </div>
-        ) : null}
-
-        {block.type === "image" ? (
-          (() => {
-            const imageLayout = resolvePostImageLayoutFromAttrs(attrs);
-            const src =
-              typeof attrs.mediaId === "string" &&
-              (attrs.mediaId.startsWith("/") || attrs.mediaId.startsWith("http"))
-                ? attrs.mediaId
-                : null;
-            const alt =
-              typeof attrs.alt === "string" && attrs.alt.trim().length > 0
-                ? attrs.alt
-                : "Selected image";
+      {block.type === "image" ? (
+        (() => {
+          const imageLayout = resolvePostImageLayoutFromAttrs(attrs);
+          const src =
+            typeof attrs.mediaId === "string" &&
+            (attrs.mediaId.startsWith("/") || attrs.mediaId.startsWith("http"))
+              ? attrs.mediaId
+              : null;
+          const alt =
+            typeof attrs.alt === "string" && attrs.alt.trim().length > 0
+              ? attrs.alt
+              : "Selected image";
+          if (!src) {
             return (
-              <div className="rounded-lg border p-4">
-                <div className="overflow-hidden text-sm text-muted-foreground">
-                  <figure
-                    className={cn(
-                      "post-editor-richtext",
-                      buildPostImageLayoutClasses(imageLayout)
-                    )}
-                  >
-                    {src ? (
-                      <img
-                        src={src}
-                        alt={alt}
-                        className="h-auto w-full rounded-lg border object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="rounded-lg border border-dashed px-3 py-5 text-sm">
-                        No image URL preview yet. Add media ID or URL in block settings.
-                      </div>
-                    )}
-                    {typeof attrs.caption === "string" && attrs.caption.trim().length > 0 ? (
-                      <figcaption className="pt-2 text-xs">{attrs.caption}</figcaption>
-                    ) : null}
-                  </figure>
-                  <p className="pt-3 text-xs">
-                    Wrap: {imageLayout.wrap} · Width: {imageLayout.widthPercent}% · Spacing:{" "}
-                    {imageLayout.marginPreset}
-                  </p>
-                </div>
-              </div>
+              <button
+                type="button"
+                className={mediaPlaceholderClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelect();
+                  onOpenBlockDetails?.(block.id);
+                }}
+                data-post-editor-media-placeholder="image"
+              >
+                <ImageIcon className="mb-2 h-8 w-8" />
+                <p className="text-sm font-medium">Click to configure image</p>
+                <p className="mt-1 text-xs text-slate-500">Set URL/media ID in Block settings.</p>
+              </button>
             );
-          })()
-        ) : null}
+          }
+          return (
+            <figure
+              className={cn("post-editor-richtext", buildPostImageLayoutClasses(imageLayout))}
+            >
+              <img
+                src={src}
+                alt={alt}
+                className="h-auto w-full rounded-lg border object-cover"
+                loading="lazy"
+              />
+              {typeof attrs.caption === "string" && attrs.caption.trim().length > 0 ? (
+                <figcaption className="pt-2 text-xs text-slate-600">{attrs.caption}</figcaption>
+              ) : null}
+            </figure>
+          );
+        })()
+      ) : null}
 
-        {block.type === "button" ? (
-          <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+      {block.type === "button" ? (
+        <button
+          type="button"
+          className={mediaPlaceholderClassName}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect();
+            onOpenBlockDetails?.(block.id);
+          }}
+          data-post-editor-media-placeholder="button"
+        >
+          <p className="text-sm font-medium">
             {typeof attrs.label === "string" && attrs.label.trim().length > 0
-              ? `Button label: ${attrs.label}`
-              : "No button label yet. Configure this block in Details -> Block."}
-          </div>
-        ) : null}
+              ? attrs.label
+              : "Configure button label and URL"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Click to edit this CTA block.</p>
+        </button>
+      ) : null}
 
-        {block.type === "embed" ? (
-          <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+      {block.type === "embed" ? (
+        <button
+          type="button"
+          className={mediaPlaceholderClassName}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect();
+            onOpenBlockDetails?.(block.id);
+          }}
+          data-post-editor-media-placeholder="embed"
+        >
+          <PlayCircle className="mb-2 h-8 w-8" />
+          <p className="text-sm font-medium">
             {typeof attrs.url === "string" && attrs.url.trim().length > 0
-              ? `Embed URL: ${attrs.url}`
-              : "No embed URL yet. Configure this block in Details -> Block."}
-          </div>
-        ) : null}
-      </div>
+              ? attrs.url
+              : "Click to configure embed URL"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">Add video or external embed in Block settings.</p>
+        </button>
+      ) : null}
     </section>
   );
 }
 
 export function PostEditorCanvas({
   document,
+  title,
+  onTitleChange,
   selectedBlockId,
   insertFocusToken,
   onSelectBlock,
   onUpdateBlockContent,
   onUploadClipboardImage,
-  onMoveBlock,
-  onTransformBlock,
-  onDeleteBlock,
   onInsertBlock,
   onEnsureDynamicTocBlock,
+  onOpenBlockDetails,
 }: PostEditorCanvasProps) {
-  // TASK-061-01 UX contract anchor:
-  // this canvas is the single writing surface. Future smart-paste and
-  // writing-canvas enhancements must keep this view as the primary editing area.
   const blockRefs = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
@@ -474,31 +360,50 @@ export function PostEditorCanvas({
   }, [insertFocusToken, selectedBlockId]);
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
-      <div className="mx-auto flex h-full w-full max-w-5xl min-h-0 flex-col overflow-y-auto px-6 py-8 sm:px-10 sm:py-12">
-        {document.blocks.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-muted/20 p-8 text-center">
-            <p className="text-sm text-muted-foreground">No blocks yet.</p>
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-3"
-              onClick={() =>
-                onInsertBlock("writing-canvas", {
-                  source: "appender",
-                  target: { mode: "index", index: 0 },
-                })
-              }
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add writing section
-            </Button>
+    <div
+      className="flex min-h-0 flex-1 overflow-hidden bg-background"
+      onClick={() => onSelectBlock(null)}
+      data-post-editor-canvas="article"
+    >
+      <div className="mx-auto flex h-full w-full max-w-[860px] min-h-0 flex-col overflow-y-auto px-6 py-10 sm:px-12 sm:py-14">
+        <div className="space-y-8 rounded-xl border border-slate-200 bg-white px-4 py-6 sm:px-8 sm:py-8">
+          <div className="space-y-2">
+            <Textarea
+              value={title}
+              onChange={(event) => onTitleChange(event.target.value)}
+              onFocus={(event) => {
+                event.stopPropagation();
+                onSelectBlock(null);
+              }}
+              placeholder="Enter post title..."
+              className="min-h-0 resize-none border-0 p-0 text-4xl font-semibold leading-tight text-slate-900 shadow-none placeholder:text-slate-300 focus-visible:ring-0"
+              rows={1}
+              data-post-editor-title-input="true"
+            />
           </div>
-        ) : (
-          <div className="space-y-6">
-            {document.blocks.map((block, index) => (
-              <div key={block.id} className="space-y-3">
+
+          {document.blocks.length === 0 ? (
+            <div className="rounded-xl border border-dashed bg-slate-50 p-8 text-center">
+              <p className="text-sm text-muted-foreground">No blocks yet.</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-3"
+                onClick={() =>
+                  onInsertBlock("writing-canvas", {
+                    source: "outline-plus",
+                    target: { mode: "index", index: 0 },
+                  })
+                }
+              >
+                Add section
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-7" data-post-editor-flow="unified">
+              {document.blocks.map((block) => (
                 <div
+                  key={block.id}
                   ref={(element) => {
                     if (element) {
                       blockRefs.current.set(block.id, element);
@@ -513,25 +418,15 @@ export function PostEditorCanvas({
                     onSelect={() => onSelectBlock(block.id)}
                     onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
                     onUploadClipboardImage={onUploadClipboardImage}
-                    onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
-                    onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
-                    onDeleteBlock={() => onDeleteBlock(block.id)}
                     onInsertBlock={onInsertBlock}
                     onEnsureDynamicTocBlock={onEnsureDynamicTocBlock}
+                    onOpenBlockDetails={onOpenBlockDetails}
                   />
                 </div>
-                <CanvasInlineAppender
-                  onInsert={(type) =>
-                    onInsertBlock(type, {
-                      source: "appender",
-                      target: { mode: "index", index: index + 1 },
-                    })
-                  }
-                />
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

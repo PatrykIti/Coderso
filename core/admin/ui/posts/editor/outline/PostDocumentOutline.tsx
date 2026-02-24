@@ -13,6 +13,7 @@ type PostDocumentOutlineProps = {
   outline: PostDocumentOutlineModel;
   selectedBlockId: string | null;
   onSelectBlock: (blockId: string) => void;
+  showHints?: boolean;
 };
 
 const getHeadingIndentClass = (level: number) => {
@@ -71,6 +72,7 @@ export function PostDocumentOutline({
   outline,
   selectedBlockId,
   onSelectBlock,
+  showHints = true,
 }: PostDocumentOutlineProps) {
   if (outline.items.length === 0) {
     return (
@@ -91,7 +93,7 @@ export function PostDocumentOutline({
         />
       ))}
 
-      {outline.warnings.length > 0 ? (
+      {showHints && outline.warnings.length > 0 ? (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700">
           <p className="font-semibold">Outline checks</p>
           <p className="mt-1">

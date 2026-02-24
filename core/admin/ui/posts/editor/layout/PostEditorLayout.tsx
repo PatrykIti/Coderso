@@ -32,6 +32,7 @@ type PostEditorLayoutProps = {
   onDetailsSidebarOpenChange?: (open: boolean) => void;
   focusMode?: boolean;
   viewportMode?: PostEditorViewportMode;
+  compactSidePanels?: boolean;
 };
 
 const DESKTOP_BREAKPOINT_QUERY = "(min-width: 1024px)";
@@ -57,6 +58,7 @@ export function PostEditorLayout({
   onDetailsSidebarOpenChange,
   focusMode = false,
   viewportMode = "auto",
+  compactSidePanels = false,
 }: PostEditorLayoutProps) {
   const [matchesDesktopQuery, setMatchesDesktopQuery] = useState(() =>
     resolveInitialDesktop("auto")
@@ -115,7 +117,7 @@ export function PostEditorLayout({
     >
       <div className="flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden bg-background">
         {showDesktopSecondary ? (
-          <PostEditorSecondarySidebarRegion>
+          <PostEditorSecondarySidebarRegion className={compactSidePanels ? "w-56" : undefined}>
             {secondarySidebar}
           </PostEditorSecondarySidebarRegion>
         ) : null}
@@ -123,7 +125,9 @@ export function PostEditorLayout({
         {contentRegion}
 
         {showDesktopDetails ? (
-          <PostEditorSidebarRegion>{detailsSidebar}</PostEditorSidebarRegion>
+          <PostEditorSidebarRegion className={compactSidePanels ? "w-72" : undefined}>
+            {detailsSidebar}
+          </PostEditorSidebarRegion>
         ) : null}
       </div>
 

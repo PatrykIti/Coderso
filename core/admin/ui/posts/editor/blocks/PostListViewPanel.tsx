@@ -12,6 +12,7 @@ type PostListViewPanelProps = {
   selectedBlockId: string | null;
   onSelectBlock: (id: string) => void;
   onMoveBlockToIndex: (id: string, targetIndex: number) => void;
+  showHints?: boolean;
 };
 
 const resolveOutlineBlockLabel = (block: PostBlock) => {
@@ -27,6 +28,7 @@ export function PostListViewPanel({
   selectedBlockId,
   onSelectBlock,
   onMoveBlockToIndex,
+  showHints = true,
 }: PostListViewPanelProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
@@ -79,9 +81,11 @@ export function PostListViewPanel({
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-background shadow-sm">
       <div className="border-b px-4 py-3">
         <p className="text-xs font-semibold uppercase text-muted-foreground">List view</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Drag blocks to reorder. Keyboard: <kbd>Alt</kbd> + <kbd>Arrow keys</kbd>.
-        </p>
+        {showHints ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Drag blocks to reorder. Keyboard: <kbd>Alt</kbd> + <kbd>Arrow keys</kbd>.
+          </p>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">

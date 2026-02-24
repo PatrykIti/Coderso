@@ -1,6 +1,6 @@
 import type { PostBlock } from "../../../../services/posts/editor/postBlockDocument";
 
-export type PostInsertSource = "sidebar" | "slash" | "appender";
+export type PostInsertSource = "sidebar" | "slash" | "appender" | "outline-plus";
 
 export type PostInsertTarget =
   | { mode: "after-selected" }
@@ -60,4 +60,3 @@ export const resolvePostInsertMutation = (
 
   return { atIndex: blockCount };
 };
-

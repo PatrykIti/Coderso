@@ -9,30 +9,22 @@ const createTopBarProps = () => ({
   status: "draft",
   dirty: false,
   saving: false,
-  lastSavedAt: "2026-02-22T22:00:00.000Z",
-  canUndo: true,
-  canRedo: true,
-  onUndo: () => undefined,
-  onRedo: () => undefined,
   onOpenRevisions: () => undefined,
-  onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
   onToggleFocusMode: () => undefined,
   focusMode: false,
-  onToggleInserter: () => undefined,
-  inserterVisible: false,
   onToggleOutline: () => undefined,
   outlineVisible: true,
   onOpenDetails: () => undefined,
+  onOpenSettings: () => undefined,
 });
 
 test("post editor top bar exposes document tools and publish actions", () => {
   const html = renderToString(<PostEditorTopBar {...createTopBarProps()} />);
 
-  expect(html).toContain("Add block");
   expect(html).toContain("Outline");
-  expect(html).toContain("Runtime preview");
+  expect(html).toContain("Preview");
   expect(html).toContain("Publish");
 });
 

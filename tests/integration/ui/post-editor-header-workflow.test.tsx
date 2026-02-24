@@ -8,35 +8,25 @@ const createHeaderProps = () => ({
   status: "draft",
   dirty: false,
   saving: false,
-  lastSavedAt: "2026-02-23T10:00:00.000Z",
-  canUndo: true,
-  canRedo: true,
-  onUndo: () => undefined,
-  onRedo: () => undefined,
   onOpenRevisions: () => undefined,
-  onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
   onToggleFocusMode: () => undefined,
   focusMode: false,
-  onToggleInserter: () => undefined,
-  inserterVisible: false,
   onToggleOutline: () => undefined,
   outlineVisible: true,
   onOpenDetails: () => undefined,
+  onOpenSettings: () => undefined,
 });
 
 test("PostEditorTopBar renders document tools, context, and action clusters", () => {
   const html = renderToString(<PostEditorTopBar {...createHeaderProps()} />);
 
-  expect(html).toContain("data-post-editor-header-cluster=\"tools\"");
   expect(html).toContain("data-post-editor-header-cluster=\"actions\"");
-  expect(html).toContain("Add block");
   expect(html).toContain("Outline");
   expect(html).toContain("Revisions");
-  expect(html).toContain("Details");
-  expect(html).toContain("Focus mode");
-  expect(html).toContain("Runtime preview");
+  expect(html).toContain("Preview");
+  expect(html).toContain("Editor settings");
 });
 
 test("PostEditorTopBar reflects saving and dirty states", () => {
@@ -45,7 +35,6 @@ test("PostEditorTopBar reflects saving and dirty states", () => {
       {...createHeaderProps()}
       saving
       dirty
-      lastSavedAt={null}
     />
   );
 

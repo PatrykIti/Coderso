@@ -117,11 +117,7 @@ przez `setup.completed=true`.
     - centralny state paneli jest utrzymywany przez `usePostEditorLayout` (list-view/inserter/details),
     - layout warstwa (`PostEditorLayout`, `PostEditorRegions`) rozdziela regiony `header/content/secondary-sidebar/sidebar/footer`,
     - secondary/details sidebary maja jeden kontrakt stanu dla desktop (`aside`) i mobile (`sheet`) bez duplikacji logiki panel actions.
-  - **TASK-063-03 (done):** posts editor header zostal zmodularyzowany do Gutenberg-like clusters:
-    - `PostEditorHeader` sklada `PostEditorDocumentTools` (`Add block`, `Undo/Redo`, `Outline`), centralny context i sekcje `Revisions/Details`,
-    - header zawiera rowniez `Focus mode` toggle (full-width writing canvas),
-    - `PostEditorActionCluster` utrzymuje status dokumentu + sync status i akcje `Save draft`, `Runtime preview`, `Publish/Update`,
-    - flow save/preview/publish pozostaje bez nowych endpointow i korzysta z istniejacej strategii `silent sync` (bez hydrate reload canvasu).
+  - **TASK-063-03 (done):** posts editor header zostal zmodularyzowany do osobnych klastrow toolbar/actions i utrzymuje lifecycle publish/preview/revisions.
   - **TASK-063-04 (done):** inserter zostal przeniesiony do dedykowanego sidebar flow:
     - `PostInserterSidebar` jest explicit secondary-sidebar dialogiem z close buttonem i `Escape` close contract,
     - block library (`BlockInserter`) wspiera category filters, searchable catalog i optional `Most used` sekcje,
@@ -132,7 +128,7 @@ przez `setup.completed=true`.
     - outline selectors (`buildPostDocumentOutline`) zbieraja headingi z `heading` blockow i `writing-canvas` nodes oraz sygnalizuja `empty heading`, `skipped level`, `multiple H1`,
     - stable heading anchors sa wspoldzielone z runtime mapperem (`resolvePostStableAnchorId`), wiec TOC/outline maja spójny anchor model.
   - **TASK-063-06 (done):** writing canvas insertion i smart paste parity:
-    - canvas ma inline appender points miedzy blokami i na koncu dokumentu (insert z kontekstu, bez przechodzenia do osobnego panelu),
+    - insert orchestration zostala ujednolicona dla wielu entrypointow; finalny primary trigger jest opisany w `TASK-063-11` (left outline `+`),
     - insert orchestration jest wspolne dla 3 wejsc (`sidebar`, `slash`, `appender`) przez `resolvePostInsertMutation` i wspiera deterministic target (`after-selected`, `after-block`, `index`),
     - inserty ustawiaja focus na nowo dodanym bloku przez tokenized focus contract (`insertFocusToken` + primary editable marker),
     - smart paste hardening:
@@ -141,9 +137,14 @@ przez `setup.completed=true`.
       - dynamic TOC directive dalej dziala idempotentnie przy pelnym wykryciu statycznego TOC.
   - **TASK-063-10 (done):** stitch template migration + focus mode:
     - shell jest wizualnie mapowany do referencji `_docs/UI/admin_panel/46-post-editor/code.html` (left outline rail, center canvas, right details),
-    - canvas writing surface zostal uproszczony (bez dodatkowego inner card/header wrapper),
-    - in-canvas insertion uzywa floating plus appender (`+`) zamiast tekstowego triggera,
     - layout state rozszerzono o `focusMode`; wlaczenie focus mode zamyka sidebars, full-width canvas i zapisuje preferencje lokalnie.
+  - **TASK-063-11 (done):** strict HTML parity i unified article canvas:
+    - lewy `Document Outline` ma primary insert trigger (`+`) i insert source `outline-plus`,
+    - canvas renderuje spojny article flow (borderless blocks, bez card chrome) + title field (`Enter post title...`),
+    - media/interactive blocks maja klikalne placeholdery, ktore ustawiają selekcje i przełączają prawy panel na `Block`,
+    - prawy panel tabs zostaly ustalone jako `Post` i `Block` (selection-driven context),
+    - header po prawej utrzymuje kontrakt `Preview`, `Publish`, `Gear` (+ revisions/focus toggles), a gear otwiera `PostEditorSettingsDialog`,
+    - ustawienia edytora sa persistowane lokalnie (`nextless.posts.editor.preferences.v1`) i obejmuja m.in. compact side panels/focus on open.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

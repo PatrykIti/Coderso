@@ -9,10 +9,9 @@ test("post editor smoke: blocks mode renders canonical editor layout", () => {
     path: "/admin/coderso/posts/post-1",
   });
 
-  expect(html).toContain("Post editor");
+  expect(html).toContain("Editor settings");
   expect(html).toContain("Document Outline");
-  expect(html).toContain("Save draft");
-  expect(html).toContain("Runtime preview");
+  expect(html).toContain("Preview");
 });
 
 test("post editor smoke: classic override route still opens legacy editor", () => {
@@ -21,7 +20,7 @@ test("post editor smoke: classic override route still opens legacy editor", () =
   });
 
   expect(html).toContain("Enter post title...");
-  expect(html).toContain("Runtime preview");
+  expect(html).toContain("Save metadata");
   expect(html).not.toContain("Document Outline");
 });
 
@@ -30,8 +29,7 @@ test("post editor smoke: shell action controls stay visible", () => {
     path: "/admin/coderso/posts/post-1",
   });
 
-  expect(html).toContain("Undo");
-  expect(html).toContain("Save draft");
+  expect(html).toContain("Revisions");
   expect(html).toContain("Publish");
   expect(html).toContain("Document Outline");
 });

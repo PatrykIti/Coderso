@@ -10,9 +10,8 @@ test("PostBlockEditorShell renders region-based layout shell", () => {
 
   expect(html).toContain("data-post-editor-region=\"header\"");
   expect(html).toContain("data-post-editor-region=\"content\"");
-  expect(html).toContain("data-post-editor-region=\"footer\"");
   expect(html).toContain("data-post-editor-region=\"secondary-sidebar\"");
   expect(html).toContain("List view");
   expect(html).toContain("Loading post editor");
-  expect(html).toContain("List view panel");
+  expect(html).toContain("Document Outline");
 });

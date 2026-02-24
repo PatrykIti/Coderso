@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 35 tasks
+- **To Do:** 28 tasks
 - **In Progress:** 4 tasks
-- **Done:** 493 tasks
+- **Done:** 500 tasks
 
 ---
 
@@ -51,13 +51,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-063-08-03 | ARIA Landmarks and Accessibility Labels | High | Small | Semantic landmarks and aria coverage |
 | TASK-063-09-01 | Regression Test Execution Plan | High | Medium | Full gate run + rollout QA report |
 | TASK-063-09-02 | Docs Changelog and Kanban Closure | High | Medium | Final docs/changelog/board synchronization |
-| TASK-063-11 | Post Editor Strict HTML Parity and Unified Article Canvas | High | Large | Left-outline plus insert, borderless canvas, right Post/Block tabs, gear settings modal |
-| TASK-063-11-01 | Visual Parity Shell and Tokens | High | Medium | Pixel-close shell/tokens parity vs `_docs/UI/admin_panel/46-post-editor/code.html` |
-| TASK-063-11-02 | Left Outline Primary Insert Flow | High | Medium | Move primary `+` insertion to Document Outline panel |
-| TASK-063-11-03 | Unified Borderless Canvas and Media Placeholders | High | Large | Single article flow canvas without block cards + clickable media placeholders |
-| TASK-063-11-04 | Right Sidebar Post/Block Tabs and Context | High | Medium | Deterministic Post/Block inspector context switching |
-| TASK-063-11-05 | Header Preview Publish Gear and Editor Settings Dialog | High | Medium | Right-side action cluster with gear popup for editor globals |
-| TASK-063-11-06 | QA, Docs, Changelog, and Closure | Medium | Medium | Full gate validation and documentation/changelog sync |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
@@ -81,7 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 completed; next: 063-11 strict HTML parity, then 063-07 details/preferences |
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 + 063-11 completed; next: 063-07 details/preferences |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -92,6 +85,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-11 | Post Editor Strict HTML Parity and Unified Article Canvas | High | Large | Done: strict shell parity, outline `+` insert, unified canvas flow, Post/Block tabs, header gear settings |
+| TASK-063-11-06 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint/types/full-suite tests + docs/changelog/kanban sync |
+| TASK-063-11-05 | Header Preview Publish Gear and Editor Settings Dialog | High | Medium | Done: right-side preview/publish/gear actions + persisted editor settings modal |
+| TASK-063-11-04 | Right Sidebar Post/Block Tabs and Context | High | Medium | Done: tabs renamed to Post/Block with selection-driven context switching |
+| TASK-063-11-03 | Unified Borderless Canvas and Media Placeholders | High | Large | Done: single article-flow canvas without per-block cards + clickable media placeholders |
+| TASK-063-11-02 | Left Outline Primary Insert Flow | High | Medium | Done: Document Outline `+` insert entrypoint wired to shared insert resolver (`outline-plus`) |
+| TASK-063-11-01 | Visual Parity Shell and Tokens | High | Medium | Done: shell/header/rails parity cleanup aligned with reference template |
 | TASK-063-06 | Writing Canvas Appender and Smart Paste Parity | High | Large | Done: inline canvas appender points + shared insert orchestration + Word paste hardening |
 | TASK-063-06-03 | Smart Paste Hardening and TOC Directives | High | Large | Done: heading fidelity hardening + TOC link cleanup + dynamic TOC directive parity |
 | TASK-063-06-02 | Unified Inserter Slash Appender Flow | High | Medium | Done: `resolvePostInsertMutation` shared across sidebar/slash/appender insert sources |

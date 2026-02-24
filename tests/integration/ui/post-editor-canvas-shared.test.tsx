@@ -22,20 +22,19 @@ test("PostEditorCanvas renders unified document canvas", () => {
           { id: "block-2", type: "heading", attrs: { level: 2 }, content: "<h2>Title</h2>" },
         ],
       }}
+      title="Unified flow"
+      onTitleChange={() => undefined}
       selectedBlockId="block-1"
       insertFocusToken={0}
       onSelectBlock={() => undefined}
       onUpdateBlockContent={() => undefined}
-      onMoveBlock={() => undefined}
-      onTransformBlock={() => undefined}
-      onDeleteBlock={() => undefined}
       onInsertBlock={() => undefined}
     />
   );
 
-  expect(html).toContain("data-post-editor-appender=\"true\"");
+  expect(html).toContain("data-post-editor-flow=\"unified\"");
+  expect(html).toContain("data-post-editor-title-input=\"true\"");
   expect(html).toContain("Heading");
-  expect((html.match(/data-post-editor-appender=\"true\"/g) ?? []).length).toBe(2);
 });
 
 test("PostEditorCanvas shows empty state and writing-canvas appender", () => {
@@ -46,17 +45,39 @@ test("PostEditorCanvas shows empty state and writing-canvas appender", () => {
         meta: {},
         blocks: [],
       }}
+      title=""
+      onTitleChange={() => undefined}
       selectedBlockId={null}
       insertFocusToken={0}
       onSelectBlock={() => undefined}
       onUpdateBlockContent={() => undefined}
-      onMoveBlock={() => undefined}
-      onTransformBlock={() => undefined}
-      onDeleteBlock={() => undefined}
       onInsertBlock={() => undefined}
     />
   );
 
   expect(html).toContain("No blocks yet.");
-  expect(html).toContain("Add writing section");
+  expect(html).toContain("Add section");
+});
+
+test("PostEditorCanvas renders media placeholder when image is not configured", () => {
+  const html = renderToString(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "block-1", type: "image", attrs: {}, content: null }],
+      }}
+      title="Media post"
+      onTitleChange={() => undefined}
+      selectedBlockId="block-1"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onOpenBlockDetails={() => undefined}
+    />
+  );
+
+  expect(html).toContain("data-post-editor-media-placeholder=\"image\"");
+  expect(html).toContain("Click to configure image");
 });

@@ -33,12 +33,14 @@ test("PostListViewSidebar renders document outline with list/outline tabs", () =
       selectedBlockId="writing-1"
       onSelectBlock={() => undefined}
       onMoveBlockToIndex={() => undefined}
+      onInsertBlock={() => undefined}
     />
   );
 
   expect(html).toContain("Document Outline");
   expect(html).toContain("List view");
   expect(html).toContain("Outline");
+  expect(html).toContain("data-post-editor-outline-insert=\"true\"");
   expect(html).toContain("Section title");
   expect(html).toContain("Implementation");
 });
@@ -61,6 +63,7 @@ test("PostListViewSidebar renders empty outline state without headings", () => {
       selectedBlockId={null}
       onSelectBlock={() => undefined}
       onMoveBlockToIndex={() => undefined}
+      onInsertBlock={() => undefined}
     />
   );
 
