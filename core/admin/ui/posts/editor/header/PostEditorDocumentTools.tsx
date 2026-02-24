@@ -27,7 +27,7 @@ export function PostEditorDocumentTools({
 }: PostEditorDocumentToolsProps) {
   return (
     <div
-      className="flex flex-wrap items-center gap-2"
+      className="flex flex-wrap items-center gap-2 border-t pt-3"
       aria-label="Document tools"
       data-post-editor-header-cluster="tools"
     >
@@ -42,7 +42,7 @@ export function PostEditorDocumentTools({
         title="Add block (/) and toggle inserter"
       >
         <Plus className="h-4 w-4" />
-        Add
+        Add block
       </Button>
 
       <Button
@@ -81,7 +81,7 @@ export function PostEditorDocumentTools({
         title="Document overview (Alt+Arrow to reorder blocks)"
       >
         <ListTree className="h-4 w-4" />
-        Document overview
+        Outline
       </Button>
     </div>
   );

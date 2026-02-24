@@ -9,7 +9,7 @@ export function PostEditorHeaderRegion({ children, className }: RegionProps) {
   return (
     <header
       data-post-editor-region="header"
-      className={cn("shrink-0 border-b bg-background", className)}
+      className={cn("shrink-0 border-b bg-background/95 backdrop-blur", className)}
     >
       {children}
     </header>
@@ -46,7 +46,7 @@ export function PostEditorSecondarySidebarRegion({
     <aside
       data-post-editor-region="secondary-sidebar"
       className={cn(
-        "hidden h-full min-h-0 w-80 shrink-0 border-r bg-background lg:block",
+        "hidden h-full min-h-0 w-64 shrink-0 border-r bg-background lg:block",
         className
       )}
       aria-label="Post editor secondary sidebar"
@@ -63,7 +63,7 @@ export function PostEditorSidebarRegion({ children, className }: RegionProps) {
     <aside
       data-post-editor-region="sidebar"
       className={cn(
-        "hidden h-full min-h-0 w-96 shrink-0 border-l bg-background lg:block",
+        "hidden h-full min-h-0 w-80 shrink-0 border-l bg-background lg:block",
         className
       )}
       aria-label="Post editor details sidebar"

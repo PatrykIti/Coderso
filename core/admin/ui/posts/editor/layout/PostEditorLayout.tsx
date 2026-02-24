@@ -30,6 +30,7 @@ type PostEditorLayoutProps = {
   detailsSidebar?: React.ReactNode;
   detailsSidebarOpen?: boolean;
   onDetailsSidebarOpenChange?: (open: boolean) => void;
+  focusMode?: boolean;
   viewportMode?: PostEditorViewportMode;
 };
 
@@ -54,6 +55,7 @@ export function PostEditorLayout({
   detailsSidebar,
   detailsSidebarOpen = false,
   onDetailsSidebarOpenChange,
+  focusMode = false,
   viewportMode = "auto",
 }: PostEditorLayoutProps) {
   const [matchesDesktopQuery, setMatchesDesktopQuery] = useState(() =>
@@ -77,14 +79,24 @@ export function PostEditorLayout({
         ? false
         : matchesDesktopQuery;
 
-  const showDesktopSecondary = isDesktopViewport && secondarySidebarOpen && Boolean(secondarySidebar);
-  const showDesktopDetails = isDesktopViewport && detailsSidebarOpen && Boolean(detailsSidebar);
-  const showMobileSecondary = !isDesktopViewport && Boolean(secondarySidebar);
-  const showMobileDetails = !isDesktopViewport && Boolean(detailsSidebar);
+  const showDesktopSecondary =
+    isDesktopViewport &&
+    !focusMode &&
+    secondarySidebarOpen &&
+    Boolean(secondarySidebar);
+  const showDesktopDetails =
+    isDesktopViewport &&
+    !focusMode &&
+    detailsSidebarOpen &&
+    Boolean(detailsSidebar);
+  const showMobileSecondary =
+    !isDesktopViewport && !focusMode && Boolean(secondarySidebar);
+  const showMobileDetails =
+    !isDesktopViewport && !focusMode && Boolean(detailsSidebar);
 
   const contentRegion = useMemo(
     () => (
-      <section className="min-h-0 min-w-0 flex-1 bg-muted/20">
+      <section className="min-h-0 min-w-0 flex-1 bg-background">
         <div className="flex h-full min-h-0 flex-col overflow-hidden">
           {header ? <PostEditorHeaderRegion>{header}</PostEditorHeaderRegion> : null}
           <PostEditorContentRegion>{content}</PostEditorContentRegion>
@@ -101,7 +113,7 @@ export function PostEditorLayout({
       breadcrumbs={breadcrumbs}
       contentClassName="overflow-hidden p-0"
     >
-      <div className="flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden">
+      <div className="flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden bg-background">
         {showDesktopSecondary ? (
           <PostEditorSecondarySidebarRegion>
             {secondarySidebar}

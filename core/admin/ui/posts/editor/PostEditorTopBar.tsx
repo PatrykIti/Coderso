@@ -15,6 +15,8 @@ type PostEditorTopBarProps = {
   onSaveDraft: () => void;
   onPreview: () => void;
   onPublish: () => void;
+  onToggleFocusMode: () => void;
+  focusMode: boolean;
   onToggleInserter?: () => void;
   inserterVisible?: boolean;
   onToggleOutline: () => void;
@@ -37,6 +39,8 @@ export function PostEditorTopBar({
   onSaveDraft,
   onPreview,
   onPublish,
+  onToggleFocusMode,
+  focusMode,
   onToggleInserter,
   inserterVisible = false,
   onToggleOutline,
@@ -64,6 +68,8 @@ export function PostEditorTopBar({
       onSaveDraft={onSaveDraft}
       onPreview={onPreview}
       onPublish={onPublish}
+      onToggleFocusMode={onToggleFocusMode}
+      focusMode={focusMode}
     />
   );
 }

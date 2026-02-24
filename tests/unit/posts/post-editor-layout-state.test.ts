@@ -12,6 +12,7 @@ describe("post editor layout state", () => {
       secondarySidebar: null,
       detailsOpen: false,
       detailsTab: "document",
+      focusMode: false,
     });
   });
 
@@ -47,5 +48,27 @@ describe("post editor layout state", () => {
     });
     expect(toggled.detailsOpen).toBe(false);
     expect(toggled.detailsTab).toBe("block");
+  });
+
+  test("focus mode closes sidebars and exits on panel open", () => {
+    const initial = createPostEditorLayoutState({
+      initialSecondarySidebar: "list-view",
+      initialDetailsOpen: true,
+      initialFocusMode: false,
+    });
+    const focused = postEditorLayoutReducer(initial, {
+      type: "set_focus_mode",
+      value: true,
+    });
+    expect(focused.focusMode).toBe(true);
+    expect(focused.secondarySidebar).toBeNull();
+    expect(focused.detailsOpen).toBe(false);
+
+    const reopened = postEditorLayoutReducer(focused, {
+      type: "open_secondary",
+      sidebar: "inserter",
+    });
+    expect(reopened.focusMode).toBe(false);
+    expect(reopened.secondarySidebar).toBe("inserter");
   });
 });

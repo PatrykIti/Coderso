@@ -118,14 +118,15 @@ przez `setup.completed=true`.
     - layout warstwa (`PostEditorLayout`, `PostEditorRegions`) rozdziela regiony `header/content/secondary-sidebar/sidebar/footer`,
     - secondary/details sidebary maja jeden kontrakt stanu dla desktop (`aside`) i mobile (`sheet`) bez duplikacji logiki panel actions.
   - **TASK-063-03 (done):** posts editor header zostal zmodularyzowany do Gutenberg-like clusters:
-    - `PostEditorHeader` sklada `PostEditorDocumentTools` (Add, Undo/Redo, Document overview), centralny context i sekcje `Revisions/Details`,
+    - `PostEditorHeader` sklada `PostEditorDocumentTools` (`Add block`, `Undo/Redo`, `Outline`), centralny context i sekcje `Revisions/Details`,
+    - header zawiera rowniez `Focus mode` toggle (full-width writing canvas),
     - `PostEditorActionCluster` utrzymuje status dokumentu + sync status i akcje `Save draft`, `Runtime preview`, `Publish/Update`,
     - flow save/preview/publish pozostaje bez nowych endpointow i korzysta z istniejacej strategii `silent sync` (bez hydrate reload canvasu).
   - **TASK-063-04 (done):** inserter zostal przeniesiony do dedykowanego sidebar flow:
     - `PostInserterSidebar` jest explicit secondary-sidebar dialogiem z close buttonem i `Escape` close contract,
     - block library (`BlockInserter`) wspiera category filters, searchable catalog i optional `Most used` sekcje,
     - focus return po zamknieciu insertera jest centralnie realizowany przez `useFocusReturn` (powrot na `Add` trigger).
-  - **TASK-063-05 (done):** `Document Overview` sidebar dostal parity dla list/outline/stats:
+  - **TASK-063-05 (done):** `Document Outline` sidebar dostal parity dla list/outline/stats:
     - secondary sidebar `PostListViewSidebar` zawiera taby `List view` i `Outline`,
     - stats selectors (`buildPostDocumentStats`) sa liczone deterministycznie z `PostBlockDocument` (words/chars/read-time/headings/paragraphs/blocks),
     - outline selectors (`buildPostDocumentOutline`) zbieraja headingi z `heading` blockow i `writing-canvas` nodes oraz sygnalizuja `empty heading`, `skipped level`, `multiple H1`,
@@ -138,6 +139,11 @@ przez `setup.completed=true`.
       - heading fidelity dla Word (w tym przypadki z `mso-outline-level` nadpisujace tag heading),
       - usuwanie statycznych Word TOC anchor links (`#_Toc...`) z retained content,
       - dynamic TOC directive dalej dziala idempotentnie przy pelnym wykryciu statycznego TOC.
+  - **TASK-063-10 (done):** stitch template migration + focus mode:
+    - shell jest wizualnie mapowany do referencji `_docs/UI/admin_panel/46-post-editor/code.html` (left outline rail, center canvas, right details),
+    - canvas writing surface zostal uproszczony (bez dodatkowego inner card/header wrapper),
+    - in-canvas insertion uzywa floating plus appender (`+`) zamiast tekstowego triggera,
+    - layout state rozszerzono o `focusMode`; wlaczenie focus mode zamyka sidebars, full-width canvas i zapisuje preferencje lokalnie.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

@@ -33,11 +33,9 @@ test("PostEditorCanvas renders unified document canvas", () => {
     />
   );
 
-  expect(html).toContain("Document canvas");
-  expect(html).toContain("Edit the full post flow in one view");
+  expect(html).toContain("data-post-editor-appender=\"true\"");
   expect(html).toContain("Heading");
-  expect(html).toContain("Add block");
-  expect((html.match(/Add block/g) ?? []).length).toBe(2);
+  expect((html.match(/data-post-editor-appender=\"true\"/g) ?? []).length).toBe(2);
 });
 
 test("PostEditorCanvas shows empty state and writing-canvas appender", () => {

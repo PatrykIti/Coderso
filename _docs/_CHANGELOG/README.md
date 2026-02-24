@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 320 | 2026-02-24 | TASK-063-10 post editor stitch template and focus mode | Admin/UI |
 | 319 | 2026-02-24 | TASK-063-06 writing canvas appender and smart paste parity | Admin/UI |
 | 318 | 2026-02-24 | TASK-063-05 post editor list view, outline, and stats | Admin/UI |
 | 317 | 2026-02-24 | TASK-063-04 post editor inserter sidebar and library | Admin/UI |

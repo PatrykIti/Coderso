@@ -45,3 +45,22 @@ test("PostEditorLayout renders sidebars as sheets on mobile", () => {
   expect(html).toContain("Editor panel");
   expect(html).toContain("Details");
 });
+
+test("PostEditorLayout hides desktop sidebars in focus mode", () => {
+  const html = renderAdminUi(
+    <PostEditorLayout
+      activeHref="/admin/posts"
+      content={<div>Canvas</div>}
+      secondarySidebar={<div>Secondary panel</div>}
+      secondarySidebarOpen
+      detailsSidebar={<div>Details panel</div>}
+      detailsSidebarOpen
+      focusMode
+      viewportMode="desktop"
+    />,
+    { path: "/admin/coderso/posts/post-1" }
+  );
+
+  expect(html).not.toContain("data-post-editor-region=\"secondary-sidebar\"");
+  expect(html).not.toContain("data-post-editor-region=\"sidebar\"");
+});

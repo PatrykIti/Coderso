@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,6 +16,13 @@ import { PostInserterSidebar } from "./sidebars/PostInserterSidebar";
 import { PostListViewSidebar } from "./sidebars/PostListViewSidebar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 
+const FOCUS_MODE_STORAGE_KEY = "nextless.posts.editor.focusMode";
+
+const resolveInitialFocusMode = () => {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(FOCUS_MODE_STORAGE_KEY) === "1";
+};
+
 // TASK-061-01 UX contract anchor:
 // - writing-first editing flow on a shared canvas,
 // - ribbon is the primary action surface,
@@ -23,11 +30,22 @@ import { usePostEditorState } from "./hooks/usePostEditorState";
 // - details opens contextually without changing canvas mode.
 export function PostBlockEditorShell() {
   const editor = usePostEditorState();
+  const [initialFocusMode] = useState(resolveInitialFocusMode);
   const layout = usePostEditorLayout({
     initialSecondarySidebar: "list-view",
+    initialDetailsOpen: true,
     initialDetailsTab: "document",
+    initialFocusMode,
   });
   const addButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      FOCUS_MODE_STORAGE_KEY,
+      layout.focusMode ? "1" : "0"
+    );
+  }, [layout.focusMode]);
 
   useFocusReturn({
     active: layout.showInserter,
@@ -121,11 +139,13 @@ export function PostBlockEditorShell() {
     <div className="flex items-center justify-between gap-4 px-4 py-2 text-xs text-muted-foreground sm:px-6">
       <span>{editor.state.document.blocks.length} blocks</span>
       <span>
-        {layout.showInserter
-          ? "Inserter panel"
-          : layout.showListView
-            ? "List view panel"
-            : "Panels hidden"}
+        {layout.focusMode
+          ? "Focus mode"
+          : layout.showInserter
+            ? "Inserter panel"
+            : layout.showListView
+              ? "List view panel"
+              : "Panels hidden"}
       </span>
     </div>
   );
@@ -225,6 +245,8 @@ export function PostBlockEditorShell() {
           onPublish={() => {
             editor.publish().catch(() => undefined);
           }}
+          onToggleFocusMode={layout.toggleFocusMode}
+          focusMode={layout.focusMode}
           onToggleInserter={layout.toggleInserter}
           inserterVisible={layout.showInserter}
           onToggleOutline={layout.toggleListView}
@@ -254,6 +276,7 @@ export function PostBlockEditorShell() {
           layout.closeDetails();
         }
       }}
+      focusMode={layout.focusMode}
     />
   );
 }

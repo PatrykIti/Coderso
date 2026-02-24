@@ -5,7 +5,7 @@
 **Category:** Authoring UX  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-06, TASK-063-10-02  
-**Status:** To Do
+**Status:** Done (2026-02-24)
 
 ---
 

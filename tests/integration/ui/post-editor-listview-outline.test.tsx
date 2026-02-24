@@ -3,7 +3,7 @@ import { renderToString } from "react-dom/server";
 
 import { PostListViewSidebar } from "../../../core/admin/ui/posts/editor/sidebars/PostListViewSidebar";
 
-test("PostListViewSidebar renders document stats and list/outline tabs", () => {
+test("PostListViewSidebar renders document outline with list/outline tabs", () => {
   const html = renderToString(
     <PostListViewSidebar
       document={{
@@ -36,9 +36,7 @@ test("PostListViewSidebar renders document stats and list/outline tabs", () => {
     />
   );
 
-  expect(html).toContain("Document overview");
-  expect(html).toContain("Document stats");
-  expect(html).toContain("Words");
+  expect(html).toContain("Document Outline");
   expect(html).toContain("List view");
   expect(html).toContain("Outline");
   expect(html).toContain("Section title");

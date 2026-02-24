@@ -7,12 +7,14 @@ export type PostEditorLayoutState = {
   secondarySidebar: PostEditorSecondarySidebar;
   detailsOpen: boolean;
   detailsTab: PostEditorDetailsTab;
+  focusMode: boolean;
 };
 
 type CreatePostEditorLayoutStateOptions = {
   initialSecondarySidebar?: PostEditorSecondarySidebar;
   initialDetailsOpen?: boolean;
   initialDetailsTab?: PostEditorDetailsTab;
+  initialFocusMode?: boolean;
 };
 
 const normalizeSecondarySidebar = (
@@ -30,6 +32,7 @@ export const createPostEditorLayoutState = (
   secondarySidebar: normalizeSecondarySidebar(options.initialSecondarySidebar),
   detailsOpen: options.initialDetailsOpen === true,
   detailsTab: normalizeDetailsTab(options.initialDetailsTab),
+  focusMode: options.initialFocusMode === true,
 });
 
 export type PostEditorLayoutAction =
@@ -39,7 +42,9 @@ export type PostEditorLayoutAction =
   | { type: "open_details"; tab?: PostEditorDetailsTab }
   | { type: "toggle_details"; tab?: PostEditorDetailsTab }
   | { type: "close_details" }
-  | { type: "set_details_tab"; tab: PostEditorDetailsTab };
+  | { type: "set_details_tab"; tab: PostEditorDetailsTab }
+  | { type: "set_focus_mode"; value: boolean }
+  | { type: "toggle_focus_mode" };
 
 export const postEditorLayoutReducer = (
   state: PostEditorLayoutState,
@@ -50,12 +55,15 @@ export const postEditorLayoutReducer = (
       return {
         ...state,
         secondarySidebar: action.sidebar,
+        focusMode: false,
       };
     case "toggle_secondary":
       return {
         ...state,
         secondarySidebar:
           state.secondarySidebar === action.sidebar ? null : action.sidebar,
+        focusMode:
+          state.secondarySidebar === action.sidebar ? state.focusMode : false,
       };
     case "close_secondary":
       return {
@@ -67,6 +75,7 @@ export const postEditorLayoutReducer = (
         ...state,
         detailsOpen: true,
         detailsTab: normalizeDetailsTab(action.tab ?? state.detailsTab),
+        focusMode: false,
       };
     case "toggle_details": {
       const nextTab = normalizeDetailsTab(action.tab ?? state.detailsTab);
@@ -80,6 +89,7 @@ export const postEditorLayoutReducer = (
         ...state,
         detailsOpen: true,
         detailsTab: nextTab,
+        focusMode: false,
       };
     }
     case "close_details":
@@ -92,6 +102,22 @@ export const postEditorLayoutReducer = (
         ...state,
         detailsTab: normalizeDetailsTab(action.tab),
       };
+    case "set_focus_mode":
+      return {
+        ...state,
+        focusMode: action.value,
+        secondarySidebar: action.value ? null : state.secondarySidebar,
+        detailsOpen: action.value ? false : state.detailsOpen,
+      };
+    case "toggle_focus_mode": {
+      const nextFocusMode = !state.focusMode;
+      return {
+        ...state,
+        focusMode: nextFocusMode,
+        secondarySidebar: nextFocusMode ? null : state.secondarySidebar,
+        detailsOpen: nextFocusMode ? false : state.detailsOpen,
+      };
+    }
     default:
       return state;
   }
@@ -105,6 +131,7 @@ export type UsePostEditorLayoutResult = {
   detailsSidebarOpen: boolean;
   showListView: boolean;
   showInserter: boolean;
+  focusMode: boolean;
   openListView: () => void;
   toggleListView: () => void;
   openInserter: () => void;
@@ -115,6 +142,8 @@ export type UsePostEditorLayoutResult = {
   openDetailsForSelection: (hasSelectedBlock: boolean) => void;
   closeDetails: () => void;
   setDetailsTab: (tab: PostEditorDetailsTab) => void;
+  setFocusMode: (value: boolean) => void;
+  toggleFocusMode: () => void;
 };
 
 export function usePostEditorLayout(
@@ -169,6 +198,14 @@ export function usePostEditorLayout(
     dispatch({ type: "set_details_tab", tab });
   }, []);
 
+  const setFocusMode = useCallback((value: boolean) => {
+    dispatch({ type: "set_focus_mode", value });
+  }, []);
+
+  const toggleFocusMode = useCallback(() => {
+    dispatch({ type: "toggle_focus_mode" });
+  }, []);
+
   return useMemo(
     () => ({
       state,
@@ -176,6 +213,7 @@ export function usePostEditorLayout(
       detailsSidebarOpen: state.detailsOpen,
       showListView: state.secondarySidebar === "list-view",
       showInserter: state.secondarySidebar === "inserter",
+      focusMode: state.focusMode,
       openListView,
       toggleListView,
       openInserter,
@@ -186,6 +224,8 @@ export function usePostEditorLayout(
       openDetailsForSelection,
       closeDetails,
       setDetailsTab,
+      setFocusMode,
+      toggleFocusMode,
     }),
     [
       closeDetails,
@@ -195,8 +235,10 @@ export function usePostEditorLayout(
       openInserter,
       openListView,
       setDetailsTab,
+      setFocusMode,
       state,
       toggleDetails,
+      toggleFocusMode,
       toggleInserter,
       toggleListView,
     ]

@@ -629,8 +629,11 @@ Editor save behavior (update `TASK-061-09`):
 
 Editor header action flow (update `TASK-063-03`):
 - header workflow zostaje podzielony na dwa clustery:
-  - document tools: `Add` (toggle inserter), `Undo/Redo`, `Document overview` (toggle list view),
+  - document tools: `Add block` (toggle inserter), `Undo/Redo`, `Outline` (toggle list view),
   - action cluster: status/sync badges + `Save draft`, `Runtime preview`, `Publish`/`Update`,
+- header zawiera `Focus mode` toggle:
+  - wlaczenie ustawia full-width canvas i ukrywa sidebary,
+  - focus mode preference jest zapisywana lokalnie (`nextless.posts.editor.focusMode`),
 - action cluster korzysta z istniejacych internal routes (`PATCH /posts/:id`, `POST /posts/:id/autosave`, `POST /posts/:id/preview`, `POST /posts/:id/publish`) i nie wprowadza nowych API endpointow.
 
 Editor inserter sidebar flow (update `TASK-063-04`):
@@ -645,7 +648,7 @@ Editor inserter sidebar flow (update `TASK-063-04`):
 - zmiana dotyczy tylko admin UI orchestration; brak nowych endpointow API.
 
 Editor document overview selectors (update `TASK-063-05`):
-- `Document overview` secondary sidebar ma dwa widoki:
+- `Document Outline` secondary sidebar ma dwa widoki:
   - `List view` (reorder/select blokow),
   - `Outline` (heading index z walidacja hierarchii),
 - stats selector contract:
@@ -662,7 +665,7 @@ Editor insertion parity flow (update `TASK-063-06`):
   - `target.mode = "after-selected" | "after-block" | "index"`,
   - resolver: `resolvePostInsertMutation(...)`,
   - reducer mutation: `insert_block` z `afterId` albo `atIndex`,
-- canvas posiada inline appender points:
+- canvas posiada inline appender points (floating `+` trigger):
   - po kazdym bloku (w tym koniec dokumentu),
   - empty state appender dla dokumentu bez blokow (`index=0`),
 - focus contract po insercie:

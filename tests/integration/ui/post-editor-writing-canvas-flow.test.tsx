@@ -18,6 +18,8 @@ const createTopBarProps = () => ({
   onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
+  onToggleFocusMode: () => undefined,
+  focusMode: false,
   onToggleInserter: () => undefined,
   inserterVisible: false,
   onToggleOutline: () => undefined,
@@ -28,8 +30,8 @@ const createTopBarProps = () => ({
 test("post editor top bar exposes document tools and publish actions", () => {
   const html = renderToString(<PostEditorTopBar {...createTopBarProps()} />);
 
-  expect(html).toContain("Add");
-  expect(html).toContain("Document overview");
+  expect(html).toContain("Add block");
+  expect(html).toContain("Outline");
   expect(html).toContain("Runtime preview");
   expect(html).toContain("Publish");
 });

@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 34 tasks
+- **To Do:** 28 tasks
 - **In Progress:** 4 tasks
-- **Done:** 487 tasks
+- **Done:** 493 tasks
 
 ---
 
@@ -51,12 +51,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-063-08-03 | ARIA Landmarks and Accessibility Labels | High | Small | Semantic landmarks and aria coverage |
 | TASK-063-09-01 | Regression Test Execution Plan | High | Medium | Full gate run + rollout QA report |
 | TASK-063-09-02 | Docs Changelog and Kanban Closure | High | Medium | Final docs/changelog/board synchronization |
-| TASK-063-10 | Post Editor Stitch Template Migration and Focus Mode | High | Large | Replace post editor surface with Stitch-inspired layout + floating plus + focus mode |
-| TASK-063-10-01 | Template Contract Mapping and Component Inventory | High | Medium | Map `_docs/UI/admin_panel/46-post-editor/code.html` to React regions/components |
-| TASK-063-10-02 | Shell Layout Migration to Stitch Reference | High | Large | Recompose left rail / center canvas / right inspector shell |
-| TASK-063-10-03 | Floating Appender Plus and Insert Flow | High | Medium | Floating `+` inserter with shared insert mutation flow |
-| TASK-063-10-04 | Focus Mode Full Width Toggle and Persistence | High | Medium | Header toggle for full-width writing mode with persisted preference |
-| TASK-063-10-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Regression validation and final closure for 063-10 |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
@@ -80,7 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 completed; next: 063-07 (details), then 063-10 (Stitch template + focus mode) |
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 completed; next: 063-07 details inspector tabs/preferences |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -95,6 +89,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-063-06-03 | Smart Paste Hardening and TOC Directives | High | Large | Done: heading fidelity hardening + TOC link cleanup + dynamic TOC directive parity |
 | TASK-063-06-02 | Unified Inserter Slash Appender Flow | High | Medium | Done: `resolvePostInsertMutation` shared across sidebar/slash/appender insert sources |
 | TASK-063-06-01 | Inline Appender Insert Points | High | Medium | Done: in-canvas appender between blocks/end + inserted block focus contract |
+| TASK-063-10 | Post Editor Stitch Template Migration and Focus Mode | High | Large | Done: stitch-inspired shell, floating appender plus, and persisted focus mode |
+| TASK-063-10-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint/types/full-suite tests + docs/changelog/kanban sync |
+| TASK-063-10-04 | Focus Mode Full Width Toggle and Persistence | High | Medium | Done: header focus toggle, full-width canvas mode, and local preference restore |
+| TASK-063-10-03 | Floating Appender Plus and Insert Flow | High | Medium | Done: floating `+` appender style wired to shared insert resolver |
+| TASK-063-10-02 | Shell Layout Migration to Stitch Reference | High | Large | Done: three-region stitch-like shell composition (left outline, canvas, right details) |
+| TASK-063-10-01 | Template Contract Mapping and Component Inventory | High | Medium | Done: reference template mapped to existing React regions/components |
 | TASK-063-05 | List View, Outline, and Document Stats | High | Large | Done: document overview sidebar with tabs, outline warnings, and live stats selectors |
 | TASK-063-05-03 | ListView and Outline Sidebar UI | High | Medium | Done: `PostListViewSidebar` with List/Outline tabs and block/heading navigation |
 | TASK-063-05-02 | Outline Builder and Validation Rules | High | Medium | Done: heading outline model with empty/skipped/multiple-H1 validation and stable anchors |

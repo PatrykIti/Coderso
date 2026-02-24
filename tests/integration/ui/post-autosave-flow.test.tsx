@@ -17,6 +17,8 @@ const createBaseProps = () => ({
   onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
+  onToggleFocusMode: () => undefined,
+  focusMode: false,
   onToggleInserter: () => undefined,
   inserterVisible: false,
   onToggleOutline: () => undefined,

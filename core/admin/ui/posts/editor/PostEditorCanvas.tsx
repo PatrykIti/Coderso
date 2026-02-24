@@ -87,19 +87,20 @@ function CanvasInlineAppender({
   onInsert: (type: PostBlockType) => void;
 }) {
   return (
-    <div className="flex justify-center py-1">
+    <div className="group relative flex h-10 items-center justify-center">
+      <div className="h-px w-full bg-border/60 transition group-hover:bg-primary/30" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             type="button"
             variant="outline"
-            size="sm"
-            className="h-8 rounded-full px-3 text-xs"
+            size="icon"
+            className="absolute h-8 w-8 rounded-full border bg-background shadow-sm"
             aria-label="Insert block"
             data-post-editor-appender="true"
           >
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            Add block
+            <Plus className="h-4 w-4" />
+            <span className="sr-only">Add block</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center" className="w-72">
@@ -473,75 +474,64 @@ export function PostEditorCanvas({
   }, [insertFocusToken, selectedBlockId]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:p-6">
-      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-background shadow-sm">
-        <div className="flex items-center border-b px-4 py-3">
-          <div>
-            <p className="text-xs font-semibold uppercase text-muted-foreground">Document canvas</p>
-            <p className="text-sm font-semibold text-foreground">
-              Edit the full post flow in one view.
-            </p>
+    <div className="flex min-h-0 flex-1 overflow-hidden bg-background">
+      <div className="mx-auto flex h-full w-full max-w-5xl min-h-0 flex-col overflow-y-auto px-6 py-8 sm:px-10 sm:py-12">
+        {document.blocks.length === 0 ? (
+          <div className="rounded-xl border border-dashed bg-muted/20 p-8 text-center">
+            <p className="text-sm text-muted-foreground">No blocks yet.</p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3"
+              onClick={() =>
+                onInsertBlock("writing-canvas", {
+                  source: "appender",
+                  target: { mode: "index", index: 0 },
+                })
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add writing section
+            </Button>
           </div>
-        </div>
-
-        <div className="max-h-[calc(100vh-23rem)] overflow-auto p-4">
-          {document.blocks.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-6 text-center">
-              <p className="text-sm text-muted-foreground">No blocks yet.</p>
-              <Button
-                type="button"
-                variant="outline"
-                className="mt-3"
-                onClick={() =>
-                  onInsertBlock("writing-canvas", {
-                    source: "appender",
-                    target: { mode: "index", index: 0 },
-                  })
-                }
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add writing section
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {document.blocks.map((block, index) => (
-                <div key={block.id} className="space-y-4">
-                  <div
-                    ref={(element) => {
-                      if (element) {
-                        blockRefs.current.set(block.id, element);
-                      } else {
-                        blockRefs.current.delete(block.id);
-                      }
-                    }}
-                  >
-                    <PostCanvasBlockItem
-                      block={block}
-                      selected={selectedBlockId === block.id}
-                      onSelect={() => onSelectBlock(block.id)}
-                      onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
-                      onUploadClipboardImage={onUploadClipboardImage}
-                      onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
-                      onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
-                      onDeleteBlock={() => onDeleteBlock(block.id)}
-                      onInsertBlock={onInsertBlock}
-                      onEnsureDynamicTocBlock={onEnsureDynamicTocBlock}
-                    />
-                  </div>
-                  <CanvasInlineAppender
-                    onInsert={(type) =>
-                      onInsertBlock(type, {
-                        source: "appender",
-                        target: { mode: "index", index: index + 1 },
-                      })
+        ) : (
+          <div className="space-y-6">
+            {document.blocks.map((block, index) => (
+              <div key={block.id} className="space-y-3">
+                <div
+                  ref={(element) => {
+                    if (element) {
+                      blockRefs.current.set(block.id, element);
+                    } else {
+                      blockRefs.current.delete(block.id);
                     }
+                  }}
+                >
+                  <PostCanvasBlockItem
+                    block={block}
+                    selected={selectedBlockId === block.id}
+                    onSelect={() => onSelectBlock(block.id)}
+                    onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
+                    onUploadClipboardImage={onUploadClipboardImage}
+                    onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
+                    onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
+                    onDeleteBlock={() => onDeleteBlock(block.id)}
+                    onInsertBlock={onInsertBlock}
+                    onEnsureDynamicTocBlock={onEnsureDynamicTocBlock}
                   />
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <CanvasInlineAppender
+                  onInsert={(type) =>
+                    onInsertBlock(type, {
+                      source: "appender",
+                      target: { mode: "index", index: index + 1 },
+                    })
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

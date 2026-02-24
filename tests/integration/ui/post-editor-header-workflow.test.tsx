@@ -17,6 +17,8 @@ const createHeaderProps = () => ({
   onSaveDraft: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
+  onToggleFocusMode: () => undefined,
+  focusMode: false,
   onToggleInserter: () => undefined,
   inserterVisible: false,
   onToggleOutline: () => undefined,
@@ -29,10 +31,11 @@ test("PostEditorTopBar renders document tools, context, and action clusters", ()
 
   expect(html).toContain("data-post-editor-header-cluster=\"tools\"");
   expect(html).toContain("data-post-editor-header-cluster=\"actions\"");
-  expect(html).toContain("Add");
-  expect(html).toContain("Document overview");
+  expect(html).toContain("Add block");
+  expect(html).toContain("Outline");
   expect(html).toContain("Revisions");
   expect(html).toContain("Details");
+  expect(html).toContain("Focus mode");
   expect(html).toContain("Runtime preview");
 });
 
