@@ -65,7 +65,8 @@ Referencja funkcjonalna i UX:
 6. `TASK-063-06` - Writing canvas flow (+ appender/slash/paste parity hardening).
 7. `TASK-063-07` - Details inspector tabs and preference persistence.
 8. `TASK-063-08` - Keyboard shortcuts, focus management, and accessibility.
-9. `TASK-063-09` - QA, docs, changelog, and closure.
+9. `TASK-063-10` - Stitch template migration + floating plus + focus mode.
+10. `TASK-063-09` - QA, docs, changelog, and closure.
 
 ## Detailed Sub-Task Files
 1. `TASK-063-01-01_Gutenberg_Component_Inventory.md`
@@ -92,8 +93,13 @@ Referencja funkcjonalna i UX:
 22. `TASK-063-08-01_Shortcut_Registry_and_Keymaps.md`
 23. `TASK-063-08-02_Focus_Return_and_Escape_Contracts.md`
 24. `TASK-063-08-03_ARIA_Landmarks_and_Accessibility_Labels.md`
-25. `TASK-063-09-01_Regression_Test_Execution_Plan.md`
-26. `TASK-063-09-02_Docs_Changelog_and_Kanban_Closure.md`
+25. `TASK-063-10-01_Template_Contract_Mapping_and_Component_Inventory.md`
+26. `TASK-063-10-02_Shell_Layout_Migration_to_Stitch_Reference.md`
+27. `TASK-063-10-03_Floating_Appender_Plus_and_Insert_Flow.md`
+28. `TASK-063-10-04_Focus_Mode_Full_Width_Toggle_and_Persistence.md`
+29. `TASK-063-10-05_QA_Docs_Changelog_and_Closure.md`
+30. `TASK-063-09-01_Regression_Test_Execution_Plan.md`
+31. `TASK-063-09-02_Docs_Changelog_and_Kanban_Closure.md`
 
 ---
 
@@ -102,7 +108,8 @@ Referencja funkcjonalna i UX:
 2. Potem shell/layout (`063-02`) i header/actions (`063-03`).
 3. Nastepnie sidebary (`063-04`, `063-05`).
 4. Potem canvas behavior (`063-06`) i details/preferences (`063-07`).
-5. Na koniec a11y/shortcuts (`063-08`) i full closure (`063-09`).
+5. Nastepnie a11y/shortcuts (`063-08`) oraz migracja visual template + focus mode (`063-10`).
+6. Na koniec full closure (`063-09`).
 
 ---
 
