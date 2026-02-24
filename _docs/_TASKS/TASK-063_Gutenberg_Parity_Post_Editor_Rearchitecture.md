@@ -63,10 +63,11 @@ Referencja funkcjonalna i UX:
 4. `TASK-063-04` - Inserter sidebar and block library parity.
 5. `TASK-063-05` - List view, outline, and document stats.
 6. `TASK-063-06` - Writing canvas flow (+ appender/slash/paste parity hardening).
-7. `TASK-063-07` - Details inspector tabs and preference persistence.
-8. `TASK-063-08` - Keyboard shortcuts, focus management, and accessibility.
-9. `TASK-063-10` - Stitch template migration + floating plus + focus mode.
-10. `TASK-063-09` - QA, docs, changelog, and closure.
+7. `TASK-063-10` - Stitch template migration + floating plus + focus mode.
+8. `TASK-063-11` - Strict HTML parity + left-outline insert + unified article canvas.
+9. `TASK-063-07` - Details inspector tabs and preference persistence.
+10. `TASK-063-08` - Keyboard shortcuts, focus management, and accessibility.
+11. `TASK-063-09` - QA, docs, changelog, and closure.
 
 ## Detailed Sub-Task Files
 1. `TASK-063-01-01_Gutenberg_Component_Inventory.md`
@@ -98,8 +99,14 @@ Referencja funkcjonalna i UX:
 27. `TASK-063-10-03_Floating_Appender_Plus_and_Insert_Flow.md`
 28. `TASK-063-10-04_Focus_Mode_Full_Width_Toggle_and_Persistence.md`
 29. `TASK-063-10-05_QA_Docs_Changelog_and_Closure.md`
-30. `TASK-063-09-01_Regression_Test_Execution_Plan.md`
-31. `TASK-063-09-02_Docs_Changelog_and_Kanban_Closure.md`
+30. `TASK-063-11-01_Visual_Parity_Shell_and_Tokens.md`
+31. `TASK-063-11-02_Left_Outline_Primary_Insert_Flow.md`
+32. `TASK-063-11-03_Unified_Borderless_Canvas_and_Media_Placeholders.md`
+33. `TASK-063-11-04_Right_Sidebar_Post_Block_Tabs_and_Context.md`
+34. `TASK-063-11-05_Header_Preview_Publish_Gear_and_Editor_Settings_Dialog.md`
+35. `TASK-063-11-06_QA_Docs_Changelog_and_Closure.md`
+36. `TASK-063-09-01_Regression_Test_Execution_Plan.md`
+37. `TASK-063-09-02_Docs_Changelog_and_Kanban_Closure.md`
 
 ---
 
@@ -107,9 +114,10 @@ Referencja funkcjonalna i UX:
 1. Najpierw analiza i matrix (`063-01`), zeby nie robic losowych zmian.
 2. Potem shell/layout (`063-02`) i header/actions (`063-03`).
 3. Nastepnie sidebary (`063-04`, `063-05`).
-4. Potem canvas behavior (`063-06`) i details/preferences (`063-07`).
-5. Nastepnie a11y/shortcuts (`063-08`) oraz migracja visual template + focus mode (`063-10`).
-6. Na koniec full closure (`063-09`).
+4. Potem canvas behavior (`063-06`) oraz migracja visual template + focus mode (`063-10`).
+5. Nastepnie strict HTML parity i unified article canvas (`063-11`).
+6. Potem domkniecie details/preferences (`063-07`) i a11y/shortcuts (`063-08`).
+7. Na koniec full closure (`063-09`).
 
 ---
 
