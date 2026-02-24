@@ -36,7 +36,17 @@ import {
   createPostBlock,
   postEditorReducer,
 } from "../postEditorStore";
+import {
+  resolvePostInsertMutation,
+  type PostInsertOptions,
+} from "../postInsertFlow";
 import { usePostAutosave } from "./usePostAutosave";
+
+export type {
+  PostInsertOptions,
+  PostInsertSource,
+  PostInsertTarget,
+} from "../postInsertFlow";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -260,6 +270,7 @@ export type UsePostEditorStateResult = {
   restoreRevision: (revisionId: string) => Promise<void>;
   state: ReturnType<typeof createInitialPostEditorState>;
   selectedBlock: PostBlock | null;
+  insertFocusToken: number;
   canUndo: boolean;
   canRedo: boolean;
   selectBlock: (id: string | null) => void;
@@ -268,7 +279,7 @@ export type UsePostEditorStateResult = {
   updateBlockAttrs: (id: string, patch: Record<string, unknown>) => void;
   updateSelectedBlockAttrs: (patch: Record<string, unknown>) => void;
   setExcerpt: (value: string) => void;
-  insertBlock: (type: string) => void;
+  insertBlock: (type: string, options?: PostInsertOptions) => void;
   ensureDynamicTocBlock: () => void;
   deleteBlock: (id: string) => void;
   deleteSelectedBlock: () => void;
@@ -318,6 +329,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
   const [revisionsLoading, setRevisionsLoading] = useState(false);
   const [revisionsError, setRevisionsError] = useState<string | null>(null);
   const [restoringRevisionId, setRestoringRevisionId] = useState<string | null>(null);
+  const [insertFocusToken, setInsertFocusToken] = useState(0);
 
   const [state, dispatch] = useReducer(
     postEditorReducer,
@@ -715,17 +727,25 @@ export function usePostEditorState(): UsePostEditorStateResult {
   }, []);
 
   const insertBlock = useCallback(
-    (type: string) => {
+    (type: string, options?: PostInsertOptions) => {
       const safeType = createSafeBlockType(type);
+      const mutation = resolvePostInsertMutation({
+        blocks: state.document.blocks,
+        selectedBlockId: state.selectedBlockId,
+        options,
+      });
       dispatch({
         type: "insert_block",
         mutation: {
           block: createPostBlock(safeType),
-          afterId: state.selectedBlockId,
+          ...mutation,
         },
       });
+      if (options?.focus !== false) {
+        setInsertFocusToken((value) => value + 1);
+      }
     },
-    [state.selectedBlockId]
+    [state.document.blocks, state.selectedBlockId]
   );
 
   const ensureDynamicTocBlock = useCallback(() => {
@@ -911,6 +931,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     restoreRevision,
     state,
     selectedBlock,
+    insertFocusToken,
     canUndo: state.history.past.length > 0,
     canRedo: state.history.future.length > 0,
     selectBlock: (id) => dispatch({ type: "select_block", id }),

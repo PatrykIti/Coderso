@@ -655,6 +655,7 @@ export function PostRichTextAdapter({
         <div
           ref={editorRef}
           contentEditable={!disabled && !imageUploading}
+          data-post-editor-primary-editable="true"
           suppressContentEditableWarning
           aria-label={ariaLabel}
           className={cn(

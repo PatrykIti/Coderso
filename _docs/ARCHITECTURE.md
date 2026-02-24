@@ -130,6 +130,14 @@ przez `setup.completed=true`.
     - stats selectors (`buildPostDocumentStats`) sa liczone deterministycznie z `PostBlockDocument` (words/chars/read-time/headings/paragraphs/blocks),
     - outline selectors (`buildPostDocumentOutline`) zbieraja headingi z `heading` blockow i `writing-canvas` nodes oraz sygnalizuja `empty heading`, `skipped level`, `multiple H1`,
     - stable heading anchors sa wspoldzielone z runtime mapperem (`resolvePostStableAnchorId`), wiec TOC/outline maja spójny anchor model.
+  - **TASK-063-06 (done):** writing canvas insertion i smart paste parity:
+    - canvas ma inline appender points miedzy blokami i na koncu dokumentu (insert z kontekstu, bez przechodzenia do osobnego panelu),
+    - insert orchestration jest wspolne dla 3 wejsc (`sidebar`, `slash`, `appender`) przez `resolvePostInsertMutation` i wspiera deterministic target (`after-selected`, `after-block`, `index`),
+    - inserty ustawiaja focus na nowo dodanym bloku przez tokenized focus contract (`insertFocusToken` + primary editable marker),
+    - smart paste hardening:
+      - heading fidelity dla Word (w tym przypadki z `mso-outline-level` nadpisujace tag heading),
+      - usuwanie statycznych Word TOC anchor links (`#_Toc...`) z retained content,
+      - dynamic TOC directive dalej dziala idempotentnie przy pelnym wykryciu statycznego TOC.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

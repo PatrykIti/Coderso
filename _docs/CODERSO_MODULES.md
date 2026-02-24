@@ -176,3 +176,8 @@ const sections = buildDefaultNavSections({
   - document stats are computed from block document selectors (`words/chars/read-time/headings/paragraphs/blocks`),
   - heading outline includes validation signals (`empty heading`, skipped levels, multiple H1),
   - stable heading anchors are shared with runtime TOC mapping for consistent editor/runtime navigation.
+- 063-06 done: Writing canvas appender and smart paste parity delivered:
+  - inline canvas appender points were added between blocks and at document end (`Add block` in-context),
+  - insert orchestration is unified across sidebar/slash/appender via shared target resolver (`resolvePostInsertMutation`),
+  - inserted block focus is deterministic (`insertFocusToken` + primary editable marker),
+  - Word paste hardening improves heading fidelity and strips leftover static TOC anchors (`#_Toc...`) while keeping dynamic TOC directive behavior idempotent.

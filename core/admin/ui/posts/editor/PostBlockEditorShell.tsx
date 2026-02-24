@@ -86,7 +86,12 @@ export function PostBlockEditorShell() {
     <PostInserterSidebar
       open={layout.showInserter}
       onClose={layout.closeSecondarySidebar}
-      onInsertBlock={(type) => editor.insertBlock(type)}
+      onInsertBlock={(type) =>
+        editor.insertBlock(type, {
+          source: "sidebar",
+          target: { mode: "after-selected" },
+        })
+      }
       disabled={editor.state.saving || editor.autosaveSaving}
       recentlyUsedTypes={["writing-canvas", "heading", "image", "button"]}
     />
@@ -165,13 +170,14 @@ export function PostBlockEditorShell() {
         <PostEditorCanvas
           document={editor.state.document}
           selectedBlockId={editor.state.selectedBlockId}
+          insertFocusToken={editor.insertFocusToken}
           onSelectBlock={(id) => editor.selectBlock(id)}
           onUpdateBlockContent={editor.updateBlockContent}
           onUploadClipboardImage={editor.uploadClipboardImage}
           onMoveBlock={editor.moveBlock}
           onTransformBlock={editor.transformBlock}
           onDeleteBlock={editor.deleteBlock}
-          onInsertBlockAfterSelected={editor.insertBlock}
+          onInsertBlock={editor.insertBlock}
           onEnsureDynamicTocBlock={editor.ensureDynamicTocBlock}
         />
       )}

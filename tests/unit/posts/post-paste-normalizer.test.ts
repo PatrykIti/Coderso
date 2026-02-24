@@ -118,6 +118,21 @@ test("normalizePostPastePayload maps h1 from Word payload into heading node", ()
   expect(postRichTextToPlainText(heading.text)).toContain("Primary heading");
 });
 
+test("normalizePostPastePayload preserves heading level when Word exports h2 with outline level 1", () => {
+  const result = normalizePostPastePayload({
+    html: '<h2 style="mso-outline-level:1">Primary heading</h2><p>Body text</p>',
+    text: "",
+  });
+
+  expect(result.mode).toBe("writing-canvas");
+  const heading = result.nodes[0];
+  if (!heading || heading.type !== "heading") {
+    throw new Error("expected heading node");
+  }
+  expect(heading.level).toBe(1);
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
+});
+
 test("normalizePostPastePayload maps Word heading-like paragraph classes into heading node", () => {
   const result = normalizePostPastePayload({
     html: '<p class="MsoHeading1">Offer title</p><p>Paragraph</p>',
@@ -173,4 +188,19 @@ test("normalizePostPastePayload detects Word TOC links and replaces static TOC w
   expect(result.html).not.toContain("#_Toc");
   expect(result.nodes.some((node) => node.type === "heading")).toBe(true);
   expect(result.nodes.some((node) => node.type === "paragraph")).toBe(true);
+});
+
+test("normalizePostPastePayload strips isolated Word TOC links without forcing dynamic TOC", () => {
+  const result = normalizePostPastePayload({
+    html: '<p><a href="#_Toc123">See chapter</a></p><p>Regular body text</p>',
+    text: "",
+  });
+
+  expect(result.directives.replaceWordTocWithDynamicToc).toBe(false);
+  expect(result.html).not.toContain("#_Toc");
+  const firstNode = result.nodes[0];
+  if (!firstNode || firstNode.type !== "paragraph") {
+    throw new Error("expected paragraph node");
+  }
+  expect(postRichTextToPlainText(firstNode.text)).toContain("See chapter");
 });

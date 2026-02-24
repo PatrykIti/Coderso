@@ -34,6 +34,7 @@ type UpdateBlockMutation = {
 type InsertBlockMutation = {
   block: PostBlock;
   afterId?: string | null;
+  atIndex?: number;
 };
 
 type MoveBlockMutation = {
@@ -214,7 +215,13 @@ const mutateInsertBlock = (state: PostEditorState, mutation: InsertBlockMutation
   }).blocks[0] as PostBlock;
 
   let insertIndex = nextDocument.blocks.length;
-  if (!mutation.afterId) {
+  if (Number.isInteger(mutation.atIndex)) {
+    insertIndex = Math.max(
+      0,
+      Math.min(nextDocument.blocks.length, Number(mutation.atIndex))
+    );
+    nextDocument.blocks.splice(insertIndex, 0, normalizedBlock);
+  } else if (!mutation.afterId) {
     nextDocument.blocks.push(normalizedBlock);
     insertIndex = nextDocument.blocks.length - 1;
   } else {

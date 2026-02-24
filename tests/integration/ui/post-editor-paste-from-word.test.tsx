@@ -40,6 +40,17 @@ test("post editor smart paste sets dynamic toc directive for Word TOC links", ()
   expect(payload.warnings.some((warning) => warning.includes("dynamic TOC"))).toBe(true);
 });
 
+test("post editor smart paste keeps Word heading hierarchy when outline metadata overrides tag", () => {
+  const payload = buildPostRichTextPasteInsert({
+    html: '<h2 style="mso-outline-level:1">Heading</h2><p>Body</p>',
+    text: "",
+  });
+
+  expect(payload.mode).toBe("writing-canvas");
+  expect(payload.html).toContain("<h1>");
+  expect(payload.html).not.toContain("<h2>Heading</h2>");
+});
+
 test("post editor smart paste returns empty payload for empty clipboard", () => {
   const payload = buildPostRichTextPasteInsert({
     html: "",

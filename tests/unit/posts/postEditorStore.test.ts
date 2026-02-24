@@ -48,6 +48,32 @@ test("postEditorStore insert/delete keeps selection and minimum one block", () =
   expect(deletedSecond.document.blocks[0]?.type).toBe("writing-canvas");
 });
 
+test("postEditorStore insert_block respects explicit atIndex", () => {
+  const initial = createInitialPostEditorState();
+  const withHeading = postEditorReducer(initial, {
+    type: "insert_block",
+    mutation: {
+      block: createPostBlock("heading"),
+      afterId: initial.selectedBlockId,
+    },
+  });
+
+  const insertedAtStart = postEditorReducer(withHeading, {
+    type: "insert_block",
+    mutation: {
+      block: createPostBlock("quote"),
+      atIndex: 0,
+    },
+  });
+
+  expect(insertedAtStart.document.blocks.map((block) => block.type)).toEqual([
+    "quote",
+    "writing-canvas",
+    "heading",
+  ]);
+  expect(insertedAtStart.selectedBlockId).toBe(insertedAtStart.document.blocks[0]?.id ?? null);
+});
+
 test("postEditorStore supports undo and redo", () => {
   const initial = createInitialPostEditorState();
   const withParagraph = postEditorReducer(initial, {

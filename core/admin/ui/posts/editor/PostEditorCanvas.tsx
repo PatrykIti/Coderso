@@ -2,6 +2,14 @@ import { MoveDown, MoveUp, Plus, Shuffle, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -20,21 +28,30 @@ import {
   serializeWritingCanvasContentToHtml,
 } from "../../../../services/posts/editor/postPasteNormalizer";
 import { getTransformTargetTypes } from "./blocks/blockTransforms";
-import { getPostBlockLabel } from "./blocks/blockCatalog";
+import {
+  BLOCK_CATEGORY_LABELS,
+  getPostBlockLabel,
+  groupPostBlockCatalogByCategory,
+  POST_BLOCK_CATALOG,
+} from "./blocks/blockCatalog";
 import { PostRichTextAdapter } from "./richtext/PostRichTextAdapter";
+import type { PostInsertOptions } from "./hooks/usePostEditorState";
 
 type PostEditorCanvasProps = {
   document: PostBlockDocument;
   selectedBlockId: string | null;
+  insertFocusToken: number;
   onSelectBlock: (id: string) => void;
   onUpdateBlockContent: (id: string, content: unknown) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   onMoveBlock: (id: string, direction: "up" | "down") => void;
   onTransformBlock: (id: string, targetType: PostBlockType) => void;
   onDeleteBlock: (id: string) => void;
-  onInsertBlockAfterSelected: (type: string) => void;
+  onInsertBlock: (type: PostBlockType, options?: PostInsertOptions) => void;
   onEnsureDynamicTocBlock?: () => void;
 };
+
+const appenderCatalogGroups = groupPostBlockCatalogByCategory(POST_BLOCK_CATALOG);
 
 const richTextBlockTypes = new Set<PostBlockType>([
   "paragraph",
@@ -64,6 +81,52 @@ const renderReadOnlyText = (value: unknown, emptyLabel: string) => {
   return <p className="whitespace-pre-wrap text-sm leading-relaxed">{text}</p>;
 };
 
+function CanvasInlineAppender({
+  onInsert,
+}: {
+  onInsert: (type: PostBlockType) => void;
+}) {
+  return (
+    <div className="flex justify-center py-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 rounded-full px-3 text-xs"
+            aria-label="Insert block"
+            data-post-editor-appender="true"
+          >
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            Add block
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="center" className="w-72">
+          {appenderCatalogGroups.map((group, index) => (
+            <div key={group.category}>
+              {index > 0 ? <DropdownMenuSeparator /> : null}
+              <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+                {BLOCK_CATEGORY_LABELS[group.category]}
+              </DropdownMenuLabel>
+              {group.items.map((item) => (
+                <DropdownMenuItem key={item.type} onClick={() => onInsert(item.type)}>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{item.label}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </div>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 function PostCanvasBlockItem({
   block,
   selected,
@@ -73,7 +136,7 @@ function PostCanvasBlockItem({
   onMoveBlock,
   onTransformBlock,
   onDeleteBlock,
-  onInsertBlockAfterSelected,
+  onInsertBlock,
   onEnsureDynamicTocBlock,
 }: {
   block: PostBlock;
@@ -84,7 +147,7 @@ function PostCanvasBlockItem({
   onMoveBlock: (direction: "up" | "down") => void;
   onTransformBlock: (targetType: PostBlockType) => void;
   onDeleteBlock: () => void;
-  onInsertBlockAfterSelected: (type: string) => void;
+  onInsertBlock: (type: PostBlockType, options?: PostInsertOptions) => void;
   onEnsureDynamicTocBlock?: () => void;
 }) {
   const transformTargets = useMemo(
@@ -198,7 +261,12 @@ function PostCanvasBlockItem({
               onUploadClipboardImage={onUploadClipboardImage}
               placeholder="Write your post content..."
               minHeightClassName="min-h-[16rem]"
-              onSlashInsertBlock={onInsertBlockAfterSelected}
+              onSlashInsertBlock={(type) =>
+                onInsertBlock(type, {
+                  source: "slash",
+                  target: { mode: "after-block", blockId: block.id },
+                })
+              }
               onFocus={onSelect}
             />
           ) : (
@@ -231,7 +299,12 @@ function PostCanvasBlockItem({
               onUploadClipboardImage={onUploadClipboardImage}
               placeholder="Write content for this block..."
               minHeightClassName="min-h-[9rem]"
-              onSlashInsertBlock={onInsertBlockAfterSelected}
+              onSlashInsertBlock={(type) =>
+                onInsertBlock(type, {
+                  source: "slash",
+                  target: { mode: "after-block", blockId: block.id },
+                })
+              }
               onFocus={onSelect}
             />
           ) : (
@@ -246,6 +319,7 @@ function PostCanvasBlockItem({
               onChange={(event) => onUpdateBlockContent(event.target.value)}
               onFocus={onSelect}
               className="min-h-[12rem] font-mono"
+              data-post-editor-primary-editable="true"
               placeholder="Write code block content"
             />
           ) : (
@@ -262,6 +336,7 @@ function PostCanvasBlockItem({
               onChange={(event) => onUpdateBlockContent(parseListItems(event.target.value))}
               onFocus={onSelect}
               className="min-h-[12rem]"
+              data-post-editor-primary-editable="true"
               placeholder="One item per line"
             />
           ) : (
@@ -353,13 +428,14 @@ function PostCanvasBlockItem({
 export function PostEditorCanvas({
   document,
   selectedBlockId,
+  insertFocusToken,
   onSelectBlock,
   onUpdateBlockContent,
   onUploadClipboardImage,
   onMoveBlock,
   onTransformBlock,
   onDeleteBlock,
-  onInsertBlockAfterSelected,
+  onInsertBlock,
   onEnsureDynamicTocBlock,
 }: PostEditorCanvasProps) {
   // TASK-061-01 UX contract anchor:
@@ -372,6 +448,29 @@ export function PostEditorCanvas({
     const element = blockRefs.current.get(selectedBlockId);
     element?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selectedBlockId]);
+
+  useEffect(() => {
+    if (!selectedBlockId || insertFocusToken === 0) return;
+    const element = blockRefs.current.get(selectedBlockId);
+    if (!element) return;
+
+    const focusTarget = () => {
+      const editable = element.querySelector<HTMLElement>(
+        "[data-post-editor-primary-editable='true'], [contenteditable='true'], textarea, input"
+      );
+      editable?.focus({ preventScroll: true });
+    };
+
+    if (typeof window === "undefined") {
+      focusTarget();
+      return;
+    }
+
+    const rafId = window.requestAnimationFrame(focusTarget);
+    return () => {
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [insertFocusToken, selectedBlockId]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 sm:p-6">
@@ -393,7 +492,12 @@ export function PostEditorCanvas({
                 type="button"
                 variant="outline"
                 className="mt-3"
-                onClick={() => onInsertBlockAfterSelected("writing-canvas")}
+                onClick={() =>
+                  onInsertBlock("writing-canvas", {
+                    source: "appender",
+                    target: { mode: "index", index: 0 },
+                  })
+                }
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Add writing section
@@ -401,28 +505,37 @@ export function PostEditorCanvas({
             </div>
           ) : (
             <div className="space-y-4">
-              {document.blocks.map((block) => (
-                <div
-                  key={block.id}
-                  ref={(element) => {
-                    if (element) {
-                      blockRefs.current.set(block.id, element);
-                    } else {
-                      blockRefs.current.delete(block.id);
+              {document.blocks.map((block, index) => (
+                <div key={block.id} className="space-y-4">
+                  <div
+                    ref={(element) => {
+                      if (element) {
+                        blockRefs.current.set(block.id, element);
+                      } else {
+                        blockRefs.current.delete(block.id);
+                      }
+                    }}
+                  >
+                    <PostCanvasBlockItem
+                      block={block}
+                      selected={selectedBlockId === block.id}
+                      onSelect={() => onSelectBlock(block.id)}
+                      onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
+                      onUploadClipboardImage={onUploadClipboardImage}
+                      onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
+                      onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
+                      onDeleteBlock={() => onDeleteBlock(block.id)}
+                      onInsertBlock={onInsertBlock}
+                      onEnsureDynamicTocBlock={onEnsureDynamicTocBlock}
+                    />
+                  </div>
+                  <CanvasInlineAppender
+                    onInsert={(type) =>
+                      onInsertBlock(type, {
+                        source: "appender",
+                        target: { mode: "index", index: index + 1 },
+                      })
                     }
-                  }}
-                >
-                  <PostCanvasBlockItem
-                    block={block}
-                    selected={selectedBlockId === block.id}
-                    onSelect={() => onSelectBlock(block.id)}
-                    onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
-                    onUploadClipboardImage={onUploadClipboardImage}
-                    onMoveBlock={(direction) => onMoveBlock(block.id, direction)}
-                    onTransformBlock={(targetType) => onTransformBlock(block.id, targetType)}
-                    onDeleteBlock={() => onDeleteBlock(block.id)}
-                    onInsertBlockAfterSelected={onInsertBlockAfterSelected}
-                    onEnsureDynamicTocBlock={onEnsureDynamicTocBlock}
                   />
                 </div>
               ))}

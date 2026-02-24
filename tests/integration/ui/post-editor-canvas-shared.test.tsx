@@ -23,18 +23,21 @@ test("PostEditorCanvas renders unified document canvas", () => {
         ],
       }}
       selectedBlockId="block-1"
+      insertFocusToken={0}
       onSelectBlock={() => undefined}
       onUpdateBlockContent={() => undefined}
       onMoveBlock={() => undefined}
       onTransformBlock={() => undefined}
       onDeleteBlock={() => undefined}
-      onInsertBlockAfterSelected={() => undefined}
+      onInsertBlock={() => undefined}
     />
   );
 
   expect(html).toContain("Document canvas");
   expect(html).toContain("Edit the full post flow in one view");
   expect(html).toContain("Heading");
+  expect(html).toContain("Add block");
+  expect((html.match(/Add block/g) ?? []).length).toBe(2);
 });
 
 test("PostEditorCanvas shows empty state and writing-canvas appender", () => {
@@ -46,12 +49,13 @@ test("PostEditorCanvas shows empty state and writing-canvas appender", () => {
         blocks: [],
       }}
       selectedBlockId={null}
+      insertFocusToken={0}
       onSelectBlock={() => undefined}
       onUpdateBlockContent={() => undefined}
       onMoveBlock={() => undefined}
       onTransformBlock={() => undefined}
       onDeleteBlock={() => undefined}
-      onInsertBlockAfterSelected={() => undefined}
+      onInsertBlock={() => undefined}
     />
   );
 

@@ -18,7 +18,8 @@ const MAX_TEXT_INPUT_LENGTH = 150_000;
 const MAX_WRITING_NODES = 200;
 const MAX_LIST_ITEMS = 120;
 
-const blockMatcher = /<(p|h1|h2|h3|h4|h5|h6|blockquote|pre|ul|ol)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+const blockMatcher =
+  /<(p|h1|h2|h3|h4|h5|h6|blockquote|pre|ul|ol)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
 const listItemMatcher = /<li\b[^>]*>([\s\S]*?)<\/li>/gi;
 const blockLikeTagsMatcher = /<\/?(p|h[1-6]|blockquote|pre|ul|ol|li)\b[^>]*>/gi;
 const spanTagMatcher = /<\/?span\b[^>]*>/gi;
@@ -28,6 +29,8 @@ const headingStyleNameMatcher =
   /\bmso-style-name\s*:\s*["']?\s*(?:heading|naglowek)\s*([1-6])\b/i;
 const headingTitleMatcher = /\bmso-title\b/i;
 const wordTocHrefMatcher = /href\s*=\s*["']#_toc[\w-]*["']/i;
+const wordTocAnchorMatcher =
+  /<a\b[^>]*href\s*=\s*["']#_toc[\w-]*["'][^>]*>([\s\S]*?)<\/a>/gi;
 const tocTitleMatcher = /^(table\s+of\s+contents|spis\s+tre[sś]ci)$/i;
 const tocNumberedLineMatcher = /^\d+(?:\.\d+)*\.?\s+\S+/;
 const tocDottedLeaderMatcher = /\.{2,}\s*\d+\s*$/;
@@ -78,6 +81,16 @@ type WordTocStripResult = {
   nodes: WritingCanvasNode[];
   detectedLinkCount: number;
   removedNodeCount: number;
+};
+
+type StripWordTocAnchorsResult = {
+  html: string;
+  removedLinkCount: number;
+};
+
+type StripWordTocAnchorsFromNodesResult = {
+  nodes: WritingCanvasNode[];
+  removedLinkCount: number;
 };
 
 const pushWarning = (
@@ -143,11 +156,17 @@ const parseHeadingLevelFromWordAttrs = (rawAttrs: string): 1 | 2 | 3 | 4 | 5 | 6
 const normalizeWordHeadingMarkup = (value: string) => {
   if (!value) return value;
 
-  return value.replace(/<p\b([^>]*)>([\s\S]*?)<\/p>/gi, (match, rawAttrs, innerHtml) => {
-    const level = parseHeadingLevelFromWordAttrs(String(rawAttrs ?? ""));
-    if (!level) return match;
-    return `<h${level}>${innerHtml ?? ""}</h${level}>`;
-  });
+  return value
+    .replace(/<p\b([^>]*)>([\s\S]*?)<\/p>/gi, (match, rawAttrs, innerHtml) => {
+      const level = parseHeadingLevelFromWordAttrs(String(rawAttrs ?? ""));
+      if (!level) return match;
+      return `<h${level}>${innerHtml ?? ""}</h${level}>`;
+    })
+    .replace(/<h([1-6])\b([^>]*)>([\s\S]*?)<\/h\1>/gi, (match, _rawLevel, rawAttrs, innerHtml) => {
+      const level = parseHeadingLevelFromWordAttrs(String(rawAttrs ?? ""));
+      if (!level) return match;
+      return `<h${level}>${innerHtml ?? ""}</h${level}>`;
+    });
 };
 
 const normalizeInlineRichText = (value: string) => {
@@ -159,6 +178,23 @@ const normalizeInlineRichText = (value: string) => {
     return "";
   }
   return serializePostRichText(sanitized);
+};
+
+const stripWordTocAnchorsFromRichText = (value: string): StripWordTocAnchorsResult => {
+  if (!value) {
+    return { html: "", removedLinkCount: 0 };
+  }
+
+  let removedLinkCount = 0;
+  const html = value.replace(wordTocAnchorMatcher, (_match, text) => {
+    removedLinkCount += 1;
+    return String(text ?? "");
+  });
+
+  return {
+    html,
+    removedLinkCount,
+  };
 };
 
 const readNodeRichText = (node: WritingCanvasNode) => {
@@ -237,6 +273,42 @@ const stripWordTocNodes = (nodes: WritingCanvasNode[]): WordTocStripResult | nul
     nodes: reindexWritingCanvasNodes(nextNodes),
     detectedLinkCount: linkIndexes.length,
     removedNodeCount: removeIndexes.size,
+  };
+};
+
+const stripWordTocAnchorsFromNodes = (
+  nodes: WritingCanvasNode[]
+): StripWordTocAnchorsFromNodesResult => {
+  let removedLinkCount = 0;
+
+  const nextNodes = nodes.map((node) => {
+    if (node.type === "list") {
+      const nextItems = node.items.map((item) => {
+        const stripped = stripWordTocAnchorsFromRichText(item);
+        removedLinkCount += stripped.removedLinkCount;
+        return stripped.html;
+      });
+      return {
+        ...node,
+        items: nextItems,
+      };
+    }
+
+    if (node.type === "heading" || node.type === "paragraph" || node.type === "quote") {
+      const stripped = stripWordTocAnchorsFromRichText(node.text);
+      removedLinkCount += stripped.removedLinkCount;
+      return {
+        ...node,
+        text: stripped.html,
+      };
+    }
+
+    return node;
+  });
+
+  return {
+    nodes: nextNodes,
+    removedLinkCount,
   };
 };
 
@@ -337,7 +409,8 @@ const mapSanitizedHtmlToNodes = (
   while ((match = blockMatcher.exec(html)) !== null) {
     const wholeMatch = match[0] ?? "";
     const tag = (match[1] ?? "").toLowerCase();
-    const innerHtml = match[2] ?? "";
+    const rawAttrs = match[2] ?? "";
+    const innerHtml = match[3] ?? "";
     const index = match.index ?? 0;
 
     if (index > cursor) {
@@ -369,9 +442,12 @@ const mapSanitizedHtmlToNodes = (
       continue;
     }
 
-    if (tag.startsWith("h")) {
+    const headingLevelFromAttrs = parseHeadingLevelFromWordAttrs(rawAttrs);
+    if (tag.startsWith("h") || (tag === "p" && headingLevelFromAttrs)) {
       const levelRaw = Number(tag.slice(1));
-      const level = Number.isFinite(levelRaw) && levelRaw >= 1 && levelRaw <= 6 ? levelRaw : 2;
+      const levelFromTag =
+        Number.isFinite(levelRaw) && levelRaw >= 1 && levelRaw <= 6 ? levelRaw : 2;
+      const level = headingLevelFromAttrs ?? levelFromTag;
       nodes.push({
         id: `node-${nodes.length + 1}`,
         type: "heading",
@@ -531,12 +607,16 @@ export function normalizePostPastePayload(
 
     if (nodes.length === 0 && /<img\b/i.test(sanitized)) {
       const richText = serializePostRichText(sanitized);
-      if (postRichTextToPlainText(richText).trim().length > 0 || /<img\b/i.test(richText)) {
+      const stripped = stripWordTocAnchorsFromRichText(richText);
+      if (
+        postRichTextToPlainText(stripped.html).trim().length > 0 ||
+        /<img\b/i.test(stripped.html)
+      ) {
         nodes = [
           {
             id: "node-1",
             type: "paragraph",
-            text: richText,
+            text: stripped.html,
           },
         ];
       }
@@ -563,6 +643,11 @@ export function normalizePostPastePayload(
         code: "word_toc_replaced",
         message: "Detected Word table of contents. Replaced with dynamic TOC.",
       });
+    }
+
+    const strippedAnchors = stripWordTocAnchorsFromNodes(nodes);
+    if (strippedAnchors.removedLinkCount > 0) {
+      nodes = strippedAnchors.nodes;
     }
   }
 

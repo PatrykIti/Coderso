@@ -5,7 +5,7 @@
 **Category:** Authoring UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-061, TASK-063-04  
-**Status:** To Do
+**Status:** Done (2026-02-24)
 
 ---
 
@@ -86,4 +86,3 @@ onPaste(payload) {
 ## Documentation Updates Required
 - `_docs/CMS_API.md` (paste directives + editor apply behavior)
 - `_docs/ARCHITECTURE.md` (writing flow event model)
-

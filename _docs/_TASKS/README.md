@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 32 tasks
+- **To Do:** 28 tasks
 - **In Progress:** 4 tasks
-- **Done:** 483 tasks
+- **Done:** 487 tasks
 
 ---
 
@@ -40,13 +40,9 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
-| TASK-063-06 | Writing Canvas Appender and Smart Paste Parity | High | Large | Inline appender + slash/inserter parity + Word paste hardening |
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
 | TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
 | TASK-063-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Full lint/types/tests, docs sync, and kanban closure |
-| TASK-063-06-01 | Inline Appender Insert Points | High | Medium | In-canvas add points between/after blocks |
-| TASK-063-06-02 | Unified Inserter Slash Appender Flow | High | Medium | Single insert orchestration across all entry points |
-| TASK-063-06-03 | Smart Paste Hardening and TOC Directives | High | Large | Word paste hardening + dynamic TOC directives |
 | TASK-063-07-01 | Tabbed Details Sidebar Shell | High | Small | Details panel shell with Document/Block tabs |
 | TASK-063-07-02 | Inspector Refactor Document vs Block | High | Medium | Shared controls and cleaner inspector ownership |
 | TASK-063-07-03 | Details Preferences Persistence | High | Medium | Persisted inspector preferences per user |
@@ -78,7 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-05 completed, next: 063-06 writing canvas appender/smart paste parity |
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 completed, next: 063-07 details inspector tabs/preferences |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -89,6 +85,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-06 | Writing Canvas Appender and Smart Paste Parity | High | Large | Done: inline canvas appender points + shared insert orchestration + Word paste hardening |
+| TASK-063-06-03 | Smart Paste Hardening and TOC Directives | High | Large | Done: heading fidelity hardening + TOC link cleanup + dynamic TOC directive parity |
+| TASK-063-06-02 | Unified Inserter Slash Appender Flow | High | Medium | Done: `resolvePostInsertMutation` shared across sidebar/slash/appender insert sources |
+| TASK-063-06-01 | Inline Appender Insert Points | High | Medium | Done: in-canvas appender between blocks/end + inserted block focus contract |
 | TASK-063-05 | List View, Outline, and Document Stats | High | Large | Done: document overview sidebar with tabs, outline warnings, and live stats selectors |
 | TASK-063-05-03 | ListView and Outline Sidebar UI | High | Medium | Done: `PostListViewSidebar` with List/Outline tabs and block/heading navigation |
 | TASK-063-05-02 | Outline Builder and Validation Rules | High | Medium | Done: heading outline model with empty/skipped/multiple-H1 validation and stable anchors |

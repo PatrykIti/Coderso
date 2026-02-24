@@ -657,6 +657,26 @@ Editor document overview selectors (update `TASK-063-05`):
   - warning codes: `empty_heading`, `skipped_heading_level`, `multiple_h1`,
   - anchor IDs sa generowane przez wspolny helper z runtime, wiec TOC i editor outline utrzymuja ten sam stable link model.
 
+Editor insertion parity flow (update `TASK-063-06`):
+- wszystkie entry points insertu (`sidebar inserter`, `slash command`, `canvas appender`) przechodza przez wspolna orkiestracje targetu:
+  - `target.mode = "after-selected" | "after-block" | "index"`,
+  - resolver: `resolvePostInsertMutation(...)`,
+  - reducer mutation: `insert_block` z `afterId` albo `atIndex`,
+- canvas posiada inline appender points:
+  - po kazdym bloku (w tym koniec dokumentu),
+  - empty state appender dla dokumentu bez blokow (`index=0`),
+- focus contract po insercie:
+  - editor emituje `insertFocusToken`,
+  - canvas fokusuje `data-post-editor-primary-editable="true"` w nowo wybranym bloku.
+
+Smart paste hardening (update `TASK-063-06-03`):
+- heading fidelity:
+  - Word heading metadata (`mso-outline-level`, heading class/style) moze nadpisac level tagu heading przed sanitizacja,
+  - fallback dla paragraph heading-like styles pozostaje aktywny,
+- TOC links cleanup:
+  - po detekcji TOC replacement usuwane sa rowniez pozostale `href="#_Toc..."` anchors z retained nodes/list items,
+  - dynamic TOC directive pozostaje idempotentna i nie duplikuje `toc` blocka.
+
 Backfill endpoint (`POST /posts/migration/backfill`) - request payload:
 
 ```json
