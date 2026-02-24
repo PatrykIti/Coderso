@@ -627,25 +627,21 @@ Editor save behavior (update `TASK-061-09`):
 - endpointy API i payloady pozostaja bez zmian,
 - full hydrate jest wykorzystywany tylko dla explicit refresh/restore konfliktow.
 
-Editor header action flow (update `TASK-063-03`):
-- header workflow zostaje podzielony na dwa clustery:
-  - document tools: `Add block` (toggle inserter), `Undo/Redo`, `Outline` (toggle list view),
-  - action cluster: status/sync badges + `Save draft`, `Runtime preview`, `Publish`/`Update`,
-- header zawiera `Focus mode` toggle:
-  - wlaczenie ustawia full-width canvas i ukrywa sidebary,
-  - focus mode preference jest zapisywana lokalnie (`nextless.posts.editor.focusMode`),
-- action cluster korzysta z istniejacych internal routes (`PATCH /posts/:id`, `POST /posts/:id/autosave`, `POST /posts/:id/preview`, `POST /posts/:id/publish`) i nie wprowadza nowych API endpointow.
+Editor header action flow (update `TASK-063-11`):
+- prawa sekcja headera utrzymuje kontrakt:
+  - `Preview`,
+  - `Publish`/`Update`,
+  - `Gear` (`Editor settings` dialog),
+- dodatkowe akcje operacyjne (`Outline`, `Details`, `Revisions`, `Focus mode`) pozostaja internal UI controls i nie zmieniaja API kontraktu,
+- focus mode state jest utrzymywany lokalnie (`nextless.posts.editor.focusMode`),
+- gear dialog zapisuje preference state lokalnie (`nextless.posts.editor.preferences.v1`) bez nowych endpointow,
+- save lifecycle nadal korzysta z istniejących endpointow internal (`PATCH /posts/:id`, `POST /posts/:id/autosave`, `POST /posts/:id/preview`, `POST /posts/:id/publish`).
 
-Editor inserter sidebar flow (update `TASK-063-04`):
-- `Add` otwiera dedykowany inserter sidebar (`PostInserterSidebar`) z kontraktem zamkniecia:
-  - explicit close button,
-  - `Escape` key close,
-  - focus return na `Add` trigger,
-- block library behavior:
-  - search po `label/description/keywords`,
-  - category filter (`all`, `text`, `media`, `interactive`),
-  - deterministic grouped listing i optional `Most used` section (client-provided hints),
-- zmiana dotyczy tylko admin UI orchestration; brak nowych endpointow API.
+Editor outline insert flow (update `TASK-063-11-02`):
+- primary insert trigger (`+`) jest przeniesiony do `Document Outline` sidebar,
+- nowy source w insert resolverze: `outline-plus`,
+- `outline-plus` korzysta z tego samego resolvera targetu (`resolvePostInsertMutation`) co pozostałe source modes,
+- brak zmian backend/API: to wyłącznie orchestration contract w admin UI.
 
 Editor document overview selectors (update `TASK-063-05`):
 - `Document Outline` secondary sidebar ma dwa widoki:
@@ -660,17 +656,21 @@ Editor document overview selectors (update `TASK-063-05`):
   - warning codes: `empty_heading`, `skipped_heading_level`, `multiple_h1`,
   - anchor IDs sa generowane przez wspolny helper z runtime, wiec TOC i editor outline utrzymuja ten sam stable link model.
 
-Editor insertion parity flow (update `TASK-063-06`):
-- wszystkie entry points insertu (`sidebar inserter`, `slash command`, `canvas appender`) przechodza przez wspolna orkiestracje targetu:
+Editor insertion parity flow (update `TASK-063-06` + `TASK-063-11`):
+- wszystkie entry points insertu (`outline-plus`, `sidebar inserter`, `slash command`) przechodza przez wspolna orkiestracje targetu:
   - `target.mode = "after-selected" | "after-block" | "index"`,
   - resolver: `resolvePostInsertMutation(...)`,
   - reducer mutation: `insert_block` z `afterId` albo `atIndex`,
-- canvas posiada inline appender points (floating `+` trigger):
-  - po kazdym bloku (w tym koniec dokumentu),
-  - empty state appender dla dokumentu bez blokow (`index=0`),
+- outline `+` jest primary trigger dla nietechnicznego flow, a slash insert pozostaje in-canvas szybkim skrótem authoringowym,
 - focus contract po insercie:
   - editor emituje `insertFocusToken`,
   - canvas fokusuje `data-post-editor-primary-editable="true"` w nowo wybranym bloku.
+
+Editor details context contract (update `TASK-063-11-03/04`):
+- prawy inspector tabs: `Post` i `Block`,
+- klik bloku (w tym media placeholdera) ustawia selekcje i przełącza context na `Block`,
+- klik tła canvasu resetuje selekcje bloku i wraca do kontekstu `Post`,
+- media/interactive placeholdery (`image`, `embed`, `button`) nie wymagają nowych API; używają istniejących block attrs w `PostBlockDocument`.
 
 Smart paste hardening (update `TASK-063-06-03`):
 - heading fidelity:

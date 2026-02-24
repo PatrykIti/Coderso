@@ -150,7 +150,7 @@ const sections = buildDefaultNavSections({
 - 060 done: Posts editor unified canvas + ribbon UX:
   - shared document canvas z inline editing wszystkich blokow,
   - tabbed ribbon (`Home`, `Insert`, `Review`, `View`) with grouped actions,
-  - insert flow moved fully into ribbon (`Add block` + `Block library`), without left inserter drawer,
+  - insert flow foundation moved do toolbar/ribbon; final primary insert entrypoint jest doprecyzowany w `063-11` (`Document Outline +`),
   - list view outline w kompaktowym ratio (`min 220`, `max 320`) i labels-only rows,
   - contextual details behavior (`Document`/`Block`) przy zachowaniu focusu/selekcji.
 - 061 (in progress): Writing Canvas + smart paste hardening:
@@ -162,12 +162,9 @@ const sections = buildDefaultNavSections({
   - centralized panel state hook `usePostEditorLayout` (`list-view`, `inserter`, `details`),
   - regionized shell composition (`PostEditorLayout`, `PostEditorRegions`) with explicit `header/content/secondary-sidebar/sidebar/footer`,
   - responsive region behavior: desktop sidebars + mobile sheets share the same state contract.
-- 063-03 done: Gutenberg-like header workflow delivered:
-  - modular header composition (`PostEditorHeader`) with dedicated clusters for document tools and publish actions,
-  - document tools cluster: `Add block`, `Undo`, `Redo`, `Outline` wired to shared layout/editor state,
-  - header action bar includes `Focus mode` toggle for full-width writing canvas,
-  - actions cluster: status + sync badges and `Save draft` / `Runtime preview` / `Publish` (`Update` for published posts),
-  - revisions and details entry points are now first-class header actions with regression coverage.
+- 063-03 done: Gutenberg-like header workflow foundation delivered:
+  - modular header composition (`PostEditorHeader`) with shared lifecycle controls and publish/preview hooks,
+  - revisions/details/focus/outline controls remain first-class header actions with regression coverage.
 - 063-04 done: Gutenberg-like inserter sidebar delivered:
   - dedicated `PostInserterSidebar` shell with explicit close button and `Escape` close behavior,
   - block library supports category filters (`All/Text/Media/Interactive`), search, grouped rendering, and optional `Most used`,
@@ -177,13 +174,17 @@ const sections = buildDefaultNavSections({
   - document stats are computed from block document selectors (`words/chars/read-time/headings/paragraphs/blocks`),
   - heading outline includes validation signals (`empty heading`, skipped levels, multiple H1),
   - stable heading anchors are shared with runtime TOC mapping for consistent editor/runtime navigation.
-- 063-06 done: Writing canvas appender and smart paste parity delivered:
-  - inline canvas appender points were added between blocks and at document end (floating `+` in-context),
-  - insert orchestration is unified across sidebar/slash/appender via shared target resolver (`resolvePostInsertMutation`),
+- 063-06 done: Writing canvas insertion and smart paste parity delivered:
+  - insert orchestration is unified across sources via shared target resolver (`resolvePostInsertMutation`),
   - inserted block focus is deterministic (`insertFocusToken` + primary editable marker),
   - Word paste hardening improves heading fidelity and strips leftover static TOC anchors (`#_Toc...`) while keeping dynamic TOC directive behavior idempotent.
 - 063-10 done: Stitch template migration + focus mode:
   - post editor shell visually aligned to `_docs/UI/admin_panel/46-post-editor/code.html` reference (left outline rail, center writing canvas, right details),
-  - central canvas switched to cleaner writing surface (removed extra inner card/header wrapper),
-  - floating plus appender is now the primary in-canvas insert affordance,
   - `Focus mode` persists in local storage and hides side panels for distraction-free writing.
+- 063-11 done: Strict HTML parity + unified article canvas:
+  - `Document Outline` has primary `+` block insertion (`outline-plus`) with shared insert resolver,
+  - center canvas is a unified article flow (no per-block cards) with title field and borderless content rhythm,
+  - right details tabs are fixed to `Post` / `Block` and switch context on selection,
+  - media/interactive placeholders in canvas are clickable and route users to block settings context,
+  - header right actions follow contract `Preview`, `Publish`, `Gear` (`Editor settings` modal),
+  - editor preferences persist locally (`nextless.posts.editor.preferences.v1`).
