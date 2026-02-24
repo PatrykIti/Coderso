@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Authoring  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-02, TASK-062  
-**Status:** To Do
+**Status:** Done (2026-02-24)
 
 ---
 
@@ -81,4 +81,3 @@ renderStatsPopover(stats);
 ## Documentation Updates Required
 - `_docs/CMS_API.md` (outline/stats computed behavior)
 - `_docs/ARCHITECTURE.md` (document selectors)
-

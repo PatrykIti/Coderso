@@ -5,7 +5,7 @@
 **Category:** Authoring UX  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-063-05  
-**Status:** To Do
+**Status:** Done (2026-02-24)
 
 ---
 

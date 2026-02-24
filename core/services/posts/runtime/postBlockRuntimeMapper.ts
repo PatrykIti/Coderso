@@ -4,6 +4,10 @@ import {
   postRichTextToPlainText,
   serializePostRichText,
 } from "../editor/postRichTextSerializer";
+import {
+  resolvePostStableAnchorId,
+  sanitizePostHeadingAnchorId,
+} from "../editor/postDocumentOutline";
 import { getMediaById } from "../../media/mediaService";
 import {
   resolvePostImageLayoutFromAttrs,
@@ -58,12 +62,6 @@ const sanitizeClassName = (value: unknown) => {
     .filter(Boolean)
     .slice(0, 8);
   return tokens.length > 0 ? tokens.join(" ") : undefined;
-};
-
-const sanitizeAnchorId = (value: unknown) => {
-  if (typeof value !== "string") return undefined;
-  const normalized = value.trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 80);
-  return normalized.length > 0 ? normalized : undefined;
 };
 
 const stripHtml = (value: string) =>
@@ -318,7 +316,7 @@ const resolveRuntimeLayout = (attrs: Record<string, unknown>): RuntimeBlockLayou
   ) as RuntimeBlockLayout["textScale"],
   highlight: attrs.highlight === true,
   hideOnMobile: attrs.hideOnMobile === true,
-  anchorId: sanitizeAnchorId(attrs.anchorId),
+  anchorId: sanitizePostHeadingAnchorId(attrs.anchorId),
   className: sanitizeClassName(attrs.className),
 });
 
@@ -384,50 +382,6 @@ const toHeadingBoundLevel = (value: unknown, fallback: 1 | 2 | 3 | 4 | 5 | 6) =>
   return toHeadingLevel(value);
 };
 
-const toAnchorSlug = (value: string) =>
-  value
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/-{2,}/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-
-const ensureUniqueAnchorId = (base: string, used: Set<string>) => {
-  if (!used.has(base)) {
-    used.add(base);
-    return base;
-  }
-  let suffix = 2;
-  while (used.has(`${base}-${suffix}`)) {
-    suffix += 1;
-  }
-  const unique = `${base}-${suffix}`;
-  used.add(unique);
-  return unique;
-};
-
-const resolveStableAnchorId = (
-  preferred: unknown,
-  text: string,
-  fallback: string,
-  used: Set<string>
-) => {
-  const preferredSanitized = sanitizeAnchorId(preferred);
-  if (preferredSanitized) {
-    return ensureUniqueAnchorId(preferredSanitized, used);
-  }
-
-  const fromText = toAnchorSlug(text);
-  if (fromText) {
-    return ensureUniqueAnchorId(fromText, used);
-  }
-
-  const fromFallback = toAnchorSlug(fallback) || "section";
-  return ensureUniqueAnchorId(fromFallback, used);
-};
-
 const mapWritingCanvasNodesForRuntime = async (
   content: unknown,
   blockId: string,
@@ -469,7 +423,7 @@ const mapWritingCanvasNodesForRuntime = async (
         type: "heading",
         level: toHeadingLevel(node.level),
         html: serializePostRichText(typeof node.text === "string" ? node.text : ""),
-        anchorId: sanitizeAnchorId(node.anchorId),
+        anchorId: sanitizePostHeadingAnchorId(node.anchorId),
       });
       ordinal += 1;
       continue;
@@ -602,7 +556,7 @@ const buildRuntimeHeadingIndex = (blocks: PostRuntimeMappedBlock[]) => {
       const text = postRichTextToPlainText(block.content.html ?? "").trim();
       if (!text) continue;
       const level = block.content.headingLevel ?? 2;
-      const anchorId = resolveStableAnchorId(
+      const anchorId = resolvePostStableAnchorId(
         block.layout.anchorId,
         text,
         `heading-${block.id}`,
@@ -626,7 +580,7 @@ const buildRuntimeHeadingIndex = (blocks: PostRuntimeMappedBlock[]) => {
       if (node.type !== "heading") continue;
       const text = postRichTextToPlainText(node.html).trim();
       if (!text) continue;
-      const anchorId = resolveStableAnchorId(
+      const anchorId = resolvePostStableAnchorId(
         node.anchorId,
         text,
         `heading-${block.id}-${node.id}`,

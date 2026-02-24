@@ -171,3 +171,8 @@ const sections = buildDefaultNavSections({
   - dedicated `PostInserterSidebar` shell with explicit close button and `Escape` close behavior,
   - block library supports category filters (`All/Text/Media/Interactive`), search, grouped rendering, and optional `Most used`,
   - focus return after closing inserter is standardized via `useFocusReturn` and returns to `Add` trigger in header tools.
+- 063-05 done: Document overview list/outline/stats parity delivered:
+  - `PostListViewSidebar` adds tabbed `List view` + `Outline` navigation for post structure,
+  - document stats are computed from block document selectors (`words/chars/read-time/headings/paragraphs/blocks`),
+  - heading outline includes validation signals (`empty heading`, skipped levels, multiple H1),
+  - stable heading anchors are shared with runtime TOC mapping for consistent editor/runtime navigation.

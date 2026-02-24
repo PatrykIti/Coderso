@@ -644,6 +644,19 @@ Editor inserter sidebar flow (update `TASK-063-04`):
   - deterministic grouped listing i optional `Most used` section (client-provided hints),
 - zmiana dotyczy tylko admin UI orchestration; brak nowych endpointow API.
 
+Editor document overview selectors (update `TASK-063-05`):
+- `Document overview` secondary sidebar ma dwa widoki:
+  - `List view` (reorder/select blokow),
+  - `Outline` (heading index z walidacja hierarchii),
+- stats selector contract:
+  - zrodlo: `PostBlockDocument`,
+  - pola: `words`, `characters`, `readingTimeMinutes`, `headings`, `paragraphs`, `blocks`,
+  - reading-time jest liczone deterministycznie (`ceil(words / wpm)`, domyslnie `wpm=220`, pusty dokument => `0`),
+- outline contract:
+  - heading sources: `heading` blocks + `writing-canvas` heading nodes,
+  - warning codes: `empty_heading`, `skipped_heading_level`, `multiple_h1`,
+  - anchor IDs sa generowane przez wspolny helper z runtime, wiec TOC i editor outline utrzymuja ten sam stable link model.
+
 Backfill endpoint (`POST /posts/migration/backfill`) - request payload:
 
 ```json

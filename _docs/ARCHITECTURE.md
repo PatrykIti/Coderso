@@ -125,6 +125,11 @@ przez `setup.completed=true`.
     - `PostInserterSidebar` jest explicit secondary-sidebar dialogiem z close buttonem i `Escape` close contract,
     - block library (`BlockInserter`) wspiera category filters, searchable catalog i optional `Most used` sekcje,
     - focus return po zamknieciu insertera jest centralnie realizowany przez `useFocusReturn` (powrot na `Add` trigger).
+  - **TASK-063-05 (done):** `Document Overview` sidebar dostal parity dla list/outline/stats:
+    - secondary sidebar `PostListViewSidebar` zawiera taby `List view` i `Outline`,
+    - stats selectors (`buildPostDocumentStats`) sa liczone deterministycznie z `PostBlockDocument` (words/chars/read-time/headings/paragraphs/blocks),
+    - outline selectors (`buildPostDocumentOutline`) zbieraja headingi z `heading` blockow i `writing-canvas` nodes oraz sygnalizuja `empty heading`, `skipped level`, `multiple H1`,
+    - stable heading anchors sa wspoldzielone z runtime mapperem (`resolvePostStableAnchorId`), wiec TOC/outline maja spójny anchor model.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

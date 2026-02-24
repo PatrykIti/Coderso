@@ -4,7 +4,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
-import { PostListViewPanel } from "./blocks/PostListViewPanel";
 import { useFocusReturn } from "./hooks/useFocusReturn";
 import { usePostEditorLayout } from "./hooks/usePostEditorLayout";
 import { BlockInspector } from "./inspector/BlockInspector";
@@ -14,6 +13,7 @@ import { PostEditorCanvas } from "./PostEditorCanvas";
 import { PostEditorTopBar } from "./PostEditorTopBar";
 import { PostRevisionDrawer } from "./PostRevisionDrawer";
 import { PostInserterSidebar } from "./sidebars/PostInserterSidebar";
+import { PostListViewSidebar } from "./sidebars/PostListViewSidebar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 
 // TASK-061-01 UX contract anchor:
@@ -91,8 +91,8 @@ export function PostBlockEditorShell() {
       recentlyUsedTypes={["writing-canvas", "heading", "image", "button"]}
     />
   ) : (
-    <PostListViewPanel
-      blocks={editor.state.document.blocks}
+    <PostListViewSidebar
+      document={editor.state.document}
       selectedBlockId={editor.state.selectedBlockId}
       onSelectBlock={(id) => editor.selectBlock(id)}
       onMoveBlockToIndex={editor.moveBlockToIndex}
