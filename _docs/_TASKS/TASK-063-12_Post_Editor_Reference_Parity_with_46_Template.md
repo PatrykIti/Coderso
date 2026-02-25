@@ -40,7 +40,7 @@ Zakres parity:
 3. Secondary controls (`Outline`, `Details`, `Focus`, `Revisions`) zostaja, ale poza primary header action cluster.
 4. W `DocumentInspector` nie dodajemy nowych backendowych pol `visibility/sticky`; parity realizujemy na dostepnym kontrakcie.
 5. SEO/metadata pozostaja funkcjonalnie dostepne, ale ida do `Advanced` (collapsed by default).
-6. Preferences baseline: localStorage + migration; internal user-settings sync tylko jako opcjonalne rozszerzenie.
+6. Preferences baseline: localStorage + migration + internal `user_settings` sync (dual persistence).
 7. Focus mode po zmianach ma przywracac poprzedni stan paneli po wyjsciu.
 8. Styling ma korzystac z istniejacego systemu template tokenow (fonts/colors/spacing), bez hardcoded one-off values.
 9. Rozwiazanie ma byc przygotowane pod przyszly model opcjonalnych UI templates per screen/per editor.
@@ -94,7 +94,11 @@ Zakres parity:
 - `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts`
 - `core/admin/ui/posts/editor/layout/PostEditorLayout.tsx`
 - `core/admin/ui/posts/editor/layout/PostEditorRegions.tsx`
-- `core/admin/services/userSettingsClient.ts` (optional)
+- `core/admin/services/userSettingsClient.ts`
+- `core/services/settings/userSettingsService.ts`
+- `tests/integration/routes/userSettings.test.ts`
+- `tests/unit/settings/userSettingsService.test.ts`
+- `tests/unit/admin/userSettingsClient.test.ts`
 - `tests/integration/ui/post-editor-layout-shell.test.tsx`
 - `tests/integration/ui/post-editor-header-workflow.test.tsx`
 - `tests/integration/ui/post-editor-listview-outline.test.tsx`

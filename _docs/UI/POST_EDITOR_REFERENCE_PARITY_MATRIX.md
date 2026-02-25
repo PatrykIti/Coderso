@@ -40,7 +40,7 @@ Decyzje:
 | Advanced fields | Secondary/progressive disclosure | SEO i advanced stale widoczne | partial | must-fix | `063-12-05` |
 | Gear modal role | Główny punkt globalnych ustawien editora | Jest modal, ale zakres/model opcji ograniczony | partial | must-fix | `063-12-06` |
 | Preferences model | Focus/compact/hints/density + clear defaults | Focus/compact/hints, bez density/migration contract | partial | must-fix | `063-12-06` |
-| Preferences persistence | Stabilna persistence + compatibility | LocalStorage only, bez jawnej migracji schemy | partial | must-fix (local migration), optional server sync | `063-12-06` |
+| Preferences persistence | Stabilna persistence + compatibility | LocalStorage only, bez jawnej migracji schemy | partial | must-fix (local migration + internal user_settings sync) | `063-12-06` |
 | Desktop composition | Stabilny 3-column shell | Dziala, ale zalezny od panel toggles/focus state | partial | must-fix | `063-12-07` |
 | Focus mode contract | Hide rails + deterministic restore | Hide dziala; restore poprzedniego stanu niedeterministyczne | partial | must-fix | `063-12-07` |
 | Mobile fallback | Left/right sheets z zachowaniem logicznej kolejnosci | Sheets sa, wymaga doprecyzowania testow i contractu | partial | must-fix | `063-12-07` |
@@ -63,7 +63,7 @@ Decyzje:
 2. Secondary controls (`Outline`, `Details`, `Focus`, `Revisions`) pozostaja w UI, ale nie w primary header cluster.
 3. Brak nowych backend fields `visibility/sticky` w tym epiku.
 4. SEO/extended metadata pozostaja dostepne, ale w `Advanced` collapse.
-5. Preferences persistence: localStorage-only w tej iteracji (SPA-first, no-reload behavior), bez server sync.
+5. Preferences persistence: local-first + internal `user_settings` sync, z graceful fallback przy bledzie sieci.
 6. Visual parity realizujemy przez system template tokenow; brak hardcoded font/theme forks.
 
 ---

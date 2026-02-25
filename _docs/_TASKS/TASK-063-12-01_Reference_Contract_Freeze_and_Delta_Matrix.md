@@ -51,7 +51,7 @@ oraz spisac delta matrix `reference vs current` przed implementacja zmian.
 3. Secondary controls (`Outline/Details/Focus/Revisions`) zostaja w UI, ale poza glownym prawym klastrem headera.
 4. Dla `DocumentInspector` nie dodajemy backendowych pol `visibility/sticky`, bo obecny kontrakt API ich nie wystawia.
 5. SEO i pola zaawansowane przechodza do `Advanced` (progressive disclosure), zamiast usuwania.
-6. Preferences editora sa utrzymywane lokalnie jako baseline; sync do user-settings pozostaje opcjonalny i internal-only.
+6. Preferences editora sa utrzymywane local-first, ale synchronizowane rowniez do internal `user_settings` (dual persistence).
 7. Focus mode po wdrozeniu ma przywracac poprzedni stan paneli po wyjsciu.
 
 ---

@@ -13,12 +13,12 @@
 Wzmocnic role ikony `Gear` jako glownego wejscia do globalnych ustawien post editora:
 - modal estetycznie zgodny z referencja i shell,
 - porzadek opcji UX (focus mode, compact rails, outline hints, density),
-- stabilna persistencja preferencji (local storage + optional internal user settings).
+- stabilna persistencja preferencji (local storage + internal user settings sync).
 
 ---
 
 ## Security Contract
-- **Visibility:** internal (`/admin/*`, optional `/admin/api/user-settings`).
+- **Visibility:** internal (`/admin/*`, `/admin/api/user-settings`).
 - **Auth model:** authenticated admin session / API key scope `admin:*`.
 - **Rate-limit bucket:** `admin_read` / `admin_write`.
 - **Anti-abuse controls:** brak public write; nonce/HMAC/reCAPTCHA nie dotyczy.
@@ -38,7 +38,7 @@ Wzmocnic role ikony `Gear` jako glownego wejscia do globalnych ustawien post edi
 2. Preferences sa trzymane lokalnie w `PostBlockEditorShell` przez:
    - `nextless.posts.editor.preferences.v1`,
    - `nextless.posts.editor.focusMode`.
-3. Persistencja przez `userSettingsClient` nie jest obecnie podlaczona.
+3. Persistencja przez `userSettingsClient` nie jest obecnie podlaczona dla post editora, mimo ze ten wzorzec istnieje na innych ekranach admina.
 4. Test `post-editor-settings-dialog` pokrywa render i podstawowe interaction, ale nie testuje migracji schemy.
 
 ---
@@ -51,16 +51,21 @@ Wzmocnic role ikony `Gear` jako glownego wejscia do globalnych ustawien post edi
 ---
 
 ## Final Implementation Decisions
-1. Source of truth pozostaje localStorage + SPA cache behavior (brak backend changes w tej fazie).
+1. Source of truth dla UX pozostaje local-first (SPA), ale persistence jest dualna: `localStorage + user_settings` sync.
 2. Rozszerzamy schema o:
    - `editorDensity: "comfortable" | "compact"`.
 3. Zachowujemy backward compatibility przez migracje `v1 -> v2` w resolverze preferences.
-4. `userSettingsClient` jest poza zakresem tej iteracji (defer), aby utrzymac brak reloadow i szybki client-side restore.
+4. `userSettingsClient` jest w zakresie tej iteracji:
+   - optimistic update do local state/localStorage,
+   - background PATCH do `/admin/api/user-settings/:key`,
+   - graceful fallback do local przy błędzie sync (bez blokowania UI).
 5. Modal dostaje sekcje i copy zgodne z `editor UX settings` (zamiast listy rownych toggli).
 6. Gear modal moze zawierac dodatkowe globalne opcje edytora postow (bez API changes), np.:
    - `showKeyboardHints`,
    - `defaultInspectorTab` (`post`/`block`),
    - `restoreLastSidebarsState` (on/off).
+7. Dodajemy nowy user setting key dla editora postow i walidacje po stronie service:
+   - proponowany key: `posts.editor.preferences`.
 
 ---
 
@@ -69,12 +74,22 @@ Wzmocnic role ikony `Gear` jako glownego wejscia do globalnych ustawien post edi
    - przebudowac na grouped sections i dodac `editorDensity`.
 2. `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
    - podniesc schema preferences i resolver migracji,
-   - utrzymac current keys + kompatybilnosc.
+   - utrzymac current local keys + kompatybilnosc.
 3. `core/admin/ui/posts/editor/header/PostEditorHeader.tsx`
    - upewnic sie, ze gear trigger jest primary i stabilny.
-4. `tests/integration/ui/post-editor-settings-dialog.test.tsx`
+4. `core/admin/services/userSettingsClient.ts`
+   - rozszerzyc typ `UserSettings` o `posts.editor.preferences`.
+5. `core/services/settings/userSettingsService.ts`
+   - dodac key do `UserSettingValueMap`, defaults i walidacji.
+6. `tests/integration/routes/userSettings.test.ts`
+   - dopisac coverage dla nowego klucza.
+7. `tests/unit/settings/userSettingsService.test.ts`
+   - dopisac walidacje i persistence cases.
+8. `tests/unit/admin/userSettingsClient.test.ts`
+   - dopisac klientowe cases dla nowego klucza.
+9. `tests/integration/ui/post-editor-settings-dialog.test.tsx`
    - dopisac testy density + migration defaults.
-5. `tests/unit/posts/post-editor-layout-state.test.ts`
+10. `tests/unit/posts/post-editor-layout-state.test.ts`
    - dodac cases dla preference parsing i reset behavior.
 
 ---
@@ -91,7 +106,7 @@ Wzmocnic role ikony `Gear` jako glownego wejscia do globalnych ustawien post edi
 - `core/admin/ui/posts/editor/settings/PostEditorSettingsDialog.tsx`
 - `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
 - `core/admin/ui/posts/editor/header/PostEditorHeader.tsx`
-- `core/admin/services/userSettingsClient.ts` (optional)
+- `core/admin/services/userSettingsClient.ts`
 - `tests/integration/ui/post-editor-settings-dialog.test.tsx`
 - `tests/unit/posts/post-editor-layout-state.test.ts`
 
@@ -108,6 +123,7 @@ type PostEditorPreferences = {
 
 function savePreferences(next: PostEditorPreferences) {
   localStorage.setItem(KEY, JSON.stringify(next));
+  void setUserSetting("posts.editor.preferences", next);
 }
 
 function resolvePreferences(raw: unknown): PostEditorPreferences {
@@ -133,14 +149,15 @@ function resolvePreferences(raw: unknown): PostEditorPreferences {
   - density option applies and restores
 - Unit:
   - preference parsing/migration/defaults
+  - user settings client + service validation for `posts.editor.preferences`
 - Regression:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - `bun test tests/integration/ui/post-editor-settings-dialog.test.tsx tests/unit/posts/post-editor-layout-state.test.ts`
+  - `bun test tests/integration/ui/post-editor-settings-dialog.test.tsx tests/unit/posts/post-editor-layout-state.test.ts tests/integration/routes/userSettings.test.ts tests/unit/settings/userSettingsService.test.ts tests/unit/admin/userSettingsClient.test.ts`
 
 ---
 
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (settings modal + preferences persistence)
-- `_docs/CMS_API.md` (optional internal user-settings reference)
+- `_docs/CMS_API.md` (internal user-settings key for posts editor preferences)
 - `_docs/CODERSO_MODULES.md`
