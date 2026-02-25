@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 322 | 2026-02-25 | TASK-063-12 post editor reference parity wave 1 (header, left rail, canvas) | Admin/UI |
 | 321 | 2026-02-24 | TASK-063-11 post editor strict html parity and unified canvas | Admin/UI |
 | 320 | 2026-02-24 | TASK-063-10 post editor stitch template and focus mode | Admin/UI |
 | 319 | 2026-02-24 | TASK-063-06 writing canvas appender and smart paste parity | Admin/UI |
