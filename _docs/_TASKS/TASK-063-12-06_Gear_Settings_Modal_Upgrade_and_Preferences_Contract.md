@@ -33,6 +33,48 @@ Wzmocnic role ikony `Gear` jako glownego wejscia do globalnych ustawien post edi
 
 ---
 
+## Current State Analysis (Repo)
+1. `PostEditorSettingsDialog` ma obecnie 3 przełączniki (`focusModeOnOpen`, `compactSidePanels`, `showOutlineHints`) i prosty footer reset/done.
+2. Preferences sa trzymane lokalnie w `PostBlockEditorShell` przez:
+   - `nextless.posts.editor.preferences.v1`,
+   - `nextless.posts.editor.focusMode`.
+3. Persistencja przez `userSettingsClient` nie jest obecnie podlaczona.
+4. Test `post-editor-settings-dialog` pokrywa render i podstawowe interaction, ale nie testuje migracji schemy.
+
+---
+
+## Delta vs Reference
+1. Referencja oczekuje bardziej „centralnego” settings experience pod gear icon (lepsza struktura i hierarchia opcji).
+2. Brak opcji `editor density`.
+3. Brak jawnego kontraktu migracji wersji preferences.
+
+---
+
+## Final Implementation Decisions
+1. Source of truth pozostaje localStorage (brak wymogu backend changes w tej fazie).
+2. Rozszerzamy schema o:
+   - `editorDensity: "comfortable" | "compact"`.
+3. Zachowujemy backward compatibility przez migracje `v1 -> v2` w resolverze preferences.
+4. `userSettingsClient` pozostaje opcjonalnym follow-up (nieblokujacym parity).
+5. Modal dostaje sekcje i copy zgodne z `editor UX settings` (zamiast listy rownych toggli).
+
+---
+
+## Detailed File-Level Plan
+1. `core/admin/ui/posts/editor/settings/PostEditorSettingsDialog.tsx`
+   - przebudowac na grouped sections i dodac `editorDensity`.
+2. `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
+   - podniesc schema preferences i resolver migracji,
+   - utrzymac current keys + kompatybilnosc.
+3. `core/admin/ui/posts/editor/header/PostEditorHeader.tsx`
+   - upewnic sie, ze gear trigger jest primary i stabilny.
+4. `tests/integration/ui/post-editor-settings-dialog.test.tsx`
+   - dopisac testy density + migration defaults.
+5. `tests/unit/posts/post-editor-layout-state.test.ts`
+   - dodac cases dla preference parsing i reset behavior.
+
+---
+
 ## Sub-Tasks
 1. Rozszerzyc model preference state i validacje.
 2. Przebudowac modal sections + opisy pod UX non-technical user.
@@ -62,7 +104,11 @@ type PostEditorPreferences = {
 
 function savePreferences(next: PostEditorPreferences) {
   localStorage.setItem(KEY, JSON.stringify(next));
-  maybeSyncUserSettings(next); // internal only
+}
+
+function resolvePreferences(raw: unknown): PostEditorPreferences {
+  // v1 -> v2 migration, defaults fallback
+  return migrateToV2(raw);
 }
 ```
 
@@ -80,12 +126,13 @@ function savePreferences(next: PostEditorPreferences) {
   - open gear -> modal visible
   - change preferences -> persist after remount
   - reset defaults behavior
+  - density option applies and restores
 - Unit:
   - preference parsing/migration/defaults
 - Regression:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - `bun test tests/integration/ui/post-editor-settings-dialog.test.tsx`
+  - `bun test tests/integration/ui/post-editor-settings-dialog.test.tsx tests/unit/posts/post-editor-layout-state.test.ts`
 
 ---
 

@@ -25,6 +25,49 @@ Domknac parity behavior dla desktop/tablet/mobile:
 
 ---
 
+## Current State Analysis (Repo)
+1. `PostEditorLayout` uzywa jednego breakpointu `min-width: 1024px` dla desktop/mobile split.
+2. Rails (`w-64`/`w-80`) sa renderowane warunkowo na desktopie, a na mobile panele ida przez `Sheet`.
+3. `usePostEditorLayout` przy wlaczeniu focus mode zamyka panele, ale nie przywraca deterministycznie poprzedniego stanu po wyjsciu.
+4. Testy responsive/smoke pokrywaja podstawowe scenariusze, ale nie waliduja restore state po focus mode.
+
+---
+
+## Delta vs Reference
+1. Referencja implikuje stabilny desktopowy 3-column layout (`left rail + canvas + right rail`).
+2. Aktualny layout przy pewnych toggle flow moze byc mniej stabilny geometrycznie.
+3. Potrzebny jest deterministic contract dla focus mode: hide -> restore.
+
+---
+
+## Final Implementation Decisions
+1. Desktop/tablet (`>=1024`) utrzymuje 3-column composition jako default parity mode.
+2. Mobile (`<1024`) korzysta z left/right sheets.
+3. Focus mode:
+   - wejscie: ukrywa panele,
+   - wyjscie: przywraca poprzedni stan paneli (snapshot restore).
+4. Region widths pozostaja zgodne z parity (`w-64`, `w-80`), z opcjonalnym compact mode z preferences.
+5. Dodajemy testy explicit dla focus restore i mobile sheet order.
+
+---
+
+## Detailed File-Level Plan
+1. `core/admin/ui/posts/editor/layout/PostEditorLayout.tsx`
+   - dopracowac logiczne rozdzielenie desktop/mobile rendering path,
+   - utrzymac deterministic behavior dla sheets i rails.
+2. `core/admin/ui/posts/editor/layout/PostEditorRegions.tsx`
+   - zablokowac parity widths i spojnosc wrappers.
+3. `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts`
+   - dodac snapshot state przed focus mode i restore po wyjsciu.
+4. `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
+   - upewnic sie, ze header toggles wywoluja nowy focus contract.
+5. `tests/integration/ui/post-editor-layout-responsive.test.tsx`
+   - dopisac przypadki focus restore i mobile panel order.
+6. `tests/integration/ui/post-editor-smoke-regression.test.tsx`
+   - rozszerzyc smoke o focus on/off transitions.
+
+---
+
 ## Sub-Tasks
 1. Refactor `PostEditorLayout` breakpoint logic.
 2. Ujednolicic region wrappers (`PostEditorRegions`) pod parity spacing.
@@ -45,17 +88,20 @@ Domknac parity behavior dla desktop/tablet/mobile:
 
 ## Pseudocode
 ```ts
-if (desktop && !focusMode) {
-  showLeftRail(64);
-  showRightRail(80);
+if (viewportWidth >= 1024 && !focusMode) {
+  showLeftRail("w-64");
+  showRightRail("w-80");
 }
-if (mobile && !focusMode) {
+if (viewportWidth < 1024 && !focusMode) {
   showLeftSheet();
   showRightSheet();
 }
 if (focusMode) {
+  cacheCurrentPanelState();
   hideLeftAndRight();
-  keepPrimaryHeaderActions();
+}
+if (!focusMode) {
+  restoreCachedPanelState();
 }
 ```
 
@@ -72,11 +118,12 @@ if (focusMode) {
 - Integration UI:
   - desktop rail visibility and widths
   - mobile sheets open/close behavior
-  - focus mode transition behavior
+  - focus mode hides rails and restores previous panel state
+  - compact side panels mode still respects parity constraints
 - Regression:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - `bun test tests/integration/ui/post-editor-layout-responsive.test.tsx`
+  - `bun test tests/integration/ui/post-editor-layout-responsive.test.tsx tests/integration/ui/post-editor-smoke-regression.test.tsx`
 
 ---
 

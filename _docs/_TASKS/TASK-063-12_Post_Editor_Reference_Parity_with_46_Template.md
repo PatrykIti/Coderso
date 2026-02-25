@@ -26,6 +26,25 @@ Zakres parity:
 
 ---
 
+## Current State Summary (Baseline)
+1. Najwieksze rozjazdy sa w header hierarchy, lewej szynie (Outline vs List view), geometrii canvas i right inspector information architecture.
+2. Logika editora (`save/autosave/preview/publish/revisions/insert`) jest stabilna i ma byc zachowana.
+3. Braki parity sa glownie warstwa kompozycji UI, spacing/tokens i progressive disclosure.
+4. Kluczowy punkt ryzyka: potencjalne regresje testow integracyjnych UI po refactorze komponentow shell/header/inspector.
+
+---
+
+## Locked Decisions and Allowed Deviations
+1. Brak nowych public endpointow i brak przebudowy backend kontraktow posts.
+2. Dodatkowy `List view` po lewej jest dopuszczony, ale `Outline` musi pozostac domyslny i primary.
+3. Secondary controls (`Outline`, `Details`, `Focus`, `Revisions`) zostaja, ale poza primary header action cluster.
+4. W `DocumentInspector` nie dodajemy nowych backendowych pol `visibility/sticky`; parity realizujemy na dostepnym kontrakcie.
+5. SEO/metadata pozostaja funkcjonalnie dostepne, ale ida do `Advanced` (collapsed by default).
+6. Preferences baseline: localStorage + migration; internal user-settings sync tylko jako opcjonalne rozszerzenie.
+7. Focus mode po zmianach ma przywracac poprzedni stan paneli po wyjsciu.
+
+---
+
 ## Security Contract
 - **Visibility:** internal (`/admin/*`, opcjonalnie `/admin/api/user-settings`).
 - **Auth model:** authenticated admin session / admin API key scopes.
@@ -43,6 +62,18 @@ Zakres parity:
 6. `TASK-063-12-06` - Gear settings modal upgrade and preferences contract.
 7. `TASK-063-12-07` - Responsive parity, focus mode, and mobile sheets.
 8. `TASK-063-12-08` - QA, docs, changelog, and closure.
+
+---
+
+## Implementation Order (Locked)
+1. `063-12-01` contract freeze + parity matrix.
+2. `063-12-02` header hierarchy.
+3. `063-12-03` left outline parity.
+4. `063-12-04` canvas parity.
+5. `063-12-05` right inspector parity.
+6. `063-12-06` gear modal/preferences contract.
+7. `063-12-07` responsive/focus mode parity.
+8. `063-12-08` QA/docs/changelog/closure.
 
 ---
 

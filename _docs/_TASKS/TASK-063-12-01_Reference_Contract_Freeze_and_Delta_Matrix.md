@@ -25,6 +25,43 @@ oraz spisac delta matrix `reference vs current` przed implementacja zmian.
 
 ---
 
+## Current State Analysis (Locked: 2026-02-25)
+1. Header jest obecnie jednowierszowy i laczy wszystkie akcje (`Outline/Details/Focus/Revisions/Preview/Publish/Gear`) w jednym klastrze, bez wyraznego podzialu primary vs secondary actions.
+2. Lewy rail ma tabs `List view` + `Outline` o rownej wadze wizualnej; `Outline` nie jest wystarczajaco domyslnym i dominujacym modelem jak w referencji.
+3. Center canvas ma szersza geometrie (`~860px`) i inny rytm spacingu/typografii niz referencja (`720px`, `text-5xl`, `space-y-6`).
+4. Prawy inspector ma obecnie sekcje bardziej techniczne (SEO/meta stale widoczne), a nie flow z referencji (`publishing -> categories -> tags -> featured image -> danger`).
+5. Gear dialog istnieje, ale jest minimalistyczny (3 toggles) i bez dopietego kontraktu density/migracji preferences.
+6. Responsive layout jest oparty o jeden breakpoint (`1024`) + mobile sheets; focus mode nie przywraca deterministycznie poprzedniego stanu paneli po wyjsciu.
+
+---
+
+## Locked Reference Contract (Token-Level)
+1. Header: `h-14`, lewy kontekst (close/back + breadcrumb + draft badge), prawa strona `Preview`, `Publish`, `Gear`.
+2. Left rail: `w-64`, `Document Outline`, list rows z lekkim hover/active, primary insert `+`.
+3. Canvas: `max-width: 720px`, `py-20 px-8`, title `text-5xl font-display font-bold`, writing flow `space-y-6`.
+4. Right rail: `w-80`, tabs `Post/Block`, sekcje publishing/category/tags/media/danger, advanced metadata jako secondary layer.
+5. Gear/settings: settings icon jako primary entrypoint do globalnych ustawien editora.
+6. Responsive: desktop-first 3-column composition; mobile fallback przez sheets.
+
+---
+
+## Final Decisions (Approved for 063-12)
+1. Brak nowych public endpointow; parity to warstwa UI/UX.
+2. Dodatkowa zakladka `List view` po lewej jest dozwolona, ale `Outline` pozostaje domyslnym i primary mode.
+3. Secondary controls (`Outline/Details/Focus/Revisions`) zostaja w UI, ale poza glownym prawym klastrem headera.
+4. Dla `DocumentInspector` nie dodajemy backendowych pol `visibility/sticky`, bo obecny kontrakt API ich nie wystawia.
+5. SEO i pola zaawansowane przechodza do `Advanced` (progressive disclosure), zamiast usuwania.
+6. Preferences editora sa utrzymywane lokalnie jako baseline; sync do user-settings pozostaje opcjonalny i internal-only.
+7. Focus mode po wdrozeniu ma przywracac poprzedni stan paneli po wyjsciu.
+
+---
+
+## Delta Matrix Source
+Szczegolowy matrix sekcja-po-sekcji jest utrzymywany w:
+- `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
+
+---
+
 ## Sub-Tasks
 1. Spisac checklist parity dla kazdej sekcji referencji.
 2. Opracowac mapping komponentow + plikow do zmian.

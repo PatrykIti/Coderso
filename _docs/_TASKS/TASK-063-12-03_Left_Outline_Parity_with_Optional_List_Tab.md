@@ -25,6 +25,50 @@ Dozwolone jest pozostawienie dodatkowej zakladki `List view`, ale:
 
 ---
 
+## Current State Analysis (Repo)
+1. `PostListViewSidebar` renderuje tabs `List view`/`Outline` o rownej wadze wizualnej.
+2. `PostDocumentOutline` korzysta z jednolitej prezentacji icon/row i nie mapuje visual language referencji dla roznych typow wierszy.
+3. `PostListViewPanel` jest relatywnie „ciezki” wizualnie jak na secondary mode.
+4. `usePostEditorLayout` nie trzyma wyraznego kontraktu `left rail primary mode`, przez co `Outline` nie jest wymuszone jako canonical default.
+
+---
+
+## Delta vs Reference
+1. Referencja to prosty, lekki `Document Outline` rail bez rownowaznych tabow.
+2. Aktualny panel ma rozbudowane controls jako first impression, co odsuwa `Outline-first` flow.
+3. Referencja ma bardziej subtelne row states i mniejszy noise na lewej szynie.
+
+---
+
+## Final Implementation Decisions
+1. `Outline` pozostaje domyslny i primary; `List view` jest secondary capability.
+2. Tabs zostaja (dozwolone odchylenie), ale `Outline` ma byc wizualnie uprzywilejowany.
+3. Left rail insert `+` zostaje jako primary insert trigger.
+4. Dodajemy jawny state `leftRailMode` (`outline` | `list-view`) w layout hooku.
+5. Zmieniamy visual states row (`active/hover/muted`) pod lekki kontrakt referencji.
+
+---
+
+## Detailed File-Level Plan
+1. `core/admin/ui/posts/editor/sidebars/PostListViewSidebar.tsx`
+   - przeprojektowac naglowek i tabs hierarchy,
+   - ustawic `Outline` jako domyslny selection,
+   - zachowac insert dropdown i flow `outline-plus`.
+2. `core/admin/ui/posts/editor/outline/PostDocumentOutline.tsx`
+   - dodac mapowanie ikon/row semantics dla outline entries,
+   - dopracowac stany active/hover bez ciezkiego border noise.
+3. `core/admin/ui/posts/editor/blocks/PostListViewPanel.tsx`
+   - uproscic chrome i helper text, aby pozostal secondary.
+4. `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts`
+   - wprowadzic `leftRailMode` + akcje reducera,
+   - zapewnic deterministic restore do `outline`.
+5. `tests/integration/ui/post-editor-listview-outline.test.tsx`
+   - dodac asercje default mode i visual priority.
+6. `tests/integration/ui/post-editor-layout-shell.test.tsx`
+   - sprawdzic integracje left rail state z shell.
+
+---
+
 ## Sub-Tasks
 1. Refactor header left rail + outline list items.
 2. Ujednolicic style item states (active, hover, muted).
@@ -45,13 +89,13 @@ Dozwolone jest pozostawienie dodatkowej zakladki `List view`, ale:
 
 ## Pseudocode
 ```ts
-const DEFAULT_LEFT_TAB = "outline";
+const DEFAULT_LEFT_RAIL_MODE = "outline";
 
 <LeftRail title="Document Outline">
   <PrimaryInsertPlus />
-  <Tabs defaultValue={DEFAULT_LEFT_TAB}>
-    <Tab value="outline" />
-    <Tab value="list" optional />
+  <Tabs value={leftRailMode} onValueChange={setLeftRailMode}>
+    <Tab value="outline" priority="primary" />
+    <Tab value="list" priority="secondary" />
   </Tabs>
 </LeftRail>
 ```
@@ -67,13 +111,14 @@ const DEFAULT_LEFT_TAB = "outline";
 
 ## Testing Requirements
 - Integration UI:
-  - default tab state is `Outline`
-  - outline selection and insert trigger
-  - list tab fallback and reorder contract
+  - default left mode is `Outline`
+  - outline selection + insert trigger stays primary
+  - list tab remains available and reorder behavior works
+  - mode restore after panel reopen
 - Regression:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - `bun test tests/integration/ui/post-editor-listview-outline.test.tsx`
+  - `bun test tests/integration/ui/post-editor-listview-outline.test.tsx tests/integration/ui/post-editor-layout-shell.test.tsx`
 
 ---
 
