@@ -52,6 +52,7 @@ Przebudowac prawy panel `Post/Block`, aby zachowac visual parity z referencja:
 3. SEO/metadata przechodza do `Advanced` (collapsed by default).
 4. `BlockInspector` zachowuje aktualna funkcjonalnosc, ale `Advanced` przechodzi na model collapse.
 5. `Post/Block` tabs i selection-driven context pozostaja bez zmian kontraktowych.
+6. Akcja `Move to trash` po potwierdzeniu przekierowuje usera na liste postow: `/admin/posts` (SPA navigate z `replace: true`, aby `Back` nie wracalo na usuniety editor route).
 
 ---
 
@@ -65,11 +66,14 @@ Przebudowac prawy panel `Post/Block`, aby zachowac visual parity z referencja:
 3. `core/admin/ui/posts/editor/inspector/inspectorSchemas.ts`
    - uporzadkowac labels/options pod nowa prezentacje.
 4. `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`
-   - dopiac ewentualne read-only publishing metadata do Document tab.
+   - dopiac ewentualne read-only publishing metadata do Document tab,
+   - po delete success wykonac redirect do `/admin/posts`.
 5. `tests/integration/ui/post-block-inspector.test.tsx`
    - dopisac asercje collapse/expand i section order.
 6. `tests/integration/ui/post-editor-layout-shell.test.tsx`
    - potwierdzic context switch `Post/Block` po selection.
+7. `tests/integration/ui/post-editor-smoke-regression.test.tsx`
+   - dodac przypadek delete -> redirect `/admin/posts`.
 
 ---
 
@@ -121,6 +125,7 @@ Przebudowac prawy panel `Post/Block`, aby zachowac visual parity z referencja:
   - block tab context switch
   - advanced section collapse/expand
   - danger zone area rendered in document tab
+  - delete success redirects to `/admin/posts`
 - Regression:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`

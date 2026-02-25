@@ -63,6 +63,8 @@ Decyzje:
 2. Secondary controls (`Outline`, `Details`, `Focus`, `Revisions`) pozostaja w UI, ale nie w primary header cluster.
 3. Brak nowych backend fields `visibility/sticky` w tym epiku.
 4. SEO/extended metadata pozostaja dostepne, ale w `Advanced` collapse.
+5. Preferences persistence: localStorage-only w tej iteracji (SPA-first, no-reload behavior), bez server sync.
+6. Visual parity realizujemy przez system template tokenow; brak hardcoded font/theme forks.
 
 ---
 

@@ -42,6 +42,8 @@ Zakres parity:
 5. SEO/metadata pozostaja funkcjonalnie dostepne, ale ida do `Advanced` (collapsed by default).
 6. Preferences baseline: localStorage + migration; internal user-settings sync tylko jako opcjonalne rozszerzenie.
 7. Focus mode po zmianach ma przywracac poprzedni stan paneli po wyjsciu.
+8. Styling ma korzystac z istniejacego systemu template tokenow (fonts/colors/spacing), bez hardcoded one-off values.
+9. Rozwiazanie ma byc przygotowane pod przyszly model opcjonalnych UI templates per screen/per editor.
 
 ---
 

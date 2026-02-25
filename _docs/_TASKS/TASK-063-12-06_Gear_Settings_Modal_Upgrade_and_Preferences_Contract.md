@@ -51,12 +51,16 @@ Wzmocnic role ikony `Gear` jako glownego wejscia do globalnych ustawien post edi
 ---
 
 ## Final Implementation Decisions
-1. Source of truth pozostaje localStorage (brak wymogu backend changes w tej fazie).
+1. Source of truth pozostaje localStorage + SPA cache behavior (brak backend changes w tej fazie).
 2. Rozszerzamy schema o:
    - `editorDensity: "comfortable" | "compact"`.
 3. Zachowujemy backward compatibility przez migracje `v1 -> v2` w resolverze preferences.
-4. `userSettingsClient` pozostaje opcjonalnym follow-up (nieblokujacym parity).
+4. `userSettingsClient` jest poza zakresem tej iteracji (defer), aby utrzymac brak reloadow i szybki client-side restore.
 5. Modal dostaje sekcje i copy zgodne z `editor UX settings` (zamiast listy rownych toggli).
+6. Gear modal moze zawierac dodatkowe globalne opcje edytora postow (bez API changes), np.:
+   - `showKeyboardHints`,
+   - `defaultInspectorTab` (`post`/`block`),
+   - `restoreLastSidebarsState` (on/off).
 
 ---
 
