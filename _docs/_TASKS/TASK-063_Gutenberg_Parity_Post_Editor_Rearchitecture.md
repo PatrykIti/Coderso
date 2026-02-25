@@ -65,9 +65,10 @@ Referencja funkcjonalna i UX:
 6. `TASK-063-06` - Writing canvas flow (+ appender/slash/paste parity hardening).
 7. `TASK-063-10` - Stitch template migration + floating plus + focus mode.
 8. `TASK-063-11` - Strict HTML parity + left-outline insert + unified article canvas.
-9. `TASK-063-07` - Details inspector tabs and preference persistence.
-10. `TASK-063-08` - Keyboard shortcuts, focus management, and accessibility.
-11. `TASK-063-09` - QA, docs, changelog, and closure.
+9. `TASK-063-12` - Reference parity pass for 46 post editor template.
+10. `TASK-063-07` - Details inspector tabs and preference persistence.
+11. `TASK-063-08` - Keyboard shortcuts, focus management, and accessibility.
+12. `TASK-063-09` - QA, docs, changelog, and closure.
 
 ## Detailed Sub-Task Files
 1. `TASK-063-01-01_Gutenberg_Component_Inventory.md`
@@ -105,8 +106,17 @@ Referencja funkcjonalna i UX:
 33. `TASK-063-11-04_Right_Sidebar_Post_Block_Tabs_and_Context.md`
 34. `TASK-063-11-05_Header_Preview_Publish_Gear_and_Editor_Settings_Dialog.md`
 35. `TASK-063-11-06_QA_Docs_Changelog_and_Closure.md`
-36. `TASK-063-09-01_Regression_Test_Execution_Plan.md`
-37. `TASK-063-09-02_Docs_Changelog_and_Kanban_Closure.md`
+36. `TASK-063-12_Post_Editor_Reference_Parity_with_46_Template.md`
+37. `TASK-063-12-01_Reference_Contract_Freeze_and_Delta_Matrix.md`
+38. `TASK-063-12-02_Header_Parity_and_Action_Hierarchy.md`
+39. `TASK-063-12-03_Left_Outline_Parity_with_Optional_List_Tab.md`
+40. `TASK-063-12-04_Canvas_Geometry_Typography_and_Block_Surface_Parity.md`
+41. `TASK-063-12-05_Right_Inspector_Parity_Post_Block_with_Progressive_Disclosure.md`
+42. `TASK-063-12-06_Gear_Settings_Modal_Upgrade_and_Preferences_Contract.md`
+43. `TASK-063-12-07_Responsive_Parity_FocusMode_and_Sheets.md`
+44. `TASK-063-12-08_QA_Docs_Changelog_and_Closure.md`
+45. `TASK-063-09-01_Regression_Test_Execution_Plan.md`
+46. `TASK-063-09-02_Docs_Changelog_and_Kanban_Closure.md`
 
 ---
 
@@ -116,8 +126,9 @@ Referencja funkcjonalna i UX:
 3. Nastepnie sidebary (`063-04`, `063-05`).
 4. Potem canvas behavior (`063-06`) oraz migracja visual template + focus mode (`063-10`).
 5. Nastepnie strict HTML parity i unified article canvas (`063-11`).
-6. Potem domkniecie details/preferences (`063-07`) i a11y/shortcuts (`063-08`).
-7. Na koniec full closure (`063-09`).
+6. Potem reference parity pass dla `_docs/UI/admin_panel/46-post-editor/code.html` (`063-12`).
+7. Potem domkniecie details/preferences (`063-07`) i a11y/shortcuts (`063-08`).
+8. Na koniec full closure (`063-09`).
 
 ---
 
