@@ -50,6 +50,20 @@ testIfDb("set/get/list user settings", async () => {
   expect(defaultFavorites).toEqual([]);
   const defaultHeroPresets = await getUserSetting(userId, "widgets.hero.presets");
   expect(defaultHeroPresets).toEqual([]);
+  const defaultPostEditorPreferences = await getUserSetting(
+    userId,
+    "posts.editor.preferences"
+  );
+  expect(defaultPostEditorPreferences).toEqual({
+    version: 2,
+    focusModeOnOpen: false,
+    compactSidePanels: false,
+    showOutlineHints: true,
+    editorDensity: "comfortable",
+    showKeyboardHints: true,
+    defaultInspectorTab: "post",
+    restoreLastSidebarsState: true,
+  });
   const defaultAssistantMode = await getUserSetting(userId, "assistant.mode");
   expect(defaultAssistantMode).toBeNull();
   const defaultAssistantUi = await getUserSetting(userId, "assistant.ui.enabled");
@@ -76,6 +90,15 @@ testIfDb("set/get/list user settings", async () => {
       updatedAt: "2026-02-06T10:00:00.000Z",
     },
   ]);
+  await setUserSetting(userId, "posts.editor.preferences", {
+    focusModeOnOpen: true,
+    compactSidePanels: true,
+    showOutlineHints: false,
+    editorDensity: "compact",
+    showKeyboardHints: false,
+    defaultInspectorTab: "block",
+    restoreLastSidebarsState: false,
+  });
   await setUserSetting(userId, "assistant.mode", "docs-only");
   await setUserSetting(userId, "assistant.ui.enabled", false);
   await setUserSetting(userId, "assistant.ui.avatarEnabled", true);
@@ -95,6 +118,20 @@ testIfDb("set/get/list user settings", async () => {
       updatedAt: "2026-02-06T10:00:00.000Z",
     },
   ]);
+  const updatedPostEditorPreferences = await getUserSetting(
+    userId,
+    "posts.editor.preferences"
+  );
+  expect(updatedPostEditorPreferences).toEqual({
+    version: 2,
+    focusModeOnOpen: true,
+    compactSidePanels: true,
+    showOutlineHints: false,
+    editorDensity: "compact",
+    showKeyboardHints: false,
+    defaultInspectorTab: "block",
+    restoreLastSidebarsState: false,
+  });
   const updatedAssistantMode = await getUserSetting(userId, "assistant.mode");
   expect(updatedAssistantMode).toBe("docs-only");
   const updatedAssistantUi = await getUserSetting(userId, "assistant.ui.enabled");
@@ -122,6 +159,16 @@ testIfDb("set/get/list user settings", async () => {
       updatedAt: "2026-02-06T10:00:00.000Z",
     },
   ]);
+  expect(list["posts.editor.preferences"]).toEqual({
+    version: 2,
+    focusModeOnOpen: true,
+    compactSidePanels: true,
+    showOutlineHints: false,
+    editorDensity: "compact",
+    showKeyboardHints: false,
+    defaultInspectorTab: "block",
+    restoreLastSidebarsState: false,
+  });
   expect(list["assistant.mode"]).toBe("docs-only");
   expect(list["assistant.ui.enabled"]).toBe(false);
   expect(list["assistant.ui.avatarEnabled"]).toBe(true);
@@ -252,7 +299,22 @@ testIfDb("rejects invalid assistant user settings", async () => {
   ).rejects.toThrow("user_settings_value_invalid");
 });
 
-test("validateUserSettingValue validates assistant user settings", () => {
+testIfDb("rejects invalid post editor preferences payload", async () => {
+  const userId = randomUUID();
+  cleanupUserIds.push(userId);
+
+  await db.insert(users).values({
+    id: userId,
+    email: `user-${userId}@example.com`,
+    passwordHash: "hash",
+  });
+
+  await expect(
+    setUserSetting(userId, "posts.editor.preferences", "invalid")
+  ).rejects.toThrow("user_settings_value_invalid");
+});
+
+test("validateUserSettingValue validates assistant and post editor settings", () => {
   expect(validateUserSettingValue("assistant.mode", "llm-rag")).toBe("llm-rag");
   expect(validateUserSettingValue("assistant.mode", null)).toBeNull();
   expect(validateUserSettingValue("assistant.ui.enabled", true)).toBe(true);
@@ -269,4 +331,42 @@ test("validateUserSettingValue validates assistant user settings", () => {
       id: "asset-1",
     })
   ).toThrow("user_settings_value_invalid");
+
+  expect(
+    validateUserSettingValue("posts.editor.preferences", {
+      focusModeOnOpen: true,
+      compactSidePanels: true,
+      showOutlineHints: false,
+      editorDensity: "compact",
+      showKeyboardHints: false,
+      defaultInspectorTab: "block",
+      restoreLastSidebarsState: false,
+    })
+  ).toEqual({
+    version: 2,
+    focusModeOnOpen: true,
+    compactSidePanels: true,
+    showOutlineHints: false,
+    editorDensity: "compact",
+    showKeyboardHints: false,
+    defaultInspectorTab: "block",
+    restoreLastSidebarsState: false,
+  });
+
+  expect(
+    validateUserSettingValue("posts.editor.preferences", {
+      focusModeOnOpen: "yes",
+      editorDensity: "dense",
+      defaultInspectorTab: "meta",
+    })
+  ).toEqual({
+    version: 2,
+    focusModeOnOpen: false,
+    compactSidePanels: false,
+    showOutlineHints: true,
+    editorDensity: "comfortable",
+    showKeyboardHints: true,
+    defaultInspectorTab: "post",
+    restoreLastSidebarsState: true,
+  });
 });

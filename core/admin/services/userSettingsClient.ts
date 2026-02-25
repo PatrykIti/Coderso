@@ -1,4 +1,5 @@
 import { createReadThroughCache } from "@/utils/readThroughCache";
+import type { StoredPostEditorPreferences } from "@/ui/posts/editor/settings/postEditorPreferences";
 import { apiRequest } from "./apiClient";
 
 export type HeroPresetSetting = {
@@ -13,6 +14,7 @@ export type UserSettings = {
   "media.openAfterUpload": boolean;
   "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSetting[];
+  "posts.editor.preferences": StoredPostEditorPreferences;
   "assistant.mode": "docs-only" | "llm-rag" | null;
   "assistant.ui.enabled": boolean;
   "assistant.ui.avatarEnabled": boolean;

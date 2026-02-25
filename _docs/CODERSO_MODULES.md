@@ -188,3 +188,9 @@ const sections = buildDefaultNavSections({
   - media/interactive placeholders in canvas are clickable and route users to block settings context,
   - header right actions follow contract `Preview`, `Publish`, `Gear` (`Editor settings` modal),
   - editor preferences persist locally (`nextless.posts.editor.preferences.v1`).
+- 063-12 done: Final reference parity closure:
+  - right inspector flow matches template contract with progressive disclosure (`Advanced` collapsed) and `Danger zone` action,
+  - `Move to trash` uses existing delete endpoint and redirects to `/admin/posts`,
+  - gear modal upgraded to grouped editor UX settings (density/hints/default tab/restore sidebars),
+  - preferences persistence is local-first (`nextless.posts.editor.preferences.v2`, compatibility `v1`) with background sync to user setting `posts.editor.preferences`,
+  - focus mode now restores previous panel snapshot deterministically after exit.

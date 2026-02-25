@@ -3,6 +3,10 @@ import { useCallback, useMemo, useReducer } from "react";
 export type PostEditorSecondarySidebar = "list-view" | "inserter" | null;
 export type PostEditorDetailsTab = "document" | "block";
 export type PostEditorLeftRailMode = "outline" | "list-view";
+export type PostEditorLayoutFocusRestore = {
+  secondarySidebar: PostEditorSecondarySidebar;
+  detailsOpen: boolean;
+};
 
 export type PostEditorLayoutState = {
   secondarySidebar: PostEditorSecondarySidebar;
@@ -10,6 +14,7 @@ export type PostEditorLayoutState = {
   detailsTab: PostEditorDetailsTab;
   focusMode: boolean;
   leftRailMode: PostEditorLeftRailMode;
+  focusRestore: PostEditorLayoutFocusRestore | null;
 };
 
 type CreatePostEditorLayoutStateOptions = {
@@ -41,6 +46,7 @@ export const createPostEditorLayoutState = (
   detailsTab: normalizeDetailsTab(options.initialDetailsTab),
   focusMode: options.initialFocusMode === true,
   leftRailMode: normalizeLeftRailMode(options.initialLeftRailMode),
+  focusRestore: null,
 });
 
 export type PostEditorLayoutAction =
@@ -65,6 +71,7 @@ export const postEditorLayoutReducer = (
         ...state,
         secondarySidebar: action.sidebar,
         focusMode: false,
+        focusRestore: null,
       };
     case "toggle_secondary":
       return {
@@ -73,6 +80,7 @@ export const postEditorLayoutReducer = (
           state.secondarySidebar === action.sidebar ? null : action.sidebar,
         focusMode:
           state.secondarySidebar === action.sidebar ? state.focusMode : false,
+        focusRestore: null,
       };
     case "close_secondary":
       return {
@@ -85,6 +93,7 @@ export const postEditorLayoutReducer = (
         detailsOpen: true,
         detailsTab: normalizeDetailsTab(action.tab ?? state.detailsTab),
         focusMode: false,
+        focusRestore: null,
       };
     case "toggle_details": {
       const nextTab = normalizeDetailsTab(action.tab ?? state.detailsTab);
@@ -92,6 +101,7 @@ export const postEditorLayoutReducer = (
         return {
           ...state,
           detailsOpen: false,
+          focusRestore: null,
         };
       }
       return {
@@ -99,6 +109,7 @@ export const postEditorLayoutReducer = (
         detailsOpen: true,
         detailsTab: nextTab,
         focusMode: false,
+        focusRestore: null,
       };
     }
     case "close_details":
@@ -117,21 +128,52 @@ export const postEditorLayoutReducer = (
         leftRailMode: normalizeLeftRailMode(action.mode),
       };
     case "set_focus_mode":
+      if (action.value) {
+        if (state.focusMode) return state;
+        return {
+          ...state,
+          focusMode: true,
+          secondarySidebar: null,
+          detailsOpen: false,
+          focusRestore: {
+            secondarySidebar: state.secondarySidebar,
+            detailsOpen: state.detailsOpen,
+          },
+        };
+      }
+      if (!state.focusMode) {
+        return {
+          ...state,
+          focusRestore: null,
+        };
+      }
       return {
         ...state,
-        focusMode: action.value,
-        secondarySidebar: action.value ? null : state.secondarySidebar,
-        detailsOpen: action.value ? false : state.detailsOpen,
+        focusMode: false,
+        secondarySidebar: state.focusRestore?.secondarySidebar ?? state.secondarySidebar,
+        detailsOpen: state.focusRestore?.detailsOpen ?? state.detailsOpen,
+        focusRestore: null,
       };
-    case "toggle_focus_mode": {
-      const nextFocusMode = !state.focusMode;
+    case "toggle_focus_mode":
+      if (state.focusMode) {
+        return {
+          ...state,
+          focusMode: false,
+          secondarySidebar: state.focusRestore?.secondarySidebar ?? state.secondarySidebar,
+          detailsOpen: state.focusRestore?.detailsOpen ?? state.detailsOpen,
+          focusRestore: null,
+        };
+      }
       return {
         ...state,
-        focusMode: nextFocusMode,
-        secondarySidebar: nextFocusMode ? null : state.secondarySidebar,
-        detailsOpen: nextFocusMode ? false : state.detailsOpen,
+        focusMode: true,
+        secondarySidebar: null,
+        detailsOpen: false,
+        focusRestore: {
+          secondarySidebar: state.secondarySidebar,
+          detailsOpen: state.detailsOpen,
+        },
       };
-    }
     default:
       return state;
   }

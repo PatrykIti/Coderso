@@ -12,6 +12,10 @@ test("PostEditorSettingsDialog renders editor preference controls", () => {
         focusModeOnOpen: false,
         compactSidePanels: false,
         showOutlineHints: true,
+        editorDensity: "comfortable",
+        showKeyboardHints: true,
+        defaultInspectorTab: "post",
+        restoreLastSidebarsState: true,
       }}
       onChange={() => undefined}
       onReset={() => undefined}
@@ -19,7 +23,11 @@ test("PostEditorSettingsDialog renders editor preference controls", () => {
   );
 
   expect(html).toContain("Editor settings");
-  expect(html).toContain("Open in full width mode");
+  expect(html).toContain("Open in focus mode");
+  expect(html).toContain("Restore panel state");
+  expect(html).toContain("Default inspector tab");
   expect(html).toContain("Compact side panels");
+  expect(html).toContain("Editor density");
   expect(html).toContain("Show outline hints");
+  expect(html).toContain("Show keyboard hints");
 });

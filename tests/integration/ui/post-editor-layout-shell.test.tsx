@@ -18,4 +18,5 @@ test("PostBlockEditorShell renders region-based layout shell", () => {
   expect(html).toContain("List view");
   expect(html).toContain("Loading post editor");
   expect(html).toContain("Document Outline");
+  expect(html).toContain("Move to trash");
 });

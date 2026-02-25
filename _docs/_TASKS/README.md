@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 37 tasks
+- **To Do:** 28 tasks
 - **In Progress:** 4 tasks
-- **Done:** 500 tasks
+- **Done:** 509 tasks
 
 ---
 
@@ -51,15 +51,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-063-08-03 | ARIA Landmarks and Accessibility Labels | High | Small | Semantic landmarks and aria coverage |
 | TASK-063-09-01 | Regression Test Execution Plan | High | Medium | Full gate run + rollout QA report |
 | TASK-063-09-02 | Docs Changelog and Kanban Closure | High | Medium | Final docs/changelog/board synchronization |
-| TASK-063-12 | Post Editor Reference Parity with 46 Template | High | Large | Final parity pass for `_docs/UI/admin_panel/46-post-editor/code.html` with existing logic preserved |
-| TASK-063-12-01 | Reference Contract Freeze and Delta Matrix | High | Small | Freeze section-by-section parity matrix and allowed deviations |
-| TASK-063-12-02 | Header Parity and Action Hierarchy | High | Medium | Match header composition and primary action hierarchy |
-| TASK-063-12-03 | Left Outline Parity with Optional List Tab | High | Medium | Keep Outline-first flow with optional List tab |
-| TASK-063-12-04 | Canvas Geometry, Typography, and Block Surface Parity | High | Medium | Align center canvas width, spacing, title scale, and placeholders |
-| TASK-063-12-05 | Right Inspector Parity Post/Block with Progressive Disclosure | High | Medium | Match inspector visual flow while preserving advanced controls |
-| TASK-063-12-06 | Gear Settings Modal Upgrade and Preferences Contract | High | Medium | Upgrade editor settings modal and preference persistence contract |
-| TASK-063-12-07 | Responsive Parity, Focus Mode, and Sheets | High | Medium | Align desktop/mobile behavior and focus mode transitions |
-| TASK-063-12-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full validation, parity report, docs/changelog/board closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
@@ -83,7 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 + 063-11 completed; next: 063-12 parity pass, then 063-07/063-08 and 063-09 closure |
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 + 063-12 completed; next: 063-07/063-08 and 063-09 closure |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -94,6 +85,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-12 | Post Editor Reference Parity with 46 Template | High | Large | Done: final parity pass completed for `_docs/UI/admin_panel/46-post-editor/code.html`, including inspector/settings/responsive contracts and closure gates |
+| TASK-063-12-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint + lint:types + full unit/integration/perf/security suites green, docs/changelog/task board synchronized |
+| TASK-063-12-07 | Responsive Parity, Focus Mode, and Sheets | High | Medium | Done: focus mode snapshot restore, stable desktop/mobile panel behavior, and responsive regression coverage |
+| TASK-063-12-06 | Gear Settings Modal Upgrade and Preferences Contract | High | Medium | Done: upgraded settings modal, preferences `v2` migration, and dual persistence (localStorage + `posts.editor.preferences` user setting) |
+| TASK-063-12-05 | Right Inspector Parity Post/Block with Progressive Disclosure | High | Medium | Done: post inspector flow parity (`Publishing -> Categories/Tags -> Featured image -> Danger zone -> Advanced`) + collapsed block advanced controls |
+| TASK-063-12-04 | Canvas Geometry, Typography, and Block Surface Parity | High | Medium | Done: center canvas width/rhythm/title/placeholder parity aligned to template contract |
+| TASK-063-12-03 | Left Outline Parity with Optional List Tab | High | Medium | Done: outline-first left rail parity with optional list-view deviation retained |
+| TASK-063-12-02 | Header Parity and Action Hierarchy | High | Medium | Done: header composition and primary action hierarchy aligned with reference |
+| TASK-063-12-01 | Reference Contract Freeze and Delta Matrix | High | Small | Done: parity matrix locked with must-match vs allowed deviations |
 | TASK-063-11 | Post Editor Strict HTML Parity and Unified Article Canvas | High | Large | Done: strict shell parity, outline `+` insert, unified canvas flow, Post/Block tabs, header gear settings |
 | TASK-063-11-06 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint/types/full-suite tests + docs/changelog/kanban sync |
 | TASK-063-11-05 | Header Preview Publish Gear and Editor Settings Dialog | High | Medium | Done: right-side preview/publish/gear actions + persisted editor settings modal |

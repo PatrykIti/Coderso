@@ -634,7 +634,8 @@ Editor header action flow (update `TASK-063-11`):
   - `Gear` (`Editor settings` dialog),
 - dodatkowe akcje operacyjne (`Outline`, `Details`, `Revisions`, `Focus mode`) pozostaja internal UI controls i nie zmieniaja API kontraktu,
 - focus mode state jest utrzymywany lokalnie (`nextless.posts.editor.focusMode`),
-- gear dialog zapisuje preference state lokalnie (`nextless.posts.editor.preferences.v1`) bez nowych endpointow,
+- gear dialog zapisuje preference state lokalnie (`nextless.posts.editor.preferences.v2`, compatibility read/write `v1`),
+- gear dialog synchronizuje preference state w tle przez `PATCH /user-settings/posts.editor.preferences` (local-first fallback),
 - save lifecycle nadal korzysta z istniejących endpointow internal (`PATCH /posts/:id`, `POST /posts/:id/autosave`, `POST /posts/:id/preview`, `POST /posts/:id/publish`).
 
 Editor outline insert flow (update `TASK-063-11-02`):
@@ -670,7 +671,14 @@ Editor details context contract (update `TASK-063-11-03/04`):
 - prawy inspector tabs: `Post` i `Block`,
 - klik bloku (w tym media placeholdera) ustawia selekcje i przełącza context na `Block`,
 - klik tła canvasu resetuje selekcje bloku i wraca do kontekstu `Post`,
+- `Post` inspector flow jest uporzadkowany jako `Publishing -> Categories/Tags -> Featured image -> Danger zone`, a pola SEO/metadata sa pod `Advanced` collapse,
+- `Block` inspector zachowuje ten sam kontrakt attrs, ale `Advanced` section jest collapsed by default,
 - media/interactive placeholdery (`image`, `embed`, `button`) nie wymagają nowych API; używają istniejących block attrs w `PostBlockDocument`.
+
+Danger zone contract (update `TASK-063-12-05`):
+- akcja `Move to trash` korzysta z istniejacego endpointu `DELETE /posts/:id`,
+- po sukcesie UI wykonuje SPA redirect do `/admin/posts` (`navigate(..., { replace: true })`),
+- brak nowych endpointow i brak zmian payload contract.
 
 Smart paste hardening (update `TASK-063-06-03`):
 - heading fidelity:
@@ -2226,6 +2234,7 @@ Przykładowe klucze:
 - `media.openAfterUpload` (bool)
 - `widgets.favorites` (string[])
 - `widgets.hero.presets` (preset[])
+- `posts.editor.preferences` (object; `version=2`, `focusModeOnOpen`, `compactSidePanels`, `showOutlineHints`, `editorDensity`, `showKeyboardHints`, `defaultInspectorTab`, `restoreLastSidebarsState`)
 - `assistant.mode` (`docs-only` | `llm-rag` | null)
 - `assistant.ui.enabled` (bool)
 - `assistant.ui.avatarEnabled` (bool)

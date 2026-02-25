@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
-import { usePostEditorLayout } from "./hooks/usePostEditorLayout";
+import {
+  usePostEditorLayout,
+  type PostEditorDetailsTab,
+  type PostEditorLeftRailMode,
+  type PostEditorSecondarySidebar,
+} from "./hooks/usePostEditorLayout";
 import { BlockInspector } from "./inspector/BlockInspector";
 import { DocumentInspector } from "./inspector/DocumentInspector";
 import { PostEditorLayout } from "./layout/PostEditorLayout";
@@ -14,33 +20,111 @@ import { PostEditorTopBar } from "./PostEditorTopBar";
 import { PostRevisionDrawer } from "./PostRevisionDrawer";
 import { PostListViewSidebar } from "./sidebars/PostListViewSidebar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
+import { PostEditorSettingsDialog } from "./settings/PostEditorSettingsDialog";
 import {
-  PostEditorSettingsDialog,
+  DEFAULT_POST_EDITOR_PREFERENCES,
+  normalizePostEditorPreferences,
+  toStoredPostEditorPreferences,
   type PostEditorPreferences,
-} from "./settings/PostEditorSettingsDialog";
+} from "./settings/postEditorPreferences";
 
 const FOCUS_MODE_STORAGE_KEY = "nextless.posts.editor.focusMode";
-const PREFERENCES_STORAGE_KEY = "nextless.posts.editor.preferences.v1";
+const LEGACY_PREFERENCES_STORAGE_KEY = "nextless.posts.editor.preferences.v1";
+const PREFERENCES_STORAGE_KEY = "nextless.posts.editor.preferences.v2";
+const LAYOUT_STORAGE_KEY = "nextless.posts.editor.layout.v1";
 
-const defaultPreferences: PostEditorPreferences = {
-  focusModeOnOpen: false,
-  compactSidePanels: false,
-  showOutlineHints: true,
+type StoredPostEditorLayoutState = {
+  secondarySidebar: PostEditorSecondarySidebar;
+  detailsOpen: boolean;
+  detailsTab: PostEditorDetailsTab;
+  leftRailMode: PostEditorLeftRailMode;
 };
 
-const resolveInitialPreferences = (): PostEditorPreferences => {
-  if (typeof window === "undefined") return defaultPreferences;
-  const raw = window.localStorage.getItem(PREFERENCES_STORAGE_KEY);
-  if (!raw) return defaultPreferences;
-  try {
-    const parsed = JSON.parse(raw) as Partial<PostEditorPreferences>;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const resolveInitialPreferences = (): {
+  preferences: PostEditorPreferences;
+  hasStoredValue: boolean;
+} => {
+  if (typeof window === "undefined") {
     return {
-      focusModeOnOpen: parsed.focusModeOnOpen === true,
-      compactSidePanels: parsed.compactSidePanels === true,
-      showOutlineHints: parsed.showOutlineHints !== false,
+      preferences: DEFAULT_POST_EDITOR_PREFERENCES,
+      hasStoredValue: false,
+    };
+  }
+
+  const parseFromStorage = (raw: string | null) => {
+    if (!raw) return null;
+    try {
+      return normalizePostEditorPreferences(JSON.parse(raw));
+    } catch {
+      return null;
+    }
+  };
+
+  const v2 = parseFromStorage(window.localStorage.getItem(PREFERENCES_STORAGE_KEY));
+  if (v2) return { preferences: v2, hasStoredValue: true };
+
+  const v1 = parseFromStorage(window.localStorage.getItem(LEGACY_PREFERENCES_STORAGE_KEY));
+  if (v1) return { preferences: v1, hasStoredValue: true };
+
+  return {
+    preferences: DEFAULT_POST_EDITOR_PREFERENCES,
+    hasStoredValue: false,
+  };
+};
+
+const resolveInitialDetailsTab = (
+  preferences: PostEditorPreferences
+): PostEditorDetailsTab =>
+  preferences.defaultInspectorTab === "block" ? "block" : "document";
+
+const resolveInitialLayoutState = (
+  preferences: PostEditorPreferences
+): StoredPostEditorLayoutState => {
+  const fallback: StoredPostEditorLayoutState = {
+    secondarySidebar: "list-view",
+    detailsOpen: true,
+    detailsTab: resolveInitialDetailsTab(preferences),
+    leftRailMode: "outline",
+  };
+
+  if (!preferences.restoreLastSidebarsState) return fallback;
+  if (typeof window === "undefined") return fallback;
+
+  const raw = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!isRecord(parsed)) return fallback;
+    const secondarySidebar =
+      parsed.secondarySidebar === "list-view" || parsed.secondarySidebar === "inserter"
+        ? parsed.secondarySidebar
+        : parsed.secondarySidebar === null
+          ? null
+          : fallback.secondarySidebar;
+    const detailsOpen =
+      typeof parsed.detailsOpen === "boolean"
+        ? parsed.detailsOpen
+        : fallback.detailsOpen;
+    const detailsTab =
+      parsed.detailsTab === "block" || parsed.detailsTab === "document"
+        ? parsed.detailsTab
+        : fallback.detailsTab;
+    const leftRailMode =
+      parsed.leftRailMode === "list-view" || parsed.leftRailMode === "outline"
+        ? parsed.leftRailMode
+        : fallback.leftRailMode;
+
+    return {
+      secondarySidebar,
+      detailsOpen,
+      detailsTab,
+      leftRailMode,
     };
   } catch {
-    return defaultPreferences;
+    return fallback;
   }
 };
 
@@ -58,24 +142,130 @@ const resolveInitialFocusMode = (preferences: PostEditorPreferences) => {
 export function PostBlockEditorShell() {
   const { navigate } = useAdminRouter();
   const editor = usePostEditorState();
-  const [preferences, setPreferences] = useState(resolveInitialPreferences);
+  const [initialPreferencesState] = useState(resolveInitialPreferences);
+  const [preferences, setPreferencesState] = useState<PostEditorPreferences>(
+    () => initialPreferencesState.preferences
+  );
+  const [hasStoredPreferences] = useState(initialPreferencesState.hasStoredValue);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [initialFocusMode] = useState(() => resolveInitialFocusMode(preferences));
+  const [initialFocusMode] = useState(() =>
+    resolveInitialFocusMode(initialPreferencesState.preferences)
+  );
+  const [initialLayoutState] = useState(() =>
+    resolveInitialLayoutState(initialPreferencesState.preferences)
+  );
+  const skipNextPreferenceSyncRef = useRef(false);
+  const didMountPreferencesRef = useRef(false);
+  const preferencesTouchedRef = useRef(false);
+
+  const setPreferences = useCallback((next: PostEditorPreferences) => {
+    preferencesTouchedRef.current = true;
+    setPreferencesState(next);
+  }, []);
 
   const layout = usePostEditorLayout({
-    initialSecondarySidebar: "list-view",
-    initialDetailsOpen: true,
-    initialDetailsTab: "document",
+    initialSecondarySidebar: initialLayoutState.secondarySidebar,
+    initialDetailsOpen: initialLayoutState.detailsOpen,
+    initialDetailsTab: initialLayoutState.detailsTab,
     initialFocusMode,
-    initialLeftRailMode: "outline",
+    initialLeftRailMode: initialLayoutState.leftRailMode,
   });
+
+  useEffect(() => {
+    let active = true;
+    if (hasStoredPreferences) return;
+    (async () => {
+      try {
+        const userSettings = await getUserSettings();
+        if (!active || preferencesTouchedRef.current) return;
+        skipNextPreferenceSyncRef.current = true;
+        setPreferencesState(
+          normalizePostEditorPreferences(userSettings["posts.editor.preferences"])
+        );
+      } catch {
+        // Keep local defaults when user setting sync is unavailable.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [hasStoredPreferences]);
+
+  const handleMoveToTrash = () => {
+    if (editor.deletingPost) return;
+    if (typeof window !== "undefined") {
+      const shouldDelete = window.confirm(
+        "Move this post to trash? This action cannot be undone from the editor."
+      );
+      if (!shouldDelete) return;
+    }
+    editor
+      .moveToTrash()
+      .then((deleted) => {
+        if (deleted) {
+          navigate("/admin/posts", { replace: true });
+        }
+      })
+      .catch(() => undefined);
+  };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!preferences.restoreLastSidebarsState) {
+      window.localStorage.removeItem(LAYOUT_STORAGE_KEY);
+      return;
+    }
+
+    const secondarySidebar =
+      layout.state.focusMode
+        ? layout.state.focusRestore?.secondarySidebar ?? layout.state.secondarySidebar
+        : layout.state.secondarySidebar;
+    const detailsOpen =
+      layout.state.focusMode
+        ? layout.state.focusRestore?.detailsOpen ?? layout.state.detailsOpen
+        : layout.state.detailsOpen;
+
+    window.localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        secondarySidebar,
+        detailsOpen,
+        detailsTab: layout.state.detailsTab,
+        leftRailMode: layout.state.leftRailMode,
+      })
+    );
+  }, [
+    layout.state.detailsOpen,
+    layout.state.detailsTab,
+    layout.state.focusMode,
+    layout.state.focusRestore,
+    layout.state.leftRailMode,
+    layout.state.secondarySidebar,
+    preferences.restoreLastSidebarsState,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(
       PREFERENCES_STORAGE_KEY,
+      JSON.stringify(toStoredPostEditorPreferences(preferences))
+    );
+    window.localStorage.setItem(
+      LEGACY_PREFERENCES_STORAGE_KEY,
       JSON.stringify(preferences)
     );
+    if (!didMountPreferencesRef.current) {
+      didMountPreferencesRef.current = true;
+      return;
+    }
+    if (skipNextPreferenceSyncRef.current) {
+      skipNextPreferenceSyncRef.current = false;
+      return;
+    }
+    void setUserSetting(
+      "posts.editor.preferences",
+      toStoredPostEditorPreferences(preferences)
+    ).catch(() => undefined);
   }, [preferences]);
 
   useEffect(() => {
@@ -135,6 +325,11 @@ export function PostBlockEditorShell() {
             categoryId={editor.categoryId}
             seo={editor.seoDraft}
             taxonomySummary={editor.taxonomySummary}
+            updatedAt={editor.post?.updatedAt ?? null}
+            scheduledAt={editor.post?.scheduledAt ?? null}
+            publishedAt={editor.post?.publishedAt ?? null}
+            moveToTrashPending={editor.deletingPost}
+            onMoveToTrash={handleMoveToTrash}
             onTitleChange={editor.setTitle}
             onSlugChange={editor.setSlug}
             onExcerptChange={editor.setExcerpt}
@@ -168,7 +363,8 @@ export function PostBlockEditorShell() {
       }
       leftRailMode={layout.leftRailMode}
       onLeftRailModeChange={layout.setLeftRailMode}
-      showHints={preferences.showOutlineHints}
+      showOutlineHints={preferences.showOutlineHints}
+      showKeyboardHints={preferences.showKeyboardHints}
     />
   );
 
@@ -322,6 +518,7 @@ export function PostBlockEditorShell() {
         }}
         focusMode={layout.focusMode}
         compactSidePanels={preferences.compactSidePanels}
+        editorDensity={preferences.editorDensity}
       />
 
       <PostEditorSettingsDialog
@@ -329,7 +526,7 @@ export function PostBlockEditorShell() {
         onOpenChange={setSettingsOpen}
         preferences={preferences}
         onChange={setPreferences}
-        onReset={() => setPreferences(defaultPreferences)}
+        onReset={() => setPreferences(DEFAULT_POST_EDITOR_PREFERENCES)}
       />
     </>
   );

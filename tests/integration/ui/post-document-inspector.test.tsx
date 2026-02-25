@@ -20,6 +20,11 @@ test("DocumentInspector renders user-friendly document controls", () => {
         robots: "index,follow",
       }}
       taxonomySummary={{ categoryName: "Announcements", tagCount: 2 }}
+      updatedAt="2026-02-25T10:00:00.000Z"
+      scheduledAt={null}
+      publishedAt={null}
+      moveToTrashPending={false}
+      onMoveToTrash={() => undefined}
       onTitleChange={() => undefined}
       onSlugChange={() => undefined}
       onExcerptChange={() => undefined}
@@ -31,11 +36,11 @@ test("DocumentInspector renders user-friendly document controls", () => {
   );
 
   expect(html).toContain("Publishing");
-  expect(html).toContain("Title, URL and excerpt");
+  expect(html).toContain("Categories and tags");
   expect(html).toContain("Featured image");
-  expect(html).toContain("Taxonomy and tags");
-  expect(html).toContain("SEO summary");
-  expect(html).toContain("SEO fields completed");
-  expect(html).toContain("Post title");
-  expect(html).toContain("Slug");
+  expect(html).toContain("Danger zone");
+  expect(html).toContain("Move to trash");
+  expect(html).toContain("Advanced");
+  expect(html).toContain("Current category");
+  expect(html).toContain("Last updated");
 });

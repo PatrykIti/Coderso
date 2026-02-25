@@ -26,9 +26,8 @@ test("BlockInspector renders block-specific and advanced controls", () => {
   expect(html).toContain("Layout and style");
   expect(html).toContain("Block-specific");
   expect(html).toContain("Advanced");
+  expect(html).toContain("Toggle");
   expect(html).toContain("Open in new tab");
-  expect(html).toContain("Custom class");
-  expect(html).toContain("Hide on mobile");
 });
 
 test("BlockInspector renders empty state when no block selected", () => {

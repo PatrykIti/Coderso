@@ -4,6 +4,11 @@ import {
   createPostEditorLayoutState,
   postEditorLayoutReducer,
 } from "../../../core/admin/ui/posts/editor/hooks/usePostEditorLayout";
+import {
+  DEFAULT_POST_EDITOR_PREFERENCES,
+  normalizePostEditorPreferences,
+  toStoredPostEditorPreferences,
+} from "../../../core/admin/ui/posts/editor/settings/postEditorPreferences";
 
 describe("post editor layout state", () => {
   test("creates default layout state", () => {
@@ -14,6 +19,7 @@ describe("post editor layout state", () => {
       detailsTab: "document",
       focusMode: false,
       leftRailMode: "outline",
+      focusRestore: null,
     });
   });
 
@@ -51,7 +57,7 @@ describe("post editor layout state", () => {
     expect(toggled.detailsTab).toBe("block");
   });
 
-  test("focus mode closes sidebars and exits on panel open", () => {
+  test("focus mode closes sidebars and restores previous panel state on exit", () => {
     const initial = createPostEditorLayoutState({
       initialSecondarySidebar: "list-view",
       initialDetailsOpen: true,
@@ -64,6 +70,32 @@ describe("post editor layout state", () => {
     expect(focused.focusMode).toBe(true);
     expect(focused.secondarySidebar).toBeNull();
     expect(focused.detailsOpen).toBe(false);
+    expect(focused.focusRestore).toEqual({
+      secondarySidebar: "list-view",
+      detailsOpen: true,
+    });
+
+    const restored = postEditorLayoutReducer(focused, {
+      type: "set_focus_mode",
+      value: false,
+    });
+    expect(restored.focusMode).toBe(false);
+    expect(restored.secondarySidebar).toBe("list-view");
+    expect(restored.detailsOpen).toBe(true);
+    expect(restored.focusRestore).toBeNull();
+  });
+
+  test("opening panel while focused clears stored snapshot", () => {
+    const focused = postEditorLayoutReducer(
+      createPostEditorLayoutState({
+        initialSecondarySidebar: "list-view",
+        initialDetailsOpen: true,
+      }),
+      {
+        type: "set_focus_mode",
+        value: true,
+      }
+    );
 
     const reopened = postEditorLayoutReducer(focused, {
       type: "open_secondary",
@@ -71,6 +103,7 @@ describe("post editor layout state", () => {
     });
     expect(reopened.focusMode).toBe(false);
     expect(reopened.secondarySidebar).toBe("inserter");
+    expect(reopened.focusRestore).toBeNull();
   });
 
   test("stores left rail mode independently from panel visibility", () => {
@@ -88,5 +121,37 @@ describe("post editor layout state", () => {
     });
     expect(closed.secondarySidebar).toBeNull();
     expect(closed.leftRailMode).toBe("list-view");
+  });
+
+  test("normalizes post editor preferences from legacy payload", () => {
+    const normalized = normalizePostEditorPreferences({
+      focusModeOnOpen: true,
+      compactSidePanels: true,
+      showOutlineHints: false,
+    });
+
+    expect(normalized.focusModeOnOpen).toBe(true);
+    expect(normalized.compactSidePanels).toBe(true);
+    expect(normalized.showOutlineHints).toBe(false);
+    expect(normalized.editorDensity).toBe(
+      DEFAULT_POST_EDITOR_PREFERENCES.editorDensity
+    );
+    expect(normalized.showKeyboardHints).toBe(
+      DEFAULT_POST_EDITOR_PREFERENCES.showKeyboardHints
+    );
+    expect(normalized.defaultInspectorTab).toBe(
+      DEFAULT_POST_EDITOR_PREFERENCES.defaultInspectorTab
+    );
+    expect(normalized.restoreLastSidebarsState).toBe(
+      DEFAULT_POST_EDITOR_PREFERENCES.restoreLastSidebarsState
+    );
+  });
+
+  test("stores preferences in v2 shape", () => {
+    const stored = toStoredPostEditorPreferences(DEFAULT_POST_EDITOR_PREFERENCES);
+
+    expect(stored.version).toBe(2);
+    expect(stored.focusModeOnOpen).toBe(false);
+    expect(stored.defaultInspectorTab).toBe("post");
   });
 });

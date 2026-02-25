@@ -145,6 +145,18 @@ przez `setup.completed=true`.
     - prawy panel tabs zostaly ustalone jako `Post` i `Block` (selection-driven context),
     - header po prawej utrzymuje kontrakt `Preview`, `Publish`, `Gear` (+ revisions/focus toggles), a gear otwiera `PostEditorSettingsDialog`,
     - ustawienia edytora sa persistowane lokalnie (`nextless.posts.editor.preferences.v1`) i obejmuja m.in. compact side panels/focus on open.
+  - **TASK-063-12 (done):** final reference parity pass dla `_docs/UI/admin_panel/46-post-editor/code.html`:
+    - prawa kolumna `Post/Block` ma reference flow (`Publishing -> Categories/Tags -> Featured image -> Danger zone`) i progressive disclosure (`Advanced` collapsed),
+    - `Move to trash` w `Danger zone` usuwa post i wykonuje SPA redirect do `/admin/posts` (`replace: true`),
+    - gear settings modal jest przebudowany na grouped UX sections i rozszerzony model preferencji:
+      - `editorDensity`,
+      - `showKeyboardHints`,
+      - `defaultInspectorTab` (`post`/`block`),
+      - `restoreLastSidebarsState`,
+    - persistence preferences jest dualna:
+      - local-first (`nextless.posts.editor.preferences.v2` + compatibility write do `v1`),
+      - background sync do internal `user-settings` key `posts.editor.preferences`,
+    - focus mode ma deterministic snapshot restore side paneli po wyjsciu (`hide -> restore`), a layout restore jest zapisywany per user-session local state.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

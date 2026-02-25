@@ -12,7 +12,7 @@ type PostListViewPanelProps = {
   selectedBlockId: string | null;
   onSelectBlock: (id: string) => void;
   onMoveBlockToIndex: (id: string, targetIndex: number) => void;
-  showHints?: boolean;
+  showKeyboardHints?: boolean;
 };
 
 const resolveOutlineBlockLabel = (block: PostBlock) => {
@@ -28,7 +28,7 @@ export function PostListViewPanel({
   selectedBlockId,
   onSelectBlock,
   onMoveBlockToIndex,
-  showHints = true,
+  showKeyboardHints = true,
 }: PostListViewPanelProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
@@ -83,7 +83,7 @@ export function PostListViewPanel({
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           List view
         </p>
-        {showHints ? (
+        {showKeyboardHints ? (
           <p className="mt-1 text-xs text-muted-foreground">
             Drag blocks to reorder. Keyboard: <kbd>Alt</kbd> + <kbd>Arrow keys</kbd>.
           </p>

@@ -20,6 +20,16 @@ const makeSettings = (): UserSettings => ({
   "media.openAfterUpload": false,
   "widgets.favorites": ["hero"],
   "widgets.hero.presets": [],
+  "posts.editor.preferences": {
+    version: 2,
+    focusModeOnOpen: false,
+    compactSidePanels: false,
+    showOutlineHints: true,
+    editorDensity: "comfortable",
+    showKeyboardHints: true,
+    defaultInspectorTab: "post",
+    restoreLastSidebarsState: true,
+  },
   "assistant.mode": "docs-only",
   "assistant.ui.enabled": true,
   "assistant.ui.avatarEnabled": false,
@@ -82,6 +92,55 @@ test("setUserSetting updates cached settings", async () => {
 
     const getCalls = calls.filter((call) => String(call.input).endsWith("/user-settings"));
     expect(getCalls).toHaveLength(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    invalidateUserSettingsCache();
+  }
+});
+
+test("setUserSetting handles post editor preference payloads", async () => {
+  const originalFetch = globalThis.fetch;
+  const settings = makeSettings();
+  const nextPreferences = {
+    version: 2 as const,
+    focusModeOnOpen: true,
+    compactSidePanels: true,
+    showOutlineHints: false,
+    editorDensity: "compact" as const,
+    showKeyboardHints: false,
+    defaultInspectorTab: "block" as const,
+    restoreLastSidebarsState: false,
+  };
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/user-settings") && init?.method === "GET") {
+      return jsonResponse(settings);
+    }
+    if (
+      url.includes("/user-settings/posts.editor.preferences") &&
+      init?.method === "PATCH"
+    ) {
+      settings["posts.editor.preferences"] = nextPreferences;
+      return jsonResponse({
+        key: "posts.editor.preferences",
+        value: nextPreferences,
+      });
+    }
+    return jsonResponse({}, 404);
+  };
+
+  try {
+    invalidateUserSettingsCache();
+    resetCsrfToken();
+
+    await getUserSettings();
+    await setUserSetting("posts.editor.preferences", nextPreferences);
+    const next = await getUserSetting("posts.editor.preferences");
+    expect(next.value).toEqual(nextPreferences);
   } finally {
     globalThis.fetch = originalFetch;
     invalidateUserSettingsCache();

@@ -32,7 +32,8 @@ type PostListViewSidebarProps = {
   onInsertBlock: (type: PostBlockType) => void;
   leftRailMode?: PostEditorLeftRailMode;
   onLeftRailModeChange?: (mode: PostEditorLeftRailMode) => void;
-  showHints?: boolean;
+  showOutlineHints?: boolean;
+  showKeyboardHints?: boolean;
 };
 
 const catalogGroups = groupPostBlockCatalogByCategory(POST_BLOCK_CATALOG);
@@ -45,7 +46,8 @@ export function PostListViewSidebar({
   onInsertBlock,
   leftRailMode = "outline",
   onLeftRailModeChange,
-  showHints = true,
+  showOutlineHints = true,
+  showKeyboardHints = true,
 }: PostListViewSidebarProps) {
   const outline = useMemo(() => buildPostDocumentOutline(document), [document]);
 
@@ -121,7 +123,7 @@ export function PostListViewSidebar({
             outline={outline}
             selectedBlockId={selectedBlockId}
             onSelectBlock={onSelectBlock}
-            showHints={showHints}
+            showHints={showOutlineHints}
           />
         </TabsContent>
         <TabsContent value="list-view" forceMount className="m-0 min-h-0 flex-1 p-3">
@@ -130,7 +132,7 @@ export function PostListViewSidebar({
             selectedBlockId={selectedBlockId}
             onSelectBlock={onSelectBlock}
             onMoveBlockToIndex={onMoveBlockToIndex}
-            showHints={showHints}
+            showKeyboardHints={showKeyboardHints}
           />
         </TabsContent>
       </Tabs>

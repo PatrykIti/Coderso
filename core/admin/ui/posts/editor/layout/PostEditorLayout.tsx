@@ -6,6 +6,7 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
 import {
@@ -33,6 +34,7 @@ type PostEditorLayoutProps = {
   focusMode?: boolean;
   viewportMode?: PostEditorViewportMode;
   compactSidePanels?: boolean;
+  editorDensity?: "comfortable" | "compact";
 };
 
 const DESKTOP_BREAKPOINT_QUERY = "(min-width: 1024px)";
@@ -59,6 +61,7 @@ export function PostEditorLayout({
   focusMode = false,
   viewportMode = "auto",
   compactSidePanels = false,
+  editorDensity = "comfortable",
 }: PostEditorLayoutProps) {
   const [matchesDesktopQuery, setMatchesDesktopQuery] = useState(() =>
     resolveInitialDesktop("auto")
@@ -115,7 +118,13 @@ export function PostEditorLayout({
       breadcrumbs={breadcrumbs}
       contentClassName="overflow-hidden p-0"
     >
-      <div className="flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden bg-background">
+      <div
+        className={cn(
+          "flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden bg-background",
+          editorDensity === "compact" ? "text-[13px]" : "text-[14px]"
+        )}
+        data-post-editor-density={editorDensity}
+      >
         {showDesktopSecondary ? (
           <PostEditorSecondarySidebarRegion className={compactSidePanels ? "w-56" : undefined}>
             {secondarySidebar}

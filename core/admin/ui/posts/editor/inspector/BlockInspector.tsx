@@ -1,3 +1,11 @@
+import { ChevronDown } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -428,33 +436,45 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
         ) : null}
       </section>
 
-      <section className="space-y-3 rounded-xl border bg-background p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Advanced</p>
-          <InfoTip content="Advanced options are optional and usually left empty." />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs text-muted-foreground">Anchor ID</label>
-          <Input
-            value={readString(attrs.anchorId)}
-            onChange={(event) => onChangeAttrs({ anchorId: event.target.value })}
-            placeholder="section-id"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs text-muted-foreground">Custom class</label>
-          <Input
-            value={readString(attrs.className)}
-            onChange={(event) => onChangeAttrs({ className: event.target.value })}
-            placeholder="custom-css-class"
-          />
-        </div>
-        <ToggleField
-          label="Hide on mobile"
-          checked={readBoolean(attrs.hideOnMobile, false)}
-          onCheckedChange={(checked) => onChangeAttrs({ hideOnMobile: checked })}
-        />
-      </section>
+      <Collapsible defaultOpen={false}>
+        <section className="space-y-3 rounded-xl border bg-background p-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Advanced</p>
+              <InfoTip content="Advanced options are optional and usually left empty." />
+            </div>
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="ghost" size="sm" className="group">
+                Toggle
+                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="space-y-3 border-t pt-3">
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Anchor ID</label>
+              <Input
+                value={readString(attrs.anchorId)}
+                onChange={(event) => onChangeAttrs({ anchorId: event.target.value })}
+                placeholder="section-id"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Custom class</label>
+              <Input
+                value={readString(attrs.className)}
+                onChange={(event) => onChangeAttrs({ className: event.target.value })}
+                placeholder="custom-css-class"
+              />
+            </div>
+            <ToggleField
+              label="Hide on mobile"
+              checked={readBoolean(attrs.hideOnMobile, false)}
+              onCheckedChange={(checked) => onChangeAttrs({ hideOnMobile: checked })}
+            />
+          </CollapsibleContent>
+        </section>
+      </Collapsible>
     </div>
   );
 }

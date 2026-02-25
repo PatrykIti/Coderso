@@ -15,6 +15,7 @@ test("PostEditorLayout renders desktop sidebars in-region", () => {
       secondarySidebarOpen
       detailsSidebar={<div>Details panel</div>}
       detailsSidebarOpen
+      editorDensity="compact"
       viewportMode="desktop"
     />,
     { path: "/admin/coderso/posts/post-1" }
@@ -22,6 +23,7 @@ test("PostEditorLayout renders desktop sidebars in-region", () => {
 
   expect(html).toContain("data-post-editor-region=\"secondary-sidebar\"");
   expect(html).toContain("data-post-editor-region=\"sidebar\"");
+  expect(html).toContain("data-post-editor-density=\"compact\"");
   expect(html).toContain("Secondary panel");
   expect(html).toContain("Details panel");
 });

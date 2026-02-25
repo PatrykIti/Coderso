@@ -4,6 +4,7 @@ import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
   autosavePost,
+  deletePost,
   getCachedPostDetail,
   getPostCached,
   listPostRevisions,
@@ -251,6 +252,8 @@ export type UsePostEditorStateResult = {
     categoryName: string | null;
     tagCount: number;
   };
+  deletingPost: boolean;
+  moveToTrash: () => Promise<boolean>;
   saveDraft: () => Promise<void>;
   publish: () => Promise<void>;
   unpublish: () => Promise<void>;
@@ -324,6 +327,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
   const [autosaveSaving, setAutosaveSaving] = useState(false);
   const [autosaveError, setAutosaveError] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [deletingPost, setDeletingPost] = useState(false);
   const [revisionsOpen, setRevisionsOpen] = useState(false);
   const [revisions, setRevisions] = useState<PostRevision[]>([]);
   const [revisionsLoading, setRevisionsLoading] = useState(false);
@@ -830,6 +834,27 @@ export function usePostEditorState(): UsePostEditorStateResult {
     loadRevisions().catch(() => undefined);
   }, [loadRevisions]);
 
+  const moveToTrash = useCallback(async () => {
+    if (!postId || deletingPost) return false;
+    setError(null);
+    setAutosaveError(null);
+    setDeletingPost(true);
+    cancelAutosave();
+    try {
+      const result = await deletePost(postId);
+      return result?.ok === true;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setError(err.message);
+      } else {
+        setError("Failed to move post to trash.");
+      }
+      return false;
+    } finally {
+      setDeletingPost(false);
+    }
+  }, [cancelAutosave, deletingPost, postId]);
+
   const handleSetRevisionsOpen = useCallback(
     (open: boolean) => {
       setRevisionsOpen(open);
@@ -912,6 +937,8 @@ export function usePostEditorState(): UsePostEditorStateResult {
     seoDraft: metadataDraft.seo,
     setSeoDraft,
     taxonomySummary,
+    deletingPost,
+    moveToTrash,
     saveDraft,
     publish,
     unpublish,

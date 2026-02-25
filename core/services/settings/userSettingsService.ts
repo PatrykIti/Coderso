@@ -15,12 +15,26 @@ type HeroPresetSettingValue = {
 };
 
 export type AssistantUserMode = "docs-only" | "llm-rag";
+export type PostEditorDensity = "comfortable" | "compact";
+export type PostEditorDefaultInspectorTab = "post" | "block";
+
+type PostEditorPreferencesSettingValue = {
+  version: 2;
+  focusModeOnOpen: boolean;
+  compactSidePanels: boolean;
+  showOutlineHints: boolean;
+  editorDensity: PostEditorDensity;
+  showKeyboardHints: boolean;
+  defaultInspectorTab: PostEditorDefaultInspectorTab;
+  restoreLastSidebarsState: boolean;
+};
 
 export type UserSettingValueMap = {
   "pages.openAfterCreate": boolean;
   "media.openAfterUpload": boolean;
   "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSettingValue[];
+  "posts.editor.preferences": PostEditorPreferencesSettingValue;
   "assistant.mode": AssistantUserMode | null;
   "assistant.ui.enabled": boolean;
   "assistant.ui.avatarEnabled": boolean;
@@ -29,11 +43,35 @@ export type UserSettingValueMap = {
 
 export type UserSettingKey = keyof UserSettingValueMap;
 
+const postEditorDensityModes = new Set<PostEditorDensity>([
+  "comfortable",
+  "compact",
+]);
+const postEditorInspectorTabs = new Set<PostEditorDefaultInspectorTab>([
+  "post",
+  "block",
+]);
+
+const DEFAULT_POST_EDITOR_PREFERENCES: PostEditorPreferencesSettingValue = {
+  version: 2,
+  focusModeOnOpen: false,
+  compactSidePanels: false,
+  showOutlineHints: true,
+  editorDensity: "comfortable",
+  showKeyboardHints: true,
+  defaultInspectorTab: "post",
+  restoreLastSidebarsState: true,
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
 const DEFAULT_USER_SETTINGS: UserSettingValueMap = {
   "pages.openAfterCreate": true,
   "media.openAfterUpload": false,
   "widgets.favorites": [],
   "widgets.hero.presets": [],
+  "posts.editor.preferences": DEFAULT_POST_EDITOR_PREFERENCES,
   "assistant.mode": null,
   "assistant.ui.enabled": true,
   "assistant.ui.avatarEnabled": false,
@@ -143,6 +181,64 @@ export function validateUserSettingValue<K extends UserSettingKey>(
       0,
       heroPresetLimit
     ) as UserSettingValueMap[K];
+  }
+  if (key === "posts.editor.preferences") {
+    if (!isRecord(value)) {
+      throw new Error("user_settings_value_invalid");
+    }
+
+    const readBoolean = (
+      source: Record<string, unknown>,
+      field: keyof PostEditorPreferencesSettingValue,
+      fallback: boolean
+    ) => {
+      const candidate = source[field];
+      return typeof candidate === "boolean" ? candidate : fallback;
+    };
+
+    const editorDensity =
+      typeof value.editorDensity === "string" &&
+      postEditorDensityModes.has(value.editorDensity as PostEditorDensity)
+        ? (value.editorDensity as PostEditorDensity)
+        : DEFAULT_POST_EDITOR_PREFERENCES.editorDensity;
+    const defaultInspectorTab =
+      typeof value.defaultInspectorTab === "string" &&
+      postEditorInspectorTabs.has(
+        value.defaultInspectorTab as PostEditorDefaultInspectorTab
+      )
+        ? (value.defaultInspectorTab as PostEditorDefaultInspectorTab)
+        : DEFAULT_POST_EDITOR_PREFERENCES.defaultInspectorTab;
+
+    return {
+      version: 2,
+      focusModeOnOpen: readBoolean(
+        value,
+        "focusModeOnOpen",
+        DEFAULT_POST_EDITOR_PREFERENCES.focusModeOnOpen
+      ),
+      compactSidePanels: readBoolean(
+        value,
+        "compactSidePanels",
+        DEFAULT_POST_EDITOR_PREFERENCES.compactSidePanels
+      ),
+      showOutlineHints: readBoolean(
+        value,
+        "showOutlineHints",
+        DEFAULT_POST_EDITOR_PREFERENCES.showOutlineHints
+      ),
+      editorDensity,
+      showKeyboardHints: readBoolean(
+        value,
+        "showKeyboardHints",
+        DEFAULT_POST_EDITOR_PREFERENCES.showKeyboardHints
+      ),
+      defaultInspectorTab,
+      restoreLastSidebarsState: readBoolean(
+        value,
+        "restoreLastSidebarsState",
+        DEFAULT_POST_EDITOR_PREFERENCES.restoreLastSidebarsState
+      ),
+    } as UserSettingValueMap[K];
   }
   if (key === "assistant.mode") {
     if (value === null) {

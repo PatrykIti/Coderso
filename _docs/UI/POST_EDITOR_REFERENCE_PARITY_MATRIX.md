@@ -1,75 +1,66 @@
 # Post Editor Reference Parity Matrix
 
 Date: 2026-02-25  
-Owner Task: `TASK-063-12-01`  
+Owner Task: `TASK-063-12-08`  
 Reference Source: `_docs/UI/admin_panel/46-post-editor/code.html`
 
 ---
 
 ## Purpose
-Ten dokument zamraza kontrakt parity dla post editora i sluzy jako gate odbiorowy dla `TASK-063-12-02..08`.
+Finalny raport parity dla rolloutu `TASK-063-12` (subtaski `01..08`), z oznaczeniem:
+- obszarow `must-match`,
+- zaakceptowanych odchylen,
+- residual risk po wdrozeniu.
 
-Legenda statusu:
-- `match`: zgodne z referencja
-- `partial`: czesciowo zgodne
-- `missing`: brak kluczowego elementu referencji
-
-Decyzje:
-- `must-fix`: wymagane w `TASK-063-12`
-- `allowed deviation`: swiadome odchylenie (udokumentowane)
-- `defer`: poza zakresem aktualnego epiku
+Legenda:
+- `match`: zgodne z referencja lub zgodne z zaakceptowanym kontraktem parity,
+- `deviation`: swiadome odchylenie zaakceptowane w zakresie taska.
 
 ---
 
 ## Region Matrix
 
-| Region | Reference Contract | Current State (Repo) | Status | Decision | Target Subtask |
+| Region | Reference Contract | Final State (Repo) | Status | Decision | Task |
 |---|---|---|---|---|---|
-| Header layout | `h-14`, lewy kontekst (close/back + breadcrumb + status), prawa strona: `Preview`, `Publish`, `Gear` | Jedna linia z mieszanym klastrem (`Outline/Details/Focus/Revisions/Preview/Publish/Gear`) | partial | must-fix | `063-12-02` |
-| Header hierarchy | Primary actions oddzielone od operational controls | Brak jawnego podzialu primary vs secondary | missing | must-fix | `063-12-02` |
-| Left rail shell | `w-64`, `Document Outline` jako first impression | Tabs `List view` + `Outline` o rownej wadze | partial | must-fix | `063-12-03` |
-| Left rail modes | Mozliwa prostota single-outline | Dodatkowy `List view` jest potrzebny produktowo | partial | allowed deviation (`List view` zostaje jako secondary) | `063-12-03` |
-| Outline row styling | Lekki rhythm (`active bg-primary/5`, subtelny hover) | Ciezszy visual row/chrome | partial | must-fix | `063-12-03` |
-| Canvas width | `max-width: 720px` | Około `860px` | partial | must-fix | `063-12-04` |
-| Title typography | `text-5xl font-display font-bold` | `text-4xl`/inny rhythm | partial | must-fix | `063-12-04` |
-| Block rhythm | `space-y-6`, subtelne separators/placeholder surfaces | `space-y-7` + ciezsze card/chrome | partial | must-fix | `063-12-04` |
-| Placeholder surfaces | Spójny `slate + dashed + subtle hover` | Dziala, ale inna geometria i tone | partial | must-fix | `063-12-04` |
-| Right rail shell | `w-80`, tabs `Post/Block` | Tabs sa, shell jest funkcjonalny | partial | must-fix (visual+info architecture) | `063-12-05` |
-| Right panel flow | Publishing -> Categories -> Tags -> Featured image -> Danger | Obecnie flow techniczny (SEO always-on, mniej reference-like) | partial | must-fix | `063-12-05` |
-| Visibility/sticky controls | W referencji widoczne | Brak backend fields w aktualnym kontrakcie posts | missing | defer (no backend expansion in 063-12) | `063-12-05` |
-| Advanced fields | Secondary/progressive disclosure | SEO i advanced stale widoczne | partial | must-fix | `063-12-05` |
-| Gear modal role | Główny punkt globalnych ustawien editora | Jest modal, ale zakres/model opcji ograniczony | partial | must-fix | `063-12-06` |
-| Preferences model | Focus/compact/hints/density + clear defaults | Focus/compact/hints, bez density/migration contract | partial | must-fix | `063-12-06` |
-| Preferences persistence | Stabilna persistence + compatibility | LocalStorage only, bez jawnej migracji schemy | partial | must-fix (local migration + internal user_settings sync) | `063-12-06` |
-| Desktop composition | Stabilny 3-column shell | Dziala, ale zalezny od panel toggles/focus state | partial | must-fix | `063-12-07` |
-| Focus mode contract | Hide rails + deterministic restore | Hide dziala; restore poprzedniego stanu niedeterministyczne | partial | must-fix | `063-12-07` |
-| Mobile fallback | Left/right sheets z zachowaniem logicznej kolejnosci | Sheets sa, wymaga doprecyzowania testow i contractu | partial | must-fix | `063-12-07` |
+| Header layout | `h-14`, lewy kontekst + prawa strona `Preview/Publish/Gear` | Header parity utrzymany z hierarchia primary/secondary actions | match | implemented | `063-12-02` |
+| Header hierarchy | Primary actions oddzielone od operational controls | Primary cluster (`Preview`, `Publish`, `Gear`) + secondary controls (`Outline`, `Details`, `Focus`, `Revisions`) | match | implemented | `063-12-02` |
+| Left rail shell | `w-64`, `Document Outline` jako first impression | Left rail parity i outline-first default zachowane | match | implemented | `063-12-03` |
+| Left rail modes | Prostota single-outline | `List view` pozostaje jako secondary mode | deviation | allowed deviation | `063-12-03` |
+| Outline row styling | Subtelny rhythm, lightweight selection states | Outline/list rows i hinty sa zgodne z kontraktem parity | match | implemented | `063-12-03` |
+| Canvas width | `max-width: 720px` | Center canvas geometry domknieta zgodnie z kontraktem | match | implemented | `063-12-04` |
+| Title typography | `text-5xl`, display-like emphasis | Title surface utrzymuje parity typography i spacing | match | implemented | `063-12-04` |
+| Block rhythm | `space-y-6` + subtelny flow powierzchni | Unified article flow i spacing parity utrzymane | match | implemented | `063-12-04` |
+| Placeholder surfaces | Subtelny `slate + dashed + hover` | Placeholdery media/interactive domkniete do kontraktu parity | match | implemented | `063-12-04` |
+| Right rail shell | `w-80`, tabs `Post/Block` | Right rail parity utrzymany (`Post`/`Block`) | match | implemented | `063-12-05` |
+| Right panel flow | `Publishing -> Categories -> Tags -> Featured -> Danger` | `DocumentInspector` ma reference-like flow + `Danger zone` | match | implemented | `063-12-05` |
+| Visibility/sticky controls | Widoczne w referencji | Backend fields nadal nie istnieja w posts contract | deviation | defer (approved) | `063-12-05` |
+| Advanced fields | Secondary/progressive disclosure | `Advanced` collapsed by default w `Post` i `Block` inspectorze | match | implemented | `063-12-05` |
+| Gear modal role | Globalne ustawienia editora | Gear modal przebudowany do grouped sections i global preferences | match | implemented | `063-12-06` |
+| Preferences model | Focus/compact/hints/density + defaults | Wdrozone `v2` preferences (`density`, `keyboard hints`, `default tab`, `restore sidebars`) | match | implemented | `063-12-06` |
+| Preferences persistence | Stabilna persistence + compatibility | Local-first (`v2` + `v1` compatibility) + sync `posts.editor.preferences` przez `/user-settings` | match | implemented | `063-12-06` |
+| Desktop composition | Stabilny 3-column shell | Desktop rails/canvas parity utrzymane (`w-64`, `w-80`) | match | implemented | `063-12-07` |
+| Focus mode contract | Hide rails + deterministic restore | Focus mode snapshot restore wdrozony i przetestowany | match | implemented | `063-12-07` |
+| Mobile fallback | Left/right sheets z logiczna kolejnoscia | Mobile sheets i responsive behavior domkniete testami regresji | match | implemented | `063-12-07` |
 
 ---
 
-## Hard Parity Tokens (Locked)
-1. Left rail width: `w-64`
-2. Right rail width: `w-80`
-3. Canvas max width: `720px`
-4. Header height: `h-14`
-5. Header primary actions: `Preview`, `Publish/Update`, `Gear`
-6. Title surface: `text-5xl` + display-style emphasis
-7. Outline-first default mode
+## Allowed Deviations
+1. `List view` zostaje jako dodatkowy tryb lewej szyny (obok `Outline`).
+2. Brak rozszerzenia backendu o `visibility/sticky` w `TASK-063-12`.
+3. Preferences persistence jest local-first z background sync przez internal `user-settings`.
 
 ---
 
-## Allowed Deviations (Approved)
-1. Dodatkowy `List view` na lewej szynie pozostaje (secondary mode).
-2. Secondary controls (`Outline`, `Details`, `Focus`, `Revisions`) pozostaja w UI, ale nie w primary header cluster.
-3. Brak nowych backend fields `visibility/sticky` w tym epiku.
-4. SEO/extended metadata pozostaja dostepne, ale w `Advanced` collapse.
-5. Preferences persistence: local-first + internal `user_settings` sync, z graceful fallback przy bledzie sieci.
-6. Visual parity realizujemy przez system template tokenow; brak hardcoded font/theme forks.
+## Residual Risk
+1. `visibility/sticky` pozostaje poza zakresem API i moze wymagac osobnego taska domenowego.
+2. Full user-settings sync dla post editora zaklada dostepnosc `/admin/api/user-settings`; w razie bledu sieci UI kontynuuje w local mode (zamierzone).
 
 ---
 
-## Final Done Gate for TASK-063-12
-1. Wszystkie `must-fix` pozycje w matrix maja status `implemented`.
-2. Wszystkie `allowed deviation` pozycje sa utrzymane i opisane.
-3. `bun --cwd core lint`, `bun --cwd core lint:types`, `bun test tests/unit tests/integration tests/perf tests/security` sa zielone.
-4. `_docs/ARCHITECTURE.md`, `_docs/CMS_API.md`, `_docs/CODERSO_MODULES.md`, `_docs/_TASKS/README.md`, `_docs/_CHANGELOG/*` sa zsynchronizowane.
+## Final Gate Result (`TASK-063-12-08`)
+1. `bun --cwd core lint` -> pass.
+2. `bun --cwd core lint:types` -> pass.
+3. `bun test tests/unit tests/integration tests/perf tests/security` -> pass.
+4. Dokumentacja/changelog/kanban zsynchronizowane.
+
+Status: `closed`.
