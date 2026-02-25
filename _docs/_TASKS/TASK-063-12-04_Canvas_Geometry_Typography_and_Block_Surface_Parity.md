@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Authoring UX  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-12-01, TASK-063-12-03  
-**Status:** To Do
+**Status:** Done (2026-02-25)
 
 ---
 

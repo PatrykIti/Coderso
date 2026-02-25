@@ -78,9 +78,11 @@ export function PostListViewPanel({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-background shadow-sm">
-      <div className="border-b px-4 py-3">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">List view</p>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg bg-background">
+      <div className="border-b px-3 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          List view
+        </p>
         {showHints ? (
           <p className="mt-1 text-xs text-muted-foreground">
             Drag blocks to reorder. Keyboard: <kbd>Alt</kbd> + <kbd>Arrow keys</kbd>.
@@ -88,7 +90,7 @@ export function PostListViewPanel({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-auto p-3">
+      <div className="min-h-0 flex-1 space-y-1 overflow-auto p-2">
         {blocks.map((block, index) => {
           const active = block.id === selectedBlockId;
           const showDropBefore = dropIndex === index;
@@ -97,9 +99,7 @@ export function PostListViewPanel({
           return (
             <div
               key={block.id}
-              className={`rounded-lg border ${
-                active ? "border-primary/60 bg-primary/10" : "border-border/70"
-              }`}
+              className="rounded-md"
             >
               {showDropBefore ? <div className="h-0.5 bg-primary" /> : null}
               <button
@@ -111,14 +111,16 @@ export function PostListViewPanel({
                 onDragEnd={clearDragState}
                 onClick={() => onSelectBlock(block.id)}
                 onKeyDown={(event) => handleKeyDown(event, block.id, index)}
-                className={`group flex w-full cursor-grab items-start gap-2 px-3 py-2 text-left transition active:cursor-grabbing ${
-                  draggingId === block.id ? "opacity-60" : ""
-                }`}
+                className={`group flex w-full cursor-grab items-start gap-2 rounded-md border px-2.5 py-2 text-left transition active:cursor-grabbing ${
+                  active
+                    ? "border-primary/30 bg-primary/5"
+                    : "border-transparent hover:border-border/60 hover:bg-muted/30"
+                } ${draggingId === block.id ? "opacity-60" : ""}`}
                 aria-label={`Select block ${index + 1}: ${resolveOutlineBlockLabel(block)}`}
               >
                 <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
+                  <p className="text-sm font-medium text-foreground">
                     {index + 1}. {resolveOutlineBlockLabel(block)}
                   </p>
                 </div>

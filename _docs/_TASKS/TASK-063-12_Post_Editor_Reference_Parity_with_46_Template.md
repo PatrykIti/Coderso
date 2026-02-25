@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Authoring UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-11  
-**Status:** To Do
+**Status:** In Progress (2026-02-25)
 
 ---
 

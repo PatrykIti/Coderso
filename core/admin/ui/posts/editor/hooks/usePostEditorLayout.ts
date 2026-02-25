@@ -2,12 +2,14 @@ import { useCallback, useMemo, useReducer } from "react";
 
 export type PostEditorSecondarySidebar = "list-view" | "inserter" | null;
 export type PostEditorDetailsTab = "document" | "block";
+export type PostEditorLeftRailMode = "outline" | "list-view";
 
 export type PostEditorLayoutState = {
   secondarySidebar: PostEditorSecondarySidebar;
   detailsOpen: boolean;
   detailsTab: PostEditorDetailsTab;
   focusMode: boolean;
+  leftRailMode: PostEditorLeftRailMode;
 };
 
 type CreatePostEditorLayoutStateOptions = {
@@ -15,6 +17,7 @@ type CreatePostEditorLayoutStateOptions = {
   initialDetailsOpen?: boolean;
   initialDetailsTab?: PostEditorDetailsTab;
   initialFocusMode?: boolean;
+  initialLeftRailMode?: PostEditorLeftRailMode;
 };
 
 const normalizeSecondarySidebar = (
@@ -26,6 +29,10 @@ const normalizeDetailsTab = (
   value: PostEditorDetailsTab | undefined
 ): PostEditorDetailsTab => (value === "block" ? "block" : "document");
 
+const normalizeLeftRailMode = (
+  value: PostEditorLeftRailMode | undefined
+): PostEditorLeftRailMode => (value === "list-view" ? "list-view" : "outline");
+
 export const createPostEditorLayoutState = (
   options: CreatePostEditorLayoutStateOptions = {}
 ): PostEditorLayoutState => ({
@@ -33,6 +40,7 @@ export const createPostEditorLayoutState = (
   detailsOpen: options.initialDetailsOpen === true,
   detailsTab: normalizeDetailsTab(options.initialDetailsTab),
   focusMode: options.initialFocusMode === true,
+  leftRailMode: normalizeLeftRailMode(options.initialLeftRailMode),
 });
 
 export type PostEditorLayoutAction =
@@ -43,6 +51,7 @@ export type PostEditorLayoutAction =
   | { type: "toggle_details"; tab?: PostEditorDetailsTab }
   | { type: "close_details" }
   | { type: "set_details_tab"; tab: PostEditorDetailsTab }
+  | { type: "set_left_rail_mode"; mode: PostEditorLeftRailMode }
   | { type: "set_focus_mode"; value: boolean }
   | { type: "toggle_focus_mode" };
 
@@ -102,6 +111,11 @@ export const postEditorLayoutReducer = (
         ...state,
         detailsTab: normalizeDetailsTab(action.tab),
       };
+    case "set_left_rail_mode":
+      return {
+        ...state,
+        leftRailMode: normalizeLeftRailMode(action.mode),
+      };
     case "set_focus_mode":
       return {
         ...state,
@@ -132,6 +146,7 @@ export type UsePostEditorLayoutResult = {
   showListView: boolean;
   showInserter: boolean;
   focusMode: boolean;
+  leftRailMode: PostEditorLeftRailMode;
   openListView: () => void;
   toggleListView: () => void;
   openInserter: () => void;
@@ -142,6 +157,7 @@ export type UsePostEditorLayoutResult = {
   openDetailsForSelection: (hasSelectedBlock: boolean) => void;
   closeDetails: () => void;
   setDetailsTab: (tab: PostEditorDetailsTab) => void;
+  setLeftRailMode: (mode: PostEditorLeftRailMode) => void;
   setFocusMode: (value: boolean) => void;
   toggleFocusMode: () => void;
 };
@@ -198,6 +214,10 @@ export function usePostEditorLayout(
     dispatch({ type: "set_details_tab", tab });
   }, []);
 
+  const setLeftRailMode = useCallback((mode: PostEditorLeftRailMode) => {
+    dispatch({ type: "set_left_rail_mode", mode });
+  }, []);
+
   const setFocusMode = useCallback((value: boolean) => {
     dispatch({ type: "set_focus_mode", value });
   }, []);
@@ -214,6 +234,7 @@ export function usePostEditorLayout(
       showListView: state.secondarySidebar === "list-view",
       showInserter: state.secondarySidebar === "inserter",
       focusMode: state.focusMode,
+      leftRailMode: state.leftRailMode,
       openListView,
       toggleListView,
       openInserter,
@@ -224,6 +245,7 @@ export function usePostEditorLayout(
       openDetailsForSelection,
       closeDetails,
       setDetailsTab,
+      setLeftRailMode,
       setFocusMode,
       toggleFocusMode,
     }),
@@ -235,6 +257,7 @@ export function usePostEditorLayout(
       openInserter,
       openListView,
       setDetailsTab,
+      setLeftRailMode,
       setFocusMode,
       state,
       toggleDetails,

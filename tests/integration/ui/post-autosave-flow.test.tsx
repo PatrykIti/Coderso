@@ -8,6 +8,9 @@ const createBaseProps = () => ({
   status: "draft",
   dirty: false,
   saving: false,
+  lastSavedAt: "2026-02-25T10:00:00.000Z",
+  breadcrumbs: <span>Content / Posts / Test post</span>,
+  onClose: () => undefined,
   onOpenRevisions: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
@@ -22,7 +25,7 @@ const createBaseProps = () => ({
 test("PostEditorTopBar renders autosave and revisions status", () => {
   const html = renderToString(<PostEditorTopBar {...createBaseProps()} />);
 
-  expect(html).toContain("Saved");
+  expect(html).toContain("Autosaved at");
   expect(html).toContain("Revisions");
 });
 

@@ -8,6 +8,9 @@ const createHeaderProps = () => ({
   status: "draft",
   dirty: false,
   saving: false,
+  lastSavedAt: "2026-02-25T10:00:00.000Z",
+  breadcrumbs: <span>Content / Posts / Header workflow</span>,
+  onClose: () => undefined,
   onOpenRevisions: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
@@ -22,11 +25,14 @@ const createHeaderProps = () => ({
 test("PostEditorTopBar renders document tools, context, and action clusters", () => {
   const html = renderToString(<PostEditorTopBar {...createHeaderProps()} />);
 
-  expect(html).toContain("data-post-editor-header-cluster=\"actions\"");
+  expect(html).toContain("data-post-editor-header-cluster=\"primary-actions\"");
+  expect(html).toContain("data-post-editor-header-cluster=\"secondary-controls\"");
+  expect(html).toContain("data-post-editor-header-close=\"true\"");
   expect(html).toContain("Outline");
   expect(html).toContain("Revisions");
   expect(html).toContain("Preview");
   expect(html).toContain("Editor settings");
+  expect(html).toContain("Header workflow");
 });
 
 test("PostEditorTopBar reflects saving and dirty states", () => {

@@ -66,14 +66,14 @@ const renderHtmlPreview = (value: unknown, emptyLabel: string) => {
   }
   return (
     <div
-      className="prose prose-slate max-w-none text-slate-800"
+      className="prose prose-slate max-w-none text-lg leading-relaxed text-slate-700"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
 };
 
 const mediaPlaceholderClassName =
-  "group flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 text-slate-500 transition hover:border-primary/40 hover:bg-slate-100";
+  "group flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-100";
 
 function PostCanvasBlockItem({
   block,
@@ -103,7 +103,7 @@ function PostCanvasBlockItem({
     <section
       data-post-editor-block-id={block.id}
       className={cn(
-        "relative rounded-md px-1 py-2 transition",
+        "relative rounded-lg px-1 py-1.5 transition",
         selected ? "ring-1 ring-primary/30" : "ring-0"
       )}
       onClick={(event) => {
@@ -144,7 +144,7 @@ function PostCanvasBlockItem({
       ) : null}
 
       {block.type === "toc" ? (
-        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4">
+        <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-4">
           <p className="text-sm font-semibold text-slate-700">
             {typeof attrs.title === "string" && attrs.title.trim().length > 0
               ? attrs.title
@@ -365,8 +365,11 @@ export function PostEditorCanvas({
       onClick={() => onSelectBlock(null)}
       data-post-editor-canvas="article"
     >
-      <div className="mx-auto flex h-full w-full max-w-[860px] min-h-0 flex-col overflow-y-auto px-6 py-10 sm:px-12 sm:py-14">
-        <div className="space-y-8 rounded-xl border border-slate-200 bg-white px-4 py-6 sm:px-8 sm:py-8">
+      <div
+        className="mx-auto flex h-full w-full max-w-[720px] min-h-0 flex-col overflow-y-auto px-4 py-10 sm:px-8 sm:py-20"
+        data-post-editor-canvas-shell="true"
+      >
+        <div className="space-y-10">
           <div className="space-y-2">
             <Textarea
               value={title}
@@ -376,14 +379,14 @@ export function PostEditorCanvas({
                 onSelectBlock(null);
               }}
               placeholder="Enter post title..."
-              className="min-h-0 resize-none border-0 p-0 text-4xl font-semibold leading-tight text-slate-900 shadow-none placeholder:text-slate-300 focus-visible:ring-0"
+              className="min-h-0 resize-none border-0 p-0 text-5xl font-display font-bold leading-tight tracking-tight text-slate-900 shadow-none placeholder:text-slate-200 focus-visible:ring-0"
               rows={1}
               data-post-editor-title-input="true"
             />
           </div>
 
           {document.blocks.length === 0 ? (
-            <div className="rounded-xl border border-dashed bg-slate-50 p-8 text-center">
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
               <p className="text-sm text-muted-foreground">No blocks yet.</p>
               <Button
                 type="button"
@@ -400,7 +403,7 @@ export function PostEditorCanvas({
               </Button>
             </div>
           ) : (
-            <div className="space-y-7" data-post-editor-flow="unified">
+            <div className="space-y-6" data-post-editor-flow="unified">
               {document.blocks.map((block) => (
                 <div
                   key={block.id}

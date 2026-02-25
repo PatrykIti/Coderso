@@ -1,6 +1,4 @@
-import { Eye, Save, Send } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
+import { Eye, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type PostEditorActionClusterProps = {
@@ -8,23 +6,8 @@ type PostEditorActionClusterProps = {
   dirty: boolean;
   saving: boolean;
   lastSavedAt: string | null;
-  onSaveDraft: () => void;
   onPreview: () => void;
   onPublish: () => void;
-};
-
-const statusLabel: Record<string, string> = {
-  draft: "Draft",
-  published: "Published",
-  scheduled: "Scheduled",
-  archived: "Archived",
-};
-
-const statusStyle: Record<string, string> = {
-  draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-  published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  scheduled: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  archived: "bg-slate-500/10 text-slate-500 border-slate-500/20",
 };
 
 const formatSavedAt = (value: string) => {
@@ -41,7 +24,6 @@ export function PostEditorActionCluster({
   dirty,
   saving,
   lastSavedAt,
-  onSaveDraft,
   onPreview,
   onPublish,
 }: PostEditorActionClusterProps) {
@@ -55,39 +37,19 @@ export function PostEditorActionCluster({
           ? `Autosaved at ${formatSavedAt(lastSavedAt)}`
           : "Synced";
 
-  const syncBadgeClass = saving
-    ? "border-amber-500/30 bg-amber-500/10 text-amber-600"
-    : dirty
-      ? "border-rose-500/30 bg-rose-500/10 text-rose-600"
-      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600";
-
   return (
     <div
       className="flex flex-wrap items-center justify-end gap-2"
-      aria-label="Save, preview, and publish actions"
-      data-post-editor-header-cluster="actions"
+      aria-label="Primary editor actions"
+      data-post-editor-header-cluster="primary-actions"
     >
-      <Badge
-        variant="outline"
-        className={statusStyle[status] ?? statusStyle.draft}
+      <span
+        className="hidden text-xs text-muted-foreground md:inline"
+        data-post-editor-sync-state="true"
       >
-        {statusLabel[status] ?? status}
-      </Badge>
-      <Badge variant="outline" className={syncBadgeClass}>
         {syncLabel}
-      </Badge>
+      </span>
 
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        onClick={onSaveDraft}
-        disabled={saving}
-        aria-label="Save current post draft"
-      >
-        <Save className="h-4 w-4" />
-        {saving ? "Saving..." : "Save draft"}
-      </Button>
       <Button
         type="button"
         variant="outline"
@@ -97,7 +59,7 @@ export function PostEditorActionCluster({
         aria-label="Open runtime preview"
       >
         <Eye className="h-4 w-4" />
-        Runtime preview
+        Preview
       </Button>
       <Button
         type="button"

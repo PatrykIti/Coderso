@@ -13,6 +13,7 @@ describe("post editor layout state", () => {
       detailsOpen: false,
       detailsTab: "document",
       focusMode: false,
+      leftRailMode: "outline",
     });
   });
 
@@ -70,5 +71,22 @@ describe("post editor layout state", () => {
     });
     expect(reopened.focusMode).toBe(false);
     expect(reopened.secondarySidebar).toBe("inserter");
+  });
+
+  test("stores left rail mode independently from panel visibility", () => {
+    const initial = createPostEditorLayoutState({
+      initialSecondarySidebar: "list-view",
+    });
+    const switched = postEditorLayoutReducer(initial, {
+      type: "set_left_rail_mode",
+      mode: "list-view",
+    });
+    expect(switched.leftRailMode).toBe("list-view");
+
+    const closed = postEditorLayoutReducer(switched, {
+      type: "close_secondary",
+    });
+    expect(closed.secondarySidebar).toBeNull();
+    expect(closed.leftRailMode).toBe("list-view");
   });
 });

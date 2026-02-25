@@ -5,6 +5,9 @@ type PostEditorTopBarProps = {
   status: string;
   dirty: boolean;
   saving: boolean;
+  lastSavedAt: string | null;
+  breadcrumbs?: React.ReactNode;
+  onClose: () => void;
   onOpenRevisions: () => void;
   onPreview: () => void;
   onPublish: () => void;
@@ -21,6 +24,9 @@ export function PostEditorTopBar({
   status,
   dirty,
   saving,
+  lastSavedAt,
+  breadcrumbs,
+  onClose,
   onOpenRevisions,
   onPreview,
   onPublish,
@@ -37,6 +43,9 @@ export function PostEditorTopBar({
       status={status}
       dirty={dirty}
       saving={saving}
+      lastSavedAt={lastSavedAt}
+      breadcrumbs={breadcrumbs}
+      onClose={onClose}
       onToggleOutline={onToggleOutline}
       onOpenDetails={onOpenDetails}
       onOpenRevisions={onOpenRevisions}

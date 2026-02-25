@@ -22,6 +22,7 @@ import {
 } from "../blocks/blockCatalog";
 import { PostListViewPanel } from "../blocks/PostListViewPanel";
 import { PostDocumentOutline } from "../outline/PostDocumentOutline";
+import type { PostEditorLeftRailMode } from "../hooks/usePostEditorLayout";
 
 type PostListViewSidebarProps = {
   document: PostBlockDocument;
@@ -29,6 +30,8 @@ type PostListViewSidebarProps = {
   onSelectBlock: (id: string) => void;
   onMoveBlockToIndex: (id: string, targetIndex: number) => void;
   onInsertBlock: (type: PostBlockType) => void;
+  leftRailMode?: PostEditorLeftRailMode;
+  onLeftRailModeChange?: (mode: PostEditorLeftRailMode) => void;
   showHints?: boolean;
 };
 
@@ -40,6 +43,8 @@ export function PostListViewSidebar({
   onSelectBlock,
   onMoveBlockToIndex,
   onInsertBlock,
+  leftRailMode = "outline",
+  onLeftRailModeChange,
   showHints = true,
 }: PostListViewSidebarProps) {
   const outline = useMemo(() => buildPostDocumentOutline(document), [document]);
@@ -48,6 +53,7 @@ export function PostListViewSidebar({
     <div
       className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
       data-post-editor-sidebar="document-overview"
+      data-post-editor-left-rail-mode={leftRailMode}
     >
       <div className="flex items-center justify-between border-b px-4 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
@@ -92,28 +98,38 @@ export function PostListViewSidebar({
         </DropdownMenu>
       </div>
 
-      <Tabs defaultValue="outline" className="flex min-h-0 flex-1 flex-col">
+      <Tabs
+        value={leftRailMode}
+        onValueChange={(value) =>
+          onLeftRailModeChange?.(value === "list-view" ? "list-view" : "outline")
+        }
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <div className="border-b px-3 py-2">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="list">List view</TabsTrigger>
-            <TabsTrigger value="outline">Outline</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-muted/40">
+            <TabsTrigger value="outline" data-post-editor-left-rail-tab="outline">
+              Outline
+            </TabsTrigger>
+            <TabsTrigger value="list-view" data-post-editor-left-rail-tab="list-view">
+              List view
+            </TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="list" forceMount className="m-0 min-h-0 flex-1 p-3">
-          <PostListViewPanel
-            blocks={document.blocks}
-            selectedBlockId={selectedBlockId}
-            onSelectBlock={onSelectBlock}
-            onMoveBlockToIndex={onMoveBlockToIndex}
-            showHints={showHints}
-          />
-        </TabsContent>
         <TabsContent value="outline" forceMount className="m-0 min-h-0 flex-1 overflow-auto p-3">
           <PostDocumentOutline
             outline={outline}
             selectedBlockId={selectedBlockId}
             onSelectBlock={onSelectBlock}
+            showHints={showHints}
+          />
+        </TabsContent>
+        <TabsContent value="list-view" forceMount className="m-0 min-h-0 flex-1 p-3">
+          <PostListViewPanel
+            blocks={document.blocks}
+            selectedBlockId={selectedBlockId}
+            onSelectBlock={onSelectBlock}
+            onMoveBlockToIndex={onMoveBlockToIndex}
             showHints={showHints}
           />
         </TabsContent>

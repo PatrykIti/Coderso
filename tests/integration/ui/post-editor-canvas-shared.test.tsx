@@ -33,7 +33,10 @@ test("PostEditorCanvas renders unified document canvas", () => {
   );
 
   expect(html).toContain("data-post-editor-flow=\"unified\"");
+  expect(html).toContain("data-post-editor-canvas-shell=\"true\"");
   expect(html).toContain("data-post-editor-title-input=\"true\"");
+  expect(html).toContain("max-w-[720px]");
+  expect(html).toContain("text-5xl");
   expect(html).toContain("Heading");
 });
 

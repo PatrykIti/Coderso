@@ -648,7 +648,7 @@ export function PostRichTextAdapter({
       <PostRichTextToolbar onCommand={executeCommand} disabled={disabled || imageUploading} />
       <div className="relative rounded-lg border bg-background">
         {!hasValue ? (
-          <div className="pointer-events-none absolute inset-0 flex items-start px-3 py-2 text-sm text-muted-foreground">
+          <div className="pointer-events-none absolute inset-0 flex items-start px-3 py-2 text-lg leading-relaxed text-muted-foreground">
             {placeholder}
           </div>
         ) : null}
@@ -659,7 +659,7 @@ export function PostRichTextAdapter({
           suppressContentEditableWarning
           aria-label={ariaLabel}
           className={cn(
-            "post-editor-richtext w-full rounded-lg px-3 py-2 text-sm leading-relaxed focus:outline-none",
+            "post-editor-richtext w-full rounded-lg px-3 py-2 text-lg leading-relaxed focus:outline-none",
             minHeightClassName
           )}
           onInput={() => {

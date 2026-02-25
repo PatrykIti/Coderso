@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
+import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
 import { usePostEditorLayout } from "./hooks/usePostEditorLayout";
 import { BlockInspector } from "./inspector/BlockInspector";
@@ -55,6 +56,7 @@ const resolveInitialFocusMode = (preferences: PostEditorPreferences) => {
 // - right panel tabs are Post/Block with selection-driven context,
 // - header actions on the right: Preview, Publish, Gear.
 export function PostBlockEditorShell() {
+  const { navigate } = useAdminRouter();
   const editor = usePostEditorState();
   const [preferences, setPreferences] = useState(resolveInitialPreferences);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -65,6 +67,7 @@ export function PostBlockEditorShell() {
     initialDetailsOpen: true,
     initialDetailsTab: "document",
     initialFocusMode,
+    initialLeftRailMode: "outline",
   });
 
   useEffect(() => {
@@ -163,11 +166,21 @@ export function PostBlockEditorShell() {
           target: { mode: "after-selected" },
         })
       }
+      leftRailMode={layout.leftRailMode}
+      onLeftRailModeChange={layout.setLeftRailMode}
       showHints={preferences.showOutlineHints}
     />
   );
 
-  const breadcrumbs = useMemo(
+  const shellBreadcrumbs = (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <span>Content</span>
+      <span>/</span>
+      <span className="text-foreground">Posts</span>
+    </div>
+  );
+
+  const editorBreadcrumbs = useMemo(
     () => (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <span>Content</span>
@@ -249,7 +262,7 @@ export function PostBlockEditorShell() {
     <>
       <PostEditorLayout
         activeHref="/admin/posts"
-        breadcrumbs={breadcrumbs}
+        breadcrumbs={shellBreadcrumbs}
         header={
           <PostEditorTopBar
             title={editor.title}
@@ -260,6 +273,9 @@ export function PostBlockEditorShell() {
               editor.autosaveSaving ||
               editor.restoringRevisionId !== null
             }
+            lastSavedAt={editor.lastSavedAt}
+            breadcrumbs={editorBreadcrumbs}
+            onClose={() => navigate("/admin/posts", { replace: true })}
             onOpenRevisions={editor.openRevisions}
             onPreview={() => {
               editor.preview().catch(() => undefined);
@@ -269,8 +285,15 @@ export function PostBlockEditorShell() {
             }}
             onToggleFocusMode={layout.toggleFocusMode}
             focusMode={layout.focusMode}
-            onToggleOutline={layout.toggleListView}
-            outlineVisible={layout.showListView}
+            onToggleOutline={() => {
+              if (layout.secondarySidebarOpen && layout.leftRailMode === "outline") {
+                layout.closeSecondarySidebar();
+                return;
+              }
+              layout.setLeftRailMode("outline");
+              layout.openListView();
+            }}
+            outlineVisible={layout.secondarySidebarOpen && layout.leftRailMode === "outline"}
             onOpenDetails={() =>
               layout.openDetailsForSelection(Boolean(editor.selectedBlock))
             }
@@ -286,6 +309,7 @@ export function PostBlockEditorShell() {
             return;
           }
           if (!layout.secondarySidebarOpen) {
+            layout.setLeftRailMode("outline");
             layout.openListView();
           }
         }}
