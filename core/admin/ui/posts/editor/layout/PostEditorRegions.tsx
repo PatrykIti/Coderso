@@ -20,7 +20,10 @@ export function PostEditorContentRegion({ children, className }: RegionProps) {
   return (
     <main
       data-post-editor-region="content"
-      className={cn("min-h-0 min-w-0 flex-1 overflow-hidden", className)}
+      className={cn(
+        "min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden",
+        className
+      )}
     >
       {children}
     </main>

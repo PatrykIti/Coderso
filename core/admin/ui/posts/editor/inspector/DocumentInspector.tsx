@@ -168,26 +168,6 @@ export function DocumentInspector({
         />
       </section>
 
-      <section className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-destructive">Danger zone</p>
-          <InfoTip content="Destructive action. This removes the post and returns to posts list." />
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Move this post to trash when the draft is no longer needed.
-        </p>
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          className="w-full"
-          disabled={moveToTrashPending || !onMoveToTrash}
-          onClick={() => onMoveToTrash?.()}
-        >
-          {moveToTrashPending ? "Moving to trash..." : "Move to trash"}
-        </Button>
-      </section>
-
       <Collapsible defaultOpen={false}>
         <section className="space-y-3 rounded-xl border bg-background p-3">
           <div className="flex items-center justify-between gap-2">
@@ -274,6 +254,26 @@ export function DocumentInspector({
           </CollapsibleContent>
         </section>
       </Collapsible>
+
+      <section className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold uppercase text-destructive">Danger zone</p>
+          <InfoTip content="Destructive action. This removes the post and returns to posts list." />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Move this post to trash when the draft is no longer needed.
+        </p>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="w-full"
+          disabled={moveToTrashPending || !onMoveToTrash}
+          onClick={() => onMoveToTrash?.()}
+        >
+          {moveToTrashPending ? "Moving to trash..." : "Move to trash"}
+        </Button>
+      </section>
     </div>
   );
 }

@@ -361,12 +361,12 @@ export function PostEditorCanvas({
 
   return (
     <div
-      className="flex min-h-0 flex-1 overflow-hidden bg-background"
+      className="flex min-h-0 flex-1 bg-background"
       onClick={() => onSelectBlock(null)}
       data-post-editor-canvas="article"
     >
       <div
-        className="mx-auto flex h-full w-full max-w-[720px] min-h-0 flex-col overflow-y-auto px-4 py-10 sm:px-8 sm:py-20"
+        className="mx-auto flex min-h-full w-full max-w-[720px] flex-col px-4 py-10 sm:px-8 sm:py-20"
         data-post-editor-canvas-shell="true"
       >
         <div className="space-y-10">
