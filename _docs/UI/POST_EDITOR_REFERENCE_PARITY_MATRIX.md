@@ -32,7 +32,7 @@ Legenda:
 | Title typography | `text-5xl`, display-like emphasis | Title surface utrzymuje parity typography i spacing | match | implemented | `063-12-04` |
 | Block rhythm | `space-y-6` + subtelny flow powierzchni | Unified article flow i spacing parity utrzymane | match | implemented | `063-12-04` |
 | Placeholder surfaces | Subtelny `slate + dashed + hover` | Placeholdery media/interactive domkniete do kontraktu parity | match | implemented | `063-12-04` |
-| Canvas block delete action | Referencja bez stalego toolbaru per blok | Dodany kosz tylko dla zaznaczonego bloku (secondary delete path) | deviation | allowed UX extension | `063-12-04` |
+| Canvas block delete action | Referencja bez stalego toolbaru per blok | Dodany kosz: stale dla zaznaczonego bloku i na hover dla pozostalych (secondary delete path) | deviation | allowed UX extension | `063-12-04` |
 | Right rail shell | `w-80`, tabs `Post/Block` | Right rail parity utrzymany (`Post`/`Block`) | match | implemented | `063-12-05` |
 | Right panel flow | `Publishing -> Categories -> Tags -> Featured -> Danger` | `DocumentInspector` ma reference-like flow + `Danger zone` | match | implemented | `063-12-05` |
 | Visibility/sticky controls | Widoczne w referencji | Backend fields nadal nie istnieja w posts contract | deviation | defer (approved) | `063-12-05` |
@@ -52,7 +52,7 @@ Legenda:
 3. Preferences persistence jest local-first z background sync przez internal `user-settings`.
 4. Delete affordance rozszerzono o:
    - primary action w `List view` (kosz per wiersz),
-   - secondary action na `Canvas` (kosz tylko dla aktywnego bloku).
+   - secondary action na `Canvas` (kosz stale dla aktywnego bloku + hover dla pozostalych).
 
 ---
 

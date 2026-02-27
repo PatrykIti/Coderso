@@ -169,6 +169,6 @@ runQualityGates();
 ## Post-Closure Follow-up (2026-02-27)
 1. Ustalono i wdrozono finalny model delete UX dla blokow:
    - `List view` = primary action (kosz per blok),
-   - `Canvas` = secondary action (kosz dla zaznaczonego bloku).
+   - `Canvas` = secondary action (kosz stale dla zaznaczonego bloku i na hover dla pozostalych).
 2. Zachowano pelna kompatybilnosc z obecna logika SPA/local state/autosave (brak zmian backend/API).
 3. Follow-up zostal odnotowany w parity matrix oraz changelogu.

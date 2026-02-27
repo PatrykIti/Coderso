@@ -135,7 +135,7 @@ export function PostListViewPanel({
                     event.stopPropagation();
                     onDeleteBlock(block.id);
                   }}
-                  className={`absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 group-hover:opacity-100 ${
+                  className={`absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-muted-foreground opacity-60 transition hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 ${
                     active ? "opacity-100" : ""
                   }`}
                   aria-label={`Delete block ${index + 1}: ${blockLabel}`}

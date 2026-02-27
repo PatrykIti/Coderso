@@ -107,3 +107,26 @@ test("PostEditorCanvas renders delete control for selected block", () => {
 
   expect(html).toContain("aria-label=\"Delete block: Heading\"");
 });
+
+test("PostEditorCanvas keeps delete control discoverable on hover for non-selected blocks", () => {
+  const html = renderToString(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "block-1", type: "heading", attrs: { level: 2 }, content: "<h2>A</h2>" }],
+      }}
+      title="Delete hover"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onDeleteBlock={() => undefined}
+    />
+  );
+
+  expect(html).toContain("aria-label=\"Delete block: Heading\"");
+  expect(html).toContain("opacity-0 group-hover:opacity-100 focus-visible:opacity-100");
+});

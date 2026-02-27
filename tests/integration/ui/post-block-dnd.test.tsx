@@ -41,4 +41,5 @@ test("PostListViewPanel renders delete affordance when delete handler is provide
 
   expect(html).toContain("aria-label=\"Delete block 1: Paragraph\"");
   expect(html).toContain("aria-label=\"Delete block 2: Heading\"");
+  expect(html).toContain("text-muted-foreground opacity-60 transition");
 });

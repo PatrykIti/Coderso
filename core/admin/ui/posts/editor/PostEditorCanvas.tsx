@@ -123,13 +123,15 @@ function PostCanvasBlockItem({
         onSelect();
       }}
     >
-      {selected && onDeleteBlock ? (
+      {onDeleteBlock ? (
         <div className="absolute right-1 top-1 z-20">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            className={`h-7 w-7 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive ${
+              selected ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+            }`}
             aria-label={`Delete block: ${resolveBlockActionLabel(block)}`}
             title="Delete selected block"
             onClick={(event) => {
