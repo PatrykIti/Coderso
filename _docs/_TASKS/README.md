@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 28 tasks
+- **To Do:** 37 tasks
 - **In Progress:** 4 tasks
 - **Done:** 509 tasks
 
@@ -39,6 +39,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-13 | Post Editor Block Authoring Stability and Parity Hardening | High | Large | Caret/newline/list/image/media flow + toolbars + inspector de-mock + preview parity + QA closure |
+| TASK-063-13-01 | Block by Block Defect Analysis and Fix Contract | High | Medium | Formal root-cause and fix matrix for all affected post editor blocks |
+| TASK-063-13-02 | RichText Input Caret Stability and Enter Semantics | High | Large | Typing vs paste split, selection-safe sync, Enter semantics for text blocks |
+| TASK-063-13-03 | List Block Multiline Editing and State Model | High | Medium | Draft-based multiline editing without newline loss on each keystroke |
+| TASK-063-13-04 | Image Block Click to Select Media Flow | High | Medium | Placeholder click opens media picker and resolves mediaId to canvas preview |
+| TASK-063-13-05 | Text Toolbar Font Controls and Global Typography Inheritance | High | Large | Font controls + document typography baseline inherited by text blocks |
+| TASK-063-13-06 | NonText Block Quick Toolbars and Block Inspector DeMock | High | Large | Quick controls above blocks and real effect parity for inspector settings |
+| TASK-063-13-07 | Canvas Preview Parity for Button Embed and Image | High | Medium | Runtime-like preview of interactive/media blocks on canvas |
+| TASK-063-13-08 | RichText Command Output Link Rendering Fixes QA Docs Closure | High | Medium | Raw-tag/link fixes + final QA/docs/changelog sync |
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
 | TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
