@@ -28,6 +28,7 @@ import {
   POST_BLOCK_TYPES,
   WRITING_CANVAS_VERSION,
   type PostBlock,
+  type PostBlockDocumentMeta,
   type PostBlockType,
 } from "../../../../../services/posts/editor/postBlockDocument";
 import { normalizePostBlockDocument } from "../../../../../services/posts/editor/postBlockNormalizer";
@@ -74,11 +75,26 @@ const createSafeBlockType = (value: string): PostBlockType => {
   return fallback;
 };
 
+const hasMeaningfulParagraphAttrs = (attrs: Record<string, unknown>) =>
+  Object.entries(attrs).some(([key, value]) => {
+    if (key === "align") return value !== "left";
+    if (key === "width") return value !== "auto";
+    if (key === "spacingTop") return value !== "md";
+    if (key === "spacingBottom") return value !== "md";
+    if (key === "textScale") return value !== "md";
+    if (key === "highlight") return value === true;
+    if (key === "hideOnMobile") return value === true;
+    if (key === "anchorId" || key === "className") {
+      return typeof value === "string" && value.trim().length > 0;
+    }
+    return true;
+  });
+
 const isEmptyParagraphBlock = (block: PostBlock) => {
   if (block.type !== "paragraph") return false;
   const plainText = postRichTextToPlainText(typeof block.content === "string" ? block.content : "");
   const attrs = isRecord(block.attrs) ? block.attrs : {};
-  return plainText.trim().length === 0 && Object.keys(attrs).length === 0;
+  return plainText.trim().length === 0 && !hasMeaningfulParagraphAttrs(attrs);
 };
 
 export const normalizeEditorDocumentForWritingFlow = (input: unknown) => {
@@ -281,6 +297,9 @@ export type UsePostEditorStateResult = {
   updateSelectedBlockContent: (content: unknown) => void;
   updateBlockAttrs: (id: string, patch: Record<string, unknown>) => void;
   updateSelectedBlockAttrs: (patch: Record<string, unknown>) => void;
+  updateDocumentTypography: (
+    typography: NonNullable<PostBlockDocumentMeta["typography"]>
+  ) => void;
   setExcerpt: (value: string) => void;
   insertBlock: (type: string, options?: PostInsertOptions) => void;
   ensureDynamicTocBlock: () => void;
@@ -721,6 +740,18 @@ export function usePostEditorState(): UsePostEditorStateResult {
     [selectedBlock, updateBlockAttrs]
   );
 
+  const updateDocumentTypography = useCallback(
+    (typography: NonNullable<PostBlockDocumentMeta["typography"]>) => {
+      dispatch({
+        type: "update_meta",
+        patch: {
+          typography,
+        },
+      });
+    },
+    []
+  );
+
   const setExcerpt = useCallback((value: string) => {
     dispatch({
       type: "update_meta",
@@ -966,6 +997,7 @@ export function usePostEditorState(): UsePostEditorStateResult {
     updateSelectedBlockContent,
     updateBlockAttrs,
     updateSelectedBlockAttrs,
+    updateDocumentTypography,
     setExcerpt,
     insertBlock,
     ensureDynamicTocBlock,

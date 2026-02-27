@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 
-import { normalizePostBlockDocument } from "../../../core/services/posts/editor/postBlockNormalizer";
+import {
+  createEmptyPostBlockDocument,
+  normalizePostBlockDocument,
+} from "../../../core/services/posts/editor/postBlockNormalizer";
 
 test("normalizePostBlockDocument normalizes writing-canvas nodes and limits", () => {
   const normalized = normalizePostBlockDocument({
@@ -58,7 +61,15 @@ test("normalizePostBlockDocument normalizes writing-canvas nodes and limits", ()
 
   const writingBlock = normalized.blocks[0];
   expect(writingBlock?.type).toBe("writing-canvas");
-  expect(writingBlock?.attrs).toEqual({});
+  expect(writingBlock?.attrs).toEqual({
+    align: "left",
+    width: "auto",
+    spacingTop: "md",
+    spacingBottom: "md",
+    textScale: "md",
+    highlight: false,
+    hideOnMobile: false,
+  });
 
   const content = writingBlock?.content as {
     version: number;
@@ -139,4 +150,111 @@ test("normalizePostBlockDocument keeps heading anchor ids for block and writing-
   };
   expect(content.nodes[0]?.type).toBe("heading");
   expect(content.nodes[0]?.anchorId).toBe("inline-anchor");
+});
+
+test("normalizePostBlockDocument normalizes expanded block attrs and typography meta", () => {
+  const normalized = normalizePostBlockDocument({
+    version: 1,
+    blocks: [
+      {
+        id: "list-1",
+        type: "list",
+        attrs: {
+          ordered: true,
+          compact: true,
+          align: "center",
+          width: "wide",
+          spacingTop: "lg",
+          spacingBottom: "sm",
+          textScale: "xl",
+          highlight: true,
+          hideOnMobile: true,
+          anchorId: " custom-anchor ",
+          className: "alpha beta<script>",
+        },
+        content: ["One", "Two"],
+      },
+      {
+        id: "button-1",
+        type: "button",
+        attrs: {
+          label: "Read more",
+          url: "https://example.com",
+          variant: "secondary",
+          size: "lg",
+          newTab: true,
+        },
+      },
+      {
+        id: "embed-1",
+        type: "embed",
+        attrs: {
+          provider: "youtube",
+          url: "https://youtu.be/video",
+          aspect: "4:3",
+          lazy: false,
+        },
+      },
+      {
+        id: "separator-1",
+        type: "separator",
+        attrs: {
+          style: "dashed",
+          thickness: 4,
+        },
+      },
+    ],
+    meta: {
+      typography: {
+        fontFamily: "serif",
+        baseTextScale: "lg",
+      },
+    },
+  });
+
+  const list = normalized.blocks[0];
+  const button = normalized.blocks[1];
+  const embed = normalized.blocks[2];
+  const separator = normalized.blocks[3];
+
+  expect(list?.attrs).toMatchObject({
+    ordered: true,
+    compact: true,
+    align: "center",
+    width: "wide",
+    spacingTop: "lg",
+    spacingBottom: "sm",
+    textScale: "xl",
+    highlight: true,
+    hideOnMobile: true,
+    anchorId: "custom-anchor",
+    className: "alpha betascript",
+  });
+  expect(button?.attrs).toMatchObject({
+    variant: "secondary",
+    size: "lg",
+    newTab: true,
+  });
+  expect(embed?.attrs).toMatchObject({
+    provider: "youtube",
+    aspect: "4:3",
+    lazy: false,
+  });
+  expect(separator?.attrs).toMatchObject({
+    style: "dashed",
+    thickness: 4,
+  });
+  expect(normalized.meta.typography).toEqual({
+    fontFamily: "serif",
+    baseTextScale: "lg",
+  });
+});
+
+test("createEmptyPostBlockDocument seeds default typography for editor inheritance", () => {
+  const empty = createEmptyPostBlockDocument();
+
+  expect(empty.meta.typography).toEqual({
+    fontFamily: "sans",
+    baseTextScale: "md",
+  });
 });

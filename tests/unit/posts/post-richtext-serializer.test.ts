@@ -67,3 +67,14 @@ test("countPostRichTextWords returns deterministic word count", () => {
 test("postRichTextFromPlainText escapes html", () => {
   expect(postRichTextFromPlainText("<h1>Unsafe</h1>")).toBe("&lt;h1&gt;Unsafe&lt;/h1&gt;");
 });
+
+test("serializePostRichText normalizes browser alias tags", () => {
+  const serialized = serializePostRichText("<div><b>Bold</b> and <i>italic</i></div>");
+
+  expect(serialized).toContain("<p>");
+  expect(serialized).toContain("<strong>Bold</strong>");
+  expect(serialized).toContain("<em>italic</em>");
+  expect(serialized).not.toContain("<div>");
+  expect(serialized).not.toContain("<b>");
+  expect(serialized).not.toContain("<i>");
+});

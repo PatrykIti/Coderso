@@ -23,6 +23,13 @@ import {
 import { useState, type ComponentType } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export type PostRichTextCommand =
   | "bold"
@@ -51,6 +58,10 @@ export type PostRichTextCommand =
 type PostRichTextToolbarProps = {
   onCommand: (command: PostRichTextCommand) => void;
   disabled?: boolean;
+  fontFamily?: "sans" | "serif" | "mono";
+  onFontFamilyChange?: (value: "sans" | "serif" | "mono") => void;
+  baseTextScale?: "sm" | "md" | "lg" | "xl";
+  onBaseTextScaleChange?: (value: "sm" | "md" | "lg" | "xl") => void;
 };
 
 type ActionButton = {
@@ -100,6 +111,10 @@ const renderActionLabel = (action: ActionButton) => {
 export function PostRichTextToolbar({
   onCommand,
   disabled = false,
+  fontFamily = "sans",
+  onFontFamilyChange,
+  baseTextScale = "md",
+  onBaseTextScaleChange,
 }: PostRichTextToolbarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -132,6 +147,45 @@ export function PostRichTextToolbar({
           <Plus className="h-3.5 w-3.5" />
           More formatting
         </Button>
+        {onFontFamilyChange ? (
+          <Select
+            value={fontFamily}
+            onValueChange={(value) =>
+              onFontFamilyChange(
+                value === "serif" || value === "mono" ? value : "sans"
+              )
+            }
+          >
+            <SelectTrigger className="h-8 w-[7.5rem] bg-background text-xs">
+              <SelectValue placeholder="Font" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sans">Sans</SelectItem>
+              <SelectItem value="serif">Serif</SelectItem>
+              <SelectItem value="mono">Mono</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : null}
+        {onBaseTextScaleChange ? (
+          <Select
+            value={baseTextScale}
+            onValueChange={(value) =>
+              onBaseTextScaleChange(
+                value === "sm" || value === "lg" || value === "xl" ? value : "md"
+              )
+            }
+          >
+            <SelectTrigger className="h-8 w-[6.5rem] bg-background text-xs">
+              <SelectValue placeholder="Size" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sm">Text S</SelectItem>
+              <SelectItem value="md">Text M</SelectItem>
+              <SelectItem value="lg">Text L</SelectItem>
+              <SelectItem value="xl">Text XL</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : null}
       </div>
 
       {showAdvanced ? (

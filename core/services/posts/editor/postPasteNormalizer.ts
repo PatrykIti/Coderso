@@ -517,6 +517,46 @@ export const serializeWritingCanvasContentToHtml = (content: unknown) => {
   return serializeWritingCanvasNodesToHtml(nodes);
 };
 
+const withStableWritingNodeIds = (
+  nodes: WritingCanvasNode[],
+  previousContent: unknown
+): WritingCanvasNode[] => {
+  if (!previousContent || typeof previousContent !== "object" || Array.isArray(previousContent)) {
+    return nodes.map((node, index) => ({ ...node, id: `node-${index + 1}` }));
+  }
+
+  const previousNodes = Array.isArray((previousContent as { nodes?: unknown }).nodes)
+    ? ((previousContent as { nodes: unknown[] }).nodes as WritingCanvasNode[])
+    : [];
+
+  return nodes.map((node, index) => {
+    const previousNode = previousNodes[index];
+    if (!previousNode || previousNode.type !== node.type || typeof previousNode.id !== "string") {
+      return { ...node, id: `node-${index + 1}` };
+    }
+    return { ...node, id: previousNode.id };
+  });
+};
+
+export const createWritingCanvasContentFromEditorHtml = (input: {
+  html: string;
+  previousContent?: unknown;
+}): WritingCanvasContent => {
+  const sanitized = sanitizePostRichTextHtml(input.html ?? "");
+  const warnings: PostPasteWarning[] = [];
+  const mapped = mapSanitizedHtmlToNodes(sanitized, warnings);
+  const nodes = withStableWritingNodeIds(mapped, input.previousContent);
+
+  if (nodes.length === 0) {
+    return createWritingCanvasContentFromPaste({ html: "<p></p>", text: "" }).content;
+  }
+
+  return {
+    version: WRITING_CANVAS_VERSION,
+    nodes,
+  };
+};
+
 export const createWritingCanvasContentFromPaste = (
   input: NormalizePostPastePayloadInput
 ): {

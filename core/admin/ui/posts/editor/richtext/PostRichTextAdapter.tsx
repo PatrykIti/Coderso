@@ -59,6 +59,10 @@ type PostRichTextAdapterProps = {
   onPasteDirectives?: (directives: PostPasteDirectives) => void;
   onFocus?: () => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
+  fontFamily?: "sans" | "serif" | "mono";
+  baseTextScale?: "sm" | "md" | "lg" | "xl";
+  onFontFamilyChange?: (value: "sans" | "serif" | "mono") => void;
+  onBaseTextScaleChange?: (value: "sm" | "md" | "lg" | "xl") => void;
 };
 
 type ClipboardItemLike = {
@@ -269,9 +273,15 @@ export function PostRichTextAdapter({
   onPasteDirectives,
   onFocus,
   onUploadClipboardImage,
+  fontFamily = "sans",
+  baseTextScale = "md",
+  onFontFamilyChange,
+  onBaseTextScaleChange,
 }: PostRichTextAdapterProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
+  const focusedRef = useRef(false);
+  const lastEmittedRef = useRef<string | null>(null);
   const [slashQuery, setSlashQuery] = useState("");
   const [slashOpen, setSlashOpen] = useState(false);
   const [pasteHint, setPasteHint] = useState<string | null>(null);
@@ -285,6 +295,7 @@ export function PostRichTextAdapter({
     if (!current) return;
     const serialized = serializePostRichText(current.innerHTML);
     if (serialized === value) return;
+    lastEmittedRef.current = serialized;
     onChange(serialized);
   }, [onChange, value]);
 
@@ -292,6 +303,9 @@ export function PostRichTextAdapter({
     const current = editorRef.current;
     if (!current) return;
     const nextHtml = deserializePostRichText(value);
+    if (focusedRef.current && nextHtml === lastEmittedRef.current) {
+      return;
+    }
     if (current.innerHTML !== nextHtml) {
       current.innerHTML = nextHtml;
     }
@@ -354,7 +368,17 @@ export function PostRichTextAdapter({
           if (!nextHref) {
             runCommand("unlink");
           } else {
-            runCommand("createLink", nextHref);
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) break;
+            if (selection.isCollapsed) {
+              const label = window.prompt("Link text", nextHref) ?? nextHref;
+              runCommand(
+                "insertHTML",
+                `<a href="${escapeHtml(nextHref)}">${escapeHtml(label)}</a>`
+              );
+            } else {
+              runCommand("createLink", nextHref);
+            }
           }
           break;
         }
@@ -461,12 +485,26 @@ export function PostRichTextAdapter({
         executeCommand("bullet-list");
         return;
       }
+
+      if (key === "enter" && !event.shiftKey) {
+        const current = editorRef.current;
+        if (!current) return;
+        const currentBlock = getCurrentBlockElement(current);
+        const currentTag = currentBlock?.tagName.toLowerCase();
+        if (currentTag !== "ul" && currentTag !== "ol") {
+          event.preventDefault();
+          runCommand("insertParagraph");
+          emitChange();
+          return;
+        }
+      }
+
       if (event.shiftKey && event.altKey && key === "5") {
         event.preventDefault();
         executeCommand("quote");
       }
     },
-    [executeCommand, slashOpen]
+    [emitChange, executeCommand, slashOpen]
   );
 
   const hasValue = useMemo(() => postRichTextToPlainText(value).length > 0, [value]);
@@ -645,10 +683,33 @@ export function PostRichTextAdapter({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <PostRichTextToolbar onCommand={executeCommand} disabled={disabled || imageUploading} />
+      <PostRichTextToolbar
+        onCommand={executeCommand}
+        disabled={disabled || imageUploading}
+        fontFamily={fontFamily}
+        onFontFamilyChange={onFontFamilyChange}
+        baseTextScale={baseTextScale}
+        onBaseTextScaleChange={onBaseTextScaleChange}
+      />
       <div className="relative rounded-lg border bg-background">
         {!hasValue ? (
-          <div className="pointer-events-none absolute inset-0 flex items-start px-3 py-2 text-lg leading-relaxed text-muted-foreground">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 flex items-start px-3 py-2 leading-relaxed text-muted-foreground",
+              baseTextScale === "sm"
+                ? "text-base"
+                : baseTextScale === "lg"
+                  ? "text-xl"
+                  : baseTextScale === "xl"
+                    ? "text-2xl"
+                    : "text-lg",
+              fontFamily === "serif"
+                ? "font-serif"
+                : fontFamily === "mono"
+                  ? "font-mono"
+                  : "font-sans"
+            )}
+          >
             {placeholder}
           </div>
         ) : null}
@@ -659,7 +720,19 @@ export function PostRichTextAdapter({
           suppressContentEditableWarning
           aria-label={ariaLabel}
           className={cn(
-            "post-editor-richtext w-full rounded-lg px-3 py-2 text-lg leading-relaxed focus:outline-none",
+            "post-editor-richtext w-full rounded-lg px-3 py-2 leading-relaxed focus:outline-none",
+            baseTextScale === "sm"
+              ? "text-base"
+              : baseTextScale === "lg"
+                ? "text-xl"
+                : baseTextScale === "xl"
+                  ? "text-2xl"
+                  : "text-lg",
+            fontFamily === "serif"
+              ? "font-serif"
+              : fontFamily === "mono"
+                ? "font-mono"
+                : "font-sans",
             minHeightClassName
           )}
           onInput={() => {
@@ -668,6 +741,7 @@ export function PostRichTextAdapter({
             updateSelectedImageState();
           }}
           onBlur={() => {
+            focusedRef.current = false;
             emitChange();
             setSlashOpen(false);
             setSlashQuery("");
@@ -683,6 +757,8 @@ export function PostRichTextAdapter({
           }}
           onFocus={() => {
             onFocus?.();
+            focusedRef.current = true;
+            runCommand("defaultParagraphSeparator", "p");
             updateSelectedImageState();
           }}
           onPaste={handlePaste}

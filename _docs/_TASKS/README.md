@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 37 tasks
+- **To Do:** 28 tasks
 - **In Progress:** 4 tasks
-- **Done:** 509 tasks
+- **Done:** 518 tasks
 
 ---
 
@@ -39,15 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063-13 | Post Editor Block Authoring Stability and Parity Hardening | High | Large | Caret/newline/list/image/media flow + toolbars + inspector de-mock + preview parity + QA closure |
-| TASK-063-13-01 | Block by Block Defect Analysis and Fix Contract | High | Medium | Formal root-cause and fix matrix for all affected post editor blocks |
-| TASK-063-13-02 | RichText Input Caret Stability and Enter Semantics | High | Large | Typing vs paste split, selection-safe sync, Enter semantics for text blocks |
-| TASK-063-13-03 | List Block Multiline Editing and State Model | High | Medium | Draft-based multiline editing without newline loss on each keystroke |
-| TASK-063-13-04 | Image Block Click to Select Media Flow | High | Medium | Placeholder click opens media picker and resolves mediaId to canvas preview |
-| TASK-063-13-05 | Text Toolbar Font Controls and Global Typography Inheritance | High | Large | Font controls + document typography baseline inherited by text blocks |
-| TASK-063-13-06 | NonText Block Quick Toolbars and Block Inspector DeMock | High | Large | Quick controls above blocks and real effect parity for inspector settings |
-| TASK-063-13-07 | Canvas Preview Parity for Button Embed and Image | High | Medium | Runtime-like preview of interactive/media blocks on canvas |
-| TASK-063-13-08 | RichText Command Output Link Rendering Fixes QA Docs Closure | High | Medium | Raw-tag/link fixes + final QA/docs/changelog sync |
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
 | TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
@@ -94,6 +85,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-13 | Post Editor Block Authoring Stability and Parity Hardening | High | Large | Done: authoring UX parity hardening delivered (caret/newline/list/image picker/toolbar inheritance/interactive preview/link output) with docs and QA |
+| TASK-063-13-08 | RichText Command Output Link Rendering Fixes QA Docs Closure | High | Medium | Done: browser alias tags (`b/i/div`) normalized, link command output stabilized, targeted QA/tests/docs/changelog completed |
+| TASK-063-13-07 | Canvas Preview Parity for Button Embed and Image | High | Medium | Done: runtime-like canvas previews for button/embed/image with provider/aspect handling and media resolution |
+| TASK-063-13-06 | NonText Block Quick Toolbars and Block Inspector DeMock | High | Large | Done: selected-block quick toolbars wired to real attrs and normalized inspector/runtime parity attrs |
+| TASK-063-13-05 | Text Toolbar Font Controls and Global Typography Inheritance | High | Large | Done: typography controls (font/scale) added to toolbar and inherited across text-capable blocks via document meta |
+| TASK-063-13-04 | Image Block Click to Select Media Flow | High | Medium | Done: image placeholder now opens media picker dialog and writes mediaId/alt/caption back to block attrs |
+| TASK-063-13-03 | List Block Multiline Editing and State Model | High | Medium | Done: multiline list editing moved to draft-on-focus commit-on-blur flow without line-loss on typing |
+| TASK-063-13-02 | RichText Input Caret Stability and Enter Semantics | High | Large | Done: typing pipeline split from paste, focused value sync guard, and deterministic Enter paragraph semantics |
+| TASK-063-13-01 | Block by Block Defect Analysis and Fix Contract | High | Medium | Done: block-by-block defect matrix translated into implemented fixes and test contracts |
 | TASK-063-12 | Post Editor Reference Parity with 46 Template | High | Large | Done: final parity pass completed for `_docs/UI/admin_panel/46-post-editor/code.html`, including inspector/settings/responsive contracts and closure gates |
 | TASK-063-12-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint + lint:types + full unit/integration/perf/security suites green, docs/changelog/task board synchronized |
 | TASK-063-12-07 | Responsive Parity, Focus Mode, and Sheets | High | Medium | Done: focus mode snapshot restore, stable desktop/mobile panel behavior, and responsive regression coverage |

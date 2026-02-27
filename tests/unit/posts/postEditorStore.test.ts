@@ -25,6 +25,25 @@ test("postEditorStore update_meta marks state as dirty", () => {
   expect(next.history.past.length).toBe(1);
 });
 
+test("postEditorStore update_meta normalizes typography contract", () => {
+  const initial = createInitialPostEditorState();
+  const next = postEditorReducer(initial, {
+    type: "update_meta",
+    patch: {
+      typography: {
+        fontFamily: "mono",
+        baseTextScale: "xl",
+      },
+    },
+  });
+
+  expect(next.document.meta.typography).toEqual({
+    fontFamily: "mono",
+    baseTextScale: "xl",
+  });
+  expect(next.dirty).toBe(true);
+});
+
 test("postEditorStore insert/delete keeps selection and minimum one block", () => {
   const initial = createInitialPostEditorState();
   const inserted = postEditorReducer(initial, {

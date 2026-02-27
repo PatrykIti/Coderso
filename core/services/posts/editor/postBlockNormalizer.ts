@@ -37,6 +37,18 @@ const MAX_WRITING_CANVAS_LIST_ITEMS = 200;
 const MAX_WRITING_CANVAS_CAPTION_LENGTH = 320;
 
 const CALL_OUT_TONES = ["info", "success", "warning", "danger", "neutral"] as const;
+const ALIGN_VALUES = ["left", "center", "right"] as const;
+const WIDTH_VALUES = ["auto", "narrow", "wide", "full"] as const;
+const SPACING_VALUES = ["none", "sm", "md", "lg"] as const;
+const TEXT_SCALE_VALUES = ["sm", "md", "lg", "xl"] as const;
+const BUTTON_VARIANT_VALUES = ["primary", "secondary", "ghost", "link"] as const;
+const BUTTON_SIZE_VALUES = ["sm", "md", "lg"] as const;
+const EMBED_PROVIDER_VALUES = ["custom", "youtube", "vimeo", "loom"] as const;
+const EMBED_ASPECT_VALUES = ["16:9", "4:3", "1:1"] as const;
+const SEPARATOR_STYLE_VALUES = ["solid", "dashed", "dotted"] as const;
+const META_FONT_FAMILY_VALUES = ["sans", "serif", "mono"] as const;
+const META_BASE_TEXT_SCALE_VALUES = ["sm", "md", "lg", "xl"] as const;
+
 const WRITING_CANVAS_LEVEL_VALUES = new Set([1, 2, 3, 4, 5, 6]);
 const writingCanvasNodeTypeSet = new Set<string>(WRITING_CANVAS_NODE_TYPES);
 const writingCanvasWrapSet = new Set<string>(WRITING_CANVAS_WRAP_VALUES);
@@ -142,14 +154,62 @@ const normalizeCalloutTone = (value: unknown): CalloutTone => {
     : "info";
 };
 
+const normalizeTokenString = <T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T
+): T => {
+  if (typeof value !== "string") return fallback;
+  const normalized = value.trim().toLowerCase();
+  return (allowed as readonly string[]).includes(normalized) ? (normalized as T) : fallback;
+};
+
+const normalizeOptionalClassName = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const tokens = value
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .map((token) => token.replace(/[^a-zA-Z0-9:_-]/g, ""))
+    .filter(Boolean)
+    .slice(0, 8);
+  return tokens.length > 0 ? tokens.join(" ") : undefined;
+};
+
+const normalizeCommonBlockLayoutAttrs = (source: Record<string, unknown>) => {
+  const normalized: Record<string, unknown> = {
+    align: normalizeTokenString(source.align, ALIGN_VALUES, "left"),
+    width: normalizeTokenString(source.width, WIDTH_VALUES, "auto"),
+    spacingTop: normalizeTokenString(source.spacingTop, SPACING_VALUES, "md"),
+    spacingBottom: normalizeTokenString(source.spacingBottom, SPACING_VALUES, "md"),
+    textScale: normalizeTokenString(source.textScale, TEXT_SCALE_VALUES, "md"),
+    highlight: source.highlight === true,
+    hideOnMobile: source.hideOnMobile === true,
+  };
+
+  const anchorId = normalizeOptionalAnchorId(source.anchorId);
+  if (anchorId) {
+    normalized.anchorId = anchorId;
+  }
+
+  const className = normalizeOptionalClassName(source.className);
+  if (className) {
+    normalized.className = className;
+  }
+
+  return normalized;
+};
+
 const normalizeBlockAttrs = (type: PostBlockType, attrs: unknown) => {
   const source = isRecord(attrs) ? attrs : {};
+  const common = normalizeCommonBlockLayoutAttrs(source);
 
   switch (type) {
     case "toc": {
       const minLevel = normalizeTocLevel(source.minLevel, 1);
       const maxLevel = Math.max(minLevel, normalizeTocLevel(source.maxLevel, 3));
       return {
+        ...common,
         title: normalizeOptionalString(source.title, 120) ?? "Table of contents",
         minLevel,
         maxLevel,
@@ -157,17 +217,20 @@ const normalizeBlockAttrs = (type: PostBlockType, attrs: unknown) => {
         hideIfEmpty: source.hideIfEmpty !== false,
       };
     }
-    case "heading": {
-      const anchorId = normalizeOptionalAnchorId(source.anchorId);
+    case "heading":
       return {
+        ...common,
         level: normalizeHeadingLevel(source.level),
-        ...(anchorId ? { anchorId } : {}),
       };
-    }
     case "list":
-      return { ordered: source.ordered === true };
+      return {
+        ...common,
+        ordered: source.ordered === true,
+        compact: source.compact === true,
+      };
     case "image":
       return {
+        ...common,
         mediaId:
           typeof source.mediaId === "string" && source.mediaId.trim().length > 0
             ? source.mediaId.trim()
@@ -186,25 +249,44 @@ const normalizeBlockAttrs = (type: PostBlockType, attrs: unknown) => {
         marginPreset: normalizePostImageMargin(source.marginPreset),
       };
     case "callout":
-      return { tone: normalizeCalloutTone(source.tone) };
+      return {
+        ...common,
+        tone: normalizeCalloutTone(source.tone),
+        showIcon: source.showIcon !== false,
+      };
     case "button":
       return {
+        ...common,
         label: normalizeOptionalString(source.label, 120) ?? "Button",
         url: normalizeOptionalString(source.url, 2048) ?? "",
-        variant: normalizeOptionalString(source.variant, 40) ?? "primary",
+        variant: normalizeTokenString(source.variant, BUTTON_VARIANT_VALUES, "primary"),
+        size: normalizeTokenString(source.size, BUTTON_SIZE_VALUES, "md"),
+        newTab: source.newTab === true,
       };
     case "embed":
       return {
-        provider: normalizeOptionalString(source.provider, 80) ?? "custom",
+        ...common,
+        provider: normalizeTokenString(source.provider, EMBED_PROVIDER_VALUES, "custom"),
         url: normalizeOptionalString(source.url, 2048) ?? "",
+        aspect: normalizeTokenString(source.aspect, EMBED_ASPECT_VALUES, "16:9"),
+        lazy: source.lazy !== false,
+      };
+    case "separator":
+      return {
+        ...common,
+        style: normalizeTokenString(source.style, SEPARATOR_STYLE_VALUES, "solid"),
+        thickness:
+          typeof source.thickness === "number" && Number.isFinite(source.thickness)
+            ? Math.min(8, Math.max(1, Math.round(source.thickness)))
+            : 1,
       };
     case "writing-canvas":
     case "paragraph":
     case "quote":
     case "code":
-    case "separator":
+      return common;
     default:
-      return {};
+      return common;
   }
 };
 
@@ -477,6 +559,23 @@ const normalizeDocumentMeta = (
     normalized.readingTimeMinutes = estimateReadingTimeMinutes(blocks);
   }
 
+  if (isRecord(source.typography)) {
+    const fontFamily = normalizeTokenString(
+      source.typography.fontFamily,
+      META_FONT_FAMILY_VALUES,
+      "sans"
+    );
+    const baseTextScale = normalizeTokenString(
+      source.typography.baseTextScale,
+      META_BASE_TEXT_SCALE_VALUES,
+      "md"
+    );
+    normalized.typography = {
+      fontFamily,
+      baseTextScale,
+    };
+  }
+
   return normalized;
 };
 
@@ -494,6 +593,10 @@ export function createEmptyPostBlockDocument(): PostBlockDocument {
     blocks,
     meta: {
       readingTimeMinutes: 0,
+      typography: {
+        fontFamily: "sans",
+        baseTextScale: "md",
+      },
     },
   };
 }

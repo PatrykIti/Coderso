@@ -107,6 +107,10 @@ export type PostBlockDocumentMeta = {
   title?: string;
   excerpt?: string;
   readingTimeMinutes?: number;
+  typography?: {
+    fontFamily?: "sans" | "serif" | "mono";
+    baseTextScale?: "sm" | "md" | "lg" | "xl";
+  };
 };
 
 export type PostBlockDocument = {

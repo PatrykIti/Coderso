@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Runtime Parity  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-13-04, TASK-063-13-06  
-**Status:** To Do
+**Status:** Done (2026-02-27)
 
 ---
 

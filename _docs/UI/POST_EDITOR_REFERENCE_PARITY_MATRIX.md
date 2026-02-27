@@ -16,6 +16,15 @@ Legenda:
 - `match`: zgodne z referencja lub zgodne z zaakceptowanym kontraktem parity,
 - `deviation`: swiadome odchylenie zaakceptowane w zakresie taska.
 
+## Post-Hardening Addendum (`TASK-063-13`)
+Stan po hardeningu authoring UX (2026-02-27):
+1. Caret/newline stabilization dla `writing-canvas`, `paragraph`, `heading`, `quote` -> `match`.
+2. Multiline model dla `list` -> `match`.
+3. Image placeholder click-to-pick media flow (`Dialog` + `MediaGrid`) -> `match`.
+4. Global typography inheritance (`meta.typography`) dla blokow tekstowych -> `deviation` (allowed UX extension, zgodny z roadmapa template/token controls).
+5. Runtime-like previews dla `button` i `embed` na canvasie -> `match`.
+6. Rich text alias normalization (`b/i/div`) i poprawiony link command output -> `match`.
+
 ---
 
 ## Region Matrix

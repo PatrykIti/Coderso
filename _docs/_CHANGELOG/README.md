@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 325 | 2026-02-27 | TASK-063-13 post editor authoring stability and parity hardening | Admin/UI |
 | 324 | 2026-02-27 | TASK-063-12 post editor block delete affordances (list view + canvas) | Admin/UI |
 | 323 | 2026-02-25 | TASK-063-12 post editor reference parity wave 2 and closure | Admin/UI |
 | 322 | 2026-02-25 | TASK-063-12 post editor reference parity wave 1 (header, left rail, canvas) | Admin/UI |

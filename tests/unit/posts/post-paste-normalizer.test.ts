@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import {
+  createWritingCanvasContentFromEditorHtml,
   createWritingCanvasContentFromPaste,
   normalizePostPastePayload,
 } from "../../../core/services/posts/editor/postPasteNormalizer";
@@ -203,4 +204,36 @@ test("normalizePostPastePayload strips isolated Word TOC links without forcing d
     throw new Error("expected paragraph node");
   }
   expect(postRichTextToPlainText(firstNode.text)).toContain("See chapter");
+});
+
+test("createWritingCanvasContentFromEditorHtml keeps node ids stable for same block types", () => {
+  const previous = {
+    version: 1,
+    nodes: [
+      { id: "intro", type: "paragraph", text: "<p>First</p>" },
+      { id: "section-1", type: "heading", level: 2, text: "<h2>Title</h2>" },
+    ],
+  };
+
+  const next = createWritingCanvasContentFromEditorHtml({
+    html: "<p>Updated first</p><h2>Updated title</h2>",
+    previousContent: previous,
+  });
+
+  expect(next.nodes[0]?.id).toBe("intro");
+  expect(next.nodes[1]?.id).toBe("section-1");
+});
+
+test("createWritingCanvasContentFromEditorHtml maps multiline lists to list node", () => {
+  const next = createWritingCanvasContentFromEditorHtml({
+    html: "<ul><li>One</li><li>Two</li><li>Three</li></ul>",
+  });
+
+  expect(next.nodes.length).toBe(1);
+  expect(next.nodes[0]?.type).toBe("list");
+  const listNode = next.nodes[0];
+  if (!listNode || listNode.type !== "list") {
+    throw new Error("expected list node");
+  }
+  expect(listNode.items).toEqual(["One", "Two", "Three"]);
 });
