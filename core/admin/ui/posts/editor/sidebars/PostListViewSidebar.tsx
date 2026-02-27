@@ -28,6 +28,7 @@ type PostListViewSidebarProps = {
   document: PostBlockDocument;
   selectedBlockId: string | null;
   onSelectBlock: (id: string) => void;
+  onDeleteBlock?: (id: string) => void;
   onMoveBlockToIndex: (id: string, targetIndex: number) => void;
   onInsertBlock: (type: PostBlockType) => void;
   leftRailMode?: PostEditorLeftRailMode;
@@ -42,6 +43,7 @@ export function PostListViewSidebar({
   document,
   selectedBlockId,
   onSelectBlock,
+  onDeleteBlock,
   onMoveBlockToIndex,
   onInsertBlock,
   leftRailMode = "outline",
@@ -131,6 +133,7 @@ export function PostListViewSidebar({
             blocks={document.blocks}
             selectedBlockId={selectedBlockId}
             onSelectBlock={onSelectBlock}
+            onDeleteBlock={onDeleteBlock}
             onMoveBlockToIndex={onMoveBlockToIndex}
             showKeyboardHints={showKeyboardHints}
           />

@@ -24,3 +24,21 @@ test("PostListViewPanel exposes drag-and-drop and keyboard fallback affordances"
   expect(html).toContain("Paragraph");
   expect(html).toContain("Heading");
 });
+
+test("PostListViewPanel renders delete affordance when delete handler is provided", () => {
+  const html = renderToString(
+    <PostListViewPanel
+      blocks={[
+        { id: "a", type: "paragraph", attrs: {}, content: "Intro" },
+        { id: "b", type: "heading", attrs: { level: 2 }, content: "Section" },
+      ]}
+      selectedBlockId="a"
+      onSelectBlock={() => undefined}
+      onDeleteBlock={() => undefined}
+      onMoveBlockToIndex={() => undefined}
+    />
+  );
+
+  expect(html).toContain("aria-label=\"Delete block 1: Paragraph\"");
+  expect(html).toContain("aria-label=\"Delete block 2: Heading\"");
+});

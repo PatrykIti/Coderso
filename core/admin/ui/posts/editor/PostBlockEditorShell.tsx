@@ -354,6 +354,7 @@ export function PostBlockEditorShell() {
       document={editor.state.document}
       selectedBlockId={editor.state.selectedBlockId}
       onSelectBlock={(id) => handleSelectBlock(id)}
+      onDeleteBlock={editor.deleteBlock}
       onMoveBlockToIndex={editor.moveBlockToIndex}
       onInsertBlock={(type) =>
         editor.insertBlock(type, {
@@ -436,6 +437,7 @@ export function PostBlockEditorShell() {
           onUpdateBlockContent={editor.updateBlockContent}
           onUploadClipboardImage={editor.uploadClipboardImage}
           onInsertBlock={editor.insertBlock}
+          onDeleteBlock={editor.deleteBlock}
           onEnsureDynamicTocBlock={editor.ensureDynamicTocBlock}
           onOpenBlockDetails={handleOpenBlockDetails}
         />

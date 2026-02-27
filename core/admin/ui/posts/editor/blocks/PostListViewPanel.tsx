@@ -1,4 +1,4 @@
-import { GripVertical } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import { useState, type DragEvent, type KeyboardEvent } from "react";
 
 import type { PostBlock } from "../../../../../services/posts/editor/postBlockDocument";
@@ -11,6 +11,7 @@ type PostListViewPanelProps = {
   blocks: PostBlock[];
   selectedBlockId: string | null;
   onSelectBlock: (id: string) => void;
+  onDeleteBlock?: (id: string) => void;
   onMoveBlockToIndex: (id: string, targetIndex: number) => void;
   showKeyboardHints?: boolean;
 };
@@ -27,6 +28,7 @@ export function PostListViewPanel({
   blocks,
   selectedBlockId,
   onSelectBlock,
+  onDeleteBlock,
   onMoveBlockToIndex,
   showKeyboardHints = true,
 }: PostListViewPanelProps) {
@@ -95,11 +97,12 @@ export function PostListViewPanel({
           const active = block.id === selectedBlockId;
           const showDropBefore = dropIndex === index;
           const showDropAfter = dropIndex === index + 1;
+          const blockLabel = resolveOutlineBlockLabel(block);
 
           return (
             <div
               key={block.id}
-              className="rounded-md"
+              className="group relative rounded-md"
             >
               {showDropBefore ? <div className="h-0.5 bg-primary" /> : null}
               <button
@@ -111,20 +114,36 @@ export function PostListViewPanel({
                 onDragEnd={clearDragState}
                 onClick={() => onSelectBlock(block.id)}
                 onKeyDown={(event) => handleKeyDown(event, block.id, index)}
-                className={`group flex w-full cursor-grab items-start gap-2 rounded-md border px-2.5 py-2 text-left transition active:cursor-grabbing ${
+                className={`flex w-full cursor-grab items-start gap-2 rounded-md border px-2.5 py-2 pr-10 text-left transition active:cursor-grabbing ${
                   active
                     ? "border-primary/30 bg-primary/5"
                     : "border-transparent hover:border-border/60 hover:bg-muted/30"
                 } ${draggingId === block.id ? "opacity-60" : ""}`}
-                aria-label={`Select block ${index + 1}: ${resolveOutlineBlockLabel(block)}`}
+                aria-label={`Select block ${index + 1}: ${blockLabel}`}
               >
                 <GripVertical className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">
-                    {index + 1}. {resolveOutlineBlockLabel(block)}
+                    {index + 1}. {blockLabel}
                   </p>
                 </div>
               </button>
+              {onDeleteBlock ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onDeleteBlock(block.id);
+                  }}
+                  className={`absolute right-1 top-1/2 z-10 -translate-y-1/2 rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 group-hover:opacity-100 ${
+                    active ? "opacity-100" : ""
+                  }`}
+                  aria-label={`Delete block ${index + 1}: ${blockLabel}`}
+                  title="Delete block"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
               {showDropAfter ? <div className="h-0.5 bg-primary" /> : null}
             </div>
           );

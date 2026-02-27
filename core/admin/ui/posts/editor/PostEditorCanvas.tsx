@@ -1,4 +1,4 @@
-import { Image as ImageIcon, PlayCircle } from "lucide-react";
+import { Image as ImageIcon, PlayCircle, Trash2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
   createWritingCanvasContentFromPaste,
   serializeWritingCanvasContentToHtml,
 } from "../../../../services/posts/editor/postPasteNormalizer";
+import { getPostBlockLabel } from "./blocks/blockCatalog";
 import { PostRichTextAdapter } from "./richtext/PostRichTextAdapter";
 import type { PostInsertOptions } from "./hooks/usePostEditorState";
 
@@ -35,6 +36,7 @@ type PostEditorCanvasProps = {
   onUpdateBlockContent: (id: string, content: unknown) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   onInsertBlock: (type: PostBlockType, options?: PostInsertOptions) => void;
+  onDeleteBlock?: (id: string) => void;
   onEnsureDynamicTocBlock?: () => void;
   onOpenBlockDetails?: (blockId: string) => void;
 };
@@ -75,6 +77,14 @@ const renderHtmlPreview = (value: unknown, emptyLabel: string) => {
 const mediaPlaceholderClassName =
   "group flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-100";
 
+const resolveBlockActionLabel = (block: PostBlock) => {
+  if (block.type === "writing-canvas") return "Section";
+  if (block.type === "toc") return "Table of contents";
+  if (block.type === "button") return "CTA block";
+  if (block.type === "embed") return "Embed block";
+  return getPostBlockLabel(block.type);
+};
+
 function PostCanvasBlockItem({
   block,
   selected,
@@ -82,6 +92,7 @@ function PostCanvasBlockItem({
   onUpdateBlockContent,
   onUploadClipboardImage,
   onInsertBlock,
+  onDeleteBlock,
   onEnsureDynamicTocBlock,
   onOpenBlockDetails,
 }: {
@@ -91,6 +102,7 @@ function PostCanvasBlockItem({
   onUpdateBlockContent: (content: unknown) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   onInsertBlock: (type: PostBlockType, options?: PostInsertOptions) => void;
+  onDeleteBlock?: (id: string) => void;
   onEnsureDynamicTocBlock?: () => void;
   onOpenBlockDetails?: (blockId: string) => void;
 }) {
@@ -103,7 +115,7 @@ function PostCanvasBlockItem({
     <section
       data-post-editor-block-id={block.id}
       className={cn(
-        "relative rounded-lg px-1 py-1.5 transition",
+        "group relative rounded-lg px-1 py-1.5 transition",
         selected ? "ring-1 ring-primary/30" : "ring-0"
       )}
       onClick={(event) => {
@@ -111,6 +123,25 @@ function PostCanvasBlockItem({
         onSelect();
       }}
     >
+      {selected && onDeleteBlock ? (
+        <div className="absolute right-1 top-1 z-20">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Delete block: ${resolveBlockActionLabel(block)}`}
+            title="Delete selected block"
+            onClick={(event) => {
+              event.stopPropagation();
+              onDeleteBlock(block.id);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : null}
+
       {block.type === "writing-canvas" ? (
         selected ? (
           <PostRichTextAdapter
@@ -325,6 +356,7 @@ export function PostEditorCanvas({
   onUpdateBlockContent,
   onUploadClipboardImage,
   onInsertBlock,
+  onDeleteBlock,
   onEnsureDynamicTocBlock,
   onOpenBlockDetails,
 }: PostEditorCanvasProps) {
@@ -422,6 +454,7 @@ export function PostEditorCanvas({
                     onUpdateBlockContent={(content) => onUpdateBlockContent(block.id, content)}
                     onUploadClipboardImage={onUploadClipboardImage}
                     onInsertBlock={onInsertBlock}
+                    onDeleteBlock={onDeleteBlock}
                     onEnsureDynamicTocBlock={onEnsureDynamicTocBlock}
                     onOpenBlockDetails={onOpenBlockDetails}
                   />

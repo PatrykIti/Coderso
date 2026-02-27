@@ -29,6 +29,7 @@ test("PostEditorCanvas renders unified document canvas", () => {
       onSelectBlock={() => undefined}
       onUpdateBlockContent={() => undefined}
       onInsertBlock={() => undefined}
+      onDeleteBlock={() => undefined}
     />
   );
 
@@ -83,4 +84,26 @@ test("PostEditorCanvas renders media placeholder when image is not configured", 
 
   expect(html).toContain("data-post-editor-media-placeholder=\"image\"");
   expect(html).toContain("Click to configure image");
+});
+
+test("PostEditorCanvas renders delete control for selected block", () => {
+  const html = renderToString(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "block-1", type: "heading", attrs: { level: 2 }, content: "<h2>A</h2>" }],
+      }}
+      title="Delete affordance"
+      onTitleChange={() => undefined}
+      selectedBlockId="block-1"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onDeleteBlock={() => undefined}
+    />
+  );
+
+  expect(html).toContain("aria-label=\"Delete block: Heading\"");
 });
