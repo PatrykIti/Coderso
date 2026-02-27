@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-14-02  
-**Status:** To Do
+**Status:** In Progress (2026-02-27)
 
 ---
 

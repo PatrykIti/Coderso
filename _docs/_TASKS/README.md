@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 35 tasks
-- **In Progress:** 4 tasks
-- **Done:** 518 tasks
+- **To Do:** 30 tasks
+- **In Progress:** 9 tasks
+- **Done:** 519 tasks
 
 ---
 
@@ -39,12 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063-14 | Post Editor RichText Command Reliability and Contextual Formatting Model | High | Large | Fix non-working formatting commands + contextual toolbar profiles + inspector dedup |
-| TASK-063-14-01 | Command Capability Matrix and Expected Behavior Contract | High | Medium | Block-type command matrix and expected behavior definitions |
-| TASK-063-14-02 | Block Level Formatting Commands H1 H6 Paragraph Quote List | High | Large | Deterministic implementation for heading/paragraph/quote/list block commands |
-| TASK-063-14-03 | Inline Formatting and Multiline Highlight Stability | High | Medium | Multiline highlight and inline formatting stability without line-collapse |
-| TASK-063-14-04 | Text Alignment and List Command Engine Stabilization | High | Medium | Reliable align and list commands with consistent semantics |
-| TASK-063-14-05 | Contextual Toolbar Profiles and Block Inspector Dedup | High | Medium | Per-block toolbar profiles and ownership split with right inspector |
 | TASK-063-14-06 | QA Docs Changelog and Closure | Medium | Medium | Lint/types/full regression/docs/changelog closure for TASK-063-14 |
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
@@ -82,6 +76,11 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 + 063-12 + 063-13 completed; active follow-up: 063-14 command reliability + 063-07/063-08 + 063-09 closure |
+| TASK-063-14 | Post Editor RichText Command Reliability and Contextual Formatting Model | High | Large | In progress: command reliability, toolbar profiles, and inspector dedup; block-by-block QA pass planned next |
+| TASK-063-14-02 | Block Level Formatting Commands H1 H6 Paragraph Quote List | High | Large | In progress: formatBlock/path stabilization implemented, remaining edge-case validation in live block pass |
+| TASK-063-14-03 | Inline Formatting and Multiline Highlight Stability | High | Medium | In progress: multiline highlight range wrapping implemented, pending wider block QA verification |
+| TASK-063-14-04 | Text Alignment and List Command Engine Stabilization | High | Medium | In progress: multi-block alignment + list command baseline implemented, pending semantic refinements |
+| TASK-063-14-05 | Contextual Toolbar Profiles and Block Inspector Dedup | High | Medium | In progress: profile matrix and inspector ownership applied, pending final polish per block |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -92,6 +91,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-14-01 | Command Capability Matrix and Expected Behavior Contract | High | Medium | Done: command profile matrix and expected behavior contract captured for implementation/testing |
 | TASK-063-13 | Post Editor Block Authoring Stability and Parity Hardening | High | Large | Done: authoring UX parity hardening delivered (caret/newline/list/image picker/toolbar inheritance/interactive preview/link output) with docs and QA |
 | TASK-063-13-08 | RichText Command Output Link Rendering Fixes QA Docs Closure | High | Medium | Done: browser alias tags (`b/i/div`) normalized, link command output stabilized, targeted QA/tests/docs/changelog completed |
 | TASK-063-13-07 | Canvas Preview Parity for Button Embed and Image | High | Medium | Done: runtime-like canvas previews for button/embed/image with provider/aspect handling and media resolution |

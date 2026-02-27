@@ -25,6 +25,24 @@ Stan po hardeningu authoring UX (2026-02-27):
 5. Runtime-like previews dla `button` i `embed` na canvasie -> `match`.
 6. Rich text alias normalization (`b/i/div`) i poprawiony link command output -> `match`.
 
+## Formatting Command Capability Matrix (`TASK-063-14-01`)
+Kontrakt command visibility per toolbar profile (2026-02-27):
+1. `writing-canvas`:
+   - pelny zestaw: `Paragraph`, `H1..H6`, `Quote`, `Bullet/Ordered`, `Align`, inline formatting.
+2. `paragraph`:
+   - rozszerzony zestaw: `Paragraph`, `H2/H3`, `Quote`, `Bullet/Ordered`, `Align`, inline formatting.
+3. `heading`:
+   - ograniczony zestaw: inline formatting + `Paragraph` + `Align` + `Clear formatting`.
+   - brak `H1..H6`, `Quote`, `Bullet/Ordered`.
+4. `quote`:
+   - inline formatting + `Paragraph` + `Quote` + `Align` + `Clear formatting`.
+5. `callout`:
+   - analogicznie do `paragraph` (bez pelnego `H1..H6`).
+
+Ownership split (`toolbar` vs `Block inspector`):
+1. Dla blokow tekstowych (`writing-canvas`, `paragraph`, `heading`, `quote`, `callout`) `alignment` i `textScale` sa toolbar-owned.
+2. `Block inspector` zostawia tylko opcje niedublujace toolbar (np. width/spacing/anchor/class i block-specific attrs).
+
 ---
 
 ## Region Matrix

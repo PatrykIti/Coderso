@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Authoring UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-13  
-**Status:** To Do
+**Status:** In Progress (2026-02-27)
 
 ---
 
@@ -80,6 +80,22 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 4. Toolbar jest contextual per block type i nie pokazuje opcji bez sensu.
 5. Prawy panel `Block` nie duplikuje opcji obecnych na toolbarze.
 6. Lint/types + dedykowane testy richtext sa zielone.
+
+---
+
+## Progress Update (2026-02-27)
+1. Wdrozono fundament command reliability:
+   - przywrocenie selekcji przed command execution,
+   - stabilizacja `formatBlock` (`tag` + fallback `<tag>`),
+   - poprawki `align` dla wielu blokow.
+2. Wdrozono profile toolbara per block type (`writing-canvas`, `paragraph`, `heading`, `quote`, `callout`).
+3. Wdrozono deduplikacje toolbar vs `BlockInspector` dla alignment/text-scale na blokach tekstowych.
+4. Dodano testy unit dla profile matrix i ownership inspector/toolbars.
+
+## Remaining Work (for block-by-block pass)
+1. Zweryfikowac i dopracowac command behavior block-by-block w runtime QA (szczegolnie edge-cases selekcji).
+2. Dopracowac semantyke list command vs dedykowany `list` block na podstawie testow praktycznych.
+3. Domknac `TASK-063-14-06` (full regression, final docs/changelog closure).
 
 ---
 
