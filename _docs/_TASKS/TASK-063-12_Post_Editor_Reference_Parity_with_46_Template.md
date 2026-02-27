@@ -163,3 +163,12 @@ runQualityGates();
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/<new-entry>.md`
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
+
+---
+
+## Post-Closure Follow-up (2026-02-27)
+1. Ustalono i wdrozono finalny model delete UX dla blokow:
+   - `List view` = primary action (kosz per blok),
+   - `Canvas` = secondary action (kosz dla zaznaczonego bloku).
+2. Zachowano pelna kompatybilnosc z obecna logika SPA/local state/autosave (brak zmian backend/API).
+3. Follow-up zostal odnotowany w parity matrix oraz changelogu.

@@ -123,3 +123,11 @@ renderUnifiedCanvas(CANVAS_UI);
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (canvas contract)
 - `_docs/CODERSO_MODULES.md` (authoring UX notes)
+
+---
+
+## Post-Closure Follow-up (2026-02-27)
+1. Dodano secondary delete affordance na canvasie: mini-toolbar aktywnego bloku (prawy gorny rog) z ikonka kosza.
+2. Zachowano UX contract: canvas delete jest tylko dla zaznaczonego bloku, aby nie zwiekszac visual noise.
+3. Logika usuwania pozostaje wspolna (`editor.deleteBlock`), bez dodatkowych endpointow i bez zmian modelu danych.
+4. Zaktualizowano testy integracyjne `PostEditorCanvas` o asercje obecnosci kontrolki delete dla aktywnego bloku.

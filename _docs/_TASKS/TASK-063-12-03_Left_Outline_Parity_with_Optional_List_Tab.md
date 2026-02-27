@@ -125,3 +125,10 @@ const DEFAULT_LEFT_RAIL_MODE = "outline";
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (left rail ownership and default mode)
 - `_docs/CMS_API.md` (outline insert orchestration notes)
+
+---
+
+## Post-Closure Follow-up (2026-02-27)
+1. Dodano jawny delete affordance w `List view` (ikonka kosza per wiersz bloku), zgodnie z ustaleniem: lewy panel jako primary path dla usuwania blokow.
+2. Akcja delete zachowuje obecny kontrakt stanu edytora (`delete_block` reducer), bez zmian API/backend.
+3. Zaktualizowano testy integracyjne dla `PostListViewPanel` o asercje `aria-label` dla akcji usuwania.

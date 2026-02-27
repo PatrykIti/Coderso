@@ -1,6 +1,6 @@
 # Post Editor Reference Parity Matrix
 
-Date: 2026-02-25  
+Date: 2026-02-27  
 Owner Task: `TASK-063-12-08`  
 Reference Source: `_docs/UI/admin_panel/46-post-editor/code.html`
 
@@ -27,10 +27,12 @@ Legenda:
 | Left rail shell | `w-64`, `Document Outline` jako first impression | Left rail parity i outline-first default zachowane | match | implemented | `063-12-03` |
 | Left rail modes | Prostota single-outline | `List view` pozostaje jako secondary mode | deviation | allowed deviation | `063-12-03` |
 | Outline row styling | Subtelny rhythm, lightweight selection states | Outline/list rows i hinty sa zgodne z kontraktem parity | match | implemented | `063-12-03` |
+| List view block delete action | Brak jawnego kosza per blok w referencji | Dodany kosz per wiersz jako primary delete path dla blokow | deviation | allowed UX extension | `063-12-03` |
 | Canvas width | `max-width: 720px` | Center canvas geometry domknieta zgodnie z kontraktem | match | implemented | `063-12-04` |
 | Title typography | `text-5xl`, display-like emphasis | Title surface utrzymuje parity typography i spacing | match | implemented | `063-12-04` |
 | Block rhythm | `space-y-6` + subtelny flow powierzchni | Unified article flow i spacing parity utrzymane | match | implemented | `063-12-04` |
 | Placeholder surfaces | Subtelny `slate + dashed + hover` | Placeholdery media/interactive domkniete do kontraktu parity | match | implemented | `063-12-04` |
+| Canvas block delete action | Referencja bez stalego toolbaru per blok | Dodany kosz tylko dla zaznaczonego bloku (secondary delete path) | deviation | allowed UX extension | `063-12-04` |
 | Right rail shell | `w-80`, tabs `Post/Block` | Right rail parity utrzymany (`Post`/`Block`) | match | implemented | `063-12-05` |
 | Right panel flow | `Publishing -> Categories -> Tags -> Featured -> Danger` | `DocumentInspector` ma reference-like flow + `Danger zone` | match | implemented | `063-12-05` |
 | Visibility/sticky controls | Widoczne w referencji | Backend fields nadal nie istnieja w posts contract | deviation | defer (approved) | `063-12-05` |
@@ -48,6 +50,9 @@ Legenda:
 1. `List view` zostaje jako dodatkowy tryb lewej szyny (obok `Outline`).
 2. Brak rozszerzenia backendu o `visibility/sticky` w `TASK-063-12`.
 3. Preferences persistence jest local-first z background sync przez internal `user-settings`.
+4. Delete affordance rozszerzono o:
+   - primary action w `List view` (kosz per wiersz),
+   - secondary action na `Canvas` (kosz tylko dla aktywnego bloku).
 
 ---
 

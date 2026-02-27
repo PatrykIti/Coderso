@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 324 | 2026-02-27 | TASK-063-12 post editor block delete affordances (list view + canvas) | Admin/UI |
 | 323 | 2026-02-25 | TASK-063-12 post editor reference parity wave 2 and closure | Admin/UI |
 | 322 | 2026-02-25 | TASK-063-12 post editor reference parity wave 1 (header, left rail, canvas) | Admin/UI |
 | 321 | 2026-02-24 | TASK-063-11 post editor strict html parity and unified canvas | Admin/UI |
