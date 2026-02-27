@@ -56,6 +56,14 @@ const readNumber = (value: unknown, fallback = 0) =>
 const hasScope = (type: PostBlockType, scope: string) =>
   BLOCK_STYLE_SCOPE[type]?.includes(scope) ?? false;
 
+const textToolbarOwnedTypes = new Set<PostBlockType>([
+  "writing-canvas",
+  "paragraph",
+  "heading",
+  "quote",
+  "callout",
+]);
+
 type SelectFieldProps = {
   label: string;
   value: string;
@@ -108,10 +116,12 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
   }
 
   const attrs = (block.attrs ?? {}) as Record<string, unknown>;
-  const hasAlignmentControl = hasScope(block.type, "alignment");
+  const toolbarOwnsAlignment = textToolbarOwnedTypes.has(block.type);
+  const toolbarOwnsTextScale = textToolbarOwnedTypes.has(block.type);
+  const hasAlignmentControl = hasScope(block.type, "alignment") && !toolbarOwnsAlignment;
   const hasWidthControl = hasScope(block.type, "width");
   const hasSpacingControl = hasScope(block.type, "spacing");
-  const hasTextScaleControl = hasScope(block.type, "textScale");
+  const hasTextScaleControl = hasScope(block.type, "textScale") && !toolbarOwnsTextScale;
   const hasAnyLayoutControl =
     hasAlignmentControl || hasWidthControl || hasSpacingControl || hasTextScaleControl;
 

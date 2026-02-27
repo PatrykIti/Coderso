@@ -55,9 +55,17 @@ export type PostRichTextCommand =
   | "align-right"
   | "clear-formatting";
 
+export type PostRichTextToolbarProfile =
+  | "writing-canvas"
+  | "paragraph"
+  | "heading"
+  | "quote"
+  | "callout";
+
 type PostRichTextToolbarProps = {
   onCommand: (command: PostRichTextCommand) => void;
   disabled?: boolean;
+  profile?: PostRichTextToolbarProfile;
   fontFamily?: "sans" | "serif" | "mono";
   onFontFamilyChange?: (value: "sans" | "serif" | "mono") => void;
   baseTextScale?: "sm" | "md" | "lg" | "xl";
@@ -99,6 +107,107 @@ const advancedActions: ActionButton[] = [
   { id: "clear-formatting", label: "Clear formatting", icon: Eraser },
 ];
 
+const toolbarProfileCapabilities: Record<
+  PostRichTextToolbarProfile,
+  ReadonlySet<PostRichTextCommand>
+> = {
+  "writing-canvas": new Set<PostRichTextCommand>([
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "inline-code",
+    "link",
+    "highlight",
+    "paragraph",
+    "heading-1",
+    "heading-2",
+    "heading-3",
+    "heading-4",
+    "heading-5",
+    "heading-6",
+    "bullet-list",
+    "ordered-list",
+    "quote",
+    "code-block",
+    "align-left",
+    "align-center",
+    "align-right",
+    "clear-formatting",
+  ]),
+  paragraph: new Set<PostRichTextCommand>([
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "inline-code",
+    "link",
+    "highlight",
+    "paragraph",
+    "heading-2",
+    "heading-3",
+    "bullet-list",
+    "ordered-list",
+    "quote",
+    "align-left",
+    "align-center",
+    "align-right",
+    "clear-formatting",
+  ]),
+  heading: new Set<PostRichTextCommand>([
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "inline-code",
+    "link",
+    "highlight",
+    "paragraph",
+    "align-left",
+    "align-center",
+    "align-right",
+    "clear-formatting",
+  ]),
+  quote: new Set<PostRichTextCommand>([
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "inline-code",
+    "link",
+    "highlight",
+    "paragraph",
+    "quote",
+    "align-left",
+    "align-center",
+    "align-right",
+    "clear-formatting",
+  ]),
+  callout: new Set<PostRichTextCommand>([
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "inline-code",
+    "link",
+    "highlight",
+    "paragraph",
+    "heading-2",
+    "heading-3",
+    "bullet-list",
+    "ordered-list",
+    "quote",
+    "align-left",
+    "align-center",
+    "align-right",
+    "clear-formatting",
+  ]),
+};
+
+export const getToolbarCommandsForProfile = (
+  profile: PostRichTextToolbarProfile
+) => toolbarProfileCapabilities[profile];
+
 const renderActionLabel = (action: ActionButton) => {
   if (action.shortLabel) return action.shortLabel;
   if (action.icon) {
@@ -111,23 +220,35 @@ const renderActionLabel = (action: ActionButton) => {
 export function PostRichTextToolbar({
   onCommand,
   disabled = false,
+  profile = "writing-canvas",
   fontFamily = "sans",
   onFontFamilyChange,
   baseTextScale = "md",
   onBaseTextScaleChange,
 }: PostRichTextToolbarProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const allowedCommands = getToolbarCommandsForProfile(profile);
+  const visiblePrimaryActions = primaryActions.filter((action) =>
+    allowedCommands.has(action.id)
+  );
+  const visibleAdvancedActions = advancedActions.filter((action) =>
+    allowedCommands.has(action.id)
+  );
+  const hasAdvancedActions = visibleAdvancedActions.length > 0;
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1.5 rounded-lg border bg-muted/30 p-2">
-        {primaryActions.map((action) => (
+        {visiblePrimaryActions.map((action) => (
           <Button
             key={action.id}
             type="button"
             variant="ghost"
             size="icon-xs"
             disabled={disabled}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
             onClick={() => onCommand(action.id)}
             aria-label={action.label}
             title={action.label}
@@ -135,18 +256,23 @@ export function PostRichTextToolbar({
             {renderActionLabel(action)}
           </Button>
         ))}
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          disabled={disabled}
-          onClick={() => setShowAdvanced((prev) => !prev)}
-          aria-expanded={showAdvanced}
-          aria-controls="post-richtext-advanced-actions"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          More formatting
-        </Button>
+        {hasAdvancedActions ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            disabled={disabled}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+            onClick={() => setShowAdvanced((prev) => !prev)}
+            aria-expanded={showAdvanced}
+            aria-controls="post-richtext-advanced-actions"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            More formatting
+          </Button>
+        ) : null}
         {onFontFamilyChange ? (
           <Select
             value={fontFamily}
@@ -188,18 +314,21 @@ export function PostRichTextToolbar({
         ) : null}
       </div>
 
-      {showAdvanced ? (
+      {showAdvanced && hasAdvancedActions ? (
         <div
           id="post-richtext-advanced-actions"
           className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed bg-background/50 p-2"
         >
-          {advancedActions.map((action) => (
+          {visibleAdvancedActions.map((action) => (
             <Button
               key={action.id}
               type="button"
               variant="ghost"
               size="icon-xs"
               disabled={disabled}
+              onMouseDown={(event) => {
+                event.preventDefault();
+              }}
               onClick={() => onCommand(action.id)}
               aria-label={action.label}
               title={action.label}

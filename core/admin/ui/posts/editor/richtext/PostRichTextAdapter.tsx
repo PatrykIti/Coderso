@@ -45,6 +45,7 @@ import { SlashCommandMenu } from "../blocks/SlashCommandMenu";
 import {
   PostRichTextToolbar,
   type PostRichTextCommand,
+  type PostRichTextToolbarProfile,
 } from "./PostRichTextToolbar";
 
 type PostRichTextAdapterProps = {
@@ -59,6 +60,7 @@ type PostRichTextAdapterProps = {
   onPasteDirectives?: (directives: PostPasteDirectives) => void;
   onFocus?: () => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
+  toolbarProfile?: PostRichTextToolbarProfile;
   fontFamily?: "sans" | "serif" | "mono";
   baseTextScale?: "sm" | "md" | "lg" | "xl";
   onFontFamilyChange?: (value: "sans" | "serif" | "mono") => void;
@@ -93,6 +95,9 @@ const runCommand = (command: string, value?: string) => {
   }
 };
 
+const applyFormatBlockCommand = (tagName: string) =>
+  runCommand("formatBlock", tagName) || runCommand("formatBlock", `<${tagName}>`);
+
 const getCurrentBlockElement = (editorRoot: HTMLElement) => {
   if (typeof window === "undefined") return null;
   const selection = window.getSelection();
@@ -111,13 +116,132 @@ const getCurrentBlockElement = (editorRoot: HTMLElement) => {
   return null;
 };
 
-const wrapSelectionWithTag = (tagName: "code" | "mark") => {
+const getClosestBlockElement = (node: Node | null, editorRoot: HTMLElement) => {
+  let cursor: Node | null = node;
+  while (cursor && cursor !== editorRoot) {
+    if (
+      cursor instanceof HTMLElement &&
+      postRichTextBlockTagSet.has(cursor.tagName.toLowerCase())
+    ) {
+      return cursor;
+    }
+    cursor = cursor.parentNode;
+  }
+  return null;
+};
+
+const getSelectedBlockElements = (editorRoot: HTMLElement) => {
+  if (typeof window === "undefined") return [] as HTMLElement[];
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return [] as HTMLElement[];
+
+  const allBlocks = Array.from(
+    editorRoot.querySelectorAll<HTMLElement>(
+      Array.from(postRichTextBlockTagSet).join(",")
+    )
+  );
+  if (allBlocks.length === 0) return [] as HTMLElement[];
+
+  const range = selection.getRangeAt(0);
+  const startBlock = getClosestBlockElement(range.startContainer, editorRoot);
+  const endBlock = getClosestBlockElement(range.endContainer, editorRoot);
+
+  if (!startBlock && !endBlock) {
+    return [allBlocks[0] as HTMLElement];
+  }
+
+  const startIndex = startBlock ? allBlocks.indexOf(startBlock) : 0;
+  const endIndex = endBlock ? allBlocks.indexOf(endBlock) : startIndex;
+  const from = Math.max(0, Math.min(startIndex, endIndex));
+  const to = Math.max(startIndex, endIndex);
+  return allBlocks.slice(from, to + 1);
+};
+
+type SelectedTextRun = {
+  node: Text;
+  start: number;
+  end: number;
+};
+
+const collectSelectedTextRuns = (range: Range): SelectedTextRun[] => {
+  const root = range.commonAncestorContainer;
+  if (root instanceof Text && root.nodeValue) {
+    const start = root === range.startContainer ? range.startOffset : 0;
+    const end = root === range.endContainer ? range.endOffset : root.nodeValue.length;
+    return end > start ? [{ node: root, start, end }] : [];
+  }
+
+  const walker = document.createTreeWalker(
+    root,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode(node) {
+        if (!(node instanceof Text)) return NodeFilter.FILTER_REJECT;
+        if (!node.nodeValue || node.nodeValue.length === 0) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (!range.intersectsNode(node)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    }
+  );
+
+  const runs: SelectedTextRun[] = [];
+  let current = walker.nextNode();
+  while (current) {
+    if (current instanceof Text && current.nodeValue) {
+      const start =
+        current === range.startContainer ? range.startOffset : 0;
+      const end =
+        current === range.endContainer
+          ? range.endOffset
+          : current.nodeValue.length;
+      if (end > start) {
+        runs.push({ node: current, start, end });
+      }
+    }
+    current = walker.nextNode();
+  }
+
+  return runs;
+};
+
+const wrapSelectionWithTag = (tagName: "code" | "mark", editorRoot: HTMLElement) => {
   if (typeof window === "undefined") return;
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-  const selectedText = selection.toString();
+  const range = selection.getRangeAt(0);
+
+  const selectedText = selection.toString().trim();
   if (!selectedText) return;
-  runCommand("insertHTML", `<${tagName}>${escapeHtml(selectedText)}</${tagName}>`);
+
+  // Preserve line/block structure by wrapping each selected text run.
+  const textRuns = collectSelectedTextRuns(range).filter((run) =>
+    editorRoot.contains(run.node)
+  );
+  if (textRuns.length === 0) return;
+
+  const wrappedNodes: HTMLElement[] = [];
+  for (let index = textRuns.length - 1; index >= 0; index -= 1) {
+    const run = textRuns[index];
+    const afterStart = run.node.splitText(run.start);
+    const afterEnd = afterStart.splitText(run.end - run.start);
+    const wrapper = document.createElement(tagName);
+    wrapper.textContent = afterStart.nodeValue ?? "";
+    afterStart.parentNode?.replaceChild(wrapper, afterStart);
+    wrappedNodes.push(wrapper);
+    void afterEnd;
+  }
+
+  if (wrappedNodes.length > 0) {
+    const first = wrappedNodes[wrappedNodes.length - 1];
+    const last = wrappedNodes[0];
+    const nextRange = document.createRange();
+    nextRange.setStartBefore(first);
+    nextRange.setEndAfter(last);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+  }
 };
 
 const insertHtmlAtCursor = (html: string) => {
@@ -273,6 +397,7 @@ export function PostRichTextAdapter({
   onPasteDirectives,
   onFocus,
   onUploadClipboardImage,
+  toolbarProfile = "writing-canvas",
   fontFamily = "sans",
   baseTextScale = "md",
   onFontFamilyChange,
@@ -280,6 +405,7 @@ export function PostRichTextAdapter({
 }: PostRichTextAdapterProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const focusedRef = useRef(false);
   const lastEmittedRef = useRef<string | null>(null);
   const [slashQuery, setSlashQuery] = useState("");
@@ -311,6 +437,28 @@ export function PostRichTextAdapter({
     }
   }, [value]);
 
+  const saveSelectionRange = useCallback(() => {
+    const editorRoot = editorRef.current;
+    if (!editorRoot || typeof window === "undefined") return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!editorRoot.contains(range.commonAncestorContainer)) return;
+    savedRangeRef.current = range.cloneRange();
+  }, []);
+
+  const restoreSelectionRange = useCallback(() => {
+    const editorRoot = editorRef.current;
+    const savedRange = savedRangeRef.current;
+    if (!editorRoot || !savedRange || typeof window === "undefined") return false;
+    const selection = window.getSelection();
+    if (!selection) return false;
+    if (!editorRoot.contains(savedRange.commonAncestorContainer)) return false;
+    selection.removeAllRanges();
+    selection.addRange(savedRange);
+    return true;
+  }, []);
+
   const updateSelectedImageState = useCallback(() => {
     const editorRoot = editorRef.current;
     if (!editorRoot) return;
@@ -334,12 +482,25 @@ export function PostRichTextAdapter({
     };
   }, [pasteHint]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const handleSelectionChange = () => {
+      if (!focusedRef.current) return;
+      saveSelectionRange();
+    };
+    document.addEventListener("selectionchange", handleSelectionChange);
+    return () => {
+      document.removeEventListener("selectionchange", handleSelectionChange);
+    };
+  }, [saveSelectionRange]);
+
   const executeCommand = useCallback(
     (command: PostRichTextCommand) => {
       if (disabled) return;
-      const current = editorRef.current;
-      if (!current) return;
-      current.focus();
+      const editorRoot = editorRef.current;
+      if (!editorRoot) return;
+      editorRoot.focus();
+      restoreSelectionRange();
 
       switch (command) {
         case "bold":
@@ -355,10 +516,10 @@ export function PostRichTextAdapter({
           runCommand("strikeThrough");
           break;
         case "inline-code":
-          wrapSelectionWithTag("code");
+          wrapSelectionWithTag("code", editorRoot);
           break;
         case "highlight":
-          wrapSelectionWithTag("mark");
+          wrapSelectionWithTag("mark", editorRoot);
           break;
         case "link": {
           if (typeof window === "undefined") break;
@@ -383,25 +544,25 @@ export function PostRichTextAdapter({
           break;
         }
         case "paragraph":
-          runCommand("formatBlock", "<p>");
+          applyFormatBlockCommand("p");
           break;
         case "heading-1":
-          runCommand("formatBlock", "<h1>");
+          applyFormatBlockCommand("h1");
           break;
         case "heading-2":
-          runCommand("formatBlock", "<h2>");
+          applyFormatBlockCommand("h2");
           break;
         case "heading-3":
-          runCommand("formatBlock", "<h3>");
+          applyFormatBlockCommand("h3");
           break;
         case "heading-4":
-          runCommand("formatBlock", "<h4>");
+          applyFormatBlockCommand("h4");
           break;
         case "heading-5":
-          runCommand("formatBlock", "<h5>");
+          applyFormatBlockCommand("h5");
           break;
         case "heading-6":
-          runCommand("formatBlock", "<h6>");
+          applyFormatBlockCommand("h6");
           break;
         case "bullet-list":
           runCommand("insertUnorderedList");
@@ -410,10 +571,10 @@ export function PostRichTextAdapter({
           runCommand("insertOrderedList");
           break;
         case "quote":
-          runCommand("formatBlock", "<blockquote>");
+          applyFormatBlockCommand("blockquote");
           break;
         case "code-block":
-          runCommand("formatBlock", "<pre>");
+          applyFormatBlockCommand("pre");
           break;
         case "align-left":
         case "align-center":
@@ -424,9 +585,16 @@ export function PostRichTextAdapter({
               : command === "align-center"
                 ? "center"
                 : "right";
-          const currentBlock = getCurrentBlockElement(current);
-          if (currentBlock) {
-            currentBlock.setAttribute("data-align", alignment);
+          const selectedBlocks = getSelectedBlockElements(editorRoot);
+          if (selectedBlocks.length === 0) {
+            const currentBlock = getCurrentBlockElement(editorRoot);
+            if (currentBlock) {
+              currentBlock.setAttribute("data-align", alignment);
+            }
+          } else {
+            for (const block of selectedBlocks) {
+              block.setAttribute("data-align", alignment);
+            }
           }
           break;
         }
@@ -438,9 +606,10 @@ export function PostRichTextAdapter({
           break;
       }
 
+      saveSelectionRange();
       emitChange();
     },
-    [disabled, emitChange]
+    [disabled, emitChange, restoreSelectionRange, saveSelectionRange]
   );
 
   const handleKeyDown = useCallback(
@@ -686,6 +855,7 @@ export function PostRichTextAdapter({
       <PostRichTextToolbar
         onCommand={executeCommand}
         disabled={disabled || imageUploading}
+        profile={toolbarProfile}
         fontFamily={fontFamily}
         onFontFamilyChange={onFontFamilyChange}
         baseTextScale={baseTextScale}
@@ -737,12 +907,14 @@ export function PostRichTextAdapter({
           )}
           onInput={() => {
             emitChange();
+            saveSelectionRange();
             updateSlashState();
             updateSelectedImageState();
           }}
           onBlur={() => {
             focusedRef.current = false;
             emitChange();
+            saveSelectionRange();
             setSlashOpen(false);
             setSlashQuery("");
             selectedImageRef.current = null;
@@ -750,15 +922,18 @@ export function PostRichTextAdapter({
           }}
           onKeyDown={handleKeyDown}
           onKeyUp={() => {
+            saveSelectionRange();
             updateSelectedImageState();
           }}
           onMouseUp={() => {
+            saveSelectionRange();
             updateSelectedImageState();
           }}
           onFocus={() => {
             onFocus?.();
             focusedRef.current = true;
             runCommand("defaultParagraphSeparator", "p");
+            saveSelectionRange();
             updateSelectedImageState();
           }}
           onPaste={handlePaste}

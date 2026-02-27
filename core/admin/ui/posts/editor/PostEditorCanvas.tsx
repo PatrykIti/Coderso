@@ -74,6 +74,8 @@ const richTextBlockTypes = new Set<PostBlockType>([
 ]);
 
 const asString = (value: unknown) => (typeof value === "string" ? value : "");
+const readBoolean = (value: unknown, fallback = false) =>
+  typeof value === "boolean" ? value : fallback;
 
 const normalizeListForEdit = (value: unknown) => {
   if (!Array.isArray(value)) return "";
@@ -439,6 +441,42 @@ function PostCanvasBlockItem({
         </div>
       ) : null}
 
+      {selected && block.type === "list" && onUpdateBlockAttrs ? (
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 p-2"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Select
+            value={readBoolean(attrs.ordered, false) ? "ordered" : "unordered"}
+            onValueChange={(value) =>
+              onUpdateBlockAttrs({
+                ordered: value === "ordered",
+              })
+            }
+          >
+            <SelectTrigger className="h-8 w-[8.5rem] bg-background text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unordered">Bullet list</SelectItem>
+              <SelectItem value="ordered">Ordered list</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant={readBoolean(attrs.compact, false) ? "default" : "outline"}
+            size="sm"
+            onClick={() =>
+              onUpdateBlockAttrs({
+                compact: !readBoolean(attrs.compact, false),
+              })
+            }
+          >
+            Compact spacing
+          </Button>
+        </div>
+      ) : null}
+
       {block.type === "writing-canvas" ? (
         selected ? (
           <PostRichTextAdapter
@@ -465,6 +503,7 @@ function PostCanvasBlockItem({
               })
             }
             onFocus={onSelect}
+            toolbarProfile="writing-canvas"
             fontFamily={typography.fontFamily}
             baseTextScale={typography.baseTextScale}
             onFontFamilyChange={(fontFamily) =>
@@ -513,6 +552,15 @@ function PostCanvasBlockItem({
               })
             }
             onFocus={onSelect}
+            toolbarProfile={
+              block.type === "heading"
+                ? "heading"
+                : block.type === "quote"
+                  ? "quote"
+                  : block.type === "callout"
+                    ? "callout"
+                    : "paragraph"
+            }
             fontFamily={typography.fontFamily}
             baseTextScale={typography.baseTextScale}
             onFontFamilyChange={(fontFamily) =>
