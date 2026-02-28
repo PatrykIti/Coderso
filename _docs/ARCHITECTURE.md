@@ -157,6 +157,11 @@ przez `setup.completed=true`.
       - local-first (`nextless.posts.editor.preferences.v2` + compatibility write do `v1`),
       - background sync do internal `user-settings` key `posts.editor.preferences`,
     - focus mode ma deterministic snapshot restore side paneli po wyjsciu (`hide -> restore`), a layout restore jest zapisywany per user-session local state.
+  - **TASK-063-14 (done):** richtext command reliability + contextual formatting model:
+    - command execution zostalo domkniete przez deterministic engine (`postRichTextCommandEngine`) dla komend blokowych/list/alignment,
+    - `PostRichTextAdapter` mapuje command dispatch do engine i zachowuje stabilny flow selection restore,
+    - contextual toolbar profile routing jest scentralizowany (`resolveToolbarProfileForBlockType`) i spina kontrakt visibility per block type,
+    - ownership split toolbar vs inspector jest finalny: dla blokow tekstowych formatting/alignment/text-scale sa toolbar-owned, inspector zostawia pola layout/runtime-level i block-specific attrs.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

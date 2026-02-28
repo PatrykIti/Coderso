@@ -45,6 +45,7 @@ import {
 } from "../../../../services/posts/editor/postPasteNormalizer";
 import { getPostBlockLabel } from "./blocks/blockCatalog";
 import { PostRichTextAdapter } from "./richtext/PostRichTextAdapter";
+import { resolveToolbarProfileForBlockType } from "./richtext/postRichTextCommandEngine";
 import type { PostInsertOptions } from "./hooks/usePostEditorState";
 
 type PostEditorCanvasProps = {
@@ -552,15 +553,7 @@ function PostCanvasBlockItem({
               })
             }
             onFocus={onSelect}
-            toolbarProfile={
-              block.type === "heading"
-                ? "heading"
-                : block.type === "quote"
-                  ? "quote"
-                  : block.type === "callout"
-                    ? "callout"
-                    : "paragraph"
-            }
+            toolbarProfile={resolveToolbarProfileForBlockType(block.type) ?? "paragraph"}
             fontFamily={typography.fontFamily}
             baseTextScale={typography.baseTextScale}
             onFontFamilyChange={(fontFamily) =>

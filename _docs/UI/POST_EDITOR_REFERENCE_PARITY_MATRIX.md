@@ -1,7 +1,7 @@
 # Post Editor Reference Parity Matrix
 
-Date: 2026-02-27  
-Owner Task: `TASK-063-12-08`  
+Date: 2026-02-28  
+Owner Tasks: `TASK-063-12-08`, `TASK-063-14-06`  
 Reference Source: `_docs/UI/admin_panel/46-post-editor/code.html`
 
 ---
@@ -42,6 +42,16 @@ Kontrakt command visibility per toolbar profile (2026-02-27):
 Ownership split (`toolbar` vs `Block inspector`):
 1. Dla blokow tekstowych (`writing-canvas`, `paragraph`, `heading`, `quote`, `callout`) `alignment` i `textScale` sa toolbar-owned.
 2. `Block inspector` zostawia tylko opcje niedublujace toolbar (np. width/spacing/anchor/class i block-specific attrs).
+
+## Command Reliability Closure (`TASK-063-14`)
+Stan finalny po domknieciu `TASK-063-14` (2026-02-28):
+1. Komendy blokowe sa egzekwowane deterministic path przez `postRichTextCommandEngine.ts` (`paragraph`, `heading-1..6`, `quote`, `bullet-list`, `ordered-list`, `align-*`).
+2. Semantyka list command jest jawna:
+   - richtext `bullet/ordered` sluzy do transformacji zaznaczonego tekstu (`ul/ol <-> p`),
+   - dedykowany `list` block pozostaje osobnym modelem danych (`items`, `ordered`, `compact`) i nie jest prowadzony przez richtext profile.
+3. Routing profilu toolbar jest centralny (`resolveToolbarProfileForBlockType`) i nie ma juz rozjazdu miedzy canvasem a toolbar visibility matrix.
+4. Ownership split toolbar vs inspector jest domkniety testami kontraktowymi (brak duplikacji alignment/text scale dla blokow tekstowych).
+5. W sekcji command profile/ownership brak otwartych TODO dla `063-14`.
 
 ---
 
@@ -94,5 +104,14 @@ Ownership split (`toolbar` vs `Block inspector`):
 2. `bun --cwd core lint:types` -> pass.
 3. `bun test tests/unit tests/integration tests/perf tests/security` -> pass.
 4. Dokumentacja/changelog/kanban zsynchronizowane.
+
+Status: `closed`.
+
+## Final Gate Result (`TASK-063-14-06`)
+1. `bun --cwd core lint` -> pass.
+2. `bun --cwd core lint:types` -> pass.
+3. `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1488 passed`, `150 skipped`, `0 failed`).
+4. Command-contract test suites + toolbar/inspector dedup tests dodane i zielone.
+5. Dokumentacja/changelog/task board zsynchronizowane.
 
 Status: `closed`.

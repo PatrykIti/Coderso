@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-14-02, TASK-063-14-03, TASK-063-14-04, TASK-063-14-05  
-**Status:** To Do
+**Status:** Done (2026-02-28)
 
 ---
 
@@ -84,3 +84,12 @@ Domknac walidacje, dokumentacje i changelog dla taska `TASK-063-14`.
 - `_docs/_CHANGELOG/<new-entry>.md`
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
 - `_docs/ARCHITECTURE.md`
+
+---
+
+## Closure Note (2026-02-28)
+1. QA gates:
+   - `bun --cwd core lint` -> pass
+   - `bun --cwd core lint:types` -> pass
+   - `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1488 passed`, `150 skipped`, `0 failed`)
+2. Task board, parity docs i changelog zostaly zsynchronizowane dla finalnego zamkniecia `TASK-063-14`.

@@ -47,6 +47,14 @@ import {
   type PostRichTextCommand,
   type PostRichTextToolbarProfile,
 } from "./PostRichTextToolbar";
+import {
+  applyAlignmentToBlocks,
+  executeBlockCommandOnBlocks,
+  getPostRichTextCommandKind,
+  resolveAlignmentForCommand,
+  resolveBlockTagForCommand,
+  resolveListTagForCommand,
+} from "./postRichTextCommandEngine";
 
 type PostRichTextAdapterProps = {
   value: string;
@@ -267,6 +275,31 @@ const insertHtmlAtCursor = (html: string) => {
 
   return true;
 };
+
+type ShortcutInput = {
+  key: string;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  shiftKey?: boolean;
+};
+
+export const resolvePostRichTextShortcutCommand = (
+  input: ShortcutInput
+): PostRichTextCommand | null => {
+  const modifier = Boolean(input.metaKey || input.ctrlKey);
+  const key = input.key.toLowerCase();
+  if (!modifier) return null;
+
+  if (key === "b") return "bold";
+  if (key === "i") return "italic";
+  if (key === "u") return "underline";
+  if (key === "k") return "link";
+  if (Boolean(input.shiftKey) && key === "7") return "ordered-list";
+  if (Boolean(input.shiftKey) && key === "8") return "bullet-list";
+  return null;
+};
+
+export const resolvePostRichTextCommandKind = getPostRichTextCommandKind;
 
 export const extractClipboardImageFiles = (clipboard: ClipboardDataLike | null | undefined) => {
   if (!clipboard) return [] as File[];
@@ -502,108 +535,67 @@ export function PostRichTextAdapter({
       editorRoot.focus();
       restoreSelectionRange();
 
-      switch (command) {
-        case "bold":
-          runCommand("bold");
-          break;
-        case "italic":
-          runCommand("italic");
-          break;
-        case "underline":
-          runCommand("underline");
-          break;
-        case "strike":
-          runCommand("strikeThrough");
-          break;
-        case "inline-code":
-          wrapSelectionWithTag("code", editorRoot);
-          break;
-        case "highlight":
-          wrapSelectionWithTag("mark", editorRoot);
-          break;
-        case "link": {
-          if (typeof window === "undefined") break;
+      const selectedBlocks = getSelectedBlockElements(editorRoot);
+      const currentBlock = getCurrentBlockElement(editorRoot);
+      const targetBlocks =
+        selectedBlocks.length > 0
+          ? selectedBlocks
+          : currentBlock
+            ? [currentBlock]
+            : [];
+      const commandKind = getPostRichTextCommandKind(command);
+
+      if (commandKind === "native-inline") {
+        if (command === "bold") runCommand("bold");
+        if (command === "italic") runCommand("italic");
+        if (command === "underline") runCommand("underline");
+        if (command === "strike") runCommand("strikeThrough");
+      } else if (commandKind === "inline-wrapper") {
+        wrapSelectionWithTag(command === "inline-code" ? "code" : "mark", editorRoot);
+      } else if (commandKind === "link") {
+        if (typeof window !== "undefined") {
           const href = window.prompt("Enter link URL", "https://");
-          if (href === null) break;
-          const nextHref = href.trim();
-          if (!nextHref) {
-            runCommand("unlink");
-          } else {
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) break;
-            if (selection.isCollapsed) {
-              const label = window.prompt("Link text", nextHref) ?? nextHref;
-              runCommand(
-                "insertHTML",
-                `<a href="${escapeHtml(nextHref)}">${escapeHtml(label)}</a>`
-              );
+          if (href !== null) {
+            const nextHref = href.trim();
+            if (!nextHref) {
+              runCommand("unlink");
             } else {
-              runCommand("createLink", nextHref);
+              const selection = window.getSelection();
+              if (selection && selection.rangeCount > 0) {
+                if (selection.isCollapsed) {
+                  const label = window.prompt("Link text", nextHref) ?? nextHref;
+                  runCommand(
+                    "insertHTML",
+                    `<a href="${escapeHtml(nextHref)}">${escapeHtml(label)}</a>`
+                  );
+                } else {
+                  runCommand("createLink", nextHref);
+                }
+              }
             }
           }
-          break;
         }
-        case "paragraph":
-          applyFormatBlockCommand("p");
-          break;
-        case "heading-1":
-          applyFormatBlockCommand("h1");
-          break;
-        case "heading-2":
-          applyFormatBlockCommand("h2");
-          break;
-        case "heading-3":
-          applyFormatBlockCommand("h3");
-          break;
-        case "heading-4":
-          applyFormatBlockCommand("h4");
-          break;
-        case "heading-5":
-          applyFormatBlockCommand("h5");
-          break;
-        case "heading-6":
-          applyFormatBlockCommand("h6");
-          break;
-        case "bullet-list":
-          runCommand("insertUnorderedList");
-          break;
-        case "ordered-list":
-          runCommand("insertOrderedList");
-          break;
-        case "quote":
-          applyFormatBlockCommand("blockquote");
-          break;
-        case "code-block":
-          applyFormatBlockCommand("pre");
-          break;
-        case "align-left":
-        case "align-center":
-        case "align-right": {
-          const alignment =
-            command === "align-left"
-              ? "left"
-              : command === "align-center"
-                ? "center"
-                : "right";
-          const selectedBlocks = getSelectedBlockElements(editorRoot);
-          if (selectedBlocks.length === 0) {
-            const currentBlock = getCurrentBlockElement(editorRoot);
-            if (currentBlock) {
-              currentBlock.setAttribute("data-align", alignment);
-            }
-          } else {
-            for (const block of selectedBlocks) {
-              block.setAttribute("data-align", alignment);
-            }
+      } else if (commandKind === "block-format" || commandKind === "list-format") {
+        const handled = executeBlockCommandOnBlocks(command, targetBlocks);
+        if (!handled) {
+          const fallbackBlockTag = resolveBlockTagForCommand(command);
+          const fallbackListTag = resolveListTagForCommand(command);
+          if (fallbackBlockTag) {
+            applyFormatBlockCommand(fallbackBlockTag);
+          } else if (fallbackListTag === "ul") {
+            runCommand("insertUnorderedList");
+          } else if (fallbackListTag === "ol") {
+            runCommand("insertOrderedList");
           }
-          break;
         }
-        case "clear-formatting":
-          runCommand("removeFormat");
-          runCommand("unlink");
-          break;
-        default:
-          break;
+      } else if (commandKind === "alignment") {
+        const alignment = resolveAlignmentForCommand(command);
+        if (alignment) {
+          applyAlignmentToBlocks(targetBlocks, alignment);
+        }
+      } else if (commandKind === "clear-formatting") {
+        runCommand("removeFormat");
+        runCommand("unlink");
       }
 
       saveSelectionRange();
@@ -621,37 +613,16 @@ export function PostRichTextAdapter({
         return;
       }
 
-      const modifier = event.metaKey || event.ctrlKey;
       const key = event.key.toLowerCase();
-
-      if (modifier && key === "b") {
+      const shortcutCommand = resolvePostRichTextShortcutCommand({
+        key,
+        metaKey: event.metaKey,
+        ctrlKey: event.ctrlKey,
+        shiftKey: event.shiftKey,
+      });
+      if (shortcutCommand) {
         event.preventDefault();
-        executeCommand("bold");
-        return;
-      }
-      if (modifier && key === "i") {
-        event.preventDefault();
-        executeCommand("italic");
-        return;
-      }
-      if (modifier && key === "u") {
-        event.preventDefault();
-        executeCommand("underline");
-        return;
-      }
-      if (modifier && key === "k") {
-        event.preventDefault();
-        executeCommand("link");
-        return;
-      }
-      if (modifier && event.shiftKey && key === "7") {
-        event.preventDefault();
-        executeCommand("ordered-list");
-        return;
-      }
-      if (modifier && event.shiftKey && key === "8") {
-        event.preventDefault();
-        executeCommand("bullet-list");
+        executeCommand(shortcutCommand);
         return;
       }
 

@@ -31,7 +31,16 @@ test("normalizePostBlockDocument normalizes blocks and meta", () => {
   expect(result.version).toBe(1);
   expect(result.blocks).toHaveLength(2);
   expect(result.blocks[0]?.id).toBe("hero-heading");
-  expect(result.blocks[0]?.attrs).toEqual({ level: 6 });
+  expect(result.blocks[0]?.attrs).toEqual({
+    align: "left",
+    width: "auto",
+    spacingTop: "md",
+    spacingBottom: "md",
+    textScale: "md",
+    highlight: false,
+    hideOnMobile: false,
+    level: 6,
+  });
   expect(result.blocks[1]?.id).toBe("hero-heading-2");
   expect(result.blocks[1]?.content).toEqual(["one", "two"]);
   expect(result.meta.title).toBe("Launch post");

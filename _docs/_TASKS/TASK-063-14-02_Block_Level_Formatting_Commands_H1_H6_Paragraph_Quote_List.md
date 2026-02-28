@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-14-01  
-**Status:** In Progress (2026-02-28)
+**Status:** Done (2026-02-28)
 
 ---
 
@@ -108,3 +108,8 @@ function applyBlockCommand(cmd: BlockCmd, selection: SelectionCtx) {
 
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (block command execution flow)
+
+---
+
+## Closure Note (2026-02-28)
+Zaimplementowano i objeto testami deterministic path dla block-level commands (`heading-1..6`, `paragraph`, `quote`, `bullet-list`, `ordered-list`) przez `postRichTextCommandEngine.ts` oraz dispatcher w `PostRichTextAdapter.tsx`.

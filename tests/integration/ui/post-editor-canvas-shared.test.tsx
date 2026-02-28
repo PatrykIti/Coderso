@@ -83,7 +83,7 @@ test("PostEditorCanvas renders media placeholder when image is not configured", 
   );
 
   expect(html).toContain("data-post-editor-media-placeholder=\"image\"");
-  expect(html).toContain("Click to configure image");
+  expect(html).toContain("Click to choose image from media library");
 });
 
 test("PostEditorCanvas renders delete control for selected block", () => {

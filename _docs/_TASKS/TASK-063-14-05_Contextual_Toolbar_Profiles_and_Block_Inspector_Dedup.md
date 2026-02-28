@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-14-01, TASK-063-14-04  
-**Status:** In Progress (2026-02-28)
+**Status:** Done (2026-02-28)
 
 ---
 
@@ -98,3 +98,8 @@ const INSPECTOR_FIELDS = ALL_FIELDS.filter((field) => !toolbarOwns(field));
 ## Documentation Updates Required
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
 - `_docs/ARCHITECTURE.md`
+
+---
+
+## Closure Note (2026-02-28)
+Profile routing toolbar zostal ustabilizowany (`resolveToolbarProfileForBlockType`), a deduplikacja toolbar vs inspector potwierdzona testami kontraktowymi.

@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Authoring UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-13  
-**Status:** In Progress (2026-02-28)
+**Status:** Done (2026-02-28)
 
 ---
 
@@ -102,11 +102,18 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 3. Wdrozono deduplikacje toolbar vs `BlockInspector` dla alignment/text-scale na blokach tekstowych.
 4. Dodano testy unit dla profile matrix i ownership inspector/toolbars.
 
-## Remaining Work (for block-by-block pass)
-1. Wydzielic i ustabilizowac deterministic command engine dla komend blokowych i inline (`063-14-02..04`).
-2. Domknac kontrakt semantyki list command vs dedykowany `list` block oraz opis ownership (`063-14-04`, `063-14-05`).
-3. Dolozyc brakujace testy kontraktowe richtext command/selection/dedup (`063-14-02..05`).
-4. Uruchomic pelne QA gates i zsynchronizowac docs/changelog/task board (`063-14-06`).
+## Closure Update (2026-02-28)
+1. Wydzielono deterministic command engine (`postRichTextCommandEngine.ts`) i podpieto go do adaptera richtext.
+2. Utrwalono semantyke komend blokowych (`paragraph`, `quote`, `heading-1..6`, `bullet-list`, `ordered-list`) i alignment.
+3. Domknieto profile contextual toolbar + routing profilu z canvasu oraz ownership split toolbar vs inspector.
+4. Dodano testy kontraktowe/unit:
+   - `post-richtext-command-engine`,
+   - `post-richtext-adapter-command-dispatch`,
+   - `post-editor-canvas-toolbar-profile-routing`,
+   - `post-editor-richtext-command-contract`,
+   - `post-editor-richtext-selection-contract`,
+   - `post-editor-toolbar-inspector-dedup`.
+5. QA gates zakonczone sukcesem: `lint`, `lint:types`, pelna regresja `tests/unit + tests/integration + tests/perf + tests/security`.
 
 ---
 

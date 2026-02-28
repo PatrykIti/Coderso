@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-14-02  
-**Status:** In Progress (2026-02-28)
+**Status:** Done (2026-02-28)
 
 ---
 
@@ -93,3 +93,8 @@ function applyHighlight(selection: Range) {
 
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (inline range processing rules)
+
+---
+
+## Closure Note (2026-02-28)
+Utrzymano stabilnosc multiline `highlight` i inline command execution path przy zachowaniu struktury blokow; kontrakt pokrywaja testy selection/command i pelna regresja.

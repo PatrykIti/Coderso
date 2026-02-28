@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 327 | 2026-02-28 | TASK-063-14 richtext command reliability closure and qa gate completion | Admin/UI |
 | 326 | 2026-02-27 | TASK-063-14 richtext command reliability phase 1 and documentation sync | Admin/UI |
 | 325 | 2026-02-27 | TASK-063-13 post editor authoring stability and parity hardening | Admin/UI |
 | 324 | 2026-02-27 | TASK-063-12 post editor block delete affordances (list view + canvas) | Admin/UI |

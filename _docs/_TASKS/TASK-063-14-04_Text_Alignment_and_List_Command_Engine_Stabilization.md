@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-14-02, TASK-063-14-03  
-**Status:** In Progress (2026-02-28)
+**Status:** Done (2026-02-28)
 
 ---
 
@@ -97,3 +97,8 @@ function applyAlign(alignment: "left" | "center" | "right", selection: Selection
 
 ## Documentation Updates Required
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md` (alignment/list decisions)
+
+---
+
+## Closure Note (2026-02-28)
+Domknieto command engine dla `align-left/center/right` oraz list toggle (`ul/ol <-> p`) z jednoznaczna semantyka wspolistnienia richtext list command i dedykowanego `list` block.
