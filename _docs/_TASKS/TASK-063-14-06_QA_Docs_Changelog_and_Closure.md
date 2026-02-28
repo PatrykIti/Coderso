@@ -22,6 +22,15 @@ Domknac walidacje, dokumentacje i changelog dla taska `TASK-063-14`.
 
 ---
 
+## Closure Checklist (Hard Gate)
+1. Wszystkie taski `TASK-063-14-01..06` maja status `Done` z data i krotkim closure note.
+2. Wyniki testow (z sekcji "Testing Requirements (Target)") sa udokumentowane w changelog entry.
+3. `_docs/_TASKS/README.md` pokazuje `TASK-063-14` w sekcji `Done`.
+4. `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md` zawiera final command matrix + ownership split (bez TODO).
+5. Changelog ma finalny wpis zamykajacy (nie `phase 1`), a `_docs/_CHANGELOG/README.md` ma index entry.
+
+---
+
 ## Detailed File-Level Plan
 1. `_docs/_TASKS/README.md`
    - statusy `TASK-063-14` i subtaskow.
@@ -38,17 +47,34 @@ Domknac walidacje, dokumentacje i changelog dla taska `TASK-063-14`.
 1. Wszystkie taski `063-14-01..06` maja status `Done`.
 2. Changelog i board sa zsynchronizowane.
 3. QA gates przechodza bez bledow.
+4. Final docs jasno opisuja semantyke komend i ownership, bez niejednoznacznosci implementacyjnych.
 
 ---
 
-## Testing Requirements
-- Mandatory:
+## Testing Requirements (Target)
+- Mandatory quality gates:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-  - `bun test tests/unit tests/integration tests/perf tests/security`
-- Plus targeted:
+- Required richtext command suites:
+  - `bun test tests/unit/posts/post-richtext-command-engine.test.ts`
   - `bun test tests/unit/posts/post-richtext-serializer.test.ts`
-  - `bun test tests/integration/ui/post-editor-richtext-commands.test.tsx`
+  - `bun test tests/unit/posts/post-paste-normalizer.test.ts`
+  - `bun test tests/unit/ui/post-editor-richtext-toolbar-profiles.test.tsx`
+  - `bun test tests/unit/ui/post-editor-block-inspector-ownership.test.tsx`
+  - `bun test tests/unit/ui/post-richtext-adapter-command-dispatch.test.tsx`
+  - `bun test tests/unit/ui/post-editor-canvas-toolbar-profile-routing.test.tsx`
+  - `bun test tests/integration/ui/post-editor-richtext-command-contract.test.tsx`
+  - `bun test tests/integration/ui/post-editor-richtext-selection-contract.test.tsx`
+  - `bun test tests/integration/ui/post-editor-toolbar-inspector-dedup.test.tsx`
+- Broader UI regression for post editor shell:
+  - `bun test tests/integration/ui/post-editor-canvas-shared.test.tsx`
+  - `bun test tests/integration/ui/post-editor-writing-canvas-flow.test.tsx`
+  - `bun test tests/integration/ui/post-block-inspector.test.tsx`
+  - `bun test tests/integration/ui/post-richtext-toolbar.test.tsx`
+  - `bun test tests/integration/ui/post-editor-paste-from-word.test.tsx`
+  - `bun test tests/integration/ui/post-editor-paste-image.test.tsx`
+- Full regression before closure:
+  - `bun test tests/unit tests/integration tests/perf tests/security`
 
 ---
 
@@ -57,3 +83,4 @@ Domknac walidacje, dokumentacje i changelog dla taska `TASK-063-14`.
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/<new-entry>.md`
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
+- `_docs/ARCHITECTURE.md`

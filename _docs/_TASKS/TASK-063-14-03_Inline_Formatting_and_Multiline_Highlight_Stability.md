@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-14-02  
-**Status:** In Progress (2026-02-27)
+**Status:** In Progress (2026-02-28)
 
 ---
 
@@ -18,16 +18,34 @@ Naprawic formatowanie inline dla wieloliniowych selekcji, szczegolnie `highlight
 1. Ustabilizowac `highlight` na zakresach obejmujacych wiele linii.
 2. Utrzymac strukture blokowa (`p/h*/blockquote/li`) po formatowaniu.
 3. Zachowac poprawnosc dla `bold/italic/underline/strike/link` na granicach linii.
+4. Zapewnic idempotentna normalizacje inline marks po zapisie/odswiezeniu.
+
+---
+
+## Inline Behavior Contract (Locked)
+1. `Highlight`:
+   - na multiline selection wrapuje tylko text-runs, bez flattenowania blokow,
+   - nie scala osobnych akapitow/naglowkow w jeden blok.
+2. `bold/italic/underline/strike`:
+   - dzialaja na granicach blokow i nie gubia tekstu na granicach runow.
+3. `link`:
+   - collapsed selection: wstawia poprawny `<a ...>label</a>`,
+   - range selection: wrapuje istniejacy tekst, bez dopisywania duplikatow.
+4. `clear-formatting`:
+   - usuwa inline marks bez degradacji struktury blokowej.
 
 ---
 
 ## Detailed File-Level Plan
-1. `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx`
-   - wdrozyc range-safe `applyInlineCommand`.
-   - dla multiline selection iterowac po text runs per block zamiast flatten do jednego run.
-2. `core/services/posts/editor/postRichTextSerializer.ts`
-   - upewnic sie, ze serializer nie scala blokow po inline markach.
-3. `core/services/posts/editor/postPasteNormalizer.ts`
+1. `core/admin/ui/posts/editor/richtext/postRichTextCommandEngine.ts` (new/extended)
+   - dodac range-safe `applyInlineCommand` dla `highlight` i pozostalych marks.
+   - unikac flattenowania selekcji do jednego text run.
+2. `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx`
+   - podpiac inline command path do engine.
+   - utrzymac poprawne restore/save selection po komendzie.
+3. `core/services/posts/editor/postRichTextSerializer.ts`
+   - upewnic sie, ze serializer nie scala blokow po inline markach i jest idempotentny.
+4. `core/services/posts/editor/postPasteNormalizer.ts`
    - potwierdzic brak regresji mapowania do nodes po multiline marks.
 
 ---
@@ -49,16 +67,27 @@ function applyHighlight(selection: Range) {
 1. `Highlight` na 5+ liniach nie skleja tekstu do jednej linii.
 2. Struktura akapitow i naglowkow zostaje zachowana.
 3. Inne komendy inline nadal dzialaja poprawnie.
+4. Wynik po serialize/deserialize pozostaje semantycznie rownowazny (bez utraty markow).
 
 ---
 
-## Testing Requirements
-- Unit (new):
+## Testing Requirements (Target)
+- Unit:
+  - `tests/unit/posts/post-richtext-command-engine.test.ts`
+    - multiline `highlight` across `p + h2 + p`.
+    - `bold/italic/underline/strike` na selekcji obejmujacej granice blokow.
+    - `clear-formatting` usuwa marks, ale zachowuje bloki.
+    - `link` collapsed vs non-collapsed selection.
   - `tests/unit/posts/post-richtext-serializer.test.ts`
-    - multiline mark preservation.
-- Integration (new):
-  - `tests/integration/ui/post-editor-richtext-selection.test.tsx`
-    - multiline highlight across paragraphs/headings.
+    - multiline mark preservation po serialize.
+    - idempotency dla zagniezdzonych markow (`strong/em/mark/code/a`).
+  - `tests/unit/posts/post-paste-normalizer.test.ts`
+    - brak regresji mapowania `mark/code/link` po paste-normalization.
+- Integration/contract:
+  - `tests/integration/ui/post-editor-richtext-selection-contract.test.tsx` (new)
+    - highlight na multiline selection (`paragraph + heading + paragraph`).
+    - link command na selection collapsed i non-collapsed.
+    - clear-formatting na fragmencie z wieloma markami.
 
 ---
 

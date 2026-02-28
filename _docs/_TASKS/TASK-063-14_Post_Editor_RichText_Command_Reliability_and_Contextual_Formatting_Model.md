@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Authoring UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-13  
-**Status:** In Progress (2026-02-27)
+**Status:** In Progress (2026-02-28)
 
 ---
 
@@ -21,10 +21,11 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 
 ## Scope
 1. Zdefiniowac kontrakt zachowania wszystkich komend rich text i mapowanie komenda -> efekt.
-2. Ustabilizowac engine komend formatowania blokowego i inline.
+2. Ustabilizowac engine komend formatowania blokowego i inline (deterministyczny flow + normalizacja wyniku).
 3. Wprowadzic contextual toolbar profiles per block type.
 4. Rozdzielic ownership opcji: `toolbar` vs `Block inspector` (bez dublowania).
 5. Dodac pelne testy unit/integration dla kazdej komendy i scenariuszy selection.
+6. Domknac semantyke `toolbar list command` vs dedykowany `list` block i opisac to w dokumentacji parity.
 
 ---
 
@@ -34,6 +35,8 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 3. `Paragraph` command ma sluzyc do powrotu do normalnego akapitu (np. z heading/quote), a nie byc no-op.
 4. Opcje obecne na toolbarze nie sa duplikowane w prawym `Block` inspector; inspector zostawia tylko opcje niedostepne z toolbar.
 5. `Heading` block dostaje ograniczony zestaw opcji (mniej niz `paragraph` i `writing-canvas`).
+6. Komendy blokowe (`paragraph`, `h1..h6`, `quote`, `bullet-list`, `ordered-list`, `align-*`) musza miec jawny deterministic path i testy kontraktowe; `execCommand` moze pozostac tylko jako fallback kompatybilnosci.
+7. Status `Done` dla `TASK-063-14` jest mozliwy dopiero po `TASK-063-14-06` oraz po przejsciu wszystkich testow z sekcji "Testing Requirements (Target)".
 
 ---
 
@@ -50,6 +53,7 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 ## Files to Create / Change (Planned)
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx`
 - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx`
+- `core/admin/ui/posts/editor/richtext/postRichTextCommandEngine.ts` (new)
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx`
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx`
 - `core/admin/ui/posts/editor/inspector/inspectorSchemas.ts`
@@ -57,9 +61,13 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 - `core/services/posts/editor/postRichTextSanitizer.ts`
 - `tests/unit/posts/post-richtext-serializer.test.ts`
 - `tests/unit/posts/post-paste-normalizer.test.ts`
-- `tests/unit/ui/post-editor-richtext-toolbar-profiles.test.ts`
-- `tests/integration/ui/post-editor-richtext-commands.test.tsx`
-- `tests/integration/ui/post-editor-richtext-selection.test.tsx`
+- `tests/unit/posts/post-richtext-command-engine.test.ts` (new)
+- `tests/unit/ui/post-editor-richtext-toolbar-profiles.test.tsx`
+- `tests/unit/ui/post-editor-block-inspector-ownership.test.tsx`
+- `tests/unit/ui/post-richtext-adapter-command-dispatch.test.tsx` (new)
+- `tests/integration/ui/post-editor-richtext-command-contract.test.tsx` (new)
+- `tests/integration/ui/post-editor-richtext-selection-contract.test.tsx` (new)
+- `tests/integration/ui/post-editor-toolbar-inspector-dedup.test.tsx` (new)
 
 ---
 
@@ -79,7 +87,9 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 3. `Highlight` nie skleja wieloliniowego tekstu do jednej linii.
 4. Toolbar jest contextual per block type i nie pokazuje opcji bez sensu.
 5. Prawy panel `Block` nie duplikuje opcji obecnych na toolbarze.
-6. Lint/types + dedykowane testy richtext sa zielone.
+6. Semantyka `toolbar list command` vs dedykowany `list` block jest jawna, spisana i pokryta testami.
+7. `TASK-063-14-01..06` maja status `Done`.
+8. Lint/types + docelowy plan testow richtext jest zielony.
 
 ---
 
@@ -93,20 +103,27 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 4. Dodano testy unit dla profile matrix i ownership inspector/toolbars.
 
 ## Remaining Work (for block-by-block pass)
-1. Zweryfikowac i dopracowac command behavior block-by-block w runtime QA (szczegolnie edge-cases selekcji).
-2. Dopracowac semantyke list command vs dedykowany `list` block na podstawie testow praktycznych.
-3. Domknac `TASK-063-14-06` (full regression, final docs/changelog closure).
+1. Wydzielic i ustabilizowac deterministic command engine dla komend blokowych i inline (`063-14-02..04`).
+2. Domknac kontrakt semantyki list command vs dedykowany `list` block oraz opis ownership (`063-14-04`, `063-14-05`).
+3. Dolozyc brakujace testy kontraktowe richtext command/selection/dedup (`063-14-02..05`).
+4. Uruchomic pelne QA gates i zsynchronizowac docs/changelog/task board (`063-14-06`).
 
 ---
 
-## Testing Requirements
+## Testing Requirements (Target)
 - Mandatory gates:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
-- Targeted suites (minimum):
-  - richtext command unit tests (serializer + adapter command mapping)
-  - toolbar profile unit tests (per block type)
-  - integration tests dla multiline selection, heading/paragraph/quote/list/align/highlight
+- Required richtext command suites:
+  - `bun test tests/unit/posts/post-richtext-command-engine.test.ts`
+  - `bun test tests/unit/posts/post-richtext-serializer.test.ts`
+  - `bun test tests/unit/posts/post-paste-normalizer.test.ts`
+  - `bun test tests/unit/ui/post-editor-richtext-toolbar-profiles.test.tsx`
+  - `bun test tests/unit/ui/post-editor-block-inspector-ownership.test.tsx`
+  - `bun test tests/unit/ui/post-richtext-adapter-command-dispatch.test.tsx`
+  - `bun test tests/integration/ui/post-editor-richtext-command-contract.test.tsx`
+  - `bun test tests/integration/ui/post-editor-richtext-selection-contract.test.tsx`
+  - `bun test tests/integration/ui/post-editor-toolbar-inspector-dedup.test.tsx`
 - Full regression before closure:
   - `bun test tests/unit tests/integration tests/perf tests/security`
 
@@ -114,7 +131,6 @@ Domknac problemy z niedzialajacymi komendami paska formatowania oraz uporzadkowa
 
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
-- `_docs/CODERSO_MODULES.md`
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
