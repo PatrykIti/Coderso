@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 29 tasks
-- **In Progress:** 4 tasks
+- **In Progress:** 5 tasks
 - **Done:** 550 tasks
 
 ---
@@ -78,6 +78,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
+| TASK-063-16-19 | Section Toolbar Type Profiles | High | Medium | Type converts section + narrow per-block toolbar options |
 
 ---
 
