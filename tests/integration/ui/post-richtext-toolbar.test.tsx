@@ -5,13 +5,21 @@ import { renderAdminUi } from "../../utils/adminRouterRender";
 
 test("PostRichTextAdapter renders toolbar and editor shortcuts", () => {
   const html = renderAdminUi(
-    <PostRichTextAdapter value="<p>Hello</p>" onChange={() => undefined} />
+    <PostRichTextAdapter
+      value="<p>Hello</p>"
+      onChange={() => undefined}
+      fontFamily="sans"
+      onFontFamilyChange={() => undefined}
+      baseTextScale="md"
+      onBaseTextScaleChange={() => undefined}
+    />
   );
 
   expect(html).toContain("Headings");
   expect(html).toContain("List");
   expect(html).toContain("Code");
   expect(html).toContain("More formatting");
+  expect(html).toContain("Typography reads from block");
   expect(html).toContain('aria-label="Bold"');
   expect(html).toContain('aria-label="Italic"');
   expect(html).toContain('aria-label="Link"');
