@@ -30,6 +30,11 @@ test("serializePostRichText normalizes alignment attributes", () => {
   expect(serialized).toBe(`<h2 data-align="center">Title</h2>`);
 });
 
+test("serializePostRichText preserves data-align attributes", () => {
+  const serialized = serializePostRichText(`<p data-align="right">Aligned</p>`);
+  expect(serialized).toBe(`<p data-align="right">Aligned</p>`);
+});
+
 test("serializePostRichText keeps contenteditable entities stable", () => {
   const first = serializePostRichText("Hello&nbsp;world &amp; team");
   const second = serializePostRichText(first);

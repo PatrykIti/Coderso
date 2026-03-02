@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 338 | 2026-03-02 | TASK-063-16-13 section alignment visual styles | Admin/UI |
 | 337 | 2026-03-02 | TASK-063-16-12 section inline code visual styles | Admin/UI |
 | 336 | 2026-03-02 | TASK-063-16-11 section inline code caret wrap | Admin/UI |
 | 335 | 2026-03-02 | TASK-063-16-10 section list strike code and clear formatting | Admin/UI |

@@ -178,6 +178,18 @@
     font-family: var(--font-mono);
   }
 
+  .post-editor-richtext [data-align="left"] {
+    text-align: left;
+  }
+
+  .post-editor-richtext [data-align="center"] {
+    text-align: center;
+  }
+
+  .post-editor-richtext [data-align="right"] {
+    text-align: right;
+  }
+
   .post-editor-richtext code {
     border: 1px solid var(--admin-base-border);
     background: var(--admin-base-surface);
