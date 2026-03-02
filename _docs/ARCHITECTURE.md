@@ -108,6 +108,9 @@ przez `setup.completed=true`.
     - autosave i save-before-preview uzywaja `silent sync` (bez `hydrate` reducera),
     - editor zachowuje lokalny canvas state bez wizualnego reloadu sekcji podczas runtime preview,
     - full `hydrate` pozostaje dla explicit refresh/restore flow.
+  - **TASK-061-08 (done):** QA/docs/changelog closure dla writing-canvas i smart paste:
+    - lint, types i pełny regression suite domkniete,
+    - dokumentacja i changelog zsynchronizowane z finalnym kontraktem.
   - **TASK-062 (done):** dynamiczny spis tresci (TOC) dla posts:
     - nowy `toc` block type jest dostepny w inserterze/ribbon i moze byc umieszczony w dowolnym miejscu dokumentu,
     - runtime buduje heading index z `heading` blocks i `writing-canvas` heading nodes, a `toc` renderuje dynamiczne linki bez recznej synchronizacji,

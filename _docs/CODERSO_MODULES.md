@@ -153,11 +153,11 @@ const sections = buildDefaultNavSections({
   - insert flow foundation moved do toolbar/ribbon; final primary insert entrypoint jest doprecyzowany w `063-11` (`Document Outline +`),
   - list view outline w kompaktowym ratio (`min 220`, `max 320`) i labels-only rows,
   - contextual details behavior (`Document`/`Block`) przy zachowaniu focusu/selekcji.
-- 061 (in progress): Writing Canvas + smart paste hardening:
+- 061 done: Writing Canvas + smart paste hardening:
   - 061-01..061-07 done: UX contract, writing-canvas block model, smart paste pipeline, clipboard image upload, image wrap semantics, writing-first shell integration, and runtime parity/compatibility,
   - posts now default to `writing-canvas` on empty document and expose writing-first insert actions (`Add writing section`, `Add CTA block`, `Add embed block`, `Add image block`),
   - runtime read path converts legacy text blocks to `writing-canvas` segments without destructive migration and exposes runtime warning diagnostics,
-  - pending 061-08: final rollout QA/docs/changelog closure.
+  - 061-08 done: final rollout QA/docs/changelog closure.
 - 063-02 done: Gutenberg-parity shell region foundation delivered:
   - centralized panel state hook `usePostEditorLayout` (`list-view`, `inserter`, `details`),
   - regionized shell composition (`PostEditorLayout`, `PostEditorRegions`) with explicit `header/content/secondary-sidebar/sidebar/footer`,

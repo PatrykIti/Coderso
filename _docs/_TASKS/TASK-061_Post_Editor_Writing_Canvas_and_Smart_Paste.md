@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Content Authoring  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-057, TASK-060  
-**Status:** In Progress (2026-02-22)
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -109,3 +109,4 @@ Obecny model jest technicznie poprawny, ale mniej intuicyjny dla scenariusza:
 - `TASK-061-06` completed: writing-first editor integration delivered (default writing-canvas, ribbon quick actions, logical list view labels, and canvas/details context updates).
 - `TASK-061-07` completed: runtime parity and compatibility layer delivered (`writing-canvas` runtime mapping/renderer, legacy read-path adapter to writing segments, and runtime warning instrumentation).
 - `TASK-061-09` completed: autosave i save-before-preview przeszly na silent sync (bez hydrate), co usuwa reload canvasu podczas runtime preview i regularnego autosave.
+- `TASK-061-08` completed: full QA/docs/changelog/kanban closure executed with `bun test:full`.

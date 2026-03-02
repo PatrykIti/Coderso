@@ -5,7 +5,7 @@
 **Category:** QA/Documentation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-061-01, TASK-061-02, TASK-061-03, TASK-061-04, TASK-061-05, TASK-061-06, TASK-061-07  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -30,7 +30,7 @@ Domknac TASK-061 przez pelna walidacje techniczna, testy, dokumentacje i synchro
 ```sh
 bun --cwd core lint
 bun --cwd core lint:types
-bun test
+bun test:full
 ```
 
 ## Acceptance Criteria
@@ -41,6 +41,7 @@ bun test
 ## Testing Requirements
 - Full regression matrix.
 - Focused suites for paste/media/wrap/runtime.
+  - `bun test:full`
 
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
@@ -48,3 +49,7 @@ bun test
 - `_docs/CODERSO_MODULES.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-03-02)
+- Ran `bun --cwd core lint`, `bun --cwd core lint:types`, and `bun test:full`.
+- Docs/changelog/kanban synced with final writing-canvas contract.

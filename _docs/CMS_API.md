@@ -626,6 +626,7 @@ Editor save behavior (update `TASK-061-09`):
 - autosave i save-before-preview dzialaja jako client-side `silent sync` (bez ponownego hydrate dokumentu w editor state),
 - endpointy API i payloady pozostaja bez zmian,
 - full hydrate jest wykorzystywany tylko dla explicit refresh/restore konfliktow.
+- QA closure (update `TASK-061-08`): lint/types + full regression suite przeszly, a kontrakt editora jest uznany za finalny.
 
 Editor header action flow (update `TASK-063-11`):
 - prawa sekcja headera utrzymuje kontrakt:

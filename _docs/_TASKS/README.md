@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
-- **In Progress:** 3 tasks
-- **Done:** 565 tasks
+- **To Do:** 17 tasks
+- **In Progress:** 2 tasks
+- **Done:** 567 tasks
 
 ---
 
@@ -39,7 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
@@ -63,7 +62,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
 
@@ -73,6 +71,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: full regression, docs sync, changelog, kanban closure |
+| TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | Done: writing-canvas rollout fully closed (061-01..09) |
 | TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | Done: details, shortcuts, focus, QA, docs, and final closure complete |
 | TASK-063-09-02 | Docs Changelog and Kanban Closure | High | Medium | Done: docs/changelog/board synchronized after final regression |
 | TASK-063-09-01 | Regression Test Execution Plan | High | Medium | Done: lint/types/tests executed with QA rollout report |
