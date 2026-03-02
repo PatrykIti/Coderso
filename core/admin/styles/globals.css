@@ -149,6 +149,43 @@
     margin-bottom: 0;
   }
 
+  .post-editor-richtext h1,
+  .post-editor-richtext h2,
+  .post-editor-richtext h3,
+  .post-editor-richtext h4,
+  .post-editor-richtext h5,
+  .post-editor-richtext h6 {
+    font-weight: 600;
+    line-height: 1.2;
+    margin: 0.9rem 0 0.4rem;
+  }
+
+  .post-editor-richtext h1 {
+    font-size: 2.25rem;
+  }
+
+  .post-editor-richtext h2 {
+    font-size: 1.875rem;
+  }
+
+  .post-editor-richtext h3 {
+    font-size: 1.5rem;
+  }
+
+  .post-editor-richtext h4 {
+    font-size: 1.25rem;
+  }
+
+  .post-editor-richtext h5 {
+    font-size: 1.125rem;
+  }
+
+  .post-editor-richtext h6 {
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
   .post-editor-richtext img[data-wrap="none"] {
     float: none;
     display: block;

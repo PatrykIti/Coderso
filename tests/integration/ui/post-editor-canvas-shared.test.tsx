@@ -94,6 +94,38 @@ test("PostEditorCanvas preview uses richtext styling for section blocks", () => 
   expect(html).toContain("post-editor-richtext");
 });
 
+test("PostEditorCanvas preview renders heading markup for section nodes", () => {
+  const html = renderToString(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "block-1",
+            type: "writing-canvas",
+            attrs: {},
+            content: {
+              version: 1,
+              nodes: [{ id: "node-1", type: "heading", level: 2, text: "<h2>Heading</h2>" }],
+            },
+          },
+        ],
+      }}
+      title="Heading preview"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  expect(html).toContain("<h2");
+  expect(html).toContain("Heading");
+});
+
 test("PostEditorCanvas renders media placeholder when image is not configured", () => {
   const html = renderToString(
     <PostEditorCanvas

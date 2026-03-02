@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 29 tasks
 - **In Progress:** 4 tasks
-- **Done:** 538 tasks
+- **Done:** 539 tasks
 
 ---
 
@@ -85,6 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-16-07 | Section Heading Visual Styles | High | Small | Done: explicit H1-H6 styling for section canvas and preview |
 | TASK-063-16-06 | Section Paragraph Quote Visual Styles | High | Small | Done: blockquote styling added for section canvas + preview surface |
 | TASK-063-16-05 | Section Paragraph Quote Div Alias Normalization | High | Small | Done: div block aliases normalized to paragraph semantics for section commands |
 | TASK-063-16 | Post Editor Section Paragraph Quote Node Boundary Commands | High | Large | Done: deterministic `paragraph/quote` node-boundary behavior in section with stable roundtrip persistence and QA/docs/changelog closure |
