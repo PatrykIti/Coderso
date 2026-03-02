@@ -6,6 +6,7 @@ import {
   Code2,
   ChevronDown,
   Eraser,
+  Heading,
   Heading1,
   Heading2,
   Heading3,
@@ -110,7 +111,7 @@ const advancedActions: ActionButton[] = [
 export const typeGroupActions: ActionButton[] = [
   { id: "type-section", label: "Section", icon: Layers },
   { id: "type-paragraph", label: "Paragraph", icon: Pilcrow },
-  { id: "type-heading", label: "Heading", icon: Heading2 },
+  { id: "type-heading", label: "Heading", icon: Heading },
   { id: "type-quote", label: "Quote", icon: Quote },
 ];
 
@@ -375,7 +376,7 @@ export function PostRichTextToolbar({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-1.5 rounded-lg border bg-muted/30 p-2">
+      <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-muted/30 p-2">
         {visiblePrimaryActions.map((action) => (
           <Button
             key={action.id}
@@ -428,7 +429,7 @@ export function PostRichTextToolbar({
       </div>
 
       {showTypographyRow ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-2">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/30 p-2">
           {hasTypographyControls ? (
             <div className="flex flex-wrap items-center gap-2">
               {onFontFamilyChange ? (
@@ -499,7 +500,7 @@ export function PostRichTextToolbar({
       {showAdvanced && hasAdvancedActions ? (
         <div
           id="post-richtext-advanced-actions"
-          className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed bg-background/50 p-2"
+          className="flex flex-wrap items-center gap-1.5 rounded-lg bg-background/50 p-2"
         >
           {visibleAdvancedActions.map((action) => (
             <Button

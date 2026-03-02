@@ -279,7 +279,7 @@ function PostCanvasBlockItem({
       data-post-editor-block-id={block.id}
       className={cn(
         "group relative rounded-lg px-1 py-1.5 transition",
-        selected ? "ring-1 ring-primary/30" : "ring-0"
+        selected ? "ring-primary/30" : "ring-0"
       )}
       onClick={(event) => {
         event.stopPropagation();

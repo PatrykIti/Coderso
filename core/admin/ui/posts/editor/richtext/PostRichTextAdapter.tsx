@@ -1140,7 +1140,7 @@ export function PostRichTextAdapter({
         baseTextScale={baseTextScale}
         onBaseTextScaleChange={onBaseTextScaleChange ? handleBaseTextScaleChange : undefined}
       />
-      <div className="relative rounded-lg border bg-background">
+      <div className="relative rounded-lg bg-background">
         {!hasValue ? (
           <div
             className={cn(

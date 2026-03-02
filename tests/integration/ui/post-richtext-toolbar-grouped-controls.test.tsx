@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
+import { Heading } from "lucide-react";
 
 import {
   PostRichTextToolbar,
   headingLevelActions,
+  typeGroupActions,
 } from "../../../core/admin/ui/posts/editor/richtext/PostRichTextToolbar";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
@@ -23,6 +25,12 @@ test("heading level actions include icons for H5 and H6", () => {
 
   expect(h5?.icon).toBeTruthy();
   expect(h6?.icon).toBeTruthy();
+});
+
+test("type dropdown uses generic heading icon", () => {
+  const headingType = typeGroupActions.find((action) => action.id === "type-heading");
+
+  expect(headingType?.icon).toBe(Heading);
 });
 
 test("heading toolbar profile hides grouped controls that are out of scope", () => {
