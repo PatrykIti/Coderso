@@ -97,6 +97,9 @@ const escapeHtml = (value: string) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 
+const editorBlockTagSet = new Set<string>([...postRichTextBlockTagSet, "div"]);
+const editorBlockSelector = Array.from(editorBlockTagSet).join(",");
+
 const runCommand = (command: string, value?: string) => {
   if (typeof document === "undefined") return false;
   try {
@@ -118,7 +121,7 @@ const getCurrentBlockElement = (editorRoot: HTMLElement) => {
   while (node && node !== editorRoot) {
     if (
       node instanceof HTMLElement &&
-      postRichTextBlockTagSet.has(node.tagName.toLowerCase())
+      editorBlockTagSet.has(node.tagName.toLowerCase())
     ) {
       return node;
     }
@@ -132,7 +135,7 @@ const getClosestBlockElement = (node: Node | null, editorRoot: HTMLElement) => {
   while (cursor && cursor !== editorRoot) {
     if (
       cursor instanceof HTMLElement &&
-      postRichTextBlockTagSet.has(cursor.tagName.toLowerCase())
+      editorBlockTagSet.has(cursor.tagName.toLowerCase())
     ) {
       return cursor;
     }
@@ -146,11 +149,7 @@ const getSelectedBlockElements = (editorRoot: HTMLElement) => {
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return [] as HTMLElement[];
 
-  const allBlocks = Array.from(
-    editorRoot.querySelectorAll<HTMLElement>(
-      Array.from(postRichTextBlockTagSet).join(",")
-    )
-  );
+  const allBlocks = Array.from(editorRoot.querySelectorAll<HTMLElement>(editorBlockSelector));
   if (allBlocks.length === 0) return [] as HTMLElement[];
 
   const range = selection.getRangeAt(0);

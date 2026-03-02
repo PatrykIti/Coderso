@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 331 | 2026-03-02 | TASK-063-16-06 section paragraph quote visual styles | Admin/UI |
+| 330 | 2026-03-02 | TASK-063-16-05 section paragraph quote div alias normalization | Admin/UI |
 | 329 | 2026-03-02 | TASK-063-16 section paragraph quote node-boundary command closure | Admin/UI |
 | 328 | 2026-03-02 | TASK-063-15 section writing-canvas hardening and grouped toolbar closure | Admin/UI |
 | 327 | 2026-02-28 | TASK-063-14 richtext command reliability closure and qa gate completion | Admin/UI |

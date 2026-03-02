@@ -133,6 +133,22 @@
     clear: both;
   }
 
+  .post-editor-richtext blockquote {
+    border-left: 3px solid var(--admin-base-border);
+    margin: 0.75rem 0;
+    padding-left: 1rem;
+    color: var(--admin-text-muted);
+    font-style: italic;
+  }
+
+  .post-editor-richtext blockquote > *:first-child {
+    margin-top: 0;
+  }
+
+  .post-editor-richtext blockquote > *:last-child {
+    margin-bottom: 0;
+  }
+
   .post-editor-richtext img[data-wrap="none"] {
     float: none;
     display: block;

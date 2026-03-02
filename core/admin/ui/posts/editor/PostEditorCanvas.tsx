@@ -209,7 +209,7 @@ const renderHtmlPreview = (value: unknown, emptyLabel: string) => {
   }
   return (
     <div
-      className="prose prose-slate max-w-none text-lg leading-relaxed text-slate-700"
+      className="post-editor-richtext prose prose-slate max-w-none text-lg leading-relaxed text-slate-700"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

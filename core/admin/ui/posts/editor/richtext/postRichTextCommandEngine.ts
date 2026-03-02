@@ -60,18 +60,27 @@ export type PostRichTextCommandKind =
 const postRichTextBlockTagValues = Array.from(postRichTextBlockTagSet) as PostRichTextBlockTag[];
 const postRichTextBlockTagSetTyped = new Set<PostRichTextBlockTag>(postRichTextBlockTagValues);
 
+const blockTagAliases: Record<string, PostRichTextBlockTag> = {
+  div: "p",
+};
+
 const isListTag = (tagName: string) => tagName === "ul" || tagName === "ol";
 
-const asBlockTag = (value: string | undefined | null): PostRichTextBlockTag | null => {
+export const normalizePostRichTextBlockTag = (
+  value: string | undefined | null
+): PostRichTextBlockTag | null => {
   if (typeof value !== "string") return null;
   const normalized = value.toLowerCase();
+  if (normalized in blockTagAliases) {
+    return blockTagAliases[normalized] ?? null;
+  }
   return postRichTextBlockTagSetTyped.has(normalized as PostRichTextBlockTag)
     ? (normalized as PostRichTextBlockTag)
     : null;
 };
 
 const getElementTag = (element: HTMLElement): PostRichTextBlockTag | null =>
-  asBlockTag(element.tagName);
+  normalizePostRichTextBlockTag(element.tagName);
 
 const copyElementAttributes = (source: HTMLElement, target: HTMLElement) => {
   for (const attribute of Array.from(source.attributes)) {
@@ -177,7 +186,12 @@ const applyTagToBlock = (block: HTMLElement, targetTag: PostRichTextBlockTag) =>
   const currentTag = getElementTag(block);
   if (!currentTag) return;
 
-  if (currentTag === targetTag) return;
+  if (currentTag === targetTag) {
+    if (block.tagName.toLowerCase() === "div") {
+      createTagReplacement(block, targetTag);
+    }
+    return;
+  }
 
   if (isListTag(currentTag) && targetTag === "p") {
     unwrapListToParagraphs(block);

@@ -4,6 +4,7 @@ import {
   applyCommandToBlockTags,
   applyCommandToRootHtmlWithoutBlocks,
   getPostRichTextCommandKind,
+  normalizePostRichTextBlockTag,
   resolveAlignmentForCommand,
   resolveBlockTagForCommand,
   resolveListTagForCommand,
@@ -89,4 +90,11 @@ test("toolbar profile routing by block type is explicit", () => {
   expect(resolveToolbarProfileForBlockType("callout")).toBe("callout");
   expect(resolveToolbarProfileForBlockType("list")).toBeNull();
   expect(resolveToolbarProfileForBlockType("image")).toBeNull();
+});
+
+test("block tag normalization maps editor divs to paragraphs", () => {
+  expect(normalizePostRichTextBlockTag("div")).toBe("p");
+  expect(normalizePostRichTextBlockTag("p")).toBe("p");
+  expect(normalizePostRichTextBlockTag("blockquote")).toBe("blockquote");
+  expect(normalizePostRichTextBlockTag("section")).toBeNull();
 });
