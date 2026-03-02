@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 341 | 2026-03-02 | TASK-063-16-16 section inline typography list selection | Admin/UI |
 | 340 | 2026-03-02 | TASK-063-16-15 section inline typography preview persistence | Admin/UI |
 | 339 | 2026-03-02 | TASK-063-16-14 section inline typography selection | Admin/UI |
 | 338 | 2026-03-02 | TASK-063-16-13 section alignment visual styles | Admin/UI |

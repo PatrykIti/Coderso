@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 29 tasks
 - **In Progress:** 4 tasks
-- **Done:** 547 tasks
+- **Done:** 548 tasks
 
 ---
 
@@ -85,6 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-16-16 | Section Inline Typography List Selection | High | Small | Done: list markers follow inline typography selection |
 | TASK-063-16-15 | Section Inline Typography Preview Persistence | High | Small | Done: inline typography spans persist in writing-canvas preview/front |
 | TASK-063-16-14 | Section Inline Typography Selection | High | Small | Done: font family/size apply to selection when highlighted |
 | TASK-063-16-13 | Section Alignment Visual Styles | High | Small | Done: align left/center/right visuals for section richtext |

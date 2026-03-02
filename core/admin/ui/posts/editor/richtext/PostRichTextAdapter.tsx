@@ -322,6 +322,33 @@ const resolveCollapsedInlineWrapperRange = (
   return range;
 };
 
+const findInlineTypographySpan = (
+  node: Node | null,
+  editorRoot: HTMLElement
+): HTMLSpanElement | null => {
+  let cursor: HTMLElement | null =
+    node instanceof HTMLElement ? node : node?.parentElement ?? null;
+  while (cursor && cursor !== editorRoot) {
+    if (
+      cursor instanceof HTMLSpanElement &&
+      (cursor.hasAttribute("data-font") || cursor.hasAttribute("data-text-scale"))
+    ) {
+      return cursor;
+    }
+    cursor = cursor.parentElement;
+  }
+  return null;
+};
+
+const applyInlineTypographyAttributes = (
+  element: HTMLElement,
+  attributes: Record<string, string>
+) => {
+  for (const [key, value] of Object.entries(attributes)) {
+    element.setAttribute(key, value);
+  }
+};
+
 const wrapSelectionWithTag = (tagName: "code" | "mark", editorRoot: HTMLElement) => {
   if (typeof window === "undefined") return;
   const selection = window.getSelection();
@@ -388,12 +415,16 @@ const wrapSelectionWithInlineSpan = (
   const wrappedNodes: HTMLElement[] = [];
   for (let index = textRuns.length - 1; index >= 0; index -= 1) {
     const run = textRuns[index];
+    const existingSpan = findInlineTypographySpan(run.node, editorRoot);
+    if (existingSpan) {
+      applyInlineTypographyAttributes(existingSpan, attributes);
+      wrappedNodes.push(existingSpan);
+      continue;
+    }
     const afterStart = run.node.splitText(run.start);
     const afterEnd = afterStart.splitText(run.end - run.start);
     const wrapper = document.createElement("span");
-    for (const [key, value] of Object.entries(attributes)) {
-      wrapper.setAttribute(key, value);
-    }
+    applyInlineTypographyAttributes(wrapper, attributes);
     wrapper.textContent = afterStart.nodeValue ?? "";
     afterStart.parentNode?.replaceChild(wrapper, afterStart);
     wrappedNodes.push(wrapper);
@@ -411,6 +442,29 @@ const wrapSelectionWithInlineSpan = (
   }
 
   return wrappedNodes.length > 0;
+};
+
+export const applyInlineTypographySelection = (
+  editorRoot: HTMLElement,
+  attributes: Record<string, string>
+) => {
+  if (typeof window === "undefined") return false;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+  const range = selection.getRangeAt(0);
+  if (!editorRoot.contains(range.commonAncestorContainer)) return false;
+  if (!selection.toString().trim()) return false;
+
+  const listItems = Array.from(editorRoot.querySelectorAll("li")).filter((item) =>
+    range.intersectsNode(item)
+  );
+  if (listItems.length > 0) {
+    for (const item of listItems) {
+      applyInlineTypographyAttributes(item, attributes);
+    }
+  }
+
+  return wrapSelectionWithInlineSpan(editorRoot, attributes);
 };
 
 const insertHtmlAtCursor = (html: string) => {
@@ -674,7 +728,7 @@ export function PostRichTextAdapter({
       if (!editorRoot) return false;
       editorRoot.focus();
       restoreSelectionRange();
-      const applied = wrapSelectionWithInlineSpan(editorRoot, attributes);
+      const applied = applyInlineTypographySelection(editorRoot, attributes);
       if (!applied) return false;
       saveSelectionRange();
       emitChange();
