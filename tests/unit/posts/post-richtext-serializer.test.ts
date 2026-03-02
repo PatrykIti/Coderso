@@ -35,6 +35,20 @@ test("serializePostRichText preserves data-align attributes", () => {
   expect(serialized).toBe(`<p data-align="right">Aligned</p>`);
 });
 
+test("serializePostRichText preserves inline typography span attributes", () => {
+  const serialized = serializePostRichText(
+    `<p><span data-font="serif" data-text-scale="lg">Styled</span></p>`
+  );
+  expect(serialized).toBe(`<p><span data-font="serif" data-text-scale="lg">Styled</span></p>`);
+});
+
+test("serializePostRichText strips invalid inline typography values", () => {
+  const serialized = serializePostRichText(
+    `<p><span data-font="comic" data-text-scale="huge">Styled</span></p>`
+  );
+  expect(serialized).toBe(`<p><span>Styled</span></p>`);
+});
+
 test("serializePostRichText keeps contenteditable entities stable", () => {
   const first = serializePostRichText("Hello&nbsp;world &amp; team");
   const second = serializePostRichText(first);

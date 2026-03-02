@@ -367,6 +367,52 @@ const wrapSelectionWithTag = (tagName: "code" | "mark", editorRoot: HTMLElement)
   }
 };
 
+const wrapSelectionWithInlineSpan = (
+  editorRoot: HTMLElement,
+  attributes: Record<string, string>
+) => {
+  if (typeof window === "undefined") return false;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+  const range = selection.getRangeAt(0);
+  if (!editorRoot.contains(range.commonAncestorContainer)) return false;
+
+  const selectedText = selection.toString().trim();
+  if (!selectedText) return false;
+
+  const textRuns = collectSelectedTextRuns(range).filter((run) =>
+    editorRoot.contains(run.node)
+  );
+  if (textRuns.length === 0) return false;
+
+  const wrappedNodes: HTMLElement[] = [];
+  for (let index = textRuns.length - 1; index >= 0; index -= 1) {
+    const run = textRuns[index];
+    const afterStart = run.node.splitText(run.start);
+    const afterEnd = afterStart.splitText(run.end - run.start);
+    const wrapper = document.createElement("span");
+    for (const [key, value] of Object.entries(attributes)) {
+      wrapper.setAttribute(key, value);
+    }
+    wrapper.textContent = afterStart.nodeValue ?? "";
+    afterStart.parentNode?.replaceChild(wrapper, afterStart);
+    wrappedNodes.push(wrapper);
+    void afterEnd;
+  }
+
+  if (wrappedNodes.length > 0) {
+    const first = wrappedNodes[wrappedNodes.length - 1];
+    const last = wrappedNodes[0];
+    const nextRange = document.createRange();
+    nextRange.setStartBefore(first);
+    nextRange.setEndAfter(last);
+    selection.removeAllRanges();
+    selection.addRange(nextRange);
+  }
+
+  return wrappedNodes.length > 0;
+};
+
 const insertHtmlAtCursor = (html: string) => {
   if (!html) return false;
   if (runCommand("insertHTML", html)) return true;
@@ -621,6 +667,39 @@ export function PostRichTextAdapter({
     selection.addRange(savedRange);
     return true;
   }, []);
+
+  const applyInlineTypography = useCallback(
+    (attributes: Record<string, string>) => {
+      const editorRoot = editorRef.current;
+      if (!editorRoot) return false;
+      editorRoot.focus();
+      restoreSelectionRange();
+      const applied = wrapSelectionWithInlineSpan(editorRoot, attributes);
+      if (!applied) return false;
+      saveSelectionRange();
+      emitChange();
+      return true;
+    },
+    [emitChange, restoreSelectionRange, saveSelectionRange]
+  );
+
+  const handleFontFamilyChange = useCallback(
+    (nextFontFamily: "sans" | "serif" | "mono") => {
+      const applied = applyInlineTypography({ "data-font": nextFontFamily });
+      if (applied) return;
+      onFontFamilyChange?.(nextFontFamily);
+    },
+    [applyInlineTypography, onFontFamilyChange]
+  );
+
+  const handleBaseTextScaleChange = useCallback(
+    (nextScale: "sm" | "md" | "lg" | "xl") => {
+      const applied = applyInlineTypography({ "data-text-scale": nextScale });
+      if (applied) return;
+      onBaseTextScaleChange?.(nextScale);
+    },
+    [applyInlineTypography, onBaseTextScaleChange]
+  );
 
   const updateSelectedImageState = useCallback(() => {
     const editorRoot = editorRef.current;
@@ -978,9 +1057,9 @@ export function PostRichTextAdapter({
         disabled={disabled || imageUploading}
         profile={toolbarProfile}
         fontFamily={fontFamily}
-        onFontFamilyChange={onFontFamilyChange}
+        onFontFamilyChange={onFontFamilyChange ? handleFontFamilyChange : undefined}
         baseTextScale={baseTextScale}
-        onBaseTextScaleChange={onBaseTextScaleChange}
+        onBaseTextScaleChange={onBaseTextScaleChange ? handleBaseTextScaleChange : undefined}
       />
       <div className="relative rounded-lg border bg-background">
         {!hasValue ? (

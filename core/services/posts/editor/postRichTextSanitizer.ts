@@ -2,6 +2,8 @@ import {
   postRichTextAlignmentSet,
   postRichTextAllowedTagSet,
   postRichTextBlockTagSet,
+  postRichTextFontFamilySet,
+  postRichTextTextScaleSet,
   postRichTextSelfClosingTagSet,
 } from "./postRichTextSchema";
 import {
@@ -54,6 +56,18 @@ const sanitizeAlignment = (value: string | undefined) => {
   return postRichTextAlignmentSet.has(normalized) ? normalized : undefined;
 };
 
+const sanitizeFontFamily = (value: string | undefined) => {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  return postRichTextFontFamilySet.has(normalized) ? normalized : undefined;
+};
+
+const sanitizeTextScale = (value: string | undefined) => {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  return postRichTextTextScaleSet.has(normalized) ? normalized : undefined;
+};
+
 const sanitizeTagAttributes = (tagName: string, rawAttrs: string): string | null => {
   const attributes = parseAttributes(rawAttrs);
   const chunks: string[] = [];
@@ -80,6 +94,17 @@ const sanitizeTagAttributes = (tagName: string, rawAttrs: string): string | null
       sanitizeAlignment(attributes.get("align"));
     if (align) {
       chunks.push(`data-align="${align}"`);
+    }
+  }
+
+  if (tagName === "span") {
+    const font = sanitizeFontFamily(attributes.get("data-font"));
+    if (font) {
+      chunks.push(`data-font="${font}"`);
+    }
+    const scale = sanitizeTextScale(attributes.get("data-text-scale"));
+    if (scale) {
+      chunks.push(`data-text-scale="${scale}"`);
     }
   }
 

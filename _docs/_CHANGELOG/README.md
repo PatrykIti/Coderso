@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 340 | 2026-03-02 | TASK-063-16-15 section inline typography preview persistence | Admin/UI |
+| 339 | 2026-03-02 | TASK-063-16-14 section inline typography selection | Admin/UI |
 | 338 | 2026-03-02 | TASK-063-16-13 section alignment visual styles | Admin/UI |
 | 337 | 2026-03-02 | TASK-063-16-12 section inline code visual styles | Admin/UI |
 | 336 | 2026-03-02 | TASK-063-16-11 section inline code caret wrap | Admin/UI |

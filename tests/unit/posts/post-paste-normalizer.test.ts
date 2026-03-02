@@ -290,3 +290,21 @@ test("writing-canvas roundtrip keeps code-block variant and block alignment attr
   expect(serialized).toContain('<p data-align="right">');
   expect(serialized).toContain('<ul data-align="center">');
 });
+
+test("writing-canvas roundtrip preserves inline typography spans", () => {
+  const next = createWritingCanvasContentFromEditorHtml({
+    html: '<p><span data-font="serif" data-text-scale="xl">Big</span> text</p>',
+  });
+
+  const paragraphNode = next.nodes[0];
+  if (!paragraphNode || paragraphNode.type !== "paragraph") {
+    throw new Error("expected paragraph node");
+  }
+
+  expect(paragraphNode.text).toContain('data-font="serif"');
+  expect(paragraphNode.text).toContain('data-text-scale="xl"');
+
+  const serialized = serializeWritingCanvasContentToHtml(next);
+  expect(serialized).toContain('data-font="serif"');
+  expect(serialized).toContain('data-text-scale="xl"');
+});

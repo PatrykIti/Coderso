@@ -25,7 +25,6 @@ const blockMatcher =
   /<(p|h1|h2|h3|h4|h5|h6|blockquote|pre|ul|ol)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
 const listItemMatcher = /<li\b[^>]*>([\s\S]*?)<\/li>/gi;
 const blockLikeTagsMatcher = /<\/?(p|h[1-6]|blockquote|pre|ul|ol|li)\b[^>]*>/gi;
-const spanTagMatcher = /<\/?span\b[^>]*>/gi;
 const headingLevelClassMatcher = /\b(?:msoheading|heading)\s*[-_]?([1-6])\b/i;
 const headingLevelStyleMatcher = /\bmso-outline-level\s*:\s*([1-6])\b/i;
 const headingStyleNameMatcher =
@@ -199,7 +198,6 @@ const normalizeWordHeadingMarkup = (value: string) => {
 const normalizeInlineRichText = (value: string) => {
   const sanitized = sanitizePostRichTextHtml(value)
     .replace(blockLikeTagsMatcher, "")
-    .replace(spanTagMatcher, "")
     .trim();
   if (!sanitized) {
     return "";

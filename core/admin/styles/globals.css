@@ -190,6 +190,34 @@
     text-align: right;
   }
 
+  .post-editor-richtext [data-font="sans"] {
+    font-family: var(--font-sans);
+  }
+
+  .post-editor-richtext [data-font="serif"] {
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  }
+
+  .post-editor-richtext [data-font="mono"] {
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+  }
+
+  .post-editor-richtext [data-text-scale="sm"] {
+    font-size: 1rem;
+  }
+
+  .post-editor-richtext [data-text-scale="md"] {
+    font-size: 1.125rem;
+  }
+
+  .post-editor-richtext [data-text-scale="lg"] {
+    font-size: 1.25rem;
+  }
+
+  .post-editor-richtext [data-text-scale="xl"] {
+    font-size: 1.5rem;
+  }
+
   .post-editor-richtext code {
     border: 1px solid var(--admin-base-border);
     background: var(--admin-base-surface);
