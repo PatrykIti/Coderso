@@ -97,6 +97,59 @@
   margin-left: 1.5rem;
 }
 
+.post-runtime-blocks h1,
+.post-runtime-blocks h2,
+.post-runtime-blocks h3,
+.post-runtime-blocks h4,
+.post-runtime-blocks h5,
+.post-runtime-blocks h6 {
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 1rem 0 0.4rem;
+}
+
+.post-runtime-blocks h1 {
+  font-size: 2.25rem;
+}
+
+.post-runtime-blocks h2 {
+  font-size: 1.875rem;
+}
+
+.post-runtime-blocks h3 {
+  font-size: 1.5rem;
+}
+
+.post-runtime-blocks h4 {
+  font-size: 1.25rem;
+}
+
+.post-runtime-blocks h5 {
+  font-size: 1.125rem;
+}
+
+.post-runtime-blocks h6 {
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.post-runtime-blocks blockquote {
+  border-left: 3px solid var(--color-border, #e2e8f0);
+  margin: 0.75rem 0;
+  padding-left: 1rem;
+  color: color-mix(in oklab, var(--color-text, #0f172a) 70%, transparent);
+  font-style: italic;
+}
+
+.post-runtime-blocks blockquote > *:first-child {
+  margin-top: 0;
+}
+
+.post-runtime-blocks blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
 @media (max-width: 767px) {
   .post-runtime-richtext img[data-wrap],
   .post-image-layout {

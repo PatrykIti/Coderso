@@ -95,6 +95,11 @@ test("mapPostDocumentForRuntime renders writing-canvas nodes and keeps parity me
                   text: "<code>const value = 42;</code>",
                 },
                 {
+                  id: "node-4b",
+                  type: "quote",
+                  text: "<p>Runtime quote</p>",
+                },
+                {
                   id: "node-5",
                   type: "image",
                   mediaId: "media-writing",
@@ -126,6 +131,8 @@ test("mapPostDocumentForRuntime renders writing-canvas nodes and keeps parity me
   expect(html).toContain("<h1");
   expect(html).toContain("Point A");
   expect(html).toContain("const value = 42;");
+  expect(html).toContain("<blockquote");
+  expect(html).toContain("Runtime quote");
   expect(html).toContain("text-center");
   expect(html).toContain("https://cdn.example.com/media/writing.jpg");
   expect(html).toContain('data-post-runtime-warning-count="0"');

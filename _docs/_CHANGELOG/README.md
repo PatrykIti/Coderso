@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 333 | 2026-03-02 | TASK-063-16-08 runtime heading quote styles | Runtime/UX |
 | 332 | 2026-03-02 | TASK-063-16-07 section heading visual styles | Admin/UI |
 | 331 | 2026-03-02 | TASK-063-16-06 section paragraph quote visual styles | Admin/UI |
 | 330 | 2026-03-02 | TASK-063-16-05 section paragraph quote div alias normalization | Admin/UI |
