@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 29 tasks
 - **In Progress:** 4 tasks
-- **Done:** 552 tasks
+- **Done:** 553 tasks
 
 ---
 
@@ -85,6 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-16-21 | Post Editor Settings Dialog Scroll | Medium | Small | Done: editor settings dialog height clamped with scrollable content |
 | TASK-063-16-20 | Section Toolbar Type Heading Icon | Medium | Small | Done: generic Heading icon used in Type dropdown |
 | TASK-063-16-19 | Section Toolbar Type Profiles | High | Medium | Done: Type converts section blocks and paragraph/heading toolbars are narrowed with inline align/clear |
 | TASK-063-16-18 | Section Toolbar Type Control | High | Medium | Done: type dropdown added, block-type transforms wired for text blocks, list controls kept as separate group |
