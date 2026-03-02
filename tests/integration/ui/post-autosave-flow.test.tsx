@@ -14,11 +14,14 @@ const createBaseProps = () => ({
   onOpenRevisions: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
+  onToggleInserter: () => undefined,
+  inserterVisible: false,
   onToggleFocusMode: () => undefined,
   focusMode: false,
   onToggleOutline: () => undefined,
   outlineVisible: true,
-  onOpenDetails: () => undefined,
+  onToggleDetails: () => undefined,
+  detailsOpen: false,
   onOpenSettings: () => undefined,
 });
 

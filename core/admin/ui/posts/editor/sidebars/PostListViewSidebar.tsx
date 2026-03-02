@@ -58,6 +58,9 @@ export function PostListViewSidebar({
       className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
       data-post-editor-sidebar="document-overview"
       data-post-editor-left-rail-mode={leftRailMode}
+      role="region"
+      aria-label="Document overview sidebar"
+      id="post-editor-document-overview"
     >
       <div className="flex items-center justify-between border-b px-4 py-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
@@ -110,7 +113,10 @@ export function PostListViewSidebar({
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="border-b px-3 py-2">
-          <TabsList className="grid w-full grid-cols-2 bg-muted/40">
+          <TabsList
+            className="grid w-full grid-cols-2 bg-muted/40"
+            aria-label="Document overview tabs"
+          >
             <TabsTrigger value="outline" data-post-editor-left-rail-tab="outline">
               Outline
             </TabsTrigger>

@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-01, TASK-063-02, TASK-063-03, TASK-063-04, TASK-063-05, TASK-063-06, TASK-063-07, TASK-063-08  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -53,4 +53,3 @@ Domknac rollout przebudowy posts editora:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/<new-entry>.md`
-

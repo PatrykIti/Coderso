@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
@@ -12,25 +10,23 @@ import {
   type PostEditorLeftRailMode,
   type PostEditorSecondarySidebar,
 } from "./hooks/usePostEditorLayout";
-import { BlockInspector } from "./inspector/BlockInspector";
-import { DocumentInspector } from "./inspector/DocumentInspector";
+import { PostDetailsSidebar } from "./inspector/PostDetailsSidebar";
 import { PostEditorLayout } from "./layout/PostEditorLayout";
 import { PostEditorCanvas } from "./PostEditorCanvas";
 import { PostEditorTopBar } from "./PostEditorTopBar";
 import { PostRevisionDrawer } from "./PostRevisionDrawer";
+import { PostInserterSidebar } from "./sidebars/PostInserterSidebar";
 import { PostListViewSidebar } from "./sidebars/PostListViewSidebar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 import { PostEditorSettingsDialog } from "./settings/PostEditorSettingsDialog";
 import {
-  DEFAULT_POST_EDITOR_PREFERENCES,
-  normalizePostEditorPreferences,
-  toStoredPostEditorPreferences,
   type PostEditorPreferences,
 } from "./settings/postEditorPreferences";
+import { usePostEditorPreferences } from "./hooks/usePostEditorPreferences";
+import { usePostEditorShortcuts } from "./hooks/usePostEditorShortcuts";
+import { useFocusReturn } from "./hooks/useFocusReturn";
 
 const FOCUS_MODE_STORAGE_KEY = "nextless.posts.editor.focusMode";
-const LEGACY_PREFERENCES_STORAGE_KEY = "nextless.posts.editor.preferences.v1";
-const PREFERENCES_STORAGE_KEY = "nextless.posts.editor.preferences.v2";
 const LAYOUT_STORAGE_KEY = "nextless.posts.editor.layout.v1";
 
 type StoredPostEditorLayoutState = {
@@ -42,38 +38,6 @@ type StoredPostEditorLayoutState = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-const resolveInitialPreferences = (): {
-  preferences: PostEditorPreferences;
-  hasStoredValue: boolean;
-} => {
-  if (typeof window === "undefined") {
-    return {
-      preferences: DEFAULT_POST_EDITOR_PREFERENCES,
-      hasStoredValue: false,
-    };
-  }
-
-  const parseFromStorage = (raw: string | null) => {
-    if (!raw) return null;
-    try {
-      return normalizePostEditorPreferences(JSON.parse(raw));
-    } catch {
-      return null;
-    }
-  };
-
-  const v2 = parseFromStorage(window.localStorage.getItem(PREFERENCES_STORAGE_KEY));
-  if (v2) return { preferences: v2, hasStoredValue: true };
-
-  const v1 = parseFromStorage(window.localStorage.getItem(LEGACY_PREFERENCES_STORAGE_KEY));
-  if (v1) return { preferences: v1, hasStoredValue: true };
-
-  return {
-    preferences: DEFAULT_POST_EDITOR_PREFERENCES,
-    hasStoredValue: false,
-  };
-};
 
 const resolveInitialDetailsTab = (
   preferences: PostEditorPreferences
@@ -142,26 +106,23 @@ const resolveInitialFocusMode = (preferences: PostEditorPreferences) => {
 export function PostBlockEditorShell() {
   const { navigate } = useAdminRouter();
   const editor = usePostEditorState();
-  const [initialPreferencesState] = useState(resolveInitialPreferences);
-  const [preferences, setPreferencesState] = useState<PostEditorPreferences>(
-    () => initialPreferencesState.preferences
-  );
-  const [hasStoredPreferences] = useState(initialPreferencesState.hasStoredValue);
+  const focusReturn = useFocusReturn();
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const outlineButtonRef = useRef<HTMLButtonElement>(null);
+  const detailsButtonRef = useRef<HTMLButtonElement>(null);
+  const {
+    preferences,
+    initialPreferences,
+    setPreferences,
+    resetPreferences,
+  } = usePostEditorPreferences();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [initialFocusMode] = useState(() =>
-    resolveInitialFocusMode(initialPreferencesState.preferences)
+    resolveInitialFocusMode(initialPreferences)
   );
   const [initialLayoutState] = useState(() =>
-    resolveInitialLayoutState(initialPreferencesState.preferences)
+    resolveInitialLayoutState(initialPreferences)
   );
-  const skipNextPreferenceSyncRef = useRef(false);
-  const didMountPreferencesRef = useRef(false);
-  const preferencesTouchedRef = useRef(false);
-
-  const setPreferences = useCallback((next: PostEditorPreferences) => {
-    preferencesTouchedRef.current = true;
-    setPreferencesState(next);
-  }, []);
 
   const layout = usePostEditorLayout({
     initialSecondarySidebar: initialLayoutState.secondarySidebar,
@@ -170,26 +131,6 @@ export function PostBlockEditorShell() {
     initialFocusMode,
     initialLeftRailMode: initialLayoutState.leftRailMode,
   });
-
-  useEffect(() => {
-    let active = true;
-    if (hasStoredPreferences) return;
-    (async () => {
-      try {
-        const userSettings = await getUserSettings();
-        if (!active || preferencesTouchedRef.current) return;
-        skipNextPreferenceSyncRef.current = true;
-        setPreferencesState(
-          normalizePostEditorPreferences(userSettings["posts.editor.preferences"])
-        );
-      } catch {
-        // Keep local defaults when user setting sync is unavailable.
-      }
-    })();
-    return () => {
-      active = false;
-    };
-  }, [hasStoredPreferences]);
 
   const handleMoveToTrash = () => {
     if (editor.deletingPost) return;
@@ -247,109 +188,141 @@ export function PostBlockEditorShell() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(
-      PREFERENCES_STORAGE_KEY,
-      JSON.stringify(toStoredPostEditorPreferences(preferences))
-    );
-    window.localStorage.setItem(
-      LEGACY_PREFERENCES_STORAGE_KEY,
-      JSON.stringify(preferences)
-    );
-    if (!didMountPreferencesRef.current) {
-      didMountPreferencesRef.current = true;
-      return;
-    }
-    if (skipNextPreferenceSyncRef.current) {
-      skipNextPreferenceSyncRef.current = false;
-      return;
-    }
-    void setUserSetting(
-      "posts.editor.preferences",
-      toStoredPostEditorPreferences(preferences)
-    ).catch(() => undefined);
-  }, [preferences]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(
       FOCUS_MODE_STORAGE_KEY,
       layout.focusMode ? "1" : "0"
     );
   }, [layout.focusMode]);
 
+  const handleCloseSecondarySidebar = useCallback(
+    (target: "inserter" | "outline") => {
+      layout.closeSecondarySidebar();
+      focusReturn.returnFocus(target);
+    },
+    [focusReturn, layout]
+  );
+
+  const handleToggleInserter = useCallback(() => {
+    if (layout.showInserter) {
+      handleCloseSecondarySidebar("inserter");
+      return;
+    }
+    focusReturn.capture("inserter", addButtonRef);
+    layout.openInserter();
+  }, [addButtonRef, focusReturn, handleCloseSecondarySidebar, layout]);
+
+  const handleToggleOutline = useCallback(() => {
+    const isOutlineOpen =
+      layout.secondarySidebarOpen &&
+      !layout.showInserter &&
+      layout.leftRailMode === "outline";
+    if (isOutlineOpen) {
+      handleCloseSecondarySidebar("outline");
+      return;
+    }
+    focusReturn.capture("outline", outlineButtonRef);
+    layout.setLeftRailMode("outline");
+    layout.openListView();
+  }, [focusReturn, handleCloseSecondarySidebar, layout, outlineButtonRef]);
+
+  const handleToggleDetails = useCallback(() => {
+    if (layout.detailsSidebarOpen) {
+      layout.closeDetails();
+      focusReturn.returnFocus("details");
+      return;
+    }
+    focusReturn.capture("details", detailsButtonRef);
+    layout.openDetailsForSelection(Boolean(editor.selectedBlock));
+  }, [detailsButtonRef, editor.selectedBlock, focusReturn, layout]);
+
+  const handleEscapePanels = useCallback(() => {
+    if (layout.showInserter) {
+      handleCloseSecondarySidebar("inserter");
+      return;
+    }
+    if (layout.secondarySidebarOpen) {
+      handleCloseSecondarySidebar("outline");
+      return;
+    }
+    if (layout.detailsSidebarOpen) {
+      layout.closeDetails();
+      focusReturn.returnFocus("details");
+    }
+  }, [focusReturn, handleCloseSecondarySidebar, layout]);
+
+  usePostEditorShortcuts({
+    onToggleInserter: handleToggleInserter,
+    onToggleOutline: handleToggleOutline,
+    onToggleDetails: handleToggleDetails,
+    onEscape: handleEscapePanels,
+  });
+
   const handleSelectBlock = useCallback(
     (id: string | null) => {
       editor.selectBlock(id);
       if (id) {
+        focusReturn.capture("details", detailsButtonRef);
         layout.openDetails("block");
         return;
       }
       layout.setDetailsTab("document");
     },
-    [editor, layout]
+    [detailsButtonRef, editor, focusReturn, layout]
   );
 
   const handleOpenBlockDetails = useCallback(
     (blockId: string) => {
       editor.selectBlock(blockId);
+      focusReturn.capture("details", detailsButtonRef);
       layout.openDetails("block");
     },
-    [editor, layout]
+    [detailsButtonRef, editor, focusReturn, layout]
   );
 
   const detailsSidebar = (
-    <div className="flex h-full flex-col">
-      <Tabs
-        value={layout.state.detailsTab}
-        onValueChange={(value) =>
-          layout.setDetailsTab(value === "block" ? "block" : "document")
-        }
-        className="flex min-h-0 flex-1 flex-col"
-      >
-        <div className="border-b px-4 py-3">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="document">Post</TabsTrigger>
-            <TabsTrigger value="block">Block</TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent
-          value="document"
-          className="m-0 min-h-0 flex-1 overflow-auto"
-        >
-          <DocumentInspector
-            title={editor.title}
-            status={editor.status}
-            slug={editor.slug}
-            excerpt={editor.state.document.meta.excerpt ?? ""}
-            featuredImage={editor.featuredImage}
-            tagsInput={editor.tagsInput}
-            categoryId={editor.categoryId}
-            seo={editor.seoDraft}
-            taxonomySummary={editor.taxonomySummary}
-            updatedAt={editor.post?.updatedAt ?? null}
-            scheduledAt={editor.post?.scheduledAt ?? null}
-            publishedAt={editor.post?.publishedAt ?? null}
-            moveToTrashPending={editor.deletingPost}
-            onMoveToTrash={handleMoveToTrash}
-            onTitleChange={editor.setTitle}
-            onSlugChange={editor.setSlug}
-            onExcerptChange={editor.setExcerpt}
-            onFeaturedImageChange={editor.setFeaturedImage}
-            onTagsInputChange={editor.setTagsInput}
-            onCategoryIdChange={editor.setCategoryId}
-            onSeoChange={editor.setSeoDraft}
-          />
-        </TabsContent>
-        <TabsContent value="block" className="m-0 min-h-0 flex-1 overflow-auto">
-          <BlockInspector
-            block={editor.selectedBlock}
-            onChangeAttrs={editor.updateSelectedBlockAttrs}
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
+    <PostDetailsSidebar
+      activeTab={layout.state.detailsTab}
+      onTabChange={layout.setDetailsTab}
+      document={{
+        title: editor.title,
+        status: editor.status,
+        slug: editor.slug,
+        excerpt: editor.state.document.meta.excerpt ?? "",
+        featuredImage: editor.featuredImage,
+        tagsInput: editor.tagsInput,
+        categoryId: editor.categoryId,
+        seo: editor.seoDraft,
+        taxonomySummary: editor.taxonomySummary,
+        updatedAt: editor.post?.updatedAt ?? null,
+        scheduledAt: editor.post?.scheduledAt ?? null,
+        publishedAt: editor.post?.publishedAt ?? null,
+        moveToTrashPending: editor.deletingPost,
+        onMoveToTrash: handleMoveToTrash,
+        onTitleChange: editor.setTitle,
+        onSlugChange: editor.setSlug,
+        onExcerptChange: editor.setExcerpt,
+        onFeaturedImageChange: editor.setFeaturedImage,
+        onTagsInputChange: editor.setTagsInput,
+        onCategoryIdChange: editor.setCategoryId,
+        onSeoChange: editor.setSeoDraft,
+      }}
+      block={editor.selectedBlock}
+      onChangeBlockAttrs={editor.updateSelectedBlockAttrs}
+    />
   );
 
-  const secondarySidebar = (
+  const secondarySidebar = layout.showInserter ? (
+    <PostInserterSidebar
+      open
+      onClose={() => handleCloseSecondarySidebar("inserter")}
+      onInsertBlock={(type) =>
+        editor.insertBlock(type, {
+          source: "sidebar",
+          target: { mode: "after-selected" },
+        })
+      }
+      disabled={editor.loading}
+    />
+  ) : (
     <PostListViewSidebar
       document={editor.state.document}
       selectedBlockId={editor.state.selectedBlockId}
@@ -484,21 +457,18 @@ export function PostBlockEditorShell() {
             onPublish={() => {
               editor.publish().catch(() => undefined);
             }}
+            onToggleInserter={handleToggleInserter}
+            inserterVisible={layout.showInserter}
             onToggleFocusMode={layout.toggleFocusMode}
             focusMode={layout.focusMode}
-            onToggleOutline={() => {
-              if (layout.secondarySidebarOpen && layout.leftRailMode === "outline") {
-                layout.closeSecondarySidebar();
-                return;
-              }
-              layout.setLeftRailMode("outline");
-              layout.openListView();
-            }}
-            outlineVisible={layout.secondarySidebarOpen && layout.leftRailMode === "outline"}
-            onOpenDetails={() =>
-              layout.openDetailsForSelection(Boolean(editor.selectedBlock))
-            }
+            onToggleOutline={handleToggleOutline}
+            outlineVisible={layout.secondarySidebarOpen && !layout.showInserter}
+            onToggleDetails={handleToggleDetails}
+            detailsOpen={layout.detailsSidebarOpen}
             onOpenSettings={() => setSettingsOpen(true)}
+            addButtonRef={addButtonRef}
+            outlineButtonRef={outlineButtonRef}
+            detailsButtonRef={detailsButtonRef}
           />
         }
         content={content}
@@ -506,7 +476,7 @@ export function PostBlockEditorShell() {
         secondarySidebarOpen={layout.secondarySidebarOpen}
         onSecondarySidebarOpenChange={(open) => {
           if (!open) {
-            layout.closeSecondarySidebar();
+            handleCloseSecondarySidebar(layout.showInserter ? "inserter" : "outline");
             return;
           }
           if (!layout.secondarySidebarOpen) {
@@ -519,6 +489,7 @@ export function PostBlockEditorShell() {
         onDetailsSidebarOpenChange={(open) => {
           if (!open) {
             layout.closeDetails();
+            focusReturn.returnFocus("details");
           }
         }}
         focusMode={layout.focusMode}
@@ -531,7 +502,7 @@ export function PostBlockEditorShell() {
         onOpenChange={setSettingsOpen}
         preferences={preferences}
         onChange={setPreferences}
-        onReset={() => setPreferences(DEFAULT_POST_EDITOR_PREFERENCES)}
+        onReset={resetPreferences}
       />
     </>
   );

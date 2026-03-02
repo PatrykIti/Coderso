@@ -10,6 +10,7 @@ export function PostEditorHeaderRegion({ children, className }: RegionProps) {
     <header
       data-post-editor-region="header"
       className={cn("shrink-0 border-b bg-background/95 backdrop-blur", className)}
+      aria-label="Post editor header"
     >
       {children}
     </header>
@@ -24,6 +25,7 @@ export function PostEditorContentRegion({ children, className }: RegionProps) {
         "min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden",
         className
       )}
+      aria-label="Post editor content"
     >
       {children}
     </main>
@@ -35,6 +37,7 @@ export function PostEditorFooterRegion({ children, className }: RegionProps) {
     <footer
       data-post-editor-region="footer"
       className={cn("shrink-0 border-t bg-background", className)}
+      aria-label="Post editor footer"
     >
       {children}
     </footer>

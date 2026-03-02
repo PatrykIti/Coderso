@@ -11,12 +11,18 @@ type PostEditorTopBarProps = {
   onOpenRevisions: () => void;
   onPreview: () => void;
   onPublish: () => void;
+  onToggleInserter: () => void;
+  inserterVisible: boolean;
   onToggleFocusMode: () => void;
   focusMode: boolean;
   onToggleOutline: () => void;
   outlineVisible: boolean;
-  onOpenDetails: () => void;
+  onToggleDetails: () => void;
+  detailsOpen: boolean;
   onOpenSettings: () => void;
+  addButtonRef?: React.Ref<HTMLButtonElement>;
+  outlineButtonRef?: React.Ref<HTMLButtonElement>;
+  detailsButtonRef?: React.Ref<HTMLButtonElement>;
 };
 
 export function PostEditorTopBar({
@@ -30,12 +36,18 @@ export function PostEditorTopBar({
   onOpenRevisions,
   onPreview,
   onPublish,
+  onToggleInserter,
+  inserterVisible,
   onToggleFocusMode,
   focusMode,
   onToggleOutline,
   outlineVisible,
-  onOpenDetails,
+  onToggleDetails,
+  detailsOpen,
   onOpenSettings,
+  addButtonRef,
+  outlineButtonRef,
+  detailsButtonRef,
 }: PostEditorTopBarProps) {
   return (
     <PostEditorHeader
@@ -47,14 +59,20 @@ export function PostEditorTopBar({
       breadcrumbs={breadcrumbs}
       onClose={onClose}
       onToggleOutline={onToggleOutline}
-      onOpenDetails={onOpenDetails}
+      onToggleDetails={onToggleDetails}
       onOpenRevisions={onOpenRevisions}
       onPreview={onPreview}
       onPublish={onPublish}
+      onToggleInserter={onToggleInserter}
+      inserterVisible={inserterVisible}
       onToggleFocusMode={onToggleFocusMode}
       focusMode={focusMode}
       outlineVisible={outlineVisible}
       onOpenSettings={onOpenSettings}
+      detailsOpen={detailsOpen}
+      addButtonRef={addButtonRef}
+      outlineButtonRef={outlineButtonRef}
+      detailsButtonRef={detailsButtonRef}
     />
   );
 }

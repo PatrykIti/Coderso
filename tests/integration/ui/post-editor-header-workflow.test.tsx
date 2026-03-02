@@ -14,11 +14,14 @@ const createHeaderProps = () => ({
   onOpenRevisions: () => undefined,
   onPreview: () => undefined,
   onPublish: () => undefined,
+  onToggleInserter: () => undefined,
+  inserterVisible: false,
   onToggleFocusMode: () => undefined,
   focusMode: false,
   onToggleOutline: () => undefined,
   outlineVisible: true,
-  onOpenDetails: () => undefined,
+  onToggleDetails: () => undefined,
+  detailsOpen: false,
   onOpenSettings: () => undefined,
 });
 
@@ -28,6 +31,7 @@ test("PostEditorTopBar renders document tools, context, and action clusters", ()
   expect(html).toContain("data-post-editor-header-cluster=\"primary-actions\"");
   expect(html).toContain("data-post-editor-header-cluster=\"secondary-controls\"");
   expect(html).toContain("data-post-editor-header-close=\"true\"");
+  expect(html).toContain("Add block");
   expect(html).toContain("Outline");
   expect(html).toContain("Revisions");
   expect(html).toContain("Preview");

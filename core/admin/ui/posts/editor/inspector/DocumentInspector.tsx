@@ -17,11 +17,10 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import type { PostStatus } from "@/services/postsClient";
-import { InfoTip } from "@/ui/shared/InfoTip";
-
 import { BLOG_SEO_ROBOTS_OPTIONS } from "./inspectorSchemas";
+import { InspectorSection } from "./InspectorSection";
 
-type DocumentInspectorProps = {
+export type DocumentInspectorProps = {
   title: string;
   status: PostStatus;
   slug: string;
@@ -105,11 +104,11 @@ export function DocumentInspector({
 
   return (
     <div className="space-y-4 p-4" data-post-editor-inspector="document">
-      <section className="space-y-3 rounded-xl border bg-muted/20 p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Publishing</p>
-          <InfoTip content="Current post lifecycle status and publishing timestamps." />
-        </div>
+      <InspectorSection
+        title="Publishing"
+        info="Current post lifecycle status and publishing timestamps."
+        tone="muted"
+      >
         <Badge variant="outline" className={statusClass[status]}>
           {statusLabel[status]}
         </Badge>
@@ -127,13 +126,12 @@ export function DocumentInspector({
             <dd className="text-right text-foreground">{formatTimestamp(scheduledAt)}</dd>
           </div>
         </dl>
-      </section>
+      </InspectorSection>
 
-      <section className="space-y-3 rounded-xl border bg-background p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Categories and tags</p>
-          <InfoTip content="Assign taxonomy for runtime filtering and grouping." />
-        </div>
+      <InspectorSection
+        title="Categories and tags"
+        info="Assign taxonomy for runtime filtering and grouping."
+      >
         <div className="rounded-lg border bg-muted/30 p-2 text-xs text-muted-foreground">
           <p>Current category: {taxonomySummary.categoryName ?? "Not assigned"}</p>
           <p>Linked tag terms: {taxonomySummary.tagCount}</p>
@@ -154,37 +152,38 @@ export function DocumentInspector({
             placeholder="news, guide, release"
           />
         </div>
-      </section>
+      </InspectorSection>
 
-      <section className="space-y-3 rounded-xl border bg-background p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Featured image</p>
-          <InfoTip content="Optional hero image used by post widgets/cards." />
-        </div>
+      <InspectorSection
+        title="Featured image"
+        info="Optional hero image used by post widgets/cards."
+      >
         <Input
           value={featuredImage}
           onChange={(event) => onFeaturedImageChange(event.target.value)}
           placeholder="Media ID (optional)"
         />
-      </section>
+      </InspectorSection>
 
       <Collapsible defaultOpen={false}>
-        <section className="space-y-3 rounded-xl border bg-background p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">Advanced</p>
-              <InfoTip content="Optional technical metadata and SEO fields." />
-            </div>
+        <InspectorSection
+          title="Advanced"
+          info="Optional technical metadata and SEO fields."
+          action={
             <CollapsibleTrigger asChild>
               <Button type="button" variant="ghost" size="sm" className="group">
                 Toggle
                 <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
               </Button>
             </CollapsibleTrigger>
-          </div>
+          }
+        >
           <CollapsibleContent className="space-y-3 border-t pt-3">
-            <section className="space-y-3 rounded-lg border bg-muted/20 p-3">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">Title, URL and excerpt</p>
+            <InspectorSection
+              title="Title, URL and excerpt"
+              tone="muted"
+              className="rounded-lg"
+            >
               <div className="space-y-2">
                 <label className="text-xs text-muted-foreground">Post title</label>
                 <Input value={title} onChange={(event) => onTitleChange(event.target.value)} />
@@ -201,12 +200,13 @@ export function DocumentInspector({
                   placeholder="Short summary for listings"
                 />
               </div>
-            </section>
+            </InspectorSection>
 
-            <section className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <InspectorSection title="SEO summary" tone="muted" className="rounded-lg">
               <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase text-muted-foreground">SEO summary</p>
-                <p className="text-xs text-muted-foreground">SEO fields completed: {seoCompleteCount}/3</p>
+                <p className="text-xs text-muted-foreground">
+                  SEO fields completed: {seoCompleteCount}/3
+                </p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs text-muted-foreground">SEO title</label>
@@ -250,16 +250,16 @@ export function DocumentInspector({
                   </SelectContent>
                 </Select>
               </div>
-            </section>
+            </InspectorSection>
           </CollapsibleContent>
-        </section>
+        </InspectorSection>
       </Collapsible>
 
-      <section className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-destructive">Danger zone</p>
-          <InfoTip content="Destructive action. This removes the post and returns to posts list." />
-        </div>
+      <InspectorSection
+        title="Danger zone"
+        info="Destructive action. This removes the post and returns to posts list."
+        tone="danger"
+      >
         <p className="text-xs text-muted-foreground">
           Move this post to trash when the draft is no longer needed.
         </p>
@@ -273,7 +273,7 @@ export function DocumentInspector({
         >
           {moveToTrashPending ? "Moving to trash..." : "Move to trash"}
         </Button>
-      </section>
+      </InspectorSection>
     </div>
   );
 }

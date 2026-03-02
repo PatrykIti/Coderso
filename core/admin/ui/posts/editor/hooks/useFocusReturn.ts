@@ -1,30 +1,60 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
 
-export const shouldReturnFocus = (
-  previousActive: boolean,
-  nextActive: boolean
-) => previousActive && !nextActive;
+export type FocusReturnTarget = "inserter" | "outline" | "details";
 
-type UseFocusReturnOptions<TElement extends HTMLElement> = {
-  active: boolean;
-  targetRef: React.RefObject<TElement | null>;
+type FocusableRef = React.RefObject<HTMLElement | null> | HTMLElement | null;
+
+type FocusReturnHandle = {
+  capture: (target: FocusReturnTarget, element?: FocusableRef) => void;
+  returnFocus: (target: FocusReturnTarget) => void;
+  clear: (target?: FocusReturnTarget) => void;
 };
 
-export function useFocusReturn<TElement extends HTMLElement>({
-  active,
-  targetRef,
-}: UseFocusReturnOptions<TElement>) {
-  const previousActiveRef = useRef(active);
+const resolveElement = (value?: FocusableRef) => {
+  if (!value) return null;
+  if (typeof HTMLElement !== "undefined" && value instanceof HTMLElement) return value;
+  if (typeof value === "object" && "current" in value) {
+    return value.current ?? null;
+  }
+  return null;
+};
 
-  useEffect(() => {
-    if (shouldReturnFocus(previousActiveRef.current, active)) {
-      const timer = window.setTimeout(() => {
-        targetRef.current?.focus();
-      }, 0);
-      previousActiveRef.current = active;
-      return () => window.clearTimeout(timer);
+export const shouldReturnFocus = (wasOpen: boolean, isOpen: boolean) =>
+  wasOpen && !isOpen;
+
+export function useFocusReturn(): FocusReturnHandle {
+  const openersRef = useRef<Record<FocusReturnTarget, HTMLElement | null>>({
+    inserter: null,
+    outline: null,
+    details: null,
+  });
+
+  const capture = useCallback((target: FocusReturnTarget, element?: FocusableRef) => {
+    if (typeof document === "undefined") return;
+    const resolved = resolveElement(element) ?? (document.activeElement as HTMLElement | null);
+    if (!resolved) return;
+    openersRef.current[target] = resolved;
+  }, []);
+
+  const returnFocus = useCallback((target: FocusReturnTarget) => {
+    const resolved = openersRef.current[target];
+    if (!resolved) return;
+    if (!resolved.isConnected) return;
+    if (typeof resolved.focus !== "function") return;
+    resolved.focus();
+  }, []);
+
+  const clear = useCallback((target?: FocusReturnTarget) => {
+    if (target) {
+      openersRef.current[target] = null;
+      return;
     }
-    previousActiveRef.current = active;
-    return undefined;
-  }, [active, targetRef]);
+    openersRef.current = {
+      inserter: null,
+      outline: null,
+      details: null,
+    };
+  }, []);
+
+  return { capture, returnFocus, clear };
 }

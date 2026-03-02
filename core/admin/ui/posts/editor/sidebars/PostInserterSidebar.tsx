@@ -1,6 +1,4 @@
 import { X } from "lucide-react";
-import { useEffect } from "react";
-
 import { Button } from "@/components/ui/button";
 
 import type { PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
@@ -21,25 +19,14 @@ export function PostInserterSidebar({
   disabled = false,
   recentlyUsedTypes = [],
 }: PostInserterSidebarProps) {
-  useEffect(() => {
-    if (!open) return;
-    if (typeof window === "undefined") return;
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      onClose();
-    };
-    window.addEventListener("keydown", handleEscape);
-    return () => window.removeEventListener("keydown", handleEscape);
-  }, [open, onClose]);
-
   if (!open) return null;
 
   return (
     <section
       className="flex h-full min-h-0 flex-col"
-      role="dialog"
+      role="region"
       aria-label="Block inserter sidebar"
+      id="post-editor-block-inserter"
       data-post-editor-sidebar="inserter"
     >
       <header className="flex items-center justify-between border-b px-4 py-3">

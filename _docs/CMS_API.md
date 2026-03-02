@@ -674,6 +674,7 @@ Editor details context contract (update `TASK-063-11-03/04`):
 - `Post` inspector flow jest uporzadkowany jako `Publishing -> Categories/Tags -> Featured image -> Danger zone`, a pola SEO/metadata sa pod `Advanced` collapse,
 - `Block` inspector zachowuje ten sam kontrakt attrs, ale `Advanced` section jest collapsed by default,
 - media/interactive placeholdery (`image`, `embed`, `button`) nie wymagają nowych API; używają istniejących block attrs w `PostBlockDocument`.
+- aktywny tab jest deterministyczny: default z `posts.editor.preferences.defaultInspectorTab`, a ostatni tab jest odtwarzany lokalnie gdy `restoreLastSidebarsState = true`.
 
 Danger zone contract (update `TASK-063-12-05`):
 - akcja `Move to trash` korzysta z istniejacego endpointu `DELETE /posts/:id`,

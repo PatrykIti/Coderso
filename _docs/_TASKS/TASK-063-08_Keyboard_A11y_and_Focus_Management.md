@@ -5,7 +5,7 @@
 **Category:** Accessibility + UX  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-03, TASK-063-04, TASK-063-05  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -82,4 +82,3 @@ function closeActiveSidebarAndReturnFocus() {
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (keyboard/focus contracts)
 - `_docs/CODERSO_MODULES.md` (authoring accessibility notes)
-

@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-02, TASK-063-03  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -89,4 +89,3 @@ return (
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (details inspector ownership)
 - `_docs/CMS_API.md` (user settings keys, if expanded)
-

@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 29 tasks
-- **In Progress:** 4 tasks
-- **Done:** 553 tasks
+- **To Do:** 18 tasks
+- **In Progress:** 3 tasks
+- **Done:** 565 tasks
 
 ---
 
@@ -40,17 +40,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
-| TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
-| TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
-| TASK-063-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Full lint/types/tests, docs sync, and kanban closure |
-| TASK-063-07-01 | Tabbed Details Sidebar Shell | High | Small | Details panel shell with Document/Block tabs |
-| TASK-063-07-02 | Inspector Refactor Document vs Block | High | Medium | Shared controls and cleaner inspector ownership |
-| TASK-063-07-03 | Details Preferences Persistence | High | Medium | Persisted inspector preferences per user |
-| TASK-063-08-01 | Shortcut Registry and Keymaps | High | Small | Centralized keyboard shortcuts for posts editor |
-| TASK-063-08-02 | Focus Return and Escape Contracts | High | Small | Deterministic focus return on panel close |
-| TASK-063-08-03 | ARIA Landmarks and Accessibility Labels | High | Small | Semantic landmarks and aria coverage |
-| TASK-063-09-01 | Regression Test Execution Plan | High | Medium | Full gate run + rollout QA report |
-| TASK-063-09-02 | Docs Changelog and Kanban Closure | High | Medium | Final docs/changelog/board synchronization |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
@@ -74,7 +63,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 + 063-12 + 063-13 + 063-14 + 063-15 + 063-16 completed; active follow-up: 063-07/063-08 + 063-09 closure |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -85,6 +73,18 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | Done: details, shortcuts, focus, QA, docs, and final closure complete |
+| TASK-063-09-02 | Docs Changelog and Kanban Closure | High | Medium | Done: docs/changelog/board synchronized after final regression |
+| TASK-063-09-01 | Regression Test Execution Plan | High | Medium | Done: lint/types/tests executed with QA rollout report |
+| TASK-063-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: quality gates + docs/changelog closure |
+| TASK-063-08-03 | ARIA Landmarks and Accessibility Labels | High | Small | Done: editor landmarks and aria labels standardized |
+| TASK-063-08-02 | Focus Return and Escape Contracts | High | Small | Done: focus return on close and Escape panel close |
+| TASK-063-08-01 | Shortcut Registry and Keymaps | High | Small | Done: centralized post editor shortcut registry |
+| TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Done: keyboard shortcuts + focus + aria coverage |
+| TASK-063-07-03 | Details Preferences Persistence | High | Medium | Done: preferences hook + user settings sync |
+| TASK-063-07-02 | Inspector Refactor Document vs Block | High | Medium | Done: shared inspector sections + validated inputs |
+| TASK-063-07-01 | Tabbed Details Sidebar Shell | High | Small | Done: details sidebar isolated in PostDetailsSidebar |
+| TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Done: Post/Block tabs + persistence contracts |
 | TASK-063-16-22 | Section Empty Placeholder Preview | Medium | Small | Done: empty section previews show the writing-canvas placeholder |
 | TASK-063-16-21 | Post Editor Settings Dialog Scroll | Medium | Small | Done: editor settings dialog height clamped with scrollable content |
 | TASK-063-16-20 | Section Toolbar Type Heading Icon | Medium | Small | Done: generic Heading icon used in Type dropdown |

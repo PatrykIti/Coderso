@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { InfoTip } from "@/ui/shared/InfoTip";
 import type {
   PostBlock,
   PostBlockType,
@@ -38,8 +37,9 @@ import {
   TEXT_SCALE_OPTIONS,
   WIDTH_OPTIONS,
 } from "./inspectorSchemas";
+import { InspectorSection } from "./InspectorSection";
 
-type BlockInspectorProps = {
+export type BlockInspectorProps = {
   block: PostBlock | null;
   onChangeAttrs: (patch: Record<string, unknown>) => void;
 };
@@ -52,6 +52,20 @@ const readBoolean = (value: unknown, fallback = false) =>
 
 const readNumber = (value: unknown, fallback = 0) =>
   typeof value === "number" && Number.isFinite(value) ? value : fallback;
+
+const clampNumber = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
+const parseClampedNumber = (
+  value: string,
+  fallback: number,
+  min: number,
+  max: number
+) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return clampNumber(parsed, min, max);
+};
 
 const hasScope = (type: PostBlockType, scope: string) =>
   BLOCK_STYLE_SCOPE[type]?.includes(scope) ?? false;
@@ -127,20 +141,20 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
 
   return (
     <div className="space-y-4 p-4">
-      <section className="space-y-2 rounded-xl border bg-muted/20 p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Selected block</p>
-          <InfoTip content="Block settings apply only to the selected block." />
-        </div>
+      <InspectorSection
+        title="Selected block"
+        info="Block settings apply only to the selected block."
+        tone="muted"
+        className="space-y-2"
+      >
         <p className="text-sm font-semibold">{getPostBlockLabel(block.type)}</p>
         <p className="text-xs text-muted-foreground">ID: {block.id}</p>
-      </section>
+      </InspectorSection>
 
-      <section className="space-y-3 rounded-xl border bg-background p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Layout and style</p>
-          <InfoTip content="Control spacing and width before tweaking advanced options." />
-        </div>
+      <InspectorSection
+        title="Layout and style"
+        info="Control spacing and width before tweaking advanced options."
+      >
         {hasAlignmentControl ? (
           <SelectField
             label="Alignment"
@@ -186,13 +200,12 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
             This block uses a fixed layout. Edit content directly on the canvas.
           </p>
         ) : null}
-      </section>
+      </InspectorSection>
 
-      <section className="space-y-3 rounded-xl border bg-background p-3">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Block-specific</p>
-          <InfoTip content="These controls depend on the selected block type." />
-        </div>
+      <InspectorSection
+        title="Block-specific"
+        info="These controls depend on the selected block type."
+      >
 
         {block.type === "heading" ? (
           <div className="space-y-2">
@@ -201,8 +214,12 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
               type="number"
               min={1}
               max={6}
-              value={readNumber(attrs.level, 2)}
-              onChange={(event) => onChangeAttrs({ level: Number(event.target.value) })}
+              value={clampNumber(readNumber(attrs.level, 2), 1, 6)}
+              onChange={(event) =>
+                onChangeAttrs({
+                  level: parseClampedNumber(event.target.value, readNumber(attrs.level, 2), 1, 6),
+                })
+              }
             />
           </div>
         ) : null}
@@ -223,8 +240,17 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
                   type="number"
                   min={1}
                   max={6}
-                  value={readNumber(attrs.minLevel, 1)}
-                  onChange={(event) => onChangeAttrs({ minLevel: Number(event.target.value) })}
+                  value={clampNumber(readNumber(attrs.minLevel, 1), 1, 6)}
+                  onChange={(event) =>
+                    onChangeAttrs({
+                      minLevel: parseClampedNumber(
+                        event.target.value,
+                        readNumber(attrs.minLevel, 1),
+                        1,
+                        6
+                      ),
+                    })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -233,8 +259,17 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
                   type="number"
                   min={1}
                   max={6}
-                  value={readNumber(attrs.maxLevel, 3)}
-                  onChange={(event) => onChangeAttrs({ maxLevel: Number(event.target.value) })}
+                  value={clampNumber(readNumber(attrs.maxLevel, 3), 1, 6)}
+                  onChange={(event) =>
+                    onChangeAttrs({
+                      maxLevel: parseClampedNumber(
+                        event.target.value,
+                        readNumber(attrs.maxLevel, 3),
+                        1,
+                        6
+                      ),
+                    })
+                  }
                 />
               </div>
             </div>
@@ -340,8 +375,17 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
                 type="number"
                 min={1}
                 max={8}
-                value={readNumber(attrs.thickness, 1)}
-                onChange={(event) => onChangeAttrs({ thickness: Number(event.target.value) })}
+                value={clampNumber(readNumber(attrs.thickness, 1), 1, 8)}
+                onChange={(event) =>
+                  onChangeAttrs({
+                    thickness: parseClampedNumber(
+                      event.target.value,
+                      readNumber(attrs.thickness, 1),
+                      1,
+                      8
+                    ),
+                  })
+                }
               />
             </div>
           </>
@@ -444,22 +488,21 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
             onCheckedChange={(checked) => onChangeAttrs({ highlight: checked })}
           />
         ) : null}
-      </section>
+      </InspectorSection>
 
       <Collapsible defaultOpen={false}>
-        <section className="space-y-3 rounded-xl border bg-background p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <p className="text-xs font-semibold uppercase text-muted-foreground">Advanced</p>
-              <InfoTip content="Advanced options are optional and usually left empty." />
-            </div>
+        <InspectorSection
+          title="Advanced"
+          info="Advanced options are optional and usually left empty."
+          action={
             <CollapsibleTrigger asChild>
               <Button type="button" variant="ghost" size="sm" className="group">
                 Toggle
                 <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
               </Button>
             </CollapsibleTrigger>
-          </div>
+          }
+        >
           <CollapsibleContent className="space-y-3 border-t pt-3">
             <div className="space-y-2">
               <label className="text-xs text-muted-foreground">Anchor ID</label>
@@ -483,7 +526,7 @@ export function BlockInspector({ block, onChangeAttrs }: BlockInspectorProps) {
               onCheckedChange={(checked) => onChangeAttrs({ hideOnMobile: checked })}
             />
           </CollapsibleContent>
-        </section>
+        </InspectorSection>
       </Collapsible>
     </div>
   );

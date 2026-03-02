@@ -194,3 +194,11 @@ const sections = buildDefaultNavSections({
   - gear modal upgraded to grouped editor UX settings (density/hints/default tab/restore sidebars),
   - preferences persistence is local-first (`nextless.posts.editor.preferences.v2`, compatibility `v1`) with background sync to user setting `posts.editor.preferences`,
   - focus mode now restores previous panel snapshot deterministically after exit.
+- 063-07 done: Details inspector tabs + preferences:
+  - `PostDetailsSidebar` owns `Post/Block` tabs with no-selection fallback,
+  - `usePostEditorPreferences` encapsulates local-first + user-settings sync,
+  - inspector sections share `InspectorSection` and numeric inputs clamp to safe ranges.
+- 063-08 done: Keyboard shortcuts, focus, and accessibility:
+  - `usePostEditorShortcuts` centralizes keymaps for inserter/overview/details and escape close,
+  - `useFocusReturn` restores focus to the originating trigger,
+  - header/content/sidebar landmarks expose consistent `aria-label` and `aria-keyshortcuts`.

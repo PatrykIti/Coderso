@@ -157,6 +157,14 @@ przez `setup.completed=true`.
       - local-first (`nextless.posts.editor.preferences.v2` + compatibility write do `v1`),
       - background sync do internal `user-settings` key `posts.editor.preferences`,
     - focus mode ma deterministic snapshot restore side paneli po wyjsciu (`hide -> restore`), a layout restore jest zapisywany per user-session local state.
+  - **TASK-063-07 (done):** details inspector tabs + preferences:
+    - `PostDetailsSidebar` konsoliduje tabs `Post/Block` z fallbackiem do `Post` bez selekcji,
+    - `usePostEditorPreferences` zamyka local-first + user-settings sync preferencji edytora,
+    - inspector sekcje wspoldziela `InspectorSection`, a pola liczbowe sa clampowane do bezpiecznych zakresow.
+  - **TASK-063-08 (done):** keyboard shortcuts, focus, i accessibility:
+    - `usePostEditorShortcuts` utrzymuje centralny rejestr skrotow (inserter/overview/details/escape),
+    - `useFocusReturn` przywraca focus do triggerow (`Add`, `Document overview`, `Details`),
+    - regiony edytora maja spójne landmarki/aria labels, a toolbar buttons wystawiaja `aria-keyshortcuts`.
   - **TASK-063-14 (done):** richtext command reliability + contextual formatting model:
     - command execution zostalo domkniete przez deterministic engine (`postRichTextCommandEngine`) dla komend blokowych/list/alignment,
     - `PostRichTextAdapter` mapuje command dispatch do engine i zachowuje stabilny flow selection restore,
