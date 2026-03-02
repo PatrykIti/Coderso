@@ -10,6 +10,8 @@ import {
   Heading2,
   Heading3,
   Heading4,
+  Heading5,
+  Heading6,
   Highlighter,
   Italic,
   Link2,
@@ -106,13 +108,13 @@ const advancedActions: ActionButton[] = [
   { id: "clear-formatting", label: "Clear formatting", icon: Eraser },
 ];
 
-const headingGroupActions: ActionButton[] = [
+export const headingGroupActions: ActionButton[] = [
   { id: "heading-1", label: "Heading 1", icon: Heading1 },
   { id: "heading-2", label: "Heading 2", icon: Heading2 },
   { id: "heading-3", label: "Heading 3", icon: Heading3 },
   { id: "heading-4", label: "Heading 4", icon: Heading4 },
-  { id: "heading-5", label: "Heading 5", shortLabel: "H5" },
-  { id: "heading-6", label: "Heading 6", shortLabel: "H6" },
+  { id: "heading-5", label: "Heading 5", icon: Heading5 },
+  { id: "heading-6", label: "Heading 6", icon: Heading6 },
 ];
 
 const listGroupActions: ActionButton[] = [
@@ -319,7 +321,13 @@ export function PostRichTextToolbar({
               }}
               aria-label={action.label}
             >
-              {action.icon ? <action.icon className="h-3.5 w-3.5" /> : null}
+              {action.icon ? (
+                <action.icon className="h-3.5 w-3.5" />
+              ) : action.shortLabel ? (
+                <span className="text-[0.65rem] font-semibold leading-none">
+                  {action.shortLabel}
+                </span>
+              ) : null}
               <span>{action.label}</span>
             </DropdownMenuItem>
           ))}

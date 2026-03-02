@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 29 tasks
 - **In Progress:** 4 tasks
-- **Done:** 540 tasks
+- **Done:** 541 tasks
 
 ---
 
@@ -85,6 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-16-09 | Section Heading Icons and H6 Style | Medium | Small | Done: H5/H6 heading badges aligned with icon style + no H6 uppercase |
 | TASK-063-16-08 | Runtime Heading and Quote Styles | High | Small | Done: runtime H1-H6 + blockquote styling for preview/public |
 | TASK-063-16-07 | Section Heading Visual Styles | High | Small | Done: explicit H1-H6 styling for section canvas and preview |
 | TASK-063-16-06 | Section Paragraph Quote Visual Styles | High | Small | Done: blockquote styling added for section canvas + preview surface |

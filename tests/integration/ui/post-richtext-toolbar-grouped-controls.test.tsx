@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 
-import { PostRichTextToolbar } from "../../../core/admin/ui/posts/editor/richtext/PostRichTextToolbar";
+import {
+  PostRichTextToolbar,
+  headingGroupActions,
+} from "../../../core/admin/ui/posts/editor/richtext/PostRichTextToolbar";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 test("writing-canvas toolbar renders grouped heading/list/code controls", () => {
@@ -13,6 +16,14 @@ test("writing-canvas toolbar renders grouped heading/list/code controls", () => 
   expect(html).toContain("Code");
 });
 
+test("heading dropdown actions include icons for H5 and H6", () => {
+  const h5 = headingGroupActions.find((action) => action.id === "heading-5");
+  const h6 = headingGroupActions.find((action) => action.id === "heading-6");
+
+  expect(h5?.icon).toBeTruthy();
+  expect(h6?.icon).toBeTruthy();
+});
+
 test("heading toolbar profile hides grouped controls that are out of scope", () => {
   const html = renderAdminUi(
     <PostRichTextToolbar profile="heading" onCommand={() => undefined} />
@@ -22,4 +33,3 @@ test("heading toolbar profile hides grouped controls that are out of scope", () 
   expect(html).not.toContain("Headings");
   expect(html).not.toContain("List");
 });
-

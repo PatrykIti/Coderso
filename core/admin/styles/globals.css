@@ -182,8 +182,6 @@
 
   .post-editor-richtext h6 {
     font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
   }
 
   .post-editor-richtext img[data-wrap="none"] {
