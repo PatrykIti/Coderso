@@ -85,6 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-16-22 | Section Empty Placeholder Preview | Medium | Small | Done: empty section previews show the writing-canvas placeholder |
 | TASK-063-16-21 | Post Editor Settings Dialog Scroll | Medium | Small | Done: editor settings dialog height clamped with scrollable content |
 | TASK-063-16-20 | Section Toolbar Type Heading Icon | Medium | Small | Done: generic Heading icon used in Type dropdown |
 | TASK-063-16-19 | Section Toolbar Type Profiles | High | Medium | Done: Type converts section blocks and paragraph/heading toolbars are narrowed with inline align/clear |

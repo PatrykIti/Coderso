@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 347 | 2026-03-02 | TASK-063-16-22 section empty placeholder preview | Admin/UI |
 | 346 | 2026-03-02 | TASK-063-16-21 editor settings dialog scroll | Admin/UI |
 | 345 | 2026-03-02 | TASK-063-16-20 section toolbar type heading icon | Admin/UI |
 | 344 | 2026-03-02 | TASK-063-16-19 section toolbar type profiles | Admin/UI |

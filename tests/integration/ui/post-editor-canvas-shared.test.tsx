@@ -94,6 +94,37 @@ test("PostEditorCanvas preview uses richtext styling for section blocks", () => 
   expect(html).toContain("post-editor-richtext");
 });
 
+test("PostEditorCanvas shows placeholder for empty section previews", () => {
+  const html = renderToString(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "block-1",
+            type: "writing-canvas",
+            attrs: {},
+            content: {
+              version: 1,
+              nodes: [{ id: "node-1", type: "paragraph", text: "" }],
+            },
+          },
+        ],
+      }}
+      title="Empty section preview"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Start writing or paste content from Word...");
+});
+
 test("PostEditorCanvas preview renders heading markup for section nodes", () => {
   const html = renderToString(
     <PostEditorCanvas

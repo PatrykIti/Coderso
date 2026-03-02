@@ -37,6 +37,7 @@ import {
   resolvePostImageLayoutFromAttrs,
 } from "../../../../services/posts/postImageWrapLayout";
 import {
+  postRichTextToPlainText,
   serializePostRichText,
 } from "../../../../services/posts/editor/postRichTextSerializer";
 import {
@@ -205,7 +206,8 @@ const resolveEmbedSrc = (provider: string, url: unknown) => {
 
 const renderHtmlPreview = (value: unknown, emptyLabel: string) => {
   const html = serializePostRichText(value);
-  if (!html) {
+  const text = postRichTextToPlainText(value);
+  if (!text) {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
   }
   return (
@@ -215,6 +217,8 @@ const renderHtmlPreview = (value: unknown, emptyLabel: string) => {
     />
   );
 };
+
+const writingCanvasPlaceholder = "Start writing or paste content from Word...";
 
 const mediaPlaceholderClassName =
   "group flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-100";
@@ -309,7 +313,7 @@ function PostCanvasBlockItem({
 
       {selected && block.type === "image" && onUpdateBlockAttrs ? (
         <div
-          className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 p-2"
+          className="mb-3 flex flex-wrap items-center gap-2 bg-muted/20 p-2"
           onClick={(event) => event.stopPropagation()}
         >
           <Button
@@ -408,7 +412,7 @@ function PostCanvasBlockItem({
 
       {selected && block.type === "embed" && onUpdateBlockAttrs ? (
         <div
-          className="mb-3 grid gap-2 rounded-lg border bg-muted/20 p-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
+          className="mb-3 grid gap-2 bg-muted/20 p-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
           onClick={(event) => event.stopPropagation()}
         >
           <Input
@@ -508,7 +512,7 @@ function PostCanvasBlockItem({
               }
             }}
             onUploadClipboardImage={onUploadClipboardImage}
-            placeholder="Start writing or paste content from Word..."
+            placeholder={writingCanvasPlaceholder}
             minHeightClassName="min-h-[16rem]"
             onSlashInsertBlock={(type) =>
               onInsertBlock(type, {
@@ -545,7 +549,7 @@ function PostCanvasBlockItem({
             }
           />
         ) : (
-          renderHtmlPreview(writingCanvasHtml, "Empty section")
+          renderHtmlPreview(writingCanvasHtml, writingCanvasPlaceholder)
         )
       ) : null}
 
@@ -608,7 +612,7 @@ function PostCanvasBlockItem({
             }
           />
         ) : (
-          renderHtmlPreview(block.content, "Empty block")
+          renderHtmlPreview(block.content, "Write content for this block...")
         )
       ) : null}
 
@@ -624,7 +628,7 @@ function PostCanvasBlockItem({
           />
         ) : (
           <pre className="overflow-x-auto rounded-lg border bg-slate-50 p-3 text-xs text-slate-700">
-            {asString(block.content) || "Empty code block"}
+            {asString(block.content) || "Write code for this block..."}
           </pre>
         )
       ) : null}
@@ -653,7 +657,7 @@ function PostCanvasBlockItem({
                 .filter((item): item is string => typeof item === "string")
                 .map((item, index) => <li key={`${block.id}-${index}`}>{item}</li>)
             ) : (
-              <li className="list-none text-sm text-muted-foreground">Empty list</li>
+              <li className="list-none text-sm text-muted-foreground">One item per line...</li>
             )}
           </ul>
         )
