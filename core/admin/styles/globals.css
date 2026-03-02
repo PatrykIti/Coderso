@@ -149,6 +149,35 @@
     margin-bottom: 0;
   }
 
+  .post-editor-richtext ul,
+  .post-editor-richtext ol {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .post-editor-richtext ul {
+    list-style: disc;
+  }
+
+  .post-editor-richtext ol {
+    list-style: decimal;
+  }
+
+  .post-editor-richtext li {
+    margin: 0.25rem 0;
+  }
+
+  .post-editor-richtext pre {
+    overflow-x: auto;
+    border: 1px solid var(--admin-base-border);
+    background: var(--admin-base-surface);
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.5rem;
+    font-family: var(--font-mono);
+  }
+
   .post-editor-richtext h1,
   .post-editor-richtext h2,
   .post-editor-richtext h3,

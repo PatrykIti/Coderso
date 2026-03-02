@@ -78,3 +78,10 @@ test("serializePostRichText normalizes browser alias tags", () => {
   expect(serialized).not.toContain("<b>");
   expect(serialized).not.toContain("<i>");
 });
+
+test("serializePostRichText normalizes strike tags to s", () => {
+  const serialized = serializePostRichText("<p><strike>Removed</strike></p>");
+
+  expect(serialized).toContain("<s>Removed</s>");
+  expect(serialized).not.toContain("<strike>");
+});

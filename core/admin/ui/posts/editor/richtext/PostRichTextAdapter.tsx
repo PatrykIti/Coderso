@@ -173,6 +173,24 @@ type SelectedTextRun = {
   end: number;
 };
 
+export const resolveInlineWrapperTextRange = (
+  text: string,
+  offset: number
+): { start: number; end: number } | null => {
+  if (!text) return null;
+  const clampedOffset = Math.max(0, Math.min(offset, text.length));
+  let start = clampedOffset;
+  let end = clampedOffset;
+  while (start > 0 && !/\s/.test(text[start - 1])) {
+    start -= 1;
+  }
+  while (end < text.length && !/\s/.test(text[end])) {
+    end += 1;
+  }
+  if (start === end) return null;
+  return { start, end };
+};
+
 const collectSelectedTextRuns = (range: Range): SelectedTextRun[] => {
   const root = range.commonAncestorContainer;
   if (root instanceof Text && root.nodeValue) {
@@ -216,11 +234,106 @@ const collectSelectedTextRuns = (range: Range): SelectedTextRun[] => {
   return runs;
 };
 
+const resolveFirstTextNode = (root: Node): Text | null => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!(node instanceof Text)) return NodeFilter.FILTER_REJECT;
+      if (!node.nodeValue || node.nodeValue.length === 0) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const next = walker.nextNode();
+  return next instanceof Text ? next : null;
+};
+
+const resolveLastTextNode = (root: Node): Text | null => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!(node instanceof Text)) return NodeFilter.FILTER_REJECT;
+      if (!node.nodeValue || node.nodeValue.length === 0) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  let last: Text | null = null;
+  let current = walker.nextNode();
+  while (current) {
+    if (current instanceof Text) last = current;
+    current = walker.nextNode();
+  }
+  return last;
+};
+
+const resolveCollapsedSelectionTextNode = (
+  selection: Selection,
+  editorRoot: HTMLElement
+): { node: Text; offset: number } | null => {
+  const anchorNode = selection.anchorNode;
+  if (!anchorNode || !editorRoot.contains(anchorNode)) return null;
+
+  if (anchorNode instanceof Text) {
+    return { node: anchorNode, offset: selection.anchorOffset };
+  }
+
+  if (!(anchorNode instanceof Element)) return null;
+
+  const offset = selection.anchorOffset;
+  const childAtOffset = anchorNode.childNodes[offset] ?? null;
+  if (childAtOffset instanceof Text) {
+    return { node: childAtOffset, offset: 0 };
+  }
+
+  const previousChild = anchorNode.childNodes[offset - 1] ?? null;
+  if (previousChild instanceof Text) {
+    return {
+      node: previousChild,
+      offset: previousChild.nodeValue?.length ?? 0,
+    };
+  }
+
+  if (childAtOffset) {
+    const first = resolveFirstTextNode(childAtOffset);
+    if (first) return { node: first, offset: 0 };
+  }
+
+  if (previousChild) {
+    const last = resolveLastTextNode(previousChild);
+    if (last) return { node: last, offset: last.nodeValue?.length ?? 0 };
+  }
+
+  return null;
+};
+
+const resolveCollapsedInlineWrapperRange = (
+  selection: Selection,
+  editorRoot: HTMLElement
+): Range | null => {
+  const target = resolveCollapsedSelectionTextNode(selection, editorRoot);
+  if (!target) return null;
+  const { node, offset } = target;
+  const boundaries = resolveInlineWrapperTextRange(node.nodeValue ?? "", offset);
+  if (!boundaries) return null;
+  const range = document.createRange();
+  range.setStart(node, boundaries.start);
+  range.setEnd(node, boundaries.end);
+  return range;
+};
+
 const wrapSelectionWithTag = (tagName: "code" | "mark", editorRoot: HTMLElement) => {
   if (typeof window === "undefined") return;
   const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-  const range = selection.getRangeAt(0);
+  if (!selection || selection.rangeCount === 0) return;
+  let range = selection.getRangeAt(0);
+  if (selection.isCollapsed) {
+    const expanded = resolveCollapsedInlineWrapperRange(selection, editorRoot);
+    if (!expanded) return;
+    selection.removeAllRanges();
+    selection.addRange(expanded);
+    range = expanded;
+  }
 
   const selectedText = selection.toString().trim();
   if (!selectedText) return;
@@ -625,6 +738,14 @@ export function PostRichTextAdapter({
         runCommand("removeFormat");
         runCommand("unlink");
         clearFormattingInBlocks(targetBlocks);
+        if (targetBlocks.length > 0) {
+          executeBlockCommandOnBlocks("paragraph", targetBlocks);
+        } else {
+          const nextHtml = applyCommandToRootHtmlWithoutBlocks("paragraph", editorRoot.innerHTML);
+          if (nextHtml) {
+            editorRoot.innerHTML = nextHtml;
+          }
+        }
       }
 
       saveSelectionRange();

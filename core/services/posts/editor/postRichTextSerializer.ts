@@ -28,6 +28,8 @@ const normalizeBrowserRichTextAliases = (value: string) =>
     .replace(/<\s*\/\s*b\s*>/gi, "</strong>")
     .replace(/<\s*i(\s|>)/gi, "<em$1")
     .replace(/<\s*\/\s*i\s*>/gi, "</em>")
+    .replace(/<\s*strike(\s|>)/gi, "<s$1")
+    .replace(/<\s*\/\s*strike\s*>/gi, "</s>")
     .replace(/<\s*div(\s|>)/gi, "<p$1")
     .replace(/<\s*\/\s*div\s*>/gi, "</p>");
 

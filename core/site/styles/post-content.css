@@ -97,6 +97,34 @@
   margin-left: 1.5rem;
 }
 
+.post-runtime-blocks ul,
+.post-runtime-blocks ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.post-runtime-blocks ul {
+  list-style: disc;
+}
+
+.post-runtime-blocks ol {
+  list-style: decimal;
+}
+
+.post-runtime-blocks li {
+  margin: 0.25rem 0;
+}
+
+.post-runtime-blocks pre:not([class]) {
+  overflow-x: auto;
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, #f8fafc);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  border-radius: 0.5rem;
+}
+
 .post-runtime-blocks h1,
 .post-runtime-blocks h2,
 .post-runtime-blocks h3,

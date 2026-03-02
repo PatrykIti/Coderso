@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 336 | 2026-03-02 | TASK-063-16-11 section inline code caret wrap | Admin/UI |
+| 335 | 2026-03-02 | TASK-063-16-10 section list strike code and clear formatting | Admin/UI |
 | 334 | 2026-03-02 | TASK-063-16-09 section heading icons and h6 style | Admin/UI |
 | 333 | 2026-03-02 | TASK-063-16-08 runtime heading quote styles | Runtime/UX |
 | 332 | 2026-03-02 | TASK-063-16-07 section heading visual styles | Admin/UI |
