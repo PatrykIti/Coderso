@@ -61,29 +61,24 @@ const renderCanvasForType = (type: PostBlockType) => {
 test("heading block routes to reduced heading toolbar profile", () => {
   const html = renderCanvasForType("heading");
 
-  expect(html).toContain('aria-label="Paragraph"');
+  expect(html).toContain("Type");
   expect(html).toContain("More formatting");
-  expect(html).not.toContain('aria-label="Heading 1"');
-  expect(html).not.toContain('aria-label="Bullet list"');
-  expect(html).not.toContain('aria-label="Quote"');
+  expect(html).not.toContain("List");
+  expect(html).not.toContain("Code");
 });
 
 test("paragraph block routes to paragraph toolbar profile", () => {
   const html = renderCanvasForType("paragraph");
 
-  expect(html).toContain('aria-label="Paragraph"');
-  expect(html).toContain("Headings");
+  expect(html).toContain("Type");
   expect(html).toContain("List");
-  expect(html).toContain('aria-label="Quote"');
 });
 
-test("quote block keeps quote toggle and omits heading list actions", () => {
+test("quote block renders type control without list group", () => {
   const html = renderCanvasForType("quote");
 
-  expect(html).toContain('aria-label="Quote"');
-  expect(html).toContain('aria-label="Paragraph"');
-  expect(html).not.toContain('aria-label="Heading 1"');
-  expect(html).not.toContain('aria-label="Bullet list"');
+  expect(html).toContain("Type");
+  expect(html).not.toContain("List");
 });
 
 test("non-richtext list block does not render richtext toolbar", () => {

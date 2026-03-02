@@ -94,8 +94,6 @@ const primaryActions: ActionButton[] = [
   { id: "bold", label: "Bold", icon: Bold },
   { id: "italic", label: "Italic", icon: Italic },
   { id: "link", label: "Link", icon: Link2 },
-  { id: "paragraph", label: "Paragraph", icon: Pilcrow },
-  { id: "quote", label: "Quote", icon: Quote },
 ];
 
 const advancedActions: ActionButton[] = [
@@ -108,13 +106,15 @@ const advancedActions: ActionButton[] = [
   { id: "clear-formatting", label: "Clear formatting", icon: Eraser },
 ];
 
-export const headingGroupActions: ActionButton[] = [
+export const typeGroupActions: ActionButton[] = [
+  { id: "paragraph", label: "Paragraph", icon: Pilcrow },
   { id: "heading-1", label: "Heading 1", icon: Heading1 },
   { id: "heading-2", label: "Heading 2", icon: Heading2 },
   { id: "heading-3", label: "Heading 3", icon: Heading3 },
   { id: "heading-4", label: "Heading 4", icon: Heading4 },
   { id: "heading-5", label: "Heading 5", icon: Heading5 },
   { id: "heading-6", label: "Heading 6", icon: Heading6 },
+  { id: "quote", label: "Quote", icon: Quote },
 ];
 
 const listGroupActions: ActionButton[] = [
@@ -254,7 +254,7 @@ export function PostRichTextToolbar({
   const visibleAdvancedActions = advancedActions.filter((action) =>
     allowedCommands.has(action.id)
   );
-  const visibleHeadingGroupActions = headingGroupActions.filter((action) =>
+  const visibleTypeGroupActions = typeGroupActions.filter((action) =>
     allowedCommands.has(action.id)
   );
   const visibleListGroupActions = listGroupActions.filter((action) =>
@@ -270,10 +270,11 @@ export function PostRichTextToolbar({
   const renderCommandGroup = (
     label: string,
     actions: ActionButton[],
-    triggerAriaLabel: string
+    triggerAriaLabel: string,
+    options?: { forceDropdown?: boolean }
   ) => {
     if (actions.length === 0) return null;
-    if (actions.length === 1) {
+    if (actions.length === 1 && !options?.forceDropdown) {
       const action = actions[0]!;
       return (
         <Button
@@ -358,7 +359,9 @@ export function PostRichTextToolbar({
             {renderActionLabel(action)}
           </Button>
         ))}
-        {renderCommandGroup("Headings", visibleHeadingGroupActions, "Headings")}
+        {renderCommandGroup("Type", visibleTypeGroupActions, "Type", {
+          forceDropdown: true,
+        })}
         {renderCommandGroup("List", visibleListGroupActions, "List")}
         {renderCommandGroup("Code", visibleCodeGroupActions, "Code")}
       </div>

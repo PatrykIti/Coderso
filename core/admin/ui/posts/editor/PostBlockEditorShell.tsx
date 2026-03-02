@@ -436,6 +436,7 @@ export function PostBlockEditorShell() {
           onSelectBlock={handleSelectBlock}
           onUpdateBlockContent={editor.updateBlockContent}
           onUpdateBlockAttrs={editor.updateBlockAttrs}
+          onTransformBlock={editor.transformBlock}
           onUpdateDocumentTypography={editor.updateDocumentTypography}
           onUploadClipboardImage={editor.uploadClipboardImage}
           onInsertBlock={editor.insertBlock}

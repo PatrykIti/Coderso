@@ -57,6 +57,7 @@ type PostEditorCanvasProps = {
   onSelectBlock: (id: string | null) => void;
   onUpdateBlockContent: (id: string, content: unknown) => void;
   onUpdateBlockAttrs?: (id: string, patch: Record<string, unknown>) => void;
+  onTransformBlock?: (id: string, targetType: PostBlockType) => void;
   onUpdateDocumentTypography?: (
     typography: NonNullable<PostBlockDocumentMeta["typography"]>
   ) => void;
@@ -232,6 +233,7 @@ function PostCanvasBlockItem({
   onSelect,
   onUpdateBlockContent,
   onUpdateBlockAttrs,
+  onTransformBlock,
   typography,
   onUpdateTypography,
   onUploadClipboardImage,
@@ -247,6 +249,7 @@ function PostCanvasBlockItem({
   onSelect: () => void;
   onUpdateBlockContent: (content: unknown) => void;
   onUpdateBlockAttrs?: (patch: Record<string, unknown>) => void;
+  onTransformBlock?: (id: string, targetType: PostBlockType) => void;
   typography: {
     fontFamily: "sans" | "serif" | "mono";
     baseTextScale: "sm" | "md" | "lg" | "xl";
@@ -564,6 +567,17 @@ function PostCanvasBlockItem({
             }
             onFocus={onSelect}
             toolbarProfile={resolveToolbarProfileForBlockType(block.type) ?? "paragraph"}
+            onBlockTypeChange={
+              onTransformBlock &&
+              (block.type === "paragraph" || block.type === "heading" || block.type === "quote")
+                ? (targetType, attrs) => {
+                    onTransformBlock(block.id, targetType);
+                    if (attrs && onUpdateBlockAttrs) {
+                      onUpdateBlockAttrs(attrs);
+                    }
+                  }
+                : undefined
+            }
             fontFamily={typography.fontFamily}
             baseTextScale={typography.baseTextScale}
             onFontFamilyChange={(fontFamily) =>
@@ -798,6 +812,7 @@ export function PostEditorCanvas({
   onSelectBlock,
   onUpdateBlockContent,
   onUpdateBlockAttrs,
+  onTransformBlock,
   onUpdateDocumentTypography,
   onUploadClipboardImage,
   onInsertBlock,
@@ -1012,6 +1027,7 @@ export function PostEditorCanvas({
                         ? (patch) => onUpdateBlockAttrs(block.id, patch)
                         : undefined
                     }
+                    onTransformBlock={onTransformBlock}
                     typography={typography}
                     onUpdateTypography={onUpdateDocumentTypography}
                     onUploadClipboardImage={onUploadClipboardImage}

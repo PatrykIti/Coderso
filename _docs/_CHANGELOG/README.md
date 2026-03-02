@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 343 | 2026-03-02 | TASK-063-16-18 section toolbar type control | Admin/UI |
 | 342 | 2026-03-02 | TASK-063-16-17 section toolbar typography row | Admin/UI |
 | 341 | 2026-03-02 | TASK-063-16-16 section inline typography list selection | Admin/UI |
 | 340 | 2026-03-02 | TASK-063-16-15 section inline typography preview persistence | Admin/UI |

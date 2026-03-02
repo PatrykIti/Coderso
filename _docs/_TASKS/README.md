@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 29 tasks
 - **In Progress:** 4 tasks
-- **Done:** 549 tasks
+- **Done:** 550 tasks
 
 ---
 
@@ -85,6 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-16-18 | Section Toolbar Type Control | High | Medium | Done: type dropdown added, block-type transforms wired for text blocks, list controls kept as separate group |
 | TASK-063-16-17 | Section Toolbar Typography Row | High | Small | Done: typography controls moved to secondary row with info + right-aligned formatting toggle |
 | TASK-063-16-16 | Section Inline Typography List Selection | High | Small | Done: list markers follow inline typography selection |
 | TASK-063-16-15 | Section Inline Typography Preview Persistence | High | Small | Done: inline typography spans persist in writing-canvas preview/front |
