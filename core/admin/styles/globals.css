@@ -178,6 +178,22 @@
     font-family: var(--font-mono);
   }
 
+  .post-editor-richtext code {
+    border: 1px solid var(--admin-base-border);
+    background: var(--admin-base-surface);
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+  }
+
+  .post-editor-richtext pre code {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font-size: inherit;
+  }
+
   .post-editor-richtext h1,
   .post-editor-richtext h2,
   .post-editor-richtext h3,

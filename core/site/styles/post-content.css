@@ -125,6 +125,23 @@
   border-radius: 0.5rem;
 }
 
+.post-runtime-blocks code {
+  border: 1px solid var(--color-border, #e2e8f0);
+  background: var(--color-surface, #f8fafc);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+  font-size: 0.9em;
+}
+
+.post-runtime-blocks pre code {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
 .post-runtime-blocks h1,
 .post-runtime-blocks h2,
 .post-runtime-blocks h3,

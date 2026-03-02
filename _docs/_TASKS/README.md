@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 29 tasks
 - **In Progress:** 4 tasks
-- **Done:** 543 tasks
+- **Done:** 544 tasks
 
 ---
 
@@ -85,6 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-16-12 | Section Inline Code Visual Styles | High | Small | Done: inline code visuals for admin canvas + runtime preview/front |
 | TASK-063-16-11 | Section Inline Code Caret Wrap | High | Small | Done: inline code/highlight wrap word at caret when selection is collapsed |
 | TASK-063-16-10 | Section List Strike Code and Clear Formatting | High | Small | Done: list/strike/code-block visuals + clear formatting reset |
 | TASK-063-16-09 | Section Heading Icons and H6 Style | Medium | Small | Done: H5/H6 heading badges aligned with icon style + no H6 uppercase |
