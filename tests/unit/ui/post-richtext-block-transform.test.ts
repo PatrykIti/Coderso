@@ -19,6 +19,22 @@ test("resolves paragraph, quote, and code-block commands", () => {
   expect(resolveBlockTransformForCommand("code-block")).toEqual({ type: "code" });
 });
 
+test("resolves type commands to block transforms", () => {
+  expect(resolveBlockTransformForCommand("type-section")).toEqual({
+    type: "writing-canvas",
+  });
+  expect(resolveBlockTransformForCommand("type-paragraph")).toEqual({
+    type: "paragraph",
+  });
+  expect(resolveBlockTransformForCommand("type-heading")).toEqual({
+    type: "heading",
+    attrs: { level: 2 },
+  });
+  expect(resolveBlockTransformForCommand("type-quote")).toEqual({
+    type: "quote",
+  });
+});
+
 test("ignores inline commands that do not map to block transforms", () => {
   expect(resolveBlockTransformForCommand("bold")).toBeNull();
   expect(resolveBlockTransformForCommand("inline-code")).toBeNull();

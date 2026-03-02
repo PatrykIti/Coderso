@@ -6,6 +6,10 @@ import {
   postRichTextToPlainText,
   serializePostRichText,
 } from "../../../../../services/posts/editor/postRichTextSerializer";
+import {
+  createWritingCanvasContentFromEditorHtml,
+  serializeWritingCanvasContentToHtml,
+} from "../../../../../services/posts/editor/postPasteNormalizer";
 
 const TRANSFORMABLE_BLOCK_TYPES: PostBlockType[] = [
   "paragraph",
@@ -14,6 +18,7 @@ const TRANSFORMABLE_BLOCK_TYPES: PostBlockType[] = [
   "quote",
   "code",
   "callout",
+  "writing-canvas",
 ];
 
 const transformableSet = new Set<PostBlockType>(TRANSFORMABLE_BLOCK_TYPES);
@@ -68,20 +73,51 @@ const normalizeContentForTarget = (
   targetType: PostBlockType
 ): unknown => {
   if (targetType === "list") {
-    return toTextLines(source.content);
+    const sourceContent =
+      source.type === "writing-canvas"
+        ? serializeWritingCanvasContentToHtml(source.content)
+        : source.content;
+    return toTextLines(sourceContent);
   }
 
   if (targetType === "code") {
-    const plain = toTextLines(source.content).join("\n");
+    const sourceContent =
+      source.type === "writing-canvas"
+        ? serializeWritingCanvasContentToHtml(source.content)
+        : source.content;
+    const plain = toTextLines(sourceContent).join("\n");
     return plain;
+  }
+
+  if (targetType === "writing-canvas") {
+    const html =
+      source.type === "list"
+        ? (() => {
+            const items = toTextLines(source.content)
+              .map((item) => serializePostRichText(item))
+              .filter(Boolean)
+              .map((item) => `<li>${item}</li>`)
+              .join("");
+            const ordered = Boolean((source.attrs ?? {}).ordered);
+            const tag = ordered ? "ol" : "ul";
+            return items.length > 0 ? `<${tag}>${items}</${tag}>` : "<p></p>";
+          })()
+        : source.type === "writing-canvas"
+          ? serializeWritingCanvasContentToHtml(source.content)
+          : typeof source.content === "string"
+            ? source.content
+            : "";
+    return createWritingCanvasContentFromEditorHtml({ html });
   }
 
   const textValue =
     source.type === "list"
       ? toTextLines(source.content).join("\n")
-      : typeof source.content === "string"
-        ? source.content
-        : "";
+      : source.type === "writing-canvas"
+        ? serializeWritingCanvasContentToHtml(source.content)
+        : typeof source.content === "string"
+          ? source.content
+          : "";
 
   return serializePostRichText(textValue);
 };
@@ -118,6 +154,9 @@ export const extractPostBlockText = (block: PostBlock) => {
   }
   if (typeof block.content === "string") {
     return block.type === "code" ? block.content : postRichTextToPlainText(block.content);
+  }
+  if (block.type === "writing-canvas") {
+    return postRichTextToPlainText(serializeWritingCanvasContentToHtml(block.content));
   }
   return "";
 };

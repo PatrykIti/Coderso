@@ -14,6 +14,7 @@ import {
   Heading6,
   Highlighter,
   Italic,
+  Layers,
   Link2,
   List,
   ListOrdered,
@@ -51,6 +52,10 @@ export type PostRichTextCommand =
   | "link"
   | "highlight"
   | "paragraph"
+  | "type-section"
+  | "type-paragraph"
+  | "type-heading"
+  | "type-quote"
   | "heading-1"
   | "heading-2"
   | "heading-3"
@@ -100,13 +105,16 @@ const advancedActions: ActionButton[] = [
   { id: "underline", label: "Underline", icon: Underline },
   { id: "strike", label: "Strike", icon: Strikethrough },
   { id: "highlight", label: "Highlight", icon: Highlighter },
-  { id: "align-left", label: "Align left", icon: AlignLeft },
-  { id: "align-center", label: "Align center", icon: AlignCenter },
-  { id: "align-right", label: "Align right", icon: AlignRight },
-  { id: "clear-formatting", label: "Clear formatting", icon: Eraser },
 ];
 
 export const typeGroupActions: ActionButton[] = [
+  { id: "type-section", label: "Section", icon: Layers },
+  { id: "type-paragraph", label: "Paragraph", icon: Pilcrow },
+  { id: "type-heading", label: "Heading", icon: Heading2 },
+  { id: "type-quote", label: "Quote", icon: Quote },
+];
+
+const textStyleActions: ActionButton[] = [
   { id: "paragraph", label: "Paragraph", icon: Pilcrow },
   { id: "heading-1", label: "Heading 1", icon: Heading1 },
   { id: "heading-2", label: "Heading 2", icon: Heading2 },
@@ -115,6 +123,22 @@ export const typeGroupActions: ActionButton[] = [
   { id: "heading-5", label: "Heading 5", icon: Heading5 },
   { id: "heading-6", label: "Heading 6", icon: Heading6 },
   { id: "quote", label: "Quote", icon: Quote },
+];
+
+export const headingLevelActions: ActionButton[] = [
+  { id: "heading-1", label: "Heading 1", icon: Heading1 },
+  { id: "heading-2", label: "Heading 2", icon: Heading2 },
+  { id: "heading-3", label: "Heading 3", icon: Heading3 },
+  { id: "heading-4", label: "Heading 4", icon: Heading4 },
+  { id: "heading-5", label: "Heading 5", icon: Heading5 },
+  { id: "heading-6", label: "Heading 6", icon: Heading6 },
+];
+
+const layoutActions: ActionButton[] = [
+  { id: "align-left", label: "Align left", icon: AlignLeft },
+  { id: "align-center", label: "Align center", icon: AlignCenter },
+  { id: "align-right", label: "Align right", icon: AlignRight },
+  { id: "clear-formatting", label: "Clear formatting", icon: Eraser },
 ];
 
 const listGroupActions: ActionButton[] = [
@@ -140,6 +164,10 @@ const toolbarProfileCapabilities: Record<
     "link",
     "highlight",
     "paragraph",
+    "type-section",
+    "type-paragraph",
+    "type-heading",
+    "type-quote",
     "heading-1",
     "heading-2",
     "heading-3",
@@ -158,17 +186,11 @@ const toolbarProfileCapabilities: Record<
   paragraph: new Set<PostRichTextCommand>([
     "bold",
     "italic",
-    "underline",
-    "strike",
-    "inline-code",
     "link",
-    "highlight",
-    "paragraph",
-    "heading-2",
-    "heading-3",
-    "bullet-list",
-    "ordered-list",
-    "quote",
+    "type-section",
+    "type-paragraph",
+    "type-heading",
+    "type-quote",
     "align-left",
     "align-center",
     "align-right",
@@ -177,12 +199,17 @@ const toolbarProfileCapabilities: Record<
   heading: new Set<PostRichTextCommand>([
     "bold",
     "italic",
-    "underline",
-    "strike",
-    "inline-code",
     "link",
-    "highlight",
-    "paragraph",
+    "type-section",
+    "type-paragraph",
+    "type-heading",
+    "type-quote",
+    "heading-1",
+    "heading-2",
+    "heading-3",
+    "heading-4",
+    "heading-5",
+    "heading-6",
     "align-left",
     "align-center",
     "align-right",
@@ -191,13 +218,11 @@ const toolbarProfileCapabilities: Record<
   quote: new Set<PostRichTextCommand>([
     "bold",
     "italic",
-    "underline",
-    "strike",
-    "inline-code",
     "link",
-    "highlight",
-    "paragraph",
-    "quote",
+    "type-section",
+    "type-paragraph",
+    "type-heading",
+    "type-quote",
     "align-left",
     "align-center",
     "align-right",
@@ -206,17 +231,11 @@ const toolbarProfileCapabilities: Record<
   callout: new Set<PostRichTextCommand>([
     "bold",
     "italic",
-    "underline",
-    "strike",
-    "inline-code",
     "link",
-    "highlight",
-    "paragraph",
-    "heading-2",
-    "heading-3",
-    "bullet-list",
-    "ordered-list",
-    "quote",
+    "type-section",
+    "type-paragraph",
+    "type-heading",
+    "type-quote",
     "align-left",
     "align-center",
     "align-right",
@@ -251,10 +270,13 @@ export function PostRichTextToolbar({
   const visiblePrimaryActions = primaryActions.filter((action) =>
     allowedCommands.has(action.id)
   );
-  const visibleAdvancedActions = advancedActions.filter((action) =>
+  const visibleTypeGroupActions = typeGroupActions.filter((action) =>
     allowedCommands.has(action.id)
   );
-  const visibleTypeGroupActions = typeGroupActions.filter((action) =>
+  const visibleTextStyleActions = textStyleActions.filter((action) =>
+    allowedCommands.has(action.id)
+  );
+  const visibleHeadingLevelActions = headingLevelActions.filter((action) =>
     allowedCommands.has(action.id)
   );
   const visibleListGroupActions = listGroupActions.filter((action) =>
@@ -263,6 +285,18 @@ export function PostRichTextToolbar({
   const visibleCodeGroupActions = codeGroupActions.filter((action) =>
     allowedCommands.has(action.id)
   );
+  const showLayoutInline =
+    profile === "paragraph" || profile === "heading" || profile === "quote" || profile === "callout";
+  const inlineLayoutActions = showLayoutInline ? layoutActions : [];
+  const advancedLayoutActions = showLayoutInline ? [] : layoutActions;
+  const visibleLayoutActions = inlineLayoutActions.filter((action) =>
+    allowedCommands.has(action.id)
+  );
+  const visibleAdvancedActions = [...advancedActions, ...advancedLayoutActions].filter(
+    (action) => allowedCommands.has(action.id)
+  );
+  const showTextStyleGroup = profile === "writing-canvas";
+  const showHeadingLevelGroup = profile === "heading";
   const hasAdvancedActions = visibleAdvancedActions.length > 0;
   const hasTypographyControls = Boolean(onFontFamilyChange) || Boolean(onBaseTextScaleChange);
   const showTypographyRow = hasTypographyControls || hasAdvancedActions;
@@ -362,6 +396,33 @@ export function PostRichTextToolbar({
         {renderCommandGroup("Type", visibleTypeGroupActions, "Type", {
           forceDropdown: true,
         })}
+        {showTextStyleGroup
+          ? renderCommandGroup("Text", visibleTextStyleActions, "Text", {
+              forceDropdown: true,
+            })
+          : null}
+        {showHeadingLevelGroup
+          ? renderCommandGroup("Headings", visibleHeadingLevelActions, "Headings", {
+              forceDropdown: true,
+            })
+          : null}
+        {visibleLayoutActions.map((action) => (
+          <Button
+            key={action.id}
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            disabled={disabled}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+            onClick={() => onCommand(action.id)}
+            aria-label={action.label}
+            title={action.label}
+          >
+            {renderActionLabel(action)}
+          </Button>
+        ))}
         {renderCommandGroup("List", visibleListGroupActions, "List")}
         {renderCommandGroup("Code", visibleCodeGroupActions, "Code")}
       </div>

@@ -43,7 +43,7 @@ test("list command availability follows profile matrix contract", () => {
   const quoteCommands = getToolbarCommandsForProfile("quote");
 
   expect(writingCommands.has("bullet-list")).toBe(true);
-  expect(paragraphCommands.has("ordered-list")).toBe(true);
+  expect(paragraphCommands.has("ordered-list")).toBe(false);
   expect(headingCommands.has("bullet-list")).toBe(false);
   expect(headingCommands.has("ordered-list")).toBe(false);
   expect(quoteCommands.has("bullet-list")).toBe(false);
@@ -53,6 +53,7 @@ test("list command availability follows profile matrix contract", () => {
 test("command dispatch kind classification remains stable", () => {
   expect(getPostRichTextCommandKind("paragraph")).toBe("block-format");
   expect(getPostRichTextCommandKind("heading-6")).toBe("block-format");
+  expect(getPostRichTextCommandKind("type-paragraph")).toBe("block-type");
   expect(getPostRichTextCommandKind("ordered-list")).toBe("list-format");
   expect(getPostRichTextCommandKind("align-left")).toBe("alignment");
 });

@@ -16,6 +16,7 @@ test("PostRichTextAdapter renders toolbar and editor shortcuts", () => {
   );
 
   expect(html).toContain("Type");
+  expect(html).toContain("Text");
   expect(html).toContain("List");
   expect(html).toContain("Code");
   expect(html).toContain("More formatting");

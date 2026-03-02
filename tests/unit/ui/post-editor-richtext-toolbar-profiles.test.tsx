@@ -6,16 +6,16 @@ import {
   PostRichTextToolbar,
 } from "../../../core/admin/ui/posts/editor/richtext/PostRichTextToolbar";
 
-test("heading toolbar profile hides heading/list/quote commands", () => {
+test("heading toolbar profile includes heading levels and alignment", () => {
   const commands = getToolbarCommandsForProfile("heading");
 
-  expect(commands.has("heading-1")).toBe(false);
-  expect(commands.has("heading-2")).toBe(false);
+  expect(commands.has("heading-1")).toBe(true);
+  expect(commands.has("heading-6")).toBe(true);
+  expect(commands.has("type-heading")).toBe(true);
   expect(commands.has("bullet-list")).toBe(false);
-  expect(commands.has("ordered-list")).toBe(false);
-  expect(commands.has("quote")).toBe(false);
-  expect(commands.has("paragraph")).toBe(true);
-  expect(commands.has("bold")).toBe(true);
+  expect(commands.has("code-block")).toBe(false);
+  expect(commands.has("underline")).toBe(false);
+  expect(commands.has("align-center")).toBe(true);
 });
 
 test("writing-canvas profile exposes full block formatting set", () => {
@@ -26,6 +26,7 @@ test("writing-canvas profile exposes full block formatting set", () => {
   expect(commands.has("bullet-list")).toBe(true);
   expect(commands.has("ordered-list")).toBe(true);
   expect(commands.has("quote")).toBe(true);
+  expect(commands.has("type-paragraph")).toBe(true);
   expect(commands.has("align-center")).toBe(true);
 });
 
@@ -38,8 +39,9 @@ test("PostRichTextToolbar render follows profile visibility", () => {
   );
 
   expect(html).toContain('aria-label="Bold"');
-  expect(html).toContain('aria-label="Paragraph"');
-  expect(html).not.toContain('aria-label="Heading 1"');
+  expect(html).toContain("Type");
+  expect(html).toContain("Headings");
+  expect(html).not.toContain("List");
   expect(html).not.toContain('aria-label="Bullet list"');
   expect(html).not.toContain('aria-label="Quote"');
 });

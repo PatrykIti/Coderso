@@ -28,6 +28,7 @@ test("adapter dispatch kind resolver is stable for core commands", () => {
   expect(resolvePostRichTextCommandKind("bold")).toBe("native-inline");
   expect(resolvePostRichTextCommandKind("highlight")).toBe("inline-wrapper");
   expect(resolvePostRichTextCommandKind("heading-1")).toBe("block-format");
+  expect(resolvePostRichTextCommandKind("type-paragraph")).toBe("block-type");
   expect(resolvePostRichTextCommandKind("ordered-list")).toBe("list-format");
   expect(resolvePostRichTextCommandKind("align-center")).toBe("alignment");
   expect(resolvePostRichTextCommandKind("clear-formatting")).toBe("clear-formatting");

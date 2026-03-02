@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 29 tasks
-- **In Progress:** 5 tasks
-- **Done:** 550 tasks
+- **In Progress:** 4 tasks
+- **Done:** 551 tasks
 
 ---
 
@@ -78,7 +78,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
-| TASK-063-16-19 | Section Toolbar Type Profiles | High | Medium | Type converts section + narrow per-block toolbar options |
 
 ---
 
@@ -86,6 +85,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-16-19 | Section Toolbar Type Profiles | High | Medium | Done: Type converts section blocks and paragraph/heading toolbars are narrowed with inline align/clear |
 | TASK-063-16-18 | Section Toolbar Type Control | High | Medium | Done: type dropdown added, block-type transforms wired for text blocks, list controls kept as separate group |
 | TASK-063-16-17 | Section Toolbar Typography Row | High | Small | Done: typography controls moved to secondary row with info + right-aligned formatting toggle |
 | TASK-063-16-16 | Section Inline Typography List Selection | High | Small | Done: list markers follow inline typography selection |

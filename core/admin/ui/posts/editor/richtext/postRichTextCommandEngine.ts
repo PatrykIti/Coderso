@@ -53,6 +53,7 @@ export type PostRichTextCommandKind =
   | "inline-wrapper"
   | "link"
   | "block-format"
+  | "block-type"
   | "list-format"
   | "alignment"
   | "clear-formatting";
@@ -228,6 +229,14 @@ export const resolveToolbarProfileForBlockType = (
 export const getPostRichTextCommandKind = (
   command: PostRichTextCommand
 ): PostRichTextCommandKind => {
+  if (
+    command === "type-section"
+    || command === "type-paragraph"
+    || command === "type-heading"
+    || command === "type-quote"
+  ) {
+    return "block-type";
+  }
   if (command === "bold" || command === "italic" || command === "underline" || command === "strike") {
     return "native-inline";
   }

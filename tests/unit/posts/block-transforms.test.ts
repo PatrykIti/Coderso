@@ -5,10 +5,12 @@ import {
   getTransformTargetTypes,
   transformPostBlock,
 } from "../../../core/admin/ui/posts/editor/blocks/blockTransforms";
+import { createWritingCanvasContentFromEditorHtml } from "../../../core/services/posts/editor/postPasteNormalizer";
 import type { PostBlock } from "../../../core/services/posts/editor/postBlockDocument";
 
 test("canTransformBlock validates supported transform matrix", () => {
   expect(canTransformBlock("paragraph", "heading")).toBe(true);
+  expect(canTransformBlock("writing-canvas", "paragraph")).toBe(true);
   expect(canTransformBlock("image", "paragraph")).toBe(false);
   expect(canTransformBlock("paragraph", "paragraph")).toBe(false);
 });
@@ -17,6 +19,7 @@ test("getTransformTargetTypes excludes source type", () => {
   const targets = getTransformTargetTypes("paragraph");
   expect(targets).toContain("heading");
   expect(targets).toContain("list");
+  expect(targets).toContain("writing-canvas");
   expect(targets).not.toContain("paragraph");
 });
 
@@ -62,4 +65,37 @@ test("transformPostBlock converts heading rich text to list items", () => {
   expect(transformed?.type).toBe("list");
   expect(transformed?.attrs).toEqual({ ordered: false });
   expect(transformed?.content).toEqual(["First", "Second"]);
+});
+
+test("transformPostBlock converts writing-canvas to paragraph rich text", () => {
+  const content = createWritingCanvasContentFromEditorHtml({
+    html: "<p>Hello</p><blockquote>Quote</blockquote>",
+  });
+  const source: PostBlock = {
+    id: "section",
+    type: "writing-canvas",
+    attrs: {},
+    content,
+  };
+
+  const transformed = transformPostBlock(source, "paragraph");
+  expect(transformed).not.toBeNull();
+  expect(transformed?.type).toBe("paragraph");
+  expect(transformed?.content).toContain("Hello");
+  expect(transformed?.content).toContain("Quote");
+});
+
+test("transformPostBlock converts paragraph to writing-canvas content", () => {
+  const source: PostBlock = {
+    id: "paragraph",
+    type: "paragraph",
+    attrs: {},
+    content: "<p>Hello</p>",
+  };
+
+  const transformed = transformPostBlock(source, "writing-canvas");
+  expect(transformed).not.toBeNull();
+  expect(transformed?.type).toBe("writing-canvas");
+  expect(transformed?.content).toBeTruthy();
+  expect(Array.isArray((transformed?.content as { nodes?: unknown[] }).nodes)).toBe(true);
 });

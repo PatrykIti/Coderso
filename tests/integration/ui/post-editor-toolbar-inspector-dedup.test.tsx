@@ -28,8 +28,8 @@ test("text block controls are owned by toolbar, not duplicated in block inspecto
     />
   );
 
-  expect(toolbarHtml).toContain("More formatting");
-  expect(toolbarHtml).toContain('aria-label="Paragraph"');
+  expect(toolbarHtml).toContain("Type");
+  expect(toolbarHtml).toContain('aria-label="Align left"');
   expect(inspectorHtml).not.toContain("Alignment");
   expect(inspectorHtml).not.toContain("Text size");
   expect(inspectorHtml).toContain("Width");

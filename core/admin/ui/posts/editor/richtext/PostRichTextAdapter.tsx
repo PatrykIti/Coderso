@@ -78,6 +78,7 @@ type PostRichTextAdapterProps = {
   onFontFamilyChange?: (value: "sans" | "serif" | "mono") => void;
   onBaseTextScaleChange?: (value: "sm" | "md" | "lg" | "xl") => void;
   onBlockTypeChange?: (targetType: PostBlockType, attrs?: Record<string, unknown>) => void;
+  blockTransformMode?: "type-only" | "type-and-format";
 };
 
 type ClipboardItemLike = {
@@ -668,6 +669,7 @@ export function PostRichTextAdapter({
   onFontFamilyChange,
   onBaseTextScaleChange,
   onBlockTypeChange,
+  blockTransformMode = "type-and-format",
 }: PostRichTextAdapterProps) {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const selectedImageRef = useRef<HTMLImageElement | null>(null);
@@ -811,11 +813,16 @@ export function PostRichTextAdapter({
             : [];
       const commandKind = getPostRichTextCommandKind(command);
 
-      if (onBlockTypeChange && commandKind === "block-format") {
-        const transform = resolveBlockTransformForCommand(command);
-        if (transform) {
-          onBlockTypeChange(transform.type, transform.attrs);
-          return;
+      if (onBlockTypeChange) {
+        const shouldHandleBlockType =
+          commandKind === "block-type"
+          || (commandKind === "block-format" && blockTransformMode === "type-and-format");
+        if (shouldHandleBlockType) {
+          const transform = resolveBlockTransformForCommand(command);
+          if (transform) {
+            onBlockTypeChange(transform.type, transform.attrs);
+            return;
+          }
         }
       }
 
@@ -895,7 +902,14 @@ export function PostRichTextAdapter({
       saveSelectionRange();
       emitChange();
     },
-    [disabled, emitChange, onBlockTypeChange, restoreSelectionRange, saveSelectionRange]
+    [
+      blockTransformMode,
+      disabled,
+      emitChange,
+      onBlockTypeChange,
+      restoreSelectionRange,
+      saveSelectionRange,
+    ]
   );
 
   const handleKeyDown = useCallback(

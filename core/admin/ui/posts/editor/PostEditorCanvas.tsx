@@ -518,6 +518,17 @@ function PostCanvasBlockItem({
             }
             onFocus={onSelect}
             toolbarProfile="writing-canvas"
+            onBlockTypeChange={
+              onTransformBlock
+                ? (targetType, attrs) => {
+                    onTransformBlock(block.id, targetType);
+                    if (attrs && onUpdateBlockAttrs) {
+                      onUpdateBlockAttrs(attrs);
+                    }
+                  }
+                : undefined
+            }
+            blockTransformMode="type-only"
             fontFamily={typography.fontFamily}
             baseTextScale={typography.baseTextScale}
             onFontFamilyChange={(fontFamily) =>
@@ -569,7 +580,10 @@ function PostCanvasBlockItem({
             toolbarProfile={resolveToolbarProfileForBlockType(block.type) ?? "paragraph"}
             onBlockTypeChange={
               onTransformBlock &&
-              (block.type === "paragraph" || block.type === "heading" || block.type === "quote")
+              (block.type === "paragraph"
+                || block.type === "heading"
+                || block.type === "quote"
+                || block.type === "callout")
                 ? (targetType, attrs) => {
                     onTransformBlock(block.id, targetType);
                     if (attrs && onUpdateBlockAttrs) {

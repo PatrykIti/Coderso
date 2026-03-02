@@ -2,23 +2,24 @@ import { expect, test } from "bun:test";
 
 import {
   PostRichTextToolbar,
-  typeGroupActions,
+  headingLevelActions,
 } from "../../../core/admin/ui/posts/editor/richtext/PostRichTextToolbar";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
-test("writing-canvas toolbar renders grouped type/list/code controls", () => {
+test("writing-canvas toolbar renders grouped type/text/list/code controls", () => {
   const html = renderAdminUi(
     <PostRichTextToolbar profile="writing-canvas" onCommand={() => undefined} />
   );
 
   expect(html).toContain("Type");
+  expect(html).toContain("Text");
   expect(html).toContain("List");
   expect(html).toContain("Code");
 });
 
-test("type dropdown actions include icons for H5 and H6", () => {
-  const h5 = typeGroupActions.find((action) => action.id === "heading-5");
-  const h6 = typeGroupActions.find((action) => action.id === "heading-6");
+test("heading level actions include icons for H5 and H6", () => {
+  const h5 = headingLevelActions.find((action) => action.id === "heading-5");
+  const h6 = headingLevelActions.find((action) => action.id === "heading-6");
 
   expect(h5?.icon).toBeTruthy();
   expect(h6?.icon).toBeTruthy();
@@ -30,6 +31,7 @@ test("heading toolbar profile hides grouped controls that are out of scope", () 
   );
 
   expect(html).toContain("Type");
+  expect(html).toContain("Headings");
   expect(html).not.toContain("List");
   expect(html).not.toContain("Code");
 });
