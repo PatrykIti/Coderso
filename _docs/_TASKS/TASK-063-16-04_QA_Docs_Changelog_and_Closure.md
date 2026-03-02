@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-16-01, TASK-063-16-02, TASK-063-16-03  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -53,3 +53,15 @@ Domknac walidacje, dokumentacje i changelog dla `TASK-063-16`.
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/<new-entry>.md`
+
+---
+
+## Closure Note (2026-03-02)
+1. QA gates:
+   - `bun --cwd core lint` -> pass
+   - `bun --cwd core lint:types` -> pass
+   - `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1496 passed`, `150 skipped`, `0 failed`)
+2. Targeted section suites:
+   - `bun test tests/unit/posts/post-richtext-command-engine.test.ts tests/integration/ui/post-editor-section-paragraph-quote-nodes.test.tsx tests/unit/posts/post-paste-normalizer.test.ts` -> pass (`26 passed`, `0 failed`)
+   - `bun test tests/integration/ui/post-editor-richtext-command-contract.test.tsx tests/integration/ui/post-editor-richtext-selection-contract.test.tsx tests/unit/ui/post-richtext-adapter-command-dispatch.test.tsx` -> pass (`11 passed`, `0 failed`)
+3. Task board, parity docs, architecture notes i changelog zsynchronizowane dla zamkniecia `TASK-063-16`.

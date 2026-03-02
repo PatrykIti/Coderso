@@ -5,7 +5,7 @@
 **Category:** Admin/UI + UX Contract  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-16  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -49,3 +49,8 @@ Zamrozic kontrakt zachowania `paragraph` i `quote` w `Section` (`writing-canvas`
 
 ## Documentation Updates Required
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
+
+---
+
+## Closure Note (2026-03-02)
+Kontrakt `Section paragraph/quote` zostal zamrozony jako node-boundary transform (`paragraph <-> quote`) z wymaganiem persistence po roundtripie modelu i runtime parity.

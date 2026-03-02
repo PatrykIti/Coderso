@@ -1,7 +1,7 @@
 # Post Editor Reference Parity Matrix
 
 Date: 2026-03-02  
-Owner Tasks: `TASK-063-12-08`, `TASK-063-14-06`, `TASK-063-15-05`  
+Owner Tasks: `TASK-063-12-08`, `TASK-063-14-06`, `TASK-063-15-05`, `TASK-063-16-04`  
 Reference Source: `_docs/UI/admin_panel/46-post-editor/code.html`
 
 ---
@@ -64,6 +64,14 @@ Stan finalny po domknieciu `TASK-063-15` (2026-03-02):
    - `inline-code` i `code-block` (bez degradacji `code-block -> quote`).
 4. Toolbar `writing-canvas` ma grouped controls: `Headings`, `List`, `Code`.
 5. W parity matrix dla `Section` brak otwartych TODO po zakresie `063-15`.
+
+## Section Paragraph Quote Node-Boundary Closure (`TASK-063-16`)
+Stan finalny po domknieciu `TASK-063-16` (2026-03-02):
+1. `paragraph` i `quote` dla `Section` sa utrwalone jako transformacje node-boundary, nie jako chwilowy efekt DOM.
+2. Dodano deterministic fallback command path dla przypadku, gdy edytor ma root bez block wrappers.
+3. Fallback opakowuje root tresc do `p` lub `blockquote`, co zapewnia persistence typu noda po roundtripie `writing-canvas`.
+4. Kontrakt `paragraph <-> quote` dla section jest pokryty testami command/selection + roundtrip.
+5. W sekcji `Section paragraph/quote` brak otwartych TODO po zakresie `063-16`.
 
 ---
 
@@ -133,6 +141,15 @@ Status: `closed`.
 2. `bun --cwd core lint:types` -> pass.
 3. `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1492 passed`, `150 skipped`, `0 failed`).
 4. Dodatkowe testy targetowane dla writing-canvas/toolbar grouping -> pass (`38 passed`, `0 failed`).
+5. Dokumentacja/changelog/task board zsynchronizowane.
+
+Status: `closed`.
+
+## Final Gate Result (`TASK-063-16-04`)
+1. `bun --cwd core lint` -> pass.
+2. `bun --cwd core lint:types` -> pass.
+3. `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1496 passed`, `150 skipped`, `0 failed`).
+4. Dodatkowe testy targetowane section paragraph/quote -> pass (`26 passed`, `0 failed`).
 5. Dokumentacja/changelog/task board zsynchronizowane.
 
 Status: `closed`.

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import {
   applyCommandToBlockTags,
+  applyCommandToRootHtmlWithoutBlocks,
   getPostRichTextCommandKind,
   resolveAlignmentForCommand,
   resolveBlockTagForCommand,
@@ -45,6 +46,21 @@ test("non-block commands do not mutate block tag structure", () => {
   const highlighted = applyCommandToBlockTags("highlight", source);
   expect(aligned).toEqual(["p", "h2", "blockquote"]);
   expect(highlighted).toEqual(["p", "h2", "blockquote"]);
+});
+
+test("root html without block wrappers can be normalized for paragraph and quote commands", () => {
+  expect(applyCommandToRootHtmlWithoutBlocks("quote", "Plain text node")).toBe(
+    "<blockquote>Plain text node</blockquote>"
+  );
+  expect(applyCommandToRootHtmlWithoutBlocks("paragraph", "Plain text node")).toBe(
+    "<p>Plain text node</p>"
+  );
+  expect(applyCommandToRootHtmlWithoutBlocks("quote", "")).toBe("<blockquote><br></blockquote>");
+});
+
+test("root html normalization skips values that already contain block tags", () => {
+  expect(applyCommandToRootHtmlWithoutBlocks("quote", "<p>Body</p>")).toBeNull();
+  expect(applyCommandToRootHtmlWithoutBlocks("paragraph", "<blockquote>Body</blockquote>")).toBeNull();
 });
 
 test("command kind and fallback mappings are deterministic", () => {

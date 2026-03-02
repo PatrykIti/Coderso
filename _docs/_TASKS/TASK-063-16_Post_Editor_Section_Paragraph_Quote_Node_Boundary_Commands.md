@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-15  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -77,6 +77,19 @@ Problem user-facing:
 3. Canvas pokazuje poprawne formatowanie (`p` vs `blockquote`) zgodne z modelem.
 4. Toggling `paragraph <-> quote` jest deterministyczny na collapsed i range selection.
 5. Wszystkie subtaski `063-16-01..04` maja status `Done`.
+
+---
+
+## Closure Update (2026-03-02)
+1. Dodano deterministic fallback dla komend blokowych przy `Section`, gdy edytor ma chwilowo root bez wrappera blokowego:
+   - `applyCommandToRootHtmlWithoutBlocks(command, html)` w command engine.
+2. Adapter richtext uzywa fallbacku dla `block-format/list-format`, gdy nie ma wykrytych target blockow:
+   - `paragraph` i `quote` tworza poprawny wrapper blokowy (`p` / `blockquote`) zamiast wpasc w niestabilny fallback.
+3. Potwierdzono persistence modelu `writing-canvas` dla `paragraph/quote` przez roundtrip parser/serializer.
+4. QA gates zakonczone sukcesem:
+   - `bun --cwd core lint` -> pass
+   - `bun --cwd core lint:types` -> pass
+   - `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1496 passed`, `150 skipped`, `0 failed`)
 
 ---
 

@@ -50,6 +50,7 @@ import {
 } from "./PostRichTextToolbar";
 import {
   applyAlignmentToBlocks,
+  applyCommandToRootHtmlWithoutBlocks,
   executeBlockCommandOnBlocks,
   getPostRichTextCommandKind,
   resolveAlignmentForCommand,
@@ -593,7 +594,18 @@ export function PostRichTextAdapter({
           }
         }
       } else if (commandKind === "block-format" || commandKind === "list-format") {
-        const handled = executeBlockCommandOnBlocks(command, targetBlocks);
+        const handled =
+          targetBlocks.length > 0
+            ? executeBlockCommandOnBlocks(command, targetBlocks)
+            : (() => {
+                const nextHtml = applyCommandToRootHtmlWithoutBlocks(
+                  command,
+                  editorRoot.innerHTML
+                );
+                if (!nextHtml) return false;
+                editorRoot.innerHTML = nextHtml;
+                return true;
+              })();
         if (!handled) {
           const fallbackBlockTag = resolveBlockTagForCommand(command);
           const fallbackListTag = resolveListTagForCommand(command);

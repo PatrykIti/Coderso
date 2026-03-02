@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-16-01  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -51,3 +51,10 @@ Wdrozyc deterministic path dla `paragraph` i `quote` w `Section` na poziomie com
 
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
+
+---
+
+## Closure Note (2026-03-02)
+Wdrozone deterministic command path dla `paragraph/quote` w `Section`:
+1. `postRichTextCommandEngine` dodaje fallback opakowania root HTML bez block wrappers.
+2. `PostRichTextAdapter` uzywa fallbacku, gdy `targetBlocks` sa puste, co stabilizuje zachowanie `paragraph/quote` dla section authoring.

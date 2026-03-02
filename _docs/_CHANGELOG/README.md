@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 329 | 2026-03-02 | TASK-063-16 section paragraph quote node-boundary command closure | Admin/UI |
 | 328 | 2026-03-02 | TASK-063-15 section writing-canvas hardening and grouped toolbar closure | Admin/UI |
 | 327 | 2026-02-28 | TASK-063-14 richtext command reliability closure and qa gate completion | Admin/UI |
 | 326 | 2026-02-27 | TASK-063-14 richtext command reliability phase 1 and documentation sync | Admin/UI |

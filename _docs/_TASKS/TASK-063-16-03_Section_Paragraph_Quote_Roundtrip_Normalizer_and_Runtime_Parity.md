@@ -5,7 +5,7 @@
 **Category:** Core/Editor + Runtime  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-16-02  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -54,3 +54,8 @@ Domknac parity modelu i runtime tak, aby `paragraph` i `quote` wykonane w `Secti
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
+
+---
+
+## Closure Note (2026-03-02)
+Dodane testy kontraktowe potwierdzaja, ze `paragraph/quote` dla section utrzymuja typ noda `writing-canvas` po roundtripie (`html -> nodes -> html -> nodes`) i nie degraduja sie przy fallback path.

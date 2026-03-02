@@ -33,6 +33,8 @@ const ALIGNMENT_COMMAND_VALUE: Partial<Record<PostRichTextCommand, PostRichTextA
   "align-right": "right",
 };
 
+const blockTagRegex = /<(p|h[1-6]|ul|ol|blockquote|pre)\b/i;
+
 export type PostRichTextBlockTag =
   | "p"
   | "h1"
@@ -236,6 +238,28 @@ export const resolveListTagForCommand = (
 export const resolveAlignmentForCommand = (
   command: PostRichTextCommand
 ): PostRichTextAlignment | null => ALIGNMENT_COMMAND_VALUE[command] ?? null;
+
+export const applyCommandToRootHtmlWithoutBlocks = (
+  command: PostRichTextCommand,
+  html: string
+): string | null => {
+  const currentHtml = typeof html === "string" ? html.trim() : "";
+  if (blockTagRegex.test(currentHtml)) {
+    return null;
+  }
+
+  const content = currentHtml.length > 0 ? currentHtml : "<br>";
+  const listTag = resolveListTagForCommand(command);
+  if (listTag) {
+    return `<${listTag}><li>${content}</li></${listTag}>`;
+  }
+
+  const blockTag = resolveBlockTagForCommand(command);
+  if (!blockTag) {
+    return null;
+  }
+  return `<${blockTag}>${content}</${blockTag}>`;
+};
 
 export const applyCommandToBlockTags = (
   command: PostRichTextCommand,

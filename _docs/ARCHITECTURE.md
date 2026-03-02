@@ -168,6 +168,10 @@ przez `setup.completed=true`.
     - semantyka `align` i `code-block` jest utrwalona w modelu (`align` per node, `quote.variant = "code"`) i mapowana do runtime renderingu,
     - toolbar dla profilu `writing-canvas` wspiera grouped controls `Headings`, `List`, `Code`,
     - `clear-formatting` usuwa inline marks/linki bez degradacji struktury blokowej.
+  - **TASK-063-16 (done):** section paragraph/quote node-boundary commands:
+    - komendy `paragraph` i `quote` w `Section` maja deterministic fallback, gdy edytor chwilowo nie ma block wrappers (`p/h*/blockquote/ul/ol/pre`),
+    - fallback opakowuje root HTML do poprawnego bloku (`p` / `blockquote`), dzieki czemu command result jest utrwalany w modelu `writing-canvas` jako node type,
+    - roundtrip kontrakt (`html -> nodes -> html`) utrzymuje typ `paragraph`/`quote` bez degradacji po `blur/reselect`.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`
