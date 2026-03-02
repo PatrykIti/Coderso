@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-15  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -57,3 +57,8 @@ Usunac przyczyne skoku caret w `Section` (`writing-canvas`) podczas wpisywania p
 
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (typing pipeline + commit boundaries for writing-canvas)
+
+---
+
+## Closure Note (2026-03-02)
+W `PostEditorCanvas` wdrozono ephemeral `writingCanvasDraftHtml` dla aktywnego `writing-canvas`, co usuwa lossy per-keystroke roundtrip jako source of truth i stabilizuje caret podczas typingu.

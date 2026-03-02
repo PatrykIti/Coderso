@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 35 tasks
+- **To Do:** 29 tasks
 - **In Progress:** 4 tasks
-- **Done:** 525 tasks
+- **Done:** 531 tasks
 
 ---
 
@@ -39,12 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063-15 | Post Editor Section Writing Canvas Caret Command Parity and Grouped Toolbar | High | Large | Section (`writing-canvas`) caret/Enter stabilization + command persistence + grouped toolbar IA |
-| TASK-063-15-01 | Section Input Pipeline and Caret Stability | High | Medium | Remove lossy per-keystroke roundtrip and stabilize selection/caret |
-| TASK-063-15-02 | Section Enter Semantics and Empty Paragraph Preservation | High | Medium | Preserve intentional empty paragraphs and fix Enter/Enter+Enter caret flow |
-| TASK-063-15-03 | Section Command Persistence Paragraph Headings List Align Clear Code | High | Large | Persist paragraph/h1-h6/list/align/clear/code semantics in writing-canvas roundtrip |
-| TASK-063-15-04 | Section Toolbar Grouping Heading List Code and A11y | High | Medium | Group heading/list/code actions and keep selection-safe accessible UX |
-| TASK-063-15-05 | QA Docs Changelog and Closure | Medium | Medium | Full gates + docs/changelog/task-board closure for TASK-063-15 |
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Full regression, docs sync, changelog, kanban closure |
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Document/Block tabs + persisted inspector preferences |
 | TASK-063-08 | Keyboard, A11y, and Focus Management | High | Medium | Shortcut registry, focus return, and ARIA contracts |
@@ -80,7 +74,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 + 063-12 + 063-13 + 063-14 completed; active follow-up: 063-07/063-08 + 063-09 closure + 063-15 section hardening |
+| TASK-063 | Gutenberg Parity Post Editor Rearchitecture | High | Large | In progress: 063-01..063-06 + 063-10 + 063-12 + 063-13 + 063-14 + 063-15 completed; active follow-up: 063-07/063-08 + 063-09 closure |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | In progress: 061-01..061-07 done, pending 061-08 |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Baseline gates delivered; final closure pending TASK-054-199 |
@@ -91,6 +85,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-063-15 | Post Editor Section Writing Canvas Caret Command Parity and Grouped Toolbar | High | Large | Done: writing-canvas caret/Enter stability, command persistence parity, grouped toolbar controls, and full QA/docs/changelog closure |
+| TASK-063-15-05 | QA Docs Changelog and Closure | Medium | Medium | Done: lint/types/full regression green; board/docs/parity/changelog synchronized |
+| TASK-063-15-04 | Section Toolbar Grouping Heading List Code and A11y | High | Medium | Done: grouped `Headings`, `List`, `Code` controls with profile-aware rendering and integration coverage |
+| TASK-063-15-03 | Section Command Persistence Paragraph Headings List Align Clear Code | High | Large | Done: persistence for heading/list/align/clear/code semantics across writing-canvas roundtrip/runtime |
+| TASK-063-15-02 | Section Enter Semantics and Empty Paragraph Preservation | High | Medium | Done: intentional empty paragraph preservation for stable `Enter`/`Enter+Enter` behavior |
+| TASK-063-15-01 | Section Input Pipeline and Caret Stability | High | Medium | Done: draft HTML input pipeline removed per-keystroke lossy rewrite and stabilized caret |
 | TASK-063-14 | Post Editor RichText Command Reliability and Contextual Formatting Model | High | Large | Done: deterministic command engine, contextual toolbar profiles, deduplicated inspector ownership, and full QA/docs/changelog closure |
 | TASK-063-14-06 | QA Docs Changelog and Closure | Medium | Medium | Done: lint/types/full regression green; board/docs/changelog synchronized |
 | TASK-063-14-05 | Contextual Toolbar Profiles and Block Inspector Dedup | High | Medium | Done: profile routing + toolbar/inspector ownership split finalized and tested |

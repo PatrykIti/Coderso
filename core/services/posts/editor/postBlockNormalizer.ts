@@ -5,6 +5,7 @@ import {
   POST_BLOCK_DOCUMENT_VERSION,
   WRITING_CANVAS_NODE_TYPES,
   WRITING_CANVAS_VERSION,
+  WRITING_CANVAS_ALIGN_VALUES,
   WRITING_CANVAS_WIDTH_VALUES,
   WRITING_CANVAS_WRAP_VALUES,
   type PostBlock,
@@ -14,6 +15,7 @@ import {
   type WritingCanvasContent,
   type WritingCanvasNode,
   type WritingCanvasNodeType,
+  type WritingCanvasAlign,
   type WritingCanvasWidth,
   type WritingCanvasWrap,
 } from "./postBlockDocument";
@@ -53,6 +55,7 @@ const WRITING_CANVAS_LEVEL_VALUES = new Set([1, 2, 3, 4, 5, 6]);
 const writingCanvasNodeTypeSet = new Set<string>(WRITING_CANVAS_NODE_TYPES);
 const writingCanvasWrapSet = new Set<string>(WRITING_CANVAS_WRAP_VALUES);
 const writingCanvasWidthSet = new Set<number>(WRITING_CANVAS_WIDTH_VALUES);
+const writingCanvasAlignSet = new Set<string>(WRITING_CANVAS_ALIGN_VALUES);
 
 type CalloutTone = (typeof CALL_OUT_TONES)[number];
 
@@ -332,6 +335,14 @@ const normalizeWritingHeadingLevel = (value: unknown) => {
   return rounded as 1 | 2 | 3 | 4 | 5 | 6;
 };
 
+const normalizeWritingAlign = (value: unknown): WritingCanvasAlign | undefined => {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  return writingCanvasAlignSet.has(normalized)
+    ? (normalized as WritingCanvasAlign)
+    : undefined;
+};
+
 const normalizeWritingListItems = (value: unknown) => {
   if (!Array.isArray(value)) return [] as string[];
   return value
@@ -356,38 +367,48 @@ const normalizeWritingNode = (
   const type = rawType as WritingCanvasNodeType;
 
   if (type === "paragraph") {
+    const align = normalizeWritingAlign(input.align);
     return {
       id,
       type,
       text: normalizeRichTextContent(input.text ?? input.content ?? ""),
+      ...(align ? { align } : {}),
     };
   }
 
   if (type === "heading") {
     const anchorId = normalizeOptionalAnchorId(input.anchorId);
+    const align = normalizeWritingAlign(input.align);
     return {
       id,
       type,
       level: normalizeWritingHeadingLevel(input.level),
       text: normalizeRichTextContent(input.text ?? input.content ?? ""),
       ...(anchorId ? { anchorId } : {}),
+      ...(align ? { align } : {}),
     };
   }
 
   if (type === "list") {
+    const align = normalizeWritingAlign(input.align);
     return {
       id,
       type,
       ordered: input.ordered === true,
       items: normalizeWritingListItems(input.items ?? input.content),
+      ...(align ? { align } : {}),
     };
   }
 
   if (type === "quote") {
+    const align = normalizeWritingAlign(input.align);
+    const variant = input.variant === "code" ? "code" : "quote";
     return {
       id,
       type,
       text: normalizeRichTextContent(input.text ?? input.content ?? ""),
+      ...(align ? { align } : {}),
+      ...(variant === "code" ? { variant } : {}),
     };
   }
 

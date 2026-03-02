@@ -1,7 +1,7 @@
 # Post Editor Reference Parity Matrix
 
-Date: 2026-02-28  
-Owner Tasks: `TASK-063-12-08`, `TASK-063-14-06`  
+Date: 2026-03-02  
+Owner Tasks: `TASK-063-12-08`, `TASK-063-14-06`, `TASK-063-15-05`  
 Reference Source: `_docs/UI/admin_panel/46-post-editor/code.html`
 
 ---
@@ -52,6 +52,18 @@ Stan finalny po domknieciu `TASK-063-14` (2026-02-28):
 3. Routing profilu toolbar jest centralny (`resolveToolbarProfileForBlockType`) i nie ma juz rozjazdu miedzy canvasem a toolbar visibility matrix.
 4. Ownership split toolbar vs inspector jest domkniety testami kontraktowymi (brak duplikacji alignment/text scale dla blokow tekstowych).
 5. W sekcji command profile/ownership brak otwartych TODO dla `063-14`.
+
+## Section Writing Canvas Hardening Closure (`TASK-063-15`)
+Stan finalny po domknieciu `TASK-063-15` (2026-03-02):
+1. `writing-canvas` input pipeline zostal ustabilizowany przez rozdzielenie live draft HTML od commitu modelu strukturalnego.
+2. Kontrakt `Enter` i `Enter+Enter` zachowuje intencjonalne puste paragrafy (`<p><br></p>`) bez skoku caret do poczatku bloku.
+3. Persistence komend dla `Section` jest utrwalona w roundtripie i runtime:
+   - `paragraph`, `h1..h6`, `bullet-list`, `ordered-list`,
+   - `align-left/center/right`,
+   - `clear-formatting`,
+   - `inline-code` i `code-block` (bez degradacji `code-block -> quote`).
+4. Toolbar `writing-canvas` ma grouped controls: `Headings`, `List`, `Code`.
+5. W parity matrix dla `Section` brak otwartych TODO po zakresie `063-15`.
 
 ---
 
@@ -112,6 +124,15 @@ Status: `closed`.
 2. `bun --cwd core lint:types` -> pass.
 3. `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1488 passed`, `150 skipped`, `0 failed`).
 4. Command-contract test suites + toolbar/inspector dedup tests dodane i zielone.
+5. Dokumentacja/changelog/task board zsynchronizowane.
+
+Status: `closed`.
+
+## Final Gate Result (`TASK-063-15-05`)
+1. `bun --cwd core lint` -> pass.
+2. `bun --cwd core lint:types` -> pass.
+3. `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1492 passed`, `150 skipped`, `0 failed`).
+4. Dodatkowe testy targetowane dla writing-canvas/toolbar grouping -> pass (`38 passed`, `0 failed`).
 5. Dokumentacja/changelog/task board zsynchronizowane.
 
 Status: `closed`.

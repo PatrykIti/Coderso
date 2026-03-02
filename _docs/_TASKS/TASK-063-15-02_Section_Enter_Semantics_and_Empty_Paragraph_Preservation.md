@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-15-01  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -57,3 +57,8 @@ Ustabilizowac semantyke `Enter` dla `Section` i przestac tracic puste paragrafy 
 
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (Enter semantics for writing-canvas)
+
+---
+
+## Closure Note (2026-03-02)
+Parser `writing-canvas` zachowuje intencjonalne puste paragrafy (`<p><br></p>`), co stabilizuje sekwencje `Enter` i `Enter+Enter`; kontrakt potwierdzono testami normalizera/paste.

@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-13, TASK-063-14  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -92,6 +92,22 @@ Domknac regresje bloku `Section` (tj. `writing-canvas`) i doprowadzic do realnej
 4. `code-block` nie degraduje do `quote`; `inline-code` i `code-block` sa obslugiwane spojnie.
 5. Toolbar ma grupy `Heading`, `List`, `Code` i jest selection-safe (brak utraty focus/caret po kliknieciu).
 6. Wszystkie subtaski `063-15-01..05` maja status `Done` z closure note.
+
+---
+
+## Closure Update (2026-03-02)
+1. Ustabilizowano input pipeline dla `writing-canvas` przez rozdzielenie live draft HTML od commitu modelu strukturalnego (`PostEditorCanvas` + commit na `onEditorBlur`).
+2. Znormalizowano parser/serializer `writing-canvas`:
+   - zachowanie pustych paragrafow po `Enter`,
+   - persistence `align` dla `paragraph/heading/list/quote`,
+   - persistence `code-block` przez `quote.variant = "code"` i mapowanie do `<pre>`.
+3. Runtime mapowanie/rendering wspiera nowe semantyki `writing-canvas` (`align`, `quote variant`).
+4. Toolbar dla profilu `writing-canvas` ma grouped controls `Headings`, `List`, `Code`.
+5. `clear-formatting` w adapterze zostal doprecyzowany (usuwanie inline marks/linkow bez degradacji struktury blokowej).
+6. QA gates zakonczone sukcesem:
+   - `bun --cwd core lint` -> pass
+   - `bun --cwd core lint:types` -> pass
+   - `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1492 passed`, `150 skipped`, `0 failed`)
 
 ---
 

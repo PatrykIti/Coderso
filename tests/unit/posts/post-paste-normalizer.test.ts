@@ -4,6 +4,7 @@ import {
   createWritingCanvasContentFromEditorHtml,
   createWritingCanvasContentFromPaste,
   normalizePostPastePayload,
+  serializeWritingCanvasContentToHtml,
 } from "../../../core/services/posts/editor/postPasteNormalizer";
 import { postRichTextToPlainText } from "../../../core/services/posts/editor/postRichTextSerializer";
 
@@ -236,4 +237,56 @@ test("createWritingCanvasContentFromEditorHtml maps multiline lists to list node
     throw new Error("expected list node");
   }
   expect(listNode.items).toEqual(["One", "Two", "Three"]);
+});
+
+test("createWritingCanvasContentFromEditorHtml preserves empty paragraphs produced by enter", () => {
+  const next = createWritingCanvasContentFromEditorHtml({
+    html: "<p>Alpha</p><p><br></p><p><br></p>",
+  });
+
+  expect(next.nodes).toHaveLength(3);
+  expect(next.nodes[0]?.type).toBe("paragraph");
+  expect(next.nodes[1]?.type).toBe("paragraph");
+  expect(next.nodes[2]?.type).toBe("paragraph");
+  const second = next.nodes[1];
+  const third = next.nodes[2];
+  if (!second || second.type !== "paragraph" || !third || third.type !== "paragraph") {
+    throw new Error("expected paragraph nodes");
+  }
+  expect(second.text).toBe("<br>");
+  expect(third.text).toBe("<br>");
+});
+
+test("writing-canvas roundtrip keeps code-block variant and block alignment attrs", () => {
+  const next = createWritingCanvasContentFromEditorHtml({
+    html: [
+      '<pre data-align="center"><code>const a = 1;</code></pre>',
+      '<p data-align="right">Aligned paragraph</p>',
+      '<ul data-align="center"><li>Item A</li></ul>',
+    ].join(""),
+  });
+
+  const codeNode = next.nodes[0];
+  if (!codeNode || codeNode.type !== "quote") {
+    throw new Error("expected quote node for code block variant");
+  }
+  expect(codeNode.variant).toBe("code");
+  expect(codeNode.align).toBe("center");
+
+  const paragraphNode = next.nodes[1];
+  if (!paragraphNode || paragraphNode.type !== "paragraph") {
+    throw new Error("expected paragraph node");
+  }
+  expect(paragraphNode.align).toBe("right");
+
+  const listNode = next.nodes[2];
+  if (!listNode || listNode.type !== "list") {
+    throw new Error("expected list node");
+  }
+  expect(listNode.align).toBe("center");
+
+  const serialized = serializeWritingCanvasContentToHtml(next);
+  expect(serialized).toContain('<pre data-align="center">');
+  expect(serialized).toContain('<p data-align="right">');
+  expect(serialized).toContain('<ul data-align="center">');
 });

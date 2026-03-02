@@ -4,6 +4,7 @@ import {
   AlignRight,
   Bold,
   Code2,
+  ChevronDown,
   Eraser,
   Heading1,
   Heading2,
@@ -23,6 +24,14 @@ import {
 import { useState, type ComponentType } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -84,27 +93,36 @@ const primaryActions: ActionButton[] = [
   { id: "italic", label: "Italic", icon: Italic },
   { id: "link", label: "Link", icon: Link2 },
   { id: "paragraph", label: "Paragraph", icon: Pilcrow },
-  { id: "heading-1", label: "Heading 1", icon: Heading1 },
-  { id: "heading-2", label: "Heading 2", icon: Heading2 },
-  { id: "bullet-list", label: "Bullet list", icon: List },
   { id: "quote", label: "Quote", icon: Quote },
 ];
 
 const advancedActions: ActionButton[] = [
   { id: "underline", label: "Underline", icon: Underline },
   { id: "strike", label: "Strike", icon: Strikethrough },
-  { id: "inline-code", label: "Inline code", icon: Code2 },
   { id: "highlight", label: "Highlight", icon: Highlighter },
-  { id: "heading-3", label: "Heading 3", icon: Heading3 },
-  { id: "heading-4", label: "Heading 4", icon: Heading4 },
-  { id: "heading-5", label: "Heading 5", shortLabel: "H5" },
-  { id: "heading-6", label: "Heading 6", shortLabel: "H6" },
-  { id: "ordered-list", label: "Ordered list", icon: ListOrdered },
-  { id: "code-block", label: "Code block", icon: Code2 },
   { id: "align-left", label: "Align left", icon: AlignLeft },
   { id: "align-center", label: "Align center", icon: AlignCenter },
   { id: "align-right", label: "Align right", icon: AlignRight },
   { id: "clear-formatting", label: "Clear formatting", icon: Eraser },
+];
+
+const headingGroupActions: ActionButton[] = [
+  { id: "heading-1", label: "Heading 1", icon: Heading1 },
+  { id: "heading-2", label: "Heading 2", icon: Heading2 },
+  { id: "heading-3", label: "Heading 3", icon: Heading3 },
+  { id: "heading-4", label: "Heading 4", icon: Heading4 },
+  { id: "heading-5", label: "Heading 5", shortLabel: "H5" },
+  { id: "heading-6", label: "Heading 6", shortLabel: "H6" },
+];
+
+const listGroupActions: ActionButton[] = [
+  { id: "bullet-list", label: "Bullet list", icon: List },
+  { id: "ordered-list", label: "Ordered list", icon: ListOrdered },
+];
+
+const codeGroupActions: ActionButton[] = [
+  { id: "inline-code", label: "Inline code", icon: Code2 },
+  { id: "code-block", label: "Code block", icon: Code2 },
 ];
 
 const toolbarProfileCapabilities: Record<
@@ -234,7 +252,81 @@ export function PostRichTextToolbar({
   const visibleAdvancedActions = advancedActions.filter((action) =>
     allowedCommands.has(action.id)
   );
+  const visibleHeadingGroupActions = headingGroupActions.filter((action) =>
+    allowedCommands.has(action.id)
+  );
+  const visibleListGroupActions = listGroupActions.filter((action) =>
+    allowedCommands.has(action.id)
+  );
+  const visibleCodeGroupActions = codeGroupActions.filter((action) =>
+    allowedCommands.has(action.id)
+  );
   const hasAdvancedActions = visibleAdvancedActions.length > 0;
+
+  const renderCommandGroup = (
+    label: string,
+    actions: ActionButton[],
+    triggerAriaLabel: string
+  ) => {
+    if (actions.length === 0) return null;
+    if (actions.length === 1) {
+      const action = actions[0]!;
+      return (
+        <Button
+          key={action.id}
+          type="button"
+          variant="ghost"
+          size="icon-xs"
+          disabled={disabled}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={() => onCommand(action.id)}
+          aria-label={action.label}
+          title={action.label}
+        >
+          {renderActionLabel(action)}
+        </Button>
+      );
+    }
+
+    return (
+      <DropdownMenu key={label}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            disabled={disabled}
+            onMouseDown={(event) => {
+              event.preventDefault();
+            }}
+            aria-label={triggerAriaLabel}
+            title={label}
+          >
+            {label}
+            <ChevronDown className="h-3.5 w-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>{label}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {actions.map((action) => (
+            <DropdownMenuItem
+              key={action.id}
+              onSelect={() => {
+                onCommand(action.id);
+              }}
+              aria-label={action.label}
+            >
+              {action.icon ? <action.icon className="h-3.5 w-3.5" /> : null}
+              <span>{action.label}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  };
 
   return (
     <div className="space-y-2">
@@ -256,6 +348,9 @@ export function PostRichTextToolbar({
             {renderActionLabel(action)}
           </Button>
         ))}
+        {renderCommandGroup("Headings", visibleHeadingGroupActions, "Headings")}
+        {renderCommandGroup("List", visibleListGroupActions, "List")}
+        {renderCommandGroup("Code", visibleCodeGroupActions, "Code")}
         {hasAdvancedActions ? (
           <Button
             type="button"

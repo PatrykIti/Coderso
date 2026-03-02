@@ -193,6 +193,7 @@ type RuntimeWritingCanvasParagraphNode = {
   id: string;
   type: "paragraph";
   html: string;
+  align?: "left" | "center" | "right";
 };
 
 type RuntimeWritingCanvasHeadingNode = {
@@ -201,6 +202,7 @@ type RuntimeWritingCanvasHeadingNode = {
   level: 1 | 2 | 3 | 4 | 5 | 6;
   html: string;
   anchorId?: string;
+  align?: "left" | "center" | "right";
 };
 
 type RuntimeWritingCanvasListNode = {
@@ -208,12 +210,15 @@ type RuntimeWritingCanvasListNode = {
   type: "list";
   ordered: boolean;
   items: string[];
+  align?: "left" | "center" | "right";
 };
 
 type RuntimeWritingCanvasQuoteNode = {
   id: string;
   type: "quote";
   html: string;
+  align?: "left" | "center" | "right";
+  variant?: "quote" | "code";
 };
 
 type RuntimeWritingCanvasImageNode = {
@@ -382,6 +387,12 @@ const toHeadingBoundLevel = (value: unknown, fallback: 1 | 2 | 3 | 4 | 5 | 6) =>
   return toHeadingLevel(value);
 };
 
+const toOptionalAlign = (value: unknown): "left" | "center" | "right" | undefined => {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  return alignValues.has(normalized) ? (normalized as "left" | "center" | "right") : undefined;
+};
+
 const mapWritingCanvasNodesForRuntime = async (
   content: unknown,
   blockId: string,
@@ -408,32 +419,39 @@ const mapWritingCanvasNodesForRuntime = async (
     const nodeId = toNodeId(node.id, `${blockId}-node-${ordinal}`);
 
     if (type === "paragraph") {
+      const align = toOptionalAlign(node.align);
       nodes.push({
         id: nodeId,
         type: "paragraph",
         html: serializePostRichText(typeof node.text === "string" ? node.text : ""),
+        ...(align ? { align } : {}),
       });
       ordinal += 1;
       continue;
     }
 
     if (type === "heading") {
+      const align = toOptionalAlign(node.align);
       nodes.push({
         id: nodeId,
         type: "heading",
         level: toHeadingLevel(node.level),
         html: serializePostRichText(typeof node.text === "string" ? node.text : ""),
         anchorId: sanitizePostHeadingAnchorId(node.anchorId),
+        ...(align ? { align } : {}),
       });
       ordinal += 1;
       continue;
     }
 
     if (type === "quote") {
+      const align = toOptionalAlign(node.align);
       nodes.push({
         id: nodeId,
         type: "quote",
         html: serializePostRichText(typeof node.text === "string" ? node.text : ""),
+        ...(align ? { align } : {}),
+        ...(node.variant === "code" ? { variant: "code" as const } : {}),
       });
       ordinal += 1;
       continue;
@@ -449,11 +467,13 @@ const mapWritingCanvasNodesForRuntime = async (
       if (items.length === 0) {
         pushRuntimeWarning(warnings, `runtime_writing_canvas_empty_list:${blockId}:${nodeId}`);
       } else {
+        const align = toOptionalAlign(node.align);
         nodes.push({
           id: nodeId,
           type: "list",
           ordered: node.ordered === true,
           items,
+          ...(align ? { align } : {}),
         });
       }
       ordinal += 1;

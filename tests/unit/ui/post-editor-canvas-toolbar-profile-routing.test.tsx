@@ -72,8 +72,8 @@ test("paragraph block routes to paragraph toolbar profile", () => {
   const html = renderCanvasForType("paragraph");
 
   expect(html).toContain('aria-label="Paragraph"');
-  expect(html).toContain('aria-label="Heading 2"');
-  expect(html).toContain('aria-label="Bullet list"');
+  expect(html).toContain("Headings");
+  expect(html).toContain("List");
   expect(html).toContain('aria-label="Quote"');
 });
 

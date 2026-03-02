@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-15-01, TASK-063-15-02, TASK-063-15-03, TASK-063-15-04  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -59,3 +59,14 @@ Domknac walidacje, dokumentacje i changelog dla `TASK-063-15`.
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/<new-entry>.md`
+
+---
+
+## Closure Note (2026-03-02)
+1. QA gates:
+   - `bun --cwd core lint` -> pass
+   - `bun --cwd core lint:types` -> pass
+   - `bun test tests/unit tests/integration tests/perf tests/security` -> pass (`1492 passed`, `150 skipped`, `0 failed`)
+2. Dodatkowo zielony targeted regression dla writing-canvas/richtext toolbar:
+   - `bun test tests/unit/posts/post-paste-normalizer.test.ts tests/unit/posts/post-block-normalizer-writing-canvas.test.ts tests/unit/posts/post-block-runtime-renderer.test.tsx tests/unit/ui/post-editor-canvas-toolbar-profile-routing.test.tsx tests/unit/ui/post-editor-richtext-toolbar-profiles.test.tsx tests/integration/ui/post-richtext-toolbar.test.tsx tests/integration/ui/post-richtext-toolbar-grouped-controls.test.tsx tests/integration/ui/post-editor-toolbar-inspector-dedup.test.tsx` -> pass (`38 passed`, `0 failed`)
+3. Task board, parity docs, architecture notes i changelog zostaly zsynchronizowane dla finalnego zamkniecia `TASK-063-15`.

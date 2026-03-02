@@ -5,7 +5,7 @@
 **Category:** Admin/UI + UX  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-063-15-03  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -65,3 +65,8 @@ Przeorganizowac toolbar dla `Section` na grupy akcji, zgodnie z oczekiwanym UX:
 
 ## Documentation Updates Required
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md` (toolbar IA notes)
+
+---
+
+## Closure Note (2026-03-02)
+Toolbar dla profilu `writing-canvas` zostal przeorganizowany na grouped controls (`Headings`, `List`, `Code`) na bazie `DropdownMenu`, z pokryciem testami integration/unit dla visibility i dispatch.

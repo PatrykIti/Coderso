@@ -49,6 +49,13 @@ test("normalizePostBlockDocument normalizes writing-canvas nodes and limits", ()
               widthPercent: 77,
             },
             {
+              id: "Code-1",
+              type: "quote",
+              variant: "code",
+              align: "center",
+              text: "<code>const x = 1</code>",
+            },
+            {
               id: "skip-me",
               type: "unsupported",
               text: "ignored",
@@ -77,7 +84,7 @@ test("normalizePostBlockDocument normalizes writing-canvas nodes and limits", ()
   };
 
   expect(content.version).toBe(1);
-  expect(content.nodes).toHaveLength(5);
+  expect(content.nodes).toHaveLength(6);
   expect(content.nodes[0]?.id).toBe("intro");
   expect(content.nodes[1]?.id).toBe("intro-2");
   expect(content.nodes[1]?.level).toBe(2);
@@ -86,6 +93,9 @@ test("normalizePostBlockDocument normalizes writing-canvas nodes and limits", ()
   expect(content.nodes[4]?.mediaId).toBe("media-1");
   expect(content.nodes[4]?.wrap).toBe("right");
   expect(content.nodes[4]?.widthPercent).toBe(50);
+  expect(content.nodes[5]?.type).toBe("quote");
+  expect(content.nodes[5]?.variant).toBe("code");
+  expect(content.nodes[5]?.align).toBe("center");
 });
 
 test("normalizePostBlockDocument uses default writing-canvas node for invalid payload", () => {

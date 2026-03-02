@@ -1,5 +1,7 @@
 import {
+  WRITING_CANVAS_ALIGN_VALUES,
   WRITING_CANVAS_VERSION,
+  type WritingCanvasAlign,
   type WritingCanvasContent,
   type WritingCanvasNode,
 } from "./postBlockDocument";
@@ -17,6 +19,7 @@ const MAX_HTML_INPUT_LENGTH = 350_000;
 const MAX_TEXT_INPUT_LENGTH = 150_000;
 const MAX_WRITING_NODES = 200;
 const MAX_LIST_ITEMS = 120;
+const writingCanvasAlignSet = new Set<string>(WRITING_CANVAS_ALIGN_VALUES);
 
 const blockMatcher =
   /<(p|h1|h2|h3|h4|h5|h6|blockquote|pre|ul|ol)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
@@ -36,6 +39,30 @@ const tocNumberedLineMatcher = /^\d+(?:\.\d+)*\.?\s+\S+/;
 const tocDottedLeaderMatcher = /\.{2,}\s*\d+\s*$/;
 
 const textTrim = (value: string) => value.replace(/\r\n/g, "\n").trim();
+
+const parseAttributes = (rawAttrs: string) => {
+  const attributes = new Map<string, string>();
+  const regex = /([a-zA-Z0-9:-]+)\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/g;
+
+  for (const match of rawAttrs.matchAll(regex)) {
+    const key = match[1]?.toLowerCase();
+    if (!key) continue;
+    const value = match[3] ?? match[4] ?? match[5] ?? "";
+    attributes.set(key, value);
+  }
+
+  return attributes;
+};
+
+const parseBlockAlignFromAttrs = (rawAttrs: string): WritingCanvasAlign | undefined => {
+  const attrs = parseAttributes(rawAttrs);
+  const alignCandidate = attrs.get("data-align") ?? attrs.get("align");
+  if (!alignCandidate) return undefined;
+  const normalized = alignCandidate.trim().toLowerCase();
+  return writingCanvasAlignSet.has(normalized)
+    ? (normalized as WritingCanvasAlign)
+    : undefined;
+};
 
 export type PostPasteWarningCode =
   | "html_truncated"
@@ -420,6 +447,7 @@ const mapSanitizedHtmlToNodes = (
 
     if (tag === "ul" || tag === "ol") {
       const items = extractListItems(innerHtml);
+      const align = parseBlockAlignFromAttrs(rawAttrs);
       if (items.length > 0) {
         const clipped = items.slice(0, MAX_LIST_ITEMS);
         if (clipped.length < items.length) {
@@ -430,6 +458,7 @@ const mapSanitizedHtmlToNodes = (
           type: "list",
           ordered: tag === "ol",
           items: clipped,
+          ...(align ? { align } : {}),
         });
       }
       cursor = index + wholeMatch.length;
@@ -437,11 +466,18 @@ const mapSanitizedHtmlToNodes = (
     }
 
     const normalized = normalizeInlineRichText(innerHtml);
-    if (!postRichTextToPlainText(normalized)) {
+    const plainText = postRichTextToPlainText(normalized);
+    const keepEmptyParagraph =
+      tag === "p" && (/<br\b/i.test(innerHtml) || /&nbsp;/i.test(innerHtml));
+    const keepEmptyCodeBlock = tag === "pre" && /(<br\b|^\s*$)/i.test(innerHtml);
+    if (!plainText && !keepEmptyParagraph && !keepEmptyCodeBlock) {
       cursor = index + wholeMatch.length;
       continue;
     }
 
+    const align = parseBlockAlignFromAttrs(rawAttrs);
+    const normalizedText =
+      !plainText && (keepEmptyParagraph || keepEmptyCodeBlock) ? "<br>" : normalized;
     const headingLevelFromAttrs = parseHeadingLevelFromWordAttrs(rawAttrs);
     if (tag.startsWith("h") || (tag === "p" && headingLevelFromAttrs)) {
       const levelRaw = Number(tag.slice(1));
@@ -452,19 +488,30 @@ const mapSanitizedHtmlToNodes = (
         id: `node-${nodes.length + 1}`,
         type: "heading",
         level: level as 1 | 2 | 3 | 4 | 5 | 6,
-        text: normalized,
+        text: normalizedText,
+        ...(align ? { align } : {}),
       });
-    } else if (tag === "blockquote" || tag === "pre") {
+    } else if (tag === "blockquote") {
       nodes.push({
         id: `node-${nodes.length + 1}`,
         type: "quote",
-        text: normalized,
+        text: normalizedText,
+        ...(align ? { align } : {}),
+      });
+    } else if (tag === "pre") {
+      nodes.push({
+        id: `node-${nodes.length + 1}`,
+        type: "quote",
+        text: normalizedText,
+        variant: "code",
+        ...(align ? { align } : {}),
       });
     } else {
       nodes.push({
         id: `node-${nodes.length + 1}`,
         type: "paragraph",
-        text: normalized,
+        text: normalizedText,
+        ...(align ? { align } : {}),
       });
     }
 
@@ -485,26 +532,43 @@ const mapSanitizedHtmlToNodes = (
   return nodes;
 };
 
+const toAlignAttr = (align: WritingCanvasAlign | undefined) =>
+  align ? ` data-align="${align}"` : "";
+
+const toCodeNodeHtml = (value: string) => {
+  const normalized = normalizeInlineRichText(value);
+  if (!normalized || normalized === "<br>") {
+    return "<code><br></code>";
+  }
+  if (/<code\b/i.test(normalized)) {
+    return normalized;
+  }
+  return `<code>${normalized}</code>`;
+};
+
 export const serializeWritingCanvasNodesToHtml = (nodes: WritingCanvasNode[]) =>
   nodes
     .map((node) => {
       if (node.type === "heading") {
-        return `<h${node.level}>${node.text}</h${node.level}>`;
+        return `<h${node.level}${toAlignAttr(node.align)}>${node.text}</h${node.level}>`;
       }
       if (node.type === "list") {
         const wrapper = node.ordered ? "ol" : "ul";
         const items = node.items
           .map((item) => `<li>${normalizeInlineRichText(item)}</li>`)
           .join("");
-        return `<${wrapper}>${items}</${wrapper}>`;
+        return `<${wrapper}${toAlignAttr(node.align)}>${items}</${wrapper}>`;
       }
       if (node.type === "quote") {
-        return `<blockquote>${node.text}</blockquote>`;
+        if (node.variant === "code") {
+          return `<pre${toAlignAttr(node.align)}>${toCodeNodeHtml(node.text)}</pre>`;
+        }
+        return `<blockquote${toAlignAttr(node.align)}>${node.text}</blockquote>`;
       }
       if (node.type === "image") {
         return "";
       }
-      return `<p>${node.text}</p>`;
+      return `<p${toAlignAttr(node.align)}>${node.text}</p>`;
     })
     .join("");
 

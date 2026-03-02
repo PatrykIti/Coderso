@@ -267,6 +267,7 @@ function PostCanvasBlockItem({
   const isWritingCanvas = block.type === "writing-canvas";
   const writingCanvasHtml =
     isWritingCanvas ? serializeWritingCanvasContentToHtml(block.content) : "";
+  const [writingCanvasDraftHtml, setWritingCanvasDraftHtml] = useState<string | null>(null);
   const [listDraft, setListDraft] = useState<string | null>(null);
   const listDraftValue = listDraft ?? normalizeListForEdit(block.content);
 
@@ -481,10 +482,19 @@ function PostCanvasBlockItem({
       {block.type === "writing-canvas" ? (
         selected ? (
           <PostRichTextAdapter
-            value={writingCanvasHtml}
+            value={writingCanvasDraftHtml ?? writingCanvasHtml}
             onChange={(nextHtml) => {
+              setWritingCanvasDraftHtml(nextHtml);
               const nextContent = createWritingCanvasContentFromEditorHtml({
                 html: nextHtml,
+                previousContent: block.content,
+              });
+              onUpdateBlockContent(nextContent);
+            }}
+            onEditorBlur={(finalHtml) => {
+              setWritingCanvasDraftHtml(null);
+              const nextContent = createWritingCanvasContentFromEditorHtml({
+                html: finalHtml,
                 previousContent: block.content,
               });
               onUpdateBlockContent(nextContent);

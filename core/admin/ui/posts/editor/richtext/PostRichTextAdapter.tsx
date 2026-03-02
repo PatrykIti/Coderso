@@ -22,6 +22,7 @@ import {
   postRichTextToPlainText,
   serializePostRichText,
 } from "../../../../../services/posts/editor/postRichTextSerializer";
+import { sanitizePostRichTextHtml } from "../../../../../services/posts/editor/postRichTextSanitizer";
 import {
   DEFAULT_POST_IMAGE_LAYOUT,
   normalizePostImageLayout,
@@ -67,6 +68,7 @@ type PostRichTextAdapterProps = {
   onSlashInsertBlock?: (type: PostBlockType) => void;
   onPasteDirectives?: (directives: PostPasteDirectives) => void;
   onFocus?: () => void;
+  onEditorBlur?: (finalHtml: string) => void;
   onUploadClipboardImage?: (file: File) => Promise<{ id: string; key: string; url: string }>;
   toolbarProfile?: PostRichTextToolbarProfile;
   fontFamily?: "sans" | "serif" | "mono";
@@ -276,6 +278,20 @@ const insertHtmlAtCursor = (html: string) => {
   return true;
 };
 
+const stripInlineFormatting = (html: string) =>
+  sanitizePostRichTextHtml(html)
+    .replace(/<\s*(strong|em|u|s|mark|code|span)\b[^>]*>/gi, "")
+    .replace(/<\s*\/\s*(strong|em|u|s|mark|code|span)\s*>/gi, "")
+    .replace(/<\s*a\b[^>]*>/gi, "")
+    .replace(/<\s*\/\s*a\s*>/gi, "");
+
+const clearFormattingInBlocks = (blocks: readonly HTMLElement[]) => {
+  for (const block of blocks) {
+    const stripped = stripInlineFormatting(block.innerHTML);
+    block.innerHTML = stripped.trim().length > 0 ? stripped : "<br>";
+  }
+};
+
 type ShortcutInput = {
   key: string;
   metaKey?: boolean;
@@ -429,6 +445,7 @@ export function PostRichTextAdapter({
   onSlashInsertBlock,
   onPasteDirectives,
   onFocus,
+  onEditorBlur,
   onUploadClipboardImage,
   toolbarProfile = "writing-canvas",
   fontFamily = "sans",
@@ -596,6 +613,7 @@ export function PostRichTextAdapter({
       } else if (commandKind === "clear-formatting") {
         runCommand("removeFormat");
         runCommand("unlink");
+        clearFormattingInBlocks(targetBlocks);
       }
 
       saveSelectionRange();
@@ -886,6 +904,10 @@ export function PostRichTextAdapter({
             focusedRef.current = false;
             emitChange();
             saveSelectionRange();
+            const current = editorRef.current;
+            if (current) {
+              onEditorBlur?.(serializePostRichText(current.innerHTML));
+            }
             setSlashOpen(false);
             setSlashQuery("");
             selectedImageRef.current = null;

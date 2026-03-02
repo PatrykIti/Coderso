@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Editor Core  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-063-15-01, TASK-063-15-02  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -83,3 +83,8 @@ Zapewnic, aby wszystkie komendy rich text dla `Section` dzialaly i utrzymywaly e
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md` (writing-canvas command persistence contract)
 - `_docs/UI/POST_EDITOR_REFERENCE_PARITY_MATRIX.md` (section command parity status)
+
+---
+
+## Closure Note (2026-03-02)
+Domknieto persistence komend dla `writing-canvas`: `paragraph`, `h1..h6`, listy, `align-*`, `clear-formatting`, `inline-code` i `code-block` (bez degradacji `code-block -> quote`) wraz z aktualizacją mappera/renderer runtime.

@@ -162,6 +162,12 @@ przez `setup.completed=true`.
     - `PostRichTextAdapter` mapuje command dispatch do engine i zachowuje stabilny flow selection restore,
     - contextual toolbar profile routing jest scentralizowany (`resolveToolbarProfileForBlockType`) i spina kontrakt visibility per block type,
     - ownership split toolbar vs inspector jest finalny: dla blokow tekstowych formatting/alignment/text-scale sa toolbar-owned, inspector zostawia pola layout/runtime-level i block-specific attrs.
+  - **TASK-063-15 (done):** section (`writing-canvas`) caret/Enter hardening + command persistence + grouped toolbar:
+    - `writing-canvas` edycja dziala na live draft HTML (bez per-keystroke lossy rewrite modelu), a commit do nodes odbywa sie na granicach commit (`blur`),
+    - parser/serializer `writing-canvas` utrzymuje intencjonalne puste paragrafy po `Enter` i `Enter+Enter`,
+    - semantyka `align` i `code-block` jest utrwalona w modelu (`align` per node, `quote.variant = "code"`) i mapowana do runtime renderingu,
+    - toolbar dla profilu `writing-canvas` wspiera grouped controls `Headings`, `List`, `Code`,
+    - `clear-formatting` usuwa inline marks/linki bez degradacji struktury blokowej.
   - runtime parity: public detail i preview dla posts korzystaja z jednego block-render pipeline (`postBlockRuntimeMapper` + `postBlockRuntimeRenderer`) z fallbackiem dla legacy danych.
 - Pelny katalog modulow v1-v3 (Core Builder, Business Builder, Growth Builder)
   jest utrzymywany w rejestrze `core/admin/ui/navigation/codersoModules.ts`

@@ -8,6 +8,9 @@ test("PostRichTextAdapter renders toolbar and editor shortcuts", () => {
     <PostRichTextAdapter value="<p>Hello</p>" onChange={() => undefined} />
   );
 
+  expect(html).toContain("Headings");
+  expect(html).toContain("List");
+  expect(html).toContain("Code");
   expect(html).toContain("More formatting");
   expect(html).toContain('aria-label="Bold"');
   expect(html).toContain('aria-label="Italic"');

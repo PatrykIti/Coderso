@@ -170,22 +170,32 @@ const renderWritingCanvasNode = (
   node: RuntimeWritingCanvasNode
 ) => {
   if (node.type === "paragraph") {
+    const nodeAlignClass = node.align ? alignClass[node.align] : "";
     return (
       <div
         key={node.id}
-        className={cx("post-runtime-richtext leading-7", textScaleClass[block.layout.textScale])}
+        className={cx(
+          "post-runtime-richtext leading-7",
+          textScaleClass[block.layout.textScale],
+          nodeAlignClass
+        )}
         dangerouslySetInnerHTML={{ __html: node.html }}
       />
     );
   }
 
   if (node.type === "heading") {
+    const nodeAlignClass = node.align ? alignClass[node.align] : "";
     return (
       <div key={node.id}>
         {renderWritingHeadingNode(
           node.level,
           node.html,
-          cx("font-semibold leading-tight", textScaleClass[block.layout.textScale]),
+          cx(
+            "font-semibold leading-tight",
+            textScaleClass[block.layout.textScale],
+            nodeAlignClass
+          ),
           node.anchorId
         )}
       </div>
@@ -193,12 +203,27 @@ const renderWritingCanvasNode = (
   }
 
   if (node.type === "quote") {
+    const nodeAlignClass = node.align ? alignClass[node.align] : "";
+    if (node.variant === "code") {
+      return (
+        <pre
+          key={node.id}
+          className={cx(
+            "overflow-x-auto rounded-lg border bg-[var(--color-surface)] p-4 text-sm leading-6",
+            nodeAlignClass
+          )}
+          dangerouslySetInnerHTML={{ __html: node.html }}
+        />
+      );
+    }
+
     return (
       <blockquote
         key={node.id}
         className={cx(
           "rounded-r-lg border-l-4 border-[var(--color-primary)]/60 pl-4 italic",
-          textScaleClass[block.layout.textScale]
+          textScaleClass[block.layout.textScale],
+          nodeAlignClass
         )}
         dangerouslySetInnerHTML={{ __html: node.html }}
       />
@@ -206,6 +231,7 @@ const renderWritingCanvasNode = (
   }
 
   if (node.type === "list") {
+    const nodeAlignClass = node.align ? alignClass[node.align] : "";
     const ListTag = node.ordered ? "ol" : "ul";
     return (
       <ListTag
@@ -213,7 +239,8 @@ const renderWritingCanvasNode = (
         className={cx(
           "space-y-2 pl-6",
           node.ordered ? "list-decimal" : "list-disc",
-          textScaleClass[block.layout.textScale]
+          textScaleClass[block.layout.textScale],
+          nodeAlignClass
         )}
       >
         {node.items.map((item, index) => (

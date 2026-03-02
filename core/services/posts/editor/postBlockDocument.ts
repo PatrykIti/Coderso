@@ -29,15 +29,18 @@ export const WRITING_CANVAS_NODE_TYPES = [
 
 export const WRITING_CANVAS_WRAP_VALUES = ["none", "left", "right"] as const;
 export const WRITING_CANVAS_WIDTH_VALUES = [25, 33, 50, 66, 100] as const;
+export const WRITING_CANVAS_ALIGN_VALUES = ["left", "center", "right"] as const;
 
 export type WritingCanvasNodeType = (typeof WRITING_CANVAS_NODE_TYPES)[number];
 export type WritingCanvasWrap = (typeof WRITING_CANVAS_WRAP_VALUES)[number];
 export type WritingCanvasWidth = (typeof WRITING_CANVAS_WIDTH_VALUES)[number];
+export type WritingCanvasAlign = (typeof WRITING_CANVAS_ALIGN_VALUES)[number];
 
 export type WritingCanvasParagraphNode = {
   id: string;
   type: "paragraph";
   text: string;
+  align?: WritingCanvasAlign;
 };
 
 export type WritingCanvasHeadingNode = {
@@ -46,6 +49,7 @@ export type WritingCanvasHeadingNode = {
   level: 1 | 2 | 3 | 4 | 5 | 6;
   text: string;
   anchorId?: string;
+  align?: WritingCanvasAlign;
 };
 
 export type WritingCanvasListNode = {
@@ -53,12 +57,15 @@ export type WritingCanvasListNode = {
   type: "list";
   ordered: boolean;
   items: string[];
+  align?: WritingCanvasAlign;
 };
 
 export type WritingCanvasQuoteNode = {
   id: string;
   type: "quote";
   text: string;
+  align?: WritingCanvasAlign;
+  variant?: "quote" | "code";
 };
 
 export type WritingCanvasImageNode = {
