@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { customScreens } from "../../../core/db/schema";
+import { contentTypes, customScreens } from "../../../core/db/schema";
 import {
   createCustomScreen,
   deleteCustomScreen,
@@ -15,6 +15,7 @@ const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
 
 const createdScreenIds = new Set<string>();
+const createdContentTypeIds = new Set<string>();
 
 async function canConnect() {
   try {
@@ -53,6 +54,43 @@ async function ensureCustomScreensTable() {
   );
 }
 
+async function ensureContentTypesTable() {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS "content_types" (
+      "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+      "name" text NOT NULL,
+      "slug" text NOT NULL UNIQUE,
+      "schema" jsonb NOT NULL,
+      "created_at" timestamp DEFAULT now() NOT NULL,
+      "updated_at" timestamp DEFAULT now() NOT NULL
+    )
+  `);
+}
+
+async function createContentType() {
+  await ensureContentTypesTable();
+  const id = randomUUID();
+  const slug = `screen-${id.slice(0, 8)}`;
+  const name = `Screen ${id.slice(0, 8)}`;
+  await db
+    .insert(contentTypes)
+    .values({
+      id,
+      name,
+      slug,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .returning();
+  createdContentTypeIds.add(id);
+  return id;
+}
+
 afterAll(async () => {
   if (!hasDb || createdScreenIds.size === 0) return;
   await db
@@ -61,15 +99,19 @@ afterAll(async () => {
   for (const id of Array.from(createdScreenIds).slice(1)) {
     await db.delete(customScreens).where(eq(customScreens.id, id));
   }
+  for (const id of Array.from(createdContentTypeIds)) {
+    await db.delete(contentTypes).where(eq(contentTypes.id, id));
+  }
 });
 
 testIfDb("custom screen CRUD flow", async () => {
   await ensureCustomScreensTable();
+  const contentTypeId = await createContentType();
   const unique = randomUUID();
 
   const created = await createCustomScreen({
     name: `Catalog ${unique}`,
-    contentTypeId: "type-1",
+    contentTypeId,
     blocks: [{ id: "section-1", type: "section", data: {} }],
     bindings: [],
   });
