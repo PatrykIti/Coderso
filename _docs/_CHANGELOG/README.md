@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 354 | 2026-03-04 | TASK-054-22-02 custom screens admin routes and RBAC | Core/API |
 | 353 | 2026-03-04 | TASK-054-22-01 custom screens schema foundation | CMS/Content |
 | 352 | 2026-03-02 | TASK-054-199 security gate CI workflow | Security/CI |
 | 351 | 2026-03-02 | TASK-061-08 post editor QA docs and closure | QA/Docs |

@@ -5,7 +5,7 @@
 **Category:** Admin/API + Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-22-01, TASK-054-02  
-**Status:** To Do
+**Status:** Done (2026-03-04)
 
 ---
 

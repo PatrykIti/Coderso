@@ -88,6 +88,18 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 - Internal layer nie jest publiczny, ale wciaz wymaga walidacji i RBAC.
 - Brak bezposredniego dostepu z zewnatrz.
 
+### Custom Screens admin API (TASK-054-22-02)
+
+- Endpointy (internal):
+  - `GET /admin/api/custom-screens`
+  - `GET /admin/api/custom-screens/:id`
+  - `POST /admin/api/custom-screens`
+  - `PATCH /admin/api/custom-screens/:id`
+  - `DELETE /admin/api/custom-screens/:id`
+- RBAC: `content:read` dla odczytu, `content:write` dla mutacji.
+- Rate-limit: `admin_read` / `admin_write`.
+- Brak public write; nonce/HMAC/reCAPTCHA nie dotyczy.
+
 ## File uploads
 
 - Limit size per file.

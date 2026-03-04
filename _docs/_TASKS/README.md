@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 15 tasks
 - **In Progress:** 2 tasks
-- **Done:** 570 tasks
+- **Done:** 571 tasks
 
 ---
 
@@ -62,7 +62,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-22 | Coderso Custom Screens From Widgets | High | Large | In progress: schema/service foundation (054-22-01) |
+| TASK-054-22 | Coderso Custom Screens From Widgets | High | Large | In progress: schema/service + admin routes done (054-22-01/02) |
 
 ---
 
@@ -71,6 +71,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054-22-01 | Screen Definition Contract and Schema | High | Medium | Done: custom screens schema/service foundation + docs/tests |
+| TASK-054-22-02 | Admin Routes and RBAC | High | Medium | Done: custom screens admin API routes, validation, and docs |
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: full regression, docs sync, changelog, kanban closure |
 | TASK-061 | Post Editor Writing Canvas and Smart Paste | High | Large | Done: writing-canvas rollout fully closed (061-01..09) |
 | TASK-054-19 | Coderso QA, Performance, and Security Gates | High | Medium | Done: release gates + security gate closure |

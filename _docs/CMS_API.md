@@ -1273,6 +1273,53 @@ Template create/update payload (summary):
 
 ---
 
+## Custom screens (Coderso)
+
+Permissions: `content:read`, `content:write`
+
+- `GET /custom-screens`
+- `GET /custom-screens/:id`
+- `POST /custom-screens`
+- `PATCH /custom-screens/:id`
+- `DELETE /custom-screens/:id`
+
+List response (summary):
+
+```json
+{
+  "items": []
+}
+```
+
+Create payload (summary):
+
+```json
+{
+  "name": "Catalog screen",
+  "contentTypeId": "content-type-uuid",
+  "status": "draft",
+  "schemaVersion": 1,
+  "blocks": [
+    { "id": "section-1", "type": "section", "data": {} }
+  ],
+  "bindings": [
+    {
+      "id": "title",
+      "widgetId": "section-1",
+      "propPath": "title",
+      "field": "title",
+      "mode": "readwrite"
+    }
+  ]
+}
+```
+
+Record shape (summary):
+- `id`, `name`, `contentTypeId`, `status`, `schemaVersion`, `blocks`, `bindings`
+- `createdAt`, `updatedAt`
+
+---
+
 ## Public site rendering
 
 Publiczne renderowanie stron działa bez `/admin`.

@@ -6,6 +6,7 @@ import { registerMenuRoutes } from "./menuRoutes";
 import { registerSettingsRoutes } from "./settingsRoutes";
 import { registerContentTypeRoutes } from "./contentTypeRoutes";
 import { registerContentEntryRoutes } from "./contentEntryRoutes";
+import { registerCustomScreenRoutes } from "./customScreenRoutes";
 import { registerSearchRoutes } from "./searchRoutes";
 import { registerAuditRoutes } from "./auditRoutes";
 import { registerThemeRoutes } from "./themeRoutes";
@@ -56,6 +57,7 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerMenuRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerContentTypeRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerContentEntryRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
+  registerCustomScreenRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerPostsRoutes(router, { requirePermission: deps.requirePermission, validate: deps.validate });
   registerSearchRoutes(router, { requirePermission: deps.requirePermission });
   registerAuditRoutes(router, { requirePermission: deps.requirePermission });
