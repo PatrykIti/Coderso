@@ -387,6 +387,14 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - endpoints Listings sa internal (`content:read/write`), bez public write API,
   - public runtime dla entries/posts wymusza `includeDrafts=false` poza preview.
 
+## Coderso Custom Screens (v1 foundation)
+
+- Definicje ekranow admina z widgetow sa w `custom_screens`:
+  - `name`, `contentTypeId`, `schemaVersion`, `blocks`, `bindings`, `status`.
+- `customScreenService` trzyma CRUD + normalizacje:
+  - `blocks` sa walidowane przez widget schema + normalizer,
+  - `bindings` mapuja `widgetId + propPath` -> field key (engine/resolver w kolejnych subtaskach).
+
 ## Coderso Filters & Search (v2 beta)
 
 - Filtry runtime bazuja na URL-tokenach `lq.<queryId>.*` i sa parsowane przez `filterEngine`.

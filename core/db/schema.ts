@@ -589,6 +589,31 @@ export const contentTypes = pgTable("content_types", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const customScreens = pgTable(
+  "custom_screens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    contentTypeId: uuid("content_type_id")
+      .notNull()
+      .references(() => contentTypes.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("draft"),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    blocks: jsonb("blocks").notNull().default([]),
+    bindings: jsonb("bindings").notNull().default([]),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    nameIdx: index("custom_screens_name_idx").on(t.name),
+    contentTypeIdx: index("custom_screens_content_type_id_idx").on(
+      t.contentTypeId
+    ),
+    statusIdx: index("custom_screens_status_idx").on(t.status),
+    updatedAtIdx: index("custom_screens_updated_at_idx").on(t.updatedAt),
+  })
+);
+
 export const contentEntries = pgTable(
   "content_entries",
   {

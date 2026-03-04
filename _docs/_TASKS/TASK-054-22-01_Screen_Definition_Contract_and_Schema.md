@@ -5,7 +5,7 @@
 **Category:** CMS/Content + Schema  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-07, TASK-054-14  
-**Status:** To Do
+**Status:** Done (2026-03-04)
 
 ---
 
@@ -47,3 +47,9 @@ const schema = z.object({
 ## Documentation Updates Required
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
+
+## Completion Notes (2026-03-04)
+- Added `custom_screens` table with migration + snapshot/journal updates.
+- Implemented `customScreenSchemas` validation/normalization and CRUD service.
+- Added unit tests for schema validation and CRUD flow.
+- Updated architecture and CMS API documentation.

@@ -947,6 +947,46 @@ Public runtime safety:
 - runtime hydration: `resolvePostsFeedRuntimeData` (SSR, public runtime),
 - public output (`preview=false`) filtruje do `status=published`; preview moze pokazywac wszystkie statusy.
 
+## Coderso Custom Screens (v1 foundation)
+
+Permissions (internal, routes in TASK-054-22-02): `content:read`, `content:write`
+
+Custom screen payload (summary):
+
+```json
+{
+  "name": "Katalog domow",
+  "contentTypeId": "content-type-id",
+  "status": "draft",
+  "schemaVersion": 1,
+  "blocks": [
+    {
+      "id": "section-1",
+      "type": "section",
+      "variant": "default",
+      "data": {},
+      "slots": {
+        "region-1": []
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "id": "title",
+      "widgetId": "section-1",
+      "propPath": "heading.title",
+      "field": "title",
+      "mode": "readwrite"
+    }
+  ]
+}
+```
+
+Notes:
+- `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
+- `bindings` mapuja `widgetId + propPath` do `contentType` field key.
+- `schemaVersion` jest wersjonowany (aktualnie `1`).
+
 ## Coderso Filters & Search (v2 beta)
 
 Filters preview (internal API, session/RBAC):
