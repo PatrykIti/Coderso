@@ -44,6 +44,21 @@ Related gate suites executed by runner:
 - `tests/unit/forms/submissionNonce.test.ts`
 - `tests/unit/server/publicBookingApi.test.ts`
 
+### CI Security Gate (SAST/SCA/Secrets/CVE)
+
+Automated CI gate blocks PRs on critical/high findings:
+- SAST: Semgrep (`.semgrep.yml` + OWASP/security packs).
+- SCA/CVE: Trivy filesystem scan (`.trivyignore` for time-boxed exceptions).
+- Secrets: Gitleaks (`.gitleaks.toml` allowlist config).
+
+Local runbook:
+```bash
+pip install semgrep
+semgrep --config .semgrep.yml --config p/owasp-top-ten --config p/security-audit --config p/nodejs --config p/typescript
+trivy fs --severity HIGH,CRITICAL --ignore-unfixed .
+gitleaks detect --config .gitleaks.toml
+```
+
 ### Konfiguracja runtime (Admin UI)
 
 - Wszystkie ustawienia middleware sa trzymane w DB (`settings.key = security.settings`).

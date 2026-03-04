@@ -5,7 +5,7 @@
 **Category:** Security + CI/CD  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-19, TASK-020-11  
-**Status:** To Do
+**Status:** Done (2026-03-02)
 
 ---
 
@@ -63,3 +63,7 @@ jobs:
 - `_docs/SECURITY_SPEC.md` (narzędzia, progi, wyjątki)
 - `_docs/CODERSO_RELEASE_GATES.md` (nowy gate w release checklist)
 - `_docs/_CHANGELOG/*.md` (po implementacji)
+
+## Completion Notes (2026-03-02)
+- Added CI security gate workflow with Semgrep, Trivy, and Gitleaks.
+- Uploaded SARIF reports and documented local runbook + allowlist policy.

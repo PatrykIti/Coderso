@@ -1,0 +1,14 @@
+rules:
+  - id: nextless-no-eval
+    message: "Avoid eval; use a safe parser or structured API instead."
+    languages: [javascript, typescript]
+    severity: ERROR
+    patterns:
+      - pattern: eval(...)
+    paths:
+      exclude:
+        - _docs
+        - node_modules
+        - dist
+        - build
+        - .next

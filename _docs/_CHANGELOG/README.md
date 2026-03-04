@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 352 | 2026-03-02 | TASK-054-199 security gate CI workflow | Security/CI |
 | 351 | 2026-03-02 | TASK-061-08 post editor QA docs and closure | QA/Docs |
 | 350 | 2026-03-02 | TASK-063-09 post editor QA and closure | QA/Docs |
 | 349 | 2026-03-02 | TASK-063-08 keyboard, focus, and accessibility | Admin/UI |

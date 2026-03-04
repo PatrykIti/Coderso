@@ -61,6 +61,7 @@ The target is a WordPress-like, low-code experience similar in breadth to Crocob
 - `TASK-054-19_Coderso_QA_Performance_and_Security_Gates.md`
 - `TASK-054-20_Coderso_Membership_and_Client_Portal_Suite.md`
 - `TASK-054-21_Coderso_Multilingual_and_i18n_Suite.md`
+- `TASK-054-22_Coderso_Custom_Screens_From_Widgets.md`
 
 ---
 

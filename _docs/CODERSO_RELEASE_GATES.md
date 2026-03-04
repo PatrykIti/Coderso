@@ -50,6 +50,16 @@ Additional security suites are executed in gate runner:
 - `tests/unit/forms/submissionNonce.test.ts`
 - `tests/unit/server/publicBookingApi.test.ts`
 
+## CI Security Gate (SAST/SCA/Secrets/CVE)
+
+Additional CI-only security gate is enforced via:
+- `.github/workflows/security-gate.yml`
+- `.semgrep.yml` (local SAST rules + registry packs)
+- `.gitleaks.toml` (secrets scanning config)
+- `.trivyignore` (time-boxed allowlist for CVEs)
+
+It blocks PRs on critical/high findings and uploads SARIF reports for auditability.
+
 ## CI Integration
 
 Workflow:
