@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 356 | 2026-03-05 | TASK-054-22-03 custom screens builder UI | Admin/UI |
 | 355 | 2026-03-05 | TASK-063-16-23 section formatting regression fixes | Admin/UI |
 | 354 | 2026-03-04 | TASK-054-22-02 custom screens admin routes and RBAC | Core/API |
 | 353 | 2026-03-04 | TASK-054-22-01 custom screens schema foundation | CMS/Content |

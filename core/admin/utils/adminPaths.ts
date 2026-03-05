@@ -68,6 +68,7 @@ const aliasPrefixes: Array<{ from: string; to: string }> = [
   { from: "/widgets", to: "/coderso/widgets" },
   { from: "/forms", to: "/coderso/forms" },
   { from: "/posts", to: "/coderso/posts" },
+  { from: "/custom-screens", to: "/coderso/custom-screens" },
   { from: "/listings", to: "/coderso/listings" },
   { from: "/booking", to: "/coderso/booking" },
   { from: "/reviews", to: "/coderso/reviews" },

@@ -24,6 +24,8 @@ import { ContentTypeList } from "@/ui/content-types/ContentTypeList";
 import { SchemaBuilderPage } from "@/ui/content-types/SchemaBuilderPage";
 import { EntryEditor } from "@/ui/entries/EntryEditor";
 import { EntryList } from "@/ui/entries/EntryList";
+import { CustomScreenEditorPage } from "@/ui/custom-screens/CustomScreenEditorPage";
+import { CustomScreenListPage } from "@/ui/custom-screens/CustomScreenListPage";
 import { FormBuilderPage } from "@/ui/forms/FormBuilderPage";
 import { FormActionLogsPage } from "@/ui/forms/FormActionLogsPage";
 import { FormListPage } from "@/ui/forms/FormListPage";
@@ -538,6 +540,8 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/coderso/engine/:id/schema", element: <SchemaBuilderPage /> },
       { pattern: "/coderso/entries", element: <EntryList /> },
       { pattern: "/coderso/entries/:type/:id", element: <EntryEditor /> },
+      { pattern: "/coderso/custom-screens", element: <CustomScreenListPage /> },
+      { pattern: "/coderso/custom-screens/:id", element: <CustomScreenEditorPage /> },
       { pattern: "/coderso/posts", element: <PostsListPage /> },
       { pattern: "/coderso/posts/:id", element: <PostEditorPage /> },
       { pattern: "/coderso/listings", element: <ListingListPage /> },

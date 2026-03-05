@@ -26,6 +26,7 @@ test("SidebarNav renders primary navigation links", () => {
   expect(html).toContain("Coderso");
   expect(html).toContain("/admin/coderso/entries");
   expect(html).toContain("/admin/coderso/engine");
+  expect(html).toContain("/admin/coderso/custom-screens");
   expect(html).toContain("/admin/media");
   expect(html).toContain("/admin/menus");
   expect(html).toContain("/admin/coderso/widgets");

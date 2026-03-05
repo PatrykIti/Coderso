@@ -62,7 +62,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-22 | Coderso Custom Screens From Widgets | High | Large | In progress: schema/service + admin routes done (054-22-01/02) |
+| TASK-054-22 | Coderso Custom Screens From Widgets | High | Large | In progress: schema/service + admin routes + builder UI done (054-22-01/02/03) |
 
 ---
 
@@ -70,6 +70,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-22-03 | Screen Builder UI and Widget Composition | High | Large | Done: custom screens list/editor UI + widget canvas + tests |
+| TASK-054-22-03-02 | Custom Screens List and Editor UI | High | Large | Done: list/editor screens, builder canvas, and UI tests |
+| TASK-054-22-03-01 | Custom Screens Admin UI Plumbing | High | Medium | Done: client/cache/nav/routes/prefetch wiring |
 | TASK-054-22-01 | Screen Definition Contract and Schema | High | Medium | Done: custom screens schema/service foundation + docs/tests |
 | TASK-054-22-02 | Admin Routes and RBAC | High | Medium | Done: custom screens admin API routes, validation, and docs |
 | TASK-061-08 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: full regression, docs sync, changelog, kanban closure |

@@ -22,6 +22,7 @@ export type CodersoModuleTier = "v1" | "v2" | "v3";
 export type CodersoModuleId =
   | "engine"
   | "entries"
+  | "custom-screens"
   | "widgets"
   | "templates"
   | "forms"
@@ -106,6 +107,21 @@ export const CODERSO_MODULE_REGISTRY: CodersoModuleDefinition[] = [
       href: "/admin/coderso/entries",
       icon: Layers,
       defaultEnabled: true,
+    },
+  },
+  {
+    id: "custom-screens",
+    label: "Screens",
+    tier: "v1",
+    ownerArea: "content",
+    lifecycle: "preview",
+    description: "Custom admin screens composed from widgets and content fields.",
+    dependencies: ["engine", "entries", "widgets"],
+    nav: {
+      href: "/admin/coderso/custom-screens",
+      icon: LayoutGrid,
+      defaultEnabled: true,
+      badge: "Beta",
     },
   },
   {

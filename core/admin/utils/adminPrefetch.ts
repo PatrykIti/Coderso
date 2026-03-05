@@ -1,4 +1,5 @@
 import { listContentTypesCached } from "@/services/contentTypesClient";
+import { listCustomScreensCached } from "@/services/customScreensClient";
 import { listMenusCached } from "@/services/menusClient";
 import { listMediaCached } from "@/services/mediaClient";
 import { listPagesCached } from "@/services/pagesClient";
@@ -181,6 +182,10 @@ const defaultEntries: AdminPrefetchEntry[] = [
   {
     match: "/coderso/entries",
     run: () => listContentTypesCached(prefetchWarmupOptions),
+  },
+  {
+    match: "/coderso/custom-screens",
+    run: () => listCustomScreensCached(prefetchWarmupOptions),
   },
   {
     match: "/coderso/forms",

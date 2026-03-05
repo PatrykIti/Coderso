@@ -49,6 +49,12 @@ test("resolveAdminRoutePath aliases legacy paths to coderso", () => {
     "/coderso/widgets/templates/new"
   );
   expect(resolveAdminRoutePath("/forms/form-1")).toBe("/coderso/forms/form-1");
+  expect(resolveAdminRoutePath("/custom-screens")).toBe(
+    "/coderso/custom-screens"
+  );
+  expect(resolveAdminRoutePath("/custom-screens/screen-1")).toBe(
+    "/coderso/custom-screens/screen-1"
+  );
   expect(resolveAdminRoutePath("/listings/query-1")).toBe(
     "/coderso/listings/query-1"
   );
@@ -83,6 +89,9 @@ test("resolveAdminHref canonicalizes admin links", () => {
   );
   expect(resolveAdminHref("/admin", "/widgets?view=templates")).toBe(
     "/admin/coderso/widgets?view=templates"
+  );
+  expect(resolveAdminHref("/admin", "/custom-screens")).toBe(
+    "/admin/coderso/custom-screens"
   );
   expect(resolveAdminHref("/admin", "/listings")).toBe("/admin/coderso/listings");
   expect(resolveAdminHref("/admin", "/booking")).toBe("/admin/coderso/booking");

@@ -51,6 +51,7 @@ przez `setup.completed=true`.
 - Domyslne moduly v1 (widoczne w sidebar):
   - `Engine` (`/admin/coderso/engine`) - content model builder (content types + schema).
   - `Entries` (`/admin/coderso/entries`) - wpisy rekordow typow z Engine.
+  - `Screens` (`/admin/coderso/custom-screens`) - custom admin screens z widgetow dla danych entry.
   - `Widgets` (`/admin/coderso/widgets`) - biblioteka widgetow i template editor.
   - `Forms` (`/admin/coderso/forms`) - lista i edytor formularzy.
 - `Posts` jest eksponowany jako top-level pozycja w `Main` (obok `Pages`) i nie jest czescia grupy `Coderso`.

@@ -10,13 +10,13 @@ import { buildDefaultNavSections } from "../../../core/admin/ui/navigation/sideb
 const ids = new Set(CODERSO_MODULE_REGISTRY.map((module) => module.id));
 
 test("Coderso module registry covers v1-v3 catalog", () => {
-  expect(CODERSO_MODULE_REGISTRY).toHaveLength(18);
+  expect(CODERSO_MODULE_REGISTRY).toHaveLength(19);
   expect(ids.has("engine")).toBe(true);
   expect(ids.has("templates")).toBe(true);
   expect(ids.has("membership-portal")).toBe(true);
   expect(ids.has("ai-kit-wizard")).toBe(true);
 
-  expect(codersoModulesByTier("v1")).toHaveLength(6);
+  expect(codersoModulesByTier("v1")).toHaveLength(7);
   expect(codersoModulesByTier("v2")).toHaveLength(6);
   expect(codersoModulesByTier("v3")).toHaveLength(6);
 });
@@ -26,6 +26,7 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
   expect(items.map((item) => item.label)).toEqual([
     "Engine",
     "Entries",
+    "Screens",
     "Widgets",
     "Forms",
     "Listings",
@@ -54,6 +55,7 @@ test("buildCodersoNavItems returns stable default navigation contract", () => {
   expect(items.some((item) => item.href === "/admin/coderso/reviews")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/commerce")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/popups")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/coderso/custom-screens")).toBe(true);
   expect(items.some((item) => item.href === "/admin/coderso/solution-kits")).toBe(
     true
   );

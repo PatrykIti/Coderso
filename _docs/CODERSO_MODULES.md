@@ -17,6 +17,7 @@ Source of truth for Coderso module scope, tiering, and navigation rollout.
 |---|---|---|---|
 | Engine | content | stable | Yes |
 | Entries | content | stable | Yes |
+| Screens | content | preview | Yes (`Beta`) |
 | Widgets | design | stable | Yes |
 | Templates | design | stable | No (managed inside Widgets flows) |
 | Forms | forms | stable | Yes |
