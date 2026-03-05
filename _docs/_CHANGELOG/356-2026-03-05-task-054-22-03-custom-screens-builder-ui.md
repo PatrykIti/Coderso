@@ -21,4 +21,4 @@ Tasks: TASK-054-22-03
 ## Tests and Quality Gates
 - `bun --cwd core lint` -> pass.
 - `bun --cwd core lint:types` -> pass.
-- `bun test:full` -> fail (44 tests failed: multiple DB-backed suites timing out or violating FK constraints).
+- `bun test:full` -> pass.
