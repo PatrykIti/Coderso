@@ -181,13 +181,36 @@ export const resolveInlineWrapperTextRange = (
   offset: number
 ): { start: number; end: number } | null => {
   if (!text) return null;
+  if (!text.trim()) return null;
   const clampedOffset = Math.max(0, Math.min(offset, text.length));
-  let start = clampedOffset;
-  let end = clampedOffset;
-  while (start > 0 && !/\s/.test(text[start - 1])) {
+  let pivot = clampedOffset >= text.length ? text.length - 1 : clampedOffset;
+  if (pivot < 0) return null;
+
+  const isWhitespace = (value: string | undefined) => Boolean(value && /\s/.test(value));
+  if (isWhitespace(text[pivot])) {
+    let left = pivot - 1;
+    while (left >= 0 && isWhitespace(text[left])) {
+      left -= 1;
+    }
+    let right = pivot + 1;
+    while (right < text.length && isWhitespace(text[right])) {
+      right += 1;
+    }
+    if (left >= 0) {
+      pivot = left;
+    } else if (right < text.length) {
+      pivot = right;
+    } else {
+      return null;
+    }
+  }
+
+  let start = pivot;
+  let end = pivot;
+  while (start > 0 && !isWhitespace(text[start - 1])) {
     start -= 1;
   }
-  while (end < text.length && !/\s/.test(text[end])) {
+  while (end < text.length && !isWhitespace(text[end])) {
     end += 1;
   }
   if (start === end) return null;
@@ -458,13 +481,18 @@ export const applyInlineTypographySelection = (
   if (!editorRoot.contains(range.commonAncestorContainer)) return false;
   if (!selection.toString().trim()) return false;
 
-  const listItems = Array.from(editorRoot.querySelectorAll("li")).filter((item) =>
-    range.intersectsNode(item)
+  const runs = collectSelectedTextRuns(range).filter((run) =>
+    editorRoot.contains(run.node)
   );
-  if (listItems.length > 0) {
-    for (const item of listItems) {
-      applyInlineTypographyAttributes(item, attributes);
+  const listItems = new Set<HTMLLIElement>();
+  for (const run of runs) {
+    const candidate = run.node.parentElement?.closest("li");
+    if (candidate && editorRoot.contains(candidate) && candidate instanceof HTMLLIElement) {
+      listItems.add(candidate);
     }
+  }
+  for (const item of listItems) {
+    applyInlineTypographyAttributes(item, attributes);
   }
 
   return wrapSelectionWithInlineSpan(editorRoot, attributes);
@@ -501,10 +529,19 @@ const stripInlineFormatting = (html: string) =>
     .replace(/<\s*a\b[^>]*>/gi, "")
     .replace(/<\s*\/\s*a\s*>/gi, "");
 
-const clearFormattingInBlocks = (blocks: readonly HTMLElement[]) => {
+export const clearFormattingInBlocks = (blocks: readonly HTMLElement[]) => {
   for (const block of blocks) {
     const stripped = stripInlineFormatting(block.innerHTML);
     block.innerHTML = stripped.trim().length > 0 ? stripped : "<br>";
+    block.removeAttribute("data-align");
+    block.removeAttribute("data-font");
+    block.removeAttribute("data-text-scale");
+    const formattedNodes = block.querySelectorAll("[data-align], [data-font], [data-text-scale]");
+    for (const node of Array.from(formattedNodes)) {
+      node.removeAttribute("data-align");
+      node.removeAttribute("data-font");
+      node.removeAttribute("data-text-scale");
+    }
   }
 };
 

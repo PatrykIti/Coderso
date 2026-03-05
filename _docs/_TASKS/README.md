@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 15 tasks
 - **In Progress:** 2 tasks
-- **Done:** 571 tasks
+- **Done:** 572 tasks
 
 ---
 
@@ -88,6 +88,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-063-07-02 | Inspector Refactor Document vs Block | High | Medium | Done: shared inspector sections + validated inputs |
 | TASK-063-07-01 | Tabbed Details Sidebar Shell | High | Small | Done: details sidebar isolated in PostDetailsSidebar |
 | TASK-063-07 | Details Inspector Tabs and Preferences | High | Medium | Done: Post/Block tabs + persistence contracts |
+| TASK-063-16-23 | Section Formatting Regression Fixes | Medium | Small | Done: preview formatting parity, inline code caret fixes, clear formatting cleanup |
 | TASK-063-16-22 | Section Empty Placeholder Preview | Medium | Small | Done: empty section previews show the writing-canvas placeholder |
 | TASK-063-16-21 | Post Editor Settings Dialog Scroll | Medium | Small | Done: editor settings dialog height clamped with scrollable content |
 | TASK-063-16-20 | Section Toolbar Type Heading Icon | Medium | Small | Done: generic Heading icon used in Type dropdown |

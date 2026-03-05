@@ -42,7 +42,7 @@ export function PostEditorSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-2xl">
+      <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Editor settings</DialogTitle>
           <DialogDescription>
@@ -50,7 +50,7 @@ export function PostEditorSettingsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <section className="space-y-3 rounded-lg border p-3">
             <div>
               <p className="text-sm font-semibold">Startup</p>

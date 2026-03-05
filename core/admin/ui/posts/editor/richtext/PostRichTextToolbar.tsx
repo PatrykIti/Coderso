@@ -7,12 +7,6 @@ import {
   ChevronDown,
   Eraser,
   Heading,
-  Heading1,
-  Heading2,
-  Heading3,
-  Heading4,
-  Heading5,
-  Heading6,
   Highlighter,
   Italic,
   Layers,
@@ -43,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export type PostRichTextCommand =
   | "bold"
@@ -96,6 +91,34 @@ type ActionButton = {
   icon?: ComponentType<{ className?: string }>;
 };
 
+const createHeadingLevelIcon = (level: 1 | 2 | 3 | 4 | 5 | 6) => {
+  const HeadingLevelIcon = ({ className }: { className?: string }) => (
+    <span
+      className={cn(
+        "relative inline-flex min-h-[1rem] min-w-[1rem] items-center justify-center text-muted-foreground",
+        className
+      )}
+      aria-hidden="true"
+    >
+      <span className="text-[0.65rem] font-medium leading-none">H</span>
+      <span className="absolute -bottom-[1px] right-0 text-[0.45rem] leading-none">
+        {level}
+      </span>
+    </span>
+  );
+  HeadingLevelIcon.displayName = `HeadingLevelIcon${level}`;
+  return HeadingLevelIcon;
+};
+
+const headingLevelIcons = {
+  1: createHeadingLevelIcon(1),
+  2: createHeadingLevelIcon(2),
+  3: createHeadingLevelIcon(3),
+  4: createHeadingLevelIcon(4),
+  5: createHeadingLevelIcon(5),
+  6: createHeadingLevelIcon(6),
+} as const;
+
 const primaryActions: ActionButton[] = [
   { id: "bold", label: "Bold", icon: Bold },
   { id: "italic", label: "Italic", icon: Italic },
@@ -117,22 +140,22 @@ export const typeGroupActions: ActionButton[] = [
 
 const textStyleActions: ActionButton[] = [
   { id: "paragraph", label: "Paragraph", icon: Pilcrow },
-  { id: "heading-1", label: "Heading 1", icon: Heading1 },
-  { id: "heading-2", label: "Heading 2", icon: Heading2 },
-  { id: "heading-3", label: "Heading 3", icon: Heading3 },
-  { id: "heading-4", label: "Heading 4", icon: Heading4 },
-  { id: "heading-5", label: "Heading 5", icon: Heading5 },
-  { id: "heading-6", label: "Heading 6", icon: Heading6 },
+  { id: "heading-1", label: "Heading 1", icon: headingLevelIcons[1] },
+  { id: "heading-2", label: "Heading 2", icon: headingLevelIcons[2] },
+  { id: "heading-3", label: "Heading 3", icon: headingLevelIcons[3] },
+  { id: "heading-4", label: "Heading 4", icon: headingLevelIcons[4] },
+  { id: "heading-5", label: "Heading 5", icon: headingLevelIcons[5] },
+  { id: "heading-6", label: "Heading 6", icon: headingLevelIcons[6] },
   { id: "quote", label: "Quote", icon: Quote },
 ];
 
 export const headingLevelActions: ActionButton[] = [
-  { id: "heading-1", label: "Heading 1", icon: Heading1 },
-  { id: "heading-2", label: "Heading 2", icon: Heading2 },
-  { id: "heading-3", label: "Heading 3", icon: Heading3 },
-  { id: "heading-4", label: "Heading 4", icon: Heading4 },
-  { id: "heading-5", label: "Heading 5", icon: Heading5 },
-  { id: "heading-6", label: "Heading 6", icon: Heading6 },
+  { id: "heading-1", label: "Heading 1", icon: headingLevelIcons[1] },
+  { id: "heading-2", label: "Heading 2", icon: headingLevelIcons[2] },
+  { id: "heading-3", label: "Heading 3", icon: headingLevelIcons[3] },
+  { id: "heading-4", label: "Heading 4", icon: headingLevelIcons[4] },
+  { id: "heading-5", label: "Heading 5", icon: headingLevelIcons[5] },
+  { id: "heading-6", label: "Heading 6", icon: headingLevelIcons[6] },
 ];
 
 const layoutActions: ActionButton[] = [
