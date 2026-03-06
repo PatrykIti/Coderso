@@ -423,10 +423,16 @@ Zakres CMS, model danych, auth i security opisane sa w:
 ## Coderso Custom Screens (v1 foundation)
 
 - Definicje ekranow admina z widgetow sa w `custom_screens`:
-  - `name`, `contentTypeId`, `schemaVersion`, `blocks`, `bindings`, `status`.
+  - `name`, `contentTypeId`, `schemaVersion`, `blocks`, `bindings`, `status`,
+  - `showInSidebar`, `sidebarLabel` dla szybkich skrotow w admin nav.
 - `customScreenService` trzyma CRUD + normalizacje:
   - `blocks` sa walidowane przez widget schema + normalizer,
   - `bindings` mapuja `widgetId + propPath` -> field key i sa wykonywane przez `bindingResolver`.
+- Shortcut model:
+  - tylko `active` screen z `showInSidebar=true` moze trafic do lewego menu,
+  - skrot jest renderowany po grupie `Coderso`,
+  - link prowadzi do `/admin/coderso/custom-screens/:screenId/entries`,
+  - `sidebarLabel` nadpisuje domyslna nazwe screena, ale jest opcjonalny.
 - Builder (`/admin/coderso/custom-screens/:id`) ma trzy warstwy pracy:
   - screen settings,
   - widget-level bindings dla zaznaczonego bloku,

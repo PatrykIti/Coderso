@@ -6,6 +6,7 @@ import { renderToString } from "react-dom/server";
 import { AdminBasePathProvider } from "../../../core/admin/ui/contexts/AdminBasePathContext";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import {
+  appendNavItemsAfterGroup,
   defaultNavSections,
   type NavSection,
 } from "../../../core/admin/ui/navigation/sidebarConfig";
@@ -78,4 +79,21 @@ test("SidebarNav hides Coderso group when all children are unauthorized", () => 
 
   expect(html).not.toContain("Coderso");
   expect(html).not.toContain("/admin/coderso/engine");
+});
+
+test("SidebarNav renders custom screen shortcuts after the Coderso group", () => {
+  const sections = appendNavItemsAfterGroup(defaultNavSections, "coderso", [
+    {
+      label: "Catalog",
+      href: "/admin/coderso/custom-screens/screen-1/entries",
+      icon: Database,
+    },
+  ]);
+
+  const html = renderSidebar(sections, {
+    activeHref: "/admin/coderso/custom-screens/screen-1/entries",
+  });
+
+  expect(html).toContain("Catalog");
+  expect(html).toContain("/admin/coderso/custom-screens/screen-1/entries");
 });

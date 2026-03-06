@@ -7,6 +7,7 @@ import {
   normalizeCustomScreenDefinition,
   type CustomScreenBinding,
   type CustomScreenDefinitionVersion,
+  normalizeCustomScreenSidebarConfig,
   type CustomScreenStatus,
 } from "./customScreenSchemas";
 
@@ -15,6 +16,8 @@ export type CustomScreenRecord = {
   name: string;
   contentTypeId: string;
   status: CustomScreenStatus;
+  showInSidebar: boolean;
+  sidebarLabel: string | null;
   schemaVersion: CustomScreenDefinitionVersion;
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
@@ -26,6 +29,8 @@ export type CustomScreenCreateInput = {
   name: string;
   contentTypeId: string;
   status?: CustomScreenStatus;
+  showInSidebar?: boolean;
+  sidebarLabel?: string | null;
   schemaVersion?: number;
   blocks?: WidgetBlock[] | null;
   bindings?: CustomScreenBinding[] | null;
@@ -35,6 +40,8 @@ export type CustomScreenUpdateInput = {
   name?: string;
   contentTypeId?: string;
   status?: CustomScreenStatus;
+  showInSidebar?: boolean;
+  sidebarLabel?: string | null;
   schemaVersion?: number;
   blocks?: WidgetBlock[] | null;
   bindings?: CustomScreenBinding[] | null;
@@ -80,6 +87,8 @@ const mapRow = (row: typeof customScreens.$inferSelect): CustomScreenRecord => {
     name: row.name,
     contentTypeId: row.contentTypeId,
     status: normalizeStatus(row.status),
+    showInSidebar: row.showInSidebar,
+    sidebarLabel: row.sidebarLabel ?? null,
     schemaVersion: definition.schemaVersion,
     blocks: definition.blocks,
     bindings: definition.bindings,
@@ -113,6 +122,10 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
     blocks: input.blocks,
     bindings: input.bindings,
   });
+  const sidebar = normalizeCustomScreenSidebarConfig({
+    showInSidebar: input.showInSidebar,
+    sidebarLabel: input.sidebarLabel,
+  });
 
   const now = new Date();
   const [row] = await db
@@ -121,6 +134,8 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
       name,
       contentTypeId,
       status: normalizeStatus(input.status),
+      showInSidebar: sidebar.showInSidebar,
+      sidebarLabel: sidebar.sidebarLabel,
       schemaVersion: definition.schemaVersion,
       blocks: definition.blocks,
       bindings: definition.bindings,
@@ -148,6 +163,14 @@ export async function updateCustomScreen(
     blocks: input.blocks !== undefined ? input.blocks : existing.blocks,
     bindings: input.bindings !== undefined ? input.bindings : existing.bindings,
   });
+  const sidebar = normalizeCustomScreenSidebarConfig({
+    showInSidebar:
+      input.showInSidebar !== undefined
+        ? input.showInSidebar
+        : existing.showInSidebar,
+    sidebarLabel:
+      input.sidebarLabel !== undefined ? input.sidebarLabel : existing.sidebarLabel,
+  });
 
   const [row] = await db
     .update(customScreens)
@@ -161,6 +184,8 @@ export async function updateCustomScreen(
         input.status !== undefined
           ? normalizeStatus(input.status)
           : normalizeStatus(existing.status),
+      showInSidebar: sidebar.showInSidebar,
+      sidebarLabel: sidebar.sidebarLabel,
       schemaVersion: definition.schemaVersion,
       blocks: definition.blocks,
       bindings: definition.bindings,

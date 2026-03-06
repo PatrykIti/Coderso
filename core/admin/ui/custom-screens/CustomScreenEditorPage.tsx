@@ -18,6 +18,7 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
@@ -124,6 +125,8 @@ export function CustomScreenEditorPage() {
   const [name, setName] = useState(screen?.name ?? "");
   const [contentTypeId, setContentTypeId] = useState(screen?.contentTypeId ?? "");
   const [status, setStatus] = useState<CustomScreenStatus>(screen?.status ?? "draft");
+  const [showInSidebar, setShowInSidebar] = useState(screen?.showInSidebar ?? false);
+  const [sidebarLabel, setSidebarLabel] = useState(screen?.sidebarLabel ?? "");
   const [blocks, setBlocks] = useState<Block[]>(() => screen?.blocks ?? []);
   const [bindings, setBindings] = useState<CustomScreenBinding[]>(
     () => screen?.bindings ?? []
@@ -178,6 +181,8 @@ export function CustomScreenEditorPage() {
     setName(record.name);
     setContentTypeId(record.contentTypeId);
     setStatus(record.status);
+    setShowInSidebar(record.showInSidebar ?? false);
+    setSidebarLabel(record.sidebarLabel ?? "");
     setBlocks(record.blocks ?? []);
     setBindings(record.bindings ?? []);
     setSelectedId(getFirstBlockId(record.blocks ?? []));
@@ -306,6 +311,8 @@ export function CustomScreenEditorPage() {
       name: trimmedName,
       contentTypeId,
       status,
+      showInSidebar,
+      sidebarLabel: sidebarLabel.trim() || null,
       blocks,
       bindings,
     };
@@ -433,6 +440,40 @@ export function CustomScreenEditorPage() {
             <SelectItem value="active">Active</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Sidebar shortcut
+        </p>
+        <div className="flex h-10 items-center justify-between rounded-md border px-3">
+          <span className="text-sm text-muted-foreground">
+            Show records workflow in left menu
+          </span>
+          <Switch
+            checked={showInSidebar}
+            onCheckedChange={(checked) => {
+              setShowInSidebar(checked === true);
+              markDirty();
+            }}
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Sidebar label
+        </p>
+        <Input
+          value={sidebarLabel}
+          onChange={(event) => {
+            setSidebarLabel(event.target.value);
+            markDirty();
+          }}
+          placeholder={name.trim() || "Use screen name"}
+          disabled={!showInSidebar}
+        />
+        <p className="text-xs text-muted-foreground">
+          When empty, the shortcut uses the screen name.
+        </p>
       </div>
     </div>
   );

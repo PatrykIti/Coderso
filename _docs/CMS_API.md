@@ -1021,6 +1021,8 @@ Custom screen payload (summary):
   "name": "Katalog domow",
   "contentTypeId": "content-type-id",
   "status": "draft",
+  "showInSidebar": true,
+  "sidebarLabel": "Katalog domow",
   "schemaVersion": 1,
   "blocks": [
     {
@@ -1049,6 +1051,8 @@ Notes:
 - `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
 - `bindings` mapuja `widgetId + propPath` do `contentType` field key.
 - `schemaVersion` jest wersjonowany (aktualnie `1`).
+- `showInSidebar=true` + `status=active` pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
+- `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.
 - builder preview rozwiazuje bindings przed przekazaniem blokow do `WidgetRenderer`.
 - dedicated record workflow nie dodaje nowego API `custom-screen entries`; reuse is through existing internal entry endpoints:
   - `GET /content/:type/entries`

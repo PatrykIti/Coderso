@@ -7,6 +7,7 @@ import {
   HardDrive,
   Image,
   LayoutDashboard,
+  LayoutGrid,
   LifeBuoy,
   List,
   Newspaper,
@@ -20,6 +21,7 @@ import {
   Users,
   Blocks,
 } from "lucide-react";
+import type { CustomScreenRecord } from "@/services/customScreensClient";
 
 import {
   buildCodersoNavItems,
@@ -47,6 +49,7 @@ export type NavSection = {
   title: string;
   items?: NavItem[];
   groups?: NavGroup[];
+  itemsAfterGroups?: NavItem[];
 };
 
 export const buildDefaultNavSections = (
@@ -107,6 +110,36 @@ export const buildDefaultNavSections = (
 ];
 
 export const defaultNavSections: NavSection[] = buildDefaultNavSections();
+
+export const buildCustomScreenShortcutNavItems = (
+  screens: CustomScreenRecord[]
+): NavItem[] =>
+  screens
+    .filter((screen) => screen.status === "active" && screen.showInSidebar === true)
+    .map((screen) => ({
+      label: screen.sidebarLabel?.trim() || screen.name,
+      href: `/admin/coderso/custom-screens/${encodeURIComponent(screen.id)}/entries`,
+      icon: LayoutGrid,
+      permission: "content:read",
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+
+export const appendNavItemsAfterGroup = (
+  sections: NavSection[],
+  groupId: string,
+  items: NavItem[]
+): NavSection[] => {
+  if (items.length === 0) return sections;
+
+  return sections.map((section) => {
+    const hasGroup = section.groups?.some((group) => group.id === groupId) ?? false;
+    if (!hasGroup) return section;
+    return {
+      ...section,
+      itemsAfterGroups: items,
+    };
+  });
+};
 
 export const defaultFooterItems: NavItem[] = [
   { label: "Docs", href: "https://nextless.dev/docs", icon: FileText },

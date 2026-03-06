@@ -19,6 +19,8 @@ export type CustomScreenRecord = {
   name: string;
   contentTypeId: string;
   status: CustomScreenStatus;
+  showInSidebar: boolean;
+  sidebarLabel: string | null;
   schemaVersion: number;
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
@@ -30,6 +32,8 @@ export type CustomScreenCreateInput = {
   name: string;
   contentTypeId: string;
   status?: CustomScreenStatus;
+  showInSidebar?: boolean;
+  sidebarLabel?: string | null;
   schemaVersion?: number;
   blocks?: WidgetBlock[] | null;
   bindings?: CustomScreenBinding[] | null;
@@ -49,6 +53,10 @@ const isCustomScreenRecord = (value: unknown): value is CustomScreenRecord =>
   typeof value.name === "string" &&
   typeof value.contentTypeId === "string" &&
   isCustomScreenStatus(value.status) &&
+  (value.showInSidebar === undefined || typeof value.showInSidebar === "boolean") &&
+  (value.sidebarLabel === undefined ||
+    value.sidebarLabel === null ||
+    typeof value.sidebarLabel === "string") &&
   typeof value.schemaVersion === "number" &&
   Array.isArray(value.blocks) &&
   Array.isArray(value.bindings) &&
@@ -61,6 +69,12 @@ const isCustomScreenList = (value: unknown): value is CustomScreenRecord[] =>
 let cachedScreens: CustomScreenRecord[] | null = null;
 let cachedScreensPromise: Promise<CustomScreenRecord[]> | null = null;
 
+const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenRecord => ({
+  ...item,
+  showInSidebar: item.showInSidebar ?? false,
+  sidebarLabel: item.sidebarLabel ?? null,
+});
+
 const readScreensCache = () =>
   readLocalCache(cacheKeys.customScreensList, cacheTtlMs.list, isCustomScreenList);
 
@@ -68,13 +82,13 @@ const readScreenDetailCache = (id: string) =>
   readLocalCache(cacheKeys.customScreenDetail(id), cacheTtlMs.detail, isCustomScreenRecord);
 
 const writeScreenDetailCache = (item: CustomScreenRecord) => {
-  writeLocalCache(cacheKeys.customScreenDetail(item.id), item);
+  writeLocalCache(cacheKeys.customScreenDetail(item.id), normalizeCustomScreenRecord(item));
 };
 
 const primeScreensCacheInternal = (items: CustomScreenRecord[]) => {
-  cachedScreens = items;
+  cachedScreens = items.map(normalizeCustomScreenRecord);
   cachedScreensPromise = null;
-  writeLocalCache(cacheKeys.customScreensList, items);
+  writeLocalCache(cacheKeys.customScreensList, cachedScreens);
 };
 
 const upsertCachedScreen = (item: CustomScreenRecord) => {
@@ -82,9 +96,9 @@ const upsertCachedScreen = (item: CustomScreenRecord) => {
   const index = current.findIndex((entry) => entry.id === item.id);
   const next = [...current];
   if (index === -1) {
-    next.unshift(item);
+    next.unshift(normalizeCustomScreenRecord(item));
   } else {
-    next[index] = { ...next[index], ...item };
+    next[index] = normalizeCustomScreenRecord({ ...next[index], ...item });
   }
   next.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   primeScreensCacheInternal(next);
@@ -100,14 +114,15 @@ const removeCachedScreen = (id: string) => {
 export const getCachedCustomScreens = () => {
   if (cachedScreens) return cachedScreens;
   const cached = readScreensCache();
-  if (cached) cachedScreens = cached;
+  if (cached) cachedScreens = cached.map(normalizeCustomScreenRecord);
   return cachedScreens;
 };
 
 export const getCachedCustomScreen = (id: string) => {
   const fromMemory = cachedScreens?.find((entry) => entry.id === id);
   if (fromMemory) return fromMemory;
-  return readScreenDetailCache(id);
+  const cached = readScreenDetailCache(id);
+  return cached ? normalizeCustomScreenRecord(cached) : cached;
 };
 
 export const clearCustomScreensCache = () => {
@@ -120,7 +135,7 @@ export async function listCustomScreens() {
   const payload = await apiRequest<{ items: CustomScreenRecord[] }>("/custom-screens", {
     method: "GET",
   });
-  return payload.items ?? [];
+  return (payload.items ?? []).map(normalizeCustomScreenRecord);
 }
 
 export async function listCustomScreensCached(options?: { force?: boolean }) {
@@ -138,7 +153,10 @@ export async function listCustomScreensCached(options?: { force?: boolean }) {
 }
 
 export async function getCustomScreen(id: string) {
-  return apiRequest<CustomScreenRecord>(`/custom-screens/${encodeURIComponent(id)}`);
+  const item = await apiRequest<CustomScreenRecord>(
+    `/custom-screens/${encodeURIComponent(id)}`
+  );
+  return normalizeCustomScreenRecord(item);
 }
 
 export async function getCustomScreenCached(id: string, options?: { force?: boolean }) {
@@ -168,7 +186,7 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
     },
     { withCsrf: true }
   );
-  upsertCachedScreen(created);
+  upsertCachedScreen(normalizeCustomScreenRecord(created));
   broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
   broadcastCacheEvent({
     key: cacheKeys.customScreenDetail(created.id),
@@ -187,7 +205,7 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
     },
     { withCsrf: true }
   );
-  upsertCachedScreen(updated);
+  upsertCachedScreen(normalizeCustomScreenRecord(updated));
   broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
   broadcastCacheEvent({
     key: cacheKeys.customScreenDetail(updated.id),

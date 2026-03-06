@@ -7,6 +7,11 @@ internal screens. This reduces loading flashes and keeps cached data warm.
 ## Coderso IA (TASK-054)
 - Sidebar now includes a single expandable group: `Coderso`.
 - Coderso modules are sourced from registry: `core/admin/ui/navigation/codersoModules.ts`.
+- Active custom screens can also expose direct shortcuts **after** the `Coderso` group:
+  - source: `custom_screens`
+  - conditions: `status=active` and `showInSidebar=true`
+  - target route: `/admin/coderso/custom-screens/:screenId/entries`
+  - label: `sidebarLabel ?? name`
 - Default (enabled) Coderso modules:
   - `Engine` -> `/admin/coderso/engine`
   - `Entries` -> `/admin/coderso/entries`

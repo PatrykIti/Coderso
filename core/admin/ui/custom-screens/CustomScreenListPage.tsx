@@ -115,6 +115,11 @@ function CustomScreenTable({
                     <span className="text-xs text-muted-foreground">
                       {contentTypeLabel ? `Content type: ${contentTypeLabel}` : "Content type pending"}
                     </span>
+                    {item.showInSidebar ? (
+                      <span className="text-xs text-muted-foreground">
+                        Sidebar shortcut: {item.sidebarLabel ?? item.name}
+                      </span>
+                    ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs md:hidden">
                       <Badge
                         variant={item.status === "active" ? "default" : "outline"}

@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
+  appendNavItemsAfterGroup,
+  buildCustomScreenShortcutNavItems,
   defaultFooterItems,
   defaultNavSections,
   type NavSection,
@@ -21,6 +23,13 @@ import { TopBar } from "@/ui/shared/TopBar";
 import { AssistantPanel } from "@/ui/assistant/AssistantPanel";
 import { mapNavItems, mapNavSections, resolveAdminHref } from "@/utils/adminPaths";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
+import {
+  getCachedCustomScreens,
+  listCustomScreensCached,
+  type CustomScreenRecord,
+} from "@/services/customScreensClient";
+import { cacheKeys } from "@/services/cachePolicy";
+import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 const NAV_GROUP_STATE_KEY = "nextless.admin.navGroupState";
 
@@ -62,7 +71,14 @@ export function AdminShell({
   contentClassName,
 }: AdminShellProps) {
   const [navOpen, setNavOpen] = useState(false);
+  const [customScreens, setCustomScreens] = useState<CustomScreenRecord[]>(
+    () => getCachedCustomScreens() ?? []
+  );
   const adminBasePath = useAdminBasePath();
+  const hasCodersoGroup = useMemo(
+    () => navSections.some((section) => section.groups?.some((group) => group.id === "coderso")),
+    [navSections]
+  );
   const navGroupDefaults = useMemo(
     () => collectDefaultGroupState(navSections),
     [navSections]
@@ -82,9 +98,36 @@ export function AdminShell({
     }
   });
 
+  useEffect(() => {
+    if (!hasCodersoGroup) return;
+    listCustomScreensCached()
+      .then((items) => setCustomScreens(items))
+      .catch(() => undefined);
+  }, [hasCodersoGroup]);
+
+  useEffect(() => {
+    if (!hasCodersoGroup) return undefined;
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.customScreensList) return;
+      listCustomScreensCached({ force: true })
+        .then((items) => setCustomScreens(items))
+        .catch(() => undefined);
+    });
+  }, [hasCodersoGroup]);
+
+  const navSectionsWithCustomScreens = useMemo(
+    () =>
+      appendNavItemsAfterGroup(
+        navSections,
+        "coderso",
+        buildCustomScreenShortcutNavItems(customScreens)
+      ),
+    [customScreens, navSections]
+  );
+
   const resolvedSections = useMemo(
-    () => mapNavSections(navSections, adminBasePath),
-    [adminBasePath, navSections]
+    () => mapNavSections(navSectionsWithCustomScreens, adminBasePath),
+    [adminBasePath, navSectionsWithCustomScreens]
   );
   const resolvedFooter = useMemo(
     () => (footerItems ? mapNavItems(footerItems, adminBasePath) : footerItems),

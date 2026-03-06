@@ -1,10 +1,11 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import {
   customScreenCreateSchema,
   customScreenUpdateSchema,
   normalizeCustomScreenBindings,
   normalizeCustomScreenDefinition,
+  normalizeCustomScreenSidebarConfig,
 } from "../../../core/services/customScreens/customScreenSchemas";
 import { validate } from "../../../core/server/validation/schemaValidator";
 
@@ -46,4 +47,21 @@ test("normalizeCustomScreenDefinition normalizes blocks", () => {
     bindings: [],
   });
   expect(definition.blocks[0]?.type).toBe("section");
+});
+
+test("normalizeCustomScreenSidebarConfig normalizes sidebar flags", () => {
+  expect(
+    normalizeCustomScreenSidebarConfig({
+      showInSidebar: true,
+      sidebarLabel: "  Catalog  ",
+    })
+  ).toEqual({
+    showInSidebar: true,
+    sidebarLabel: "Catalog",
+  });
+
+  expect(normalizeCustomScreenSidebarConfig()).toEqual({
+    showInSidebar: false,
+    sidebarLabel: null,
+  });
 });

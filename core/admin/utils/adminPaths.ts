@@ -129,6 +129,7 @@ export const mapNavSections = <
   T extends {
     items?: { href: string }[];
     groups?: { items: { href: string }[] }[];
+    itemsAfterGroups?: { href: string }[];
   },
 >(
   sections: T[],
@@ -137,6 +138,9 @@ export const mapNavSections = <
   sections.map((section) => ({
     ...section,
     items: section.items ? mapNavItems(section.items, basePath) : section.items,
+    itemsAfterGroups: section.itemsAfterGroups
+      ? mapNavItems(section.itemsAfterGroups, basePath)
+      : section.itemsAfterGroups,
     groups: section.groups
       ? section.groups.map((group) => ({
           ...group,

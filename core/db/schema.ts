@@ -600,6 +600,8 @@ export const customScreens = pgTable(
       .notNull()
       .references(() => contentTypes.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("draft"),
+    showInSidebar: boolean("show_in_sidebar").notNull().default(false),
+    sidebarLabel: text("sidebar_label"),
     schemaVersion: integer("schema_version").notNull().default(1),
     blocks: jsonb("blocks").notNull().default([]),
     bindings: jsonb("bindings").notNull().default([]),
@@ -612,6 +614,7 @@ export const customScreens = pgTable(
       t.contentTypeId
     ),
     statusIdx: index("custom_screens_status_idx").on(t.status),
+    sidebarIdx: index("custom_screens_sidebar_idx").on(t.showInSidebar),
     updatedAtIdx: index("custom_screens_updated_at_idx").on(t.updatedAt),
   })
 );

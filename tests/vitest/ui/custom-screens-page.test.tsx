@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import React from "react";
+import { expect, test } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { CustomScreenEditorPage } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
@@ -43,6 +44,8 @@ test("CustomScreenListPage renders cached screens without loading placeholder", 
             name: "Cached screen",
             contentTypeId: "type-1",
             status: "draft",
+            showInSidebar: true,
+            sidebarLabel: "Catalog",
             schemaVersion: 1,
             blocks: [],
             bindings: [],
@@ -59,6 +62,8 @@ test("CustomScreenListPage renders cached screens without loading placeholder", 
     });
 
     expect(html).toContain("Cached screen");
+    expect(html).toContain("Sidebar shortcut:");
+    expect(html).toContain("Catalog");
     expect(html).not.toContain("Loading custom screens");
   } finally {
     if (originalLocal === undefined) {
@@ -76,7 +81,28 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
 
   expect(html).toContain("Create screen");
   expect(html).toContain("Bindings");
+  expect(html).toContain("Sidebar shortcut");
+  expect(html).toContain("Sidebar label");
   expect(html).toContain("Screen name");
   expect(html).toContain("Screen canvas");
   expect(html).toContain("Build your custom screen");
+});
+
+test("CustomScreenListPage renders list shell", () => {
+  const html = renderAdminUi(<CustomScreenListPage />, {
+    path: "/admin/coderso/custom-screens",
+  });
+
+  expect(html).toContain("Custom Screens");
+  expect(html).toContain("New screen");
+});
+
+test("CustomScreenEditorPage renders builder canvas and save action", () => {
+  const html = renderAdminUi(<CustomScreenEditorPage />, {
+    path: "/admin/coderso/custom-screens/new",
+  });
+
+  expect(html).toContain("Create screen");
+  expect(html).toContain("Screen canvas");
+  expect(html).toContain("Drag widgets");
 });

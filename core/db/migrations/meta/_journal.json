@@ -337,6 +337,13 @@
       "when": 1772763811283,
       "tag": "0047_page_revision_autosave_kind",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1772780387576,
+      "tag": "0048_custom_screen_sidebar_shortcuts",
+      "breakpoints": true
     }
   ]
 }

@@ -142,6 +142,7 @@ const sections = buildDefaultNavSections({
 - 054-22 done: Custom Screens module delivered:
   - screen builder route (`/admin/coderso/custom-screens/:id`) now supports widget-to-field bindings and bound preview,
   - dedicated records routes (`/admin/coderso/custom-screens/:screenId/entries*`) reuse existing entries domain while hiding classic Entries from the main workflow,
+  - active screens can opt into direct left-menu shortcuts rendered after the `Coderso` group (`showInSidebar`, optional `sidebarLabel`),
   - classic Entries fallback remains available for metadata/publish operations outside the scoped custom-screen editor.
 - 055 done: Posts module delivered:
   - dedicated `Posts` list + editor routes (`/admin/coderso/posts`, `/admin/coderso/posts/:id`),

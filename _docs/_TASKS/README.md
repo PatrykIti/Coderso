@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 6 tasks
 - **In Progress:** 1 task
-- **Done:** 617 tasks
+- **Done:** 619 tasks
 
 ---
 
@@ -60,6 +60,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-102-06 | Custom Screens and Admin Nav Vitest Migration | Medium | Medium | Done: Bun-free custom screen and admin nav suites moved to tests/vitest while DB/route coverage stayed in Bun |
+| TASK-054-22-07 | Custom Screens Admin Sidebar Shortcuts | High | Medium | Done: active screens can opt into left-menu shortcuts rendered after the Coderso group |
 | TASK-102 | Hybrid Testing Strategy and Coverage Architecture | High | Large | Done: hybrid Bun/Vitest lanes, Bun baseline/full coverage commands, CI workflow, docs, and guardrails shipped |
 | TASK-102-05 | Docs, CI Rollout, and Adoption Guardrails | Medium | Medium | Done: repo docs, tests README, CI workflow, task board, and changelog closure synchronized |
 | TASK-102-04 | Test Utilities, Fixtures, and Migration Wave 1 | Medium | Large | Done: shared Vitest setup and additive Bun-free wave across admin, UI, DOM, and SDK |

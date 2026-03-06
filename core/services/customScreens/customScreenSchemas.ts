@@ -23,6 +23,11 @@ export type CustomScreenDefinition = {
   bindings: CustomScreenBinding[];
 };
 
+export type CustomScreenSidebarConfig = {
+  showInSidebar: boolean;
+  sidebarLabel: string | null;
+};
+
 const supportedDefinitionVersions = new Set<CustomScreenDefinitionVersion>([1]);
 const bindingModes = new Set<CustomScreenBindingMode>(customScreenBindingModes);
 const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
@@ -138,6 +143,20 @@ export function normalizeCustomScreenDefinition(
   };
 }
 
+export function normalizeCustomScreenSidebarConfig(
+  input: {
+    showInSidebar?: unknown;
+    sidebarLabel?: unknown;
+  } = {}
+): CustomScreenSidebarConfig {
+  const showInSidebar = input.showInSidebar === true;
+  const label = normalizeText(input.sidebarLabel);
+  return {
+    showInSidebar,
+    sidebarLabel: label,
+  };
+}
+
 export const customScreenBindingSchema = {
   type: "object",
   required: ["widgetId", "propPath", "field"],
@@ -187,6 +206,8 @@ export const customScreenCreateSchema = {
     name: { type: "string", minLength: 1, maxLength: 160 },
     contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
     status: { enum: customScreenStatusValues },
+    showInSidebar: { type: "boolean" },
+    sidebarLabel: { type: "string", minLength: 1, maxLength: 160 },
     schemaVersion: { enum: [1] },
     blocks: {
       type: "array",
@@ -209,6 +230,8 @@ export const customScreenUpdateSchema = {
     name: { type: "string", minLength: 1, maxLength: 160 },
     contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
     status: { enum: customScreenStatusValues },
+    showInSidebar: { type: "boolean" },
+    sidebarLabel: { type: "string", minLength: 1, maxLength: 160 },
     schemaVersion: { enum: [1] },
     blocks: {
       type: "array",

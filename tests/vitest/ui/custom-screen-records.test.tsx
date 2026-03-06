@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import React from "react";
+import { expect, test } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { CustomScreenEntriesPage } from "../../../core/admin/ui/custom-screens/CustomScreenEntriesPage";
@@ -55,6 +56,8 @@ const seedCache = (storage: ReturnType<typeof createLocalStorage>) => {
         name: "Property Catalog",
         contentTypeId: "type-1",
         status: "active",
+        showInSidebar: true,
+        sidebarLabel: "Catalog",
         schemaVersion: 1,
         blocks: [],
         bindings: [

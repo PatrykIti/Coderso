@@ -57,6 +57,9 @@ export function SidebarNav({
       const visibleItems = (section.items ?? []).filter((item) =>
         canAccessPermission(item.permission)
       );
+      const visibleItemsAfterGroups = (section.itemsAfterGroups ?? []).filter((item) =>
+        canAccessPermission(item.permission)
+      );
       const visibleGroups = (section.groups ?? [])
         .filter((group) => canAccessPermission(group.permission))
         .map((group) => ({
@@ -67,10 +70,16 @@ export function SidebarNav({
       return {
         ...section,
         items: visibleItems,
+        itemsAfterGroups: visibleItemsAfterGroups,
         groups: visibleGroups,
       };
     })
-    .filter((section) => section.items.length > 0 || section.groups.length > 0);
+    .filter(
+      (section) =>
+        section.items.length > 0 ||
+        section.groups.length > 0 ||
+        section.itemsAfterGroups.length > 0
+    );
 
   const baseClasses =
     variant === "mobile"
@@ -187,6 +196,37 @@ export function SidebarNav({
                       </div>
                     ) : null}
                   </div>
+                );
+              })}
+              {section.itemsAfterGroups.map((item) => {
+                const Icon = item.icon;
+                const isActive = isAdminHrefActive(
+                  adminBasePath,
+                  item.href,
+                  activeHref
+                );
+                return (
+                  <AdminLink
+                    key={item.href}
+                    href={item.href}
+                    prefetch
+                    onClick={() => {
+                      if (variant === "mobile") onNavigate?.();
+                    }}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--admin-sidebar-text)] transition-colors hover:bg-[var(--admin-sidebar-hover-bg)] hover:text-[var(--admin-sidebar-active-text)]",
+                      isActive &&
+                        "bg-[var(--admin-sidebar-active-bg)] text-[var(--admin-sidebar-active-text)] hover:bg-[var(--admin-sidebar-active-bg)] hover:text-[var(--admin-sidebar-active-text)]"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="flex-1 truncate">{item.label}</span>
+                    {item.badge ? (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {item.badge}
+                      </Badge>
+                    ) : null}
+                  </AdminLink>
                 );
               })}
             </div>

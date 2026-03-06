@@ -33,6 +33,8 @@ async function ensureCustomScreensTable() {
       "name" text NOT NULL,
       "content_type_id" uuid NOT NULL,
       "status" text DEFAULT 'draft' NOT NULL,
+      "show_in_sidebar" boolean DEFAULT false NOT NULL,
+      "sidebar_label" text,
       "schema_version" integer DEFAULT 1 NOT NULL,
       "blocks" jsonb DEFAULT '[]'::jsonb NOT NULL,
       "bindings" jsonb DEFAULT '[]'::jsonb NOT NULL,
@@ -48,6 +50,9 @@ async function ensureCustomScreensTable() {
   );
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS "custom_screens_status_idx" ON "custom_screens" ("status")`
+  );
+  await db.execute(
+    sql`CREATE INDEX IF NOT EXISTS "custom_screens_sidebar_idx" ON "custom_screens" ("show_in_sidebar")`
   );
   await db.execute(
     sql`CREATE INDEX IF NOT EXISTS "custom_screens_updated_at_idx" ON "custom_screens" ("updated_at")`
@@ -112,6 +117,8 @@ testIfDb("custom screen CRUD flow", async () => {
   const created = await createCustomScreen({
     name: `Catalog ${unique}`,
     contentTypeId,
+    showInSidebar: true,
+    sidebarLabel: "Catalog shortcut",
     blocks: [{ id: "section-1", type: "section", data: {} }],
     bindings: [],
   });
@@ -119,12 +126,16 @@ testIfDb("custom screen CRUD flow", async () => {
   createdScreenIds.add(created.id);
   expect(created.schemaVersion).toBe(1);
   expect(created.status).toBe("draft");
+  expect(created.showInSidebar).toBe(true);
+  expect(created.sidebarLabel).toBe("Catalog shortcut");
 
   const updated = await updateCustomScreen(created.id, {
     status: "active",
+    sidebarLabel: "Catalog",
   });
 
   expect(updated?.status).toBe("active");
+  expect(updated?.sidebarLabel).toBe("Catalog");
 
   const listed = await listCustomScreens();
   expect(listed.some((screen) => screen.id === created.id)).toBe(true);
