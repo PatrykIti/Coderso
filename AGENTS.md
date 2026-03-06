@@ -40,6 +40,8 @@ Follow these rules when working in this repo:
   - `bun --cwd core lint:types`
   - all relevant unit/integration tests for touched areas.
 - For DB-backed features, run DB tests when `DATABASE_URL` is available.
+- Before running any tests that touch DB or settings, load repo env vars with:
+  - `set -a && source .env && set +a`
 - If any tests are skipped or cannot run, state it clearly in the summary.
 
 ## Task Closure Rules
