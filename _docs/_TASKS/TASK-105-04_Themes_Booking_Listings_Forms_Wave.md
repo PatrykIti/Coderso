@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-01  
-**Status:** To Do
+**Status:** In Progress (2026-03-06)
 
 ---
 
@@ -40,6 +40,18 @@ assertProductSpecificControls();
 
 1. Each cluster gets meaningful state coverage, not just shell rendering.
 2. Coverage increases across the largest medium-coverage admin modules.
+
+## Progress Notes
+
+Completed slices:
+- theme leaf cards and `ThemeEditorPage`
+- booking tabs: `Availability`, `Services`, `Reservations`, `SlotPreview`
+- form leaf: `FormCanvas`
+
+Remaining slices:
+- listings editors, manager, and hooks
+- forms builder pages/panels beyond `FormCanvas`
+- broader theme drawers and `ThemesPage`
 
 ## Testing Requirements
 

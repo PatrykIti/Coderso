@@ -5,7 +5,7 @@
 **Category:** QA + SDK + Domain  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-105-01  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -41,6 +41,12 @@ testCustomScreenServiceValidationAndStateTransitions();
 
 1. SDK manifest logic is covered by real branch tests.
 2. Custom screens service gains direct behavioral coverage, not only UI proxy coverage.
+
+## Completion Notes
+
+- `packages/sdk/src/pluginManifest.ts` now has direct manifest validation and normalization tests
+- `packages/sdk/src/client.ts` and `packages/sdk/src/server.ts` gained direct registration-path tests
+- `core/services/customScreens/customScreenService.ts` gained direct service and normalization coverage
 
 ## Testing Requirements
 

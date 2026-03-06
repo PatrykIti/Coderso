@@ -5,7 +5,7 @@
 **Category:** QA + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-105  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -40,6 +40,12 @@ publishVitestMatrix(grouped);
 
 1. Every later subtask can point at frozen file groups.
 2. The repo has one clear definition of what remains between current state and `100%`.
+
+## Completion Notes
+
+- initial baseline captured at `38.01 / 33.57 / 31.52 / 40.18`
+- current re-baseline after delivered waves: `40.73 / 36.10 / 34.93 / 43.04`
+- execution order remains `zero-first -> small leafs -> medium product clusters -> large editor/widgets`
 
 ## Testing Requirements
 

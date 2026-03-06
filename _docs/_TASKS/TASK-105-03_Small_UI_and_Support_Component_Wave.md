@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-105-01  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -36,6 +36,11 @@ assertEmptyAndNonEmptyStates();
 
 1. Small leaf UI files no longer remain at or near `0%`.
 2. Tests cover real render paths and empty/loading/copy states.
+
+## Completion Notes
+
+- covered `BlockLibrary`, `FormCanvas`, `MediaDetailsPanel`, `PluginFilters`, `ThemeRoutesEditor`, `ThemeTokensEditor`
+- added complementary leaf coverage for redirects/page-builder/page leaf components and theme leaf cards
 
 ## Testing Requirements
 

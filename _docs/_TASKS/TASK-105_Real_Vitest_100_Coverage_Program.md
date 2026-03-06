@@ -5,7 +5,7 @@
 **Category:** QA + Platform + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-102, TASK-104  
-**Status:** To Do
+**Status:** In Progress (2026-03-06)
 
 ---
 
@@ -28,11 +28,17 @@ The remaining work is explicit:
 After `TASK-104`, the repo can finally treat Vitest coverage as a serious product-quality signal for Bun-free code.
 Right now the Vitest lane is broad but still far from full coverage.
 
-Current Vitest coverage snapshot (from `bun run test:coverage` on 2026-03-06):
+Initial Vitest coverage snapshot (from `bun run test:coverage` on 2026-03-06):
 - `% Stmts`: `38.01`
 - `% Branch`: `33.57`
 - `% Funcs`: `31.52`
 - `% Lines`: `40.18`
+
+Current Vitest coverage snapshot after the first implemented waves (from `./node_modules/.bin/vitest run --config vitest.config.ts --coverage` on 2026-03-06):
+- `% Stmts`: `40.73`
+- `% Branch`: `36.10`
+- `% Funcs`: `34.93`
+- `% Lines`: `43.04`
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -95,6 +101,24 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 7. SDK/custom screens domain wave.
 8. Final branch/statement gap closure.
 9. QA/docs/changelog/board closure.
+
+## Progress
+
+Completed waves:
+- admin service zero-coverage clients and `sessionCache`
+- SDK `pluginManifest`, `client`, and `server`
+- custom screens service coverage
+- small UI leafs (`BlockLibrary`, `FormCanvas`, `MediaDetailsPanel`, `PluginFilters`, theme route/token editors)
+- themes leaf cards and `ThemeEditorPage`
+- redirects page leaf coverage
+- booking tab leaf coverage
+- plugin/media/site leaf coverage
+
+Remaining large clusters:
+- listings editors/managers
+- forms builder pages and panels
+- entries/pages/posts editor shells
+- widgets editor suites
 
 ## Sub-Tasks
 
