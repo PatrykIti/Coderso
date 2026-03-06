@@ -221,6 +221,8 @@ bun --cwd core lint:types
 bun test tests/integration tests/perf tests/security
 vitest run --config vitest.config.ts
 vitest run --config vitest.config.ts --coverage
+bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage/bun tests/integration/ui tests/integration/plugins/assets.test.ts tests/perf/admin-request-baseline.test.ts tests/perf/admin-prefetch-budget.test.ts
+bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage/bun-full tests/integration tests/perf tests/security
 ```
 
 Possible future script split:
@@ -230,7 +232,10 @@ Possible future script split:
   "test": "bun run test:bun && bun run test:vitest",
   "test:bun": "bun test tests/integration tests/perf tests/security",
   "test:vitest": "vitest run",
-  "test:coverage": "vitest run --coverage"
+  "test:coverage": "vitest run --coverage",
+  "test:coverage:bun": "bun test --coverage tests/integration/ui tests/integration/plugins/assets.test.ts + selected perf suites",
+  "test:coverage:bun:full": "bun test --coverage tests/integration tests/perf tests/security",
+  "test:coverage:all": "bun run test:coverage && bun run test:coverage:bun"
 }
 ```
 
