@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 6 tasks
+- **To Do:** 16 tasks
 - **In Progress:** 1 task
 - **Done:** 628 tasks
 
@@ -41,6 +41,16 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
+| TASK-105 | Real Vitest 100% Coverage Program | High | Large | Real new tests for remaining Vitest-owned files to reach 100% coverage |
+| TASK-105-01 | Vitest Coverage Matrix and Invariants | High | Medium | Freeze uncovered file matrix and hard rules for real 100% |
+| TASK-105-02 | Admin Services Zero Coverage Wave | High | Medium | Cover small zero-coverage admin services and caches |
+| TASK-105-03 | Small UI and Support Component Wave | Medium | Medium | Cover tiny uncovered UI leafs and support components |
+| TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | Cover medium-coverage product surfaces with real tests |
+| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | Deepen editor shell and inspector coverage |
+| TASK-105-06 | Widget Editor New Tests Wave | High | Large | Add real new tests for the largest remaining widget/editor gaps |
+| TASK-105-07 | SDK Plugin Manifest and Custom Screens Service Wave | Medium | Medium | Cover SDK manifest and custom screens domain/service gaps |
+| TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
+| TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
