@@ -1,4 +1,5 @@
 import {
+  autosavePage,
   createPage,
   duplicatePage,
   deletePage,
@@ -12,6 +13,7 @@ import {
 import { listPageTemplateOptions } from "../../services/pages/pageTemplateService";
 import { createPreviewToken } from "../../services/pages/previewService";
 import {
+  discardAutosaveRevision,
   listRevisions,
   restoreRevision,
 } from "../../services/pages/revisionService";
@@ -22,6 +24,7 @@ import {
   resolvePreviewUrl,
 } from "../utils/previewUrls";
 import {
+  pageAutosaveSchema,
   pageCreateSchema,
   pagePreviewSchema,
   pagePublishSchema,
@@ -109,6 +112,29 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
     if (!page) throw new Error("page_not_found");
     return page;
   });
+
+  router.post(
+    "/pages/:id/autosave",
+    requirePermission("content:write"),
+    async (ctx) => {
+      validate(pageAutosaveSchema, ctx.body);
+      if (!ctx.user?.id) throw new Error("auth_required");
+      const body = ctx.body as {
+        title?: string;
+        slug?: string;
+        data?: PageData;
+      };
+      return autosavePage(
+        ctx.params.id,
+        {
+          title: body.title,
+          slug: body.slug,
+          data: body.data,
+        },
+        ctx.user.id
+      );
+    }
+  );
 
   router.post(
     "/pages/:id/publish",
@@ -206,13 +232,36 @@ export function registerPageRoutes(router: Router, deps: PageRouteDeps) {
     "/pages/:id/revisions/:revisionId/restore",
     requirePermission("content:write"),
     async (ctx) => {
-      const revision = await restoreRevision(ctx.params.revisionId);
+      const result = await restoreRevision(ctx.params.id, ctx.params.revisionId);
       await logAudit({
         actorId: ctx.user?.id ?? null,
         action: "pages.restore",
         targetType: "page",
-        targetId: revision.pageId,
-        metadata: { revisionId: revision.id },
+        targetId: ctx.params.id,
+        metadata: {
+          revisionId: result.revision.id,
+          kind: result.revision.kind,
+          restored: result.restored,
+        },
+      });
+      return { ok: true, ...result };
+    }
+  );
+
+  router.delete(
+    "/pages/:id/revisions/:revisionId",
+    requirePermission("content:write"),
+    async (ctx) => {
+      const discarded = await discardAutosaveRevision(
+        ctx.params.id,
+        ctx.params.revisionId
+      );
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "pages.autosave.discard",
+        targetType: "page",
+        targetId: ctx.params.id,
+        metadata: { revisionId: discarded.id },
       });
       return { ok: true };
     }

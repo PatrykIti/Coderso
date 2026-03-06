@@ -25,8 +25,9 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
-| 358 | 2026-03-06 | TASK-103 agent guidelines hardening and contribution guardrails | Docs/Architecture |
+| 360 | 2026-03-06 | TASK-053-06 page settings autosave and history | Admin/UI |
 | 359 | 2026-03-06 | TASK-102 vitest bootstrap | QA/Platform |
+| 358 | 2026-03-06 | TASK-103 agent guidelines hardening and contribution guardrails | Docs/Architecture |
 | 357 | 2026-03-06 | TASK-054-22 custom screens bindings and record workflow | Admin/UI |
 | 356 | 2026-03-05 | TASK-054-22-03 custom screens builder UI | Admin/UI |
 | 355 | 2026-03-05 | TASK-063-16-23 section formatting regression fixes | Admin/UI |

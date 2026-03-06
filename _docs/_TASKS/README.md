@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 14 tasks
+- **To Do:** 12 tasks
 - **In Progress:** 1 task
-- **Done:** 609 tasks
+- **Done:** 611 tasks
 
 ---
 
@@ -48,8 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-102-04 | Test Utilities, Fixtures, and Migration Wave 1 | Medium | Large | Prepare helpers, fixtures, and the first safe suite migrations |
 | TASK-102-05 | Docs, CI Rollout, and Adoption Guardrails | Medium | Medium | Finalize contributor rules, docs, and rollout closure for the hybrid model |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
-| TASK-053 | Page Editor Templates Mode | High | Large | 053-01..06 |
-| TASK-053-06 | Page Settings Autosave + History | Medium | Large | Autosave + history labels |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -68,6 +66,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-053 | Page Editor Templates Mode | High | Large | Done: templates mode, settings usability, preview UX, retention policy, FOUC reduction, and settings autosave/history are fully closed |
+| TASK-053-06 | Page Settings Autosave + History | Medium | Large | Done: autosave-on-close, history drawer, restore/discard flow, revision kind model, and page API/client wiring shipped |
 | TASK-103 | Agent Guidelines Hardening and Contribution Guardrails | Medium | Small | Done: AGENTS rules hardened against repo contracts and delivered via dedicated worktree flow |
 | TASK-054-22 | Coderso Custom Screens From Widgets | High | Large | Done: schema, admin routes, builder UI, field bindings, dedicated records workflow, and closure shipped |
 | TASK-054-22-06 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint, typecheck, full test suite, docs, changelog, and task board sync |

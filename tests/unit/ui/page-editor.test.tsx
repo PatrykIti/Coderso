@@ -12,4 +12,5 @@ test("PageEditorPage renders key panels", () => {
   expect(html).toContain("Templates");
   expect(html).toContain("Runtime preview device");
   expect(html).toContain("Runtime preview");
+  expect(html).toContain("History");
 });

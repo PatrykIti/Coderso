@@ -103,6 +103,36 @@ Runtime semantics:
 - applied on publish
 - oldest revisions are pruned when the limit is exceeded
 
+## Page revisions and settings autosave (v1)
+
+`page_revisions` stores two kinds of snapshots:
+- `publish` - created on publish and governed by `settings.revisionRetention`
+- `autosave` - latest unsaved Page Settings snapshot, overwritten per page
+
+Stored snapshot contract:
+
+```json
+{
+  "title": "Home draft",
+  "slug": "/home-draft",
+  "data": {
+    "schemaVersion": 1,
+    "blocks": [],
+    "settings": {
+      "template": "landing",
+      "showInNav": false
+    }
+  }
+}
+```
+
+Semantics:
+- autosave is created when the Page Settings drawer closes with unsaved changes
+- only one autosave is kept per page
+- restore applies `title`, `slug`, and `current_data`
+- discard is allowed only for autosave snapshots
+- legacy publish revisions without `title/slug` still restore `current_data`
+
 ## Block structure
 
 ```json

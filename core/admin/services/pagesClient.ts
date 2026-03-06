@@ -40,10 +40,32 @@ export type PagePayload = {
   data: Record<string, unknown>;
 };
 
+export type PageAutosavePayload = Partial<PagePayload>;
+
 export type PreviewResponse = {
   token: string;
   previewUrl: string;
   expiresAt: string;
+};
+
+export type PageRevisionKind = "publish" | "autosave";
+
+export type PageRevision = {
+  id: string;
+  pageId: string;
+  version: number;
+  kind: PageRevisionKind;
+  title?: string | null;
+  slug?: string | null;
+  data: Record<string, unknown>;
+  createdAt: string;
+  createdBy: PageAuthor | null;
+};
+
+export type PageAutosaveResponse = {
+  savedAt: string;
+  reusedRevision: boolean;
+  revision: PageRevision;
 };
 
 export type PageTemplateOption = {
@@ -211,6 +233,18 @@ export async function updatePage(id: string, payload: Partial<PagePayload>) {
   return updated;
 }
 
+export async function autosavePage(id: string, payload: PageAutosavePayload) {
+  return apiRequest<PageAutosaveResponse>(
+    `/pages/${id}/autosave`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+}
+
 export async function publishPage(id: string, data?: Record<string, unknown>) {
   const result = await apiRequest<{ ok: boolean }>(
     `/pages/${id}/publish`,
@@ -269,6 +303,37 @@ export async function duplicatePage(id: string) {
     broadcastCacheEvent({ key: cacheKeys.pageDetail(clone.id), action: "update" });
   }
   return clone;
+}
+
+export async function listPageRevisions(id: string) {
+  return apiRequest<PageRevision[]>(`/pages/${id}/revisions`, { method: "GET" });
+}
+
+export async function restorePageRevision(id: string, revisionId: string) {
+  const result = await apiRequest<{
+    ok: boolean;
+    restored: boolean;
+    revision: PageRevision;
+    page: PageDetail;
+  }>(
+    `/pages/${id}/revisions/${revisionId}/restore`,
+    { method: "POST" },
+    { withCsrf: true }
+  );
+  if (result?.page) {
+    upsertCachedPage(result.page);
+    broadcastCacheEvent({ key: cacheKeys.pagesList, action: "update" });
+    broadcastCacheEvent({ key: cacheKeys.pageDetail(result.page.id), action: "update" });
+  }
+  return result;
+}
+
+export async function discardPageRevision(id: string, revisionId: string) {
+  return apiRequest<{ ok: boolean }>(
+    `/pages/${id}/revisions/${revisionId}`,
+    { method: "DELETE" },
+    { withCsrf: true }
+  );
 }
 
 export async function deletePage(id: string) {

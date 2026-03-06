@@ -1,5 +1,5 @@
 import { Globe, Settings, Sparkles, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import type { PageDetail, PageTemplateOption } from "@/services/pagesClient";
+import { areRevisionSnapshotsEqual } from "../../../services/content/revisionSnapshot";
 import {
   normalizePageLayoutSettings,
   pageLayoutTokens,
@@ -53,8 +54,14 @@ type PageSettingsDrawerProps = {
     title: string;
     slug: string;
     settings: PageSettingsValue;
+  }) => Promise<boolean> | boolean;
+  onAutosave?: (payload: {
+    title: string;
+    slug: string;
+    settings: PageSettingsValue;
   }) => Promise<void> | void;
   isSubmitting?: boolean;
+  isAutosaving?: boolean;
   error?: string | null;
 };
 
@@ -79,7 +86,9 @@ export function PageSettingsDrawer({
   templateOptionsLoading = false,
   templateOptionsError,
   onSave,
+  onAutosave,
   isSubmitting = false,
+  isAutosaving = false,
   error,
 }: PageSettingsDrawerProps) {
   const [title, setTitle] = useState(page?.title ?? "");
@@ -89,6 +98,33 @@ export function PageSettingsDrawer({
   const [showInNav, setShowInNav] = useState(settings.showInNav);
   const [layout, setLayout] = useState<PageLayoutSettings>(settings.layout);
   const [revisionRetention, setRevisionRetention] = useState(settings.revisionRetention);
+
+  const initialPayload = useMemo(
+    () => ({
+      title: page?.title ?? "",
+      slug: page?.slug ?? "",
+      settings,
+    }),
+    [page?.slug, page?.title, settings]
+  );
+  const draftPayload = useMemo(
+    () => ({
+      title: title.trim(),
+      slug: slug.startsWith("/") ? slug : `/${slug}`,
+      settings: {
+        template,
+        showInNav,
+        layout,
+        revisionRetention,
+      },
+    }),
+    [layout, revisionRetention, showInNav, slug, template, title]
+  );
+  const isDirty = useMemo(
+    () => !areRevisionSnapshotsEqual(initialPayload, draftPayload),
+    [draftPayload, initialPayload]
+  );
+  const shouldSkipAutosaveRef = useRef(false);
 
   const resolvedTemplateOptions = useMemo(() => {
     const map = new Map<string, { key: string; label: string }>();
@@ -127,23 +163,34 @@ export function PageSettingsDrawer({
     [slug, title]
   );
 
-  const handleSubmit = () => {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
+
+    if (shouldSkipAutosaveRef.current) {
+      shouldSkipAutosaveRef.current = false;
+      onOpenChange(false);
+      return;
+    }
+
+    if (isDirty && onAutosave && !isSubmitting) {
+      void Promise.resolve(onAutosave(draftPayload));
+    }
+    onOpenChange(false);
+  };
+
+  const handleSubmit = async () => {
     if (!canSubmit || isSubmitting) return;
-    const normalizedSlug = slug.startsWith("/") ? slug : `/${slug}`;
-    onSave({
-      title: title.trim(),
-      slug: normalizedSlug,
-      settings: {
-        template,
-        showInNav,
-        layout,
-        revisionRetention,
-      },
-    });
+    const saved = await onSave(draftPayload);
+    if (saved) {
+      shouldSkipAutosaveRef.current = true;
+    }
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
         className="flex h-full min-h-0 w-full flex-col overflow-hidden p-0 sm:max-w-2xl"
@@ -690,17 +737,26 @@ export function PageSettingsDrawer({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Settings className="h-4 w-4" />
-              <span>Settings apply instantly to drafts.</span>
+              <span>Save settings or close the drawer to keep one autosave snapshot.</span>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+              <Button variant="outline" onClick={() => handleOpenChange(false)}>
+                {isDirty ? "Close and autosave" : "Cancel"}
               </Button>
-              <Button onClick={handleSubmit} disabled={!canSubmit || isSubmitting}>
+              <Button onClick={() => void handleSubmit()} disabled={!canSubmit || isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save settings"}
               </Button>
             </div>
           </div>
+          {isAutosaving ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Saving autosave snapshot...
+            </p>
+          ) : isDirty ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Closing the drawer stores one autosave snapshot in page history.
+            </p>
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>

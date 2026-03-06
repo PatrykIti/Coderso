@@ -1,7 +1,13 @@
 import { desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { pages, users } from "../../db/schema";
-import { createRevisionTx, pruneRevisionsTx, type RevisionData } from "./revisionService";
+import {
+  createOrReplaceAutosaveRevisionTx,
+  createRevisionTx,
+  pruneRevisionsTx,
+  type PageAutosaveRevisionResult,
+  type RevisionData,
+} from "./revisionService";
 import { invalidateSiteCachePath, normalizeSitePath } from "../../site/cache/siteCache";
 import { getSetting } from "../settings/settingsService";
 import { normalizePageDataLayout } from "./layoutSettings";
@@ -40,6 +46,16 @@ export type UpdatePageInput = {
   data?: PageData;
 };
 
+export type PageAutosaveInput = {
+  title?: string;
+  slug?: string;
+  data?: PageData;
+};
+
+export type PageAutosaveResult = PageAutosaveRevisionResult & {
+  savedAt: string;
+};
+
 function toPublishedData(data: PageData): PageData {
   const blocks = Array.isArray(data.blocks)
     ? data.blocks.map((block) => {
@@ -68,6 +84,21 @@ function preparePageData(data: PageData, template?: string): PageData {
   const withTemplate = applyTemplate(data, template);
   return normalizePageDataLayout(withTemplate) as PageData;
 }
+
+const buildRevisionSnapshot = (
+  page: Pick<typeof pages.$inferSelect, "title" | "slug" | "currentData">,
+  overrides?: {
+    title?: string | null;
+    slug?: string | null;
+    data?: PageData;
+  }
+) => ({
+  title: overrides?.title ?? page.title,
+  slug: overrides?.slug ?? page.slug,
+  data: preparePageData(
+    overrides?.data ?? (page.currentData as PageData)
+  ) as RevisionData,
+});
 
 export async function createPage(input: CreatePageInput) {
   const [page] = await db
@@ -160,7 +191,13 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
 
     const retention = resolvePageRevisionRetention(nextData as Record<string, unknown>);
 
-    await createRevisionTx(tx, id, nextData as RevisionData, userId);
+    await createRevisionTx(
+      tx,
+      id,
+      buildRevisionSnapshot(page, { data: nextData }),
+      userId,
+      "publish"
+    );
     await pruneRevisionsTx(tx, id, retention);
 
     const publishedData = toPublishedData(nextData);
@@ -195,6 +232,26 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
   }
 
   return updated;
+}
+
+export async function autosavePage(id: string, input: PageAutosaveInput, userId: string) {
+  const [page] = await db.select().from(pages).where(eq(pages.id, id));
+  if (!page) throw new Error("page_not_found");
+
+  const snapshot = buildRevisionSnapshot(page, {
+    title: input.title ?? undefined,
+    slug: input.slug ?? undefined,
+    data: input.data,
+  });
+
+  const result = await db.transaction(async (tx) =>
+    createOrReplaceAutosaveRevisionTx(tx, id, snapshot, userId)
+  );
+
+  return {
+    ...result,
+    savedAt: new Date().toISOString(),
+  };
 }
 
 export async function unpublishPage(id: string) {

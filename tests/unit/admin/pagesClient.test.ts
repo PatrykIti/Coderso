@@ -1,13 +1,17 @@
 import { expect, test } from "bun:test";
 
 import {
+  autosavePage,
   clearPagesCache,
   createPage,
   duplicatePage,
   getPageCached,
+  discardPageRevision,
+  listPageRevisions,
   listPages,
   listPagesCached,
   previewPage,
+  restorePageRevision,
 } from "../../../core/admin/services/pagesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
@@ -130,6 +134,133 @@ test("duplicatePage posts to duplicate endpoint", async () => {
     await duplicatePage("page-1");
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/pages/page-1/duplicate");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("autosavePage posts payload with CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      savedAt: "2026-03-06T12:00:00.000Z",
+      reusedRevision: false,
+      revision: {
+        id: "rev-1",
+        pageId: "page-1",
+        version: 2,
+        kind: "autosave",
+        data: { blocks: [] },
+        createdAt: "2026-03-06T12:00:00.000Z",
+        createdBy: null,
+      },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await autosavePage("page-1", {
+      title: "Draft title",
+      slug: "/draft-title",
+      data: { blocks: [] },
+    });
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/pages/page-1/autosave");
+    expect(calls[1]?.init?.method).toBe("POST");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("listPageRevisions calls revisions endpoint", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse([]);
+  };
+
+  try {
+    await listPageRevisions("page-1");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/admin/api/pages/page-1/revisions");
+    expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("restorePageRevision posts restore endpoint with CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      ok: true,
+      restored: true,
+      revision: {
+        id: "rev-1",
+        pageId: "page-1",
+        version: 2,
+        kind: "autosave",
+        data: { blocks: [] },
+        createdAt: "2026-03-06T12:00:00.000Z",
+        createdBy: null,
+      },
+      page: {
+        id: "page-1",
+        title: "Restored",
+        slug: "/restored",
+        status: "draft",
+        currentData: { blocks: [] },
+        updatedAt: "2026-03-06T12:00:00.000Z",
+      },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await restorePageRevision("page-1", "rev-1");
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/pages/page-1/revisions/rev-1/restore");
+    expect(calls[1]?.init?.method).toBe("POST");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("discardPageRevision deletes autosave revision with CSRF", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({ ok: true });
+  };
+
+  try {
+    resetCsrfToken();
+    await discardPageRevision("page-1", "rev-1");
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/pages/page-1/revisions/rev-1");
+    expect(calls[1]?.init?.method).toBe("DELETE");
   } finally {
     globalThis.fetch = originalFetch;
   }

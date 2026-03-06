@@ -330,6 +330,13 @@
       "when": 1772622699000,
       "tag": "0046_custom_screens",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1772763811283,
+      "tag": "0047_page_revision_autosave_kind",
+      "breakpoints": true
     }
   ]
 }

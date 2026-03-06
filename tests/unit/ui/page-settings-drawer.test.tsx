@@ -30,7 +30,7 @@ const renderDrawer = (
       onOpenChange={() => undefined}
       page={basePage}
       settings={baseSettings}
-      onSave={() => undefined}
+      onSave={() => true}
       isSubmitting={false}
       error={null}
       {...overrides}

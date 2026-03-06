@@ -33,6 +33,7 @@ test("registerPageRoutes wires endpoints", () => {
       "POST /pages",
       "GET /pages/:id",
       "PATCH /pages/:id",
+      "POST /pages/:id/autosave",
       "POST /pages/:id/publish",
       "POST /pages/:id/unpublish",
       "POST /pages/:id/preview",
@@ -40,6 +41,7 @@ test("registerPageRoutes wires endpoints", () => {
       "DELETE /pages/:id",
       "GET /pages/:id/revisions",
       "POST /pages/:id/revisions/:revisionId/restore",
+      "DELETE /pages/:id/revisions/:revisionId",
     ])
   );
 });

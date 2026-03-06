@@ -62,8 +62,9 @@ testIfDb("creates and restores revisions", async () => {
 
   const revisions = await listRevisions(page.id);
   expect(revisions.length).toBe(2);
+  expect(revisions[0]?.kind).toBe("publish");
 
-  await restoreRevision(revision1!.id);
+  await restoreRevision(page.id, revision1!.id);
   const [updated] = await db.select().from(pages).where(eq(pages.id, page.id));
   expect(updated?.currentData).toEqual({ step: 1 });
 

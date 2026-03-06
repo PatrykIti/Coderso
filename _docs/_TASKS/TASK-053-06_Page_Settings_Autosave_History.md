@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Data  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-002-02, TASK-052-05  
-**Status:** To Do  
+**Status:** Done (2026-03-06)  
 
 ---
 
@@ -29,6 +29,13 @@ Introduce WordPress-like autosave behavior for **Page Settings** changes. When t
 3. **History entry**: list autosave in history with a distinct label (not a publish revision).
 4. **Restore/Discard**: allow restoring autosave or discarding it.
 5. **Retention**: keep only the latest autosave per page.
+
+## Security Contract
+
+- **Visibility:** internal (`/admin/api/pages/*`)
+- **Auth model:** authenticated admin session / admin API key with `content:read` / `content:write`
+- **Rate-limit bucket:** `admin_read` / `admin_write`
+- **Anti-abuse controls:** no public write surface; CSRF on mutating routes; no nonce/HMAC/reCAPTCHA required
 
 ---
 

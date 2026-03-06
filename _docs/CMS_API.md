@@ -473,11 +473,13 @@ Permissions: `content:read`, `content:write`, `content:publish`
 - `PATCH /pages/:id`
 - `POST /pages/:id/publish`
 - `POST /pages/:id/unpublish`
+- `POST /pages/:id/autosave`
 - `POST /pages/:id/preview`
 - `POST /pages/:id/duplicate`
 - `DELETE /pages/:id`
 - `GET /pages/:id/revisions`
 - `POST /pages/:id/revisions/:revisionId/restore`
+- `DELETE /pages/:id/revisions/:revisionId`
 
 Create/Update payload (summary):
 
@@ -520,6 +522,41 @@ Create/Update payload (summary):
 }
 ```
 
+`POST /pages/:id/autosave` payload (summary):
+
+```json
+{
+  "title": "Home draft",
+  "slug": "/home-draft",
+  "data": {
+    "schemaVersion": 1,
+    "blocks": [],
+    "settings": {
+      "template": "landing",
+      "showInNav": false
+    }
+  }
+}
+```
+
+`POST /pages/:id/autosave` response:
+
+```json
+{
+  "savedAt": "2026-03-06T12:00:00.000Z",
+  "reusedRevision": false,
+  "revision": {
+    "id": "revision-id",
+    "pageId": "page-id",
+    "version": 7,
+    "kind": "autosave",
+    "title": "Home draft",
+    "slug": "/home-draft",
+    "data": { "schemaVersion": 1, "blocks": [] }
+  }
+}
+```
+
 `POST /pages/:id/preview` response:
 
 ```json
@@ -538,6 +575,32 @@ Create/Update payload (summary):
   "templates": [{ "key": "landing", "label": "Landing" }]
 }
 ```
+
+`GET /pages/:id/revisions` returns both publish revisions and the latest autosave.
+
+Revision item summary:
+
+```json
+{
+  "id": "revision-id",
+  "pageId": "page-id",
+  "version": 6,
+  "kind": "publish",
+  "title": "Home",
+  "slug": "/home",
+  "data": { "schemaVersion": 1, "blocks": [] },
+  "createdAt": "2026-03-06T12:00:00.000Z",
+  "createdBy": {
+    "id": "user-id",
+    "name": "Admin",
+    "email": "admin@example.com"
+  }
+}
+```
+
+Notes:
+- `kind = autosave` is used for Page Settings snapshots created on drawer close.
+- `DELETE /pages/:id/revisions/:revisionId` is supported only for autosave revisions (discard).
 
 Preview URL resolution policy (dotyczy pages/content/widget templates):
 - 1) `settings["site.publicBaseUrl"]`

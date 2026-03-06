@@ -233,6 +233,17 @@ export const pageUpdateSchema = {
   },
 };
 
+export const pageAutosaveSchema = {
+  type: "object",
+  minProperties: 1,
+  additionalProperties: false,
+  properties: {
+    title: { type: "string", minLength: 1 },
+    slug: { type: "string", minLength: 1 },
+    data: pageDataSchema,
+  },
+};
+
 export const pagePreviewSchema = {
   type: "object",
   additionalProperties: false,

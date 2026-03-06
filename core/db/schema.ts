@@ -324,12 +324,14 @@ export const pageRevisions = pgTable(
       .notNull()
       .references(() => pages.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
+    kind: text("kind").notNull().default("publish"),
     data: jsonb("data").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     createdBy: uuid("created_by").references(() => users.id),
   },
   (t) => ({
     pageIdIdx: index("page_revisions_page_id_idx").on(t.pageId),
+    pageKindIdx: index("page_revisions_page_kind_idx").on(t.pageId, t.kind),
   })
 );
 

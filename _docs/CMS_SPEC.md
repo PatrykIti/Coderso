@@ -50,7 +50,9 @@ Model:
 
 Przechowywanie:
 - Biezacy stan strony trzymany w `pages.current_data` (JSONB).
-- Historia zmian w `page_revisions.data` (JSONB).
+- Historia zmian i settings autosave trzymane w `page_revisions`:
+  - `kind = publish` dla snapshotow publikacji,
+  - `kind = autosave` dla najnowszego niezatwierdzonego Page Settings snapshot.
 
 ## Pages runtime parity (v1)
 
@@ -72,6 +74,8 @@ Zasady:
 - rollback do revision przywraca dane.
 - retain policy: `settings.revisionRetention` (default 10) controls how many publish revisions are kept per page.
 - oldest revisions are pruned on publish when limit is exceeded.
+- zamkniecie Page Settings z niezapisanymi zmianami tworzy jeden autosave snapshot (`title`, `slug`, `data`).
+- autosave nie jest traktowany jak publikowana rewizja i moze byc osobno `restore` albo `discard`.
 
 ---
 

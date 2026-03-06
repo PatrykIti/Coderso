@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Eye, Save, Settings2 } from "lucide-react";
+import { Eye, History, Save, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,18 @@ import {
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
+  autosavePage,
+  discardPageRevision,
   getCachedPageDetail,
   getPageCached,
   getPageTemplateOptions,
+  listPageRevisions,
   publishPage,
   previewPage,
+  restorePageRevision,
   updatePage,
   type PageDetail,
+  type PageRevision,
   type PageTemplateOptionsResponse,
 } from "@/services/pagesClient";
 import { EditorShell } from "@/ui/layouts/EditorShell";
@@ -29,6 +34,7 @@ import { RuntimePreviewDialog, type RuntimePreviewDeviceId } from "@/ui/preview/
 import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
 import { LibraryPanel } from "./builder/LibraryPanel";
+import { PageRevisionDrawer } from "./PageRevisionDrawer";
 import { PageSettingsDrawer, type PageSettingsValue } from "./PageSettingsDrawer";
 import {
   applyWizardSelection,
@@ -221,11 +227,18 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [isUpdatingMeta, setIsUpdatingMeta] = useState(false);
+  const [isAutosavingSettings, setIsAutosavingSettings] = useState(false);
   const [metaError, setMetaError] = useState<string | null>(null);
   const [templateOptions, setTemplateOptions] = useState<PageTemplateOptionsResponse | null>(null);
   const [templateOptionsError, setTemplateOptionsError] = useState<string | null>(null);
   const [templateOptionsLoading, setTemplateOptionsLoading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [revisionsOpen, setRevisionsOpen] = useState(false);
+  const [revisions, setRevisions] = useState<PageRevision[]>([]);
+  const [revisionsLoading, setRevisionsLoading] = useState(false);
+  const [revisionsError, setRevisionsError] = useState<string | null>(null);
+  const [restoringRevisionId, setRestoringRevisionId] = useState<string | null>(null);
+  const [discardingRevisionId, setDiscardingRevisionId] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -367,6 +380,32 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       active = false;
     };
   }, [settingsOpen, templateOptions, templateOptionsLoading]);
+
+  const refreshRevisions = useCallback(
+    async () => {
+      if (!pageId) return;
+      setRevisionsLoading(true);
+      setRevisionsError(null);
+      try {
+        const items = await listPageRevisions(pageId);
+        setRevisions(items);
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setRevisionsError(err.message);
+        } else {
+          setRevisionsError("Failed to load page history.");
+        }
+      } finally {
+        setRevisionsLoading(false);
+      }
+    },
+    [pageId]
+  );
+
+  useEffect(() => {
+    if (!revisionsOpen) return;
+    refreshRevisions().catch(() => undefined);
+  }, [refreshRevisions, revisionsOpen]);
 
   useEffect(() => {
     const handler = (event: BeforeUnloadEvent) => {
@@ -553,8 +592,8 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     title: string;
     slug: string;
     settings: PageSettingsValue;
-  }) => {
-    if (!pageId) return;
+  }): Promise<boolean> => {
+    if (!pageId) return false;
     setMetaError(null);
     setIsUpdatingMeta(true);
     try {
@@ -573,14 +612,86 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
       setPageData((prev) => applyPageSettings(prev, payload.settings));
       setRemoteUpdatePending(false);
       setSettingsOpen(false);
+      await refreshRevisions();
+      return true;
     } catch (err) {
       if (isApiClientError(err)) {
         setMetaError(err.message);
       } else {
         setMetaError("Failed to update page settings.");
       }
+      return false;
     } finally {
       setIsUpdatingMeta(false);
+    }
+  };
+
+  const handleAutosaveSettings = async (payload: {
+    title: string;
+    slug: string;
+    settings: PageSettingsValue;
+  }) => {
+    if (!pageId) return;
+    setMetaError(null);
+    setIsAutosavingSettings(true);
+    try {
+      const persistedData = isRecord(page?.currentData)
+        ? (page.currentData as Record<string, unknown>)
+        : { blocks: defaultBlocks };
+      const nextPersistedData = applyPageSettings(persistedData, payload.settings);
+      await autosavePage(pageId, {
+        title: payload.title,
+        slug: payload.slug,
+        data: nextPersistedData,
+      });
+      await refreshRevisions();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setMetaError(err.message);
+      } else {
+        setMetaError("Failed to autosave page settings.");
+      }
+    } finally {
+      setIsAutosavingSettings(false);
+    }
+  };
+
+  const handleRestoreRevision = async (revisionId: string) => {
+    if (!pageId) return;
+    setRestoringRevisionId(revisionId);
+    setRevisionsError(null);
+    try {
+      const result = await restorePageRevision(pageId, revisionId);
+      if (result?.page) {
+        applyPage(result.page, { preserveSelection: true });
+      }
+      await refreshRevisions();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setRevisionsError(err.message);
+      } else {
+        setRevisionsError("Failed to restore revision.");
+      }
+    } finally {
+      setRestoringRevisionId(null);
+    }
+  };
+
+  const handleDiscardRevision = async (revisionId: string) => {
+    if (!pageId) return;
+    setDiscardingRevisionId(revisionId);
+    setRevisionsError(null);
+    try {
+      await discardPageRevision(pageId, revisionId);
+      await refreshRevisions();
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setRevisionsError(err.message);
+      } else {
+        setRevisionsError("Failed to discard autosave.");
+      }
+    } finally {
+      setDiscardingRevisionId(null);
     }
   };
 
@@ -667,22 +778,34 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
               <Settings2 className="h-4 w-4" />
               Page settings
             </Button>
-            <div className="ml-auto flex flex-wrap items-center gap-2 lg:hidden">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={() => setMobileLibraryOpen(true)}
+                className="gap-2"
+                onClick={() => setRevisionsOpen(true)}
+                disabled={!page}
               >
-                Components
+                <History className="h-4 w-4" />
+                History
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMobileDetailsOpen(true)}
-                disabled={!selectedBlock || !selectedWidget}
-              >
-                Details
-              </Button>
+              <div className="flex flex-wrap items-center gap-2 lg:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMobileLibraryOpen(true)}
+                >
+                  Components
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setMobileDetailsOpen(true)}
+                  disabled={!selectedBlock || !selectedWidget}
+                >
+                  Details
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -692,6 +815,12 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
           <Alert variant="destructive">
             <AlertTitle>Page error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {metaError ? (
+          <Alert variant="destructive">
+            <AlertTitle>Page settings error</AlertTitle>
+            <AlertDescription>{metaError}</AlertDescription>
           </Alert>
         ) : null}
         {remoteUpdatePending ? (
@@ -764,8 +893,25 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
         templateOptionsLoading={templateOptionsLoading}
         templateOptionsError={templateOptionsError}
         onSave={handleSaveSettings}
+        onAutosave={handleAutosaveSettings}
         isSubmitting={isUpdatingMeta}
-        error={metaError}
+        isAutosaving={isAutosavingSettings}
+        error={null}
+      />
+      <PageRevisionDrawer
+        open={revisionsOpen}
+        onOpenChange={setRevisionsOpen}
+        revisions={revisions}
+        isLoading={revisionsLoading}
+        error={revisionsError}
+        restoringId={restoringRevisionId}
+        discardingId={discardingRevisionId}
+        onRestore={(revisionId) => {
+          handleRestoreRevision(revisionId).catch(() => undefined);
+        }}
+        onDiscard={(revisionId) => {
+          handleDiscardRevision(revisionId).catch(() => undefined);
+        }}
       />
       <RuntimePreviewDialog
         open={previewOpen}

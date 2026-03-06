@@ -5,7 +5,7 @@
 **Category:** CMS/Pages + Admin/UI + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-049, TASK-052  
-**Status:** To Do  
+**Status:** Done (2026-03-06)  
 
 ---
 
