@@ -42,6 +42,8 @@ Follow these rules when working in this repo:
 - For DB-backed features, run DB tests when `DATABASE_URL` is available.
 - Before running any tests that touch DB or settings, load repo env vars with:
   - `set -a && source .env && set +a`
+- Before `bun test:full`, verify the database behind `DATABASE_URL` is reachable; if not, pause tests and report it.
+- If `bun test:full` cannot complete due to DB/network issues, rerun after recovery and update the changelog with the final test status.
 - If any tests are skipped or cannot run, state it clearly in the summary.
 
 ## Task Closure Rules
