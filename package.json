@@ -11,9 +11,14 @@
     "dev:core": "bun --cwd core dev",
     "dev:store": "bun --cwd store dev",
     "lint": "bun --cwd core lint && bun --cwd core lint:types && bun --cwd store lint",
-    "test": "bun test tests/unit tests/integration tests/perf tests/security",
-    "test:full": "bun test tests/unit tests/integration tests/perf tests/security",
-    "test:unit": "bun test tests/unit",
+    "test": "bun run test:bun && bun run test:vitest",
+    "test:full": "bun run test:bun && bun run test:vitest",
+    "test:bun": "bun test tests/unit tests/integration tests/perf tests/security",
+    "test:vitest": "vitest run --config vitest.config.ts",
+    "test:coverage": "vitest run --config vitest.config.ts --coverage",
+    "test:unit": "bun run test:unit:bun && bun run test:unit:vitest",
+    "test:unit:bun": "bun test tests/unit",
+    "test:unit:vitest": "vitest run --config vitest.config.ts",
     "test:integration": "bun test tests/integration",
     "test:perf": "bun test tests/perf",
     "test:security": "bun test tests/security",
@@ -27,11 +32,13 @@
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.53.1",
     "@typescript-eslint/parser": "^8.53.1",
+    "@vitest/coverage-v8": "^4.0.7",
     "concurrently": "^9.2.1",
     "eslint": "8.57.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.7"
   },
   "dependencies": {
     "semver": "^7.7.3"

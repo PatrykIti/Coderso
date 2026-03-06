@@ -67,6 +67,8 @@ Follow these rules when working in this repo:
   - admin/UI,
   - SDK/shared contracts,
   - widget/content logic that does not depend on runtime Bun APIs.
+- Introduce a new test lane additively first: config + scripts + isolated pilot suites. Do not break the existing Bun command surface while bootstrapping Vitest.
+- Prefer `tests/vitest/*` pilot suites during the first migration wave instead of rewriting existing Bun suites in place before parity is proven.
 - Do not migrate runtime tests to Vitest only to improve coverage numbers.
 - Do not leak `Bun.*` APIs into pure domain, SDK, or admin/UI layers. Keep Bun-specific logic behind narrow runtime adapters.
 - Until `TASK-102` ships the Vitest lane for real, treat Bun as the only shipped test runner/command surface. Do not claim `vitest`, `test:vitest`, or lane-specific coverage validation unless the required config/scripts exist and were actually run.
@@ -86,6 +88,8 @@ Follow these rules when working in this repo:
 - Choose tests by dependency shape, not by folder name alone. `tests/unit/*` may still be Bun-owned or DB-backed, and `tests/integration/*` may still require targeted non-runtime assertions.
 - If a task touches runtime-kernel behavior, plugin lifecycle, performance gates, or security gates, Bun-based suites are mandatory.
 - If a task touches pure domain/admin/UI/SDK code that is owned by the Vitest lane, run the relevant Vitest suites and coverage commands when that lane exists for the touched surface; otherwise run the currently shipped Bun suites and note the temporary gap against the target architecture.
+- When bootstrapping a new lane, always run targeted comparison smoke tests for the equivalent existing Bun-owned suites before claiming migration safety.
+- If broad legacy suites fail for unrelated pre-existing reasons, record that separately and do not attribute the failures to the new lane bootstrap without isolating them first.
 - If a task touches `store/**`, run `bun --cwd store lint` and report the result. If a task touches `packages/sdk/**`, run `tsc -p packages/sdk/tsconfig.json --noEmit` and `bun test tests/unit/sdk`.
 - For every new or changed route family, add or update route registration tests and `map*Error` coverage in addition to service/domain tests.
 - If a change touches release-gated behavior (`functional`, `ux`, `performance`, `security`, `reliability`), run or update the relevant gate suites and keep `scripts/coderso-release-gates.ts`, workflow files, and docs in sync when the contract changes.
