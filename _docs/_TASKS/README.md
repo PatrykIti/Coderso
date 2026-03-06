@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 14 tasks
 - **In Progress:** 1 task
-- **Done:** 608 tasks
+- **Done:** 609 tasks
 
 ---
 
@@ -68,6 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-103 | Agent Guidelines Hardening and Contribution Guardrails | Medium | Small | Done: AGENTS rules hardened against repo contracts and delivered via dedicated worktree flow |
 | TASK-054-22 | Coderso Custom Screens From Widgets | High | Large | Done: schema, admin routes, builder UI, field bindings, dedicated records workflow, and closure shipped |
 | TASK-054-22-06 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint, typecheck, full test suite, docs, changelog, and task board sync |
 | TASK-054-22-05 | Data Entry Screens and Collection Workflow | High | Large | Done: dedicated records list/editor routes with bound field editing and classic Entries fallback |
