@@ -13,8 +13,8 @@
 
 ### Coverage Progress
 - Initial TASK-105 baseline: `38.01% stmts`, `33.57% branch`, `31.52% funcs`, `40.18% lines`
-- Current baseline after implemented waves: `40.73% stmts`, `36.10% branch`, `34.93% funcs`, `43.04% lines`
-- Full Vitest validation now passes with `324` test files and `1025` tests.
+- Current verified baseline after implemented waves: `40.46% stmts`, `35.76% branch`, `34.16% funcs`, `42.73% lines`
+- Full Vitest validation now passes with `323` test files and `1017` tests.
 
 ### Remaining Focus
 - Listings, forms builder, entries/pages/posts editor shells, and widget editor suites remain the dominant coverage gaps.

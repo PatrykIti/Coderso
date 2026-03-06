@@ -35,10 +35,10 @@ Initial Vitest coverage snapshot (from `bun run test:coverage` on 2026-03-06):
 - `% Lines`: `40.18`
 
 Current Vitest coverage snapshot after the first implemented waves (from `./node_modules/.bin/vitest run --config vitest.config.ts --coverage` on 2026-03-06):
-- `% Stmts`: `40.73`
-- `% Branch`: `36.10`
-- `% Funcs`: `34.93`
-- `% Lines`: `43.04`
+- `% Stmts`: `40.46`
+- `% Branch`: `35.76`
+- `% Funcs`: `34.16`
+- `% Lines`: `42.73`
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -53,16 +53,27 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 
 ## High-Level Hotspots
 
-### Zero or near-zero coverage files
+### Remaining zero or near-zero hotspots
 
-- `packages/sdk/src/pluginManifest.ts` -> `0%`
-- `core/services/customScreens/customScreenService.ts` -> `0%`
-- `core/admin/utils/sessionCache.ts` -> `0%`
-- `core/admin/services/webhooksClient.ts` -> `0%`
-- `core/admin/services/apiKeysClient.ts` -> `0%`
-- `core/admin/services/emailClient.ts` -> `0%`
-- `core/admin/services/integrationsClient.ts` -> `0%`
-- `core/admin/services/taxonomyClient.ts` -> `0%`
+- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `0%`
+- `core/admin/ui/booking/components/ReservationsTab.tsx` -> `0%`
+- `core/admin/ui/booking/components/ServicesTab.tsx` -> `0%`
+- `core/admin/ui/widgets/editors/ProductListEditors.tsx` -> `7.69%`
+- `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `9.37%`
+- `core/admin/ui/posts/editor/blocks/blockDnD.ts` -> `13.04%`
+
+### Zero-gap waves already cleared
+
+- `packages/sdk/src/pluginManifest.ts`
+- `core/services/customScreens/customScreenService.ts`
+- `core/admin/utils/sessionCache.ts`
+- `core/admin/services/webhooksClient.ts`
+- `core/admin/services/apiKeysClient.ts`
+- `core/admin/services/emailClient.ts`
+- `core/admin/services/integrationsClient.ts`
+- `core/admin/services/taxonomyClient.ts`
+- `core/admin/ui/themes/ThemeEditorPage.tsx`
+- `core/admin/ui/redirects/RedirectsPage.tsx`
 
 ### Large low-coverage area clusters
 
