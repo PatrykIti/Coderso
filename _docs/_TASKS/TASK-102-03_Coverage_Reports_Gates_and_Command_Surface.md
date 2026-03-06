@@ -5,7 +5,7 @@
 **Category:** QA + CI + Platform Reliability  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-102, TASK-102-01, TASK-102-02, TASK-054-19  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -95,3 +95,9 @@ if (!vitestCoverage.ok) fail("coverage_lane_failed");
 - `_docs/CODERSO_RELEASE_GATES.md`
 - `_docs/TESTING_STRATEGY.md`
 - `README.md`
+
+## Completion Notes (2026-03-06)
+
+- Added `test:coverage`, `test:coverage:bun`, `test:coverage:bun:full`, and `test:coverage:all`.
+- Split Bun baseline coverage from the broader environment-dependent Bun full sweep.
+- Added CI workflow `.github/workflows/testing-lanes.yml` with artifacts for `coverage/vitest` and `coverage/bun`.

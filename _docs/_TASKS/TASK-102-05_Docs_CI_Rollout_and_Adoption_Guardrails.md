@@ -5,7 +5,7 @@
 **Category:** Docs + QA + Contributor Experience  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-102-01..04  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -70,3 +70,8 @@ syncChangelogWhenImplemented();
 - `_docs/ARCHITECTURE.md`
 - `_docs/TESTING_STRATEGY.md`
 - `_docs/CODERSO_RELEASE_GATES.md`
+
+## Completion Notes (2026-03-06)
+
+- Synced docs across repo entrypoints (`README.md`, `_docs/TESTING_STRATEGY.md`, `_docs/CODERSO_RELEASE_GATES.md`, `AGENTS.md`, `tests/README.md`).
+- Added CI/testing workflow and finalized task board plus changelog closure.

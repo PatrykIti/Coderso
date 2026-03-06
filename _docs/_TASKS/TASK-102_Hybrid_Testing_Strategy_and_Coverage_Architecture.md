@@ -5,7 +5,7 @@
 **Category:** Platform + QA + Docs  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-015, TASK-016, TASK-017, TASK-054-19, TASK-054-199  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -164,3 +164,10 @@ for (const testFile of repoTests) {
 - `README.md`
 - `_docs/CODERSO_RELEASE_GATES.md`
 - `_docs/_CHANGELOG/*.md` (only when implementation work lands)
+
+## Completion Notes (2026-03-06)
+
+- Shipped hybrid Bun/Vitest command surface in `package.json`.
+- Added Vitest setup, Bun baseline/full coverage commands, and `tests/vitest/*` suites for Bun-free surfaces.
+- Added `tests/README.md`, synced docs, and added CI workflow `.github/workflows/testing-lanes.yml`.
+- Closed contributor guardrails in `AGENTS.md`, testing docs, task board, and changelog.

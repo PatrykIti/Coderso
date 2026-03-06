@@ -32,6 +32,10 @@ Primary docs live in `_docs/`:
 - `_docs/_TASKS/README.md` - tasks index
 - `_docs/_CHANGELOG/README.md` - changelog index
 
+Testing docs:
+
+- `tests/README.md` - current runner ownership and test command surface
+
 ## Workflow rules
 
 - Tasks: add new task files in `_docs/_TASKS` and update `_docs/_TASKS/README.md`.

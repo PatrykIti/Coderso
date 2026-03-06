@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 362 | 2026-03-06 | TASK-102 hybrid testing closure | QA/Platform |
 | 360 | 2026-03-06 | TASK-053-06 page settings autosave and history | Admin/UI |
 | 361 | 2026-03-06 | TASK-102 dual coverage commands | QA/Platform |
 | 359 | 2026-03-06 | TASK-102 vitest bootstrap | QA/Platform |

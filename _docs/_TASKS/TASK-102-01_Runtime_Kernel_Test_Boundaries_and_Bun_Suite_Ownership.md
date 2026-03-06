@@ -5,7 +5,7 @@
 **Category:** Platform + Runtime + QA  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-102, TASK-015, TASK-054-19  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -76,3 +76,8 @@ function resolveRunnerForSuite(filePath: string): "bun" | "review" {
 
 - `_docs/TESTING_STRATEGY.md`
 - `_docs/ARCHITECTURE.md`
+
+## Completion Notes (2026-03-06)
+
+- Documented Bun ownership for runtime-kernel, plugin lifecycle, performance, security, and broader integration suites.
+- Added lane guidance for contributors in `AGENTS.md` and `tests/README.md`.

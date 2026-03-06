@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 12 tasks
+- **To Do:** 6 tasks
 - **In Progress:** 1 task
-- **Done:** 611 tasks
+- **Done:** 617 tasks
 
 ---
 
@@ -41,12 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
-| TASK-102 | Hybrid Testing Strategy and Coverage Architecture | High | Large | Hybrid `Bun runtime kernel` + `Vitest pure TS/UI` testing and coverage rollout |
-| TASK-102-01 | Runtime Kernel Test Boundaries and Bun Suite Ownership | High | Medium | Inventory and protect Bun-only runtime, perf, security, and bundle lifecycle suites |
-| TASK-102-02 | Vitest Workspace for Pure TS, Admin, and SDK | High | Large | Add Bun-free Vitest lane for domain, admin/UI, and SDK coverage |
-| TASK-102-03 | Coverage Reports, Gates, and Command Surface | High | Medium | Define lane-specific coverage, scripts, and CI quality gates |
-| TASK-102-04 | Test Utilities, Fixtures, and Migration Wave 1 | Medium | Large | Prepare helpers, fixtures, and the first safe suite migrations |
-| TASK-102-05 | Docs, CI Rollout, and Adoption Guardrails | Medium | Medium | Finalize contributor rules, docs, and rollout closure for the hybrid model |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
@@ -66,6 +60,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-102 | Hybrid Testing Strategy and Coverage Architecture | High | Large | Done: hybrid Bun/Vitest lanes, Bun baseline/full coverage commands, CI workflow, docs, and guardrails shipped |
+| TASK-102-05 | Docs, CI Rollout, and Adoption Guardrails | Medium | Medium | Done: repo docs, tests README, CI workflow, task board, and changelog closure synchronized |
+| TASK-102-04 | Test Utilities, Fixtures, and Migration Wave 1 | Medium | Large | Done: shared Vitest setup and additive Bun-free wave across admin, UI, DOM, and SDK |
+| TASK-102-03 | Coverage Reports, Gates, and Command Surface | High | Medium | Done: lane-specific coverage commands, Bun baseline/full split, and testing-lanes workflow |
+| TASK-102-02 | Vitest Workspace for Pure TS, Admin, and SDK | High | Large | Done: shipped Vitest config, aliasing, happy-dom support, and Bun-free suites under tests/vitest |
+| TASK-102-01 | Runtime Kernel Test Boundaries and Bun Suite Ownership | High | Medium | Done: Bun ownership documented for runtime, perf, security, plugin lifecycle, and broader integration suites |
 | TASK-053 | Page Editor Templates Mode | High | Large | Done: templates mode, settings usability, preview UX, retention policy, FOUC reduction, and settings autosave/history are fully closed |
 | TASK-053-06 | Page Settings Autosave + History | Medium | Large | Done: autosave-on-close, history drawer, restore/discard flow, revision kind model, and page API/client wiring shipped |
 | TASK-103 | Agent Guidelines Hardening and Contribution Guardrails | Medium | Small | Done: AGENTS rules hardened against repo contracts and delivered via dedicated worktree flow |

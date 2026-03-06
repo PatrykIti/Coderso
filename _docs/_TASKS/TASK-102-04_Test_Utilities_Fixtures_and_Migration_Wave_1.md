@@ -5,7 +5,7 @@
 **Category:** QA + Refactor Safety  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-102-02, TASK-102-03  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -76,3 +76,9 @@ function chooseFixtureModel(suite: TestSuite) {
 
 - `_docs/TESTING_STRATEGY.md`
 - task notes for migrated suite groups
+
+## Completion Notes (2026-03-06)
+
+- Added shared Vitest setup helper in `tests/setup/vitest.ts`.
+- Completed additive wave 1 migration through `tests/vitest/*` instead of rewriting legacy Bun suites in place.
+- Left DB-backed/runtime bundle flows on Bun.
