@@ -14,8 +14,11 @@ The correct split is:
 - Vitest for pure TypeScript, SDK, and admin/UI logic that should stay runtime-agnostic.
 
 Current repo state:
-- the suite is still executed primarily through `bun test`,
-- the hybrid model described below is the target state tracked by `TASK-102`.
+- the repo ships both Bun and Vitest lanes,
+- Bun remains authoritative for runtime-kernel, perf, security, and broader integration behavior,
+- Vitest is now shipped for Bun-free suites under `tests/vitest/*`,
+- Bun-free UI integration suites have been moved from `tests/integration/ui/*` into `tests/vitest/ui-integration/*`,
+- further migration remains incremental by ownership, not by filename pattern alone.
 
 ## Business Rationale
 
@@ -171,6 +174,7 @@ Target ownership:
 - `tests/perf/*` -> Bun
 - `tests/security/*` -> Bun
 - `tests/integration/runtime/*` and Bun-backed route/install suites -> Bun
+- `tests/integration/ui/*` -> Vitest-owned integration render suites
 - pure domain and admin/UI unit suites -> Vitest
 
 The migration should be done by ownership, not by filename pattern alone.
@@ -212,7 +216,7 @@ Target CI model:
 - Bun performance/security suites remain release-blocking,
 - optional merged LCOV is publish-only, not architecture-defining.
 
-Target command surface:
+Current command surface:
 
 ```bash
 bun --cwd core lint
@@ -221,11 +225,11 @@ bun --cwd core lint:types
 bun test tests/integration tests/perf tests/security
 vitest run --config vitest.config.ts
 vitest run --config vitest.config.ts --coverage
-bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage/bun tests/integration/ui tests/integration/plugins/assets.test.ts tests/perf/admin-request-baseline.test.ts tests/perf/admin-prefetch-budget.test.ts
+bun scripts/run-bun-coverage-baseline.ts
 bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage/bun-full tests/integration tests/perf tests/security
 ```
 
-Possible future script split:
+Current script split:
 
 ```json
 {
@@ -233,7 +237,7 @@ Possible future script split:
   "test:bun": "bun test tests/integration tests/perf tests/security",
   "test:vitest": "vitest run",
   "test:coverage": "vitest run --coverage",
-  "test:coverage:bun": "bun test --coverage tests/integration/ui tests/integration/plugins/assets.test.ts + selected perf suites",
+  "test:coverage:bun": "bun scripts/run-bun-coverage-baseline.ts",
   "test:coverage:bun:full": "bun test --coverage tests/integration tests/perf tests/security",
   "test:coverage:all": "bun run test:coverage && bun run test:coverage:bun"
 }

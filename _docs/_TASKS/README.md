@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 14 tasks
-- **In Progress:** 2 tasks
-- **Done:** 619 tasks
+- **To Do:** 6 tasks
+- **In Progress:** 1 task
+- **Done:** 628 tasks
 
 ---
 
@@ -41,14 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
-| TASK-104-01 | Coverage Audit and Runner Ownership Matrix | High | Medium | Freeze Bun baseline hotspots and ownership map |
-| TASK-104-02 | Admin Clients and Utils Move to Vitest | High | Large | Move clear Bun-free admin client and utility suites out of Bun |
-| TASK-104-03 | Admin UI SSR and DOM Move to Vitest | High | Large | Migrate SSR and happy-dom eligible admin/UI tests |
-| TASK-104-04 | SDK and Shared Contracts Move to Vitest | High | Medium | Move SDK/shared contract tests that do not need Bun |
-| TASK-104-05 | Refactor-First Domain and Posts Eligibility | Medium | Large | Extract pure seams before migrating ambiguous suites |
-| TASK-104-06 | Bun Baseline Purity and Runtime Coverage Hardening | High | Large | Improve true Bun-owned coverage after migration waves |
-| TASK-104-07 | Widget and Editor Coverage Waves | High | Large | Attack the largest uncovered widget/editor clusters in waves |
-| TASK-104-08 | QA, Docs, Board, and Closure | Medium | Medium | Final metrics, docs, board sync, and closure |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
@@ -61,7 +53,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-104 | Bun Coverage Remediation and Runner Ownership Program | High | Large | In progress: convert Bun baseline into a truthful runtime signal while migrating Bun-free suites to Vitest |
 
 ---
 
@@ -69,6 +60,15 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-104 | Bun Coverage Remediation and Runner Ownership Program | High | Large | Done: ownership matrix, large Vitest migration waves, curated Bun baseline, docs, and closure synced |
+| TASK-104-08 | QA, Docs, Board, and Closure | Medium | Medium | Done: board, docs, runner ownership notes, and changelog closure synchronized |
+| TASK-104-07 | Widget and Editor Coverage Waves | High | Large | Done: widget/editor suites migrated to Vitest ownership and verified there |
+| TASK-104-06 | Bun Baseline Purity and Runtime Coverage Hardening | High | Large | Done: Bun baseline now uses curated self-filtering route/plugin/perf coverage command |
+| TASK-104-05 | Refactor-First Domain and Posts Eligibility | Medium | Large | Done: refactor-first clusters marked and runtime-coupled suites returned to Bun |
+| TASK-104-04 | SDK and Shared Contracts Move to Vitest | High | Medium | Done: Bun-free shared contract suites moved while plugin manifest stayed in Bun |
+| TASK-104-03 | Admin UI SSR and DOM Move to Vitest | High | Large | Done: broad unit and integration UI suites moved into Vitest lanes including ui-dom |
+| TASK-104-02 | Admin Clients and Utils Move to Vitest | High | Large | Done: large admin client/utils suite moved out of Bun into Vitest |
+| TASK-104-01 | Coverage Audit and Runner Ownership Matrix | High | Medium | Done: hotspot and ownership matrix published from live Bun coverage data |
 | TASK-102-06 | Custom Screens and Admin Nav Vitest Migration | Medium | Medium | Done: Bun-free custom screen and admin nav suites moved to tests/vitest while DB/route coverage stayed in Bun |
 | TASK-054-22-07 | Custom Screens Admin Sidebar Shortcuts | High | Medium | Done: active screens can opt into left-menu shortcuts rendered after the Coderso group |
 | TASK-102 | Hybrid Testing Strategy and Coverage Architecture | High | Large | Done: hybrid Bun/Vitest lanes, Bun baseline/full coverage commands, CI workflow, docs, and guardrails shipped |

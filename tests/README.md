@@ -5,7 +5,11 @@ This repository uses a hybrid testing model aligned with the product architectur
 ## Runner ownership
 
 - Bun owns runtime-kernel validation:
-  - `tests/integration/*`
+  - `tests/integration/routes/*`
+  - `tests/integration/runtime/*`
+  - `tests/integration/server/*`
+  - `tests/integration/store/*`
+  - `tests/integration/plugins/*`
   - `tests/perf/*`
   - `tests/security/*`
   - plugin lifecycle and bundle/runtime contracts
@@ -14,6 +18,7 @@ This repository uses a hybrid testing model aligned with the product architectur
   - admin/UI component logic
   - SDK/shared contracts
   - DOM-rich editor helpers through `happy-dom`
+  - UI integration/render suites moved from `tests/integration/ui/*`
 
 ## Commands
 
@@ -24,6 +29,8 @@ bun run test:coverage:bun
 bun run test:coverage:bun:full
 bun run test:coverage:all
 ```
+
+`test:coverage:bun` now uses curated Bun-owned route/plugin/perf suites through `scripts/run-bun-coverage-baseline.ts`.
 
 ## Lane guidance
 

@@ -5,7 +5,7 @@
 **Category:** QA + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-104  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -63,3 +63,8 @@ publishMatrix({
 
 - `tests/README.md`
 - main TASK-104 file
+
+## Completion Notes (2026-03-06)
+
+- Published ownership and hotspot snapshot in `tests/RUNNER_OWNERSHIP.md`.
+- Seeded the remediation backlog from live `coverage/bun/lcov.info` data.

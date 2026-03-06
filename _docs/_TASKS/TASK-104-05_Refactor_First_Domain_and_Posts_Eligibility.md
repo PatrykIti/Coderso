@@ -5,7 +5,7 @@
 **Category:** Platform + Refactor Safety  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-104-01  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -57,3 +57,8 @@ moveVitestTests(pureLogic);
 
 - `tests/README.md`
 - relevant task notes
+
+## Completion Notes (2026-03-06)
+
+- Marked `assistant`, `posts`, `forms`, `search`, `server`, and `validation` as refactor-first clusters in `tests/RUNNER_OWNERSHIP.md`.
+- Returned runtime-coupled suites from Vitest back to Bun where validation exposed hidden DB/runtime dependencies.

@@ -5,7 +5,7 @@
 **Category:** QA + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-104-01..07  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -59,3 +59,8 @@ writeChangelog();
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*.md`
 - `tests/README.md`
+
+## Completion Notes (2026-03-06)
+
+- Synced task board, testing docs, runner ownership docs, and changelog closure.
+- Validated final `test:vitest` and `test:coverage:bun` command surface.

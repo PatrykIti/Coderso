@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-104-01  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -63,3 +63,8 @@ if (suite.usesRenderToString || suite.usesDocumentWindowSelection) {
 
 - `tests/README.md`
 - `_docs/TESTING_STRATEGY.md`
+
+## Completion Notes (2026-03-06)
+
+- Migrated Bun-free `tests/unit/ui/*`, `tests/unit/authUi/*`, `tests/unit/pageBuilder/*`, and `tests/integration/ui/*` into Vitest lanes.
+- Added `tests/vitest/ui-dom/*` coverage for DOM-dependent editor helpers.

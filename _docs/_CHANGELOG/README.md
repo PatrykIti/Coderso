@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 365 | 2026-03-06 | TASK-104 coverage remediation closure | QA/Platform |
 | 364 | 2026-03-06 | TASK-102-06 custom screens and admin nav vitest migration | QA/Platform |
 | 363 | 2026-03-06 | TASK-054-22-07 custom screen sidebar shortcuts | Admin/UI |
 | 362 | 2026-03-06 | TASK-102 hybrid testing closure | QA/Platform |

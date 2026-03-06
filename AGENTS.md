@@ -67,11 +67,11 @@ Follow these rules when working in this repo:
   - admin/UI,
   - SDK/shared contracts,
   - widget/content logic that does not depend on runtime Bun APIs.
-- Introduce a new test lane additively first: config + scripts + isolated pilot suites. Do not break the existing Bun command surface while bootstrapping Vitest.
-- Prefer `tests/vitest/*` pilot suites during the first migration wave instead of rewriting existing Bun suites in place before parity is proven.
+- Introduce new lane changes additively first and keep the existing command surface green while migrating ownership.
+- Prefer `tests/vitest/*` for Bun-free suites by default. Use `tests/vitest/ui-integration/*` for Bun-free integration render flows.
 - Do not migrate runtime tests to Vitest only to improve coverage numbers.
 - Do not leak `Bun.*` APIs into pure domain, SDK, or admin/UI layers. Keep Bun-specific logic behind narrow runtime adapters.
-- Until `TASK-102` ships the Vitest lane for real, treat Bun as the only shipped test runner/command surface. Do not claim `vitest`, `test:vitest`, or lane-specific coverage validation unless the required config/scripts exist and were actually run.
+- Vitest lane is shipped for Bun-free suites. Continue to validate against the actual command surface in the checked-out branch before claiming lane ownership.
 - Treat coverage per lane:
   - Bun coverage is for executed runtime files and runtime contract confidence,
   - Vitest coverage is for source-wide gaps in pure TS/UI lanes.

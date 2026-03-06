@@ -5,7 +5,7 @@
 **Category:** QA + SDK + Contracts  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-104-01  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -55,3 +55,8 @@ for (const suite of sharedContractSuites) {
 ## Documentation Updates Required
 
 - `tests/README.md`
+
+## Completion Notes (2026-03-06)
+
+- Moved Bun-free shared contract suites such as `hookContext`, `exports`, and `revisionSnapshot` into Vitest.
+- Left `pluginManifest.test.ts` in Bun after validation confirmed runtime/database coupling through plugin runtime helpers.

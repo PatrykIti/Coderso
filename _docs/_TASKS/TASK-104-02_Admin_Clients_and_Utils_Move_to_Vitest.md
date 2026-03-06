@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-104-01  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -64,3 +64,8 @@ for (const suite of adminClientAndUtilsSuites) {
 ## Documentation Updates Required
 
 - `tests/README.md`
+
+## Completion Notes (2026-03-06)
+
+- Migrated broad `tests/unit/admin/*` Bun-free suites into `tests/vitest/admin/*`.
+- Added matcher compatibility in `tests/setup/vitest.ts` to smooth Bun -> Vitest migration.

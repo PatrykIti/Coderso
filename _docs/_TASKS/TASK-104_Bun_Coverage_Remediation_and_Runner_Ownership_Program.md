@@ -5,7 +5,7 @@
 **Category:** QA + Platform + Docs  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-102, TASK-054-19, TASK-054-199  
-**Status:** In Progress (2026-03-06)
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -164,3 +164,10 @@ for (const item of backlog) {
 - `_docs/TESTING_STRATEGY.md`
 - `tests/README.md`
 - `_docs/_CHANGELOG/*.md` (when subtask work lands)
+
+## Completion Notes (2026-03-06)
+
+- Added ownership and hotspot snapshot in `tests/RUNNER_OWNERSHIP.md`.
+- Migrated Bun-free unit and UI integration suites into `tests/vitest/*`.
+- Added curated Bun baseline runner `scripts/run-bun-coverage-baseline.ts`.
+- Kept runtime/database-coupled suites in Bun or moved them back there after validation.

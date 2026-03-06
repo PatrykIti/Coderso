@@ -5,7 +5,7 @@
 **Category:** QA + Runtime + Coverage  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-104-01, TASK-104-02, TASK-104-03, TASK-104-04  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -56,3 +56,8 @@ if (isTrueBunOwner(file)) {
 
 - `_docs/TESTING_STRATEGY.md`
 - `tests/README.md`
+
+## Completion Notes (2026-03-06)
+
+- Replaced stale Bun baseline command with `scripts/run-bun-coverage-baseline.ts`.
+- Bun baseline now auto-skips env-dependent route suites and excludes migrated UI integration suites.

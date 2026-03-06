@@ -5,7 +5,7 @@
 **Category:** QA + Admin/UI + Widgets  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-104-01, TASK-104-03  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 
@@ -65,3 +65,8 @@ for (const widgetEditor of coverageWave) {
 ## Documentation Updates Required
 
 - main TASK-104 file
+
+## Completion Notes (2026-03-06)
+
+- Migrated broad widget/editor suite ownership from Bun into Vitest under `tests/vitest/widgets/*`.
+- Verified the migrated widget/editor suites in the Vitest lane.
