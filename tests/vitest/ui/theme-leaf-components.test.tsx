@@ -127,20 +127,21 @@ test("theme leaf cards render state and forward action callbacks", () => {
       Array.from(view.container.querySelectorAll("button")).find(
         (button) => button.getAttribute("aria-label") === label
       );
+    const activateButtons = Array.from(view.container.querySelectorAll("button")).filter(
+      (button) => button.textContent?.includes("Activate")
+    );
 
     act(() => {
       byLabel("Edit Ocean")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       byLabel("Duplicate Ocean")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      Array.from(view.container.querySelectorAll("button"))
-        .filter((button) => button.textContent?.includes("Activate"))
-        .forEach((button) =>
-          button.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-        );
+      activateButtons[0]?.click();
+      activateButtons[1]?.click();
       byLabel("Edit Storefront")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       byLabel("Edit Starter")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       byLabel("Duplicate Starter")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
+    expect(activateButtons).toHaveLength(2);
     expect(onEditTheme).toHaveBeenCalledOnce();
     expect(onDuplicateTheme).toHaveBeenCalledOnce();
     expect(onActivateTheme).toHaveBeenCalledOnce();
