@@ -5,7 +5,7 @@
 **Category:** Docs/UX Contract  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-063-11  
-**Status:** To Do
+**Status:** Done (2026-02-25)
 
 ---
 

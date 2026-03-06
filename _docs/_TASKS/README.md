@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 15 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 2 tasks
-- **Done:** 572 tasks
+- **Done:** 579 tasks
 
 ---
 
@@ -42,13 +42,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
-| TASK-020-11 | Security Hardening + Settings UX | High | Large | Auth/public/admin protection & UX presets |
-| TASK-020-11-01 | Rate Limit Buckets + Keying | High | Medium | New buckets + keying strategy |
-| TASK-020-11-02 | Auth Hardening + Bot Protection | High | Medium | Login throttling + CAPTCHA |
-| TASK-020-11-03 | Public Endpoint Protection | High | Medium | Public read/write buckets + guardrails |
-| TASK-020-11-04 | Security Settings Model + API | High | Medium | Per-bucket config + validation |
-| TASK-020-11-05 | Security Settings UI + Presets | High | Large | New sections + presets + tooltips |
-| TASK-020-11-06 | PII Email Encryption | Medium | Large | Decision + optional implementation |
 | TASK-053 | Page Editor Templates Mode | High | Large | 053-01..06 |
 | TASK-053-06 | Page Settings Autosave + History | Medium | Large | Autosave + history labels |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
@@ -471,6 +464,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-020-08 | Input Validation Middleware | Medium | Medium | AJV validate helper |
 | TASK-020-09 | Security Settings UI Wiring | High | Medium | Admin UI config |
 | TASK-020-10 | Session Limits in Security Settings | High | Medium | TTL + max sessions per user |
+| TASK-020-11 | Security Hardening + Settings UX | High | Large | Done: auth/public/admin hardening aligned with user-friendly security settings presets |
+| TASK-020-11-01 | Rate Limit Buckets + Keying | High | Medium | Done: explicit buckets and shared-IP-aware keying strategy added |
+| TASK-020-11-02 | Auth Hardening + Bot Protection | High | Medium | Done: login/reset throttling and reCAPTCHA v3 protection added |
+| TASK-020-11-03 | Public Endpoint Protection | High | Medium | Done: public endpoint policy, preview token protection, and abuse guardrails aligned |
+| TASK-020-11-04 | Security Settings Model + API | High | Medium | Done: per-bucket security settings model, validation, and API expansion shipped |
+| TASK-020-11-05 | Security Settings UI + Presets | High | Large | Done: Security settings sections, presets, and explanatory tooltips delivered |
+| TASK-020-11-06 | PII Email Encryption | Medium | Large | Done: email-at-rest protection implemented with hash plus encrypted storage |
 | TASK-028 | Analytics Core and UI | Medium | Large | KPIs + top content |
 | TASK-028-01 | Analytics Service | Medium | Medium | aggregate metrics |
 | TASK-028-02 | Analytics API Routes | Medium | Medium | /analytics endpoints |
