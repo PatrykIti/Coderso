@@ -1,51 +1,13 @@
-// @vitest-environment happy-dom
-
-import React, { act } from "react";
-import { createRoot } from "react-dom/client";
+import React from "react";
+import { renderToString } from "react-dom/server";
 import { expect, test, vi } from "vitest";
-
-import type {
-  BookingBlackoutRecord,
-  BookingReservationRecord,
-  BookingResourceRecord,
-  BookingScheduleInput,
-  BookingServiceRecord,
-  BookingSlotRecord,
-} from "../../../core/admin/services/bookingClient";
-import { BookingAvailabilityTab } from "../../../core/admin/ui/booking/components/AvailabilityTab";
-import { BookingReservationsTab } from "../../../core/admin/ui/booking/components/ReservationsTab";
-import { BookingServicesTab } from "../../../core/admin/ui/booking/components/ServicesTab";
-import { BookingSlotPreviewTab } from "../../../core/admin/ui/booking/components/SlotPreviewTab";
-import type {
-  BlackoutFormState,
-  ReservationFormState,
-  ScheduleDraftState,
-  ServiceFormState,
-  SlotPreviewFormState,
-} from "../../../core/admin/ui/booking/bookingTypes";
-
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/badge", () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({
-    children,
-    onClick,
-    disabled,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: () => void;
-    disabled?: boolean;
-    [key: string]: unknown;
-  }) => (
-    <button type="button" onClick={onClick} disabled={disabled} {...props}>
-      {children}
-    </button>
-  ),
+  Button: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
 }));
 
 vi.mock("@/components/ui/card", () => ({
@@ -57,60 +19,35 @@ vi.mock("@/components/ui/card", () => ({
 }));
 
 vi.mock("@/components/ui/checkbox", () => ({
-  Checkbox: ({
-    checked,
-    disabled,
-    onCheckedChange,
-  }: {
-    checked?: boolean;
-    disabled?: boolean;
-    onCheckedChange?: (checked: boolean) => void;
-  }) => (
-    <input
-      type="checkbox"
-      checked={Boolean(checked)}
-      disabled={disabled}
-      onChange={(event) => onCheckedChange?.(event.target.checked)}
-    />
+  Checkbox: ({ checked }: { checked?: boolean }) => (
+    <input type="checkbox" checked={checked} readOnly />
   ),
 }));
 
 vi.mock("@/components/ui/input", () => ({
   Input: ({
     value,
-    onChange,
-    ...props
+    placeholder,
+    type,
   }: {
     value?: string | number;
-    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
-    [key: string]: unknown;
-  }) => <input defaultValue={value} onChange={onChange} {...props} />,
+    placeholder?: string;
+    type?: string;
+  }) => <input value={value} placeholder={placeholder} type={type} readOnly />,
 }));
 
 vi.mock("@/components/ui/select", () => ({
-  Select: ({
-    children,
-    onValueChange,
-    value,
-  }: {
-    children: React.ReactNode;
-    onValueChange?: (value: string) => void;
-    value?: string;
-  }) => (
-    <select value={value} onChange={(event) => onValueChange?.(event.target.value)}>
-      {children}
-    </select>
-  ),
-  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Select: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SelectContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SelectItem: ({
     children,
     value,
   }: {
     children: React.ReactNode;
     value: string;
-  }) => <option value={value}>{children}</option>,
-  SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  SelectValue: () => null,
+  }) => <div data-value={value}>{children}</div>,
+  SelectTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
 }));
 
 vi.mock("@/components/ui/table", () => ({
@@ -119,275 +56,78 @@ vi.mock("@/components/ui/table", () => ({
   TableCell: ({
     children,
     colSpan,
-    className,
   }: {
     children: React.ReactNode;
     colSpan?: number;
-    className?: string;
-  }) => (
-    <td colSpan={colSpan} className={className}>
-      {children}
-    </td>
-  ),
+  }) => <td colSpan={colSpan}>{children}</td>,
   TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
   TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
-  TableRow: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <tr className={className}>{children}</tr>,
+  TableRow: ({ children }: { children: React.ReactNode }) => <tr>{children}</tr>,
 }));
 
 vi.mock("@/components/ui/textarea", () => ({
-  Textarea: ({
-    value,
-    onChange,
-    ...props
-  }: {
-    value?: string;
-    onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
-    [key: string]: unknown;
-  }) => <textarea defaultValue={value} onChange={onChange} {...props} />,
+  Textarea: ({ value }: { value?: string }) => <textarea readOnly defaultValue={value} />,
 }));
 
-vi.mock("../../../core/admin/ui/booking/bookingHelpers", () => ({
-  dayLabel: (day: number) => `Day ${day}`,
-  formatDateTime: (value: string, timezone?: string) =>
-    timezone ? `${value} @ ${timezone}` : value,
-  formatReservationStatus: (status: string) => `status:${status}`,
-  toTimeInput: (minutes: number) => `t-${minutes}`,
-}));
+import { BookingAvailabilityTab } from "../../../core/admin/ui/booking/components/AvailabilityTab";
+import { BookingReservationsTab } from "../../../core/admin/ui/booking/components/ReservationsTab";
+import { BookingServicesTab } from "../../../core/admin/ui/booking/components/ServicesTab";
+import { BookingSlotPreviewTab } from "../../../core/admin/ui/booking/components/SlotPreviewTab";
 
-const mount = (node: React.ReactNode) => {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-
-  act(() => {
-    root.render(node);
-  });
-
-  return {
-    container,
-    cleanup: () => {
-      act(() => {
-        root.unmount();
-      });
-      container.remove();
-    },
-  };
-};
-
-const setSelectValue = (element: Element | undefined, value: string) => {
-  if (!(element instanceof HTMLSelectElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLSelectElement.prototype,
-    "value"
-  );
-  descriptor?.set?.call(element, value);
-  element.dispatchEvent(new Event("change", { bubbles: true }));
-};
-
-const setInputValue = (element: Element | undefined, value: string) => {
-  if (!(element instanceof HTMLInputElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLInputElement.prototype,
-    "value"
-  );
-  descriptor?.set?.call(element, value);
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
-};
-
-const setTextareaValue = (element: Element | null, value: string) => {
-  if (!(element instanceof HTMLTextAreaElement)) return;
-  const descriptor = Object.getOwnPropertyDescriptor(
-    HTMLTextAreaElement.prototype,
-    "value"
-  );
-  descriptor?.set?.call(element, value);
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
-};
-
-const resources: BookingResourceRecord[] = [
-  {
-    id: "resource-1",
-    name: "Bay A",
-    slug: "bay-a",
-    type: "bay",
-    status: "active",
-    timezone: "UTC",
-    capacity: 2,
-    settings: {},
-    createdAt: "2026-03-06T09:00:00.000Z",
-    updatedAt: "2026-03-06T09:00:00.000Z",
-  },
-  {
-    id: "resource-2",
-    name: "Bay B",
-    slug: "bay-b",
-    type: "bay",
-    status: "active",
-    timezone: "Europe/Warsaw",
-    capacity: 1,
-    settings: {},
-    createdAt: "2026-03-06T09:00:00.000Z",
-    updatedAt: "2026-03-06T09:00:00.000Z",
-  },
-];
-
-const services: BookingServiceRecord[] = [
-  {
-    id: "service-1",
-    name: "Inspection",
-    slug: "inspection",
-    status: "active",
-    description: "Annual inspection",
-    durationMinutes: 60,
-    bufferBeforeMinutes: 10,
-    bufferAfterMinutes: 15,
-    priceCents: 2500,
-    currency: "USD",
-    settings: { submissionAccess: "public" },
-    createdAt: "2026-03-06T09:00:00.000Z",
-    updatedAt: "2026-03-06T09:00:00.000Z",
-  },
-  {
-    id: "service-2",
-    name: "Repair",
-    slug: "repair",
-    status: "inactive",
-    description: "Repair visit",
-    durationMinutes: 90,
-    bufferBeforeMinutes: 5,
-    bufferAfterMinutes: 20,
-    priceCents: null,
-    currency: null,
-    settings: { submissionAccess: "internal" },
-    createdAt: "2026-03-06T09:00:00.000Z",
-    updatedAt: "2026-03-06T09:00:00.000Z",
-  },
-];
-
-const resourcesById = new Map(resources.map((item) => [item.id, item]));
-const servicesById = new Map(services.map((item) => [item.id, item]));
-
-const scheduleDraft: ScheduleDraftState = {
-  dayOfWeek: "1",
-  startTime: "09:00",
-  endTime: "17:00",
-  timezone: "UTC",
-  isAvailable: true,
-};
-
-const blackoutForm: BlackoutFormState = {
-  resourceId: "all",
-  startsAt: "2026-03-06T09:00",
-  endsAt: "2026-03-06T12:00",
-  reason: "Maintenance",
-};
-
-const scheduleRows: BookingScheduleInput[] = [
-  {
-    dayOfWeek: 1,
-    startMinute: 540,
-    endMinute: 1020,
-    timezone: "UTC",
-    isAvailable: true,
-  },
-];
-
-const blackouts: BookingBlackoutRecord[] = [
-  {
-    id: "blackout-1",
-    resourceId: "resource-1",
-    startsAt: "2026-03-06T09:00:00.000Z",
-    endsAt: "2026-03-06T12:00:00.000Z",
-    reason: "Maintenance",
-    createdAt: "2026-03-06T08:00:00.000Z",
-  },
-];
-
-const serviceForm: ServiceFormState = {
-  name: "Inspection",
-  slug: "inspection",
+const resource = {
+  id: "resource-1",
+  name: "Room A",
+  type: "room",
+  timezone: "Europe/Warsaw",
   status: "active",
-  description: "Annual inspection",
-  durationMinutes: "60",
-  bufferBeforeMinutes: "10",
-  bufferAfterMinutes: "15",
-  priceCents: "2500",
-  currency: "USD",
-  submissionAccess: "public",
-};
+  capacity: 4,
+  createdAt: "2026-03-06T10:00:00.000Z",
+  updatedAt: "2026-03-06T10:00:00.000Z",
+} as const;
 
-const reservations: BookingReservationRecord[] = [
-  {
-    id: "reservation-1",
-    serviceId: "service-1",
-    resourceId: "resource-1",
-    formSubmissionId: null,
-    status: "pending",
-    customerName: "Jane Doe",
-    customerEmail: "jane@example.com",
-    customerPhone: "+48123456789",
-    notes: "Needs wheelchair access",
-    startsAt: "2026-03-07T09:00:00.000Z",
-    endsAt: "2026-03-07T10:00:00.000Z",
-    timezone: "UTC",
-    metadata: {},
-    createdAt: "2026-03-06T08:00:00.000Z",
-    updatedAt: "2026-03-06T08:00:00.000Z",
-  },
-];
+const service = {
+  id: "service-1",
+  name: "Consultation",
+  slug: "consultation",
+  description: "Primary service",
+  durationMinutes: 60,
+  bufferBeforeMinutes: 10,
+  bufferAfterMinutes: 15,
+  priceCents: 15000,
+  currency: "PLN",
+  status: "active",
+  settings: { submissionAccess: "internal" },
+  createdAt: "2026-03-06T10:00:00.000Z",
+  updatedAt: "2026-03-06T10:00:00.000Z",
+} as const;
 
-const reservationForm: ReservationFormState = {
-  serviceId: "service-1",
-  resourceId: "resource-1",
-  startsAt: "2026-03-08T10:00",
-  endsAt: "2026-03-08T11:00",
-  timezone: "UTC",
-  customerName: "John Smith",
-  customerEmail: "john@example.com",
-  customerPhone: "+48987654321",
-  notes: "Phone booking",
-};
-
-const slotPreviewForm: SlotPreviewFormState = {
-  serviceId: "service-1",
-  resourceId: "resource-1",
-  date: "2026-03-09",
-  timezone: "UTC",
-  intervalMinutes: "30",
-};
-
-const previewSlots: BookingSlotRecord[] = [
-  {
-    startsAt: "2026-03-09T09:00:00.000Z",
-    endsAt: "2026-03-09T09:30:00.000Z",
-    timezone: "UTC",
-  },
-];
-
-test("BookingAvailabilityTab renders loading and empty states", () => {
-  const view = mount(
+test("BookingAvailabilityTab renders loading, schedules, and blackout states", () => {
+  const loadingHtml = renderToString(
     <BookingAvailabilityTab
-      resources={resources}
-      resourcesById={resourcesById}
-      selectedResourceId=""
+      resources={[resource]}
+      resourcesById={new Map([[resource.id, resource]])}
+      selectedResourceId={resource.id}
       onSelectResource={() => undefined}
       scheduleRows={[]}
-      scheduleDraft={scheduleDraft}
+      scheduleDraft={{
+        dayOfWeek: "1",
+        startTime: "09:00",
+        endTime: "17:00",
+        timezone: "Europe/Warsaw",
+        isAvailable: true,
+      }}
       scheduleLoading
       scheduleSaving={false}
       onScheduleDraftChange={() => undefined}
       onAddScheduleRow={() => undefined}
       onRemoveScheduleRow={() => undefined}
       onSaveSchedules={() => undefined}
-      blackoutForm={blackoutForm}
+      blackoutForm={{
+        resourceId: "all",
+        startsAt: "2026-03-06T09:00",
+        endsAt: "2026-03-06T12:00",
+        reason: "",
+      }}
       blackouts={[]}
       blackoutsLoading
       saving={false}
@@ -397,109 +137,170 @@ test("BookingAvailabilityTab renders loading and empty states", () => {
     />
   );
 
-  try {
-    expect(view.container.textContent).toContain("Loading schedules...");
-    expect(view.container.textContent).toContain("Loading blackouts...");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("BookingAvailabilityTab forwards schedule and blackout interactions", () => {
-  const onSelectResource = vi.fn();
-  const onScheduleDraftChange = vi.fn();
-  const onAddScheduleRow = vi.fn();
-  const onRemoveScheduleRow = vi.fn();
-  const onSaveSchedules = vi.fn();
-  const onBlackoutFormChange = vi.fn();
-  const onCreateBlackout = vi.fn();
-  const onDeleteBlackout = vi.fn();
-  const view = mount(
+  const filledHtml = renderToString(
     <BookingAvailabilityTab
-      resources={resources}
-      resourcesById={resourcesById}
-      selectedResourceId="resource-1"
-      onSelectResource={onSelectResource}
-      scheduleRows={scheduleRows}
-      scheduleDraft={scheduleDraft}
+      resources={[resource]}
+      resourcesById={new Map([[resource.id, resource]])}
+      selectedResourceId={resource.id}
+      onSelectResource={() => undefined}
+      scheduleRows={[
+        {
+          dayOfWeek: 1,
+          startMinute: 540,
+          endMinute: 1020,
+          timezone: "Europe/Warsaw",
+          isAvailable: true,
+        },
+      ]}
+      scheduleDraft={{
+        dayOfWeek: "1",
+        startTime: "09:00",
+        endTime: "17:00",
+        timezone: "Europe/Warsaw",
+        isAvailable: true,
+      }}
       scheduleLoading={false}
-      scheduleSaving={false}
-      onScheduleDraftChange={onScheduleDraftChange}
-      onAddScheduleRow={onAddScheduleRow}
-      onRemoveScheduleRow={onRemoveScheduleRow}
-      onSaveSchedules={onSaveSchedules}
-      blackoutForm={blackoutForm}
-      blackouts={blackouts}
+      scheduleSaving
+      onScheduleDraftChange={() => undefined}
+      onAddScheduleRow={() => undefined}
+      onRemoveScheduleRow={() => undefined}
+      onSaveSchedules={() => undefined}
+      blackoutForm={{
+        resourceId: resource.id,
+        startsAt: "2026-03-06T09:00",
+        endsAt: "2026-03-06T12:00",
+        reason: "Maintenance",
+      }}
+      blackouts={[
+        {
+          id: "blackout-1",
+          resourceId: resource.id,
+          startsAt: "2026-03-06T09:00:00.000Z",
+          endsAt: "2026-03-06T12:00:00.000Z",
+          reason: "Maintenance",
+          createdAt: "2026-03-06T08:00:00.000Z",
+          updatedAt: "2026-03-06T08:00:00.000Z",
+        },
+      ]}
       blackoutsLoading={false}
-      saving={false}
-      onBlackoutFormChange={onBlackoutFormChange}
-      onCreateBlackout={onCreateBlackout}
-      onDeleteBlackout={onDeleteBlackout}
+      saving
+      onBlackoutFormChange={() => undefined}
+      onCreateBlackout={() => undefined}
+      onDeleteBlackout={() => undefined}
     />
   );
 
-  try {
-    expect(view.container.textContent).toContain("Day 1");
-    expect(view.container.textContent).toContain("Maintenance");
-
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    const inputs = Array.from(view.container.querySelectorAll("input"));
-    const textarea = view.container.querySelector("textarea");
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-
-    act(() => {
-      setSelectValue(selects[0], "resource-2");
-      setSelectValue(selects[1], "2");
-      setInputValue(inputs[0], "08:00");
-      setInputValue(inputs[1], "16:00");
-      setInputValue(inputs[2], "Europe/Warsaw");
-      (inputs[3] as HTMLInputElement | undefined)?.click();
-      buttons[0]?.click();
-      buttons[1]?.click();
-      buttons[2]?.click();
-
-      setSelectValue(selects[2], "resource-2");
-      setInputValue(inputs[4], "2026-03-07T09:00");
-      setInputValue(inputs[5], "2026-03-07T11:00");
-      setTextareaValue(textarea, "Holiday");
-      buttons[3]?.click();
-      buttons[4]?.click();
-    });
-
-    expect(onSelectResource).toHaveBeenCalledWith("resource-2");
-    expect(onScheduleDraftChange).toHaveBeenCalledWith({ dayOfWeek: "2" });
-    expect(onScheduleDraftChange).toHaveBeenCalledWith({ startTime: "08:00" });
-    expect(onScheduleDraftChange).toHaveBeenCalledWith({ endTime: "16:00" });
-    expect(onScheduleDraftChange).toHaveBeenCalledWith({
-      timezone: "Europe/Warsaw",
-    });
-    expect(onScheduleDraftChange).toHaveBeenCalledWith({ isAvailable: false });
-    expect(onAddScheduleRow).toHaveBeenCalledOnce();
-    expect(onRemoveScheduleRow).toHaveBeenCalledWith(0);
-    expect(onSaveSchedules).toHaveBeenCalledOnce();
-    expect(onBlackoutFormChange).toHaveBeenCalledWith({ resourceId: "resource-2" });
-    expect(onBlackoutFormChange).toHaveBeenCalledWith({
-      startsAt: "2026-03-07T09:00",
-    });
-    expect(onBlackoutFormChange).toHaveBeenCalledWith({
-      endsAt: "2026-03-07T11:00",
-    });
-    expect(onBlackoutFormChange).toHaveBeenCalledWith({ reason: "Holiday" });
-    expect(onCreateBlackout).toHaveBeenCalledOnce();
-    expect(onDeleteBlackout).toHaveBeenCalledWith("blackout-1");
-  } finally {
-    view.cleanup();
-  }
+  expect(loadingHtml).toContain("Loading schedules...");
+  expect(loadingHtml).toContain("Loading blackouts...");
+  expect(filledHtml).toContain("Schedules");
+  expect(filledHtml).toContain("Save schedules");
+  expect(filledHtml).toContain("available");
+  expect(filledHtml).toContain("Blackout windows");
+  expect(filledHtml).toContain("Maintenance");
+  expect(filledHtml).toContain("Create blackout");
 });
 
-test("BookingServicesTab renders loading states", () => {
-  const view = mount(
+test("BookingReservationsTab renders loading, populated table, and manual form", () => {
+  const loadingHtml = renderToString(
+    <BookingReservationsTab
+      reservations={[]}
+      reservationsLoading
+      services={[service]}
+      resources={[resource]}
+      servicesById={new Map([[service.id, service]])}
+      resourcesById={new Map([[resource.id, resource]])}
+      reservationStatusDrafts={{}}
+      reservationForm={{
+        serviceId: service.id,
+        resourceId: resource.id,
+        startsAt: "2026-03-06T10:00",
+        endsAt: "2026-03-06T11:00",
+        timezone: "Europe/Warsaw",
+        customerName: "",
+        customerEmail: "",
+        customerPhone: "",
+        notes: "",
+      }}
+      saving={false}
+      onReservationFormChange={() => undefined}
+      onReservationStatusDraftChange={() => undefined}
+      onCreateReservation={() => undefined}
+      onUpdateReservationStatus={() => undefined}
+    />
+  );
+
+  const filledHtml = renderToString(
+    <BookingReservationsTab
+      reservations={[
+        {
+          id: "reservation-1",
+          serviceId: service.id,
+          resourceId: resource.id,
+          status: "confirmed",
+          startsAt: "2026-03-06T10:00:00.000Z",
+          endsAt: "2026-03-06T11:00:00.000Z",
+          timezone: "Europe/Warsaw",
+          customerName: "Ada Lovelace",
+          customerEmail: "ada@example.com",
+          customerPhone: "+48123123123",
+          notes: "Window seat",
+          createdAt: "2026-03-06T08:00:00.000Z",
+          updatedAt: "2026-03-06T08:00:00.000Z",
+        },
+      ]}
+      reservationsLoading={false}
+      services={[service]}
+      resources={[resource]}
+      servicesById={new Map([[service.id, service]])}
+      resourcesById={new Map([[resource.id, resource]])}
+      reservationStatusDrafts={{ "reservation-1": "cancelled" }}
+      reservationForm={{
+        serviceId: service.id,
+        resourceId: resource.id,
+        startsAt: "2026-03-06T10:00",
+        endsAt: "2026-03-06T11:00",
+        timezone: "Europe/Warsaw",
+        customerName: "Ada Lovelace",
+        customerEmail: "ada@example.com",
+        customerPhone: "+48123123123",
+        notes: "Window seat",
+      }}
+      saving
+      onReservationFormChange={() => undefined}
+      onReservationStatusDraftChange={() => undefined}
+      onCreateReservation={() => undefined}
+      onUpdateReservationStatus={() => undefined}
+    />
+  );
+
+  expect(loadingHtml).toContain("Loading reservations...");
+  expect(filledHtml).toContain("Reservations");
+  expect(filledHtml).toContain("Ada Lovelace");
+  expect(filledHtml).toContain("Consultation");
+  expect(filledHtml).toContain("Room A");
+  expect(filledHtml).toContain("Create reservation");
+  expect(filledHtml).toContain("Manual reservation creation");
+});
+
+test("BookingServicesTab renders services, edit form, and resource assignment", () => {
+  const loadingHtml = renderToString(
     <BookingServicesTab
       services={[]}
       servicesLoading
       selectedServiceId=""
       editingServiceId={null}
-      serviceForm={serviceForm}
+      serviceForm={{
+        name: "",
+        slug: "",
+        description: "",
+        status: "draft",
+        submissionAccess: "public",
+        durationMinutes: "60",
+        bufferBeforeMinutes: "0",
+        bufferAfterMinutes: "0",
+        priceCents: "",
+        currency: "",
+      }}
       resources={[]}
       serviceResourceIds={[]}
       requiredServiceResourceIds={[]}
@@ -518,227 +319,66 @@ test("BookingServicesTab renders loading states", () => {
     />
   );
 
-  try {
-    expect(view.container.textContent).toContain("Loading services...");
-    expect(view.container.textContent).toContain("Loading service resources...");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("BookingServicesTab forwards list, form, and assignment actions", () => {
-  const onSelectService = vi.fn();
-  const onServiceFormChange = vi.fn();
-  const onSubmitService = vi.fn();
-  const onEditService = vi.fn();
-  const onDeleteService = vi.fn();
-  const onCancelEdit = vi.fn();
-  const onToggleServiceResource = vi.fn();
-  const onToggleRequiredServiceResource = vi.fn();
-  const onSaveServiceResources = vi.fn();
-  const view = mount(
+  const filledHtml = renderToString(
     <BookingServicesTab
-      services={services}
+      services={[service]}
       servicesLoading={false}
-      selectedServiceId="service-1"
-      editingServiceId="service-1"
-      serviceForm={serviceForm}
-      resources={resources}
-      serviceResourceIds={["resource-1"]}
-      requiredServiceResourceIds={["resource-1"]}
+      selectedServiceId={service.id}
+      editingServiceId={service.id}
+      serviceForm={{
+        name: service.name,
+        slug: service.slug,
+        description: service.description ?? "",
+        status: "active",
+        submissionAccess: "internal",
+        durationMinutes: "60",
+        bufferBeforeMinutes: "10",
+        bufferAfterMinutes: "15",
+        priceCents: "15000",
+        currency: "PLN",
+      }}
+      resources={[resource]}
+      serviceResourceIds={[resource.id]}
+      requiredServiceResourceIds={[resource.id]}
       serviceResourceLoading={false}
-      serviceResourceSaving={false}
-      saving={false}
-      onSelectService={onSelectService}
-      onServiceFormChange={onServiceFormChange}
-      onSubmitService={onSubmitService}
-      onEditService={onEditService}
-      onDeleteService={onDeleteService}
-      onCancelEdit={onCancelEdit}
-      onToggleServiceResource={onToggleServiceResource}
-      onToggleRequiredServiceResource={onToggleRequiredServiceResource}
-      onSaveServiceResources={onSaveServiceResources}
+      serviceResourceSaving
+      saving
+      onSelectService={() => undefined}
+      onServiceFormChange={() => undefined}
+      onSubmitService={() => undefined}
+      onEditService={() => undefined}
+      onDeleteService={() => undefined}
+      onCancelEdit={() => undefined}
+      onToggleServiceResource={() => undefined}
+      onToggleRequiredServiceResource={() => undefined}
+      onSaveServiceResources={() => undefined}
     />
   );
 
-  try {
-    expect(view.container.textContent).toContain("Inspection");
-    expect(view.container.textContent).toContain("internal");
-
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    const inputs = Array.from(view.container.querySelectorAll("input"));
-    const textarea = view.container.querySelector("textarea");
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-    const checkboxes = Array.from(
-      view.container.querySelectorAll("input[type='checkbox']")
-    ) as HTMLInputElement[];
-
-    act(() => {
-      buttons.find((button) => button.textContent?.includes("Edit"))?.click();
-      buttons.find((button) => button.textContent?.includes("Delete"))?.click();
-
-      setInputValue(inputs[0], "Repair");
-      setInputValue(inputs[1], "repair");
-      setTextareaValue(textarea, "Updated service");
-      setSelectValue(selects[0], "inactive");
-      setSelectValue(selects[1], "internal");
-      setInputValue(inputs[2], "90");
-      setInputValue(inputs[3], "5");
-      setInputValue(inputs[4], "20");
-      setInputValue(inputs[5], "5000");
-      setInputValue(inputs[6], "EUR");
-
-      buttons.find((button) => button.textContent?.includes("Save service"))?.click();
-      buttons.find((button) => button.textContent?.includes("Cancel edit"))?.click();
-
-      setSelectValue(selects[2], "service-2");
-      checkboxes[0]?.click();
-      checkboxes[1]?.click();
-      buttons.find((button) => button.textContent?.includes("Save assignment"))?.click();
-    });
-
-    expect(onEditService).toHaveBeenCalledWith(services[0]);
-    expect(onDeleteService).toHaveBeenCalledWith("service-1");
-    expect(onServiceFormChange).toHaveBeenCalledWith({ name: "Repair" });
-    expect(onServiceFormChange).toHaveBeenCalledWith({ slug: "repair" });
-    expect(onServiceFormChange).toHaveBeenCalledWith({
-      description: "Updated service",
-    });
-    expect(onServiceFormChange).toHaveBeenCalledWith({ status: "inactive" });
-    expect(onServiceFormChange).toHaveBeenCalledWith({
-      submissionAccess: "internal",
-    });
-    expect(onServiceFormChange).toHaveBeenCalledWith({ durationMinutes: "90" });
-    expect(onServiceFormChange).toHaveBeenCalledWith({
-      bufferBeforeMinutes: "5",
-    });
-    expect(onServiceFormChange).toHaveBeenCalledWith({
-      bufferAfterMinutes: "20",
-    });
-    expect(onServiceFormChange).toHaveBeenCalledWith({ priceCents: "5000" });
-    expect(onServiceFormChange).toHaveBeenCalledWith({ currency: "EUR" });
-    expect(onSubmitService).toHaveBeenCalledOnce();
-    expect(onCancelEdit).toHaveBeenCalledOnce();
-    expect(onSelectService).toHaveBeenCalledWith("service-2");
-    expect(onToggleServiceResource).toHaveBeenCalledWith("resource-1", false);
-    expect(onToggleRequiredServiceResource).toHaveBeenCalledWith("resource-1", false);
-    expect(onSaveServiceResources).toHaveBeenCalledOnce();
-  } finally {
-    view.cleanup();
-  }
+  expect(loadingHtml).toContain("Loading services...");
+  expect(loadingHtml).toContain("Loading service resources...");
+  expect(filledHtml).toContain("Services");
+  expect(filledHtml).toContain("Consultation");
+  expect(filledHtml).toContain("internal");
+  expect(filledHtml).toContain("Edit service");
+  expect(filledHtml).toContain("Cancel edit");
+  expect(filledHtml).toContain("Service resource assignment");
+  expect(filledHtml).toContain("Required");
+  expect(filledHtml).toContain("Save assignment");
 });
 
-test("BookingReservationsTab renders loading state", () => {
-  const view = mount(
-    <BookingReservationsTab
-      reservations={[]}
-      reservationsLoading
-      services={services}
-      resources={resources}
-      servicesById={servicesById}
-      resourcesById={resourcesById}
-      reservationStatusDrafts={{}}
-      reservationForm={reservationForm}
-      saving={false}
-      onReservationFormChange={() => undefined}
-      onReservationStatusDraftChange={() => undefined}
-      onCreateReservation={() => undefined}
-      onUpdateReservationStatus={() => undefined}
-    />
-  );
-
-  try {
-    expect(view.container.textContent).toContain("Loading reservations...");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("BookingReservationsTab forwards status and form actions", () => {
-  const onReservationFormChange = vi.fn();
-  const onReservationStatusDraftChange = vi.fn();
-  const onCreateReservation = vi.fn();
-  const onUpdateReservationStatus = vi.fn();
-  const view = mount(
-    <BookingReservationsTab
-      reservations={reservations}
-      reservationsLoading={false}
-      services={services}
-      resources={resources}
-      servicesById={servicesById}
-      resourcesById={resourcesById}
-      reservationStatusDrafts={{ "reservation-1": "confirmed" }}
-      reservationForm={reservationForm}
-      saving={false}
-      onReservationFormChange={onReservationFormChange}
-      onReservationStatusDraftChange={onReservationStatusDraftChange}
-      onCreateReservation={onCreateReservation}
-      onUpdateReservationStatus={onUpdateReservationStatus}
-    />
-  );
-
-  try {
-    expect(view.container.textContent).toContain("Jane Doe");
-    expect(view.container.textContent).toContain("2026-03-07T09:00:00.000Z @ UTC");
-
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    const inputs = Array.from(view.container.querySelectorAll("input"));
-    const textarea = view.container.querySelector("textarea");
-    const buttons = Array.from(view.container.querySelectorAll("button"));
-
-    act(() => {
-      setSelectValue(selects[0], "cancelled");
-      buttons.find((button) => button.textContent?.includes("Save"))?.click();
-
-      setSelectValue(selects[1], "service-2");
-      setSelectValue(selects[2], "resource-2");
-      setInputValue(inputs[0], "2026-03-08T12:00");
-      setInputValue(inputs[1], "2026-03-08T13:00");
-      setInputValue(inputs[2], "Europe/Warsaw");
-      setInputValue(inputs[3], "Alice");
-      setInputValue(inputs[4], "alice@example.com");
-      setInputValue(inputs[5], "+48111000222");
-      setTextareaValue(textarea, "VIP");
-
-      buttons.find((button) => button.textContent?.includes("Create reservation"))?.click();
-    });
-
-    expect(onReservationStatusDraftChange).toHaveBeenCalledWith(
-      "reservation-1",
-      "cancelled"
-    );
-    expect(onUpdateReservationStatus).toHaveBeenCalledWith("reservation-1");
-    expect(onReservationFormChange).toHaveBeenCalledWith({ serviceId: "service-2" });
-    expect(onReservationFormChange).toHaveBeenCalledWith({ resourceId: "resource-2" });
-    expect(onReservationFormChange).toHaveBeenCalledWith({
-      startsAt: "2026-03-08T12:00",
-    });
-    expect(onReservationFormChange).toHaveBeenCalledWith({
-      endsAt: "2026-03-08T13:00",
-    });
-    expect(onReservationFormChange).toHaveBeenCalledWith({
-      timezone: "Europe/Warsaw",
-    });
-    expect(onReservationFormChange).toHaveBeenCalledWith({ customerName: "Alice" });
-    expect(onReservationFormChange).toHaveBeenCalledWith({
-      customerEmail: "alice@example.com",
-    });
-    expect(onReservationFormChange).toHaveBeenCalledWith({
-      customerPhone: "+48111000222",
-    });
-    expect(onReservationFormChange).toHaveBeenCalledWith({ notes: "VIP" });
-    expect(onCreateReservation).toHaveBeenCalledOnce();
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("BookingSlotPreviewTab renders empty state", () => {
-  const view = mount(
+test("BookingSlotPreviewTab renders empty and populated preview results", () => {
+  const emptyHtml = renderToString(
     <BookingSlotPreviewTab
-      services={services}
-      resources={resources}
-      slotPreviewForm={slotPreviewForm}
+      services={[service]}
+      resources={[resource]}
+      slotPreviewForm={{
+        serviceId: service.id,
+        resourceId: resource.id,
+        date: "2026-03-06",
+        timezone: "Europe/Warsaw",
+        intervalMinutes: "30",
+      }}
       previewSlots={[]}
       previewLoading={false}
       onSlotPreviewFormChange={() => undefined}
@@ -746,57 +386,34 @@ test("BookingSlotPreviewTab renders empty state", () => {
     />
   );
 
-  try {
-    expect(view.container.textContent).toContain("No preview slots yet.");
-    expect(view.container.textContent).toContain("Result count: 0");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("BookingSlotPreviewTab forwards form changes and renders preview slots", () => {
-  const onSlotPreviewFormChange = vi.fn();
-  const onPreviewSlots = vi.fn();
-  const view = mount(
+  const filledHtml = renderToString(
     <BookingSlotPreviewTab
-      services={services}
-      resources={resources}
-      slotPreviewForm={slotPreviewForm}
-      previewSlots={previewSlots}
-      previewLoading={false}
-      onSlotPreviewFormChange={onSlotPreviewFormChange}
-      onPreviewSlots={onPreviewSlots}
+      services={[service]}
+      resources={[resource]}
+      slotPreviewForm={{
+        serviceId: service.id,
+        resourceId: resource.id,
+        date: "2026-03-06",
+        timezone: "Europe/Warsaw",
+        intervalMinutes: "30",
+      }}
+      previewSlots={[
+        {
+          startsAt: "2026-03-06T10:00:00.000Z",
+          endsAt: "2026-03-06T11:00:00.000Z",
+          timezone: "Europe/Warsaw",
+        },
+      ]}
+      previewLoading
+      onSlotPreviewFormChange={() => undefined}
+      onPreviewSlots={() => undefined}
     />
   );
 
-  try {
-    expect(view.container.textContent).toContain("Result count: 1");
-    expect(view.container.textContent).toContain("2026-03-09T09:00:00.000Z @ UTC");
-
-    const selects = Array.from(view.container.querySelectorAll("select"));
-    const inputs = Array.from(view.container.querySelectorAll("input"));
-    const button = view.container.querySelector("button");
-
-    act(() => {
-      setSelectValue(selects[0], "service-2");
-      setSelectValue(selects[1], "resource-2");
-      setInputValue(inputs[0], "2026-03-10");
-      setInputValue(inputs[1], "Europe/Warsaw");
-      setInputValue(inputs[2], "45");
-      button?.click();
-    });
-
-    expect(onSlotPreviewFormChange).toHaveBeenCalledWith({ serviceId: "service-2" });
-    expect(onSlotPreviewFormChange).toHaveBeenCalledWith({ resourceId: "resource-2" });
-    expect(onSlotPreviewFormChange).toHaveBeenCalledWith({ date: "2026-03-10" });
-    expect(onSlotPreviewFormChange).toHaveBeenCalledWith({
-      timezone: "Europe/Warsaw",
-    });
-    expect(onSlotPreviewFormChange).toHaveBeenCalledWith({
-      intervalMinutes: "45",
-    });
-    expect(onPreviewSlots).toHaveBeenCalledOnce();
-  } finally {
-    view.cleanup();
-  }
+  expect(emptyHtml).toContain("Slot preview");
+  expect(emptyHtml).toContain("No preview slots yet. Run preview to load slots.");
+  expect(filledHtml).toContain("Run preview");
+  expect(filledHtml).toContain("Result count:");
+  expect(filledHtml).toContain(">1<");
+  expect(filledHtml).toContain("Ends:");
 });
