@@ -17,7 +17,7 @@ export default defineConfig({
       reportsDirectory: "coverage/vitest",
       reporter: ["text", "html", "lcov", "json-summary"],
       include: [
-        "core/admin/services/customScreensClient.ts",
+        "core/admin/services/**/*.ts",
         "core/admin/utils/**/*.ts",
         "core/admin/ui/**/*.{ts,tsx}",
         "core/services/customScreens/**/*.ts",
