@@ -18,11 +18,21 @@ Execution model:
 
 If any gate fails, release is blocked (`non-zero exit code`).
 
+## Runner Ownership Note
+
+Target testing architecture is tracked by `TASK-102` and documented in `_docs/TESTING_STRATEGY.md`.
+
+Gate ownership follows product architecture:
+- Bun remains authoritative for runtime-kernel, performance, security, and install/rollback reliability flows.
+- Vitest is the target runner for pure TS/admin/UI coverage lanes that do not depend on Bun runtime primitives.
+
+Release gates must not weaken runtime guarantees just to normalize tooling.
+
 ## Gate Matrix
 
 | Gate | Goal | Execution Source |
 |------|------|------------------|
-| `functional` | Core module flows are runnable | lint + selected UI flow tests |
+| `functional` | Core module flows are runnable | lint + selected Bun runtime flows + selected Vitest UI/domain flows |
 | `ux` | Beginner/composite-first paths remain stable | wizard/library/editor UX suites |
 | `performance` | p95 budgets for critical interactions | `tests/perf/codersoPerformanceGate.test.ts` |
 | `security` | Public-write hardening and baseline controls | `tests/security/*` + security unit suites |

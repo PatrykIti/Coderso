@@ -35,6 +35,38 @@ Nie-cele:
 - Ustawienia security middleware (CORS/CSRF/rate-limit/headers) konfigurowalne
   z Admin UI i stosowane runtime (bez restartu).
 
+## Strategia testow i coverage (TASK-102 target)
+
+Architektura testow musi byc zgodna z architektura produktu.
+Nextless jest celowo WordPress-like na poziomie runtime:
+- Bun pozostaje runtime kernelem,
+- pluginy i widget bundles sa ladowane dynamicznie,
+- runtime nie moze byc sztucznie podporzadkowany jednemu runnerowi tylko po to,
+  aby uzyskac wygodniejszy raport coverage.
+
+Docelowy podzial:
+- Bun:
+  - runtime kernel,
+  - route/runtime integration,
+  - plugin install/upgrade/rollback,
+  - performance gates,
+  - security gates,
+  - wszystkie testy zalezne od `Bun.serve`, `Bun.file` lub realnego bundle lifecycle.
+- Vitest:
+  - pure TS domain/services,
+  - admin/UI,
+  - SDK contracts,
+  - source-wide coverage dla kodu, ktory nie powinien zalezec od runtime Buna.
+
+Zasady architektoniczne:
+- `Bun.*` APIs trzymamy w waskich adapterach runtime.
+- Domain i UI nie powinny znac runtime kernel details.
+- Coverage interpretujemy per lane:
+  - Bun coverage odpowiada na pytanie "czy runtime jest wykonany i strzezony?",
+  - Vitest coverage odpowiada na pytanie "ktore pliki pure TS/UI nadal maja luki?".
+
+Szczegolowy target model jest opisany w `_docs/TESTING_STRATEGY.md`.
+
 ## Pierwsze uruchomienie (Setup Wizard)
 
 Po pierwszym logowaniu admin otrzymuje prosty Setup Wizard, aby ustawic:

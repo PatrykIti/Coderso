@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 14 tasks
 - **In Progress:** 1 task
 - **Done:** 608 tasks
 
@@ -41,6 +41,12 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
+| TASK-102 | Hybrid Testing Strategy and Coverage Architecture | High | Large | Hybrid `Bun runtime kernel` + `Vitest pure TS/UI` testing and coverage rollout |
+| TASK-102-01 | Runtime Kernel Test Boundaries and Bun Suite Ownership | High | Medium | Inventory and protect Bun-only runtime, perf, security, and bundle lifecycle suites |
+| TASK-102-02 | Vitest Workspace for Pure TS, Admin, and SDK | High | Large | Add Bun-free Vitest lane for domain, admin/UI, and SDK coverage |
+| TASK-102-03 | Coverage Reports, Gates, and Command Surface | High | Medium | Define lane-specific coverage, scripts, and CI quality gates |
+| TASK-102-04 | Test Utilities, Fixtures, and Migration Wave 1 | Medium | Large | Prepare helpers, fixtures, and the first safe suite migrations |
+| TASK-102-05 | Docs, CI Rollout, and Adoption Guardrails | Medium | Medium | Finalize contributor rules, docs, and rollout closure for the hybrid model |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
 | TASK-053 | Page Editor Templates Mode | High | Large | 053-01..06 |
 | TASK-053-06 | Page Settings Autosave + History | Medium | Large | Autosave + history labels |

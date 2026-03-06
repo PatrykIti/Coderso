@@ -26,6 +26,7 @@ Primary docs live in `_docs/`:
 - `_docs/README.md` - docs index
 - `_docs/SDK_SPEC.md` - plugin SDK contract
 - `_docs/STORE_SPEC.md` - store + security pipeline
+- `_docs/TESTING_STRATEGY.md` - target hybrid testing model for Bun runtime and Vitest coverage lanes
 - `_docs/WIDGETS.md` - core widgets and configuration model
 - `_docs/_WIDGETS/README.md` - widgets index and per-widget docs
 - `_docs/_TASKS/README.md` - tasks index

@@ -33,6 +33,7 @@
 - `SDK_SPEC.md` - plugin SDK contract
 - `STORE_SPEC.md` - store + security pipeline
 - `STORE_API.md` - store endpoint contract and metadata flow
+- `TESTING_STRATEGY.md` - target hybrid testing model (`Bun runtime kernel` + `Vitest pure TS/UI`)
 - `WIDGETS.md` - core widgets and configuration model
 - `WIDGETS_COMPOSITE_STRATEGY.md` - composite-first widget delivery model
 - `WIDGET_PACK_MATRIX.md` - module pack coverage matrix and validation rules
