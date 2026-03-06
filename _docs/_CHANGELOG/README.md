@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 357 | 2026-03-06 | TASK-054-22 custom screens bindings and record workflow | Admin/UI |
 | 356 | 2026-03-05 | TASK-054-22-03 custom screens builder UI | Admin/UI |
 | 355 | 2026-03-05 | TASK-063-16-23 section formatting regression fixes | Admin/UI |
 | 354 | 2026-03-04 | TASK-054-22-02 custom screens admin routes and RBAC | Core/API |

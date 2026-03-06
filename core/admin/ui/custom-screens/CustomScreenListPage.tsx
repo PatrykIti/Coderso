@@ -1,4 +1,4 @@
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Plus, SquarePen, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -153,6 +153,16 @@ function CustomScreenTable({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-36">
+                      <DropdownMenuItem asChild>
+                        <AdminLink
+                          href={`/coderso/custom-screens/${encodeURIComponent(item.id)}/entries`}
+                          className="w-full"
+                          prefetch
+                        >
+                          <SquarePen className="h-4 w-4" />
+                          Records
+                        </AdminLink>
+                      </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <AdminLink
                           href={`/coderso/custom-screens/${encodeURIComponent(item.id)}`}

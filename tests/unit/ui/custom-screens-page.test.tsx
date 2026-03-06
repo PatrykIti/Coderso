@@ -75,6 +75,7 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
   });
 
   expect(html).toContain("Create screen");
+  expect(html).toContain("Bindings");
   expect(html).toContain("Screen name");
   expect(html).toContain("Screen canvas");
   expect(html).toContain("Build your custom screen");

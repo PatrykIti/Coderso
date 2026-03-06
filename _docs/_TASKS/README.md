@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 8 tasks
-- **In Progress:** 2 tasks
-- **Done:** 579 tasks
+- **In Progress:** 1 task
+- **Done:** 608 tasks
 
 ---
 
@@ -54,8 +54,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility |
-| TASK-054-22 | Coderso Custom Screens From Widgets | High | Large | In progress: schema/service + admin routes + builder UI done (054-22-01/02/03) |
+| TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 
 ---
 
@@ -63,6 +62,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-22 | Coderso Custom Screens From Widgets | High | Large | Done: schema, admin routes, builder UI, field bindings, dedicated records workflow, and closure shipped |
+| TASK-054-22-06 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint, typecheck, full test suite, docs, changelog, and task board sync |
+| TASK-054-22-05 | Data Entry Screens and Collection Workflow | High | Large | Done: dedicated records list/editor routes with bound field editing and classic Entries fallback |
+| TASK-054-22-04 | Field Binding Engine and Preview | High | Large | Done: binding resolver, selected-widget binding UI, and bound preview canvas delivered |
 | TASK-054-22-03 | Screen Builder UI and Widget Composition | High | Large | Done: custom screens list/editor UI + widget canvas + tests |
 | TASK-054-22-03-02 | Custom Screens List and Editor UI | High | Large | Done: list/editor screens, builder canvas, and UI tests |
 | TASK-054-22-03-01 | Custom Screens Admin UI Plumbing | High | Medium | Done: client/cache/nav/routes/prefetch wiring |

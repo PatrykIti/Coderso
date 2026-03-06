@@ -24,7 +24,9 @@ import { ContentTypeList } from "@/ui/content-types/ContentTypeList";
 import { SchemaBuilderPage } from "@/ui/content-types/SchemaBuilderPage";
 import { EntryEditor } from "@/ui/entries/EntryEditor";
 import { EntryList } from "@/ui/entries/EntryList";
+import { CustomScreenEntriesPage } from "@/ui/custom-screens/CustomScreenEntriesPage";
 import { CustomScreenEditorPage } from "@/ui/custom-screens/CustomScreenEditorPage";
+import { CustomScreenEntryEditor } from "@/ui/custom-screens/CustomScreenEntryEditor";
 import { CustomScreenListPage } from "@/ui/custom-screens/CustomScreenListPage";
 import { FormBuilderPage } from "@/ui/forms/FormBuilderPage";
 import { FormActionLogsPage } from "@/ui/forms/FormActionLogsPage";
@@ -541,6 +543,14 @@ export function AdminApp({ path }: AdminAppProps) {
       { pattern: "/coderso/entries", element: <EntryList /> },
       { pattern: "/coderso/entries/:type/:id", element: <EntryEditor /> },
       { pattern: "/coderso/custom-screens", element: <CustomScreenListPage /> },
+      {
+        pattern: "/coderso/custom-screens/:id/entries/:entryId",
+        element: <CustomScreenEntryEditor />,
+      },
+      {
+        pattern: "/coderso/custom-screens/:id/entries",
+        element: <CustomScreenEntriesPage />,
+      },
       { pattern: "/coderso/custom-screens/:id", element: <CustomScreenEditorPage /> },
       { pattern: "/coderso/posts", element: <PostsListPage /> },
       { pattern: "/coderso/posts/:id", element: <PostEditorPage /> },

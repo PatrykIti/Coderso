@@ -5,7 +5,7 @@
 **Category:** Admin/UI + CMS/Content  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-22-02, TASK-054-22-04  
-**Status:** To Do
+**Status:** Done (2026-03-06)
 
 ---
 

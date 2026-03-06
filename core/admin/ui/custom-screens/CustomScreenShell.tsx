@@ -17,6 +17,7 @@ export type CustomScreenShellProps = {
   isSaving?: boolean;
   isCreateMode?: boolean;
   saveDisabled?: boolean;
+  additionalActions?: React.ReactNode;
   onSave: () => void;
   onBack: () => void;
   leftPanel?: React.ReactNode;
@@ -32,6 +33,7 @@ export function CustomScreenShell({
   isSaving,
   isCreateMode,
   saveDisabled,
+  additionalActions,
   onSave,
   onBack,
   leftPanel,
@@ -65,6 +67,7 @@ export function CustomScreenShell({
       }
       topbarActions={
         <div className="flex items-center gap-2">
+          {additionalActions}
           <Button variant="outline" size="sm" className="gap-2" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" />
             Back to list

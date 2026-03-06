@@ -139,6 +139,10 @@ const sections = buildDefaultNavSections({
   - `/admin/coderso/booking` screen with resources/services/availability/reservations/slot preview tabs,
   - Coderso sidebar Booking module enabled as `Beta`,
   - admin cache + route prefetch support for booking section.
+- 054-22 done: Custom Screens module delivered:
+  - screen builder route (`/admin/coderso/custom-screens/:id`) now supports widget-to-field bindings and bound preview,
+  - dedicated records routes (`/admin/coderso/custom-screens/:screenId/entries*`) reuse existing entries domain while hiding classic Entries from the main workflow,
+  - classic Entries fallback remains available for metadata/publish operations outside the scoped custom-screen editor.
 - 055 done: Posts module delivered:
   - dedicated `Posts` list + editor routes (`/admin/coderso/posts`, `/admin/coderso/posts/:id`),
   - internal API aliases (`/admin/api/posts*`) on top of reserved `post` content type,

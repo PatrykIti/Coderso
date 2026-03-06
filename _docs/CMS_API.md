@@ -986,6 +986,16 @@ Notes:
 - `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
 - `bindings` mapuja `widgetId + propPath` do `contentType` field key.
 - `schemaVersion` jest wersjonowany (aktualnie `1`).
+- builder preview rozwiazuje bindings przed przekazaniem blokow do `WidgetRenderer`.
+- dedicated record workflow nie dodaje nowego API `custom-screen entries`; reuse is through existing internal entry endpoints:
+  - `GET /content/:type/entries`
+  - `POST /content/:type/entries`
+  - `GET /content/:type/entries/:id`
+  - `PATCH /content/:type/entries/:id`
+- admin UI routes for the workflow:
+  - `/admin/coderso/custom-screens/:screenId/entries`
+  - `/admin/coderso/custom-screens/:screenId/entries/:entryId`
+- `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
 
 ## Coderso Filters & Search (v2 beta)
 

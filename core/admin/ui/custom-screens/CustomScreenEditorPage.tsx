@@ -1,4 +1,4 @@
-import { Search, Settings2 } from "lucide-react";
+import { Eye, Search, Settings2, SquarePen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -33,14 +33,19 @@ import {
 import {
   getCachedContentTypes,
   listContentTypesCached,
+  type ContentSchemaProperty,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { listRegisteredWidgets } from "@/ui/widgets/registry";
 import { WidgetCard } from "@/ui/widgets/WidgetCard";
 
 import { CustomScreenShell } from "./CustomScreenShell";
+import { CustomScreenPreview } from "./CustomScreenPreview";
+import { FieldBindingPanel } from "./FieldBindingPanel";
+import { resolveCustomScreenId } from "./routeParams";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import {
@@ -56,6 +61,7 @@ import {
   type BlockPath,
 } from "@/ui/pages/builder/blockUtils";
 import type { Block } from "@/ui/pages/builder/types";
+import type { ContentField } from "../content-types/SchemaBuilder";
 
 const widgetCategoryLabels: Record<string, string> = {
   layout: "Layout",
@@ -65,18 +71,47 @@ const widgetCategoryLabels: Record<string, string> = {
   media: "Media",
 };
 
-const resolveScreenId = (pathname: string) => {
-  const parts = pathname.split("/").filter(Boolean);
-  const index = parts.findIndex((segment) => segment === "custom-screens");
-  if (index === -1) return null;
-  return parts[index + 1] ?? null;
+const normalizeText = (value: string) => value.trim();
+
+const buildPreviewValue = (field: ContentField, property?: ContentSchemaProperty) => {
+  if (property?.default !== undefined) {
+    return property.default;
+  }
+
+  switch (field.type) {
+    case "number":
+      return 1;
+    case "boolean":
+      return true;
+    case "select":
+      return field.options?.[0] ?? `${field.label} option`;
+    case "media":
+      return "https://images.unsplash.com/photo-1498050108023-c5249f4df085";
+    case "relation":
+      return field.relation?.multiple ? ["related-entry-1"] : "related-entry-1";
+    case "richtext":
+      return `${field.label} example content`;
+    case "text":
+    default:
+      return `${field.label} preview`;
+  }
 };
 
-const normalizeText = (value: string) => value.trim();
+const buildPreviewData = (contentType: ContentTypeSummary | null) => {
+  if (!contentType) return {};
+  const fields = fieldsFromSchema(contentType.schema);
+  return fields.reduce<Record<string, unknown>>((result, field) => {
+    result[field.name] = buildPreviewValue(
+      field,
+      contentType.schema.properties[field.name]
+    );
+    return result;
+  }, {});
+};
 
 export function CustomScreenEditorPage() {
   const { path, navigate } = useAdminRouter();
-  const screenId = useMemo(() => resolveScreenId(path), [path]);
+  const screenId = useMemo(() => resolveCustomScreenId(path), [path]);
   const isCreateMode = !screenId || screenId === "new";
 
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>(
@@ -103,9 +138,22 @@ export function CustomScreenEditorPage() {
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
+  const [canvasMode, setCanvasMode] = useState<"builder" | "preview">("builder");
 
   const widgetRegistry = useMemo(() => listRegisteredWidgets(), []);
   const [query, setQuery] = useState("");
+  const selectedContentType = useMemo(
+    () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
+    [contentTypeId, contentTypes]
+  );
+  const contentFields = useMemo(
+    () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
+    [selectedContentType]
+  );
+  const previewData = useMemo(
+    () => buildPreviewData(selectedContentType),
+    [selectedContentType]
+  );
 
   const selectedBlock = findBlockById(blocks, selectedId);
   const selectedWidget = selectedBlock
@@ -393,10 +441,22 @@ export function CustomScreenEditorPage() {
     <Tabs defaultValue="screen" className="flex h-full flex-col">
       <TabsList variant="line" className="px-1">
         <TabsTrigger value="screen">Screen</TabsTrigger>
+        <TabsTrigger value="bindings">Bindings</TabsTrigger>
         <TabsTrigger value="block">Block</TabsTrigger>
       </TabsList>
       <TabsContent value="screen" className="mt-4">
         {screenSettingsPanel}
+      </TabsContent>
+      <TabsContent value="bindings" className="mt-4">
+        <FieldBindingPanel
+          selectedBlock={selectedBlock}
+          value={bindings}
+          fields={contentFields}
+          onChange={(next) => {
+            setBindings(next);
+            markDirty();
+          }}
+        />
       </TabsContent>
       <TabsContent value="block" className="mt-4">
         <BlockSettings
@@ -419,6 +479,23 @@ export function CustomScreenEditorPage() {
         isSaving={isSaving}
         isCreateMode={isCreateMode}
         saveDisabled={isLoading}
+        additionalActions={
+          !isCreateMode && screenId ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() =>
+                navigate(
+                  `/coderso/custom-screens/${encodeURIComponent(screenId)}/entries`
+                )
+              }
+            >
+              <SquarePen className="h-4 w-4" />
+              Open records
+            </Button>
+          ) : null
+        }
         onSave={handleSave}
         onBack={() => navigate("/coderso/custom-screens")}
         leftPanel={libraryPanel}
@@ -429,11 +506,57 @@ export function CustomScreenEditorPage() {
           <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2">
             <div className="space-y-1">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Screen canvas
+                {canvasMode === "builder" ? "Screen canvas" : "Bound preview"}
               </p>
               <p className="text-xs text-muted-foreground">
-                Drag widgets from the library or use the quick insert buttons.
+                {canvasMode === "builder"
+                  ? "Drag widgets from the library or use the quick insert buttons."
+                  : "Preview uses content type defaults and the current field bindings."}
               </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
+                <Button
+                  variant={canvasMode === "builder" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setCanvasMode("builder")}
+                >
+                  <SquarePen className="h-4 w-4" />
+                  Builder
+                </Button>
+                <Button
+                  variant={canvasMode === "preview" ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setCanvasMode("preview")}
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </Button>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 sm:hidden"
+                onClick={() =>
+                  setCanvasMode((current) =>
+                    current === "builder" ? "preview" : "builder"
+                  )
+                }
+              >
+                {canvasMode === "builder" ? (
+                  <>
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </>
+                ) : (
+                  <>
+                    <SquarePen className="h-4 w-4" />
+                    Builder
+                  </>
+                )}
+              </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2 lg:hidden">
               <Button
@@ -489,6 +612,17 @@ export function CustomScreenEditorPage() {
                 content type.
               </p>
             </div>
+          ) : canvasMode === "preview" ? (
+            <CustomScreenPreview
+              blocks={blocks}
+              bindings={bindings}
+              data={previewData}
+              emptyMessage={
+                selectedContentType
+                  ? "Add widgets to preview the custom screen."
+                  : "Select a content type to preview bound fields."
+              }
+            />
           ) : (
             <div
               className="w-full overflow-hidden rounded-xl border border-border/50 bg-background"

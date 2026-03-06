@@ -394,7 +394,19 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `name`, `contentTypeId`, `schemaVersion`, `blocks`, `bindings`, `status`.
 - `customScreenService` trzyma CRUD + normalizacje:
   - `blocks` sa walidowane przez widget schema + normalizer,
-  - `bindings` mapuja `widgetId + propPath` -> field key (engine/resolver w kolejnych subtaskach).
+  - `bindings` mapuja `widgetId + propPath` -> field key i sa wykonywane przez `bindingResolver`.
+- Builder (`/admin/coderso/custom-screens/:id`) ma trzy warstwy pracy:
+  - screen settings,
+  - widget-level bindings dla zaznaczonego bloku,
+  - bound preview, ktory materializuje drzewo widgetow przed renderem przez `WidgetRenderer`.
+- Workflow rekordow custom screen korzysta z istniejacego domain `entries`, bez nowego storage:
+  - list route: `/admin/coderso/custom-screens/:screenId/entries`,
+  - editor route: `/admin/coderso/custom-screens/:screenId/entries/:entryId`,
+  - `contentTypeId` z `custom_screens` jest rozwiazywany do `content_types.slug`, a zapis/listowanie dalej ida przez `content_entries`.
+- Dedicated record editor pokazuje tylko pola wynikajace z `write/readwrite` bindings:
+  - preview czyta `read/readwrite`,
+  - edycja zapisuje standardowy `entry.data`,
+  - fallback do klasycznego `EntryEditor` pozostaje dostepny dla pelnego metadata/publish workflow.
 
 ## Coderso Filters & Search (v2 beta)
 
