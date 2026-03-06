@@ -49,9 +49,10 @@ Completed slices:
 - booking resource tab coverage
 - commerce leaf panels and small editor sections
 - form leaf: `FormCanvas`
+- listings hooks, list/search/filter flows, and template manager
 
 Remaining slices:
-- listings editors, manager, and hooks
+- deeper listing editor flow and manager branches
 - forms builder pages/panels beyond `FormCanvas`
 - broader theme drawers and `ThemesPage`
 
