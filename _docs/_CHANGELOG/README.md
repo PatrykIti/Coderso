@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 367 | 2026-03-06 | TASK-105 vitest coverage waves follow-up | QA/Platform |
 | 366 | 2026-03-06 | TASK-105 vitest coverage waves progress | QA/Platform |
 | 365 | 2026-03-06 | TASK-104 coverage remediation closure | QA/Platform |
 | 364 | 2026-03-06 | TASK-102-06 custom screens and admin nav vitest migration | QA/Platform |

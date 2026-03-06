@@ -46,6 +46,8 @@ assertProductSpecificControls();
 Completed slices:
 - theme leaf cards and `ThemeEditorPage`
 - booking tabs: `Availability`, `Services`, `Reservations`, `SlotPreview`
+- booking resource tab coverage
+- commerce leaf panels and small editor sections
 - form leaf: `FormCanvas`
 
 Remaining slices:

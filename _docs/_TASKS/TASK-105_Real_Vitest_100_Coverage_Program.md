@@ -34,11 +34,11 @@ Initial Vitest coverage snapshot (from `bun run test:coverage` on 2026-03-06):
 - `% Funcs`: `31.52`
 - `% Lines`: `40.18`
 
-Current Vitest coverage snapshot after the first implemented waves (from `./node_modules/.bin/vitest run --config vitest.config.ts --coverage` on 2026-03-06):
-- `% Stmts`: `40.46`
-- `% Branch`: `35.76`
-- `% Funcs`: `34.16`
-- `% Lines`: `42.73`
+Current Vitest coverage snapshot after the latest implemented waves (from `./node_modules/.bin/vitest run --config vitest.config.ts --coverage` on 2026-03-06):
+- `% Stmts`: `42.03`
+- `% Branch`: `37.65`
+- `% Funcs`: `36.29`
+- `% Lines`: `44.36`
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -53,14 +53,14 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 
 ## High-Level Hotspots
 
-### Remaining zero or near-zero hotspots
+### Remaining low-coverage hotspots
 
-- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `0%`
-- `core/admin/ui/booking/components/ReservationsTab.tsx` -> `0%`
-- `core/admin/ui/booking/components/ServicesTab.tsx` -> `0%`
+- `core/admin/ui/listings/ListingTemplateManager.tsx` -> `6.89%`
 - `core/admin/ui/widgets/editors/ProductListEditors.tsx` -> `7.69%`
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `9.37%`
-- `core/admin/ui/posts/editor/blocks/blockDnD.ts` -> `13.04%`
+- `core/admin/ui/audit/AuditTable.tsx` -> `8.33%`
+- `core/admin/ui/popups/components/PopupEditorForm.tsx` -> `13.04%`
+- `core/admin/ui/users/UserDetailsDrawer.tsx` -> `18.18%`
 
 ### Zero-gap waves already cleared
 
@@ -124,6 +124,10 @@ Completed waves:
 - redirects page leaf coverage
 - booking tab leaf coverage
 - plugin/media/site leaf coverage
+- analytics/settings/entries/seo leaf coverage
+- menu leaf coverage
+- post-editor/settings/storage/api-key utility leaf coverage
+- `recaptcha` and `blockDnD` utility coverage
 
 Remaining large clusters:
 - listings editors/managers
