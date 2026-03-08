@@ -34,11 +34,11 @@ Initial Vitest coverage snapshot (from `bun run test:coverage` on 2026-03-06):
 - `% Funcs`: `31.52`
 - `% Lines`: `40.18`
 
-Current Vitest coverage snapshot after the latest implemented waves (from `./node_modules/.bin/vitest run --config vitest.config.ts --coverage` on 2026-03-06):
-- `% Stmts`: `42.51`
-- `% Branch`: `37.95`
-- `% Funcs`: `36.82`
-- `% Lines`: `44.86`
+Current Vitest coverage snapshot after the latest implemented waves (from `coverage/vitest/coverage-summary.json` on 2026-03-06):
+- `% Stmts`: `43.21`
+- `% Branch`: `38.55`
+- `% Funcs`: `37.69`
+- `% Lines`: `45.61`
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -129,6 +129,7 @@ Completed waves:
 - post-editor/settings/storage/api-key utility leaf coverage
 - `recaptcha` and `blockDnD` utility coverage
 - first substantial `listings` wave (`filters`, `search`, `list`, `template manager`, hooks)
+- forms support wave (`useForms`, list/create flow, settings/runtime panels)
 
 Remaining large clusters:
 - forms builder pages and panels
