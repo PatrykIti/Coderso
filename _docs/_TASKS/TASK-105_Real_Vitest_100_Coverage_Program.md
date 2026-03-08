@@ -40,6 +40,17 @@ Current Vitest coverage snapshot after the latest implemented waves (from `cover
 - `% Funcs`: `37.69`
 - `% Lines`: `45.61`
 
+Latest re-baseline after the editor and widget follow-up waves (from `bun run test:coverage` on 2026-03-08):
+- `% Stmts`: `47.56`
+- `% Branch`: `42.37`
+- `% Funcs`: `42.21`
+- `% Lines`: `50.18`
+- raw files under `100%`: `385`
+- infrastructure-noise files at `0%` (`types.ts`, `index.ts`): `11`
+- real backlog files under `100%` after filtering those infra files: `374`
+- backlog already covered by open wave clusters `TASK-105-04..07`: `161`
+- backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
+
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
 
@@ -55,12 +66,12 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 
 ### Remaining low-coverage hotspots
 
-- `core/admin/ui/listings/ListingTemplateManager.tsx` -> `6.89%`
-- `core/admin/ui/widgets/editors/ProductListEditors.tsx` -> `7.69%`
-- `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `9.37%`
+- `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `6.53%`
 - `core/admin/ui/audit/AuditTable.tsx` -> `8.33%`
 - `core/admin/ui/popups/components/PopupEditorForm.tsx` -> `13.04%`
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `18.18%`
+- `core/admin/ui/settings/SessionsPage.tsx` -> `21.62%`
+- `core/admin/ui/listings/ListingEditorPage.tsx` -> `22.95%`
 
 ### Zero-gap waves already cleared
 
@@ -75,18 +86,18 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 - `core/admin/ui/themes/ThemeEditorPage.tsx`
 - `core/admin/ui/redirects/RedirectsPage.tsx`
 
-### Large low-coverage area clusters
+### Current large low-coverage area clusters
 
-| Area | Approx line coverage | Notes |
-|------|----------------------|-------|
-| `core/admin/ui/themes` | `21.38%` | large admin surface with drawers/editor flows |
-| `core/admin/ui/booking` | `22.11%` | page shell + helper + tabs |
-| `core/admin/ui/listings` | `30.65%` | list/editor/search/filters/manager |
-| `core/admin/ui/forms` | `27.89%` | builder shell and action/runtime panels |
-| `core/admin/ui/menus` | `32.96%` | editor tree, drawers, row interactions |
-| `core/admin/ui/entries` | `33.49%` | editor + table + metadata + renderer |
-| `core/admin/ui/posts` | `40.53%` | still large, many editor sub-surfaces untested |
-| `core/admin/ui/widgets` | `35.58%` | biggest file-count cluster in Vitest lane |
+| Area | Current line coverage | Notes |
+|------|-----------------------|-------|
+| `core/admin/ui/booking` | `26.37%` | shell-heavy page and helper branches still mostly open |
+| `core/admin/ui/widgets/editors` | `39.72%` | still the largest editor-only backlog in the Vitest lane |
+| `core/admin/ui/settings` | `40.22%` | large admin surface not represented by the original wave split |
+| `core/admin/ui/forms` | `50.34%` | builder shell, action panel, and logs page remain open |
+| `core/admin/ui/listings` | `50.67%` | editor flow and binding editor still branch-light |
+| `core/admin/ui/pages` | `74.50%` | page builder internals remain under-tested despite shell waves |
+| `core/admin/ui/entries` | `65.33%` | list, renderer, and table branches still open |
+| `core/admin/ui/posts/editor` | `49.68%` | canvas, richtext adapter, inspectors, and hook branches remain wide |
 
 ## Goals
 
@@ -136,6 +147,7 @@ Remaining large clusters:
 - entries/pages/posts editor shells
 - widgets editor suites
 - deeper `listings` editor/page flows
+- settings, popups, audit, users, content-types, media, auth, and other non-wave admin surfaces now quantified by `TASK-105-10`
 
 ## Sub-Tasks
 
@@ -148,6 +160,7 @@ Remaining large clusters:
 7. `TASK-105-07_SDK_PluginManifest_and_Custom_Screens_Service_Wave.md`
 8. `TASK-105-08_Final_Per_File_100_Gap_Closure.md`
 9. `TASK-105-09_QA_Docs_Changelog_and_Closure.md`
+10. `TASK-105-10_Coverage_Gap_Rebaseline_and_Lane_Backlog.md`
 
 ## Implementation Order
 

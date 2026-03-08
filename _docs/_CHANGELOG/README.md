@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 370 | 2026-03-08 | TASK-105 coverage gap rebaseline and lane backlog | QA/Docs |
 | 369 | 2026-03-06 | TASK-105 forms wave progress | QA/Platform |
 | 368 | 2026-03-06 | TASK-105 listings wave progress | QA/Platform |
 | 367 | 2026-03-06 | TASK-105 vitest coverage waves follow-up | QA/Platform |

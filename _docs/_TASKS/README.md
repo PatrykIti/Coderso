@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 10 tasks
 - **In Progress:** 3 tasks
-- **Done:** 632 tasks
+- **Done:** 633 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-105-10 | Coverage Gap Rebaseline and Lane Backlog | High | Medium | Done: 2026-03-08 Vitest snapshot, lane split, and concrete remaining test backlog documented |
 | TASK-105-07 | SDK Plugin Manifest and Custom Screens Service Wave | Medium | Medium | Done: plugin manifest, SDK client/server, and custom screen service gained direct Vitest coverage |
 | TASK-105-03 | Small UI and Support Component Wave | Medium | Medium | Done: block library, redirects/page leafs, form canvas, media details panel, plugin filters, theme routes/tokens, and related page leafs covered |
 | TASK-105-02 | Admin Services Zero Coverage Wave | High | Medium | Done: api keys, email, integrations, taxonomy, webhooks, and session cache now have direct Vitest tests |
