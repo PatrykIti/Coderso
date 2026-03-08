@@ -52,10 +52,10 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
 Current snapshot after the latest forms, listings, themes, booking, and widget-editor follow-up slices (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `54.91`
-- `% Branch`: `46.01`
-- `% Funcs`: `47.82`
-- `% Lines`: `54.91`
+- `% Stmts`: `55.01`
+- `% Branch`: `46.13`
+- `% Funcs`: `48.07`
+- `% Lines`: `55.01`
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines, `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines, `63.12%` branches
 - `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines, `77.27%` branches
@@ -73,7 +73,8 @@ Current snapshot after the latest forms, listings, themes, booking, and widget-e
 - aggregate `core/admin/ui/themes/*` -> `90.78%` lines, `73.47%` branches
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines, `66.04%` branches
 - `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `74.33%` lines, `36.06%` branches
-- aggregate `core/admin/ui/widgets/editors/*` -> `47.79%` lines, `47.73%` branches
+- `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `96.70%` lines, `64.00%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `48.38%` lines, `48.45%` branches
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -175,6 +176,7 @@ Completed waves:
 - direct create/edit/no-template coverage for `ThemeProfileDrawer`
 - direct Vitest coverage for `EntryTeaserEditors`
 - direct Vitest coverage for `ListingFiltersEditors`
+- direct Vitest coverage for `PostsFeedEditors`
 
 Remaining large clusters:
 - forms builder pages and panels
