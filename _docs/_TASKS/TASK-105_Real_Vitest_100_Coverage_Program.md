@@ -52,10 +52,10 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
 Current snapshot after the latest forms, listings, themes, and booking follow-up slices (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `53.66`
-- `% Branch`: `45.14`
-- `% Funcs`: `46.16`
-- `% Lines`: `53.99`
+- `% Stmts`: `54.02`
+- `% Branch`: `45.22`
+- `% Funcs`: `46.23`
+- `% Lines`: `54.02`
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines, `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines, `63.12%` branches
 - `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines, `77.27%` branches
@@ -68,8 +68,9 @@ Current snapshot after the latest forms, listings, themes, and booking follow-up
 - `core/admin/ui/booking/bookingHelpers.ts` -> `84.48%` lines, `67.39%` branches
 - aggregate `core/admin/ui/booking/*` -> `65.04%` lines, `77.41%` branches
 - `core/admin/ui/themes/ThemesPage.tsx` -> `90.67%` lines, `75.71%` branches
+- `core/admin/ui/themes/ThemeProfileDrawer.tsx` -> `100.00%` lines, `94.59%` branches
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `62.04%` lines, `71.79%` branches
-- aggregate `core/admin/ui/themes/*` -> `87.33%` lines, `69.80%` branches
+- aggregate `core/admin/ui/themes/*` -> `89.78%` lines, `73.24%` branches
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -168,6 +169,7 @@ Completed waves:
 - direct create/edit/save/invert coverage for `ThemeTemplateDrawer`
 - shell-level action coverage for `BookingPage`
 - interactive page-level coverage for `ThemesPage`
+- direct create/edit/no-template coverage for `ThemeProfileDrawer`
 
 Remaining large clusters:
 - forms builder pages and panels
