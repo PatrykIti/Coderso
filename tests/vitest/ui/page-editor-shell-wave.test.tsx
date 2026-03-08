@@ -2,132 +2,138 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test, vi } from "vitest";
+import { beforeEach, expect, test, vi } from "vitest";
+
+import { createBlock } from "../../../core/admin/ui/pages/builder/blockUtils";
+import { PageEditor } from "../../../core/admin/ui/pages/PageEditor";
+import { normalizePageLayoutSettings } from "../../../core/services/pages/layoutSettings";
+import type {
+  PageDetail,
+  PageRevision,
+} from "../../../core/admin/services/pagesClient";
+
+type CacheEvent = {
+  key: string;
+  action: "update";
+};
 
 const pageEditorState = vi.hoisted(() => {
-  const apiError = (message: string) => ({
-    name: "ApiClientError",
-    message,
-    code: "request_failed",
-    status: 400,
-  });
-
-  const page = {
-    id: "page-1",
-    title: "Homepage",
-    slug: "/",
-    status: "draft",
-    currentData: {
-      blocks: [
-        {
-          id: "block-1",
-          type: "hero",
-          data: {},
-          layout: {
-            container: "default",
-            padding: { top: "xl", bottom: "xl" },
-            margin: { top: "none", bottom: "none" },
-            background: { color: "transparent", image: null },
-          },
-          visibility: { enabled: true, devices: ["desktop", "tablet", "mobile"] },
-          editor: { mode: "visual", wizardCompleted: true },
-        },
-      ],
-      settings: {
-        template: "landing",
-        showInNav: true,
-        layout: {
-          wrapper: {
-            container: "default",
-            maxWidth: undefined,
-            background: {
-              color: "#ffffff",
-              image: null,
-              media: { type: "none", source: "external", src: null },
-            },
-            padding: { top: "md", bottom: "md" },
-          },
-          sections: {
-            gap: "lg",
-            defaults: {
-              container: "default",
-              padding: { top: "xl", bottom: "xl" },
-              margin: { top: "none", bottom: "none" },
-            },
-          },
-          applyDefaultsToNewBlocks: true,
-        },
-        revisionRetention: 10,
-      },
+  const state = {
+    cachedPage: null as PageDetail | null,
+    currentPage: null as PageDetail | null,
+    revisions: [] as PageRevision[],
+    cacheListener: null as ((event: CacheEvent) => void) | null,
+    getCachedPageDetail: vi.fn((id: string) =>
+      state.cachedPage && state.cachedPage.id === id ? state.cachedPage : null
+    ),
+    getPageCached: vi.fn(async () => state.currentPage),
+    getPageTemplateOptions: vi.fn(async () => ({
+      themeName: "starter",
+      templates: [{ key: "landing", label: "Landing" }],
+    })),
+    listPageRevisions: vi.fn(async () => state.revisions),
+    previewPage: vi.fn(async (pageId: string) => ({
+      previewUrl: `https://preview.test/${pageId}`,
+    })),
+    updatePage: vi.fn(
+      async (id: string, payload: Partial<PageDetail> & { data?: Record<string, unknown> }) => {
+        const current =
+          state.currentPage ??
+          ({
+            id,
+            title: "Homepage",
+            slug: "homepage",
+            status: "draft",
+            currentData: { blocks: [] },
+            updatedAt: "2026-03-08T09:00:00.000Z",
+          } satisfies PageDetail);
+        const updated = {
+          ...current,
+          title: typeof payload.title === "string" ? payload.title : current.title,
+          slug: typeof payload.slug === "string" ? payload.slug : current.slug,
+          currentData: payload.data ?? current.currentData,
+        } satisfies PageDetail;
+        state.currentPage = updated;
+        return updated;
+      }
+    ),
+    publishPage: vi.fn(async (id: string, data: Record<string, unknown>) => {
+      if (!state.currentPage) return;
+      state.currentPage = {
+        ...state.currentPage,
+        id,
+        status: "published",
+        currentData: data,
+      };
+    }),
+    autosavePage: vi.fn(async () => ({
+      savedAt: "2026-03-08T09:10:00.000Z",
+      reusedRevision: false,
+      revision: state.revisions[0],
+    })),
+    restorePageRevision: vi.fn(async () => {
+      const restored =
+        state.currentPage &&
+        ({
+          ...state.currentPage,
+          title: "Restored Homepage",
+        } satisfies PageDetail);
+      state.currentPage = restored;
+      return { page: restored };
+    }),
+    discardPageRevision: vi.fn(async () => undefined),
+    subscribeCacheEvents: vi.fn(
+      (listener: (event: CacheEvent) => void) => {
+        state.cacheListener = listener;
+        return () => {
+          if (state.cacheListener === listener) {
+            state.cacheListener = null;
+          }
+        };
+      }
+    ),
+    triggerCacheEvent(key: string) {
+      state.cacheListener?.({ key, action: "update" });
     },
-    updatedAt: "2026-03-08T10:00:00.000Z",
-  };
-
-  return {
-    apiError,
-    page,
-    templateOptions: {
-      items: [{ key: "landing", label: "Landing" }],
-    },
-    revisions: [
-      {
-        id: "rev-1",
-        pageId: "page-1",
-        version: 1,
-        kind: "autosave",
-        title: "Draft",
-        slug: "/draft",
-        data: { blocks: [] },
-        createdAt: "2026-03-08T10:00:00.000Z",
-        createdBy: { name: "Admin", email: "admin@example.com" },
-      },
-    ],
-    subscribers: new Set<(event: { key: string }) => void>(),
-    getPageCalls: [] as Array<{ id: string; force?: boolean }>,
-    updatePageCalls: [] as Array<{ id: string; input: Record<string, unknown> }>,
-    previewPageCalls: [] as string[],
-    publishPageCalls: [] as Array<{ id: string; data: Record<string, unknown> }>,
-    autosaveCalls: [] as Array<{ id: string; payload: Record<string, unknown> }>,
-    restoreRevisionCalls: [] as Array<{ id: string; revisionId: string }>,
-    discardRevisionCalls: [] as Array<{ id: string; revisionId: string }>,
-    listRevisionCalls: [] as string[],
-    getTemplateOptionsCalls: 0,
     reset() {
-      this.subscribers.clear();
-      this.getPageCalls = [];
-      this.updatePageCalls = [];
-      this.previewPageCalls = [];
-      this.publishPageCalls = [];
-      this.autosaveCalls = [];
-      this.restoreRevisionCalls = [];
-      this.discardRevisionCalls = [];
-      this.listRevisionCalls = [];
-      this.getTemplateOptionsCalls = 0;
+      state.cachedPage = null;
+      state.currentPage = null;
+      state.revisions = [];
+      state.cacheListener = null;
+      state.getCachedPageDetail.mockClear();
+      state.getPageCached.mockClear();
+      state.getPageTemplateOptions.mockClear();
+      state.listPageRevisions.mockClear();
+      state.previewPage.mockClear();
+      state.updatePage.mockClear();
+      state.publishPage.mockClear();
+      state.autosavePage.mockClear();
+      state.restorePageRevision.mockClear();
+      state.discardPageRevision.mockClear();
+      state.subscribeCacheEvents.mockClear();
     },
   };
-});
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  return state;
+});
 
 vi.mock("@/components/ui/alert", () => ({
   Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertTitle: ({ children }: { children: React.ReactNode }) => <strong>{children}</strong>,
   AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  AlertTitle: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
 }));
 
 vi.mock("@/components/ui/button", () => ({
   Button: ({
     children,
-    onClick,
     disabled,
-    ...props
+    onClick,
   }: {
     children: React.ReactNode;
-    onClick?: () => void;
     disabled?: boolean;
-    [key: string]: unknown;
+    onClick?: () => void;
   }) => (
-    <button type="button" onClick={onClick} disabled={disabled} {...props}>
+    <button type="button" disabled={disabled} onClick={onClick}>
       {children}
     </button>
   ),
@@ -135,103 +141,70 @@ vi.mock("@/components/ui/button", () => ({
 
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({
-    children,
     open,
-    onOpenChange,
+    children,
   }: {
+    open: boolean;
     children: React.ReactNode;
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
-      {children}
-    </div>
-  ),
-  SheetContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  }) => (open ? <div>{children}</div> : null),
+  SheetContent: ({
+    side,
+    children,
+  }: {
+    side: "left" | "right";
+    children: React.ReactNode;
+  }) => <div>{`sheet:${side}`}{children}</div>,
   SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  SheetDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@/services/apiClient", () => ({
   isApiClientError: (error: unknown) =>
-    typeof error === "object" &&
-    error !== null &&
-    "name" in error &&
-    (error as { name?: string }).name === "ApiClientError",
+    typeof error === "object" && error !== null && "kind" in error && error.kind === "api",
 }));
 
 vi.mock("@/services/cachePolicy", () => ({
   cacheKeys: {
-    pageDetail: (id: string) => `page:${id}`,
+    pageDetail: (id: string) => `page-detail:${id}`,
   },
 }));
 
 vi.mock("@/services/pagesClient", () => ({
-  getCachedPageDetail: () => pageEditorState.page,
-  getPageCached: vi.fn(async (id: string, { force }: { force?: boolean } = {}) => {
-    pageEditorState.getPageCalls.push({ id, force });
-    return pageEditorState.page;
-  }),
-  getPageTemplateOptions: vi.fn(async () => {
-    pageEditorState.getTemplateOptionsCalls += 1;
-    return pageEditorState.templateOptions;
-  }),
-  listPageRevisions: vi.fn(async (id: string) => {
-    pageEditorState.listRevisionCalls.push(id);
-    return pageEditorState.revisions;
-  }),
-  updatePage: vi.fn(async (id: string, input: Record<string, unknown>) => {
-    pageEditorState.updatePageCalls.push({ id, input });
-    return { ...pageEditorState.page, ...input, currentData: input.data ?? pageEditorState.page.currentData };
-  }),
-  publishPage: vi.fn(async (id: string, data: Record<string, unknown>) => {
-    pageEditorState.publishPageCalls.push({ id, data });
-    return { ok: true };
-  }),
-  previewPage: vi.fn(async (id: string) => {
-    pageEditorState.previewPageCalls.push(id);
-    return { previewUrl: "https://preview.test/page" };
-  }),
-  autosavePage: vi.fn(async (id: string, payload: Record<string, unknown>) => {
-    pageEditorState.autosaveCalls.push({ id, payload });
-    return { ok: true };
-  }),
-  restorePageRevision: vi.fn(async (id: string, revisionId: string) => {
-    pageEditorState.restoreRevisionCalls.push({ id, revisionId });
-    return { page: pageEditorState.page };
-  }),
-  discardPageRevision: vi.fn(async (id: string, revisionId: string) => {
-    pageEditorState.discardRevisionCalls.push({ id, revisionId });
-    return { ok: true };
-  }),
+  autosavePage: pageEditorState.autosavePage,
+  discardPageRevision: pageEditorState.discardPageRevision,
+  getCachedPageDetail: pageEditorState.getCachedPageDetail,
+  getPageCached: pageEditorState.getPageCached,
+  getPageTemplateOptions: pageEditorState.getPageTemplateOptions,
+  listPageRevisions: pageEditorState.listPageRevisions,
+  previewPage: pageEditorState.previewPage,
+  publishPage: pageEditorState.publishPage,
+  restorePageRevision: pageEditorState.restorePageRevision,
+  updatePage: pageEditorState.updatePage,
 }));
 
 vi.mock("@/ui/layouts/EditorShell", () => ({
   EditorShell: ({
-    children,
+    breadcrumbs,
     leftPanel,
     rightPanel,
-    breadcrumbs,
+    children,
   }: {
-    children: React.ReactNode;
+    breadcrumbs?: React.ReactNode;
     leftPanel?: React.ReactNode;
     rightPanel?: React.ReactNode;
-    breadcrumbs?: React.ReactNode;
+    children: React.ReactNode;
   }) => (
     <div>
       <div>{breadcrumbs}</div>
-      <aside>{leftPanel}</aside>
-      <main>{children}</main>
-      <aside>{rightPanel}</aside>
+      <div>{leftPanel}</div>
+      <div>{rightPanel}</div>
+      <div>{children}</div>
     </div>
   ),
 }));
 
 vi.mock("@/utils/cacheBus", () => ({
-  subscribeCacheEvents: (handler: (event: { key: string }) => void) => {
-    pageEditorState.subscribers.add(handler);
-    return () => pageEditorState.subscribers.delete(handler);
-  },
+  subscribeCacheEvents: pageEditorState.subscribeCacheEvents,
 }));
 
 vi.mock("@/ui/pages/DeviceSwitcher", () => ({
@@ -242,9 +215,12 @@ vi.mock("@/ui/pages/DeviceSwitcher", () => ({
     value: string;
     onChange: (value: "desktop" | "tablet" | "mobile") => void;
   }) => (
-    <button type="button" onClick={() => onChange(value === "desktop" ? "mobile" : "desktop")}>
-      {`device:${value}`}
-    </button>
+    <div>
+      <span>{`device:${value}`}</span>
+      <button type="button" onClick={() => onChange("tablet")}>
+        device-tablet
+      </button>
+    </div>
   ),
 }));
 
@@ -252,10 +228,63 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
   RuntimePreviewDialog: ({
     open,
     previewUrl,
+    isLoading,
+    error,
+    device,
   }: {
     open: boolean;
     previewUrl: string | null;
-  }) => <div>{`runtime-preview:${open ? "open" : "closed"}:${previewUrl ?? "none"}`}</div>,
+    isLoading: boolean;
+    error: string | null;
+    device: string;
+  }) =>
+    open ? (
+      <div>
+        <span>{`preview-url:${previewUrl ?? "none"}`}</span>
+        <span>{`preview-loading:${String(isLoading)}`}</span>
+        <span>{`preview-error:${error ?? "none"}`}</span>
+        <span>{`preview-device:${device}`}</span>
+      </div>
+    ) : null,
+}));
+
+vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
+  BlockList: ({
+    blocks,
+    selectedId,
+    onSelect,
+  }: {
+    blocks: Array<{ id: string; type: string }>;
+    selectedId: string | null;
+    onSelect: (id: string | null) => void;
+  }) => (
+    <div>
+      <span>{`block-count:${blocks.length}`}</span>
+      <span>{`selected-block:${selectedId ?? "none"}`}</span>
+      <span>{`block-types:${blocks.map((block) => block.type).join(",")}`}</span>
+      <button
+        type="button"
+        onClick={() => onSelect(blocks[blocks.length - 1]?.id ?? null)}
+      >
+        select-last-block
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("../../../core/admin/ui/pages/builder/BlockSettings", () => ({
+  BlockSettings: ({
+    block,
+    widget,
+  }: {
+    block?: { id: string; type: string } | null;
+    widget?: { type: string } | null;
+  }) => (
+    <div>
+      <span>{`settings-block:${block?.type ?? "none"}`}</span>
+      <span>{`settings-widget:${widget?.type ?? "none"}`}</span>
+    </div>
+  ),
 }));
 
 vi.mock("../../../core/admin/ui/pages/builder/LibraryPanel", () => ({
@@ -269,162 +298,178 @@ vi.mock("../../../core/admin/ui/pages/builder/LibraryPanel", () => ({
     onAddForm: (form: { id: string; name: string }) => void;
   }) => (
     <div>
-      <button type="button" onClick={() => onAddWidget("paragraph")}>
+      <button type="button" onClick={() => onAddWidget("hero")}>
         add-widget
       </button>
-      <button type="button" onClick={() => onAddTemplate({ id: "tpl-1", name: "Template" })}>
+      <button
+        type="button"
+        onClick={() => onAddTemplate({ id: "template-1", name: "Hero Template" })}
+      >
         add-template
       </button>
-      <button type="button" onClick={() => onAddForm({ id: "form-1", name: "Form" })}>
+      <button
+        type="button"
+        onClick={() => onAddForm({ id: "form-1", name: "Lead Form" })}
+      >
         add-form
       </button>
     </div>
   ),
 }));
 
-vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
-  BlockList: ({
-    onSelect,
-    onDuplicate,
-    onDelete,
-  }: {
-    onSelect: (id: string) => void;
-    onDuplicate: (id: string) => void;
-    onDelete: (id: string) => void;
-  }) => (
-    <div>
-      <button type="button" onClick={() => onSelect("block-2")}>
-        select-page-block
-      </button>
-      <button type="button" onClick={() => onDuplicate("block-2")}>
-        duplicate-page-block
-      </button>
-      <button type="button" onClick={() => onDelete("block-2")}>
-        delete-page-block
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("../../../core/admin/ui/pages/builder/BlockSettings", () => ({
-  BlockSettings: ({
-    onChange,
-  }: {
-    onChange: (block: Record<string, unknown>) => void;
-  }) => (
-    <button type="button" onClick={() => onChange({ id: "block-1", type: "hero", data: { title: "Updated" } })}>
-      change-block
-    </button>
-  ),
-}));
-
 vi.mock("../../../core/admin/ui/pages/PageRevisionDrawer", () => ({
   PageRevisionDrawer: ({
     open,
+    revisions,
     onRestore,
     onDiscard,
   }: {
     open: boolean;
+    revisions: Array<{ id: string }>;
     onRestore: (id: string) => void;
     onDiscard: (id: string) => void;
-  }) => (
-    <div>
-      <span>{`revisions:${open ? "open" : "closed"}`}</span>
-      <button type="button" onClick={() => onRestore("rev-1")}>
-        restore-page-revision
-      </button>
-      <button type="button" onClick={() => onDiscard("rev-1")}>
-        discard-page-revision
-      </button>
-    </div>
-  ),
+  }) =>
+    open ? (
+      <div>
+        <span>{`revision-count:${revisions.length}`}</span>
+        <button type="button" onClick={() => onRestore(revisions[0]?.id ?? "rev-published")}>
+          restore-revision
+        </button>
+        <button type="button" onClick={() => onDiscard(revisions[1]?.id ?? "rev-autosave")}>
+          discard-revision
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../../../core/admin/ui/pages/PageSettingsDrawer", () => ({
   PageSettingsDrawer: ({
     open,
+    templateOptions,
+    templateOptionsLoading,
     onSave,
     onAutosave,
   }: {
     open: boolean;
-    onSave: (payload: Record<string, unknown>) => Promise<boolean>;
-    onAutosave: (payload: Record<string, unknown>) => Promise<void>;
-  }) => (
-    <div>
-      <span>{`settings:${open ? "open" : "closed"}`}</span>
-      <button
-        type="button"
-        onClick={() =>
-          void onSave({
-            title: "Updated page",
-            slug: "/updated",
-            settings: {
-              template: "landing",
-              showInNav: false,
-              layout: pageEditorState.page.currentData.settings.layout,
-              revisionRetention: 5,
-            },
-          })
-        }
-      >
-        save-page-settings
-      </button>
-      <button
-        type="button"
-        onClick={() =>
-          void onAutosave({
-            title: "Autosave page",
-            slug: "/autosave",
-            settings: {
-              template: "landing",
-              showInNav: true,
-              layout: pageEditorState.page.currentData.settings.layout,
-              revisionRetention: 10,
-            },
-          })
-        }
-      >
-        autosave-page-settings
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("../../../core/admin/ui/pages/builder/blockUtils", () => ({
-  applyWizardSelection: (block: unknown) => block,
-  appendSlotBlock: (blocks: Array<Record<string, unknown>>, _parentId: string, _slotId: string, nextBlock: Record<string, unknown>) => [...blocks, nextBlock],
-  createBlock: (type: string, id = `${type}-1`) => ({
-    id,
-    type,
-    data: {},
-    layout: {
-      container: "default",
-      padding: { top: "xl", bottom: "xl" },
-      margin: { top: "none", bottom: "none" },
-      background: { color: "transparent", image: null },
-    },
-    visibility: { enabled: true, devices: ["desktop", "tablet", "mobile"] },
-    editor: { mode: "visual", wizardCompleted: true },
-  }),
-  deleteBlockById: (blocks: Array<Record<string, unknown>>) => ({ deleted: true, blocks }),
-  duplicateBlock: (blocks: Array<Record<string, unknown>>) => blocks,
-  findBlockById: (blocks: Array<Record<string, unknown>>, id: string | null) =>
-    blocks.find((block) => block.id === id) ?? null,
-  getFirstBlockId: (blocks: Array<Record<string, unknown>>) => blocks[0]?.id ?? null,
-  moveBlockIntoSlot: (blocks: Array<Record<string, unknown>>) => blocks,
-  reorderBlocksAtPath: (blocks: Array<Record<string, unknown>>) => blocks,
-  shouldWarnOnNavigate: (dirty: boolean) => dirty,
-  updateBlockById: (blocks: Array<Record<string, unknown>>, id: string, updater: (block: Record<string, unknown>) => Record<string, unknown>) =>
-    blocks.map((block) => (block.id === id ? updater(block) : block)),
+    templateOptions: Array<{ key: string; label: string }> | null;
+    templateOptionsLoading: boolean;
+    onSave: (payload: {
+      title: string;
+      slug: string;
+      settings: ReturnType<typeof normalizePageLayoutSettings> extends never
+        ? never
+        : {
+            template: string;
+            showInNav: boolean;
+            layout: ReturnType<typeof normalizePageLayoutSettings>;
+            revisionRetention: number;
+          };
+    }) => Promise<boolean>;
+    onAutosave: (payload: {
+      title: string;
+      slug: string;
+      settings: {
+        template: string;
+        showInNav: boolean;
+        layout: ReturnType<typeof normalizePageLayoutSettings>;
+        revisionRetention: number;
+      };
+    }) => Promise<void>;
+  }) =>
+    open ? (
+      <div>
+        <span>{`template-options:${templateOptions?.length ?? 0}`}</span>
+        <span>{`template-options-loading:${String(templateOptionsLoading)}`}</span>
+        <button
+          type="button"
+          onClick={() =>
+            void onSave({
+              title: "SEO Homepage",
+              slug: "seo-homepage",
+              settings: {
+                template: "landing",
+                showInNav: false,
+                layout: normalizePageLayoutSettings(undefined),
+                revisionRetention: 12,
+              },
+            })
+          }
+        >
+          settings-save
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            void onAutosave({
+              title: "Autosaved Homepage",
+              slug: "autosaved-homepage",
+              settings: {
+                template: "landing",
+                showInNav: true,
+                layout: normalizePageLayoutSettings(undefined),
+                revisionRetention: 15,
+              },
+            })
+          }
+        >
+          settings-autosave
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../../../core/admin/ui/pages/builder/widgetRegistry", () => ({
-  getWidgetRegistry: () => [{ type: "hero" }],
+  getWidgetRegistry: () => [
+    { type: "hero" },
+    { type: "compare-timeline" },
+    { type: "template-section" },
+    { type: "form-embed" },
+  ],
 }));
 
-vi.mock("../../../widgets/validator", () => ({
-  normalizeWidgetBlock: (block: unknown) => block,
+vi.mock("../../../core/widgets/validator", () => ({
+  normalizeWidgetBlock: <T,>(block: T) => block,
 }));
+
+const clonePage = (page: PageDetail): PageDetail => ({
+  ...page,
+  currentData: {
+    ...(page.currentData ?? {}),
+    blocks: Array.isArray(page.currentData?.blocks)
+      ? [...(page.currentData.blocks as unknown[])]
+      : [],
+  },
+});
+
+const createPage = (
+  overrides: Partial<PageDetail> = {}
+): PageDetail => {
+  const hero = createBlock("hero");
+  const comparison = createBlock("compare-timeline");
+
+  return {
+    id: "page-1",
+    title: "Homepage",
+    slug: "homepage",
+    status: "draft",
+    currentData: { blocks: [hero, comparison] },
+    updatedAt: "2026-03-08T09:00:00.000Z",
+    ...overrides,
+  };
+};
+
+const createRevision = (overrides: Partial<PageRevision>): PageRevision => ({
+  id: "rev-1",
+  pageId: "page-1",
+  version: 1,
+  kind: "publish",
+  title: "Homepage",
+  slug: "homepage",
+  data: { blocks: [] },
+  createdAt: "2026-03-08T09:00:00.000Z",
+  createdBy: null,
+  ...overrides,
+});
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -446,78 +491,187 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
-afterEach(() => {
-  vi.restoreAllMocks();
-  pageEditorState.reset();
-  window.history.replaceState({}, "", "/");
-});
+const flush = async () => {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
 
-test("PageEditor drives preview, save, publish, settings, revisions, and sidebar actions", async () => {
-  window.history.replaceState({}, "", "/admin/pages/page-1");
-
-  const { PageEditor } = await import(
-    "../../../core/admin/ui/pages/PageEditor"
+const clickButton = (container: HTMLElement, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(label)
   );
 
-  const view = mount(<PageEditor />);
+  if (!button) {
+    throw new Error(`Missing button: ${label}`);
+  }
+
+  act(() => {
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+beforeEach(() => {
+  pageEditorState.reset();
+  pageEditorState.cachedPage = createPage();
+  pageEditorState.currentPage = clonePage(pageEditorState.cachedPage);
+  pageEditorState.revisions = [
+    createRevision({ id: "rev-published", kind: "publish" }),
+    createRevision({ id: "rev-autosave", kind: "autosave", version: 2 }),
+  ];
+  (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT =
+    true;
+});
+
+test("PageEditor hydrates from cache, surfaces remote updates, and supports shell library/details flows", async () => {
+  const view = mount(<PageEditor pageId="page-1" />);
 
   try {
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await flush();
 
+    expect(pageEditorState.getCachedPageDetail).toHaveBeenCalledWith("page-1");
+    expect(pageEditorState.getPageCached).toHaveBeenCalledWith("page-1", {
+      force: true,
+    });
     expect(view.container.textContent).toContain("Homepage");
-    expect(view.container.textContent).toContain("device:desktop");
+    expect(view.container.textContent).toContain("block-count:2");
+    expect(view.container.textContent).toContain("settings-block:hero");
 
-    const buttons = Array.from(view.container.querySelectorAll("button"));
+    clickButton(view.container, "add-widget");
+    await flush();
 
-    await act(async () => {
-      buttons.find((button) => button.textContent === "add-widget")?.click();
-      buttons.find((button) => button.textContent === "add-template")?.click();
-      buttons.find((button) => button.textContent === "add-form")?.click();
-      buttons.find((button) => button.textContent === "select-page-block")?.click();
-      buttons.find((button) => button.textContent === "duplicate-page-block")?.click();
-      buttons.find((button) => button.textContent === "delete-page-block")?.click();
-      buttons.find((button) => button.textContent === "change-block")?.click();
-      buttons.find((button) => button.textContent === "Runtime preview")?.click();
-      buttons.find((button) => button.textContent === "Save draft")?.click();
-      buttons.find((button) => button.textContent === "Publish")?.click();
-      buttons.find((button) => button.textContent === "save-page-settings")?.click();
-      buttons.find((button) => button.textContent === "autosave-page-settings")?.click();
-      buttons.find((button) => button.textContent === "restore-page-revision")?.click();
-      buttons.find((button) => button.textContent === "discard-page-revision")?.click();
-      await Promise.resolve();
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(view.container.textContent).toContain("block-count:3");
+
+    clickButton(view.container, "Details");
+    await flush();
+
+    expect(view.container.textContent).toContain("sheet:right");
+
+    pageEditorState.currentPage = createPage({
+      title: "Remote Homepage",
+      currentData: { blocks: [createBlock("hero")] },
+    });
+    act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Updated in another tab");
+    expect(view.container.textContent).toContain("Refresh");
+
+    clickButton(view.container, "Refresh");
+    await flush();
+
+    expect(view.container.textContent).toContain("Remote Homepage");
+    expect(view.container.textContent).not.toContain("Updated in another tab");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor handles preview, draft/publish, settings persistence, autosave, and revision actions", async () => {
+  const initialPage = createPage();
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "device-tablet");
+    clickButton(view.container, "Runtime preview");
+    await flush();
+
+    expect(pageEditorState.previewPage).toHaveBeenCalledWith("page-1");
+    expect(view.container.textContent).toContain("preview-url:https://preview.test/page-1");
+    expect(view.container.textContent).toContain("preview-device:tablet");
+
+    clickButton(view.container, "Save draft");
+    await flush();
+
+    const draftPayload = pageEditorState.updatePage.mock.calls[0]?.[1] as {
+      data: { blocks: unknown[] };
+    };
+    expect(draftPayload.data.blocks).toHaveLength(2);
+
+    clickButton(view.container, "Publish");
+    await flush();
+
+    expect(pageEditorState.publishPage).toHaveBeenCalledWith(
+      "page-1",
+      expect.objectContaining({
+        blocks: expect.any(Array),
+      })
+    );
+    expect(view.container.textContent).toContain("Published");
+
+    clickButton(view.container, "Page settings");
+    await flush();
+
+    expect(pageEditorState.getPageTemplateOptions).toHaveBeenCalledTimes(1);
+    expect(view.container.textContent).toContain("template-options-loading:true");
+
+    clickButton(view.container, "settings-save");
+    await flush();
+
+    const settingsSavePayload = pageEditorState.updatePage.mock.calls[1]?.[1] as {
+      title: string;
+      slug: string;
+      data: {
+        settings: {
+          template: string;
+          showInNav: boolean;
+          revisionRetention: number;
+        };
+      };
+    };
+    expect(settingsSavePayload.title).toBe("SEO Homepage");
+    expect(settingsSavePayload.slug).toBe("seo-homepage");
+    expect(settingsSavePayload.data.settings).toMatchObject({
+      template: "landing",
+      showInNav: false,
+      revisionRetention: 12,
     });
 
-    expect(pageEditorState.previewPageCalls).toContain("page-1");
-    expect(pageEditorState.updatePageCalls.some((call) => "data" in call.input)).toBe(true);
-    expect(pageEditorState.publishPageCalls[0]).toEqual({
-      id: "page-1",
-      data: expect.any(Object),
-    });
-    expect(pageEditorState.updatePageCalls.some((call) => call.input.title === "Updated page")).toBe(true);
-    expect(pageEditorState.autosaveCalls[0]).toEqual({
-      id: "page-1",
-      payload: expect.objectContaining({ title: "Autosave page" }),
-    });
-    expect(pageEditorState.restoreRevisionCalls).toContainEqual({
-      id: "page-1",
-      revisionId: "rev-1",
-    });
-    expect(pageEditorState.discardRevisionCalls).toContainEqual({
-      id: "page-1",
-      revisionId: "rev-1",
-    });
+    clickButton(view.container, "Page settings");
+    await flush();
+    clickButton(view.container, "settings-autosave");
+    await flush();
 
-    await act(async () => {
-      for (const subscriber of pageEditorState.subscribers) {
-        subscriber({ key: "page:page-1" });
-      }
-      await Promise.resolve();
-    });
+    expect(pageEditorState.autosavePage).toHaveBeenCalledWith(
+      "page-1",
+      expect.objectContaining({
+        title: "Autosaved Homepage",
+        slug: "autosaved-homepage",
+      })
+    );
 
-    expect(pageEditorState.getPageCalls.length).toBeGreaterThan(1);
+    clickButton(view.container, "History");
+    await flush();
+
+    expect(pageEditorState.listPageRevisions).toHaveBeenCalled();
+    expect(view.container.textContent).toContain("revision-count:2");
+
+    clickButton(view.container, "restore-revision");
+    await flush();
+
+    expect(pageEditorState.restorePageRevision).toHaveBeenCalledWith(
+      "page-1",
+      "rev-published"
+    );
+    expect(view.container.textContent).toContain("Restored Homepage");
+
+    clickButton(view.container, "discard-revision");
+    await flush();
+
+    expect(pageEditorState.discardPageRevision).toHaveBeenCalledWith(
+      "page-1",
+      "rev-autosave"
+    );
   } finally {
     view.cleanup();
   }
