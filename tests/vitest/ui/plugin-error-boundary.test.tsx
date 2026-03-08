@@ -71,6 +71,7 @@ test("PluginErrorBoundary renders children when nothing fails", () => {
 });
 
 test("PluginErrorBoundary isolates crashes and forwards disable action", () => {
+  const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
   const onDisable = vi.fn();
   const view = mount(
     <PluginErrorBoundary
@@ -97,8 +98,10 @@ test("PluginErrorBoundary isolates crashes and forwards disable action", () => {
       name: "Catalog",
       version: "1.0.0",
     });
+    expect(errorSpy).toHaveBeenCalled();
   } finally {
     view.cleanup();
+    errorSpy.mockRestore();
   }
 });
 

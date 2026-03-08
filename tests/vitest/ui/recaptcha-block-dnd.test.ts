@@ -3,6 +3,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 
 const originalFetch = globalThis.fetch;
+let appendedScript: HTMLScriptElement | null = null;
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -10,6 +11,7 @@ afterEach(() => {
   document.head.innerHTML = "";
   delete (window as Window & { grecaptcha?: unknown }).grecaptcha;
   globalThis.fetch = originalFetch;
+  appendedScript = null;
 });
 
 test("executeRecaptcha uses the existing grecaptcha client without loading a script", async () => {
@@ -28,16 +30,18 @@ test("executeRecaptcha uses the existing grecaptcha client without loading a scr
 });
 
 test("executeRecaptcha loads the script before executing", async () => {
-  globalThis.fetch = vi.fn(async () => new Response(""));
+  vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
+    appendedScript = node as HTMLScriptElement;
+    return node;
+  });
   const { executeRecaptcha } = await import(
     "../../../core/admin/ui/auth/recaptcha"
   );
   const execute = vi.fn(async () => "token-2");
 
   const promise = executeRecaptcha("site-key", "signup");
-  const script = document.head.querySelector("script");
 
-  expect(script?.getAttribute("src")).toContain(
+  expect(appendedScript?.getAttribute("src")).toContain(
     "https://www.google.com/recaptcha/api.js?render=site-key"
   );
 
@@ -45,7 +49,7 @@ test("executeRecaptcha loads the script before executing", async () => {
     grecaptcha?: { execute: (siteKey: string, options: { action: string }) => Promise<string> };
   }).grecaptcha = { execute };
 
-  script?.dispatchEvent(new Event("load"));
+  appendedScript?.dispatchEvent(new Event("load"));
 
   await expect(promise).resolves.toBe("token-2");
   expect(execute).toHaveBeenCalledWith("site-key", { action: "signup" });
@@ -53,14 +57,16 @@ test("executeRecaptcha loads the script before executing", async () => {
 
 test("executeRecaptcha rejects when the script load fails or grecaptcha is unavailable", async () => {
   {
-    globalThis.fetch = vi.fn(async () => new Response(""));
+    vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
+      appendedScript = node as HTMLScriptElement;
+      return node;
+    });
     const { executeRecaptcha } = await import(
       "../../../core/admin/ui/auth/recaptcha"
     );
 
     const promise = executeRecaptcha("site-key", "login");
-    const script = document.head.querySelector("script");
-    script?.dispatchEvent(new Event("error"));
+    appendedScript?.dispatchEvent(new Event("error"));
 
     await expect(promise).rejects.toThrow("recaptcha_load_failed");
   }
@@ -68,14 +74,18 @@ test("executeRecaptcha rejects when the script load fails or grecaptcha is unava
   vi.resetModules();
   document.head.innerHTML = "";
   delete (window as Window & { grecaptcha?: unknown }).grecaptcha;
-  globalThis.fetch = vi.fn(async () => new Response(""));
+  appendedScript = null;
+  vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
+    appendedScript = node as HTMLScriptElement;
+    return node;
+  });
 
   const { executeRecaptcha } = await import(
     "../../../core/admin/ui/auth/recaptcha"
   );
 
   const secondPromise = executeRecaptcha("site-key", "login");
-  document.head.querySelector("script")?.dispatchEvent(new Event("load"));
+  appendedScript?.dispatchEvent(new Event("load"));
 
   await expect(secondPromise).rejects.toThrow("recaptcha_unavailable");
 });
