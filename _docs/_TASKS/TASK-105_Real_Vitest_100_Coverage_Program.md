@@ -52,16 +52,17 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
 Current snapshot after the latest forms and listings follow-up slices (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `49.40`
-- `% Branch`: `43.90`
-- `% Funcs`: `44.26`
-- `% Lines`: `52.03`
+- `% Stmts`: `49.60`
+- `% Branch`: `44.09`
+- `% Funcs`: `44.61`
+- `% Lines`: `52.22`
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines, `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines, `63.12%` branches
 - `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines, `77.27%` branches
 - aggregate `core/admin/ui/forms/*` -> `86.06%` lines, `66.93%` branches
 - `core/admin/ui/listings/ListingEditorPage.tsx` -> `89.79%` lines, `72.99%` branches
-- aggregate `core/admin/ui/listings/*` -> `85.98%` lines, `64.15%` branches
+- `core/admin/ui/listings/components/BindingEditor.tsx` -> `91.04%` lines, `74.13%` branches
+- aggregate `core/admin/ui/listings/*` -> `85.96%` lines, `60.00%` branches
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -155,6 +156,7 @@ Completed waves:
 - forms support wave (`useForms`, list/create flow, settings/runtime panels)
 - direct builder, automation, and action-log coverage for `FormBuilderPage`, `FormActionsPanel`, and `FormActionLogsPage`
 - direct editor coverage for `ListingEditorPage`
+- direct interaction coverage for `BindingEditor`
 
 Remaining large clusters:
 - forms builder pages and panels
