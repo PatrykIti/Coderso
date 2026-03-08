@@ -7,13 +7,14 @@
 ## Key Changes
 
 ### QA / Widget Editors
-- Added direct `happy-dom` coverage for `ContentListEditors` across wizard/visual/advanced flows, legacy vs listing source mode, listing query/template selection, variant/layout controls, runtime labels, runtime snapshot, and loading/error states.
-- This was delivered as a worker-owned slice and integrated into the main `task-105-coverage-analysis` branch after local validation.
+- Added the first direct `happy-dom` Vitest suite for `ContentListEditors`, covering legacy vs listing source wiring, listing query/template selection, variant/layout controls, runtime labels, facet-like state changes, and loader errors.
+- This gives the file a direct Vitest owner instead of leaving it visible only through older broad widget coverage.
 
 ### Coverage Progress
-- Current snapshot remains `54.91% stmts`, `46.01% branch`, `47.82% funcs`, `54.91% lines` with `ContentListEditors.tsx` sitting at `50.76%` lines / `35.33%` branches.
-- The file is no longer uncovered by default; it now has direct Vitest editor coverage and can be iterated further from a real interaction base instead of smoke-level renderer coverage.
+- Current snapshot after the latest widget-editor follow-up remains `54.91% stmts`, `46.01% branch`, `47.82% funcs`, `54.91% lines`
+- `ContentListEditors.tsx` currently sits at `50.76%` lines / `35.33%` branches after this first direct suite
+- Combined `core/admin/ui/widgets/editors/*` average remains `48.38%` lines / `48.45%` branches
 
 ### Remaining Focus
-- The next highest-value widget-editor work is `StatsKpiEditors`, then the `Product*` family.
-- `ContentListEditors` itself still needs deeper branch closure, but it is now in the active Vitest lane with a real suite in place.
+- `ContentListEditors` still needs deeper follow-up for the more complex layout and branch combinations.
+- The next biggest widget-editor surfaces remain `StatsKpiEditors` and the `Product*` family.
