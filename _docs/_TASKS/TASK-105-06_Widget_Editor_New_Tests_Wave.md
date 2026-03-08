@@ -5,7 +5,7 @@
 **Category:** QA + Widgets  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-01  
-**Status:** To Do
+**Status:** In Progress (2026-03-08)
 
 ---
 
@@ -35,6 +35,24 @@ assertVariantSpecificBranches();
 
 1. The largest remaining widget editor gaps get targeted new tests.
 2. Tests cover meaningful editor branching, not only generic presence checks.
+
+## Progress Notes
+
+Completed slices:
+- direct Vitest coverage for `EntryTeaserEditors`
+
+Current `2026-03-08` widget editor snapshot after the latest slice:
+- `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines / `66.04%` branches
+- `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `73.62%` lines / `36.00%` branches
+- `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `50.76%` lines / `35.33%` branches
+- aggregate `core/admin/ui/widgets/editors/*` average -> `46.82%` lines / `47.25%` branches across `39` tracked files
+
+Remaining hotspots in this wave:
+- `PostsFeedEditors.tsx`
+- `ContentListEditors.tsx`
+- `ListingFiltersEditors.tsx`
+- `StatsKpiEditors.tsx`
+- `Product*Editors.tsx`
 
 ## Testing Requirements
 

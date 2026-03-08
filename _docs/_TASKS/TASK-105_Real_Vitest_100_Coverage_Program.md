@@ -51,11 +51,11 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog already covered by open wave clusters `TASK-105-04..07`: `161`
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
-Current snapshot after the latest forms, listings, themes, and booking follow-up slices (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `54.10`
-- `% Branch`: `45.23`
-- `% Funcs`: `46.41`
-- `% Lines`: `54.02`
+Current snapshot after the latest forms, listings, themes, booking, and widget-editor follow-up slices (from `bun run test:coverage` on 2026-03-08):
+- `% Stmts`: `54.70`
+- `% Branch`: `45.87`
+- `% Funcs`: `47.32`
+- `% Lines`: `54.70`
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines, `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines, `63.12%` branches
 - `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines, `77.27%` branches
@@ -71,6 +71,8 @@ Current snapshot after the latest forms, listings, themes, and booking follow-up
 - `core/admin/ui/themes/ThemeProfileDrawer.tsx` -> `100.00%` lines, `94.59%` branches
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `72.99%` lines, `74.35%` branches
 - aggregate `core/admin/ui/themes/*` -> `90.78%` lines, `73.47%` branches
+- `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines, `66.04%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `46.82%` lines, `47.25%` branches
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -87,12 +89,12 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 
 ### Remaining low-coverage hotspots
 
-- `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `6.53%`
 - `core/admin/ui/audit/AuditTable.tsx` -> `8.33%`
 - `core/admin/ui/popups/components/PopupEditorForm.tsx` -> `13.04%`
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `18.18%`
 - `core/admin/ui/settings/SessionsPage.tsx` -> `21.62%`
 - `core/admin/ui/settings/ApiKeysPage.tsx` -> `24.35%`
+- `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `36.28%`
 
 ### Zero-gap waves already cleared
 

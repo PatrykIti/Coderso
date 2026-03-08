@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 381 | 2026-03-08 | TASK-105 entry teaser editor coverage follow-up | QA/Platform |
 | 380 | 2026-03-08 | TASK-105 theme template drawer deep coverage follow-up | QA/Platform |
 | 379 | 2026-03-08 | TASK-105 theme profile drawer coverage follow-up | QA/Platform |
 | 378 | 2026-03-08 | TASK-105 themes page coverage follow-up | QA/Platform |
