@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 375 | 2026-03-08 | TASK-105 listing template manager coverage follow-up | QA/Platform |
 | 374 | 2026-03-08 | TASK-105 listing binding editor coverage follow-up | QA/Platform |
 | 373 | 2026-03-08 | TASK-105 listings editor coverage follow-up | QA/Platform |
 | 372 | 2026-03-08 | TASK-105 form action logs coverage follow-up | QA/Platform |

@@ -63,6 +63,7 @@ const listingsState = vi.hoisted(() => {
   return {
     queryItems,
     templateItems,
+    cachedTemplateItems: templateItems as typeof templateItems | undefined,
     subscribers,
     contentTypes: [
       {
@@ -72,6 +73,8 @@ const listingsState = vi.hoisted(() => {
     ],
     queryError: null as unknown,
     templateError: null as unknown,
+    saveTemplateError: null as unknown,
+    deleteTemplateError: null as unknown,
     detailError: null as unknown,
     previewQueryError: null as unknown,
     detailResult: {
@@ -124,8 +127,11 @@ const listingsState = vi.hoisted(() => {
     reset() {
       this.queryError = null;
       this.templateError = null;
+      this.saveTemplateError = null;
+      this.deleteTemplateError = null;
       this.detailError = null;
       this.previewQueryError = null;
+      this.cachedTemplateItems = this.templateItems;
       this.detailResult = {
         id: "query-1",
         name: "Homepage listing",
@@ -385,7 +391,7 @@ vi.mock("@/services/listingsClient", () => ({
     if (listingsState.queryError) throw listingsState.queryError;
     return listingsState.queryItems;
   }),
-  getCachedListingTemplates: () => listingsState.templateItems,
+  getCachedListingTemplates: () => listingsState.cachedTemplateItems,
   listListingTemplatesCached: vi.fn(async ({ force }: { force?: boolean } = {}) => {
     listingsState.listTemplateCalls.push(force);
     if (listingsState.templateError) throw listingsState.templateError;
@@ -433,6 +439,7 @@ vi.mock("@/services/listingsClient", () => ({
   }),
   createListingTemplate: vi.fn(async (input) => {
     listingsState.createTemplateCalls.push(input);
+    if (listingsState.saveTemplateError) throw listingsState.saveTemplateError;
     return {
       id: "created-template",
       ...input,
@@ -442,6 +449,7 @@ vi.mock("@/services/listingsClient", () => ({
   }),
   updateListingTemplate: vi.fn(async (id: string, input) => {
     listingsState.updateTemplateCalls.push({ id, input });
+    if (listingsState.saveTemplateError) throw listingsState.saveTemplateError;
     return {
       id,
       ...input,
@@ -451,6 +459,7 @@ vi.mock("@/services/listingsClient", () => ({
   }),
   deleteListingTemplate: vi.fn(async (id: string) => {
     listingsState.deleteTemplateCalls.push(id);
+    if (listingsState.deleteTemplateError) throw listingsState.deleteTemplateError;
     return { ok: true };
   }),
 }));
@@ -678,6 +687,7 @@ test("ListingTemplateManager creates, edits, deletes, and surfaces API errors", 
     act(() => {
       buttons().find((button) => button.textContent?.includes("New template"))?.click();
     });
+    expect(view.container.textContent).toContain("New listing template");
     act(() => {
       setInputValue(inputs()[0], "Homepage cards");
       setInputValue(inputs()[1], "homepage-cards");
@@ -690,6 +700,7 @@ test("ListingTemplateManager creates, edits, deletes, and surfaces API errors", 
     act(() => {
       buttons().find((button) => button.textContent?.includes("Save template"))?.click();
     });
+    await flush();
 
     expect(listingsState.createTemplateCalls[0]).toEqual(
       expect.objectContaining({
@@ -704,14 +715,86 @@ test("ListingTemplateManager creates, edits, deletes, and surfaces API errors", 
     );
     expect(listingsState.listTemplateCalls).toContain(true);
 
-    listingsState.templateError = listingsState.apiError("Template delete failed");
+    act(() => {
+      buttons().find((button) => button.textContent === "Edit")?.click();
+    });
+    act(() => {
+      setInputValue(inputs()[0], "Cards updated");
+      setInputValue(inputs()[1], "cards-updated");
+      setSelectValue(selects()[0], "grid");
+      setTextareaValue(textareas()[0], "Updated template");
+    });
+    act(() => {
+      buttons().find((button) => button.textContent?.includes("Save template"))?.click();
+    });
+    await flush();
+
+    expect(listingsState.updateTemplateCalls[0]).toEqual({
+      id: "template-1",
+      input: expect.objectContaining({
+        name: "Cards updated",
+        slug: "cards-updated",
+        description: "Updated template",
+        layout: "grid",
+      }),
+    });
+
+    listingsState.saveTemplateError = listingsState.apiError("Template save failed");
+    act(() => {
+      buttons().find((button) => button.textContent?.includes("New template"))?.click();
+    });
+    act(() => {
+      setInputValue(inputs()[0], "Broken template");
+      buttons().find((button) => button.textContent?.includes("Save template"))?.click();
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Template save failed");
+
+    listingsState.saveTemplateError = null;
+    listingsState.deleteTemplateError = listingsState.apiError("Template delete failed");
     act(() => {
       buttons().find((button) => button.textContent === "Delete")?.click();
     });
+    await flush();
 
     expect(listingsState.deleteTemplateCalls).toContain("template-1");
+    expect(view.container.textContent).toContain("Template delete failed");
   } finally {
     view.cleanup();
+  }
+});
+
+test("ListingTemplateManager shows loading, empty, and load-error states", async () => {
+  const { ListingTemplateManager } = await import(
+    "../../../core/admin/ui/listings/ListingTemplateManager"
+  );
+
+  listingsState.cachedTemplateItems = undefined;
+  listingsState.templateItems = [];
+  const emptyView = mount(<ListingTemplateManager />);
+
+  try {
+    expect(emptyView.container.textContent).toContain("Loading templates...");
+    await flush();
+    expect(emptyView.container.textContent).toContain("No listing templates yet.");
+  } finally {
+    emptyView.cleanup();
+  }
+
+  listingsState.reset();
+  listingsState.cachedTemplateItems = undefined;
+  listingsState.templateItems = [];
+  listingsState.templateError = listingsState.apiError("Templates load failed");
+
+  const errorView = mount(<ListingTemplateManager />);
+
+  try {
+    await flush();
+    expect(errorView.container.textContent).toContain("Unable to load templates");
+    expect(errorView.container.textContent).toContain("Templates load failed");
+  } finally {
+    errorView.cleanup();
   }
 });
 
