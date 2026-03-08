@@ -75,7 +75,8 @@ Current snapshot after the latest forms, listings, themes, booking, and widget-e
 - `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `74.33%` lines, `36.06%` branches
 - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `96.70%` lines, `64.00%` branches
 - `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `50.76%` lines, `35.33%` branches
-- aggregate `core/admin/ui/widgets/editors/*` -> `48.38%` lines, `48.45%` branches
+- `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `87.50%` lines, `66.07%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `50.61%` lines, `49.66%` branches
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
