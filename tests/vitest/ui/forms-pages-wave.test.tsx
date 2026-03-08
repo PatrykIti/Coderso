@@ -66,6 +66,30 @@ const formsPageState = vi.hoisted(() => {
 
   return {
     apiError,
+    form: {
+      ...form,
+      settings: {
+        ...form.settings,
+        automationRetry: {
+          ...form.settings.automationRetry,
+        },
+      },
+    },
+    field: {
+      ...field,
+      settings: {
+        ...field.settings,
+      },
+    },
+    action: {
+      ...action,
+      condition: {
+        ...action.condition,
+      },
+      config: {
+        ...action.config,
+      },
+    },
     formsList: [form],
     formDetail: { form, fields: [field] },
     formActions: [action],
@@ -87,6 +111,34 @@ const formsPageState = vi.hoisted(() => {
     updateActionsCalls: [] as Array<{ id: string; actions: Array<Record<string, unknown>> }>,
     navigateCalls: [] as string[],
     reset() {
+      this.form = {
+        ...form,
+        settings: {
+          ...form.settings,
+          automationRetry: {
+            ...form.settings.automationRetry,
+          },
+        },
+      };
+      this.field = {
+        ...field,
+        settings: {
+          ...field.settings,
+        },
+      };
+      this.action = {
+        ...action,
+        condition: {
+          ...action.condition,
+        },
+        config: {
+          ...action.config,
+        },
+      };
+      this.formsList = [this.form];
+      this.formDetail = { form: this.form, fields: [this.field] };
+      this.formActions = [this.action];
+      this.contentTypes = [{ id: "articles", name: "Articles" }];
       this.listError = null;
       this.createError = null;
       this.deleteError = null;
@@ -558,6 +610,26 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+const flush = async () => {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
+const clickByText = (container: HTMLElement, text: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(text)
+  );
+  if (!button) {
+    throw new Error(`Missing button: ${text}`);
+  }
+  act(() => {
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
 afterEach(() => {
   formsPageState.reset();
   window.history.replaceState({}, "", "/");
@@ -649,5 +721,151 @@ test("FormListPage creates, deletes, and reports form errors", async () => {
     });
   } finally {
     view.cleanup();
+  }
+});
+
+test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updates, saves, previews, and opens logs", async () => {
+  window.history.replaceState({}, "", "/admin/forms/form-1");
+  const originalConfirm = window.confirm;
+  const confirmSpy = vi.fn(() => true);
+  Object.defineProperty(window, "confirm", {
+    value: confirmSpy,
+    configurable: true,
+    writable: true,
+  });
+  const { FormBuilderPage } = await import(
+    "../../../core/admin/ui/forms/FormBuilderPage"
+  );
+
+  const view = mount(<FormBuilderPage />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Contact");
+    expect(view.container.textContent).toContain("canvas:1");
+    expect(formsPageState.detailCalls).toContainEqual({ id: "form-1", force: true });
+    expect(formsPageState.actionsCalls).toContainEqual({ id: "form-1", force: true });
+
+    clickByText(view.container, "open-library");
+    clickByText(view.container, "add-library-field");
+    clickByText(view.container, "duplicate-field");
+    await flush();
+
+    expect(view.container.textContent).toContain("canvas:3");
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    clickByText(view.container, "Runtime preview");
+    await flush();
+
+    expect(view.container.textContent).toContain(
+      "Save form before opening runtime preview."
+    );
+
+    clickByText(view.container, "canvas-select-form");
+    clickByText(view.container, "change-form-name");
+    clickByText(view.container, "change-form-settings");
+    clickByText(view.container, "change-retry");
+    clickByText(view.container, "change-step-titles");
+    clickByText(view.container, "apply-preset");
+    await flush();
+
+    expect(confirmSpy).toHaveBeenCalled();
+
+    formsPageState.formDetail = {
+      form: {
+        ...formsPageState.form,
+        name: "Remote Contact",
+      },
+      fields: [formsPageState.formDetail.fields[0]!],
+    };
+
+    await act(async () => {
+      for (const subscriber of formsPageState.subscribers) {
+        subscriber({ key: "formDetail:form-1" });
+      }
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("Updated in another tab");
+
+    clickByText(view.container, "Refresh");
+    await flush();
+
+    expect(view.container.textContent).toContain("Remote Contact");
+    expect(view.container.textContent).not.toContain("Updated in another tab");
+
+    clickByText(view.container, "canvas-select-form");
+    clickByText(view.container, "change-form-name");
+    await flush();
+
+    clickByText(view.container, "Save form");
+    await flush();
+
+    expect(formsPageState.updateFormCalls[0]).toEqual({
+      id: "form-1",
+      input: expect.objectContaining({
+        name: "Updated form name",
+      }),
+    });
+    expect(formsPageState.updateFieldsCalls[0]?.id).toBe("form-1");
+    expect(formsPageState.updateFieldsCalls[0]?.fields.length).toBeGreaterThan(0);
+    expect(formsPageState.updateActionsCalls[0]?.id).toBe("form-1");
+    expect(view.container.textContent).toContain("Form saved.");
+
+    clickByText(view.container, "Runtime preview");
+    await flush();
+
+    expect(view.container.textContent).toContain("runtime-preview:open:clean");
+
+    clickByText(view.container, "Action logs");
+    expect(formsPageState.navigateCalls).toContain("/forms/form-1/action-runs");
+  } finally {
+    Object.defineProperty(window, "confirm", {
+      value: originalConfirm,
+      configurable: true,
+      writable: true,
+    });
+    view.cleanup();
+  }
+});
+
+test("FormBuilderPage reports load and save errors", async () => {
+  window.history.replaceState({}, "", "/admin/forms/form-1");
+  const { FormBuilderPage } = await import(
+    "../../../core/admin/ui/forms/FormBuilderPage"
+  );
+
+  formsPageState.formDetail = null as never;
+  formsPageState.detailError = formsPageState.apiError("Detail failed");
+
+  const loadView = mount(<FormBuilderPage />);
+
+  try {
+    await flush();
+
+    expect(loadView.container.textContent).toContain("Unable to load form");
+    expect(loadView.container.textContent).toContain("Detail failed");
+  } finally {
+    loadView.cleanup();
+  }
+
+  formsPageState.reset();
+  window.history.replaceState({}, "", "/admin/forms/form-1");
+
+  const saveView = mount(<FormBuilderPage />);
+
+  try {
+    await flush();
+
+    formsPageState.updateError = formsPageState.apiError("Save failed");
+    clickByText(saveView.container, "add-library-field");
+    await flush();
+    clickByText(saveView.container, "Save form");
+    await flush();
+
+    expect(saveView.container.textContent).toContain("Save failed");
+  } finally {
+    saveView.cleanup();
   }
 });
