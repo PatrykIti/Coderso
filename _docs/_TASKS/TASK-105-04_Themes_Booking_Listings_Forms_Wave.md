@@ -50,18 +50,18 @@ Completed slices:
 - commerce leaf panels and small editor sections
 - form leaf: `FormCanvas`
 - forms support panels and list/create flow
-- direct builder shell and automation coverage for `FormBuilderPage` and `FormActionsPanel`
+- direct builder shell, automation, and action-log coverage for `FormBuilderPage`, `FormActionsPanel`, and `FormActionLogsPage`
 - listings hooks, list/search/filter flows, and template manager
 
 Current `2026-03-08` forms snapshot after the latest slice:
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines / `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines / `63.12%` branches
-- `core/admin/ui/forms/FormActionLogsPage.tsx` -> `30.35%` lines / `6.81%` branches
-- aggregate `core/admin/ui/forms/*` average -> `81.99%` lines / `64.40%` branches across `13` tracked files
+- `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines / `77.27%` branches
+- aggregate `core/admin/ui/forms/*` average -> `86.06%` lines / `66.93%` branches across `13` tracked files
 
 Remaining slices:
 - deeper listing editor flow and manager branches
-- `FormActionLogsPage` and remaining list/runtime-preview/list-page branches beyond the current builder/actions slice
+- remaining list/runtime-preview/list-page branches beyond the current builder/actions slice
 - broader theme drawers and `ThemesPage`
 
 ## Testing Requirements

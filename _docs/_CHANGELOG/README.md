@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 372 | 2026-03-08 | TASK-105 form action logs coverage follow-up | QA/Platform |
 | 371 | 2026-03-08 | TASK-105 forms builder and automation coverage follow-up | QA/Platform |
 | 370 | 2026-03-08 | TASK-105 coverage gap rebaseline and lane backlog | QA/Docs |
 | 369 | 2026-03-06 | TASK-105 forms wave progress | QA/Platform |

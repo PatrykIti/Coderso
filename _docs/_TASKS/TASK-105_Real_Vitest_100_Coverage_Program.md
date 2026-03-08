@@ -51,14 +51,15 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog already covered by open wave clusters `TASK-105-04..07`: `161`
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
-Current snapshot after the first deeper `TASK-105-04` follow-up slice (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `48.62`
-- `% Branch`: `43.25`
-- `% Funcs`: `43.35`
-- `% Lines`: `51.23`
+Current snapshot after the latest forms follow-up slices (from `bun run test:coverage` on 2026-03-08):
+- `% Stmts`: `48.78`
+- `% Branch`: `43.44`
+- `% Funcs`: `43.52`
+- `% Lines`: `51.40`
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines, `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines, `63.12%` branches
-- `core/admin/ui/forms/FormActionLogsPage.tsx` remains the main open forms hotspot at `30.35%` lines
+- `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines, `77.27%` branches
+- aggregate `core/admin/ui/forms/*` -> `86.06%` lines, `66.93%` branches
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -150,7 +151,7 @@ Completed waves:
 - `recaptcha` and `blockDnD` utility coverage
 - first substantial `listings` wave (`filters`, `search`, `list`, `template manager`, hooks)
 - forms support wave (`useForms`, list/create flow, settings/runtime panels)
-- direct builder and automation coverage for `FormBuilderPage` and `FormActionsPanel`
+- direct builder, automation, and action-log coverage for `FormBuilderPage`, `FormActionsPanel`, and `FormActionLogsPage`
 
 Remaining large clusters:
 - forms builder pages and panels
