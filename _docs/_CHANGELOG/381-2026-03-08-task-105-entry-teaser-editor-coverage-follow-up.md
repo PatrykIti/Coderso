@@ -11,8 +11,8 @@
 - This moves the file out of the near-zero bucket and starts the real `TASK-105-06` widget-editor wave in the proper Vitest lane instead of relying on the older Bun-owned widget test.
 
 ### Coverage Progress
-- Previous snapshot after the theme-focused follow-up slices: `54.10% stmts`, `45.23% branch`, `46.41% funcs`, `54.10% lines`
-- Current snapshot after this widget-editor slice: `54.70% stmts`, `45.87% branch`, `47.32% funcs`, `54.70% lines`
+- Previous snapshot after the theme-focused follow-up slices: `51.04% stmts`, `44.91% branch`, `45.79% funcs`, `53.66% lines`
+- Current snapshot after this widget-editor slice: `52.40% stmts`, `46.13% branch`, `48.07% funcs`, `55.01% lines`
 - `EntryTeaserEditors.tsx` moved to `90.84%` lines / `66.04%` branches
 - Combined `core/admin/ui/widgets/editors/*` average now sits at `46.82%` lines / `47.25%` branches
 

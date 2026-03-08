@@ -11,8 +11,8 @@
 - This was delivered in parallel as a worker-owned slice and then integrated into the main `task-105-coverage-analysis` branch.
 
 ### Coverage Progress
-- Previous snapshot after `EntryTeaserEditors` and `ListingFiltersEditors`: `54.91% stmts`, `46.01% branch`, `47.82% funcs`, `54.91% lines`
-- Current snapshot after this `PostsFeedEditors` follow-up: `55.01% stmts`, `46.13% branch`, `48.07% funcs`, `55.01% lines`
+- Previous snapshot after `EntryTeaserEditors` and `ListingFiltersEditors`: `52.40% stmts`, `46.13% branch`, `48.07% funcs`, `55.01% lines`
+- Current snapshot after this `PostsFeedEditors` follow-up remains `52.40% stmts`, `46.13% branch`, `48.07% funcs`, `55.01% lines`
 - `PostsFeedEditors.tsx` moved to `96.70%` lines / `64.00%` branches
 - Combined `core/admin/ui/widgets/editors/*` average moved to `48.38%` lines / `48.45%` branches
 

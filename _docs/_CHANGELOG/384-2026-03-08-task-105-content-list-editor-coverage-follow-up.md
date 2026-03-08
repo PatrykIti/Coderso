@@ -11,7 +11,7 @@
 - This gives the file a direct Vitest owner instead of leaving it visible only through older broad widget coverage.
 
 ### Coverage Progress
-- Current snapshot after the latest widget-editor follow-up remains `54.91% stmts`, `46.01% branch`, `47.82% funcs`, `54.91% lines`
+- Current snapshot after the latest widget-editor follow-up remains `52.40% stmts`, `46.13% branch`, `48.07% funcs`, `55.01% lines`
 - `ContentListEditors.tsx` currently sits at `50.76%` lines / `35.33%` branches after this first direct suite
 - Combined `core/admin/ui/widgets/editors/*` average remains `48.38%` lines / `48.45%` branches
 

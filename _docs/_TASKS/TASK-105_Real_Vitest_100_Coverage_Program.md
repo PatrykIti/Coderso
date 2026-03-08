@@ -52,7 +52,7 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
 Current snapshot after the latest forms, listings, themes, booking, and widget-editor follow-up slices (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `55.01`
+- `% Stmts`: `52.40`
 - `% Branch`: `46.13`
 - `% Funcs`: `48.07`
 - `% Lines`: `55.01`

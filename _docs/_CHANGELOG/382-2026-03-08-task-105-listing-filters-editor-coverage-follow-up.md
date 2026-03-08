@@ -11,8 +11,8 @@
 - This continues the real widget-editor move into the Vitest lane after `EntryTeaserEditors`, reducing reliance on older renderer-level tests for editor confidence.
 
 ### Coverage Progress
-- Previous snapshot after the first widget-editor slice: `54.70% stmts`, `45.87% branch`, `47.32% funcs`, `54.70% lines`
-- Current snapshot after this follow-up: `54.91% stmts`, `46.01% branch`, `47.82% funcs`, `54.91% lines`
+- Previous snapshot after the first widget-editor slice: `52.40% stmts`, `46.13% branch`, `48.07% funcs`, `55.01% lines`
+- Current snapshot after this follow-up remains `52.40% stmts`, `46.13% branch`, `48.07% funcs`, `55.01% lines`
 - `ListingFiltersEditors.tsx` moved to `74.33%` lines / `36.06%` branches
 - Combined `core/admin/ui/widgets/editors/*` average now sits at `47.79%` lines / `47.73%` branches
 
