@@ -52,10 +52,10 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
 Current snapshot after the latest forms, listings, themes, booking, and widget-editor follow-up slices (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `54.70`
-- `% Branch`: `45.87`
-- `% Funcs`: `47.32`
-- `% Lines`: `54.70`
+- `% Stmts`: `54.91`
+- `% Branch`: `46.01`
+- `% Funcs`: `47.82`
+- `% Lines`: `54.91`
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines, `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines, `63.12%` branches
 - `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines, `77.27%` branches
@@ -72,7 +72,8 @@ Current snapshot after the latest forms, listings, themes, booking, and widget-e
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `72.99%` lines, `74.35%` branches
 - aggregate `core/admin/ui/themes/*` -> `90.78%` lines, `73.47%` branches
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines, `66.04%` branches
-- aggregate `core/admin/ui/widgets/editors/*` -> `46.82%` lines, `47.25%` branches
+- `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `74.33%` lines, `36.06%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `47.79%` lines, `47.73%` branches
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -94,7 +95,7 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `18.18%`
 - `core/admin/ui/settings/SessionsPage.tsx` -> `21.62%`
 - `core/admin/ui/settings/ApiKeysPage.tsx` -> `24.35%`
-- `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `36.28%`
+- `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `50.76%`
 
 ### Zero-gap waves already cleared
 
@@ -114,7 +115,7 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 | Area | Current line coverage | Notes |
 |------|-----------------------|-------|
 | `core/admin/ui/booking` | `26.37%` | shell-heavy page and helper branches still mostly open |
-| `core/admin/ui/widgets/editors` | `39.72%` | still the largest editor-only backlog in the Vitest lane |
+| `core/admin/ui/widgets/editors` | `47.79%` | still the largest editor-only backlog in the Vitest lane |
 | `core/admin/ui/settings` | `40.22%` | large admin surface not represented by the original wave split |
 | `core/admin/ui/forms` | `50.34%` | builder shell, action panel, and logs page remain open |
 | `core/admin/ui/listings` | `50.67%` | editor flow and binding editor still branch-light |
@@ -172,6 +173,8 @@ Completed waves:
 - shell-level action coverage for `BookingPage`
 - interactive page-level coverage for `ThemesPage`
 - direct create/edit/no-template coverage for `ThemeProfileDrawer`
+- direct Vitest coverage for `EntryTeaserEditors`
+- direct Vitest coverage for `ListingFiltersEditors`
 
 Remaining large clusters:
 - forms builder pages and panels
