@@ -73,6 +73,7 @@ const listingsState = vi.hoisted(() => {
     queryError: null as unknown,
     templateError: null as unknown,
     detailError: null as unknown,
+    previewQueryError: null as unknown,
     detailResult: {
       id: "query-1",
       name: "Homepage listing",
@@ -124,6 +125,7 @@ const listingsState = vi.hoisted(() => {
       this.queryError = null;
       this.templateError = null;
       this.detailError = null;
+      this.previewQueryError = null;
       this.detailResult = {
         id: "query-1",
         name: "Homepage listing",
@@ -392,10 +394,11 @@ vi.mock("@/services/listingsClient", () => ({
   getListingQueryCached: vi.fn(async (id: string, { force }: { force?: boolean } = {}) => {
     listingsState.getDetailCalls.push({ id, force });
     if (listingsState.detailError) throw listingsState.detailError;
-    return listingsState.detailResult;
+    return JSON.parse(JSON.stringify(listingsState.detailResult));
   }),
   previewListingQuery: vi.fn(async (query) => {
     listingsState.previewQueryCalls.push(query);
+    if (listingsState.previewQueryError) throw listingsState.previewQueryError;
     return listingsState.previewListingQueryResult;
   }),
   previewListingFilters: vi.fn(async (input) => {
@@ -599,6 +602,59 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+const flush = async () => {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
+const clickButtonByText = (container: HTMLElement, text: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(text)
+  );
+  if (!button) {
+    throw new Error(`Missing button: ${text}`);
+  }
+  act(() => {
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
+  Array.from(container.querySelectorAll("input")).find(
+    (element) =>
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
+  );
+
+const findInputsByPlaceholder = (container: HTMLElement, placeholder: string) =>
+  Array.from(container.querySelectorAll("input")).filter(
+    (element) =>
+      element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
+  );
+
+const findTextareaByPlaceholder = (container: HTMLElement, placeholder: string) =>
+  Array.from(container.querySelectorAll("textarea")).find(
+    (element) =>
+      element instanceof HTMLTextAreaElement &&
+      element.getAttribute("placeholder") === placeholder
+  );
+
+const findSelectsByOptions = (container: ParentNode, values: string[]) =>
+  Array.from(container.querySelectorAll("select")).filter((element) => {
+    if (!(element instanceof HTMLSelectElement)) return false;
+    const optionValues = Array.from(element.options).map((option) => option.value);
+    return values.every((value) => optionValues.includes(value));
+  });
+
+const findSelectByOptions = (container: ParentNode, values: string[]) =>
+  Array.from(container.querySelectorAll("select")).find((element) => {
+    if (!(element instanceof HTMLSelectElement)) return false;
+    const optionValues = Array.from(element.options).map((option) => option.value);
+    return values.every((value) => optionValues.includes(value));
+  });
+
 afterEach(() => {
   listingsState.reset();
   window.history.replaceState({}, "", "/");
@@ -767,19 +823,257 @@ test("ListingListPage deletes queries and shows action errors", async () => {
       buttons().find((button) => button.textContent === "Delete")?.click();
     });
     expect(listingsState.deleteQueryCalls).toContain("11111111-1111-4111-8111-111111111111");
-
-    vi.doMock("@/services/listingsClient", async () => {
-      const actual = await vi.importActual<Record<string, unknown>>(
-        "@/services/listingsClient"
-      );
-      return {
-        ...actual,
-        deleteListingQuery: vi.fn(async () => {
-          throw listingsState.apiError("Delete failed");
-        }),
-      };
-    });
   } finally {
     view.cleanup();
+  }
+});
+
+test("ListingEditorPage edits query state, previews normalized payload, discards changes, saves, and refreshes from cache bus", async () => {
+  window.history.replaceState({}, "", "/admin/coderso/listings/query-1");
+  const { ListingEditorPage } = await import(
+    "../../../core/admin/ui/listings/ListingEditorPage"
+  );
+
+  const view = mount(<ListingEditorPage />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Edit listing query");
+    expect(view.container.textContent).toContain("Homepage listing");
+    expect(listingsState.getDetailCalls).toContainEqual({ id: "query-1", force: true });
+
+    act(() => {
+      setInputValue(
+        findInputByPlaceholder(view.container, "Homepage featured cards"),
+        "Homepage cards"
+      );
+      setTextareaValue(
+        findTextareaByPlaceholder(view.container, "Optional context for editors."),
+        "Updated cards"
+      );
+    });
+
+    const sourceSelect = findSelectByOptions(view.container, [
+      "entries",
+      "posts",
+      "users",
+      "taxonomies",
+    ]);
+    act(() => {
+      setSelectValue(sourceSelect, "posts");
+    });
+    expect(view.container.textContent).toContain(
+      "Uses the default post content type mapping."
+    );
+
+    const includeDraftsSelect = findSelectByOptions(view.container, ["no", "yes"]);
+    act(() => {
+      setSelectValue(includeDraftsSelect, "yes");
+    });
+
+    clickButtonByText(view.container, "Add filter");
+    clickButtonByText(view.container, "Add sort");
+
+    const sortFieldInputs = Array.from(view.container.querySelectorAll("input")).filter(
+      (element) =>
+        element instanceof HTMLInputElement &&
+        element.getAttribute("placeholder") === "sort field"
+    );
+    const numericInputs = Array.from(view.container.querySelectorAll("input")).filter(
+      (element) => element instanceof HTMLInputElement && element.getAttribute("type") === "number"
+    );
+    const fieldsTextarea = findTextareaByPlaceholder(
+      view.container,
+      "id, title, slug, status"
+    );
+    const templateSelect = findSelectByOptions(view.container, ["__none__", "template-1"]);
+
+    act(() => {
+      setInputValue(
+        findInputsByPlaceholder(view.container, "field path (e.g. status)").at(-1),
+        "category"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, [
+          "eq",
+          "neq",
+          "lt",
+          "lte",
+          "gt",
+          "gte",
+          "contains",
+          "in",
+          "nin",
+          "between",
+          "exists",
+        ]).at(-1),
+        "in"
+      );
+      setInputValue(sortFieldInputs.at(-1), "title");
+      setSelectValue(
+        findSelectsByOptions(view.container, ["asc", "desc"]).at(-1),
+        "asc"
+      );
+      setInputValue(numericInputs[0], "24");
+      setInputValue(numericInputs[1], "5");
+      setTextareaValue(fieldsTextarea, "id, title, slug");
+      setSelectValue(templateSelect, "template-1");
+    });
+    await flush();
+
+    act(() => {
+      setInputValue(
+        findInputsByPlaceholder(view.container, "value (comma separated for arrays)").at(-1),
+        "featured, news"
+      );
+    });
+
+    clickButtonByText(view.container, "Run preview");
+    await flush();
+
+    expect(listingsState.previewQueryCalls.at(-1)).toEqual({
+      source: "posts",
+      sourceConfig: { includeDrafts: true },
+      filters: [
+        { field: "status", op: "eq", value: "published" },
+        { field: "category", op: "in", value: ["featured", "news"] },
+      ],
+      sort: [
+        { field: "updatedAt", dir: "desc" },
+        { field: "title", dir: "asc" },
+      ],
+      pagination: { limit: 24, offset: 5 },
+      fields: ["id", "title", "slug"],
+    });
+    expect(view.container.textContent).toContain("1 matching row");
+    expect(view.container.textContent).toContain("Preview row");
+
+    clickButtonByText(view.container, "Discard");
+    await flush();
+
+    clickButtonByText(view.container, "Save query");
+    await flush();
+
+    expect(listingsState.updateQueryCalls[0]).toEqual({
+      id: "query-1",
+      input: {
+        name: "Homepage listing",
+        description: "Homepage cards",
+        query: listingsState.detailResult.query,
+      },
+    });
+
+    listingsState.detailResult = {
+      ...listingsState.detailResult,
+      name: "Remote listing",
+      description: "Remote cards",
+    };
+
+    await act(async () => {
+      for (const subscriber of listingsState.subscribers) {
+        subscriber({ key: "listingQueryDetail:query-1" });
+      }
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("Remote listing");
+
+    clickButtonByText(view.container, "Back to list");
+    expect(listingsState.navigateCalls).toContain("/coderso/listings");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ListingEditorPage create mode creates queries and reports preview/load errors", async () => {
+  const { ListingEditorPage } = await import(
+    "../../../core/admin/ui/listings/ListingEditorPage"
+  );
+
+  window.history.replaceState({}, "", "/admin/coderso/listings/new");
+  const createView = mount(<ListingEditorPage />);
+
+  try {
+    await flush();
+
+    expect(createView.container.textContent).toContain("New listing query");
+    expect(createView.container.textContent).toContain("No filters yet.");
+
+    act(() => {
+      setInputValue(
+        findInputByPlaceholder(createView.container, "Homepage featured cards"),
+        "Taxonomy query"
+      );
+      setTextareaValue(
+        findTextareaByPlaceholder(createView.container, "Optional context for editors."),
+        "Taxonomy listing"
+      );
+    });
+
+    act(() => {
+      setSelectValue(
+        findSelectByOptions(createView.container, [
+          "entries",
+          "posts",
+          "users",
+          "taxonomies",
+        ]),
+        "taxonomies"
+      );
+    });
+
+    act(() => {
+      setInputValue(
+        findInputByPlaceholder(createView.container, "taxonomy-id"),
+        "categories"
+      );
+    });
+
+    listingsState.previewQueryError = listingsState.apiError("Preview failed");
+
+    clickButtonByText(createView.container, "Run preview");
+    await flush();
+
+    expect(createView.container.textContent).toContain("Preview failed");
+
+    listingsState.previewQueryError = null;
+    listingsState.previewListingQueryResult = {
+      total: 0,
+      rows: [],
+    };
+
+    clickButtonByText(createView.container, "Save query");
+    await flush();
+
+    expect(listingsState.createQueryCalls[0]).toEqual({
+      name: "Taxonomy query",
+      description: "Taxonomy listing",
+      query: expect.objectContaining({
+        source: "taxonomies",
+        sourceConfig: { taxonomyId: "categories" },
+        filters: [],
+        sort: [{ field: "updatedAt", dir: "desc" }],
+        pagination: { limit: 12, offset: 0 },
+        fields: expect.arrayContaining(["id", "title"]),
+      }),
+    });
+    expect(listingsState.navigateCalls).toContain("/coderso/listings/created-query");
+  } finally {
+    createView.cleanup();
+  }
+
+  listingsState.reset();
+  listingsState.detailError = listingsState.apiError("Detail failed");
+  window.history.replaceState({}, "", "/admin/coderso/listings/query-1");
+
+  const errorView = mount(<ListingEditorPage />);
+
+  try {
+    await flush();
+    expect(errorView.container.textContent).toContain("Listing query error");
+    expect(errorView.container.textContent).toContain("Detail failed");
+  } finally {
+    errorView.cleanup();
   }
 });

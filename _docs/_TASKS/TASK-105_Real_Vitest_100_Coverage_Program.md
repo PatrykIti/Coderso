@@ -51,15 +51,17 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog already covered by open wave clusters `TASK-105-04..07`: `161`
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
-Current snapshot after the latest forms follow-up slices (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `48.78`
-- `% Branch`: `43.44`
-- `% Funcs`: `43.52`
-- `% Lines`: `51.40`
+Current snapshot after the latest forms and listings follow-up slices (from `bun run test:coverage` on 2026-03-08):
+- `% Stmts`: `49.40`
+- `% Branch`: `43.90`
+- `% Funcs`: `44.26`
+- `% Lines`: `52.03`
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines, `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines, `63.12%` branches
 - `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines, `77.27%` branches
 - aggregate `core/admin/ui/forms/*` -> `86.06%` lines, `66.93%` branches
+- `core/admin/ui/listings/ListingEditorPage.tsx` -> `89.79%` lines, `72.99%` branches
+- aggregate `core/admin/ui/listings/*` -> `85.98%` lines, `64.15%` branches
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
@@ -81,7 +83,7 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 - `core/admin/ui/popups/components/PopupEditorForm.tsx` -> `13.04%`
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `18.18%`
 - `core/admin/ui/settings/SessionsPage.tsx` -> `21.62%`
-- `core/admin/ui/listings/ListingEditorPage.tsx` -> `22.95%`
+- `core/admin/ui/booking/BookingPage.tsx` -> `23.72%`
 
 ### Zero-gap waves already cleared
 
@@ -152,6 +154,7 @@ Completed waves:
 - first substantial `listings` wave (`filters`, `search`, `list`, `template manager`, hooks)
 - forms support wave (`useForms`, list/create flow, settings/runtime panels)
 - direct builder, automation, and action-log coverage for `FormBuilderPage`, `FormActionsPanel`, and `FormActionLogsPage`
+- direct editor coverage for `ListingEditorPage`
 
 Remaining large clusters:
 - forms builder pages and panels

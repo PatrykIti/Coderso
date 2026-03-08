@@ -51,7 +51,7 @@ Completed slices:
 - form leaf: `FormCanvas`
 - forms support panels and list/create flow
 - direct builder shell, automation, and action-log coverage for `FormBuilderPage`, `FormActionsPanel`, and `FormActionLogsPage`
-- listings hooks, list/search/filter flows, and template manager
+- listings hooks, list/search/filter flows, template manager, and direct `ListingEditorPage` coverage
 
 Current `2026-03-08` forms snapshot after the latest slice:
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines / `65.95%` branches
@@ -59,8 +59,14 @@ Current `2026-03-08` forms snapshot after the latest slice:
 - `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines / `77.27%` branches
 - aggregate `core/admin/ui/forms/*` average -> `86.06%` lines / `66.93%` branches across `13` tracked files
 
+Current `2026-03-08` listings snapshot after the latest slice:
+- `core/admin/ui/listings/ListingEditorPage.tsx` -> `89.79%` lines / `72.99%` branches
+- `core/admin/ui/listings/ListingTemplateManager.tsx` -> `68.96%` lines / `27.77%` branches
+- `core/admin/ui/listings/components/BindingEditor.tsx` -> `29.85%` lines / `20.68%` branches
+- aggregate `core/admin/ui/listings/*` average -> `85.98%` lines / `64.15%` branches across `10` tracked files
+
 Remaining slices:
-- deeper listing editor flow and manager branches
+- deeper listing manager and binding-editor branches
 - remaining list/runtime-preview/list-page branches beyond the current builder/actions slice
 - broader theme drawers and `ThemesPage`
 
