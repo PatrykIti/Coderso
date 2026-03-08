@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 384 | 2026-03-08 | TASK-105 content list editor coverage follow-up | QA/Platform |
+| 384 | 2026-03-08 | TASK-105 content list editor coverage follow-up | QA/Platform |
 | 383 | 2026-03-08 | TASK-105 posts feed editor coverage follow-up | QA/Platform |
 | 382 | 2026-03-08 | TASK-105 listing filters editor coverage follow-up | QA/Platform |
 | 381 | 2026-03-08 | TASK-105 entry teaser editor coverage follow-up | QA/Platform |
