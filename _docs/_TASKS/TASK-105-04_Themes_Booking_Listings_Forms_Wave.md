@@ -72,8 +72,8 @@ Current `2026-03-08` listings snapshot after the latest slice:
 Current `2026-03-08` themes snapshot after the latest slice:
 - `core/admin/ui/themes/ThemesPage.tsx` -> `90.67%` lines / `75.71%` branches
 - `core/admin/ui/themes/ThemeProfileDrawer.tsx` -> `100.00%` lines / `94.59%` branches
-- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `62.04%` lines / `71.79%` branches
-- aggregate `core/admin/ui/themes/*` average -> `89.78%` lines / `73.24%` branches across `11` tracked files
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `72.99%` lines / `74.35%` branches
+- aggregate `core/admin/ui/themes/*` average -> `90.78%` lines / `73.47%` branches across `11` tracked files
 
 Current `2026-03-08` booking snapshot after the latest slice:
 - `core/admin/ui/booking/BookingPage.tsx` -> `90.11%` lines / `63.25%` branches
@@ -82,7 +82,7 @@ Current `2026-03-08` booking snapshot after the latest slice:
 
 Remaining slices:
 - remaining list/runtime-preview/list-page branches beyond the current builder/actions slice
-- `ThemeTemplateDrawer` and any remaining broader theme-drawer/page branches
+- any residual `ThemeTemplateDrawer` branches plus broader non-wave backlog after `TASK-105-04`
 - residual booking helper/page branches beyond the current shell slice
 
 ## Testing Requirements

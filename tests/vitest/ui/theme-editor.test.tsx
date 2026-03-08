@@ -137,6 +137,9 @@ const setInputValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
+const findColorInputs = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll("input[type='color']")) as HTMLInputElement[];
+
 const clickButtonByText = (container: HTMLElement, text: string) => {
   const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
     candidate.textContent?.includes(text)
@@ -301,6 +304,140 @@ test("ThemeTemplateDrawer edit mode renders template values and respects saving 
     expect(descriptionInput.value).toBe("Editorial palette");
     expect(nameInput.disabled).toBe(true);
     expect(descriptionInput.disabled).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, inputs, navigation, cards, and states", async () => {
+  const { ThemeTemplateDrawer } = await import(
+    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
+  );
+
+  const onOpenChange = vi.fn();
+  const onSave = vi.fn(async () => undefined);
+  const template = {
+    id: "tpl-2",
+    name: "Editorial",
+    description: "Editorial palette",
+    tokens: {
+      base: { bg: "#101010", surface: "#1b1b1b", border: "#303030", text: "#fafafa" },
+      typography: {
+        mutedText: "#b0b0b0",
+        sans: "Inter",
+        display: "Space Grotesk",
+        sm: "0.875rem",
+        md: "1rem",
+        lg: "1.125rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+      },
+      buttons: {
+        primary: { bg: "#fafafa", text: "#111111", hoverBg: "#e0e0e0", hoverText: "#111111" },
+        secondary: { bg: "#262626", text: "#ededed", hoverBg: "#303030", hoverText: "#ffffff" },
+        outline: { border: "#555555", text: "#f5f5f5", hoverBg: "#202020", hoverText: "#ffffff" },
+        ghost: { hoverBg: "#2a2a2a", hoverText: "#ffffff" },
+      },
+      inputs: {
+        bg: "#121212",
+        border: "#3a3a3a",
+        text: "#fafafa",
+        placeholder: "#9a9a9a",
+        focusRing: "#7dd3fc",
+      },
+      sidebar: {
+        bg: "#161616",
+        text: "#e5e5e5",
+        activeBg: "#262626",
+        activeText: "#ffffff",
+        hoverBg: "#202020",
+      },
+      topbar: {
+        bg: "#181818",
+        text: "#f5f5f5",
+        border: "#2d2d2d",
+      },
+      card: {
+        bg: "#181818",
+        border: "#2f2f2f",
+      },
+      state: {
+        success: "#10b981",
+        warning: "#f59e0b",
+        danger: "#ef4444",
+      },
+    },
+  };
+
+  const view = mount(
+    <ThemeTemplateDrawer
+      open
+      onOpenChange={onOpenChange}
+      template={template}
+      onSave={onSave}
+    />
+  );
+
+  try {
+    const colorInputs = findColorInputs(view.container);
+
+    act(() => {
+      setInputValue(
+        findInputByPlaceholder(
+          view.container,
+          '"IBM Plex Sans", Arial, sans-serif'
+        ),
+        '"Work Sans", Arial, sans-serif'
+      );
+      setInputValue(
+        findInputByPlaceholder(
+          view.container,
+          '"Space Grotesk", Arial, sans-serif'
+        ),
+        '"Archivo Black", Arial, sans-serif'
+      );
+      setInputValue(
+        findInputByPlaceholder(view.container, "1.5rem"),
+        "1.75rem"
+      );
+      setInputValue(colorInputs[5], "#123456");
+      setInputValue(colorInputs[19], "#224466");
+      setInputValue(colorInputs[24], "#335577");
+      setInputValue(colorInputs[30], "#446688");
+      setInputValue(colorInputs[32], "#55aa77");
+    });
+
+    const invertButtons = Array.from(view.container.querySelectorAll("button")).filter(
+      (candidate) => candidate.textContent?.includes("Invert section")
+    );
+
+    act(() => {
+      invertButtons[1]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      invertButtons[2]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      invertButtons[3]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      invertButtons[4]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      invertButtons[5]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      invertButtons[6]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    clickButtonByText(view.container, "Save Template");
+
+    const payload = onSave.mock.calls[0]?.[0];
+    expect(payload.name).toBe("Editorial");
+    expect(payload.description).toBe("Editorial palette");
+    expect(payload.tokens.typography).toEqual(
+      expect.objectContaining({
+        sans: '"Work Sans", Arial, sans-serif',
+        display: '"Archivo Black", Arial, sans-serif',
+        "2xl": "1.75rem",
+        mutedText: "#4f4f4f",
+      })
+    );
+    expect(payload.tokens.buttons.primary.bg).not.toBe(template.tokens.buttons.primary.bg);
+    expect(payload.tokens.inputs.bg).not.toBe(template.tokens.inputs.bg);
+    expect(payload.tokens.sidebar.bg).not.toBe(template.tokens.sidebar.bg);
+    expect(payload.tokens.card.bg).not.toBe(template.tokens.card.bg);
+    expect(payload.tokens.state.success).not.toBe(template.tokens.state.success);
   } finally {
     view.cleanup();
   }
