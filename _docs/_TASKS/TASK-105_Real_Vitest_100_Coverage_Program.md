@@ -51,11 +51,11 @@ Re-baseline before the next closure slices (from `bun run test:coverage` on 2026
 - backlog already covered by open wave clusters `TASK-105-04..07`: `161`
 - backlog still outside the original wave clusters and therefore not yet represented by the task split: `213`
 
-Current snapshot after the latest forms, listings, and themes follow-up slices (from `bun run test:coverage` on 2026-03-08):
-- `% Stmts`: `49.85`
-- `% Branch`: `44.24`
-- `% Funcs`: `44.91`
-- `% Lines`: `52.48`
+Current snapshot after the latest forms, listings, themes, and booking follow-up slices (from `bun run test:coverage` on 2026-03-08):
+- `% Stmts`: `51.04`
+- `% Branch`: `44.91`
+- `% Funcs`: `45.79`
+- `% Lines`: `53.66`
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines, `65.95%` branches
 - `core/admin/ui/forms/FormActionsPanel.tsx` -> `87.24%` lines, `63.12%` branches
 - `core/admin/ui/forms/FormActionLogsPage.tsx` -> `96.42%` lines, `77.27%` branches
@@ -64,6 +64,9 @@ Current snapshot after the latest forms, listings, and themes follow-up slices (
 - `core/admin/ui/listings/components/BindingEditor.tsx` -> `91.04%` lines, `74.13%` branches
 - `core/admin/ui/listings/ListingTemplateManager.tsx` -> `86.20%` lines, `72.22%` branches
 - aggregate `core/admin/ui/listings/*` -> `87.53%` lines, `65.00%` branches
+- `core/admin/ui/booking/BookingPage.tsx` -> `90.11%` lines, `63.25%` branches
+- `core/admin/ui/booking/bookingHelpers.ts` -> `84.48%` lines, `67.39%` branches
+- aggregate `core/admin/ui/booking/*` -> `65.04%` lines, `77.41%` branches
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `62.04%` lines, `71.79%` branches
 - aggregate `core/admin/ui/themes/*` -> `81.86%` lines, `64.99%` branches
 
@@ -87,7 +90,7 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 - `core/admin/ui/popups/components/PopupEditorForm.tsx` -> `13.04%`
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `18.18%`
 - `core/admin/ui/settings/SessionsPage.tsx` -> `21.62%`
-- `core/admin/ui/booking/BookingPage.tsx` -> `23.72%`
+- `core/admin/ui/themes/ThemesPage.tsx` -> `30.50%`
 
 ### Zero-gap waves already cleared
 
@@ -162,6 +165,7 @@ Completed waves:
 - direct interaction coverage for `BindingEditor`
 - deeper branch coverage for `ListingTemplateManager`
 - direct create/edit/save/invert coverage for `ThemeTemplateDrawer`
+- shell-level action coverage for `BookingPage`
 
 Remaining large clusters:
 - forms builder pages and panels

@@ -47,6 +47,7 @@ Completed slices:
 - theme leaf cards and `ThemeEditorPage`
 - booking tabs: `Availability`, `Services`, `Reservations`, `SlotPreview`
 - booking resource tab coverage
+- shell-level booking flows for `BookingPage`
 - commerce leaf panels and small editor sections
 - form leaf: `FormCanvas`
 - forms support panels and list/create flow
@@ -72,9 +73,15 @@ Current `2026-03-08` themes snapshot after the latest slice:
 - `core/admin/ui/themes/ThemesPage.tsx` -> `30.50%` lines / `22.85%` branches
 - aggregate `core/admin/ui/themes/*` average -> `81.86%` lines / `64.99%` branches across `11` tracked files
 
+Current `2026-03-08` booking snapshot after the latest slice:
+- `core/admin/ui/booking/BookingPage.tsx` -> `90.11%` lines / `63.25%` branches
+- `core/admin/ui/booking/bookingHelpers.ts` -> `84.48%` lines / `67.39%` branches
+- aggregate `core/admin/ui/booking/*` average -> `65.04%` lines / `77.41%` branches across `8` tracked files
+
 Remaining slices:
 - remaining list/runtime-preview/list-page branches beyond the current builder/actions slice
 - `ThemesPage`, `ThemeProfileDrawer`, and any remaining broader theme-drawer/page branches
+- residual booking helper/page branches beyond the current shell slice
 
 ## Testing Requirements
 

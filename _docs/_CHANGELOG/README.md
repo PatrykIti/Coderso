@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 377 | 2026-03-08 | TASK-105 booking page coverage follow-up | QA/Platform |
 | 376 | 2026-03-08 | TASK-105 theme template drawer coverage follow-up | QA/Platform |
 | 375 | 2026-03-08 | TASK-105 listing template manager coverage follow-up | QA/Platform |
 | 374 | 2026-03-08 | TASK-105 listing binding editor coverage follow-up | QA/Platform |
