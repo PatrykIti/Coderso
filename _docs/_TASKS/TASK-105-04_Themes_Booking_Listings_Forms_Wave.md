@@ -52,6 +52,7 @@ Completed slices:
 - forms support panels and list/create flow
 - direct builder shell, automation, and action-log coverage for `FormBuilderPage`, `FormActionsPanel`, and `FormActionLogsPage`
 - listings hooks, list/search/filter flows, deeper `ListingTemplateManager` branches, direct `ListingEditorPage` coverage, and direct `BindingEditor` coverage
+- direct create/edit/save/invert coverage for `ThemeTemplateDrawer`
 
 Current `2026-03-08` forms snapshot after the latest slice:
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines / `65.95%` branches
@@ -65,9 +66,15 @@ Current `2026-03-08` listings snapshot after the latest slice:
 - `core/admin/ui/listings/ListingTemplateManager.tsx` -> `86.20%` lines / `72.22%` branches
 - aggregate `core/admin/ui/listings/*` average -> `87.53%` lines / `65.00%` branches across `10` tracked files
 
+Current `2026-03-08` themes snapshot after the latest slice:
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `62.04%` lines / `71.79%` branches
+- `core/admin/ui/themes/ThemeProfileDrawer.tsx` -> `73.33%` lines / `56.75%` branches
+- `core/admin/ui/themes/ThemesPage.tsx` -> `30.50%` lines / `22.85%` branches
+- aggregate `core/admin/ui/themes/*` average -> `81.86%` lines / `64.99%` branches across `11` tracked files
+
 Remaining slices:
 - remaining list/runtime-preview/list-page branches beyond the current builder/actions slice
-- broader theme drawers and `ThemesPage`
+- `ThemesPage`, `ThemeProfileDrawer`, and any remaining broader theme-drawer/page branches
 
 ## Testing Requirements
 
