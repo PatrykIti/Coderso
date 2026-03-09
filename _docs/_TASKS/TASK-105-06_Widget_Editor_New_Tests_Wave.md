@@ -75,6 +75,9 @@ Completed slices:
 - direct Vitest coverage for `AccordionEditors`
 - direct Vitest coverage for `ToggleBlockEditors`
 - direct Vitest coverage for `FormEmbedEditors`
+- direct Vitest coverage for `StackEditors`
+- direct Vitest coverage for `SpacerEditors`
+- deeper branch coverage for `SplitLayoutEditors`
 
 Current `2026-03-09` widget editor snapshot after the latest utility-layout slice:
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines / `66.04%` branches
@@ -107,20 +110,21 @@ Current `2026-03-09` widget editor snapshot after the latest utility-layout slic
 - `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` -> `98.07%` lines / `64.28%` branches
 - `core/admin/ui/widgets/editors/SectionEditors.tsx` -> `88.52%` lines / `57.14%` branches
 - `core/admin/ui/widgets/editors/TabsEditors.tsx` -> `100.00%` lines / `64.86%` branches
-- `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` -> `98.00%` lines / `57.57%` branches
+- `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` -> `100.00%` lines / `96.96%` branches
 - `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` -> `100.00%` lines / `55.95%` branches
 - `core/admin/ui/widgets/editors/AccordionEditors.tsx` -> `100.00%` lines / `67.64%` branches
 - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` -> `100.00%` lines / `53.33%` branches
 - `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` -> `100.00%` lines / `79.31%` branches
-- aggregate `core/admin/ui/widgets/editors/*` -> `87.86%` lines / `66.05%` branches across `40` tracked files
+- `core/admin/ui/widgets/editors/StackEditors.tsx` -> `100.00%` lines / `58.33%` branches
+- `core/admin/ui/widgets/editors/SpacerEditors.tsx` -> `97.50%` lines / `71.42%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `90.08%` lines / `68.30%` branches across `40` tracked files
 
 Remaining hotspots in this wave:
-- `StackEditors.tsx`
-- `SpacerEditors.tsx`
 - `DividerEditors.tsx`
 - residual branch gaps in `GridColumnsEditors`
 - residual branch gaps in `ToggleBlockEditors`
-- residual branch gaps in `SplitLayoutEditors`
+- residual branch gaps in `StackEditors`
+- residual line/branch gaps in `SpacerEditors`
 
 ## Testing Requirements
 
