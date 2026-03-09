@@ -107,6 +107,21 @@ Additional widget-editor layout/social-proof snapshot (from `bun run test:covera
 - aggregate `core/admin/ui/widgets/editors/*` -> `68.06%` lines, `59.06%` branches
 - remaining widget-editor low-line hotspots after this slice -> `ContactEditors.tsx` (`35.71%`), `LogoCloudEditors.tsx` (`35.71%`), `RichTextSectionEditors.tsx` (`37.11%`), `BookingCalendarEditors.tsx` (`37.14%`), `CompareTimelineEditors.tsx` (`38.09%`)
 
+Additional widget-editor contact/content snapshot (from `bun run test:coverage` on 2026-03-09):
+- `% Stmts`: `57.61`
+- `% Branch`: `49.22`
+- `% Funcs`: `57.58`
+- `% Lines`: `60.53`
+- `core/admin/ui/widgets/editors/ContactEditors.tsx` -> `92.85%` lines, `63.80%` branches
+- `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` -> `100.00%` lines, `70.58%` branches
+- `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` -> `96.42%` lines, `66.37%` branches
+- `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` -> `88.23%` lines, `58.97%` branches
+- `core/admin/ui/widgets/editors/FooterEditors.tsx` -> `96.85%` lines, `89.47%` branches
+- `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` -> `98.80%` lines, `64.00%` branches
+- `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` -> `89.69%` lines, `63.79%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `79.78%` lines, `63.55%` branches
+- remaining widget-editor low-line hotspots after this slice -> `GalleryMosaicEditors.tsx` (`38.29%`), `CtaBannerEditors.tsx` (`38.33%`), `TimelineEditors.tsx` (`40.17%`), `NewsletterEditors.tsx` (`42.85%`), `SearchBoxEditors.tsx` (`46.15%`)
+
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
 
@@ -221,6 +236,13 @@ Completed waves:
 - direct Vitest coverage for `FaqAccordionEditors`
 - direct Vitest coverage for `HeroEditors`
 - direct Vitest coverage for `NavigationEditors`
+- direct Vitest coverage for `ContactEditors`
+- direct Vitest coverage for `BookingCalendarEditors`
+- direct Vitest coverage for `CompareTimelineEditors`
+- direct Vitest coverage for `FeatureGridEditors`
+- direct Vitest coverage for `FooterEditors`
+- direct Vitest coverage for `LogoCloudEditors`
+- direct Vitest coverage for `RichTextSectionEditors`
 
 Remaining large clusters:
 - forms builder pages and panels

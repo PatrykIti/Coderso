@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 388 | 2026-03-09 | TASK-105 contact and content widget editor coverage follow-up | QA/Platform |
 | 387 | 2026-03-09 | TASK-105 layout and social-proof widget editor coverage follow-up | QA/Platform |
 | 386 | 2026-03-09 | TASK-105 product and template widget editor coverage follow-up | QA/Platform |
 | 385 | 2026-03-08 | TASK-105 stats kpi editor coverage follow-up | QA/Platform |

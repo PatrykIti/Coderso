@@ -56,8 +56,15 @@ Completed slices:
 - direct Vitest coverage for `FaqAccordionEditors`
 - direct Vitest coverage for `HeroEditors`
 - direct Vitest coverage for `NavigationEditors`
+- direct Vitest coverage for `ContactEditors`
+- direct Vitest coverage for `BookingCalendarEditors`
+- direct Vitest coverage for `CompareTimelineEditors`
+- direct Vitest coverage for `FeatureGridEditors`
+- direct Vitest coverage for `FooterEditors`
+- direct Vitest coverage for `LogoCloudEditors`
+- direct Vitest coverage for `RichTextSectionEditors`
 
-Current `2026-03-09` widget editor snapshot after the latest layout/social-proof slice:
+Current `2026-03-09` widget editor snapshot after the latest contact/content/layout slice:
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines / `66.04%` branches
 - `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `100.00%` lines / `74.59%` branches
 - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `96.70%` lines / `64.00%` branches
@@ -74,15 +81,22 @@ Current `2026-03-09` widget editor snapshot after the latest layout/social-proof
 - `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` -> `89.77%` lines / `60.00%` branches
 - `core/admin/ui/widgets/editors/HeroEditors.tsx` -> `82.37%` lines / `82.26%` branches
 - `core/admin/ui/widgets/editors/NavigationEditors.tsx` -> `91.73%` lines / `72.12%` branches
-- aggregate `core/admin/ui/widgets/editors/*` -> `68.06%` lines / `59.06%` branches across `40` tracked files
+- `core/admin/ui/widgets/editors/ContactEditors.tsx` -> `92.85%` lines / `63.80%` branches
+- `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` -> `100.00%` lines / `70.58%` branches
+- `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` -> `96.42%` lines / `66.37%` branches
+- `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` -> `88.23%` lines / `58.97%` branches
+- `core/admin/ui/widgets/editors/FooterEditors.tsx` -> `96.85%` lines / `89.47%` branches
+- `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` -> `98.80%` lines / `64.00%` branches
+- `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` -> `89.69%` lines / `63.79%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `79.78%` lines / `63.55%` branches across `40` tracked files
 
 Remaining hotspots in this wave:
-- `ContactEditors.tsx`
-- `LogoCloudEditors.tsx`
-- `RichTextSectionEditors.tsx`
-- `BookingCalendarEditors.tsx`
-- `CompareTimelineEditors.tsx`
-- `FeatureGridEditors.tsx`
+- `GalleryMosaicEditors.tsx`
+- `CtaBannerEditors.tsx`
+- `TimelineEditors.tsx`
+- `NewsletterEditors.tsx`
+- `SearchBoxEditors.tsx`
+- `SectionEditors.tsx`
 
 ## Testing Requirements
 
