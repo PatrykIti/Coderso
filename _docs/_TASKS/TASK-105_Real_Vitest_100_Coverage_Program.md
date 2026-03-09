@@ -136,6 +136,20 @@ Additional widget-editor promo/content snapshot (from `bun run test:coverage` on
 - aggregate `core/admin/ui/widgets/editors/*` -> `86.63%` lines, `65.76%` branches
 - remaining widget-editor low-line hotspots after this slice -> `GridColumnsEditors.tsx` (`48.07%`), `AccordionEditors.tsx` (`50.00%`), `ToggleBlockEditors.tsx` (`51.72%`), `FormEmbedEditors.tsx` (`51.80%`), `TabsEditors.tsx` (`52.27%`)
 
+Additional widget-editor utility-layout snapshot (from `bun run test:coverage` on 2026-03-09):
+- `% Stmts`: `58.91`
+- `% Branch`: `49.63`
+- `% Funcs`: `60.77`
+- `% Lines`: `61.83`
+- `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` -> `100.00%` lines, `55.95%` branches
+- `core/admin/ui/widgets/editors/AccordionEditors.tsx` -> `100.00%` lines, `67.64%` branches
+- `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` -> `100.00%` lines, `53.33%` branches
+- `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` -> `100.00%` lines, `79.31%` branches
+- `core/admin/ui/widgets/editors/TabsEditors.tsx` -> `100.00%` lines, `64.86%` branches
+- `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` -> `98.00%` lines, `57.57%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `87.86%` lines, `66.05%` branches
+- remaining widget-editor low-line hotspots after this slice -> `StackEditors.tsx` (`58.92%`), `SpacerEditors.tsx` (`60.00%`), `DividerEditors.tsx` (`61.66%`), with residual branch gaps still left in `GridColumnsEditors`, `ToggleBlockEditors`, and `SplitLayoutEditors`
+
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
 
@@ -263,6 +277,12 @@ Completed waves:
 - direct Vitest coverage for `NewsletterEditors`
 - direct Vitest coverage for `SearchBoxEditors`
 - direct Vitest coverage for `SectionEditors`
+- direct Vitest coverage for `TabsEditors`
+- direct Vitest coverage for `SplitLayoutEditors`
+- direct Vitest coverage for `GridColumnsEditors`
+- direct Vitest coverage for `AccordionEditors`
+- direct Vitest coverage for `ToggleBlockEditors`
+- direct Vitest coverage for `FormEmbedEditors`
 
 Remaining large clusters:
 - forms builder pages and panels
