@@ -122,6 +122,20 @@ Additional widget-editor contact/content snapshot (from `bun run test:coverage` 
 - aggregate `core/admin/ui/widgets/editors/*` -> `79.78%` lines, `63.55%` branches
 - remaining widget-editor low-line hotspots after this slice -> `GalleryMosaicEditors.tsx` (`38.29%`), `CtaBannerEditors.tsx` (`38.33%`), `TimelineEditors.tsx` (`40.17%`), `NewsletterEditors.tsx` (`42.85%`), `SearchBoxEditors.tsx` (`46.15%`)
 
+Additional widget-editor promo/content snapshot (from `bun run test:coverage` on 2026-03-09):
+- `% Stmts`: `58.71`
+- `% Branch`: `49.58`
+- `% Funcs`: `60.26`
+- `% Lines`: `61.64`
+- `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` -> `95.74%` lines, `66.66%` branches
+- `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` -> `86.66%` lines, `62.50%` branches
+- `core/admin/ui/widgets/editors/TimelineEditors.tsx` -> `99.10%` lines, `84.21%` branches
+- `core/admin/ui/widgets/editors/NewsletterEditors.tsx` -> `93.65%` lines, `61.42%` branches
+- `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` -> `98.07%` lines, `64.28%` branches
+- `core/admin/ui/widgets/editors/SectionEditors.tsx` -> `88.52%` lines, `57.14%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `86.63%` lines, `65.76%` branches
+- remaining widget-editor low-line hotspots after this slice -> `GridColumnsEditors.tsx` (`48.07%`), `AccordionEditors.tsx` (`50.00%`), `ToggleBlockEditors.tsx` (`51.72%`), `FormEmbedEditors.tsx` (`51.80%`), `TabsEditors.tsx` (`52.27%`)
+
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
 
@@ -243,6 +257,12 @@ Completed waves:
 - direct Vitest coverage for `FooterEditors`
 - direct Vitest coverage for `LogoCloudEditors`
 - direct Vitest coverage for `RichTextSectionEditors`
+- direct Vitest coverage for `GalleryMosaicEditors`
+- direct Vitest coverage for `CtaBannerEditors`
+- direct Vitest coverage for `TimelineEditors`
+- direct Vitest coverage for `NewsletterEditors`
+- direct Vitest coverage for `SearchBoxEditors`
+- direct Vitest coverage for `SectionEditors`
 
 Remaining large clusters:
 - forms builder pages and panels
