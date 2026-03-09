@@ -78,6 +78,21 @@ Current snapshot after the latest forms, listings, themes, booking, and widget-e
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `87.50%` lines, `66.07%` branches
 - aggregate `core/admin/ui/widgets/editors/*` -> `50.61%` lines, `49.66%` branches
 
+Additional widget-editor product/template snapshot (from `bun run test:coverage` on 2026-03-09):
+- `% Stmts`: `53.20`
+- `% Branch`: `46.79`
+- `% Funcs`: `49.74`
+- `% Lines`: `55.83`
+- `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` -> `93.93%` lines, `73.33%` branches
+- `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `100.00%` lines, `74.59%` branches
+- `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `85.38%` lines, `64.66%` branches
+- `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` -> `100.00%` lines, `62.50%` branches
+- `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` -> `95.00%` lines, `63.15%` branches
+- `core/admin/ui/widgets/editors/ProductTableEditors.tsx` -> `100.00%` lines, `62.50%` branches
+- `core/admin/ui/widgets/editors/TemplateSectionEditors.tsx` -> `100.00%` lines, `71.79%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `50.54%` lines, `48.35%` branches
+- remaining widget-editor low-line hotspots after this slice -> `PricingPlansEditors.tsx` (`23.94%`), `TeamEditors.tsx` (`28.68%`), `NavigationEditors.tsx` (`30.57%`), `HeroEditors.tsx` (`32.37%`), `FaqAccordionEditors.tsx` (`32.95%`)
+
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
 
@@ -180,6 +195,12 @@ Completed waves:
 - direct Vitest coverage for `ListingFiltersEditors`
 - direct Vitest coverage for `PostsFeedEditors`
 - initial direct Vitest coverage for `ContentListEditors`
+- direct Vitest coverage for `CommerceWidgetEditorShared`
+- direct Vitest coverage for `ProductCompareEditors`
+- direct Vitest coverage for `ProductGalleryEditors`
+- direct Vitest coverage for `ProductTableEditors`
+- direct Vitest coverage for `TemplateSectionEditors`
+- deeper branch coverage for `ListingFiltersEditors`
 
 Remaining large clusters:
 - forms builder pages and panels

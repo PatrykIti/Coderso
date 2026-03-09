@@ -44,18 +44,33 @@ Completed slices:
 - direct Vitest coverage for `PostsFeedEditors`
 - initial direct Vitest coverage for `ContentListEditors`
 - direct Vitest coverage for `StatsKpiEditors`
+- direct Vitest coverage for `CommerceWidgetEditorShared`
+- direct Vitest coverage for `ProductCompareEditors`
+- direct Vitest coverage for `ProductGalleryEditors`
+- direct Vitest coverage for `ProductTableEditors`
+- direct Vitest coverage for `TemplateSectionEditors`
+- deeper follow-up coverage for `ListingFiltersEditors`
 
-Current `2026-03-08` widget editor snapshot after the latest slice:
+Current `2026-03-09` widget editor snapshot after the latest product/template slice:
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines / `66.04%` branches
-- `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `74.33%` lines / `36.06%` branches
+- `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `100.00%` lines / `74.59%` branches
 - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `96.70%` lines / `64.00%` branches
-- `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `50.76%` lines / `35.33%` branches
+- `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `85.38%` lines / `64.66%` branches
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `87.50%` lines / `66.07%` branches
-- aggregate `core/admin/ui/widgets/editors/*` average -> `50.61%` lines / `49.66%` branches across `39` tracked files
+- `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` -> `93.93%` lines / `73.33%` branches
+- `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` -> `100.00%` lines / `62.50%` branches
+- `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` -> `95.00%` lines / `63.15%` branches
+- `core/admin/ui/widgets/editors/ProductTableEditors.tsx` -> `100.00%` lines / `62.50%` branches
+- `core/admin/ui/widgets/editors/TemplateSectionEditors.tsx` -> `100.00%` lines / `71.79%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `50.54%` lines / `48.35%` branches across `40` tracked files
 
 Remaining hotspots in this wave:
-- `ContentListEditors.tsx`
-- `Product*Editors.tsx`
+- `PricingPlansEditors.tsx`
+- `TeamEditors.tsx`
+- `NavigationEditors.tsx`
+- `HeroEditors.tsx`
+- `FaqAccordionEditors.tsx`
+- `TestimonialsEditors.tsx`
 
 ## Testing Requirements
 
