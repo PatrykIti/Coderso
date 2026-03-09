@@ -78,8 +78,9 @@ Completed slices:
 - direct Vitest coverage for `StackEditors`
 - direct Vitest coverage for `SpacerEditors`
 - deeper branch coverage for `SplitLayoutEditors`
+- direct Vitest coverage for `DividerEditors`
 
-Current `2026-03-09` widget editor snapshot after the latest utility-layout slice:
+Current `2026-03-09` widget editor snapshot after the latest divider follow-up:
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines / `66.04%` branches
 - `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `100.00%` lines / `74.59%` branches
 - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `96.70%` lines / `64.00%` branches
@@ -117,14 +118,16 @@ Current `2026-03-09` widget editor snapshot after the latest utility-layout slic
 - `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` -> `100.00%` lines / `79.31%` branches
 - `core/admin/ui/widgets/editors/StackEditors.tsx` -> `100.00%` lines / `58.33%` branches
 - `core/admin/ui/widgets/editors/SpacerEditors.tsx` -> `97.50%` lines / `71.42%` branches
-- aggregate `core/admin/ui/widgets/editors/*` -> `90.08%` lines / `68.30%` branches across `40` tracked files
+- `core/admin/ui/widgets/editors/DividerEditors.tsx` -> `90.00%` lines / `67.39%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `92.80%` lines / `68.30%` branches across `40` tracked files
 
 Remaining hotspots in this wave:
-- `DividerEditors.tsx`
-- residual branch gaps in `GridColumnsEditors`
-- residual branch gaps in `ToggleBlockEditors`
-- residual branch gaps in `StackEditors`
-- residual line/branch gaps in `SpacerEditors`
+- `HeroEditors.tsx`
+- `AppointmentFormEditors.tsx`
+- `ContentListEditors.tsx`
+- `CtaBannerEditors.tsx`
+- `SectionEditors.tsx`
+- residual branch gaps in `GridColumnsEditors` / `ToggleBlockEditors` / `StackEditors` / `SpacerEditors`
 
 ## Testing Requirements
 
