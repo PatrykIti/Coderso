@@ -486,6 +486,12 @@ test("CtaBanner visual covers variant cards, picker fallbacks, action updates, a
     setInputValue(getInputsByPlaceholder(container, "#")[0], "/demo");
     setInputValue(getInputByPlaceholder(container, "Contact sales"), "Talk with team");
     setInputValue(getInputsByPlaceholder(container, "#")[1], "/contact-sales");
+    setInputValue(colorInputs[1], "#0f172a");
+    setInputValue(colorInputs[2], "#2563eb");
+    setInputValue(colorInputs[3], "#f9fafb");
+    setInputValue(colorInputs[4], "#7c3aed");
+    setInputValue(colorInputs[5], "#f5f5f5");
+    setInputValue(colorInputs[6], "#111827");
     setInputValue(getInputsByPlaceholder(colorsSection, "var(--color-surface)")[0], "#101820");
     setInputValue(getInputsByPlaceholder(spacingSection, "var(--color-border)")[0], "#334455");
     setSelectValue(borderWidthSelect, "3");
@@ -511,7 +517,12 @@ test("CtaBanner visual covers variant cards, picker fallbacks, action updates, a
       },
       style: {
         background: "#101820",
-        text: "#123456",
+        text: "#0f172a",
+        badgeBackground: "#2563eb",
+        badgeText: "#f9fafb",
+        primaryButtonBg: "#7c3aed",
+        primaryButtonText: "#f5f5f5",
+        secondaryButtonText: "#111827",
         border: "#334455",
         borderWidth: "3",
         radius: "2xl",
@@ -554,6 +565,7 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
 
   try {
     setInputValue(getInputByPlaceholder(container, "background token"), "var(--cta-bg)");
+    setInputValue(getInputByPlaceholder(container, "text token"), "var(--cta-text)");
     setInputValue(getInputByPlaceholder(container, "border token"), "var(--cta-border)");
     setInputValue(
       getInputByPlaceholder(container, "primary button border token"),
@@ -566,6 +578,7 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
 
     expect(getLatestValue().style).toMatchObject({
       background: "var(--cta-bg)",
+      text: "var(--cta-text)",
       border: "var(--cta-border)",
       primaryButtonBorder: "var(--cta-primary-border)",
       secondaryButtonBorder: "var(--cta-secondary-border)",
@@ -592,7 +605,7 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
       },
       style: {
         background: "var(--cta-bg)",
-        text: "#111111",
+        text: "var(--cta-text)",
         border: "var(--cta-border)",
         borderWidth: "1",
         radius: "xl",
