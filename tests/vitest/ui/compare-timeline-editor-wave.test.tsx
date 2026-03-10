@@ -473,6 +473,9 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
     const targetTrackSelect = findSelectByOptions(markersSection as ParentNode, ["a", "b"]);
     expect((targetTrackSelect as HTMLSelectElement | undefined)?.value).toBe("b");
 
+    clickButtonByText(markersSection as ParentNode, "Discover", 0);
+    clickButtonByText(markersSection as ParentNode, "Build", 1);
+
     setSelectValue(targetTrackSelect, "a");
     clickButtonByText(markersSection as ParentNode, "Add segment");
 
@@ -505,7 +508,13 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
 
     setInputValue(colorInputs[0], "#ffaa00");
     setInputValue(colorInputs[1], "#2244ff");
+    setInputValue(colorInputs[2], "#334455");
+    setInputValue(colorInputs[3], "#445566");
+    setInputValue(colorInputs[4], "#556677");
     setInputValue(colorInputs[5], "#0f172a");
+    setInputValue(findInputsByPlaceholder(colorsSection as ParentNode, "#0f172a")[0], "#102030");
+    setInputValue(findInputsByPlaceholder(colorsSection as ParentNode, "#0f172a")[1], "#203040");
+    setInputValue(findInputByPlaceholder(colorsSection as ParentNode, "#334155"), "#304050");
 
     setSelectValue(
       findSelectByOptions(colorsSection as ParentNode, ["sm", "base", "lg"]),
@@ -535,6 +544,7 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
       expect.objectContaining({
         id: "a",
         label: "Current state",
+        markers: [],
         segments: [{ from: 0, to: 3, label: "Automation lane" }],
       })
     );
@@ -542,6 +552,7 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
       expect.objectContaining({
         id: "b",
         label: "Future state",
+        markers: [1, 2],
       })
     );
     expect(latestValue.highlight).toEqual({ targetTrackId: "a" });
@@ -551,6 +562,9 @@ test("CompareTimeline visual editor covers highlight branching, segment editing,
         highlightColor: "#ffaa00",
         highlightLabelStyle: "subtle",
         markerColor: "#2244ff",
+        trackLabelColor: "#102030",
+        stepLabelColor: "#203040",
+        mutedStepColor: "#304050",
         guideColor: "#0f172a",
         trackLabelSize: "lg",
         stepLabelSize: "base",
@@ -714,5 +728,112 @@ test("CompareTimeline advanced editor covers normalization, metadata edits, and 
     expect(latestValue.highlight).toEqual({ targetTrackId: "a" });
   } finally {
     view.cleanup();
+  }
+});
+
+test("CompareTimeline editors cover visual marker toggles, raw color tokens, and advanced add-step growth", async () => {
+  const {
+    CompareTimelineAdvancedEditor,
+    CompareTimelineVisualEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/CompareTimelineEditors");
+
+  let latestVisualValue: CompareTimelineData = {
+    axis: {
+      steps: [{ label: "Plan" }, { label: "Build" }, { label: "Ship" }],
+    },
+    tracks: [
+      { id: "legacy", label: "Legacy", markers: [0], segments: [] },
+      { id: "modern", label: "Modern", markers: [2], segments: [] },
+    ],
+    guides: { enabled: true, style: "solid" },
+    layout: { trackSpacing: "md", labelPosition: "top" },
+    style: {},
+  };
+
+  const VisualHarness = () => {
+    const [value, setValue] = useState<CompareTimelineData>(latestVisualValue);
+
+    return (
+      <CompareTimelineVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestVisualValue = next;
+          setValue(next);
+        }}
+        variant="dual-track"
+      />
+    );
+  };
+
+  const visualView = mount(<VisualHarness />);
+
+  try {
+    const markersSection = findSectionByTitle(visualView.container, "Markers and segment mapping");
+    clickButtonByText(markersSection as ParentNode, "Plan", 1);
+    clickButtonByText(markersSection as ParentNode, "Build", 0);
+
+    expect(latestVisualValue.tracks[0]?.markers).toEqual([0, 1]);
+    expect(latestVisualValue.tracks[1]?.markers).toEqual([0, 2]);
+
+    const colorsSection = findSectionByTitle(visualView.container, "Colors and typography");
+    setInputValue(findInputByPlaceholder(colorsSection as ParentNode, "#0f172a"), "var(--track-label)");
+    setInputValue(
+      findInputsByPlaceholder(colorsSection as ParentNode, "#0f172a")[1],
+      "var(--step-label)"
+    );
+    setInputValue(findInputByPlaceholder(colorsSection as ParentNode, "#334155"), "muted-step-token");
+
+    expect(latestVisualValue.style).toEqual(
+      expect.objectContaining({
+        trackLabelColor: "var(--track-label)",
+        stepLabelColor: "var(--step-label)",
+        mutedStepColor: "muted-step-token",
+      })
+    );
+  } finally {
+    visualView.cleanup();
+  }
+
+  let latestAdvancedValue: CompareTimelineData = {
+    axis: {
+      steps: [{ label: "Plan" }, { label: "Build" }, { label: "Ship" }],
+    },
+    tracks: [
+      { id: "legacy", label: "Legacy", markers: [0], segments: [] },
+      { id: "modern", label: "Modern", markers: [1], segments: [] },
+    ],
+  };
+
+  const AdvancedHarness = () => {
+    const [value, setValue] = useState<CompareTimelineData>(latestAdvancedValue);
+
+    return (
+      <CompareTimelineAdvancedEditor
+        value={value}
+        onChange={(next) => {
+          latestAdvancedValue = next;
+          setValue(next);
+        }}
+        variant="dual-track"
+      />
+    );
+  };
+
+  const advancedView = mount(<AdvancedHarness />);
+
+  try {
+    clickButtonByText(advancedView.container, "Add step");
+    expect(latestAdvancedValue.axis.steps).toHaveLength(4);
+    expect(latestAdvancedValue.axis.steps[3]).toEqual(
+      expect.objectContaining({
+        id: "step-4",
+        label: "Optimize",
+      })
+    );
+
+    setSelectValue(findSelectByOptions(advancedView.container, ["a", "b"]), "b");
+    expect(latestAdvancedValue.highlight).toEqual({ targetTrackId: "b" });
+  } finally {
+    advancedView.cleanup();
   }
 });

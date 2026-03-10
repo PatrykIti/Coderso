@@ -206,6 +206,7 @@ Additional widget-editor residual-closure snapshot (from `bun run test:coverage`
 - defensive follow-up on `AppointmentFormEditors`, `ContentListEditors`, `CtaBannerEditors`, and `SectionEditors` kept the authoritative full-lane snapshot flat while adding sparse-normalization and stale-async-path coverage
 - parallel low-line follow-up on `StatsKpiEditors`, `FeatureGridEditors`, `TestimonialsEditors`, `RichTextSectionEditors`, `FaqAccordionEditors`, `EntryTeaserEditors`, and `NavigationEditors` produced stronger isolated targeted runs, but the authoritative full-lane snapshot still remained flat
 - contact/newsletter follow-up produced stronger isolated targeted runs for `ContactEditors` and `NewsletterEditors`, but the authoritative full-lane snapshot still remained flat
+- compare/posts/shared follow-up produced stronger isolated targeted runs for `CompareTimelineEditors`, `PostsFeedEditors`, and `CommerceWidgetEditorShared`, plus a selector-scope fix for `ProductGalleryEditors`, but the authoritative full-lane snapshot still remained flat
 - remaining widget-editor focus after this slice -> `StatsKpiEditors`, `FeatureGridEditors`, `TestimonialsEditors`, `RichTextSectionEditors`, `FaqAccordionEditors`, `EntryTeaserEditors`, `NavigationEditors`, and `ContactEditors`
 
 This means the next stage is not runner cleanup anymore.

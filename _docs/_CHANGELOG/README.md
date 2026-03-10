@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 399 | 2026-03-10 | TASK-105 compare posts and shared editor coverage follow-up | QA/Platform |
 | 398 | 2026-03-10 | TASK-105 contact and newsletter coverage follow-up | QA/Platform |
 | 397 | 2026-03-10 | TASK-105 parallel low-line widget editor coverage follow-up | QA/Platform |
 | 396 | 2026-03-10 | TASK-105 defensive widget editor fallback follow-up | QA/Platform |

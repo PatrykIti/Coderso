@@ -484,3 +484,143 @@ test("PostsFeed editors surface post loading errors", async () => {
     view.cleanup();
   }
 });
+
+test("PostsFeed editors cover category filtering, manual deselection, empty catalog, and generic load errors", async () => {
+  const {
+    PostsFeedAdvancedEditor,
+    PostsFeedVisualEditor,
+    PostsFeedWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  const originalPosts = postsFeedState.posts;
+  postsFeedState.posts = [];
+
+  let latestValue: PostsFeedData = {
+    source: {
+      mode: "manual",
+      manualPostIds: ["post-1"],
+      limit: 3,
+      sort: "published-desc",
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<PostsFeedData>(latestValue);
+
+    const handleChange = (next: PostsFeedData) => {
+      latestValue = next;
+      setValue(next);
+    };
+
+    return (
+      <>
+        <PostsFeedWizardEditor value={value} onChange={handleChange} variant="cards" />
+        <PostsFeedVisualEditor value={value} onChange={handleChange} variant="cards" />
+        <PostsFeedAdvancedEditor value={value} onChange={handleChange} variant="cards" />
+      </>
+    );
+  };
+
+  const emptyView = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(emptyView.container.textContent).toContain("No posts available.");
+
+    act(() => {
+      setSelectValue(
+        findSelectByOptions(emptyView.container, ["latest", "featured", "category", "manual"]),
+        "category"
+      );
+    });
+
+    act(() => {
+      setInputValue(
+        findInputByPlaceholder(emptyView.container, "e.g. news, updates, automotive"),
+        "events"
+      );
+    });
+    expect(latestValue.source).toEqual(
+      expect.objectContaining({
+        mode: "category",
+        category: "events",
+      })
+    );
+  } finally {
+    emptyView.cleanup();
+  }
+
+  postsFeedState.posts = originalPosts;
+
+  let latestManualValue: PostsFeedData = {
+    source: {
+      mode: "manual",
+      manualPostIds: ["post-1"],
+      limit: 3,
+      sort: "published-desc",
+    },
+  };
+
+  const ManualHarness = () => {
+    const [value, setValue] = useState<PostsFeedData>(latestManualValue);
+
+    return (
+      <PostsFeedWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestManualValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const manualView = mount(<ManualHarness />);
+
+  try {
+    await flush();
+
+    const selectedPostCheckbox = Array.from(manualView.container.querySelectorAll("label"))
+      .find((label) => label.textContent?.includes("Launch note"))
+      ?.querySelector("input");
+    clickElement(selectedPostCheckbox);
+    await flush();
+
+    expect(latestManualValue.source).toEqual(
+      expect.objectContaining({
+        mode: "manual",
+        manualPostIds: [],
+      })
+    );
+    expect(manualView.container.textContent).not.toContain("Selected:");
+  } finally {
+    manualView.cleanup();
+  }
+
+  try {
+    postsFeedState.postsError = new Error("boom");
+    const errorView = mount(
+      <PostsFeedWizardEditor
+        value={{ source: { mode: "manual" } }}
+        onChange={() => undefined}
+        variant="cards"
+      />
+    );
+
+    try {
+      act(() => {
+        setSelectValue(
+          findSelectByOptions(errorView.container, ["latest", "featured", "category", "manual"]),
+          "manual"
+        );
+      });
+      await flush();
+      expect(errorView.container.textContent).toContain("Failed to load posts.");
+    } finally {
+      errorView.cleanup();
+    }
+  } finally {
+    postsFeedState.posts = originalPosts;
+  }
+});

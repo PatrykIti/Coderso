@@ -154,8 +154,20 @@ Contact and newsletter follow-up on 2026-03-10:
 - Deepened `ContactEditors` coverage around visual submit-label/contact-detail updates, required-field reorder down-path, and text-token `ColorField` input handling.
 - Deepened `NewsletterEditors` coverage around visual title/description copy, CTA label edits, and switching integration mode back to webhook with direct webhook-id updates.
 - Isolated targeted runs for that follow-up moved:
-  - `ContactEditors.tsx` -> `98.97%` lines / `63.80%` branches
+  - `ContactEditors.tsx` -> `100.00%` lines / `65.71%` branches
   - `NewsletterEditors.tsx` -> `100.00%` lines / `61.42%` branches
+- Re-ran the authoritative full-lane snapshot and it still remained flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`.
+
+Compare/posts/shared follow-up on 2026-03-10:
+- Deepened `CompareTimelineEditors` coverage around visual marker toggles, additional color token paths, and advanced add-step growth.
+- Deepened `PostsFeedEditors` coverage around category mode, manual deselection, empty catalog behavior, and generic loader failures.
+- Tightened `CommerceWidgetEditorShared` numeric guard coverage for non-finite number input handling.
+- Scoped `ProductGalleryEditors` empty-state assertions to the correct section so the test exercises the real editor contract instead of relying on duplicate global labels.
+- Isolated targeted runs for that follow-up moved:
+  - `CompareTimelineEditors.tsx` -> `100.00%` lines / `67.25%` branches
+  - `PostsFeedEditors.tsx` -> `97.80%` lines / `62.66%` branches
+  - `CommerceWidgetEditorShared.tsx` -> `100.00%` lines / `73.33%` branches
+  - `ProductGalleryEditors.tsx` -> `95.00%` lines / `63.15%` branches
 - Re-ran the authoritative full-lane snapshot and it still remained flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`.
 
 Remaining hotspots in this wave:

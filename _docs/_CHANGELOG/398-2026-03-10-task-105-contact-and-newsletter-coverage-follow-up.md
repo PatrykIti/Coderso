@@ -15,7 +15,7 @@
 - Previous authoritative snapshot after the parallel low-line widget-editor slice: `60.27% stmts`, `50.65% branch`, `64.04% funcs`, `63.16% lines`
 - Current authoritative snapshot after this contact/newsletter follow-up: `60.27% stmts`, `50.65% branch`, `64.04% funcs`, `63.16% lines`
 - Isolated targeted runs for the touched editor files reached:
-  - `ContactEditors.tsx` -> `98.97%` lines / `63.80%` branches
+  - `ContactEditors.tsx` -> `100.00%` lines / `65.71%` branches
   - `NewsletterEditors.tsx` -> `100.00%` lines / `61.42%` branches
 - Combined authoritative `core/admin/ui/widgets/editors/*` snapshot remained `96.12%` lines / `72.42%` branches across `40` tracked files
 

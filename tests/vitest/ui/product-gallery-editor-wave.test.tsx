@@ -118,6 +118,11 @@ const findInputByLabel = (container: ParentNode, text: string) =>
 const findSelectByLabel = (container: ParentNode, text: string) =>
   findLabeledField(container, text, "select");
 
+const findSectionByTitle = (container: ParentNode, title: string) =>
+  Array.from(container.querySelectorAll("section")).find((section) =>
+    normalizeText(section.textContent).includes(normalizeText(title))
+  );
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -217,11 +222,12 @@ test("ProductGallery editors cover source, card fields, empty state, and runtime
     toggleCheckbox(findInputByLabel(view.container, "Show stock badge"));
     toggleCheckbox(findInputByLabel(view.container, "Show media hint"));
 
-    setInputValue(findInputByLabel(view.container, "Title"), "Nothing found");
-    setInputValue(
-      findInputByLabel(view.container, "Description"),
-      "Adjust query filters or publish products."
+    const emptyStateSection = findSectionByTitle(view.container, "Shown when query returns no products.");
+    setInputValue(findInputByLabel(emptyStateSection ?? view.container, "Title"), "Nothing found");
+    const emptyStateInputs = Array.from(
+      (emptyStateSection ?? view.container).querySelectorAll("input")
     );
+    setInputValue(emptyStateInputs[1], "Adjust query filters or publish products.");
     setInputValue(findInputByLabel(view.container, "Runtime error flag"), "resolver-timeout");
 
     expect(onChangeSpy).toHaveBeenCalled();
@@ -265,6 +271,48 @@ test("ProductGallery editors cover source, card fields, empty state, and runtime
     expect(preview?.textContent).toContain('"status": [');
     expect(preview?.textContent).toContain('"published"');
     expect(preview?.textContent).toContain('"archived"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ProductGallery visual editor updates the empty-state description in isolation", async () => {
+  const { ProductGalleryVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ProductGalleryEditors"
+  );
+
+  let latestValue: ProductGalleryData = {};
+
+  const Harness = () => {
+    const [value, setValue] = useState<ProductGalleryData>(latestValue);
+
+    return (
+      <ProductGalleryVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="gallery"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const emptyStateSection = findSectionByTitle(view.container, "Shown when query returns no products.");
+    const emptyStateInputs = Array.from(
+      (emptyStateSection ?? view.container).querySelectorAll("input")
+    );
+
+    setInputValue(emptyStateInputs[1], "No catalog items yet.");
+
+    expect(latestValue.emptyState).toEqual(
+      expect.objectContaining({
+        description: "No catalog items yet.",
+      })
+    );
   } finally {
     view.cleanup();
   }
