@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 394 | 2026-03-10 | TASK-105 hero content list and section coverage follow-up | QA/Platform |
 | 393 | 2026-03-09 | TASK-105 appointment form and cta banner coverage follow-up | QA/Platform |
 | 392 | 2026-03-09 | TASK-105 divider editor coverage follow-up | QA/Platform |
 | 391 | 2026-03-09 | TASK-105 stack and spacer widget editor coverage follow-up | QA/Platform |

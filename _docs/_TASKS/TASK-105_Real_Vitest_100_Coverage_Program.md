@@ -180,6 +180,17 @@ Additional widget-editor appointment/banner snapshot (from `bun run test:coverag
 - aggregate `core/admin/ui/widgets/editors/*` -> `93.71%` lines, `68.63%` branches
 - remaining widget-editor low-line hotspots after this slice -> `HeroEditors.tsx` (`82.37%`), `ContentListEditors.tsx` (`85.38%`), `SectionEditors.tsx` (`88.52%`), `DividerEditors.tsx` (`90.00%`), with branch-gap work still open in `GridColumnsEditors`, `ToggleBlockEditors`, `StackEditors`, and `SpacerEditors`
 
+Additional widget-editor hero/content snapshot (from `bun run test:coverage` on 2026-03-10):
+- `% Stmts`: `60.24`
+- `% Branch`: `50.21`
+- `% Funcs`: `63.98`
+- `% Lines`: `63.14`
+- `core/admin/ui/widgets/editors/HeroEditors.tsx` -> `99.35%` lines, `91.32%` branches
+- `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `98.46%` lines, `68.42%` branches
+- `core/admin/ui/widgets/editors/SectionEditors.tsx` -> `100.00%` lines, `57.14%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `95.97%` lines, `69.72%` branches
+- remaining widget-editor low-line hotspots after this slice -> `DividerEditors.tsx` (`90.00%`), `AppointmentFormEditors.tsx` (`97.22%`), with branch-gap work still open in `SectionEditors`, `GridColumnsEditors`, `ToggleBlockEditors`, `StackEditors`, `SpacerEditors`, and `CtaBannerEditors`
+
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
 
@@ -319,6 +330,9 @@ Completed waves:
 - direct Vitest coverage for `DividerEditors`
 - direct Vitest coverage for `AppointmentFormEditors`
 - deeper value-path coverage for `CtaBannerEditors`
+- deeper branch and line coverage for `HeroEditors`
+- deeper branch and line coverage for `ContentListEditors`
+- deeper branch and token coverage for `SectionEditors`
 
 Remaining large clusters:
 - forms builder pages and panels

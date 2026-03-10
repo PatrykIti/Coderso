@@ -178,13 +178,16 @@ vi.mock("@/components/ui/switch", () => ({
   Switch: ({
     checked,
     onCheckedChange,
+    disabled,
   }: {
     checked?: boolean;
     onCheckedChange?: (checked: boolean) => void;
+    disabled?: boolean;
   }) => (
     <input
       type="checkbox"
       checked={Boolean(checked)}
+      disabled={disabled}
       onChange={(event) => onCheckedChange?.(event.target.checked)}
     />
   ),
@@ -317,6 +320,9 @@ const clickElement = (element: Element | undefined) => {
   });
 };
 
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
 const findInputByPlaceholder = (container: HTMLElement, placeholder: string) =>
   Array.from(container.querySelectorAll("input")).find(
     (element) =>
@@ -330,13 +336,6 @@ const findTextareaByPlaceholder = (container: HTMLElement, placeholder: string) 
       element.getAttribute("placeholder") === placeholder
   );
 
-const findTextareasByPlaceholder = (container: HTMLElement, placeholder: string) =>
-  Array.from(container.querySelectorAll("textarea")).filter(
-    (element) =>
-      element instanceof HTMLTextAreaElement &&
-      element.getAttribute("placeholder") === placeholder
-  );
-
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -344,17 +343,109 @@ const findSelectsByOptions = (container: ParentNode, values: string[]) =>
     return values.every((value) => optionValues.includes(value));
   });
 
+const findNumberInputs = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("input")).filter(
+    (element) => element instanceof HTMLInputElement && element.type === "number"
+  );
+
+const findCheckboxByLabelText = (container: ParentNode, labelText: string) =>
+  Array.from(container.querySelectorAll("label")).find((element) =>
+    normalizeText(element.textContent).includes(normalizeText(labelText))
+  )?.querySelector("input[type='checkbox']");
+
+const findButtonByText = (container: ParentNode, buttonText: string) =>
+  Array.from(container.querySelectorAll("button")).find((element) =>
+    normalizeText(element.textContent).includes(normalizeText(buttonText))
+  );
+
 afterEach(() => {
   vi.restoreAllMocks();
   contentListState.reset();
 });
 
-test("ContentList editors cover legacy and listing source modes, variant/layout controls, runtime labels, and snapshot", async () => {
-  const {
-    ContentListAdvancedEditor,
-    ContentListVisualEditor,
-    ContentListWizardEditor,
-  } = await import(
+test("ContentList wizard editor normalizes invalid variant, clamps item limit, and clears legacy content type in listing mode", async () => {
+  const { ContentListWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ContentListEditors"
+  );
+
+  const onChangeSpy = vi.fn();
+  const onVariantChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({} as ContentListData);
+    const [variant, setVariant] = useState("unknown-layout");
+
+    return (
+      <ContentListWizardEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => {
+          onVariantChangeSpy(next);
+          setVariant(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    const variantSelect = findSelectsByOptions(view.container, ["cards", "list", "compact"])[0];
+    expect((variantSelect as HTMLSelectElement | undefined)?.value).toBe("cards");
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
+        "articles"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "listing"
+      );
+    });
+    await flush();
+
+    act(() => {
+      setInputValue(findNumberInputs(view.container)[0], "48");
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_listing_query__", "query-1"])[0],
+        "query-1"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_listing_template__", "template-1"])[0],
+        "template-1"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["cards", "list", "compact"])[0],
+        "list"
+      );
+    });
+
+    expect(onVariantChangeSpy).toHaveBeenCalledWith("list");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        source: expect.objectContaining({
+          mode: "listing",
+          contentTypeId: "",
+          listingQueryId: "query-1",
+          listingTemplateId: "template-1",
+          limit: 24,
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList visual editor switches between listing and legacy sources and persists empty state content", async () => {
+  const { ContentListVisualEditor } = await import(
     "../../../core/admin/ui/widgets/editors/ContentListEditors"
   );
 
@@ -364,45 +455,20 @@ test("ContentList editors cover legacy and listing source modes, variant/layout 
   const Harness = () => {
     const [value, setValue] = useState<ContentListData>({} as ContentListData);
     const [variant, setVariant] = useState("cards");
+
     return (
-      <>
-        <ContentListWizardEditor
-          value={value}
-          onChange={(next) => {
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            onVariantChangeSpy(next);
-            setVariant(next);
-          }}
-        />
-        <ContentListVisualEditor
-          value={value}
-          onChange={(next) => {
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            onVariantChangeSpy(next);
-            setVariant(next);
-          }}
-        />
-        <ContentListAdvancedEditor
-          value={value}
-          onChange={(next) => {
-            onChangeSpy(next);
-            setValue(next);
-          }}
-          variant={variant}
-          onVariantChange={(next) => {
-            onVariantChangeSpy(next);
-            setVariant(next);
-          }}
-        />
-      </>
+      <ContentListVisualEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant={variant}
+        onVariantChange={(next) => {
+          onVariantChangeSpy(next);
+          setVariant(next);
+        }}
+      />
     );
   };
 
@@ -411,50 +477,8 @@ test("ContentList editors cover legacy and listing source modes, variant/layout 
   try {
     await flush();
 
-    expect(view.container.textContent).toContain("Source setup");
-    expect(view.container.textContent).toContain("Variant and layout");
-    expect(view.container.textContent).toContain("Runtime payload");
-
     act(() => {
-      setSelectValue(
-        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
-        "legacy"
-      );
-      setSelectValue(
-        findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
-        "articles"
-      );
-      setInputValue(
-        findInputByPlaceholder(view.container, "e.g. featured or case-study"),
-        "featured"
-      );
-      setSelectValue(
-        findSelectsByOptions(view.container, ["published", "all", "draft", "scheduled", "archived"])[0],
-        "draft"
-      );
-      setSelectValue(
-        findSelectsByOptions(view.container, [
-          "published-desc",
-          "published-asc",
-          "updated-desc",
-          "updated-asc",
-          "title-asc",
-          "title-desc",
-        ])[0],
-        "title-asc"
-      );
-      setInputValue(findInputByPlaceholder(view.container, "e.g. news"), "news");
-      setInputValue(
-        findInputByPlaceholder(view.container, "Optional helper text."),
-        "Empty state helper"
-      );
-    });
-
-    act(() => {
-      setSelectValue(
-        findSelectsByOptions(view.container, ["cards", "list", "compact"])[0],
-        "compact"
-      );
+      clickElement(findButtonByText(view.container, "Compact"));
       setSelectValue(findSelectsByOptions(view.container, ["1", "2", "3"])[0], "2");
       setSelectValue(findSelectsByOptions(view.container, ["sm", "md", "lg"])[0], "lg");
       setSelectValue(
@@ -462,15 +486,6 @@ test("ContentList editors cover legacy and listing source modes, variant/layout 
         "elevated"
       );
       setInputValue(findInputByPlaceholder(view.container, "Read more"), "View entry");
-    });
-
-    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
-    clickElement(checkboxes[0]);
-    clickElement(checkboxes[1]);
-    clickElement(checkboxes[2]);
-    clickElement(checkboxes[3]);
-
-    act(() => {
       setSelectValue(
         findSelectsByOptions(view.container, ["legacy", "listing"])[0],
         "listing"
@@ -487,15 +502,76 @@ test("ContentList editors cover legacy and listing source modes, variant/layout 
         findSelectsByOptions(view.container, ["__no_listing_template__", "template-1"])[0],
         "template-1"
       );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_listing_query__", "query-1"])[0],
+        "__no_listing_query__"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_listing_template__", "template-1"])[0],
+        "__no_listing_template__"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "legacy"
+      );
+    });
+    await flush();
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
+        "__no_content_type__"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
+        "articles"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["published", "all", "draft", "scheduled", "archived"])[0],
+        "scheduled"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, [
+          "published-desc",
+          "published-asc",
+          "updated-desc",
+          "updated-asc",
+          "title-asc",
+          "title-desc",
+        ])[0],
+        "title-desc"
+      );
+      setInputValue(
+        findInputByPlaceholder(view.container, "e.g. featured or case-study"),
+        "case-study"
+      );
+      setInputValue(findInputByPlaceholder(view.container, "No items found"), "Nothing here yet");
+      setTextareaValue(
+        findTextareaByPlaceholder(
+          view.container,
+          "Adjust filters or publish entries for this content type."
+        ),
+        "Publish a case study to populate this block."
+      );
     });
 
-    const payload = onChangeSpy.mock.lastCall?.[0];
-    expect(payload).toEqual(
+    expect(onVariantChangeSpy).toHaveBeenCalledWith("compact");
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
       expect.objectContaining({
         source: expect.objectContaining({
-          mode: "listing",
-          listingQueryId: "query-1",
-          listingTemplateId: "template-1",
+          mode: "legacy",
+          contentTypeId: "articles",
+          listingQueryId: "",
+          listingTemplateId: "",
+          statusScope: "scheduled",
+          sort: "title-desc",
+        }),
+        filters: expect.objectContaining({
+          taxonomy: "case-study",
+        }),
+        emptyState: expect.objectContaining({
+          title: "Nothing here yet",
+          description: "Publish a case study to populate this block.",
         }),
         style: expect.objectContaining({
           columns: "2",
@@ -505,9 +581,139 @@ test("ContentList editors cover legacy and listing source modes, variant/layout 
         }),
       })
     );
-    expect(onVariantChangeSpy).toHaveBeenCalledWith("compact");
-    expect(view.container.textContent).toContain('"items"');
-    expect(view.container.textContent).toContain('"runtime"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList advanced editor handles listing query controls, disabled filters, styling tokens, and runtime snapshot", async () => {
+  const { ContentListAdvancedEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ContentListEditors"
+  );
+
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({
+      resolved: {
+        items: [{ id: "item-1", title: "Launch note" }],
+        total: 1,
+        runtime: { rejectedTokens: ["draft"], page: 2 },
+      },
+    } as ContentListData);
+
+    return (
+      <ContentListAdvancedEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "listing"
+      );
+    });
+    await flush();
+
+    const authorInputInListingMode = findInputByPlaceholder(
+      view.container,
+      "Optional author UUID"
+    );
+    const searchInputInListingMode = findInputByPlaceholder(
+      view.container,
+      "Title, excerpt, tags"
+    );
+    const featuredOnlyToggleInListingMode = findCheckboxByLabelText(
+      view.container,
+      "Featured only"
+    );
+
+    expect(authorInputInListingMode).toBeInstanceOf(HTMLInputElement);
+    expect((authorInputInListingMode as HTMLInputElement).disabled).toBe(true);
+    expect(searchInputInListingMode).toBeInstanceOf(HTMLInputElement);
+    expect((searchInputInListingMode as HTMLInputElement).disabled).toBe(true);
+    expect(featuredOnlyToggleInListingMode).toBeInstanceOf(HTMLInputElement);
+    expect((featuredOnlyToggleInListingMode as HTMLInputElement).disabled).toBe(true);
+    expect(view.container.textContent).toContain(
+      "Listing mode uses filters and sorting from the selected Listings query."
+    );
+
+    act(() => {
+      setInputValue(findNumberInputs(view.container)[0], "99");
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_listing_query__", "query-1"])[0],
+        "query-1"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_listing_template__", "template-1"])[0],
+        "template-1"
+      );
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "legacy"
+      );
+    });
+    await flush();
+
+    const authorInput = findInputByPlaceholder(view.container, "Optional author UUID");
+    const searchInput = findInputByPlaceholder(view.container, "Title, excerpt, tags");
+    const featuredOnlyToggle = findCheckboxByLabelText(view.container, "Featured only");
+
+    expect((authorInput as HTMLInputElement).disabled).toBe(false);
+    expect((searchInput as HTMLInputElement).disabled).toBe(false);
+    expect((featuredOnlyToggle as HTMLInputElement).disabled).toBe(false);
+
+    act(() => {
+      setInputValue(authorInput, "author-123");
+      setInputValue(searchInput, "launch");
+      clickElement(featuredOnlyToggle);
+      setInputValue(
+        findInputByPlaceholder(view.container, "var(--color-bg)"),
+        "#101820"
+      );
+      setInputValue(
+        findInputByPlaceholder(view.container, "var(--color-border)"),
+        "#d1d5db"
+      );
+      setInputValue(
+        findInputByPlaceholder(view.container, "var(--color-text)"),
+        "#f9fafb"
+      );
+    });
+
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        source: expect.objectContaining({
+          mode: "legacy",
+          listingQueryId: "",
+          listingTemplateId: "",
+          limit: 24,
+        }),
+        filters: expect.objectContaining({
+          authorId: "author-123",
+          searchQuery: "launch",
+          featuredOnly: true,
+        }),
+        style: expect.objectContaining({
+          backgroundColor: "#101820",
+          borderColor: "#d1d5db",
+          textColor: "#f9fafb",
+        }),
+      })
+    );
+    expect(view.container.textContent).toContain('"title": "Launch note"');
+    expect(view.container.textContent).toContain('"page": 2');
   } finally {
     view.cleanup();
   }
@@ -557,6 +763,39 @@ test("ContentList editors surface content type and listings loading errors", asy
     await flush();
 
     expect(view.container.textContent).toContain("Listings failed");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList editors fall back to generic loading messages for unexpected errors", async () => {
+  const { ContentListWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ContentListEditors"
+  );
+
+  contentListState.contentTypesError = new Error("Unexpected types failure");
+  contentListState.listingsError = new Error("Unexpected listings failure");
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({} as ContentListData);
+    return <ContentListWizardEditor value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Failed to load content types.");
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "listing"
+      );
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Failed to load listings options.");
   } finally {
     view.cleanup();
   }
