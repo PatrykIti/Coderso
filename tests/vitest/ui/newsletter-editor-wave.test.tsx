@@ -494,15 +494,31 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
     expect(getLatestVariant()).toBe("minimal");
 
     const contentSection = getSectionByTitle(container, "Content and copy");
+    setInputValue(
+      getInputByPlaceholder(contentSection, "Join our newsletter"),
+      "Launch notes"
+    );
+    setTextareaValue(
+      getTextareaByPlaceholder(contentSection, "Short supporting line"),
+      "Monthly digest for operators."
+    );
     setInputValue(getInputByPlaceholder(contentSection, "you@example.com"), "ops@example.com");
-    expect(getLatestValue().placeholder).toBe("ops@example.com");
+    expect(getLatestValue()).toMatchObject({
+      title: "Launch notes",
+      description: "Monthly digest for operators.",
+      placeholder: "ops@example.com",
+    });
 
     const consentSection = getSectionByTitle(container, "Consent and submit behavior");
+    setInputValue(getInputByPlaceholder(consentSection, "Subscribe"), "Keep me posted");
     setInputValue(
       getInputByPlaceholder(consentSection, "Thanks for joining!"),
       "Check your inbox."
     );
-    expect(getLatestValue().submit?.successMessage).toBe("Check your inbox.");
+    expect(getLatestValue().submit).toMatchObject({
+      label: "Keep me posted",
+      successMessage: "Check your inbox.",
+    });
 
     let consentCheckboxes = getCheckboxes(consentSection);
     expect(consentCheckboxes).toHaveLength(2);
@@ -544,11 +560,16 @@ test("Newsletter visual editor covers variant cards, consent gates, integration 
       getInputByPlaceholder(integrationSection, "https://example.com/subscribe"),
       "https://example.com/newsletter"
     );
+    setSelectValue(integrationSelect, "webhook");
+    setInputValue(
+      getInputByPlaceholder(integrationSection, "webhook_newsletter_signup"),
+      "newsletter_sync"
+    );
 
     expect(getLatestValue().integration).toMatchObject({
-      mode: "action-url",
+      mode: "webhook",
       actionUrl: "https://example.com/newsletter",
-      webhookId: "legacy_hook",
+      webhookId: "newsletter_sync",
     });
 
     const colorsSection = getSectionByTitle(container, "Colors and emphasis");

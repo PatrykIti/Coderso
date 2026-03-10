@@ -396,7 +396,7 @@ test("ContactWizardEditor covers variant fallback, form field guard branches, an
   }
 });
 
-test("ContactVisualEditor covers variant cards, required and ordering rules, map visibility, and style controls", async () => {
+test("ContactVisualEditor covers variant cards, required and ordering rules, contact details, map visibility, and style controls", async () => {
   const { ContactVisualEditor } = await import(
     "../../../core/admin/ui/widgets/editors/ContactEditors"
   );
@@ -487,6 +487,10 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, map
       true
     );
     expect(latestValue.form?.required).toEqual(["phone", "email"]);
+    setCheckboxValue(findRequiredFieldCheckbox(rulesSection, "Email"), false);
+    expect(latestValue.form?.required).toEqual(["phone"]);
+    setCheckboxValue(findRequiredFieldCheckbox(rulesSection, "Email"), true);
+    expect(latestValue.form?.required).toEqual(["phone", "email"]);
 
     const phoneCard = findRequiredFieldCard(rulesSection, "Phone");
     if (!phoneCard) {
@@ -494,11 +498,23 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, map
     }
     clickButtonByText(phoneCard, "Move up");
     expect(latestValue.form?.fields).toEqual(["phone", "email", "message"]);
+    clickButtonByText(findRequiredFieldCard(rulesSection, "Phone") ?? rulesSection, "Move down");
+    expect(latestValue.form?.fields).toEqual(["email", "phone", "message"]);
 
     setCheckboxValue(findFieldToggleCheckbox(rulesSection, "Email"), false);
     expect(latestValue.form?.fields).toEqual(["phone", "message"]);
     expect(latestValue.form?.required).toEqual(["phone"]);
 
+    setInputValue(findInputByPlaceholder(view.container, "Send message"), "Talk to us");
+    setInputValue(findInputByPlaceholder(view.container, "+1 555 123 456"), "+48 222 333 444");
+    setInputValue(
+      findInputByPlaceholder(view.container, "hello@example.com"),
+      "hello@nextless.dev"
+    );
+    setTextareaValue(
+      findTextareaByPlaceholder(view.container, "123 Market Street"),
+      "Nowy Swiat 10"
+    );
     setInputValue(findInputByPlaceholder(view.container, "Mon-Fri 9-5"), "24/7 support");
 
     const mapSection = findSection(view.container, "Map source and display behavior");
@@ -522,14 +538,25 @@ test("ContactVisualEditor covers variant cards, required and ordering rules, map
     setInputValue(colorInputs[0], "#112233");
     setInputValue(colorInputs[1], "#334455");
     setInputValue(colorInputs[2], "#556677");
+    setInputValue(
+      findInputByPlaceholder(view.container, "transparent or #f8fafc"),
+      "var(--surface-contact)"
+    );
     setSelectValue(findSelectByOptions(view.container, ["0", "1", "2", "3"]), "3");
     setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg", "xl"]), "xl");
     setSelectValue(findSelectByOptions(view.container, ["one", "two"]), "one");
 
     expect(onChangeSpy).toHaveBeenCalled();
+    expect(latestValue.form?.submitLabel).toBe("Talk to us");
+    expect(latestValue.contact).toMatchObject({
+      phone: "+48 222 333 444",
+      email: "hello@nextless.dev",
+      address: "Nowy Swiat 10",
+      hours: "24/7 support",
+    });
     expect(latestValue.contact?.hours).toBe("24/7 support");
     expect(latestValue.style).toMatchObject({
-      background: "#112233",
+      background: "var(--surface-contact)",
       surfaceColor: "#334455",
       borderColor: "#556677",
       borderWidth: "3",

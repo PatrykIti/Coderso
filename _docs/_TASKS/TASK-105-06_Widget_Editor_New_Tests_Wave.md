@@ -150,6 +150,14 @@ Parallel low-line follow-up on 2026-03-10:
   - `NavigationEditors.tsx` -> `97.93%` lines / `75.22%` branches
 - Re-ran the authoritative full-lane snapshot and it still remained flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`, so these gains are currently confirmed in targeted runs but not yet reflected in the global summary artifact.
 
+Contact and newsletter follow-up on 2026-03-10:
+- Deepened `ContactEditors` coverage around visual submit-label/contact-detail updates, required-field reorder down-path, and text-token `ColorField` input handling.
+- Deepened `NewsletterEditors` coverage around visual title/description copy, CTA label edits, and switching integration mode back to webhook with direct webhook-id updates.
+- Isolated targeted runs for that follow-up moved:
+  - `ContactEditors.tsx` -> `98.97%` lines / `63.80%` branches
+  - `NewsletterEditors.tsx` -> `100.00%` lines / `61.42%` branches
+- Re-ran the authoritative full-lane snapshot and it still remained flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`.
+
 Remaining hotspots in this wave:
 - `StatsKpiEditors.tsx`
 - `FeatureGridEditors.tsx`
