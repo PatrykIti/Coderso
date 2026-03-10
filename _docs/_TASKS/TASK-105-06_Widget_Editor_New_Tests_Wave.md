@@ -179,6 +179,11 @@ Gallery mosaic follow-up on 2026-03-10:
 - Isolated targeted run for `GalleryMosaicEditors.tsx` moved to `100.00%` lines / `66.66%` branches.
 - Re-ran the authoritative full-lane snapshot and it still remained flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`.
 
+Pricing plans follow-up on 2026-03-10:
+- Deepened `PricingPlansEditors` coverage around visual plan-count contraction/expansion, plan move-up ordering, and feature move-down flow.
+- Isolated targeted run for `PricingPlansEditors.tsx` moved to `99.29%` lines / `59.80%` branches.
+- Canonical full-lane snapshot was not rebaselined separately for this narrow slice; the latest authoritative totals still come from `coverage/vitest/coverage-summary.json`.
+
 Canonical full-lane rebaseline after the report-path fix on 2026-03-10:
 - `test:coverage` now runs through `scripts/run-vitest-coverage.ts` and writes the canonical full-lane summary to `coverage/vitest/coverage-summary.json`.
 - Previous “flat” comparisons against `/tmp/nextless-vitest-cov/coverage-summary.json` were using a stale artifact and are now superseded.
@@ -202,7 +207,6 @@ Canonical full-lane rebaseline after the report-path fix on 2026-03-10:
 Remaining hotspots in this wave:
 - `EntryTeaserEditors.tsx`
 - `FooterEditors.tsx`
-- `PricingPlansEditors.tsx`
 - `TeamEditors.tsx`
 - `StatsKpiEditors.tsx`
 - `NavigationEditors.tsx`

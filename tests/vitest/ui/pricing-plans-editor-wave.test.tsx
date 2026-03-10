@@ -671,3 +671,68 @@ test("PricingPlans advanced editor covers token overrides and normalization cont
     view.cleanup();
   }
 });
+
+test("PricingPlans visual editor covers plan-count contraction, move-up ordering, and feature move-down flow", async () => {
+  const { PricingPlansVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/PricingPlansEditors"
+  );
+
+  let latestValue: PricingPlansData = {
+    plans: [
+      {
+        id: "starter",
+        name: "Starter",
+        price: "$19",
+        features: ["Email support"],
+      },
+      {
+        id: "growth",
+        name: "Growth",
+        price: "$49",
+        features: ["API", "Automation"],
+      },
+      {
+        id: "scale",
+        name: "Scale",
+        price: "$99",
+        features: ["SSO"],
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<PricingPlansData>(latestValue);
+
+    return (
+      <PricingPlansVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="three-plans"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    setSelectValue(findSelectByOptions(view.container, ["2", "3", "4", "5", "6"]), "2");
+    expect(latestValue.plans).toHaveLength(2);
+
+    setSelectValue(findSelectByOptions(view.container, ["2", "3", "4", "5", "6"]), "3");
+    expect(latestValue.plans).toHaveLength(3);
+
+    const growthPlanCard = getPlanCards(view.container)[1];
+    clickButtonByText(growthPlanCard ?? view.container, "Move up");
+    expect(latestValue.plans.map((plan) => plan.id)).toEqual(["growth", "starter", "plan-3"]);
+
+    const movedGrowthCard = getPlanCards(view.container)[0];
+    const featureRows = getFeatureRows(movedGrowthCard ?? view.container);
+    clickButtonByText(featureRows[0] ?? movedGrowthCard ?? view.container, "Move down");
+    expect(latestValue.plans[0]?.features).toEqual(["Automation", "API"]);
+  } finally {
+    view.cleanup();
+  }
+});
