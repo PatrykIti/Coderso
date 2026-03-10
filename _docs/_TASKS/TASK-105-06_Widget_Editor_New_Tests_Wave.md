@@ -226,12 +226,33 @@ Footer/team/navigation/logo/divider/entry follow-up on 2026-03-10:
   - `DividerEditors.tsx` -> `100.00%` lines / `71.73%` branches
   - `EntryTeaserEditors.tsx` -> `100.00%` lines / `90.74%` branches
 
+Stats/navigation/pricing/hero follow-up on 2026-03-10:
+- Deepened `StatsKpiEditors` coverage around isolated wizard value updates and visual divider toggles.
+- Deepened `NavigationEditors` coverage around API-flavored menu-sync fallback and direct color-picker updates in the colors section.
+- Deepened `PricingPlansEditors` coverage around the remaining visual `ColorField` picker path.
+- Deepened `HeroEditors` coverage around the wizard secondary CTA URL path and the advanced background color picker branch.
+- Fresh canonical full-lane snapshot from `coverage/vitest/coverage-summary.json` after this batch:
+  - `% Stmts`: `60.87`
+  - `% Branch`: `51.45`
+  - `% Funcs`: `65.55`
+  - `% Lines`: `63.78`
+- Updated widget-editor aggregate:
+  - `core/admin/ui/widgets/editors/*` -> `99.97%` lines / `77.47%` branches across `40` tracked files
+- Updated authoritative file snapshots from the canonical full-lane run:
+  - `StatsKpiEditors.tsx` -> `100.00%` lines / `91.07%` branches
+  - `NavigationEditors.tsx` -> `100.00%` lines / `76.54%` branches
+  - `PricingPlansEditors.tsx` -> `100.00%` lines / `59.80%` branches
+  - `HeroEditors.tsx` -> `100.00%` lines / `91.32%` branches
+
 Remaining hotspots in this wave:
-- `StatsKpiEditors.tsx`
 - `TimelineEditors.tsx`
-- `NavigationEditors.tsx`
-- `PricingPlansEditors.tsx`
-- `HeroEditors.tsx`
+- residual branch gaps in `FeatureGridEditors.tsx`
+- residual branch gaps in `PricingPlansEditors.tsx`
+- residual branch gaps in `NewsletterEditors.tsx`
+- residual branch gaps in `TeamEditors.tsx`
+- residual branch gaps in `ProductCompareEditors.tsx`
+- residual branch gaps in `ProductTableEditors.tsx`
+- residual branch gaps in `LogoCloudEditors.tsx`
 
 ## Testing Requirements
 

@@ -749,3 +749,87 @@ test("StatsKpi editors render sparse normalized fallbacks for missing header, it
     vi.resetModules();
   }
 });
+
+test("StatsKpi wizard value inputs and visual divider toggle update isolated stateful paths", async () => {
+  const { StatsKpiVisualEditor, StatsKpiWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/StatsKpiEditors"
+  );
+
+  let latestWizardValue: StatsKpiData = {
+    items: [
+      { id: "metric-1", value: "10", label: "One" },
+      { id: "metric-2", value: "20", label: "Two" },
+      { id: "metric-3", value: "30", label: "Three" },
+    ],
+  };
+
+  const WizardHarness = () => {
+    const [value, setValue] = useState<StatsKpiData>(latestWizardValue);
+
+    return (
+      <StatsKpiWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestWizardValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const wizardView = mount(<WizardHarness />);
+
+  try {
+    setInputValue(getInputByPlaceholder(wizardView.container, "Metric 2 value"), "240");
+    expect(latestWizardValue.items?.[1]).toMatchObject({
+      value: "240",
+      label: "Two",
+    });
+  } finally {
+    wizardView.cleanup();
+  }
+
+  let latestVisualValue: StatsKpiData = {
+    items: [
+      { id: "metric-a", value: "88%", label: "Coverage" },
+      { id: "metric-b", value: "12m", label: "Runtime" },
+    ],
+    style: {
+      divider: false,
+    },
+  };
+
+  const VisualHarness = () => {
+    const [value, setValue] = useState<StatsKpiData>(latestVisualValue);
+
+    return (
+      <StatsKpiVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestVisualValue = next;
+          setValue(next);
+        }}
+        variant="inline"
+      />
+    );
+  };
+
+  const visualView = mount(<VisualHarness />);
+
+  try {
+    const dividerToggle = visualView.container.querySelector<HTMLInputElement>('input[type="checkbox"]');
+    if (!(dividerToggle instanceof HTMLInputElement)) {
+      throw new Error("Missing divider toggle");
+    }
+    act(() => {
+      dividerToggle.click();
+    });
+
+    expect(latestVisualValue.style).toMatchObject({
+      divider: true,
+    });
+  } finally {
+    visualView.cleanup();
+  }
+});

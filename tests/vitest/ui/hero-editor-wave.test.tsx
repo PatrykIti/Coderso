@@ -480,6 +480,11 @@ test("HeroWizardEditor applies presets, updates direct content fields, toggles C
       setSelectValue(findSelectByOptions(view.container, ["single", "dual"]), "dual");
     });
     expect(view.container.textContent).toContain("Secondary CTA Label");
+
+    act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Learn more"), "Review pricing");
+      setInputValue(findInputByPlaceholder(view.container, "/learn"), "/pricing");
+    });
     expect(
       [...onChangeSpy.mock.calls]
         .reverse()
@@ -1197,6 +1202,7 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
       const backgroundColors = backgroundSection?.querySelectorAll(
         'input[type="color"]'
       ) as NodeListOf<HTMLInputElement> | undefined;
+      setInputValue(backgroundColors?.[0], "#f8fafc");
       setInputValue(backgroundColors?.[1], "#0ea5e9");
       setInputValue(backgroundColors?.[2], "#0369a1");
       setInputValue(backgroundSection?.querySelector('input[type="range"]') ?? undefined, "60");
@@ -1228,7 +1234,7 @@ test("HeroAdvancedEditor covers legacy background media, layout and spacing cont
           paddingBottom: "2xl",
         }),
         background: expect.objectContaining({
-          color: "#ffffff",
+          color: "#f8fafc",
           gradient: "linear-gradient(60deg, #0ea5e9, #0369a1)",
           media: expect.objectContaining({
             type: "none",

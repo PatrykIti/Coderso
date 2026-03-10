@@ -547,6 +547,11 @@ test("PricingPlans visual editor covers variant cards, plan and feature manageme
       highlighted: false,
     });
 
+    const colorPickersBeforeUpdate = Array.from(
+      view.container.querySelectorAll("input[type='color']")
+    ) as HTMLInputElement[];
+    setInputValue(colorPickersBeforeUpdate[0], "#101820");
+    setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "var(--surface-card)");
     setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#112233");
     setInputValue(findInputByPlaceholder(view.container, "var(--color-border)"), "#223344");
     setInputValue(findInputByPlaceholder(view.container, "var(--color-primary)"), "#334455");

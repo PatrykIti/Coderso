@@ -973,6 +973,73 @@ test("Navigation editors surface generic menu and logo resolver failures without
   }
 });
 
+test("NavigationVisualEditor covers API menu resolver fallback and color picker updates", async () => {
+  const { NavigationVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/NavigationEditors"
+  );
+
+  let latestValue = createNavigationValue();
+
+  const Harness = () => {
+    const [value, setValue] = useState<NavigationData>(latestValue);
+
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="with-cta"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const structureSection = findSectionByTitle(view.container, "Variant and Structure");
+    if (!(structureSection instanceof HTMLElement)) {
+      throw new Error("Missing structure section");
+    }
+
+    setSelectValue(
+      findSelectByOptions(structureSection, ["manual", "menu", "pages"]),
+      "menu"
+    );
+    await flush();
+
+    navigationClientState.menuDetailError = createApiClientError("Menu sync unavailable");
+    setSelectValue(
+      findSelectByOptions(structureSection, ["__none__", "menu-1", "menu-2"]),
+      "menu-1"
+    );
+    await flush();
+
+    expect(normalizeText(structureSection.textContent)).toContain(
+      normalizeText("Menu sync unavailable")
+    );
+
+    const colorsSection = findSectionByTitle(view.container, "Colors, Borders, Typography");
+    if (!(colorsSection instanceof HTMLElement)) {
+      throw new Error("Missing colors section");
+    }
+
+    const colorPickers = Array.from(
+      colorsSection.querySelectorAll<HTMLInputElement>('input[type="color"]')
+    );
+
+    setInputValue(colorPickers[0], "#102938");
+
+    expect(latestValue.style).toMatchObject({
+      surfaceColor: "#102938",
+    });
+  } finally {
+    view.cleanup();
+    navigationClientState.menuDetailError = null;
+  }
+});
+
 test("NavigationVisualEditor covers manual editing, menu error recovery, CTA validation, and style or behavior controls", async () => {
   const { NavigationVisualEditor } = await import(
     "../../../core/admin/ui/widgets/editors/NavigationEditors"
