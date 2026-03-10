@@ -230,12 +230,14 @@ test("primitive editor fields render content and emit normalized changes", () =>
   setInputValue(findInputByLabel(container, "Headline"), "Fresh headline");
   setInputValue(findInputByLabel(container, "Limit"), "999");
   setInputValue(findInputByLabel(container, "Limit"), "Infinity");
+  setInputValue(findInputByLabel(container, "Limit"), "1e309");
   setTextareaValue(findTextareaByLabel(container, "Description"), "Long form copy");
   toggleCheckbox(findCheckboxByLabel(container, "Show excerpt"));
 
   expect(textChange).toHaveBeenCalledWith("Fresh headline");
   expect(numberChange).toHaveBeenNthCalledWith(1, 8);
   expect(numberChange).toHaveBeenNthCalledWith(2, 4);
+  expect(numberChange).toHaveBeenNthCalledWith(3, 4);
   expect(textareaChange).toHaveBeenCalledWith("Long form copy");
   expect(toggleChange).toHaveBeenCalledWith(true);
 
