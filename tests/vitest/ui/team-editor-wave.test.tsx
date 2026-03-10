@@ -599,3 +599,76 @@ test("Team advanced editor covers normalization safeguards, token updates, and r
     view.cleanup();
   }
 });
+
+test("Team visual editor covers member-count expansion, social add-link, and raw card token inputs", async () => {
+  const { TeamVisualEditor } = await import("../../../core/admin/ui/widgets/editors/TeamEditors");
+
+  let latestValue: TeamData = {
+    members: [
+      {
+        name: "Ada",
+        role: "CTO",
+        bio: "Builds delivery systems.",
+        socialLinks: [],
+      },
+    ],
+    style: {},
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<TeamData>(latestValue);
+
+    return (
+      <TeamVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const structureSection = findSectionByTitle(view.container, "Variant and member structure");
+    setSelectValue(findSelectByOptions(structureSection as ParentNode, ["1", "12"]), "2");
+    expect(latestValue.members).toHaveLength(2);
+
+    const membersSection = findSectionByTitle(view.container, "Members content and order");
+    setInputValue(findInputsByPlaceholder(view.container, "Anna Kowalska")[1], "Grace");
+    const moveUpButtons = Array.from((membersSection ?? view.container).querySelectorAll("button")).filter(
+      (button) => button.textContent?.includes("Move up")
+    );
+    clickElement(moveUpButtons[1]);
+    expect(latestValue.members.map((member) => member.name)).toEqual(["Grace", "Ada"]);
+
+    const socialLinksSection = findSectionByTitle(view.container, "Social links");
+    clickButtonByText(socialLinksSection as ParentNode, "Add link");
+    expect(latestValue.members[0]?.socialLinks).toHaveLength(1);
+    expect(latestValue.members[0]?.socialLinks?.[0]).toEqual(
+      expect.objectContaining({
+        label: "LinkedIn",
+        url: "#",
+      })
+    );
+
+    const styleSection = findSectionByTitle(view.container, "Card and layout style");
+    setInputValue(findInputByPlaceholder(styleSection as ParentNode, "var(--color-bg)"), "var(--team-surface)");
+    setInputValue(
+      findInputByPlaceholder(styleSection as ParentNode, "var(--color-border)"),
+      "var(--team-border)"
+    );
+
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        cardSurface: "var(--team-surface)",
+        cardBorder: "var(--team-border)",
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});

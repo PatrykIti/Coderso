@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 404 | 2026-03-10 | TASK-105 footer team navigation logo divider entry follow-up | QA/Platform |
 | 403 | 2026-03-10 | TASK-105 pricing plans coverage follow-up | QA/Platform |
 | 402 | 2026-03-10 | TASK-105 vitest coverage canonical rebaseline | QA/Platform |
 | 401 | 2026-03-10 | TASK-105 gallery mosaic coverage follow-up | QA/Platform |

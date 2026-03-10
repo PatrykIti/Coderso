@@ -825,6 +825,8 @@ test("NavigationWizardEditor updates manual links and logo copy safely without a
   const view = mount(<Harness />);
 
   try {
+    setSelectValue(findSelectByOptions(view.container, ["simple", "with-cta", "split"]), "split");
+
     const quickLinkInputs = findInputsByPlaceholder(view.container, "/path");
     setInputValue(findInputByPlaceholder(view.container, "Item 1 label"), "Platform");
     setInputValue(quickLinkInputs[0], "/platform");
@@ -862,6 +864,112 @@ test("NavigationWizardEditor updates manual links and logo copy safely without a
     });
   } finally {
     view.cleanup();
+  }
+});
+
+test("Navigation editors surface generic menu and logo resolver failures without relying on API error wrappers", async () => {
+  const { NavigationVisualEditor, NavigationWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/NavigationEditors"
+  );
+
+  navigationClientState.listMenusError = new Error("menus_failed");
+
+  const menuLoadView = mount(
+    <NavigationWizardEditor
+      value={createNavigationValue({ linksSource: "menu" })}
+      onChange={() => undefined}
+      variant="simple"
+    />
+  );
+
+  try {
+    await flush();
+    expect(normalizeText(menuLoadView.container.textContent)).toContain(
+      normalizeText("Failed to load menus.")
+    );
+  } finally {
+    menuLoadView.cleanup();
+  }
+
+  navigationClientState.listMenusError = null;
+  navigationClientState.menuDetailError = new Error("sync_failed");
+
+  let latestValue = createNavigationValue({ linksSource: "menu" });
+
+  const VisualHarness = () => {
+    const [value, setValue] = useState<NavigationData>(latestValue);
+
+    return (
+      <NavigationVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="with-cta"
+      />
+    );
+  };
+
+  const menuResolveView = mount(<VisualHarness />);
+
+  try {
+    await flush();
+    setSelectValue(
+      findSelectByOptions(menuResolveView.container, ["__none__", "menu-1", "menu-2"]),
+      "menu-1"
+    );
+    await flush();
+
+    expect(normalizeText(menuResolveView.container.textContent)).toContain(
+      normalizeText("Failed to load selected menu items.")
+    );
+  } finally {
+    menuResolveView.cleanup();
+  }
+
+  navigationClientState.menuDetailError = null;
+  navigationClientState.mediaError = new Error("resolve_failed");
+
+  let latestLogoValue = createNavigationValue({
+    logo: {
+      type: "image",
+      value: "",
+      href: "/",
+      source: "library",
+    },
+  });
+
+  const LogoHarness = () => {
+    const [value, setValue] = useState<NavigationData>(latestLogoValue);
+
+    return (
+      <NavigationWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestLogoValue = next;
+          setValue(next);
+        }}
+        variant="with-cta"
+      />
+    );
+  };
+
+  const logoView = mount(<LogoHarness />);
+
+  try {
+    clickByText(logoView.container, "pick-media");
+    await flush();
+
+    expect(normalizeText(logoView.container.textContent)).toContain(
+      normalizeText("Failed to resolve selected logo.")
+    );
+    expect(latestLogoValue.logo).toMatchObject({
+      source: "library",
+      assetId: "logo-1",
+    });
+  } finally {
+    logoView.cleanup();
   }
 });
 

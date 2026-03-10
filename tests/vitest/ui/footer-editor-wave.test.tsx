@@ -363,3 +363,63 @@ test("Footer editors cover quick setup, visual content edits, social links, and 
     view.cleanup();
   }
 });
+
+test("Footer visual editor updates visible column titles and removes social links", async () => {
+  const { FooterVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/FooterEditors"
+  );
+
+  let latestValue: FooterData = {
+    columns: [
+      { title: "Company", links: [{ label: "Docs", href: "/docs" }] },
+      { title: "Product", links: [{ label: "API", href: "/api" }] },
+    ],
+    social: [
+      { type: "linkedin", href: "https://linkedin.com/company/example" },
+      { type: "github", href: "https://github.com/example" },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<FooterData>(latestValue);
+
+    return (
+      <FooterVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="columns-2"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    setInputValue(findInputByPlaceholder(view.container, "Column 1 title"), "Platform");
+
+    const firstSocialUrlInput = findInputsByPlaceholder(view.container, "Social URL")[0];
+    const firstSocialRow = firstSocialUrlInput?.closest("div.grid");
+    const socialRemoveButton = firstSocialRow?.querySelector("button");
+    if (!(socialRemoveButton instanceof HTMLButtonElement)) {
+      throw new Error("Missing social remove button");
+    }
+    act(() => {
+      socialRemoveButton.click();
+    });
+
+    expect(latestValue.columns[0]).toMatchObject({
+      title: "Platform",
+    });
+    expect(latestValue.social).toEqual([
+      {
+        type: "github",
+        href: "https://github.com/example",
+      },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});

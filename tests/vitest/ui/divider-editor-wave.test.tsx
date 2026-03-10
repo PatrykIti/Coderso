@@ -416,7 +416,11 @@ test("Divider editors cover visual label input, color picker changes, custom spa
     const advancedSection = findSectionByTitle(view.container, "Technical divider tokens");
     const variantSelect = findSelectsByOptions(advancedSection as ParentNode, ["line", "dashed", "label-center"])[0];
     setSelectValue(variantSelect, "line");
-    setInputValue(findInputByPlaceholder(advancedSection as ParentNode, "e.g. 32px"), "24px");
+    const advancedSpacingInputs = Array.from(
+      (advancedSection as ParentNode).querySelectorAll("input[placeholder='e.g. 32px']")
+    );
+    setInputValue(advancedSpacingInputs[0], "24px");
+    setInputValue(advancedSpacingInputs[1], "18px");
 
     expect(currentVariant).toBe("label-center");
     expect(latestValue).toMatchObject({
@@ -425,13 +429,14 @@ test("Divider editors cover visual label input, color picker changes, custom spa
       customWidth: "55%",
       color: "#94a3b8",
       marginTop: "24px",
-      marginBottom: "6",
+      marginBottom: "18px",
     });
 
     const snapshot = view.container.querySelector("pre");
     expect(snapshot?.textContent).toContain('"label": "Chapter break"');
     expect(snapshot?.textContent).toContain('"customWidth": "55%"');
     expect(snapshot?.textContent).toContain('"marginTop": "24px"');
+    expect(snapshot?.textContent).toContain('"marginBottom": "18px"');
   } finally {
     view.cleanup();
   }

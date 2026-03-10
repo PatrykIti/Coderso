@@ -1004,3 +1004,95 @@ test("EntryTeaser editors cover listing mode and content/listings loading errors
     successView.cleanup();
   }
 });
+
+test("EntryTeaser visual source controls cover generic content-type failure, API entry failure, and fallback title updates", async () => {
+  entryTeaserState.contentTypesError = new Error("types transport failed");
+
+  const typesErrorView = await renderEditors({
+    initialValue: {},
+  });
+
+  try {
+    await flush();
+    expect(typesErrorView.container.textContent).toContain("Failed to load content types.");
+  } finally {
+    typesErrorView.cleanup();
+  }
+
+  entryTeaserState.reset();
+  entryTeaserState.entriesError = {
+    name: "ApiClientError",
+    message: "Entries API failed",
+  };
+
+  const entryErrorView = await renderEditors({
+    initialValue: {
+      sourceMode: "manual",
+      source: {
+        mode: "legacy",
+        contentTypeId: "articles",
+      },
+    },
+  });
+
+  try {
+    await flush();
+    expect(entryErrorView.container.textContent).toContain("Entries API failed");
+  } finally {
+    entryErrorView.cleanup();
+  }
+
+  entryTeaserState.reset();
+
+  const visualView = await renderEditors({
+    initialValue: {},
+  });
+
+  try {
+    const visualSection = findSectionByTitle(visualView.container, "Source configuration");
+    if (!(visualSection instanceof HTMLElement)) {
+      throw new Error("Missing visual source configuration section");
+    }
+
+    setSelectValue(findSelectByOptions(visualSection, ["legacy", "listing"]), "listing");
+    await flush();
+
+    expect(visualView.getLatestValue()).toMatchObject({
+      source: {
+        mode: "listing",
+        contentTypeId: "",
+        entryId: "",
+      },
+    });
+
+    setSelectValue(findSelectByOptions(visualSection, ["legacy", "listing"]), "legacy");
+    await flush();
+    setSelectValue(findSelectByOptions(visualSection, ["latest", "featured", "manual"]), "manual");
+    await flush();
+
+    const fallbackSection = findSectionByTitle(visualView.container, "Empty state copy");
+    if (!(fallbackSection instanceof HTMLElement)) {
+      throw new Error("Missing fallback section");
+    }
+
+    setInputValue(
+      findInputByPlaceholder(fallbackSection, "No entry selected"),
+      "Choose teaser content"
+    );
+
+    expect(visualView.getLatestValue()).toMatchObject({
+      sourceMode: "manual",
+      source: {
+        mode: "legacy",
+        entryId: "",
+        listingQueryId: "",
+        listingTemplateId: "",
+      },
+      fallback: {
+        title: "Choose teaser content",
+      },
+    });
+  } finally {
+    visualView.cleanup();
+  }
+});

@@ -204,15 +204,34 @@ Canonical full-lane rebaseline after the report-path fix on 2026-03-10:
   - `DividerEditors.tsx` -> `98.33%` lines / `71.73%` branches
   - `LogoCloudEditors.tsx` -> `98.80%` lines / `64.00%` branches
 
+Footer/team/navigation/logo/divider/entry follow-up on 2026-03-10:
+- Deepened `FooterEditors` coverage around visible-column title edits and social-link removal in visual mode.
+- Deepened `TeamEditors` coverage around member-count expansion, second-card move-up ordering, social-link add flow, and raw card token updates.
+- Deepened `NavigationEditors` coverage around no-handler variant selection and generic non-API menu/media fallback paths.
+- Deepened `LogoCloudEditors` coverage around direct logo-name editing before reorder/remove.
+- Deepened `DividerEditors` coverage around the second advanced spacing input (`marginBottom`).
+- Deepened `EntryTeaserEditors` coverage around generic content-type failures, API entry failures, source-mode switching, and fallback-title updates.
+- Fresh canonical full-lane snapshot from `coverage/vitest/coverage-summary.json` after this batch:
+  - `% Stmts`: `60.84`
+  - `% Branch`: `51.45`
+  - `% Funcs`: `65.47`
+  - `% Lines`: `63.75`
+- Updated widget-editor aggregate:
+  - `core/admin/ui/widgets/editors/*` -> `99.76%` lines / `77.43%` branches across `40` tracked files
+- Updated authoritative file snapshots from the canonical full-lane run:
+  - `FooterEditors.tsx` -> `100.00%` lines / `89.47%` branches
+  - `TeamEditors.tsx` -> `100.00%` lines / `61.90%` branches
+  - `NavigationEditors.tsx` -> `99.17%` lines / `76.10%` branches
+  - `LogoCloudEditors.tsx` -> `100.00%` lines / `64.00%` branches
+  - `DividerEditors.tsx` -> `100.00%` lines / `71.73%` branches
+  - `EntryTeaserEditors.tsx` -> `100.00%` lines / `90.74%` branches
+
 Remaining hotspots in this wave:
-- `EntryTeaserEditors.tsx`
-- `FooterEditors.tsx`
-- `TeamEditors.tsx`
 - `StatsKpiEditors.tsx`
+- `TimelineEditors.tsx`
 - `NavigationEditors.tsx`
-- `DividerEditors.tsx`
-- `LogoCloudEditors.tsx`
-- `EntryTeaserEditors.tsx`
+- `PricingPlansEditors.tsx`
+- `HeroEditors.tsx`
 
 ## Testing Requirements
 

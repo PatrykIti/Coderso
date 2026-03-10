@@ -482,31 +482,33 @@ test("LogoCloud visual covers variant cards, count boundaries, logo CRUD, reorde
   expect(getLatestValue().logos[2]?.name).toBe("Logo 3");
   expect(getLatestValue().logos[2]?.href).toBe("#");
 
+  setInputValue(getInputByPlaceholder(logosSection, "Logo 1"), "Solo updated");
   setInputValue(
     getInputsByPlaceholder(logosSection, "https://cdn.example.com/logo.svg")[0],
     "https://cdn.example.com/solo.svg"
   );
   setInputValue(getInputsByPlaceholder(logosSection, "#")[2], "/partners/logo-3");
 
+  expect(getLatestValue().logos[0]?.name).toBe("Solo updated");
   expect(getLatestValue().logos[0]?.image).toBe("https://cdn.example.com/solo.svg");
   expect(getLatestValue().logos[2]?.href).toBe("/partners/logo-3");
 
   clickButton(getButtonsByText(logosSection, "Move down")[0]);
   expect(getLatestValue().logos.map((logo) => logo.name)).toEqual([
     "North Labs",
-    "Solo",
+    "Solo updated",
     "Logo 3",
   ]);
 
   clickButton(getButtonsByText(logosSection, "Move up")[1]);
   expect(getLatestValue().logos.map((logo) => logo.name)).toEqual([
-    "Solo",
+    "Solo updated",
     "North Labs",
     "Logo 3",
   ]);
 
   clickButton(getButtonsByText(logosSection, "Remove")[1]);
-  expect(getLatestValue().logos.map((logo) => logo.name)).toEqual(["Solo", "Logo 3"]);
+  expect(getLatestValue().logos.map((logo) => logo.name)).toEqual(["Solo updated", "Logo 3"]);
 
   setInputValue(
     getInputByPlaceholder(headerSection, "Trusted by teams worldwide"),

@@ -230,7 +230,8 @@ Additional widget-editor residual-closure snapshot (from `bun run test:coverage`
 - gallery mosaic follow-up produced a stronger isolated targeted run for `GalleryMosaicEditors`, but the authoritative full-lane snapshot still remained flat
 - pricing plans follow-up produced a stronger isolated targeted run for `PricingPlansEditors` (`99.29%` lines / `59.80%` branches) without a separate full-lane rebaseline
 - canonical report-path fix and fresh full-lane rebaseline moved the true widget-editor aggregate to `99.17%` lines / `77.13%` branches
-- remaining widget-editor focus after this slice -> `EntryTeaserEditors`, `FooterEditors`, `TeamEditors`, `StatsKpiEditors`, `NavigationEditors`, `DividerEditors`, and `LogoCloudEditors`
+- footer/team/navigation/logo/divider/entry follow-up moved the widget-editor aggregate further to `99.76%` lines / `77.43%` branches in the canonical full-lane snapshot
+- remaining widget-editor focus after this slice -> `StatsKpiEditors`, `TimelineEditors`, `NavigationEditors`, `PricingPlansEditors`, and `HeroEditors`
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
