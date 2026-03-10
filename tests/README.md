@@ -31,6 +31,7 @@ bun run test:coverage:all
 ```
 
 `test:coverage:bun` now uses curated Bun-owned route/plugin/perf suites through `scripts/run-bun-coverage-baseline.ts`.
+`test:coverage` now uses `scripts/run-vitest-coverage.ts` and the canonical full-lane report path `coverage/vitest/coverage-summary.json`.
 
 ## Lane guidance
 

@@ -15,7 +15,7 @@
     "test:full": "bun run test:bun && bun run test:vitest",
     "test:bun": "bun test tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/perf tests/security",
     "test:vitest": "vitest run --config vitest.config.ts",
-    "test:coverage": "mkdir -p coverage/vitest/.tmp && vitest run --config vitest.config.ts --coverage",
+    "test:coverage": "bun scripts/run-vitest-coverage.ts",
     "test:coverage:bun": "bun scripts/run-bun-coverage-baseline.ts",
     "test:coverage:bun:full": "bun test --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir=coverage/bun-full tests/integration tests/perf tests/security",
     "test:coverage:all": "bun run test:coverage && bun run test:coverage:bun",

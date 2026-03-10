@@ -236,7 +236,7 @@ Current script split:
   "test": "bun run test:bun && bun run test:vitest",
   "test:bun": "bun test tests/integration tests/perf tests/security",
   "test:vitest": "vitest run",
-  "test:coverage": "vitest run --coverage",
+  "test:coverage": "bun scripts/run-vitest-coverage.ts",
   "test:coverage:bun": "bun scripts/run-bun-coverage-baseline.ts",
   "test:coverage:bun:full": "bun test --coverage tests/integration tests/perf tests/security",
   "test:coverage:all": "bun run test:coverage && bun run test:coverage:bun"

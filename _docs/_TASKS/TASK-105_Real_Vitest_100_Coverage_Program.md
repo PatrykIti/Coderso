@@ -78,6 +78,25 @@ Current snapshot after the latest forms, listings, themes, booking, and widget-e
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `87.50%` lines, `66.07%` branches
 - aggregate `core/admin/ui/widgets/editors/*` -> `50.61%` lines, `49.66%` branches
 
+Canonical full-lane rebaseline after the coverage report-path fix (from `coverage/vitest/coverage-summary.json` on 2026-03-10):
+- `% Stmts`: `60.75`
+- `% Branch`: `51.40`
+- `% Funcs`: `65.24`
+- `% Lines`: `63.65`
+- `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `96.73%` lines, `88.27%` branches
+- `core/admin/ui/widgets/editors/FooterEditors.tsx` -> `96.85%` lines, `89.47%` branches
+- `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` -> `97.18%` lines, `58.82%` branches
+- `core/admin/ui/widgets/editors/TeamEditors.tsx` -> `97.67%` lines, `60.71%` branches
+- `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `97.72%` lines, `91.07%` branches
+- `core/admin/ui/widgets/editors/NavigationEditors.tsx` -> `97.93%` lines, `75.22%` branches
+- `core/admin/ui/widgets/editors/DividerEditors.tsx` -> `98.33%` lines, `71.73%` branches
+- `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` -> `98.80%` lines, `64.00%` branches
+- `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `100.00%` lines, `69.33%` branches
+- `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` -> `100.00%` lines, `80.00%` branches
+- `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` -> `100.00%` lines, `66.66%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `99.17%` lines, `77.13%` branches across `40` tracked files
+- previous “flat” comparisons against `/tmp/nextless-vitest-cov/coverage-summary.json` are superseded; that file was a stale artifact, not the current full-lane snapshot
+
 Additional widget-editor product/template snapshot (from `bun run test:coverage` on 2026-03-09):
 - `% Stmts`: `53.20`
 - `% Branch`: `46.79`
@@ -209,7 +228,8 @@ Additional widget-editor residual-closure snapshot (from `bun run test:coverage`
 - compare/posts/shared follow-up produced stronger isolated targeted runs for `CompareTimelineEditors`, `PostsFeedEditors`, and `CommerceWidgetEditorShared`, plus a selector-scope fix for `ProductGalleryEditors`, but the authoritative full-lane snapshot still remained flat
 - commerce shared number-guard follow-up locked an extra overflow-style numeric input path without changing the authoritative full-lane snapshot
 - gallery mosaic follow-up produced a stronger isolated targeted run for `GalleryMosaicEditors`, but the authoritative full-lane snapshot still remained flat
-- remaining widget-editor focus after this slice -> `StatsKpiEditors`, `FeatureGridEditors`, `TestimonialsEditors`, `RichTextSectionEditors`, `FaqAccordionEditors`, `EntryTeaserEditors`, `NavigationEditors`, and `ContactEditors`
+- canonical report-path fix and fresh full-lane rebaseline moved the true widget-editor aggregate to `99.17%` lines / `77.13%` branches
+- remaining widget-editor focus after this slice -> `EntryTeaserEditors`, `FooterEditors`, `PricingPlansEditors`, `TeamEditors`, `StatsKpiEditors`, `NavigationEditors`, `DividerEditors`, and `LogoCloudEditors`
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.

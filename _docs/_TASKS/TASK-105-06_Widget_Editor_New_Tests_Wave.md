@@ -179,15 +179,36 @@ Gallery mosaic follow-up on 2026-03-10:
 - Isolated targeted run for `GalleryMosaicEditors.tsx` moved to `100.00%` lines / `66.66%` branches.
 - Re-ran the authoritative full-lane snapshot and it still remained flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`.
 
+Canonical full-lane rebaseline after the report-path fix on 2026-03-10:
+- `test:coverage` now runs through `scripts/run-vitest-coverage.ts` and writes the canonical full-lane summary to `coverage/vitest/coverage-summary.json`.
+- Previous “flat” comparisons against `/tmp/nextless-vitest-cov/coverage-summary.json` were using a stale artifact and are now superseded.
+- Current authoritative full-lane snapshot from `coverage/vitest/coverage-summary.json`:
+  - `% Stmts`: `60.75`
+  - `% Branch`: `51.40`
+  - `% Funcs`: `65.24`
+  - `% Lines`: `63.65`
+- Current authoritative widget-editor aggregate:
+  - `core/admin/ui/widgets/editors/*` -> `99.17%` lines / `77.13%` branches across `40` tracked files
+- Current authoritative widget-editor low-line hotspots are now:
+  - `EntryTeaserEditors.tsx` -> `96.73%` lines / `88.27%` branches
+  - `FooterEditors.tsx` -> `96.85%` lines / `89.47%` branches
+  - `PricingPlansEditors.tsx` -> `97.18%` lines / `58.82%` branches
+  - `TeamEditors.tsx` -> `97.67%` lines / `60.71%` branches
+  - `StatsKpiEditors.tsx` -> `97.72%` lines / `91.07%` branches
+  - `NavigationEditors.tsx` -> `97.93%` lines / `75.22%` branches
+  - `DividerEditors.tsx` -> `98.33%` lines / `71.73%` branches
+  - `LogoCloudEditors.tsx` -> `98.80%` lines / `64.00%` branches
+
 Remaining hotspots in this wave:
-- `StatsKpiEditors.tsx`
-- `FeatureGridEditors.tsx`
-- `TestimonialsEditors.tsx`
-- `RichTextSectionEditors.tsx`
-- `FaqAccordionEditors.tsx`
 - `EntryTeaserEditors.tsx`
+- `FooterEditors.tsx`
+- `PricingPlansEditors.tsx`
+- `TeamEditors.tsx`
+- `StatsKpiEditors.tsx`
 - `NavigationEditors.tsx`
-- `ContactEditors.tsx`
+- `DividerEditors.tsx`
+- `LogoCloudEditors.tsx`
+- `EntryTeaserEditors.tsx`
 
 ## Testing Requirements
 
