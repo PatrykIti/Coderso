@@ -208,6 +208,7 @@ Additional widget-editor residual-closure snapshot (from `bun run test:coverage`
 - contact/newsletter follow-up produced stronger isolated targeted runs for `ContactEditors` and `NewsletterEditors`, but the authoritative full-lane snapshot still remained flat
 - compare/posts/shared follow-up produced stronger isolated targeted runs for `CompareTimelineEditors`, `PostsFeedEditors`, and `CommerceWidgetEditorShared`, plus a selector-scope fix for `ProductGalleryEditors`, but the authoritative full-lane snapshot still remained flat
 - commerce shared number-guard follow-up locked an extra overflow-style numeric input path without changing the authoritative full-lane snapshot
+- gallery mosaic follow-up produced a stronger isolated targeted run for `GalleryMosaicEditors`, but the authoritative full-lane snapshot still remained flat
 - remaining widget-editor focus after this slice -> `StatsKpiEditors`, `FeatureGridEditors`, `TestimonialsEditors`, `RichTextSectionEditors`, `FaqAccordionEditors`, `EntryTeaserEditors`, `NavigationEditors`, and `ContactEditors`
 
 This means the next stage is not runner cleanup anymore.

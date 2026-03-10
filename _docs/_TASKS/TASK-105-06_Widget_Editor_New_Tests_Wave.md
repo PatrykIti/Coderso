@@ -174,6 +174,11 @@ Commerce shared number-guard follow-up on 2026-03-10:
 - Added one more explicit non-finite numeric input path (`1e309`) to the shared commerce number-field test so the clamp-to-current behavior is locked for overflow-style input as well as `Infinity`.
 - Isolated targeted run for `CommerceWidgetEditorShared.tsx` stayed at `100.00%` lines / `73.33%` branches.
 
+Gallery mosaic follow-up on 2026-03-10:
+- Deepened `GalleryMosaicEditors` coverage around visual header-title updates, first-item image URL edits, move-down ordering, and raw overlay-token inputs without a variant handler.
+- Isolated targeted run for `GalleryMosaicEditors.tsx` moved to `100.00%` lines / `66.66%` branches.
+- Re-ran the authoritative full-lane snapshot and it still remained flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`.
+
 Remaining hotspots in this wave:
 - `StatsKpiEditors.tsx`
 - `FeatureGridEditors.tsx`

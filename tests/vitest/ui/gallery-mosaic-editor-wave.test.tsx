@@ -248,6 +248,11 @@ const findButtonsByText = (container: ParentNode, text: string) =>
     (element) => normalizeText(element.textContent) === normalizeText(text)
   );
 
+const findSectionByTitle = (container: ParentNode, title: string) =>
+  Array.from(container.querySelectorAll("section")).find((section) =>
+    normalizeText(section.textContent).includes(normalizeText(title))
+  );
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -561,6 +566,76 @@ test("GalleryMosaic advanced editor normalizes malformed payloads, applies token
 
     clickElement(findButtonByText(view.container, "Reset to defaults"));
     expect(latestValue).toEqual(galleryMosaicDefaults);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("GalleryMosaic visual editor updates header title, image field, move-down ordering, and raw overlay token without a variant handler", async () => {
+  const { GalleryMosaicVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/GalleryMosaicEditors"
+  );
+
+  let latestValue: GalleryMosaicData = {
+    header: {},
+    items: [
+      { id: "gallery-a", caption: "Lead frame", image: "/lead.jpg" },
+      { id: "gallery-b", caption: "Motion draft" },
+      { id: "gallery-c", caption: "Detail still" },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<GalleryMosaicData>(latestValue);
+
+    return (
+      <GalleryMosaicVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="mosaic"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const headerSection = findSectionByTitle(view.container, "Header copy");
+    setInputValue(findInputByPlaceholder(headerSection ?? view.container, "Gallery highlights"), "Customer proof");
+
+    const mediaSection = findSectionByTitle(view.container, "Media items and links");
+    setInputValue(
+      findInputByPlaceholder(mediaSection ?? view.container, "https://cdn.example.com/photo.jpg"),
+      "https://cdn.example.com/updated-lead.jpg"
+    );
+    clickElement(findButtonsByText(mediaSection ?? view.container, "Move down")[0]);
+
+    const overlaySection = findSectionByTitle(view.container, "Overlay and caption controls");
+    setInputValue(
+      findInputByPlaceholder(overlaySection ?? view.container, "rgba(15, 23, 42, 0.35)"),
+      "var(--gallery-overlay)"
+    );
+
+    expect(latestValue.header).toEqual(
+      expect.objectContaining({
+        title: "Customer proof",
+      })
+    );
+    expect(latestValue.items[1]).toEqual(
+      expect.objectContaining({
+        id: "gallery-a",
+        image: "https://cdn.example.com/updated-lead.jpg",
+        caption: "Lead frame",
+      })
+    );
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        overlay: "var(--gallery-overlay)",
+      })
+    );
   } finally {
     view.cleanup();
   }
