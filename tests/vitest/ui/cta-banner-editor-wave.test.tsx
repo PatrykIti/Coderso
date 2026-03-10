@@ -630,3 +630,121 @@ test("CtaBanner advanced covers raw token updates, normalize now, reset to defau
     cleanup();
   }
 });
+
+test("CtaBanner editors render defensive empty and default fallbacks for sparse normalized fields", async () => {
+  vi.resetModules();
+
+  const ctaBannerModule = await import("../../../core/widgets/core/ctaBanner");
+  vi.spyOn(ctaBannerModule, "normalizeCtaBannerData").mockReturnValue({
+    content: {},
+    actions: {
+      primaryCta: {},
+      secondaryCta: {},
+    },
+    style: {},
+  });
+
+  const {
+    CtaBannerWizardEditor,
+    CtaBannerVisualEditor,
+    CtaBannerAdvancedEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/CtaBannerEditors");
+
+  const wizardMount = mount(
+    <CtaBannerWizardEditor
+      value={{}}
+      onChange={vi.fn()}
+      variant="split"
+      onVariantChange={vi.fn()}
+    />
+  );
+
+  try {
+    expect(
+      getInputByPlaceholder(wizardMount.container, "Ready to launch your next campaign?").value
+    ).toBe("");
+    expect(getInputByPlaceholder(wizardMount.container, "Get started").value).toBe("");
+  } finally {
+    wizardMount.cleanup();
+  }
+
+  const visualMount = mount(
+    <CtaBannerVisualEditor
+      value={{}}
+      onChange={vi.fn()}
+      variant="with-badge"
+      onVariantChange={vi.fn()}
+    />
+  );
+
+  try {
+    const colorsSection = getSectionByTitle(visualMount.container, "Colors and button styles");
+    const spacingSection = getSectionByTitle(visualMount.container, "Border and spacing");
+
+    expect(getInputByPlaceholder(visualMount.container, "Limited offer").value).toBe("");
+    expect(
+      getInputByPlaceholder(visualMount.container, "Ready to launch your next campaign?").value
+    ).toBe("");
+    expect(
+      getTextareaByPlaceholder(visualMount.container, "Use reusable sections and publish faster.")
+        .value
+    ).toBe("");
+    expect(getInputByPlaceholder(visualMount.container, "Get started").value).toBe("");
+    expect(getInputByPlaceholder(visualMount.container, "Contact sales").value).toBe("");
+    expect(getInputsByPlaceholder(visualMount.container, "#").map((input) => input.value)).toEqual(
+      ["", ""]
+    );
+
+    expect(
+      getInputsByPlaceholder(colorsSection, "var(--color-surface)").map((input) => input.value)
+    ).toEqual([""]);
+    expect(
+      getInputsByPlaceholder(colorsSection, "var(--color-text)").map((input) => input.value)
+    ).toEqual(["", ""]);
+    expect(
+      getInputsByPlaceholder(colorsSection, "var(--color-primary)").map((input) => input.value)
+    ).toEqual(["", ""]);
+    expect(getInputsByPlaceholder(colorsSection, "var(--color-bg)").map((input) => input.value)).toEqual(
+      ["", ""]
+    );
+    expect(getInputsByPlaceholder(spacingSection, "var(--color-border)").map((input) => input.value)).toEqual(
+      [""]
+    );
+
+    expect(getColorInputs(visualMount.container).map((input) => input.value)).toEqual([
+      "#f8fafc",
+      "#0f172a",
+      "#1d4ed8",
+      "#ffffff",
+      "#1d4ed8",
+      "#ffffff",
+      "#0f172a",
+      "#e2e8f0",
+    ]);
+
+    expect(getSelectByOptions(spacingSection, ["0", "1", "2", "3"]).value).toBe("1");
+    expect(getSelectByOptions(spacingSection, ["none", "md", "lg", "xl", "2xl"]).value).toBe(
+      "xl"
+    );
+    expect(getSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]).value).toBe("md");
+  } finally {
+    visualMount.cleanup();
+  }
+
+  const advancedMount = mount(<CtaBannerAdvancedEditor value={{}} onChange={vi.fn()} />);
+
+  try {
+    expect(getInputByPlaceholder(advancedMount.container, "background token").value).toBe("");
+    expect(getInputByPlaceholder(advancedMount.container, "text token").value).toBe("");
+    expect(getInputByPlaceholder(advancedMount.container, "border token").value).toBe("");
+    expect(
+      getInputByPlaceholder(advancedMount.container, "primary button border token").value
+    ).toBe("");
+    expect(
+      getInputByPlaceholder(advancedMount.container, "secondary button border token").value
+    ).toBe("");
+  } finally {
+    advancedMount.cleanup();
+    vi.resetModules();
+  }
+});

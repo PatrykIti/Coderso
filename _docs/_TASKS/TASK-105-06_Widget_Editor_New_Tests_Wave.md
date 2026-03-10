@@ -133,16 +133,20 @@ Current `2026-03-10` widget editor snapshot after the latest residual-closure fo
 - `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `98.46%` lines / `68.42%` branches
 - aggregate `core/admin/ui/widgets/editors/*` -> `96.12%` lines / `72.42%` branches across `40` tracked files
 
+Additional defensive follow-up on 2026-03-10:
+- Added sparse-normalization fallback cases for `AppointmentFormEditors`, `CtaBannerEditors`, and `SectionEditors`.
+- Added stale async transition coverage plus unresolved source cleanup coverage for `ContentListEditors`.
+- Re-ran the authoritative full-lane snapshot and confirmed it stayed flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`, so this slice improved defensive scenario confidence without materially moving the full-lane percentages.
+
 Remaining hotspots in this wave:
-- `AppointmentFormEditors.tsx`
-- `ContentListEditors.tsx`
-- `CtaBannerEditors.tsx`
-- residual branch gaps in `SectionEditors`
-- residual branch gaps in `AppointmentFormEditors`
-- residual branch gaps in `ContentListEditors`
-- residual branch gaps in `DividerEditors`
-- residual branch gaps in `GridColumnsEditors` / `ToggleBlockEditors` / `StackEditors` / `SpacerEditors`
-- residual branch gaps in `CtaBannerEditors`
+- `StatsKpiEditors.tsx`
+- `FeatureGridEditors.tsx`
+- `TestimonialsEditors.tsx`
+- `RichTextSectionEditors.tsx`
+- `FaqAccordionEditors.tsx`
+- `EntryTeaserEditors.tsx`
+- `NavigationEditors.tsx`
+- `ContactEditors.tsx`
 
 ## Testing Requirements
 

@@ -64,6 +64,17 @@ const contentListState = vi.hoisted(() => ({
   },
 }));
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+
+  return { promise, resolve, reject };
+};
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/badge", () => ({
@@ -444,7 +455,7 @@ test("ContentList wizard editor normalizes invalid variant, clamps item limit, a
   }
 });
 
-test("ContentList visual editor switches between listing and legacy sources and persists empty state content", async () => {
+test("ContentList visual editor switches between listing and legacy sources, persists empty state content, and updates presentation fields", async () => {
   const { ContentListVisualEditor } = await import(
     "../../../core/admin/ui/widgets/editors/ContentListEditors"
   );
@@ -554,6 +565,24 @@ test("ContentList visual editor switches between listing and legacy sources and 
         "Publish a case study to populate this block."
       );
     });
+    await flush();
+
+    const showImageToggle = findCheckboxByLabelText(view.container, "Show image");
+    const showExcerptToggle = findCheckboxByLabelText(view.container, "Show excerpt");
+    const showMetaToggle = findCheckboxByLabelText(view.container, "Show meta");
+    const showCtaToggle = findCheckboxByLabelText(view.container, "Show CTA link");
+
+    expect(showImageToggle).toBeInstanceOf(HTMLInputElement);
+    expect(showExcerptToggle).toBeInstanceOf(HTMLInputElement);
+    expect(showMetaToggle).toBeInstanceOf(HTMLInputElement);
+    expect(showCtaToggle).toBeInstanceOf(HTMLInputElement);
+
+    act(() => {
+      clickElement(showImageToggle);
+      clickElement(showExcerptToggle);
+      clickElement(showMetaToggle);
+      clickElement(showCtaToggle);
+    });
 
     expect(onVariantChangeSpy).toHaveBeenCalledWith("compact");
     expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
@@ -569,6 +598,12 @@ test("ContentList visual editor switches between listing and legacy sources and 
         filters: expect.objectContaining({
           taxonomy: "case-study",
         }),
+        fields: expect.objectContaining({
+          showImage: false,
+          showExcerpt: false,
+          showMeta: false,
+          showCta: false,
+        }),
         emptyState: expect.objectContaining({
           title: "Nothing here yet",
           description: "Publish a case study to populate this block.",
@@ -578,6 +613,81 @@ test("ContentList visual editor switches between listing and legacy sources and 
           gap: "lg",
           cardStyle: "elevated",
           ctaLabel: "View entry",
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList visual editor tolerates unresolved listing and content type selections during source transitions", async () => {
+  const { ContentListVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ContentListEditors"
+  );
+
+  const onChangeSpy = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({
+      source: {
+        mode: "listing",
+        contentTypeId: "missing-type",
+        listingQueryId: "missing-query",
+        listingTemplateId: "missing-template",
+      },
+    } as ContentListData);
+
+    return (
+      <ContentListVisualEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        variant="cards"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(findSelectsByOptions(view.container, ["__no_listing_query__", "query-1"])).toHaveLength(
+      1
+    );
+    expect(
+      findSelectsByOptions(view.container, ["__no_listing_template__", "template-1"])
+    ).toHaveLength(1);
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "legacy"
+      );
+    });
+    await flush();
+
+    expect(findSelectsByOptions(view.container, ["__no_content_type__", "articles"])).toHaveLength(
+      1
+    );
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["__no_content_type__", "articles"])[0],
+        "__no_content_type__"
+      );
+    });
+
+    expect(onChangeSpy.mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({
+        source: expect.objectContaining({
+          mode: "legacy",
+          contentTypeId: "",
+          listingQueryId: "",
+          listingTemplateId: "",
         }),
       })
     );
@@ -714,6 +824,155 @@ test("ContentList advanced editor handles listing query controls, disabled filte
     );
     expect(view.container.textContent).toContain('"title": "Launch note"');
     expect(view.container.textContent).toContain('"page": 2');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList wizard editor ignores late successful loader results after source-mode transitions", async () => {
+  const { ContentListWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ContentListEditors"
+  );
+  const { listContentTypesCached } = await import("@/services/contentTypesClient");
+  const { listListingQueriesCached, listListingTemplatesCached } = await import(
+    "@/services/listingsClient"
+  );
+
+  const contentTypesDeferred = createDeferred<typeof contentListState.contentTypes>();
+  const listingQueriesDeferred = createDeferred<typeof contentListState.listingQueries>();
+  const listingTemplatesDeferred = createDeferred<typeof contentListState.listingTemplates>();
+  const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+  vi.mocked(listContentTypesCached).mockImplementationOnce(() => contentTypesDeferred.promise);
+  vi.mocked(listListingQueriesCached).mockImplementationOnce(() => listingQueriesDeferred.promise);
+  vi.mocked(listListingTemplatesCached).mockImplementationOnce(
+    () => listingTemplatesDeferred.promise
+  );
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({} as ContentListData);
+    return <ContentListWizardEditor value={value} onChange={setValue} variant="cards" />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Loading content types...");
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "listing"
+      );
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Loading content types...");
+    expect(view.container.textContent).toContain("Loading listings options...");
+
+    await act(async () => {
+      contentTypesDeferred.resolve(contentListState.contentTypes);
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Loading content types...");
+    expect(view.container.textContent).toContain("Loading listings options...");
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "legacy"
+      );
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Loading listings options...");
+
+    await act(async () => {
+      listingQueriesDeferred.resolve(contentListState.listingQueries);
+      listingTemplatesDeferred.resolve(contentListState.listingTemplates);
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Listings failed");
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ContentList wizard editor ignores late loader failures after source-mode transitions", async () => {
+  const { ContentListWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ContentListEditors"
+  );
+  const { listContentTypesCached } = await import("@/services/contentTypesClient");
+  const { listListingQueriesCached, listListingTemplatesCached } = await import(
+    "@/services/listingsClient"
+  );
+
+  const contentTypesDeferred = createDeferred<typeof contentListState.contentTypes>();
+  const listingQueriesDeferred = createDeferred<typeof contentListState.listingQueries>();
+  const listingTemplatesDeferred = createDeferred<typeof contentListState.listingTemplates>();
+  const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+  vi.mocked(listContentTypesCached).mockImplementationOnce(() => contentTypesDeferred.promise);
+  vi.mocked(listListingQueriesCached).mockImplementationOnce(() => listingQueriesDeferred.promise);
+  vi.mocked(listListingTemplatesCached).mockImplementationOnce(
+    () => listingTemplatesDeferred.promise
+  );
+
+  const Harness = () => {
+    const [value, setValue] = useState<ContentListData>({} as ContentListData);
+    return <ContentListWizardEditor value={value} onChange={setValue} variant="cards" />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Loading content types...");
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "listing"
+      );
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Loading content types...");
+    expect(view.container.textContent).toContain("Loading listings options...");
+
+    await act(async () => {
+      contentTypesDeferred.reject(new Error("Late content types failure"));
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Failed to load content types.");
+
+    act(() => {
+      setSelectValue(
+        findSelectsByOptions(view.container, ["legacy", "listing"])[0],
+        "legacy"
+      );
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Loading listings options...");
+
+    await act(async () => {
+      listingQueriesDeferred.reject(new Error("Late listings failure"));
+      listingTemplatesDeferred.resolve(contentListState.listingTemplates);
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Failed to load listings options.");
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

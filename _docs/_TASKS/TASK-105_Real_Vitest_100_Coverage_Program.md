@@ -203,7 +203,8 @@ Additional widget-editor residual-closure snapshot (from `bun run test:coverage`
 - `core/admin/ui/widgets/editors/StackEditors.tsx` -> `100.00%` lines, `97.22%` branches
 - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` -> `100.00%` lines, `96.66%` branches
 - aggregate `core/admin/ui/widgets/editors/*` -> `96.12%` lines, `72.42%` branches
-- remaining widget-editor focus after this slice -> `AppointmentFormEditors`, `ContentListEditors`, `CtaBannerEditors`, and residual branch gaps in `SectionEditors`
+- defensive follow-up on `AppointmentFormEditors`, `ContentListEditors`, `CtaBannerEditors`, and `SectionEditors` kept the authoritative full-lane snapshot flat while adding sparse-normalization and stale-async-path coverage
+- remaining widget-editor focus after this slice -> `StatsKpiEditors`, `FeatureGridEditors`, `TestimonialsEditors`, `RichTextSectionEditors`, `FaqAccordionEditors`, `EntryTeaserEditors`, `NavigationEditors`, and `ContactEditors`
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.

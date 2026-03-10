@@ -360,6 +360,27 @@ const renderEditors = async ({
   };
 };
 
+const mockSectionContract = async ({
+  normalizedValue,
+  defaults,
+}: {
+  normalizedValue: SectionData;
+  defaults: SectionData;
+}) => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/section", async () => {
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/section")>(
+      "../../../core/widgets/core/section"
+    );
+
+    return {
+      ...actual,
+      normalizeSectionData: vi.fn(() => normalizedValue),
+      sectionDefaults: defaults,
+    };
+  });
+};
+
 test("Section editors normalize malformed defaults, preserve token strings, and ignore variant changes without a handler", async () => {
   const view = await renderEditors({
     initialValue: {
@@ -585,6 +606,77 @@ test("Section advanced editor clamps non-finite and out-of-range technical token
   }
 });
 
+test("Section surface token inputs preserve raw tokens, fall back safely, and resync after valid picker updates", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      style: {
+        backgroundColor: "#0ea5e9",
+        gradientFrom: "#38bdf8",
+        borderColor: "#0f172a",
+      },
+    },
+  });
+
+  try {
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+
+    const backgroundTextInput = findInputByPlaceholder(surfaceSection, "transparent");
+    const backgroundColorInput = findColorInputForPlaceholder(surfaceSection, "transparent");
+    const gradientStartTextInput = findInputByPlaceholder(surfaceSection, "#ffffff");
+    const gradientStartColorInput = findColorInputForPlaceholder(surfaceSection, "#ffffff");
+    const borderTextInput = findInputByPlaceholder(surfaceSection, "var(--color-border)");
+    const borderColorInput = findColorInputForPlaceholder(
+      surfaceSection,
+      "var(--color-border)"
+    );
+
+    setInputValue(backgroundTextInput, "var(--section-surface)");
+    setInputValue(gradientStartTextInput, "surface-start-token");
+    setInputValue(borderTextInput, "border-strong-token");
+
+    expect(view.getLatestValue().style).toMatchObject({
+      backgroundColor: "var(--section-surface)",
+      gradientFrom: "surface-start-token",
+      borderColor: "border-strong-token",
+    });
+    expect(backgroundTextInput?.value).toBe("var(--section-surface)");
+    expect(backgroundColorInput.value).toBe("#ffffff");
+    expect(gradientStartTextInput?.value).toBe("surface-start-token");
+    expect(gradientStartColorInput.value).toBe("#ffffff");
+    expect(borderTextInput?.value).toBe("border-strong-token");
+    expect(borderColorInput.value).toBe("#e2e8f0");
+
+    setInputValue(backgroundColorInput, "#112233");
+    setInputValue(gradientStartColorInput, "#abcdef");
+    setInputValue(borderColorInput, "#334455");
+
+    expect(view.getLatestValue().style).toMatchObject({
+      backgroundColor: "#112233",
+      gradientFrom: "#abcdef",
+      borderColor: "#334455",
+    });
+    expect(backgroundTextInput?.value).toBe("#112233");
+    expect(gradientStartTextInput?.value).toBe("#abcdef");
+    expect(borderTextInput?.value).toBe("#334455");
+
+    setInputValue(backgroundTextInput, "");
+
+    expect(view.getLatestValue().style?.backgroundColor).toBe("");
+    expect(backgroundTextInput?.value).toBe("");
+    expect(backgroundColorInput.value).toBe("#ffffff");
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"backgroundColor": ""');
+    expect(snapshot?.textContent).toContain('"gradientFrom": "#abcdef"');
+    expect(snapshot?.textContent).toContain('"borderColor": "#334455"');
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("Section editors coerce invalid numeric text input back to safe angle and opacity defaults", async () => {
   const view = await renderEditors({
     initialValue: {
@@ -624,5 +716,242 @@ test("Section editors coerce invalid numeric text input back to safe angle and o
     expect(snapshot?.textContent).toContain('"overlayOpacity": 0');
   } finally {
     view.cleanup();
+  }
+});
+
+test("Section advanced technical tokens round decimals, clamp boundaries, and stay synchronized with surface controls", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      semantics: {
+        anchorId: "initial-anchor",
+        ariaLabel: "Initial section",
+      },
+      style: {
+        gradientAngle: 12,
+        overlayOpacity: 8,
+      },
+    },
+  });
+
+  try {
+    const technicalTokensSection = findSectionByTitle(view.container, "Technical tokens");
+    if (!(technicalTokensSection instanceof HTMLElement)) {
+      throw new Error("Missing technical tokens section");
+    }
+
+    const [advancedAngleInput, advancedOpacityInput] = findNumberInputs(technicalTokensSection);
+    setInputValue(
+      findInputByPlaceholder(technicalTokensSection, "section-anchor"),
+      "wave-layout"
+    );
+    setInputValue(
+      findInputByPlaceholder(technicalTokensSection, "Descriptive section label"),
+      "Wave layout section"
+    );
+    setInputValue(advancedAngleInput, "44.6");
+    setInputValue(advancedOpacityInput, "15.5");
+
+    expect(view.getLatestValue().semantics).toMatchObject({
+      anchorId: "wave-layout",
+      ariaLabel: "Wave layout section",
+    });
+    expect(view.getLatestValue().style).toMatchObject({
+      gradientAngle: 45,
+      overlayOpacity: 16,
+    });
+
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+
+    const [surfaceAngleInput, surfaceOpacityInput] = findNumberInputs(surfaceSection);
+    expect(surfaceAngleInput?.value).toBe("45");
+    expect(surfaceOpacityInput?.value).toBe("16");
+
+    setInputValue(surfaceAngleInput, "359.6");
+    setInputValue(surfaceOpacityInput, "-0.6");
+
+    expect(view.getLatestValue().style).toMatchObject({
+      gradientAngle: 360,
+      overlayOpacity: 0,
+    });
+    expect(advancedAngleInput?.value).toBe("360");
+    expect(advancedOpacityInput?.value).toBe("0");
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"anchorId": "wave-layout"');
+    expect(snapshot?.textContent).toContain('"ariaLabel": "Wave layout section"');
+    expect(snapshot?.textContent).toContain('"gradientAngle": 360');
+    expect(snapshot?.textContent).toContain('"overlayOpacity": 0');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section editors fall back to sparse normalized token fields and contract defaults", async () => {
+  await mockSectionContract({
+    normalizedValue: {
+      heading: {
+        label: undefined,
+        title: undefined,
+        description: undefined,
+      },
+      semantics: {
+        element: undefined,
+        anchorId: undefined,
+        ariaLabel: undefined,
+      },
+      style: {
+        backgroundColor: undefined,
+        gradientFrom: undefined,
+        gradientTo: undefined,
+        gradientAngle: 180,
+        borderColor: undefined,
+        borderWidth: undefined,
+        radius: undefined,
+        overlayColor: undefined,
+        overlayOpacity: 0,
+      },
+    },
+    defaults: {
+      heading: {},
+      semantics: {
+        element: "div",
+      },
+      style: {
+        borderWidth: "3",
+        radius: "lg",
+        gradientAngle: 180,
+        overlayOpacity: 0,
+      },
+    },
+  });
+
+  let view: Awaited<ReturnType<typeof renderEditors>> | undefined;
+
+  try {
+    view = await renderEditors({
+      initialValue: {},
+    });
+
+    expect(findInputByPlaceholder(view.container, "Section title")?.value).toBe("");
+    expect(
+      findTextareaByPlaceholder(view.container, "Short context for the section")?.value
+    ).toBe("");
+    expect(findInputsByPlaceholder(view.container, "transparent")[0]?.value).toBe("");
+    expect(findColorInputForPlaceholder(view.container, "transparent", 0).value).toBe("#ffffff");
+
+    const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
+    if (!(semanticsSection instanceof HTMLElement)) {
+      throw new Error("Missing semantics section");
+    }
+
+    expect(findInputByPlaceholder(view.container, "Section label")?.value).toBe("");
+    expect(findInputsByPlaceholder(view.container, "Section title")[1]?.value).toBe("");
+    expect(
+      findTextareaByPlaceholder(view.container, "Supportive copy for this section")?.value
+    ).toBe("");
+    expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("div");
+    expect(findInputByPlaceholder(semanticsSection, "pricing-section")?.value).toBe("");
+    expect(findInputByPlaceholder(semanticsSection, "Pricing section")?.value).toBe("");
+
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+
+    expect(findInputByPlaceholder(surfaceSection, "#ffffff")?.value).toBe("");
+    expect(findColorInputForPlaceholder(surfaceSection, "#ffffff").value).toBe("#ffffff");
+    expect(findInputByPlaceholder(surfaceSection, "#f1f5f9")?.value).toBe("");
+    expect(findColorInputForPlaceholder(surfaceSection, "#f1f5f9").value).toBe("#f1f5f9");
+    expect(findInputByPlaceholder(surfaceSection, "var(--color-border)")?.value).toBe("");
+    expect(findColorInputForPlaceholder(surfaceSection, "var(--color-border)").value).toBe(
+      "#e2e8f0"
+    );
+    expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("3");
+    expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("lg");
+    expect(findInputByPlaceholder(surfaceSection, "#000000")?.value).toBe("");
+    expect(findColorInputForPlaceholder(surfaceSection, "#000000").value).toBe("#000000");
+
+    const technicalTokensSection = findSectionByTitle(view.container, "Technical tokens");
+    if (!(technicalTokensSection instanceof HTMLElement)) {
+      throw new Error("Missing technical tokens section");
+    }
+
+    expect(findInputByPlaceholder(technicalTokensSection, "section-anchor")?.value).toBe("");
+    expect(
+      findInputByPlaceholder(technicalTokensSection, "Descriptive section label")?.value
+    ).toBe("");
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"gradientAngle": 180');
+    expect(snapshot?.textContent).toContain('"overlayOpacity": 0');
+  } finally {
+    view?.cleanup();
+    vi.doUnmock("../../../core/widgets/core/section");
+    vi.resetModules();
+  }
+});
+
+test("Section editors use hardcoded select fallbacks when sparse defaults omit semantics and surface options", async () => {
+  await mockSectionContract({
+    normalizedValue: {
+      heading: {},
+      semantics: {
+        element: undefined,
+        anchorId: undefined,
+        ariaLabel: undefined,
+      },
+      style: {
+        backgroundColor: undefined,
+        gradientFrom: undefined,
+        gradientTo: undefined,
+        gradientAngle: 180,
+        borderColor: undefined,
+        borderWidth: undefined,
+        radius: undefined,
+        overlayColor: undefined,
+        overlayOpacity: 0,
+      },
+    },
+    defaults: {
+      heading: {},
+      semantics: {},
+      style: {
+        gradientAngle: 180,
+        overlayOpacity: 0,
+      },
+    },
+  });
+
+  let view: Awaited<ReturnType<typeof renderEditors>> | undefined;
+
+  try {
+    view = await renderEditors({
+      initialValue: {},
+      withVariantChange: false,
+    });
+
+    const semanticsSection = findSectionByTitle(view.container, "Semantics and anchor");
+    if (!(semanticsSection instanceof HTMLElement)) {
+      throw new Error("Missing semantics section");
+    }
+    expect(findSelectByOptions(semanticsSection, ["section", "div"]).value).toBe("section");
+
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+    expect(findSelectByOptions(surfaceSection, ["0", "1", "2", "3"]).value).toBe("0");
+    expect(findSelectByOptions(surfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe("none");
+
+    clickByText(view.container, "Contained");
+    expect(view.getLatestVariant()).toBe("legacy");
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
+  } finally {
+    view?.cleanup();
+    vi.doUnmock("../../../core/widgets/core/section");
+    vi.resetModules();
   }
 });
