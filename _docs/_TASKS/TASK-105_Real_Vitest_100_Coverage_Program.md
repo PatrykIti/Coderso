@@ -191,6 +191,20 @@ Additional widget-editor hero/content snapshot (from `bun run test:coverage` on 
 - aggregate `core/admin/ui/widgets/editors/*` -> `95.97%` lines, `69.72%` branches
 - remaining widget-editor low-line hotspots after this slice -> `DividerEditors.tsx` (`90.00%`), `AppointmentFormEditors.tsx` (`97.22%`), with branch-gap work still open in `SectionEditors`, `GridColumnsEditors`, `ToggleBlockEditors`, `StackEditors`, `SpacerEditors`, and `CtaBannerEditors`
 
+Additional widget-editor residual-closure snapshot (from `bun run test:coverage` on 2026-03-10):
+- `% Stmts`: `60.27`
+- `% Branch`: `50.65`
+- `% Funcs`: `64.04`
+- `% Lines`: `63.16`
+- `core/admin/ui/widgets/editors/DividerEditors.tsx` -> `98.33%` lines, `71.73%` branches
+- `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` -> `100.00%` lines, `97.61%` branches
+- `core/admin/ui/widgets/editors/SectionEditors.tsx` -> `100.00%` lines, `61.22%` branches
+- `core/admin/ui/widgets/editors/SpacerEditors.tsx` -> `100.00%` lines, `96.42%` branches
+- `core/admin/ui/widgets/editors/StackEditors.tsx` -> `100.00%` lines, `97.22%` branches
+- `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` -> `100.00%` lines, `96.66%` branches
+- aggregate `core/admin/ui/widgets/editors/*` -> `96.12%` lines, `72.42%` branches
+- remaining widget-editor focus after this slice -> `AppointmentFormEditors`, `ContentListEditors`, `CtaBannerEditors`, and residual branch gaps in `SectionEditors`
+
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.
 
@@ -333,6 +347,11 @@ Completed waves:
 - deeper branch and line coverage for `HeroEditors`
 - deeper branch and line coverage for `ContentListEditors`
 - deeper branch and token coverage for `SectionEditors`
+- deeper branch coverage for `GridColumnsEditors`
+- deeper branch coverage for `ToggleBlockEditors`
+- deeper branch coverage for `StackEditors`
+- deeper branch coverage for `SpacerEditors`
+- deeper line and branch coverage for `DividerEditors`
 
 Remaining large clusters:
 - forms builder pages and panels

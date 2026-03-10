@@ -186,6 +186,18 @@ const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findColorInputForPlaceholder = (container: ParentNode, placeholder: string) => {
+  const textInput = findInputByPlaceholder(container, placeholder);
+  if (!(textInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with placeholder "${placeholder}"`);
+  }
+  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
+  if (!(colorInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input for "${placeholder}"`);
+  }
+  return colorInput;
+};
+
 const findSelectsByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).filter((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
@@ -324,6 +336,102 @@ test("Divider editors cover variant changes, width modes, spacing tokens, and ad
     expect(snapshot?.textContent).toContain('"color": "#334155"');
     expect(snapshot?.textContent).toContain('"marginTop": "12"');
     expect(snapshot?.textContent).toContain('"marginBottom": "8"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Divider editors cover visual label input, color picker changes, custom spacing text input, and advanced variant no-op", async () => {
+  const {
+    DividerAdvancedEditor,
+    DividerVisualEditor,
+    DividerWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/DividerEditors");
+
+  let latestValue: DividerData = {
+    width: "container",
+    marginTop: "custom-margin",
+    marginBottom: "bad",
+  };
+  let currentVariant = "label-center";
+
+  const Harness = () => {
+    const [value, setValue] = useState<DividerData>(latestValue);
+    const [variant, setVariant] = useState(currentVariant);
+
+    return (
+      <>
+        <DividerWizardEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={(next) => {
+            currentVariant = next;
+            setVariant(next);
+          }}
+        />
+        <DividerVisualEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={(next) => {
+            currentVariant = next;
+            setVariant(next);
+          }}
+        />
+        <DividerAdvancedEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={() => undefined}
+        />
+      </>
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const visualVariant = findSectionByTitle(view.container, "Variant and label");
+    setInputValue(findInputByPlaceholder(visualVariant as ParentNode, "Optional label"), "Chapter break");
+
+    const lineSection = findSectionByTitle(view.container, "Line style and width");
+    setInputValue(findColorInputForPlaceholder(lineSection as ParentNode, "var(--color-border)"), "#94a3b8");
+    const widthModeSelect = findSelectsByOptions(lineSection as ParentNode, ["full", "container", "custom"])[0];
+    setSelectValue(widthModeSelect, "custom");
+    setInputValue(findInputByPlaceholder(lineSection as ParentNode, "e.g. 320px or 60%"), "55%");
+
+    const spacingSection = findSectionByTitle(view.container, "Spacing around divider");
+    setInputValue(findInputByPlaceholder(spacingSection as ParentNode, "e.g. 32px"), "40px");
+
+    const advancedSection = findSectionByTitle(view.container, "Technical divider tokens");
+    const variantSelect = findSelectsByOptions(advancedSection as ParentNode, ["line", "dashed", "label-center"])[0];
+    setSelectValue(variantSelect, "line");
+    setInputValue(findInputByPlaceholder(advancedSection as ParentNode, "e.g. 32px"), "24px");
+
+    expect(currentVariant).toBe("label-center");
+    expect(latestValue).toMatchObject({
+      label: "Chapter break",
+      width: "custom",
+      customWidth: "55%",
+      color: "#94a3b8",
+      marginTop: "24px",
+      marginBottom: "6",
+    });
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"label": "Chapter break"');
+    expect(snapshot?.textContent).toContain('"customWidth": "55%"');
+    expect(snapshot?.textContent).toContain('"marginTop": "24px"');
   } finally {
     view.cleanup();
   }

@@ -555,3 +555,134 @@ test("Spacer advanced editor keeps technical per-breakpoint controls while snaps
     view.cleanup();
   }
 });
+
+test("Spacer editors fall back to default height controls when normalized data omits height branches", async () => {
+  vi.resetModules();
+
+  let responsiveNormalizationCalls = 0;
+
+  vi.doMock("../../../core/widgets/core/spacer", async () => {
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/spacer")>(
+      "../../../core/widgets/core/spacer"
+    );
+
+    return {
+      ...actual,
+      resolveSpacerVariant: vi.fn(() => "responsive"),
+      normalizeSpacerData: vi.fn((_data: SpacerData, variant = "responsive") => {
+        if (variant === "missing-height") {
+          return {
+            showGuideInEditor: false,
+          } satisfies SpacerData;
+        }
+
+        if (variant === "empty-height") {
+          return {
+            height: {},
+            showGuideInEditor: false,
+          } satisfies SpacerData;
+        }
+
+        if (variant === "responsive") {
+          responsiveNormalizationCalls += 1;
+
+          return responsiveNormalizationCalls === 1
+            ? ({
+                showGuideInEditor: false,
+              } satisfies SpacerData)
+            : ({
+                height: {},
+                showGuideInEditor: false,
+              } satisfies SpacerData);
+        }
+
+        return actual.normalizeSpacerData(_data, variant);
+      }),
+    };
+  });
+
+  const advancedMissingHeightView = await renderEditor({
+    editor: "advanced",
+    initialVariant: "missing-height",
+    initialValue: {},
+  });
+  const advancedEmptyHeightView = await renderEditor({
+    editor: "advanced",
+    initialVariant: "empty-height",
+    initialValue: {},
+  });
+  const wizardMissingHeightView = await renderEditor({
+    editor: "wizard",
+    initialVariant: "missing-height",
+    initialValue: {},
+  });
+  const wizardEmptyHeightView = await renderEditor({
+    editor: "wizard",
+    initialVariant: "empty-height",
+    initialValue: {},
+  });
+
+  try {
+    const missingHeightTechnicalSection = getSectionByTitle(
+      advancedMissingHeightView.container,
+      "Technical height tokens"
+    );
+    expect(
+      findSelectsByOptions(missingHeightTechnicalSection, heightSelectValues).map(
+        (select) => select.value
+      )
+    ).toEqual(["16", "12", "8"]);
+    expect(
+      findInputsByPlaceholder(missingHeightTechnicalSection, "e.g. 48px").map(
+        (input) => input.value
+      )
+    ).toEqual(["", "", ""]);
+    expect(getDiagnosticsSnapshot(advancedMissingHeightView.container)).toEqual({
+      showGuideInEditor: false,
+    });
+
+    const emptyHeightTechnicalSection = getSectionByTitle(
+      advancedEmptyHeightView.container,
+      "Technical height tokens"
+    );
+    expect(
+      findSelectsByOptions(emptyHeightTechnicalSection, heightSelectValues).map(
+        (select) => select.value
+      )
+    ).toEqual(["16", "12", "8"]);
+    expect(
+      findInputsByPlaceholder(emptyHeightTechnicalSection, "e.g. 48px").map(
+        (input) => input.value
+      )
+    ).toEqual(["", "", ""]);
+    expect(getDiagnosticsSnapshot(advancedEmptyHeightView.container)).toEqual({
+      height: {},
+      showGuideInEditor: false,
+    });
+
+    expect(findSelectByOptions(wizardMissingHeightView.container, variantSelectValues).value).toBe(
+      "responsive"
+    );
+    expect(
+      findSelectsByOptions(wizardMissingHeightView.container, heightSelectValues)[0]?.value
+    ).toBe("16");
+    expect(findInputByPlaceholder(wizardMissingHeightView.container, "e.g. 48px").value).toBe("");
+    expect(findCheckbox(wizardMissingHeightView.container).checked).toBe(false);
+
+    expect(findSelectByOptions(wizardEmptyHeightView.container, variantSelectValues).value).toBe(
+      "responsive"
+    );
+    expect(findSelectsByOptions(wizardEmptyHeightView.container, heightSelectValues)[0]?.value).toBe(
+      "16"
+    );
+    expect(findInputByPlaceholder(wizardEmptyHeightView.container, "e.g. 48px").value).toBe("");
+    expect(findCheckbox(wizardEmptyHeightView.container).checked).toBe(false);
+  } finally {
+    advancedMissingHeightView.cleanup();
+    advancedEmptyHeightView.cleanup();
+    wizardMissingHeightView.cleanup();
+    wizardEmptyHeightView.cleanup();
+    vi.doUnmock("../../../core/widgets/core/spacer");
+    vi.resetModules();
+  }
+});

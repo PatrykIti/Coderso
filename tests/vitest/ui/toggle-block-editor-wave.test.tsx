@@ -494,3 +494,138 @@ test("ToggleBlock advanced editor renders diagnostics from normalized data and t
     view.cleanup();
   }
 });
+
+test("ToggleBlock editor controls fall back safely when normalized fields are partial", async () => {
+  vi.resetModules();
+
+  vi.doMock("../../../core/widgets/core/toggleBlock", async () => {
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/toggleBlock")>(
+      "../../../core/widgets/core/toggleBlock"
+    );
+
+    const partialNormalized: ToggleBlockData = {
+      labels: {
+        primary: undefined,
+        secondary: undefined,
+        helper: undefined,
+      },
+      style: {
+        surfaceColor: undefined,
+        borderColor: undefined,
+        accentColor: undefined,
+      },
+    };
+
+    const partialDefaults: ToggleBlockData = {
+      labels: {
+        primary: undefined,
+        secondary: "Fallback secondary",
+        helper: undefined,
+      },
+      style: {
+        surfaceColor: undefined,
+        borderColor: "var(--fallback-border)",
+        accentColor: undefined,
+      },
+    };
+
+    return {
+      ...actual,
+      normalizeToggleBlockData: vi.fn(() => partialNormalized),
+      toggleBlockDefaults: partialDefaults,
+    };
+  });
+
+  const wizardView = await renderEditor({
+    editor: "wizard",
+    initialVariant: "legacy-toggle",
+    initialValue: {},
+  });
+  const visualView = await renderEditor({
+    editor: "visual",
+    initialVariant: "legacy-toggle",
+    initialValue: {},
+  });
+  const advancedView = await renderEditor({
+    editor: "advanced",
+    initialVariant: "legacy-toggle",
+    initialValue: {},
+  });
+
+  try {
+    const wizardLabels = getSectionByTitle(wizardView.container, "Labels");
+    expect(findInputByPlaceholder(wizardLabels, "View A").value).toBe("");
+    expect(findInputByPlaceholder(wizardLabels, "View B").value).toBe("Fallback secondary");
+    expect(findInputByPlaceholder(wizardLabels, "Switch between two content views.").value).toBe(
+      ""
+    );
+
+    const visualBehavior = getSectionByTitle(visualView.container, "Behavior and Style");
+    expect(findSelectByOptions(visualBehavior, ["primary", "secondary"]).value).toBe("primary");
+    expect(findInputByPlaceholder(visualBehavior, "var(--color-surface)").value).toBe("");
+    expect(findInputByPlaceholder(visualBehavior, "var(--color-border)").value).toBe(
+      "var(--fallback-border)"
+    );
+    expect(findInputByPlaceholder(visualBehavior, "var(--color-text)").value).toBe("");
+
+    expect(getDiagnosticsSnapshot(advancedView.container)).toEqual({
+      labels: {},
+      style: {},
+    });
+  } finally {
+    wizardView.cleanup();
+    visualView.cleanup();
+    advancedView.cleanup();
+    vi.doUnmock("../../../core/widgets/core/toggleBlock");
+    vi.resetModules();
+  }
+});
+
+test("ToggleBlock visual editor uses empty strings when secondary and border defaults are absent", async () => {
+  vi.resetModules();
+
+  vi.doMock("../../../core/widgets/core/toggleBlock", async () => {
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/toggleBlock")>(
+      "../../../core/widgets/core/toggleBlock"
+    );
+
+    return {
+      ...actual,
+      normalizeToggleBlockData: vi.fn(() => ({
+        labels: {},
+        style: {},
+      })),
+      toggleBlockDefaults: {
+        labels: {
+          primary: "View A",
+          helper: "Switch between two content views.",
+        },
+        options: {
+          defaultState: "primary",
+        },
+        style: {
+          surfaceColor: "var(--color-surface)",
+          accentColor: "var(--color-text)",
+        },
+      } satisfies ToggleBlockData,
+    };
+  });
+
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "legacy-toggle",
+    initialValue: {},
+  });
+
+  try {
+    const labelsSection = getSectionByTitle(view.container, "Labels");
+    const behaviorSection = getSectionByTitle(view.container, "Behavior and Style");
+
+    expect(findInputByPlaceholder(labelsSection, "View B").value).toBe("");
+    expect(findInputByPlaceholder(behaviorSection, "var(--color-border)").value).toBe("");
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/toggleBlock");
+    vi.resetModules();
+  }
+});

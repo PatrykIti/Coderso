@@ -163,6 +163,28 @@ const setInputValue = (element: Element | undefined, value: string) => {
   });
 };
 
+const setRawInputValue = (element: Element | undefined, value: string) => {
+  if (!(element instanceof HTMLInputElement)) return;
+  const ownDescriptor = Object.getOwnPropertyDescriptor(element, "value");
+  let currentValue = value;
+  Object.defineProperty(element, "value", {
+    configurable: true,
+    get: () => currentValue,
+    set: (next: string) => {
+      currentValue = next;
+    },
+  });
+  act(() => {
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  if (ownDescriptor) {
+    Object.defineProperty(element, "value", ownDescriptor);
+    return;
+  }
+  delete (element as HTMLInputElement & { value?: string }).value;
+};
+
 const setTextareaValue = (element: Element | undefined, value: string) => {
   if (!(element instanceof HTMLTextAreaElement)) return;
   const descriptor = Object.getOwnPropertyDescriptor(
@@ -558,6 +580,48 @@ test("Section advanced editor clamps non-finite and out-of-range technical token
     expect(snapshot?.textContent).toContain('"ariaLabel": "Team overview section"');
     expect(snapshot?.textContent).toContain('"gradientAngle": 0');
     expect(snapshot?.textContent).toContain('"overlayOpacity": 100');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Section editors coerce invalid numeric text input back to safe angle and opacity defaults", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      style: {
+        gradientAngle: 45,
+        overlayOpacity: 55,
+      },
+    },
+  });
+
+  try {
+    const surfaceSection = findSectionByTitle(view.container, "Surface and borders");
+    if (!(surfaceSection instanceof HTMLElement)) {
+      throw new Error("Missing surface section");
+    }
+
+    const [angleInput, opacityInput] = findNumberInputs(surfaceSection);
+    setRawInputValue(angleInput, "not-a-number");
+    setRawInputValue(opacityInput, "not-a-number");
+
+    expect(view.getLatestValue().style).toMatchObject({
+      gradientAngle: 180,
+      overlayOpacity: 0,
+    });
+
+    const technicalTokensSection = findSectionByTitle(view.container, "Technical tokens");
+    if (!(technicalTokensSection instanceof HTMLElement)) {
+      throw new Error("Missing technical tokens section");
+    }
+
+    const [advancedAngleInput, advancedOpacityInput] = findNumberInputs(technicalTokensSection);
+    expect(advancedAngleInput?.value).toBe("180");
+    expect(advancedOpacityInput?.value).toBe("0");
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"gradientAngle": 180');
+    expect(snapshot?.textContent).toContain('"overlayOpacity": 0');
   } finally {
     view.cleanup();
   }

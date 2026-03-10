@@ -279,10 +279,12 @@ const renderEditor = async ({
   editor,
   initialValue,
   initialVariant = "equal",
+  withVariantChange = true,
 }: {
   editor: EditorKind;
   initialValue: GridColumnsData;
   initialVariant?: string;
+  withVariantChange?: boolean;
 }) => {
   const {
     GridColumnsAdvancedEditor,
@@ -316,11 +318,15 @@ const renderEditor = async ({
           setValue(next);
         }}
         variant={variant}
-        onVariantChange={(next) => {
-          latestVariant = next;
-          onVariantChangeSpy(next);
-          setVariant(next);
-        }}
+        onVariantChange={
+          withVariantChange
+            ? (next) => {
+                latestVariant = next;
+                onVariantChangeSpy(next);
+                setVariant(next);
+              }
+            : undefined
+        }
       />
     );
   };
@@ -429,6 +435,50 @@ test("GridColumns wizard editor covers variant fallback, count clamp, label edit
     expect(view.onChangeSpy).toHaveBeenCalled();
   } finally {
     view.cleanup();
+  }
+});
+
+test("GridColumns variant controls ignore changes when variant handlers are absent", async () => {
+  const wizardView = await renderEditor({
+    editor: "wizard",
+    initialVariant: "equal",
+    initialValue: gridColumnsDefaults,
+    withVariantChange: false,
+  });
+  const visualView = await renderEditor({
+    editor: "visual",
+    initialVariant: "equal",
+    initialValue: gridColumnsDefaults,
+    withVariantChange: false,
+  });
+
+  try {
+    const wizardVariantSelect = findSelectByOptions(wizardView.container, [
+      "equal",
+      "asymmetric",
+      "masonry-lite",
+    ]);
+    const visualVariantSection = getSectionByTitle(
+      visualView.container,
+      "Variant and layout structure"
+    );
+
+    setSelectValue(wizardVariantSelect, "masonry-lite");
+    clickButton(findButtonsByText(visualVariantSection, "Masonry Lite")[0]);
+
+    expect(wizardView.getVariant()).toBe("equal");
+    expect(wizardView.onVariantChangeSpy).not.toHaveBeenCalled();
+    expect(visualView.getVariant()).toBe("equal");
+    expect(visualView.onVariantChangeSpy).not.toHaveBeenCalled();
+    expect(normalizeText(findButtonsByText(visualVariantSection, "Equal")[0]?.textContent)).toContain(
+      "selected"
+    );
+    expect(
+      normalizeText(findButtonsByText(visualVariantSection, "Masonry Lite")[0]?.textContent)
+    ).toContain("pick");
+  } finally {
+    wizardView.cleanup();
+    visualView.cleanup();
   }
 });
 
@@ -561,6 +611,167 @@ test("GridColumns visual editor covers variant cards, column sizing controls, an
     expect(queryInputByPlaceholder(surfaceSection, "var(--color-surface)")).toBeUndefined();
   } finally {
     view.cleanup();
+  }
+});
+
+test("GridColumns editors fall back to safe defaults when normalization returns sparse data", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/gridColumns", async () => {
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/gridColumns")>(
+      "../../../core/widgets/core/gridColumns"
+    );
+
+    return {
+      ...actual,
+      normalizeGridColumnsData: vi.fn((value: GridColumnsData) => value),
+      gridColumnsDefaults: {
+        ...actual.gridColumnsDefaults,
+        layout: {
+          ...actual.gridColumnsDefaults.layout,
+          gapX: undefined,
+          gapY: undefined,
+        },
+        style: {
+          ...actual.gridColumnsDefaults.style,
+          cardizeColumns: true,
+          columnBackground: undefined,
+          columnBorderColor: undefined,
+          columnBorderWidth: undefined,
+          columnRadius: undefined,
+          columnPadding: undefined,
+        },
+      },
+    };
+  });
+
+  const wizardView = await renderEditor({
+    editor: "wizard",
+    initialVariant: "legacy-grid",
+    initialValue: {},
+  });
+  const visualEmptyView = await renderEditor({
+    editor: "visual",
+    initialVariant: "legacy-grid",
+    initialValue: {},
+  });
+  const visualPartialView = await renderEditor({
+    editor: "visual",
+    initialVariant: "legacy-grid",
+    initialValue: {
+      columns: [{}],
+      layout: {},
+    },
+  });
+  const advancedView = await renderEditor({
+    editor: "advanced",
+    initialValue: {},
+  });
+
+  try {
+    const wizardVariantSelect = findSelectByOptions(wizardView.container, [
+      "equal",
+      "asymmetric",
+      "masonry-lite",
+    ]);
+    const wizardCountSelect = findSelectByOptions(wizardView.container, [
+      String(gridColumnsColumnMin),
+      "3",
+      "4",
+      "5",
+      String(gridColumnsColumnMax),
+    ]);
+    const wizardGapSelects = findSelectsByOptions(wizardView.container, ["2", "3", "4", "6", "8"]);
+
+    expect(wizardVariantSelect.value).toBe("equal");
+    expect(wizardCountSelect.value).toBe(String(gridColumnsColumnMin));
+    expect(findInputByPlaceholder(wizardView.container, "Column 1").value).toBe("");
+    expect(findInputByPlaceholder(wizardView.container, "Column 2").value).toBe("");
+    expect(wizardGapSelects[0]?.value).toBe("6");
+    expect(wizardGapSelects[1]?.value).toBe("6");
+
+    setInputValue(findInputByPlaceholder(wizardView.container, "Column 1"), "Ignored");
+    expect(wizardView.getValue()).toEqual({});
+
+    setSelectValue(wizardCountSelect, "3");
+    expect(wizardView.getValue()).toEqual({
+      columns: [
+        { id: "1", label: "Column 1", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "2", label: "Column 2", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+        { id: "3", label: "Column 3", desktopSpan: "6", tabletSpan: "6", mobileSpan: "12" },
+      ],
+    });
+
+    const visualVariantSection = getSectionByTitle(
+      visualEmptyView.container,
+      "Variant and layout structure"
+    );
+    const visualColumnSection = getSectionByTitle(
+      visualPartialView.container,
+      "Column sizing and labels"
+    );
+    const visualSurfaceSection = getSectionByTitle(
+      visualPartialView.container,
+      "Gap and column surface"
+    );
+    const alignmentSelect = findSelectByOptions(visualVariantSection, [
+      "start",
+      "center",
+      "end",
+      "stretch",
+    ]);
+    const addButton = findButtonsByText(visualEmptyView.container, "Add column config")[0];
+    const removeButton = findButtonsByText(visualEmptyView.container, "Remove last config")[0];
+    const visualGapSelects = findSelectsByOptions(visualSurfaceSection, ["2", "3", "4", "6", "8"]);
+    const visualSpanSelects = findSelectsByOptions(visualColumnSection, allSpanOptions);
+    const visualColorInputs = Array.from(
+      visualSurfaceSection.querySelectorAll('input[type="color"]')
+    ).filter((element): element is HTMLInputElement => element instanceof HTMLInputElement);
+
+    expect(alignmentSelect.value).toBe("start");
+    expect(addButton.disabled).toBe(false);
+    expect(removeButton.disabled).toBe(true);
+
+    clickButton(addButton);
+    expect(visualEmptyView.getValue().columns).toHaveLength(3);
+
+    expect(visualColumnSection.textContent).toContain("slot: column:1");
+    expect(findInputByPlaceholder(visualColumnSection, "Column 1").value).toBe("");
+    expect(visualSpanSelects).toHaveLength(3);
+    expect(visualSpanSelects[0]?.value).toBe("6");
+    expect(visualSpanSelects[1]?.value).toBe("6");
+    expect(visualSpanSelects[2]?.value).toBe("12");
+
+    expect(visualGapSelects[0]?.value).toBe("6");
+    expect(visualGapSelects[1]?.value).toBe("6");
+    expect(visualColorInputs[0]?.value).toBe("#f8fafc");
+    expect(visualColorInputs[1]?.value).toBe("#e2e8f0");
+    expect(findInputByPlaceholder(visualSurfaceSection, "var(--color-surface)").value).toBe("");
+    expect(findInputByPlaceholder(visualSurfaceSection, "var(--color-border)").value).toBe("");
+    expect(findSelectByOptions(visualSurfaceSection, ["0", "1", "2", "3"]).value).toBe("1");
+    expect(findSelectByOptions(visualSurfaceSection, ["none", "lg", "xl", "2xl"]).value).toBe(
+      "xl"
+    );
+    expect(findSelectByOptions(visualSurfaceSection, ["2", "3", "4", "5", "6"]).value).toBe("4");
+
+    const advancedSection = getSectionByTitle(advancedView.container, "Technical layout tokens");
+    const advancedSelects = Array.from(advancedSection.querySelectorAll("select")).filter(
+      (element): element is HTMLSelectElement => element instanceof HTMLSelectElement
+    );
+    const advancedCardizeToggle = advancedSection.querySelector('input[type="checkbox"]');
+
+    expect(advancedSelects[0]?.value).toBe("start");
+    expect(advancedSelects[1]?.value).toBe("6");
+    expect(advancedSelects[2]?.value).toBe("6");
+    expect(advancedSelects[3]?.value).toBe("1");
+    expect(advancedSelects[4]?.value).toBe("4");
+    expect((advancedCardizeToggle as HTMLInputElement | undefined)?.checked).toBe(true);
+  } finally {
+    wizardView.cleanup();
+    visualEmptyView.cleanup();
+    visualPartialView.cleanup();
+    advancedView.cleanup();
+    vi.doUnmock("../../../core/widgets/core/gridColumns");
+    vi.resetModules();
   }
 });
 

@@ -84,8 +84,13 @@ Completed slices:
 - deeper branch and line coverage for `HeroEditors`
 - deeper branch and line coverage for `ContentListEditors`
 - deeper branch and token coverage for `SectionEditors`
+- deeper branch coverage for `GridColumnsEditors`
+- deeper branch coverage for `ToggleBlockEditors`
+- deeper branch coverage for `StackEditors`
+- deeper branch coverage for `SpacerEditors`
+- deeper line and branch coverage for `DividerEditors`
 
-Current `2026-03-10` widget editor snapshot after the latest hero/content/section follow-up:
+Current `2026-03-10` widget editor snapshot after the latest residual-closure follow-up:
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines / `66.04%` branches
 - `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `100.00%` lines / `74.59%` branches
 - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `96.70%` lines / `64.00%` branches
@@ -100,7 +105,7 @@ Current `2026-03-10` widget editor snapshot after the latest hero/content/sectio
 - `core/admin/ui/widgets/editors/TeamEditors.tsx` -> `97.67%` lines / `60.71%` branches
 - `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` -> `89.01%` lines / `63.33%` branches
 - `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` -> `89.77%` lines / `60.00%` branches
-- `core/admin/ui/widgets/editors/HeroEditors.tsx` -> `82.37%` lines / `82.26%` branches
+- `core/admin/ui/widgets/editors/HeroEditors.tsx` -> `99.35%` lines / `91.32%` branches
 - `core/admin/ui/widgets/editors/NavigationEditors.tsx` -> `91.73%` lines / `72.12%` branches
 - `core/admin/ui/widgets/editors/ContactEditors.tsx` -> `92.85%` lines / `63.80%` branches
 - `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` -> `100.00%` lines / `70.58%` branches
@@ -114,25 +119,28 @@ Current `2026-03-10` widget editor snapshot after the latest hero/content/sectio
 - `core/admin/ui/widgets/editors/TimelineEditors.tsx` -> `99.10%` lines / `84.21%` branches
 - `core/admin/ui/widgets/editors/NewsletterEditors.tsx` -> `93.65%` lines / `61.42%` branches
 - `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` -> `98.07%` lines / `64.28%` branches
-- `core/admin/ui/widgets/editors/SectionEditors.tsx` -> `100.00%` lines / `57.14%` branches
+- `core/admin/ui/widgets/editors/SectionEditors.tsx` -> `100.00%` lines / `61.22%` branches
 - `core/admin/ui/widgets/editors/TabsEditors.tsx` -> `100.00%` lines / `64.86%` branches
 - `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` -> `100.00%` lines / `96.96%` branches
-- `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` -> `100.00%` lines / `55.95%` branches
+- `core/admin/ui/widgets/editors/GridColumnsEditors.tsx` -> `100.00%` lines / `97.61%` branches
 - `core/admin/ui/widgets/editors/AccordionEditors.tsx` -> `100.00%` lines / `67.64%` branches
-- `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` -> `100.00%` lines / `53.33%` branches
+- `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` -> `100.00%` lines / `96.66%` branches
 - `core/admin/ui/widgets/editors/FormEmbedEditors.tsx` -> `100.00%` lines / `79.31%` branches
-- `core/admin/ui/widgets/editors/StackEditors.tsx` -> `100.00%` lines / `58.33%` branches
-- `core/admin/ui/widgets/editors/SpacerEditors.tsx` -> `97.50%` lines / `71.42%` branches
-- `core/admin/ui/widgets/editors/DividerEditors.tsx` -> `90.00%` lines / `67.39%` branches
+- `core/admin/ui/widgets/editors/StackEditors.tsx` -> `100.00%` lines / `97.22%` branches
+- `core/admin/ui/widgets/editors/SpacerEditors.tsx` -> `100.00%` lines / `96.42%` branches
+- `core/admin/ui/widgets/editors/DividerEditors.tsx` -> `98.33%` lines / `71.73%` branches
 - `core/admin/ui/widgets/editors/AppointmentFormEditors.tsx` -> `97.22%` lines / `70.00%` branches
-- `core/admin/ui/widgets/editors/HeroEditors.tsx` -> `99.35%` lines / `91.32%` branches
 - `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `98.46%` lines / `68.42%` branches
-- aggregate `core/admin/ui/widgets/editors/*` -> `95.97%` lines / `69.72%` branches across `40` tracked files
+- aggregate `core/admin/ui/widgets/editors/*` -> `96.12%` lines / `72.42%` branches across `40` tracked files
 
 Remaining hotspots in this wave:
-- `DividerEditors.tsx`
 - `AppointmentFormEditors.tsx`
+- `ContentListEditors.tsx`
+- `CtaBannerEditors.tsx`
 - residual branch gaps in `SectionEditors`
+- residual branch gaps in `AppointmentFormEditors`
+- residual branch gaps in `ContentListEditors`
+- residual branch gaps in `DividerEditors`
 - residual branch gaps in `GridColumnsEditors` / `ToggleBlockEditors` / `StackEditors` / `SpacerEditors`
 - residual branch gaps in `CtaBannerEditors`
 
