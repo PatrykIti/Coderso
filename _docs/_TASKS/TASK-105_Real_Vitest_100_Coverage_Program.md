@@ -204,6 +204,7 @@ Additional widget-editor residual-closure snapshot (from `bun run test:coverage`
 - `core/admin/ui/widgets/editors/ToggleBlockEditors.tsx` -> `100.00%` lines, `96.66%` branches
 - aggregate `core/admin/ui/widgets/editors/*` -> `96.12%` lines, `72.42%` branches
 - defensive follow-up on `AppointmentFormEditors`, `ContentListEditors`, `CtaBannerEditors`, and `SectionEditors` kept the authoritative full-lane snapshot flat while adding sparse-normalization and stale-async-path coverage
+- parallel low-line follow-up on `StatsKpiEditors`, `FeatureGridEditors`, `TestimonialsEditors`, `RichTextSectionEditors`, `FaqAccordionEditors`, `EntryTeaserEditors`, and `NavigationEditors` produced stronger isolated targeted runs, but the authoritative full-lane snapshot still remained flat
 - remaining widget-editor focus after this slice -> `StatsKpiEditors`, `FeatureGridEditors`, `TestimonialsEditors`, `RichTextSectionEditors`, `FaqAccordionEditors`, `EntryTeaserEditors`, `NavigationEditors`, and `ContactEditors`
 
 This means the next stage is not runner cleanup anymore.

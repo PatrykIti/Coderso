@@ -413,12 +413,33 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     setSelectValue(layoutSelects[0], "full");
     expect(latestValue.options?.maxWidth).toBe("full");
 
+    const titleSection = findSectionByTitle(view.container, "Title block copy");
+    setInputValue(findInputByPlaceholder(titleSection ?? view.container, "Editorial"), "Perspective");
+    setInputValue(
+      findInputByPlaceholder(titleSection ?? view.container, "Long-form content section"),
+      "Deeper narrative"
+    );
+    expect(latestValue.titleBlock?.eyebrow).toBe("Perspective");
+    expect(latestValue.titleBlock?.title).toBe("Deeper narrative");
+
+    const bodySection = findSectionByTitle(view.container, "Body content");
+    setTextareaValue(
+      findTextareaByPlaceholder(
+        bodySection ?? view.container,
+        "<h2>Section heading</h2><p>Paragraph content...</p>"
+      ),
+      "<p>Updated body</p>"
+    );
+    expect(latestValue.body?.html).toBe("<p>Updated body</p>");
+
     const blockSection = findSectionByTitle(view.container, "Structured fallback blocks");
     const blockCountSelect = blockSection?.querySelector("select");
-    setSelectValue(blockCountSelect, "3");
+    clickByText(blockSection ?? view.container, "Add fallback block");
 
     expect(latestValue.body?.blocks).toHaveLength(3);
     expect(latestValue.body?.blocks?.[2]?.id).toBe("block-3");
+    expect(latestValue.body?.blocks?.[2]?.heading).toBe("Heading 3");
+    expect(latestValue.body?.blocks?.[2]?.content).toBe("Paragraph content.");
 
     setInputValue(findInputByPlaceholder(blockSection ?? view.container, "Heading", 2), "Third section");
     setTextareaValue(
@@ -429,10 +450,14 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     expect(latestValue.body?.blocks?.[2]?.heading).toBe("Third section");
     expect(latestValue.body?.blocks?.[2]?.content).toBe("Gamma copy");
 
-    clickByText(blockSection ?? view.container, "Move up", 2);
-    expect(latestValue.body?.blocks?.[1]?.heading).toBe("Third section");
+    clickByText(blockSection ?? view.container, "Move down", 1);
+    expect(latestValue.body?.blocks?.[2]?.heading).toBe("Second section");
 
-    clickByText(blockSection ?? view.container, "Remove", 1);
+    clickByText(blockSection ?? view.container, "Move up", 2);
+    expect(latestValue.body?.blocks?.[1]?.heading).toBe("Second section");
+    expect(latestValue.body?.blocks?.[2]?.heading).toBe("Third section");
+
+    clickByText(blockSection ?? view.container, "Remove", 2);
     expect(latestValue.body?.blocks).toHaveLength(2);
     expect(latestValue.body?.blocks?.[1]?.heading).toBe("Second section");
 
@@ -470,6 +495,18 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     expect(latestValue.style?.lineHeight).toBe("relaxed");
     expect(latestValue.style?.spacing).toBe("sm");
 
+    setInputValue(
+      findInputByPlaceholder(typographySection ?? view.container, "var(--color-text)"),
+      "var(--editor-foreground)"
+    );
+    setInputValue(
+      findInputByPlaceholder(typographySection ?? view.container, "transparent"),
+      "rgba(255,255,255,0.6)"
+    );
+
+    expect(latestValue.style?.textColor).toBe("var(--editor-foreground)");
+    expect(latestValue.style?.background).toBe("rgba(255,255,255,0.6)");
+
     const colorInputs = Array.from(
       typographySection?.querySelectorAll('input[type="color"]') ?? []
     );
@@ -483,6 +520,118 @@ test("RichTextSection visual editor covers variant cards, fallback blocks, reade
     expect(latestValue.style?.background).toBe("#445566");
   } finally {
     view.cleanup();
+  }
+});
+
+test("RichTextSection editors render sparse normalized fallbacks across wizard, visual, and advanced flows", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/richTextSection", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/richTextSection")
+    >("../../../core/widgets/core/richTextSection");
+
+    return {
+      ...actual,
+      normalizeRichTextSectionData: vi.fn((value: RichTextSectionData) => ({
+        ...value,
+        titleBlock: undefined,
+        body: undefined,
+        options: undefined,
+        style: undefined,
+      })),
+    };
+  });
+
+  const {
+    RichTextSectionAdvancedEditor,
+    RichTextSectionVisualEditor,
+    RichTextSectionWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/RichTextSectionEditors");
+
+  const view = mount(
+    <>
+      <RichTextSectionWizardEditor
+        value={{}}
+        onChange={() => undefined}
+        variant="legacy-layout"
+        onVariantChange={() => undefined}
+      />
+      <RichTextSectionVisualEditor
+        value={{}}
+        onChange={() => undefined}
+        variant="legacy-layout"
+        onVariantChange={() => undefined}
+      />
+      <RichTextSectionAdvancedEditor
+        value={{}}
+        onChange={() => undefined}
+        variant="legacy-layout"
+        onVariantChange={() => undefined}
+      />
+    </>
+  );
+
+  try {
+    const wizardSelect = view.container.querySelector("select");
+    expect((wizardSelect as HTMLSelectElement | null)?.value).toBe("single-column");
+    expect(findInputByPlaceholder(view.container, "Editorial", 0)?.value).toBe("");
+    expect(findInputByPlaceholder(view.container, "Long-form content section", 0)?.value).toBe("");
+    expect(findTextareaByPlaceholder(view.container, "<p>Start writing your content...</p>")?.value).toBe(
+      ""
+    );
+
+    const layoutSection = findSectionByTitle(view.container, "Variant and layout structure");
+    const layoutSelect = layoutSection?.querySelector("select");
+    expect((layoutSelect as HTMLSelectElement | null)?.value).toBe("lg");
+
+    const titleSection = findSectionByTitle(view.container, "Title block copy");
+    expect(findInputByPlaceholder(titleSection ?? view.container, "Editorial")?.value).toBe("");
+    expect(findInputByPlaceholder(titleSection ?? view.container, "Long-form content section")?.value).toBe("");
+
+    const bodySection = findSectionByTitle(view.container, "Body content");
+    expect(
+      findTextareaByPlaceholder(
+        bodySection ?? view.container,
+        "<h2>Section heading</h2><p>Paragraph content...</p>"
+      )?.value
+    ).toBe("");
+
+    const blocksSection = findSectionByTitle(view.container, "Structured fallback blocks");
+    expect((blocksSection?.querySelector("select") as HTMLSelectElement | null)?.value).toBe("0");
+
+    const readerSection = findSectionByTitle(view.container, "Reader options");
+    const readerToggles = Array.from(readerSection?.querySelectorAll('input[type="checkbox"]') ?? []);
+    expect((readerToggles[0] as HTMLInputElement | undefined)?.checked).toBe(false);
+    expect((readerToggles[1] as HTMLInputElement | undefined)?.checked).toBe(false);
+
+    const typographySection = findSectionByTitle(view.container, "Typography and colors");
+    const typographySelects = Array.from(typographySection?.querySelectorAll("select") ?? []);
+    expect((typographySelects[0] as HTMLSelectElement | undefined)?.value).toBe("md");
+    expect((typographySelects[1] as HTMLSelectElement | undefined)?.value).toBe("normal");
+    expect((typographySelects[2] as HTMLSelectElement | undefined)?.value).toBe("md");
+    expect(findInputByPlaceholder(typographySection ?? view.container, "var(--color-text)")?.value).toBe("");
+    expect(findInputByPlaceholder(typographySection ?? view.container, "transparent")?.value).toBe("");
+
+    const colorInputs = Array.from(
+      typographySection?.querySelectorAll<HTMLInputElement>('input[type="color"]') ?? []
+    );
+    expect(colorInputs.map((input) => input.value)).toEqual(["#0f172a", "#ffffff"]);
+
+    const outputSection = findSectionByTitle(view.container, "Output mode and fallback");
+    expect((outputSection?.querySelector("select") as HTMLSelectElement | null)?.value).toBe(
+      "blocks-fallback"
+    );
+    expect(outputSection?.textContent).toContain("Current structured fallback block count: 0");
+
+    const tokensSection = findSectionByTitle(view.container, "Technical typography tokens");
+    const tokenSelects = Array.from(tokensSection?.querySelectorAll("select") ?? []);
+    expect((tokenSelects[0] as HTMLSelectElement | undefined)?.value).toBe("md");
+    expect((tokenSelects[1] as HTMLSelectElement | undefined)?.value).toBe("normal");
+    expect((tokenSelects[2] as HTMLSelectElement | undefined)?.value).toBe("md");
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/richTextSection");
+    vi.resetModules();
   }
 });
 

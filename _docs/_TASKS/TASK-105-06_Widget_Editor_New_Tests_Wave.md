@@ -138,6 +138,18 @@ Additional defensive follow-up on 2026-03-10:
 - Added stale async transition coverage plus unresolved source cleanup coverage for `ContentListEditors`.
 - Re-ran the authoritative full-lane snapshot and confirmed it stayed flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`, so this slice improved defensive scenario confidence without materially moving the full-lane percentages.
 
+Parallel low-line follow-up on 2026-03-10:
+- Deepened real editor-wave coverage for `StatsKpiEditors`, `FeatureGridEditors`, `TestimonialsEditors`, `RichTextSectionEditors`, `FaqAccordionEditors`, `EntryTeaserEditors`, and `NavigationEditors`.
+- Isolated targeted runs for that batch moved those files to:
+  - `StatsKpiEditors.tsx` -> `97.72%` lines / `91.07%` branches
+  - `FeatureGridEditors.tsx` -> `100.00%` lines / `58.97%` branches
+  - `TestimonialsEditors.tsx` -> `100.00%` lines / `63.33%` branches
+  - `RichTextSectionEditors.tsx` -> `100.00%` lines / `91.37%` branches
+  - `FaqAccordionEditors.tsx` -> `100.00%` lines / `63.33%` branches
+  - `EntryTeaserEditors.tsx` -> `96.73%` lines / `88.27%` branches
+  - `NavigationEditors.tsx` -> `97.93%` lines / `75.22%` branches
+- Re-ran the authoritative full-lane snapshot and it still remained flat at `96.12%` lines / `72.42%` branches for aggregate `core/admin/ui/widgets/editors/*`, so these gains are currently confirmed in targeted runs but not yet reflected in the global summary artifact.
+
 Remaining hotspots in this wave:
 - `StatsKpiEditors.tsx`
 - `FeatureGridEditors.tsx`

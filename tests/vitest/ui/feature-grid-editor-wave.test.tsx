@@ -281,7 +281,7 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       borderColor: "bad-token",
     },
   };
-  let currentVariant = "cards-3";
+  let currentVariant = "unexpected-layout";
 
   const Harness = () => {
     const [value, setValue] = useState<FeatureGridData>(latestValue);
@@ -340,6 +340,7 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       "cards-4",
       "highlight-first",
     ])[0];
+    expect((variantSelect as HTMLSelectElement | undefined)?.value).toBe("cards-3");
     setSelectValue(variantSelect, "cards-4");
     expect(currentVariant).toBe("cards-4");
 
@@ -358,49 +359,123 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     const countSelect = findSelectsByOptions(view.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0];
     setSelectValue(countSelect, "4");
     expect(latestValue.items).toHaveLength(4);
-
-    setInputValue(findInputsByPlaceholder(view.container, "Feature 1")[0], "Automation");
-    setTextareaValue(
-      findTextareasByPlaceholder(view.container, "Describe this feature in one short paragraph.")[0],
-      "Automates repeatable delivery tasks."
-    );
-    setInputValue(findInputByPlaceholder(view.container, "⚡"), "🤖");
-    setInputValue(
-      findInputByPlaceholder(view.container, "https://cdn.example.com/feature.jpg"),
-      "https://cdn.example.com/automation.jpg"
-    );
-    setInputValue(findInputByPlaceholder(view.container, "Learn more"), "See automation");
-    setInputValue(findInputByPlaceholder(view.container, "/features"), "/automation");
-
-    clickByText(view.container, "Add card");
-    expect(latestValue.items).toHaveLength(5);
-    clickByText(view.container, "Move down", 0);
-    clickByText(view.container, "Remove", 4);
-    expect(latestValue.items).toHaveLength(4);
+    setInputValue(findInputsByPlaceholder(view.container, "Feature 1")[0], "Wizard automation");
 
     const layoutSection = findSectionByTitle(view.container, "Variant and layout structure");
+    const headerSection = findSectionByTitle(view.container, "Header copy");
+    const featureCardsSection = findSectionByTitle(view.container, "Feature cards and actions");
     const colorsSection = findSectionByTitle(view.container, "Colors and borders");
+    const advancedSection = findSectionByTitle(view.container, "Layout tokens");
+
+    expect(layoutSection).toBeTruthy();
+    expect(headerSection).toBeTruthy();
+    expect(featureCardsSection).toBeTruthy();
+    expect(colorsSection).toBeTruthy();
+    expect(advancedSection).toBeTruthy();
+
+    clickByText(layoutSection as ParentNode, "Highlight First");
+    expect(currentVariant).toBe("highlight-first");
+
     const visualColumnsSelect = findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0];
-    const gapSelect = findSelectsByOptions(layoutSection as ParentNode, ["sm", "md", "lg"])[0];
+    const visualGapSelect = findSelectsByOptions(layoutSection as ParentNode, ["sm", "md", "lg"])[0];
+    const visualCountSelect = findSelectsByOptions(
+      layoutSection as ParentNode,
+      ["1", "2", "3", "4", "5", "6", "7", "8"]
+    )[0];
+    setSelectValue(visualColumnsSelect, "2");
+    setSelectValue(visualGapSelect, "lg");
+    setSelectValue(visualCountSelect, "6");
+    expect(latestValue.items).toHaveLength(6);
+
+    setInputValue(
+      findInputByPlaceholder(headerSection as ParentNode, "Feature highlights"),
+      "Why teams switch"
+    );
+    setInputValue(
+      findInputByPlaceholder(headerSection as ParentNode, "Everything your team needs"),
+      "Feature grid overview"
+    );
+    setTextareaValue(
+      findTextareasByPlaceholder(
+        headerSection as ParentNode,
+        "Use focused cards to explain your strongest product capabilities."
+      )[0],
+      "Concise visual summary."
+    );
+
+    setInputValue(
+      findInputsByPlaceholder(featureCardsSection as ParentNode, "Feature 1")[0],
+      "Automation"
+    );
+    setTextareaValue(
+      findTextareasByPlaceholder(
+        featureCardsSection as ParentNode,
+        "Describe this feature in one short paragraph."
+      )[0],
+      "Automates repeatable delivery tasks."
+    );
+    setInputValue(findInputByPlaceholder(featureCardsSection as ParentNode, "⚡"), "🤖");
+    setInputValue(
+      findInputByPlaceholder(featureCardsSection as ParentNode, "https://cdn.example.com/feature.jpg"),
+      "https://cdn.example.com/automation.jpg"
+    );
+    setInputValue(
+      findInputByPlaceholder(featureCardsSection as ParentNode, "Learn more"),
+      "See automation"
+    );
+    setInputValue(
+      findInputByPlaceholder(featureCardsSection as ParentNode, "/features"),
+      "/automation"
+    );
+
+    clickByText(featureCardsSection as ParentNode, "Add card");
+    expect(latestValue.items).toHaveLength(7);
+    clickByText(featureCardsSection as ParentNode, "Move down", 0);
+    clickByText(featureCardsSection as ParentNode, "Move up", 1);
+    clickByText(featureCardsSection as ParentNode, "Remove", 6);
+    expect(latestValue.items).toHaveLength(6);
+
     const borderWidthSelect = findSelectsByOptions(colorsSection as ParentNode, ["0", "1", "2", "3"])[0];
     const radiusSelect = findSelectsByOptions(colorsSection as ParentNode, ["none", "md", "lg", "xl"])[0];
-    setSelectValue(visualColumnsSelect, "2");
-    setSelectValue(gapSelect, "lg");
     setSelectValue(borderWidthSelect, "3");
     setSelectValue(radiusSelect, "xl");
 
     const colorInputs = Array.from((colorsSection as ParentNode).querySelectorAll("input[type='color']"));
     setInputValue(colorInputs[0], "#111111");
     setInputValue(colorInputs[1], "#222222");
+    setInputValue(
+      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)"),
+      "var(--surface-strong)"
+    );
+    setInputValue(
+      findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)"),
+      "var(--border-strong)"
+    );
+
+    const advancedColumnsSelect = findSelectsByOptions(advancedSection as ParentNode, ["2", "3", "4"])[0];
+    const advancedGapSelect = findSelectsByOptions(advancedSection as ParentNode, ["sm", "md", "lg"])[0];
+    const advancedBorderWidthSelect = findSelectsByOptions(
+      advancedSection as ParentNode,
+      ["0", "1", "2", "3"]
+    )[0];
+    const advancedRadiusSelect = findSelectsByOptions(
+      advancedSection as ParentNode,
+      ["none", "md", "lg", "xl"]
+    )[0];
+    setSelectValue(advancedColumnsSelect, "4");
+    setSelectValue(advancedGapSelect, "sm");
+    setSelectValue(advancedBorderWidthSelect, "2");
+    setSelectValue(advancedRadiusSelect, "none");
 
     clickByText(view.container, "Normalize items to variant baseline");
     clickByText(view.container, "Normalize full payload");
 
     expect(onChangeSpy).toHaveBeenCalled();
-    expect(currentVariant).toBe("cards-4");
+    expect(currentVariant).toBe("highlight-first");
     expect(latestValue.header).toMatchObject({
-      title: "Core feature set",
-      description: "Short proof of platform value.",
+      eyebrow: "Why teams switch",
+      title: "Feature grid overview",
+      description: "Concise visual summary.",
     });
     expect(latestValue.items).toHaveLength(4);
     expect(latestValue.items).toEqual(
@@ -416,18 +491,20 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
       ])
     );
     expect(latestValue.style).toMatchObject({
-      columns: "2",
-      gap: "lg",
-      borderWidth: "3",
-      radius: "xl",
-      surfaceColor: "#111111",
-      borderColor: "#222222",
+      columns: "4",
+      gap: "sm",
+      borderWidth: "2",
+      radius: "none",
+      surfaceColor: "var(--surface-strong)",
+      borderColor: "var(--border-strong)",
     });
 
     const snapshot = view.container.querySelector("pre");
-    expect(snapshot?.textContent).toContain('"title": "Core feature set"');
-    expect(snapshot?.textContent).toContain('"columns": "2"');
-    expect(snapshot?.textContent).toContain('"borderWidth": "3"');
+    expect(snapshot?.textContent).toContain('"eyebrow": "Why teams switch"');
+    expect(snapshot?.textContent).toContain('"title": "Feature grid overview"');
+    expect(snapshot?.textContent).toContain('"columns": "4"');
+    expect(snapshot?.textContent).toContain('"borderWidth": "2"');
+    expect(snapshot?.textContent).toContain('"surfaceColor": "var(--surface-strong)"');
     expect(snapshot?.textContent).toContain('"ctaHref": "/automation"');
   } finally {
     view.cleanup();

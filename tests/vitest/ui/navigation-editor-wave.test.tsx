@@ -796,6 +796,75 @@ test("NavigationWizardEditor surfaces menu list and logo lookup API errors witho
   }
 });
 
+test("NavigationWizardEditor updates manual links and logo copy safely without a variant handler", async () => {
+  const { NavigationWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/NavigationEditors"
+  );
+
+  let latestValue = createNavigationValue({
+    linksSource: "manual",
+    logo: {
+      type: "text",
+      value: "Starter brand",
+      href: "/",
+      source: "external",
+    },
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState<NavigationData>(latestValue);
+
+    const handleChange = (next: NavigationData) => {
+      latestValue = next;
+      setValue(next);
+    };
+
+    return <NavigationWizardEditor value={value} onChange={handleChange} variant="simple" />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const quickLinkInputs = findInputsByPlaceholder(view.container, "/path");
+    setInputValue(findInputByPlaceholder(view.container, "Item 1 label"), "Platform");
+    setInputValue(quickLinkInputs[0], "/platform");
+
+    expect(latestValue.items[0]).toMatchObject({
+      label: "Platform",
+      href: "/platform",
+    });
+
+    setInputValue(findInputByPlaceholder(view.container, "Nextless"), "Northwind");
+    setInputValue(findInputByPlaceholder(view.container, "Logo link (e.g. /)"), "/home");
+
+    expect(latestValue.logo).toMatchObject({
+      type: "text",
+      value: "Northwind",
+      href: "/home",
+    });
+
+    clickElement(findCheckboxes(view.container).at(-1));
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Simple variant hides CTA in runtime output.")
+    );
+
+    const logoTypeSelect = findSelectByOptions(view.container, ["text", "image"]);
+    setSelectValue(logoTypeSelect, "image");
+
+    setInputValue(findInputByPlaceholder(view.container, "https://..."), "/brand/logo.svg");
+    setInputValue(findInputByPlaceholder(view.container, "Logo alt text"), "Northwind mark");
+
+    expect(latestValue.logo).toMatchObject({
+      type: "image",
+      value: "/brand/logo.svg",
+      href: "/home",
+      alt: "Northwind mark",
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("NavigationVisualEditor covers manual editing, menu error recovery, CTA validation, and style or behavior controls", async () => {
   const { NavigationVisualEditor } = await import(
     "../../../core/admin/ui/widgets/editors/NavigationEditors"
@@ -832,6 +901,7 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
 
   try {
     const structureSection = findSectionByTitle(view.container, "Variant and Structure");
+    const brandSection = findSectionByTitle(view.container, "Brand and Logo");
     const linksSection = findSectionByTitle(view.container, "Navigation Links");
     const ctaSection = findSectionByTitle(view.container, "CTA and Right Actions");
     const mobileSection = findSectionByTitle(view.container, "Mobile Behavior");
@@ -845,6 +915,7 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     );
 
     expect(structureSection).toBeTruthy();
+    expect(brandSection).toBeTruthy();
     expect(linksSection).toBeTruthy();
     expect(ctaSection).toBeTruthy();
     expect(mobileSection).toBeTruthy();
@@ -942,6 +1013,20 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
       },
     ]);
 
+    setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "image");
+    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "https://..."), "/brand/logo.svg");
+    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Logo link (e.g. /)"), "/brand");
+    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Logo alt text"), "Brand mark");
+    setSelectValue(findSelectByOptions(brandSection ?? view.container, ["text", "image"]), "text");
+    setInputValue(findInputByPlaceholder(brandSection ?? view.container, "Nextless"), "Northwind OS");
+
+    expect(latestValue.logo).toMatchObject({
+      type: "text",
+      value: "Northwind OS",
+      href: "/brand",
+      alt: "Brand mark",
+    });
+
     setInputValue(findInputByPlaceholder(ctaSection ?? view.container, "CTA label"), "Contact");
     setInputValue(findInputByPlaceholder(ctaSection ?? view.container, "/start"), "mailto:test@example.com");
 
@@ -966,6 +1051,12 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
 
     setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#ffffff"), "#f8fafc");
     setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#e2e8f0"), "#cbd5e1");
+    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[0], "#0f172b");
+    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#0f172a")[1], "#1f2937");
+    setInputValue(findInputByPlaceholder(colorsSection ?? view.container, "#334155"), "#475569");
+    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[0], "#2563eb");
+    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#ffffff")[1], "#eff6ff");
+    setInputValue(findInputsByPlaceholder(colorsSection ?? view.container, "#1d4ed8")[1], "#1e40af");
     setSelectValue(findSelectByOptions(colorsSection ?? view.container, ["0", "1", "2", "3"]), "2");
     setSelectValue(findSelectByOptions(colorsSection ?? view.container, ["xs", "sm", "base", "lg"]), "lg");
     setSelectValue(
@@ -980,6 +1071,12 @@ test("NavigationVisualEditor covers manual editing, menu error recovery, CTA val
     expect(latestValue.style).toMatchObject({
       surfaceColor: "#f8fafc",
       borderColor: "#cbd5e1",
+      textColor: "#0f172b",
+      logoColor: "#1f2937",
+      linkColor: "#475569",
+      ctaBackgroundColor: "#2563eb",
+      ctaTextColor: "#eff6ff",
+      ctaBorderColor: "#1e40af",
       borderWidth: "2",
       fontSize: "lg",
       fontWeight: "bold",

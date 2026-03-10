@@ -469,6 +469,10 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
       ),
       "Short answers first."
     );
+    setInputValue(
+      findInputByPlaceholder(view.container, "Frequently asked questions"),
+      "Launch FAQ"
+    );
 
     const questionInputs = findInputsByPlaceholderPrefix(view.container, "Question ");
     setInputValue(questionInputs[0], "What is included?");
@@ -485,20 +489,37 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
     expect(view.getValue().items[1]?.question).toBe("What is included?");
     expect(view.getValue().items[1]?.answer).toBe("Setup and support.");
 
+    clickElement(findButtonsByText(view.container, "Move up")[1]);
+    expect(view.getValue().items[0]?.question).toBe("What is included?");
+    expect(view.getValue().items[1]?.question).toBe("Question 2");
+
     const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
     toggleCheckbox(checkboxes[0], true);
 
     setSelectValue(findSelectByOptions(view.container, ["-1", "0", "1"]), "-1");
-    setInputValue(colorInputs[0], "#123456");
-    setInputValue(colorInputs[1], "#654321");
-    setInputValue(colorInputs[2], "#abcdef");
+    setInputValue(colorInputs[0], "#111111");
+    setInputValue(findInputByPlaceholder(view.container, "var(--color-bg)"), "#123456");
+    const borderInputs = findAllInputsByPlaceholder(view.container, "var(--color-border)");
+    setInputValue(borderInputs[0], "#654321");
+    setInputValue(borderInputs[1], "#abcdef");
     setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "lg");
+    clickElement(findButtonsByText(view.container, "Remove")[1]);
+
+    const removeButtonsAfterDelete = findButtonsByText(view.container, "Remove");
+    expect((removeButtonsAfterDelete[0] as HTMLButtonElement | undefined)?.disabled).toBe(true);
 
     expect(view.getValue()).toEqual(
       expect.objectContaining({
         header: expect.objectContaining({
+          title: "Launch FAQ",
           description: "Short answers first.",
         }),
+        items: [
+          expect.objectContaining({
+            question: "What is included?",
+            answer: "Setup and support.",
+          }),
+        ],
         options: expect.objectContaining({
           allowMultipleOpen: true,
           defaultOpenIndex: -1,
@@ -509,6 +530,39 @@ test("FaqAccordion visual editor covers item-count normalization, add and reorde
           divider: "#abcdef",
           spacing: "lg",
         }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FaqAccordion visual editor keeps item count capped when add item is used at faqAccordionItemMax", async () => {
+  const initialItems = Array.from({ length: faqAccordionItemMax }, (_, index) => ({
+    id: `faq-seed-${index + 1}`,
+    question: `Question seed ${index + 1}`,
+    answer: `Answer seed ${index + 1}`,
+  }));
+
+  const view = await renderEditor({
+    editor: "visual",
+    initialVariant: "single-column",
+    initialValue: {
+      items: initialItems,
+    },
+  });
+
+  try {
+    expect(view.getValue().items).toHaveLength(faqAccordionItemMax);
+
+    clickElement(findButtonByText(view.container, "Add item"));
+
+    expect(view.getValue().items).toHaveLength(faqAccordionItemMax);
+    expect(view.getValue().items[faqAccordionItemMax - 1]).toEqual(
+      expect.objectContaining({
+        id: `faq-seed-${faqAccordionItemMax}`,
+        question: `Question seed ${faqAccordionItemMax}`,
+        answer: `Answer seed ${faqAccordionItemMax}`,
       })
     );
   } finally {

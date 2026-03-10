@@ -295,9 +295,11 @@ const setInputValue = (element: Element | undefined, value: string) => {
     HTMLInputElement.prototype,
     "value"
   );
-  descriptor?.set?.call(element, value);
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
+  act(() => {
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 };
 
 const setTextareaValue = (element: Element | undefined, value: string) => {
@@ -306,9 +308,11 @@ const setTextareaValue = (element: Element | undefined, value: string) => {
     HTMLTextAreaElement.prototype,
     "value"
   );
-  descriptor?.set?.call(element, value);
-  element.dispatchEvent(new Event("input", { bubbles: true }));
-  element.dispatchEvent(new Event("change", { bubbles: true }));
+  act(() => {
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 };
 
 const setSelectValue = (element: Element | undefined, value: string) => {
@@ -317,8 +321,10 @@ const setSelectValue = (element: Element | undefined, value: string) => {
     HTMLSelectElement.prototype,
     "value"
   );
-  descriptor?.set?.call(element, value);
-  element.dispatchEvent(new Event("change", { bubbles: true }));
+  act(() => {
+    descriptor?.set?.call(element, value);
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 };
 
 const clickButtonByText = (container: HTMLElement, text: string) => {
@@ -357,12 +363,391 @@ const findSelectByOptions = (container: ParentNode, values: string[]) =>
   Array.from(container.querySelectorAll("select")).find((element) => {
     if (!(element instanceof HTMLSelectElement)) return false;
     const optionValues = Array.from(element.options).map((option) => option.value);
-    return values.every((value) => optionValues.includes(value));
+    return optionValues.length === values.length && values.every((value) => optionValues.includes(value));
   });
+
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const findSectionByTitle = (container: ParentNode, title: string) =>
+  Array.from(container.querySelectorAll("section")).find((section) =>
+    Array.from(section.querySelectorAll("p")).some(
+      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    )
+  );
+
+const findCheckboxes = (container: ParentNode) =>
+  Array.from(container.querySelectorAll("input[type='checkbox']")).filter(
+    (element): element is HTMLInputElement => element instanceof HTMLInputElement
+  );
+
+const renderEditors = async ({
+  initialValue,
+  initialVariant = "horizontal",
+  withVariantChange = true,
+}: {
+  initialValue: EntryTeaserData;
+  initialVariant?: string;
+  withVariantChange?: boolean;
+}) => {
+  const {
+    EntryTeaserAdvancedEditor,
+    EntryTeaserVisualEditor,
+    EntryTeaserWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/EntryTeaserEditors");
+
+  const onChangeSpy = vi.fn();
+  const onVariantChangeSpy = vi.fn();
+  let latestValue = initialValue;
+  let latestVariant = initialVariant;
+
+  const Harness = () => {
+    const [value, setValue] = useState<EntryTeaserData>(initialValue);
+    const [variant, setVariant] = useState(initialVariant);
+
+    const handleChange = (next: EntryTeaserData) => {
+      latestValue = next;
+      onChangeSpy(next);
+      setValue(next);
+    };
+
+    const handleVariantChange = withVariantChange
+      ? (next: string) => {
+          latestVariant = next;
+          onVariantChangeSpy(next);
+          setVariant(next);
+        }
+      : undefined;
+
+    return (
+      <>
+        <EntryTeaserWizardEditor
+          value={value}
+          onChange={handleChange}
+          variant={variant}
+          onVariantChange={handleVariantChange}
+        />
+        <EntryTeaserVisualEditor
+          value={value}
+          onChange={handleChange}
+          variant={variant}
+          onVariantChange={handleVariantChange}
+        />
+        <EntryTeaserAdvancedEditor
+          value={value}
+          onChange={handleChange}
+          variant={variant}
+          onVariantChange={handleVariantChange}
+        />
+      </>
+    );
+  };
+
+  const mounted = {
+    ...mount(<Harness />),
+    onChangeSpy,
+    onVariantChangeSpy,
+    getLatestValue: () => latestValue,
+    getLatestVariant: () => latestVariant,
+  };
+
+  await flush();
+
+  return mounted;
+};
+
+const mockEntryTeaserContract = async (normalizedValue: EntryTeaserData) => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/entryTeaser", async () => {
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/entryTeaser")>(
+      "../../../core/widgets/core/entryTeaser"
+    );
+
+    return {
+      ...actual,
+      normalizeEntryTeaserData: vi.fn(() => normalizedValue),
+    };
+  });
+};
 
 afterEach(() => {
   vi.restoreAllMocks();
   entryTeaserState.reset();
+});
+
+test("EntryTeaser advanced editor updates source wiring, style tokens, and fallback toggle", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      sourceMode: "featured",
+      source: {
+        mode: "legacy",
+        contentTypeId: "articles",
+        entryId: "entry-1",
+        listingQueryId: "query-1",
+        listingTemplateId: "template-1",
+      },
+      style: {
+        surface: "var(--surface-initial)",
+        border: "var(--border-initial)",
+        radius: "md",
+        spacing: "sm",
+      },
+      fallback: {
+        fallbackToLatest: true,
+      },
+      resolved: {
+        item: null,
+        error: "Pending runtime resolution",
+      },
+    },
+    initialVariant: "vertical",
+  });
+
+  try {
+    await flush();
+
+    const sourceWiringSection = findSectionByTitle(view.container, "Source wiring");
+    if (!(sourceWiringSection instanceof HTMLElement)) {
+      throw new Error("Missing source wiring section");
+    }
+
+    setSelectValue(
+      findSelectByOptions(sourceWiringSection, ["legacy", "listing"]),
+      "listing"
+    );
+    await flush();
+
+    setSelectValue(
+      findSelectByOptions(sourceWiringSection, ["__no_listing_query__", "query-1"]),
+      "__no_listing_query__"
+    );
+    setSelectValue(
+      findSelectByOptions(sourceWiringSection, ["__no_listing_template__", "template-1"]),
+      "__no_listing_template__"
+    );
+
+    const styleTokensSection = findSectionByTitle(view.container, "Style tokens");
+    if (!(styleTokensSection instanceof HTMLElement)) {
+      throw new Error("Missing style tokens section");
+    }
+
+    setInputValue(
+      findInputByPlaceholder(styleTokensSection, "var(--color-bg)"),
+      "var(--teaser-surface)"
+    );
+    setInputValue(
+      findInputByPlaceholder(styleTokensSection, "var(--color-border)"),
+      "var(--teaser-border)"
+    );
+    setSelectValue(
+      findSelectByOptions(styleTokensSection, ["sm", "md", "lg", "xl"]),
+      "sm"
+    );
+    setSelectValue(findSelectByOptions(styleTokensSection, ["sm", "md", "lg"]), "lg");
+
+    const fallbackSection = findSectionByTitle(view.container, "Fallback behavior");
+    if (!(fallbackSection instanceof HTMLElement)) {
+      throw new Error("Missing fallback behavior section");
+    }
+
+    clickElement(findCheckboxes(fallbackSection)[0]);
+
+    expect(view.getLatestValue()).toMatchObject({
+      source: {
+        mode: "listing",
+        contentTypeId: "",
+        entryId: "",
+        listingQueryId: "",
+        listingTemplateId: "",
+      },
+      style: {
+        surface: "var(--teaser-surface)",
+        border: "var(--teaser-border)",
+        radius: "sm",
+        spacing: "lg",
+      },
+      fallback: {
+        fallbackToLatest: false,
+      },
+    });
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"error": "Pending runtime resolution"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("EntryTeaser editors fall back safely for sparse normalized values and ignore variant changes without a handler", async () => {
+  await mockEntryTeaserContract({
+    sourceMode: undefined,
+    source: {
+      mode: undefined,
+      listingQueryId: undefined,
+      listingTemplateId: undefined,
+      contentTypeId: undefined,
+      entryId: undefined,
+    },
+    fields: {
+      showImage: undefined,
+      showExcerpt: undefined,
+      showMeta: undefined,
+      showTags: undefined,
+    },
+    cta: {
+      label: undefined,
+      hrefMode: undefined,
+      href: undefined,
+    },
+    style: {
+      surface: undefined,
+      border: undefined,
+      radius: undefined,
+      spacing: undefined,
+    },
+    fallback: {
+      title: undefined,
+      description: undefined,
+      fallbackToLatest: undefined,
+    },
+    resolved: undefined,
+  });
+
+  let view: Awaited<ReturnType<typeof renderEditors>> | undefined;
+
+  try {
+    view = await renderEditors({
+      initialValue: {},
+      initialVariant: "legacy-variant",
+      withVariantChange: false,
+    });
+    await flush();
+
+    const wizardSection = findSectionByTitle(view.container, "Source mode");
+    if (!(wizardSection instanceof HTMLElement)) {
+      throw new Error("Missing wizard source mode section");
+    }
+    expect(findSelectByOptions(wizardSection, ["legacy", "listing"])?.value).toBe("legacy");
+    expect(findSelectByOptions(wizardSection, ["latest", "featured", "manual"])?.value).toBe(
+      "latest"
+    );
+    expect(findSelectByOptions(view.container, ["horizontal", "vertical", "minimal"])?.value).toBe(
+      "horizontal"
+    );
+
+    clickButtonByText(view.container, "Vertical");
+    expect(view.getLatestVariant()).toBe("legacy-variant");
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
+
+    const visualSection = findSectionByTitle(view.container, "Source configuration");
+    if (!(visualSection instanceof HTMLElement)) {
+      throw new Error("Missing visual source configuration section");
+    }
+    expect(findSelectByOptions(visualSection, ["legacy", "listing"])?.value).toBe("legacy");
+    expect(findSelectByOptions(visualSection, ["latest", "featured", "manual"])?.value).toBe(
+      "latest"
+    );
+
+    expect(findCheckboxes(view.container).slice(0, 4).every((checkbox) => checkbox.checked)).toBe(
+      true
+    );
+    expect(findInputByPlaceholder(view.container, "Read more")?.value).toBe("Read more");
+    expect(
+      findInputByPlaceholder(view.container, "/blog/entry-slug or https://...")
+    ).toBeUndefined();
+    expect(findInputByPlaceholder(view.container, "No entry selected")?.value).toBe("");
+    expect(
+      findTextareaByPlaceholder(view.container, "Choose a source mode and content type.")?.value
+    ).toBe("");
+
+    const styleTokensSection = findSectionByTitle(view.container, "Style tokens");
+    if (!(styleTokensSection instanceof HTMLElement)) {
+      throw new Error("Missing style tokens section");
+    }
+    expect(findInputByPlaceholder(styleTokensSection, "var(--color-bg)")?.value).toBe("");
+    expect(findInputByPlaceholder(styleTokensSection, "var(--color-border)")?.value).toBe("");
+    expect(findSelectByOptions(styleTokensSection, ["sm", "md", "lg", "xl"])?.value).toBe("lg");
+    expect(findSelectByOptions(styleTokensSection, ["sm", "md", "lg"])?.value).toBe("md");
+
+    const fallbackSection = findSectionByTitle(view.container, "Fallback behavior");
+    if (!(fallbackSection instanceof HTMLElement)) {
+      throw new Error("Missing fallback behavior section");
+    }
+    expect(findCheckboxes(fallbackSection)[0]?.checked).toBe(true);
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"item": null');
+  } finally {
+    view?.cleanup();
+    vi.doUnmock("../../../core/widgets/core/entryTeaser");
+    vi.resetModules();
+  }
+});
+
+test("EntryTeaser editors surface generic listing and entry load failures plus empty manual-entry state", async () => {
+  entryTeaserState.listingsError = new Error("Listing transport failed");
+
+  const listingsErrorView = await renderEditors({
+    initialValue: {
+      source: {
+        mode: "listing",
+      },
+    },
+  });
+
+  try {
+    await flush();
+    expect(listingsErrorView.container.textContent).toContain("Failed to load listings options.");
+  } finally {
+    listingsErrorView.cleanup();
+  }
+
+  entryTeaserState.reset();
+  entryTeaserState.entriesError = new Error("Entries transport failed");
+
+  const entryErrorView = await renderEditors({
+    initialValue: {
+      sourceMode: "manual",
+      source: {
+        mode: "legacy",
+        contentTypeId: "articles",
+      },
+    },
+  });
+
+  try {
+    await flush();
+    expect(entryErrorView.container.textContent).toContain("Failed to load entries.");
+  } finally {
+    entryErrorView.cleanup();
+  }
+
+  entryTeaserState.reset();
+  const originalEntriesBySlug = entryTeaserState.entriesBySlug;
+  entryTeaserState.entriesBySlug = {
+    ...entryTeaserState.entriesBySlug,
+    articles: [],
+  };
+
+  const emptyEntriesView = await renderEditors({
+    initialValue: {
+      sourceMode: "manual",
+      source: {
+        mode: "legacy",
+        contentTypeId: "articles",
+      },
+    },
+  });
+
+  try {
+    await flush();
+    expect(emptyEntriesView.container.textContent).toContain(
+      "No entries loaded yet for selected content type."
+    );
+  } finally {
+    emptyEntriesView.cleanup();
+    entryTeaserState.entriesBySlug = originalEntriesBySlug;
+  }
 });
 
 test("EntryTeaser editors cover legacy manual mode, style fields, CTA options, and runtime snapshot", async () => {

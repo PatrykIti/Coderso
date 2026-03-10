@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 397 | 2026-03-10 | TASK-105 parallel low-line widget editor coverage follow-up | QA/Platform |
 | 396 | 2026-03-10 | TASK-105 defensive widget editor fallback follow-up | QA/Platform |
 | 395 | 2026-03-10 | TASK-105 residual widget editor branch closure follow-up | QA/Platform |
 | 394 | 2026-03-10 | TASK-105 hero content list and section coverage follow-up | QA/Platform |

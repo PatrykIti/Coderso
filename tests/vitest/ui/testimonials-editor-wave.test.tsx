@@ -233,6 +233,46 @@ const findTextareasByPlaceholder = (container: ParentNode, placeholder: string) 
       element.getAttribute("placeholder") === placeholder
   );
 
+const findInputByPlaceholder = (container: ParentNode, placeholder: string) =>
+  findInputsByPlaceholder(container, placeholder)[0];
+
+const findTextareaByPlaceholder = (container: ParentNode, placeholder: string) =>
+  findTextareasByPlaceholder(container, placeholder)[0];
+
+const findSelectByOptions = (container: ParentNode, values: string[]) => {
+  const select = findSelectsByOptions(container, values)[0];
+  if (!(select instanceof HTMLSelectElement)) {
+    throw new Error(`Missing select with options ${values.join(", ")}`);
+  }
+  return select;
+};
+
+const normalizeText = (value: string | null | undefined) =>
+  (value ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+const findSectionByTitle = (container: ParentNode, title: string) =>
+  Array.from(container.querySelectorAll("section")).find((section) =>
+    Array.from(section.querySelectorAll("p")).some(
+      (paragraph) => normalizeText(paragraph.textContent) === normalizeText(title)
+    )
+  );
+
+const findColorInputForPlaceholder = (
+  container: ParentNode,
+  placeholder: string,
+  index = 0
+) => {
+  const textInput = findInputsByPlaceholder(container, placeholder)[index];
+  if (!(textInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
+  }
+  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
+  if (!(colorInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input for placeholder "${placeholder}" (${index})`);
+  }
+  return colorInput;
+};
+
 const findButtonsByText = (container: ParentNode, text: string) =>
   Array.from(container.querySelectorAll("button")).filter((button) =>
     button.textContent?.includes(text)
@@ -242,6 +282,77 @@ afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
 });
+
+const renderEditors = async ({
+  initialValue,
+  initialVariant = "grid",
+  withVariantChange = true,
+}: {
+  initialValue: TestimonialsData;
+  initialVariant?: string;
+  withVariantChange?: boolean;
+}) => {
+  const {
+    TestimonialsAdvancedEditor,
+    TestimonialsVisualEditor,
+    TestimonialsWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/TestimonialsEditors");
+
+  const onChangeSpy = vi.fn();
+  const onVariantChangeSpy = vi.fn();
+  let latestValue = initialValue;
+  let latestVariant = initialVariant;
+
+  const Harness = () => {
+    const [value, setValue] = useState<TestimonialsData>(initialValue);
+    const [variant, setVariant] = useState(initialVariant);
+
+    const handleChange = (next: TestimonialsData) => {
+      latestValue = next;
+      onChangeSpy(next);
+      setValue(next);
+    };
+
+    const handleVariantChange = withVariantChange
+      ? (next: string) => {
+          latestVariant = next;
+          onVariantChangeSpy(next);
+          setVariant(next);
+        }
+      : undefined;
+
+    return (
+      <>
+        <TestimonialsWizardEditor
+          value={value}
+          onChange={handleChange}
+          variant={variant}
+          onVariantChange={handleVariantChange}
+        />
+        <TestimonialsVisualEditor
+          value={value}
+          onChange={handleChange}
+          variant={variant}
+          onVariantChange={handleVariantChange}
+        />
+        <TestimonialsAdvancedEditor
+          value={value}
+          onChange={handleChange}
+          variant={variant}
+          onVariantChange={handleVariantChange}
+        />
+      </>
+    );
+  };
+
+  return {
+    ...mount(<Harness />),
+    onChangeSpy,
+    onVariantChangeSpy,
+    getLatestValue: () => latestValue,
+    getLatestVariant: () => latestVariant,
+  };
+};
 
 test("Testimonials editors cover variant changes, content edits, ordering, colors, and advanced normalization", async () => {
   const {
@@ -413,6 +524,287 @@ test("Testimonials editors cover variant changes, content edits, ordering, color
     expect(snapshot?.textContent).toContain('"spacing": "lg"');
     expect(snapshot?.textContent).toContain('"rating": 4');
     expect(snapshot?.textContent).toContain('"sourceLabel": "North Labs"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Testimonials editors normalize sparse payloads, preserve token colors, and ignore variant changes without a handler", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      testimonials: [
+        {
+          id: "same",
+          quote: "   ",
+          author: "   ",
+          rating: Number.POSITIVE_INFINITY,
+        },
+        {
+          id: "same",
+          quote: "Second quote",
+          author: "Second author",
+          rating: -8,
+        },
+      ],
+      style: {
+        cardSurface: "surface-token",
+        cardBorder: "border-token",
+        textColor: "text-token",
+        accentColor: "accent-token",
+        spacing: "wide" as never,
+      },
+    },
+    initialVariant: "legacy",
+    withVariantChange: false,
+  });
+
+  try {
+    const variantSelect = findSelectByOptions(view.container, [
+      "grid",
+      "spotlight",
+      "slider-static",
+    ]);
+    expect(variantSelect.value).toBe("grid");
+
+    const variantSection = findSectionByTitle(view.container, "Variant and layout structure");
+    if (!(variantSection instanceof HTMLElement)) {
+      throw new Error("Missing variant section");
+    }
+
+    clickButton(findButtonsByText(variantSection, "Spotlight")[0]);
+    setSelectValue(variantSelect, "spotlight");
+    expect(view.getLatestVariant()).toBe("legacy");
+    expect(view.onVariantChangeSpy).not.toHaveBeenCalled();
+
+    const headerSection = findSectionByTitle(view.container, "Header copy");
+    if (!(headerSection instanceof HTMLElement)) {
+      throw new Error("Missing header section");
+    }
+
+    expect(findInputByPlaceholder(headerSection, "Customer stories")?.value).toBe(
+      "Customer stories"
+    );
+    expect(
+      findTextareaByPlaceholder(
+        headerSection,
+        "Use real customer voices to build trust and reduce hesitation."
+      )?.value
+    ).toBe("Use real customer voices to build trust and reduce hesitation.");
+
+    const contentSection = findSectionByTitle(view.container, "Testimonials content and ratings");
+    if (!(contentSection instanceof HTMLElement)) {
+      throw new Error("Missing content section");
+    }
+
+    expect(findTextareasByPlaceholder(contentSection, "Customer quote")[0]?.value).toBe(
+      "We launched our marketing site in two days and kept full control over future edits."
+    );
+    expect(findInputsByPlaceholder(contentSection, "Author name")[0]?.value).toBe("Customer One");
+
+    const ratingSelects = findSelectsByOptions(contentSection, ["0", "1", "2", "3", "4", "5"]);
+    expect(ratingSelects[0]?.value).toBe("5");
+    expect(ratingSelects[1]?.value).toBe("0");
+    expect(findButtonsByText(contentSection, "Move up")[0]).toHaveProperty("disabled", true);
+    expect(findButtonsByText(contentSection, "Move down").at(-1)).toHaveProperty(
+      "disabled",
+      true
+    );
+    expect(findButtonsByText(contentSection, "Remove")[0]).toHaveProperty("disabled", true);
+
+    const colorsSection = findSectionByTitle(view.container, "Colors and emphasis");
+    if (!(colorsSection instanceof HTMLElement)) {
+      throw new Error("Missing colors section");
+    }
+
+    expect(findInputByPlaceholder(colorsSection, "var(--color-bg)")?.value).toBe("surface-token");
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-bg)").value).toBe("#ffffff");
+    expect(findInputByPlaceholder(colorsSection, "var(--color-border)")?.value).toBe(
+      "border-token"
+    );
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-border)").value).toBe(
+      "#e2e8f0"
+    );
+    expect(findInputByPlaceholder(colorsSection, "var(--color-text)")?.value).toBe("text-token");
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-text)").value).toBe(
+      "#0f172a"
+    );
+    expect(findInputByPlaceholder(colorsSection, "var(--color-primary)")?.value).toBe(
+      "accent-token"
+    );
+    expect(findColorInputForPlaceholder(colorsSection, "var(--color-primary)").value).toBe(
+      "#1d4ed8"
+    );
+
+    const advancedSection = findSectionByTitle(view.container, "Display tokens");
+    if (!(advancedSection instanceof HTMLElement)) {
+      throw new Error("Missing advanced display section");
+    }
+
+    const advancedSpacingSelect = findSelectByOptions(advancedSection, ["sm", "md", "lg"]);
+    expect(advancedSpacingSelect.value).toBe("md");
+    setSelectValue(advancedSpacingSelect, "lg");
+
+    expect(view.onChangeSpy).toHaveBeenCalled();
+    expect(view.getLatestValue().style).toMatchObject({
+      cardSurface: "surface-token",
+      cardBorder: "border-token",
+      textColor: "text-token",
+      accentColor: "accent-token",
+      spacing: "lg",
+    });
+
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"spacing": "lg"');
+    expect(snapshot?.textContent).toContain('"quote": "Second quote"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Testimonials visual editor covers header copy, card field updates, picker colors, and max-count normalization", async () => {
+  const view = await renderEditors({
+    initialValue: {
+      header: {
+        eyebrow: "",
+        title: "",
+        description: "",
+      },
+      testimonials: [
+        { id: "testimonial-a", quote: "Quote A", author: "Author A", rating: 2 },
+        { id: "testimonial-b", quote: "Quote B", author: "Author B", rating: 3 },
+        { id: "testimonial-c", quote: "Quote C", author: "Author C", rating: 4 },
+        { id: "testimonial-d", quote: "Quote D", author: "Author D", rating: 1 },
+        { id: "testimonial-e", quote: "Quote E", author: "Author E", rating: 5 },
+        { id: "testimonial-f", quote: "Quote F", author: "Author F", rating: 0 },
+      ],
+      style: {
+        cardSurface: "#101010",
+        cardBorder: "#202020",
+        textColor: "#303030",
+        accentColor: "#404040",
+        spacing: "sm",
+      },
+    },
+  });
+
+  try {
+    const variantSection = findSectionByTitle(view.container, "Variant and layout structure");
+    if (!(variantSection instanceof HTMLElement)) {
+      throw new Error("Missing variant section");
+    }
+
+    clickButton(findButtonsByText(variantSection, "Slider Static")[0]);
+    expect(view.getLatestVariant()).toBe("slider-static");
+
+    const visualCountSelect = findSelectByOptions(variantSection, [
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+    ]);
+    setSelectValue(visualCountSelect, "7");
+    expect(view.getLatestValue().testimonials).toHaveLength(7);
+
+    const headerSection = findSectionByTitle(view.container, "Header copy");
+    if (!(headerSection instanceof HTMLElement)) {
+      throw new Error("Missing header section");
+    }
+
+    setInputValue(findInputByPlaceholder(headerSection, "Customer stories"), "What customers say");
+    setInputValue(
+      findInputByPlaceholder(headerSection, "Trusted by teams that ship fast"),
+      "Proof from customers"
+    );
+    setTextareaValue(
+      findTextareaByPlaceholder(
+        headerSection,
+        "Use real customer voices to build trust and reduce hesitation."
+      ),
+      "Detailed proof copy for the testimonials section."
+    );
+
+    const contentSection = findSectionByTitle(view.container, "Testimonials content and ratings");
+    if (!(contentSection instanceof HTMLElement)) {
+      throw new Error("Missing content section");
+    }
+
+    setTextareaValue(
+      findTextareasByPlaceholder(contentSection, "Customer quote")[0],
+      "Visual editor quote update"
+    );
+    setInputValue(findInputsByPlaceholder(contentSection, "Author name")[0], "Jordan");
+    setInputValue(findInputsByPlaceholder(contentSection, "Role or position")[0], "CEO");
+    setInputValue(
+      findInputsByPlaceholder(contentSection, "https://cdn.example.com/avatar.jpg")[0],
+      "https://cdn.example.com/jordan.jpg"
+    );
+    setInputValue(findInputsByPlaceholder(contentSection, "Acme Studio")[0], "Peak Labs");
+
+    const ratingSelects = findSelectsByOptions(contentSection, ["0", "1", "2", "3", "4", "5"]);
+    setSelectValue(ratingSelects[0], "1");
+
+    clickButton(findButtonsByText(contentSection, "Move up")[1]);
+    expect(view.getLatestValue().testimonials[0]?.author).toBe("Author B");
+    expect(view.getLatestValue().testimonials[1]?.author).toBe("Jordan");
+
+    clickButton(findButtonsByText(contentSection, "Add testimonial")[0]);
+    expect(view.getLatestValue().testimonials).toHaveLength(8);
+    expect(findButtonsByText(contentSection, "Add testimonial")[0]).toHaveProperty(
+      "disabled",
+      true
+    );
+
+    const colorsSection = findSectionByTitle(view.container, "Colors and emphasis");
+    if (!(colorsSection instanceof HTMLElement)) {
+      throw new Error("Missing colors section");
+    }
+
+    setInputValue(findColorInputForPlaceholder(colorsSection, "var(--color-bg)"), "#111111");
+    setInputValue(findColorInputForPlaceholder(colorsSection, "var(--color-border)"), "#222222");
+    setInputValue(findColorInputForPlaceholder(colorsSection, "var(--color-text)"), "#f5f5f5");
+    setInputValue(findColorInputForPlaceholder(colorsSection, "var(--color-primary)"), "#2563eb");
+
+    expect(view.getLatestValue().header).toMatchObject({
+      eyebrow: "What customers say",
+      title: "Proof from customers",
+      description: "Detailed proof copy for the testimonials section.",
+    });
+    expect(view.getLatestValue().testimonials).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          quote: "Visual editor quote update",
+          author: "Jordan",
+          role: "CEO",
+          avatar: "https://cdn.example.com/jordan.jpg",
+          rating: 1,
+          sourceLabel: "Peak Labs",
+        }),
+      ])
+    );
+    expect(view.getLatestValue().style).toMatchObject({
+      cardSurface: "#111111",
+      cardBorder: "#222222",
+      textColor: "#f5f5f5",
+      accentColor: "#2563eb",
+    });
+
+    const fallbackSection = findSectionByTitle(view.container, "Normalization and fallback");
+    if (!(fallbackSection instanceof HTMLElement)) {
+      throw new Error("Missing normalization section");
+    }
+
+    clickButton(findButtonsByText(fallbackSection, "Normalize list to variant baseline")[0]);
+    clickButton(findButtonsByText(fallbackSection, "Normalize full payload")[0]);
+
+    expect(view.getLatestValue().testimonials).toHaveLength(3);
+    const snapshot = view.container.querySelector("pre");
+    expect(snapshot?.textContent).toContain('"eyebrow": "What customers say"');
+    expect(snapshot?.textContent).toContain('"title": "Proof from customers"');
+    expect(snapshot?.textContent).toContain('"spacing": "sm"');
+    expect(snapshot?.textContent).toContain('"rating": 1');
   } finally {
     view.cleanup();
   }
