@@ -699,3 +699,93 @@ test("Newsletter advanced editor covers fallback summary, raw integration metada
     cleanup();
   }
 });
+
+test("Newsletter editors render sparse defaults and ignore variant changes without a handler", async () => {
+  const {
+    NewsletterAdvancedEditor,
+    NewsletterVisualEditor,
+    NewsletterWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/NewsletterEditors");
+
+  const sparseValue: NewsletterData = {
+    title: undefined,
+    description: undefined,
+    placeholder: undefined,
+    consent: {},
+    submit: {},
+    integration: {},
+    style: {},
+  };
+
+  const wizardView = mount(
+    <NewsletterWizardEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="legacy-newsletter"
+    />
+  );
+
+  try {
+    const variantSelect = getSelectByOptions(wizardView.container, ["inline", "stacked", "minimal"]);
+    expect(variantSelect.value).toBe("inline");
+    expect(getInputByPlaceholder(wizardView.container, "Join our newsletter").value).toBe(
+      newsletterDefaults.title ?? ""
+    );
+    expect(
+      getTextareaByPlaceholder(wizardView.container, "Short supporting line").value
+    ).toBe(newsletterDefaults.description ?? "");
+    setSelectValue(variantSelect, "stacked");
+    expect(variantSelect.value).toBe("inline");
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <NewsletterVisualEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="legacy-newsletter"
+    />
+  );
+
+  try {
+    const variantSection = getSectionByTitle(visualView.container, "Variant and form structure");
+    clickButton(getButtonsByText(variantSection, "Minimal")[0]);
+
+    expect(getInputByPlaceholder(visualView.container, "Join our newsletter").value).toBe(
+      newsletterDefaults.title ?? ""
+    );
+    expect(
+      getTextareaByPlaceholder(visualView.container, "Short supporting line").value
+    ).toBe(newsletterDefaults.description ?? "");
+    expect(getInputByPlaceholder(visualView.container, "you@example.com").value).toBe(
+      newsletterDefaults.placeholder ?? ""
+    );
+
+    const integrationSection = getSectionByTitle(visualView.container, "Integration target");
+    expect(
+      getSelectByOptions(integrationSection, ["action-url", "webhook"]).value
+    ).toBe("action-url");
+    expect(
+      getInputByPlaceholder(integrationSection, "https://example.com/subscribe").value
+    ).toBe("");
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <NewsletterAdvancedEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="legacy-newsletter"
+    />
+  );
+
+  try {
+    const layoutSection = getSectionByTitle(advancedView.container, "Layout tokens");
+    expect(getSelectByOptions(layoutSection, ["sm", "md", "lg", "xl"]).value).toBe("md");
+    expect(getSelectByOptions(layoutSection, ["start", "center", "end"]).value).toBe("start");
+  } finally {
+    advancedView.cleanup();
+  }
+});

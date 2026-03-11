@@ -741,3 +741,110 @@ test("PricingPlans visual editor covers plan-count contraction, move-up ordering
     view.cleanup();
   }
 });
+
+test("PricingPlans editors render sparse defaults and ignore variant changes without a handler", async () => {
+  const {
+    PricingPlansAdvancedEditor,
+    PricingPlansVisualEditor,
+    PricingPlansWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/PricingPlansEditors");
+
+  const sparseValue: PricingPlansData = {
+    header: {},
+    plans: [{}, {}] as never,
+    style: {},
+  };
+
+  const wizardView = mount(
+    <PricingPlansWizardEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="three-plans"
+    />
+  );
+
+  try {
+    expect(
+      (findInputByPlaceholder(
+        wizardView.container,
+        pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
+      ) as HTMLInputElement | undefined)?.value
+    ).toBe(pricingPlansDefaults.header?.title);
+    expect((findSelectByOptions(wizardView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | undefined)?.value).toBe(
+      "2"
+    );
+    expect((findInputByPlaceholder(wizardView.container, "Plan 1") as HTMLInputElement | undefined)?.value).toBe(
+      "Starter"
+    );
+    expect((findInputsByPlaceholder(wizardView.container, "$49")[0] as HTMLInputElement | undefined)?.value).toBe(
+      "$19"
+    );
+
+    setSelectValue(
+      findSelectByOptions(wizardView.container, ["three-plans", "four-plans", "comparison-rows"]),
+      "comparison-rows"
+    );
+    expect(
+      (findSelectByOptions(wizardView.container, ["three-plans", "four-plans", "comparison-rows"]) as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("three-plans");
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <PricingPlansVisualEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="three-plans"
+    />
+  );
+
+  try {
+    expect(
+      (findInputByPlaceholder(
+        visualView.container,
+        pricingPlansDefaults.header?.title ?? "Choose the plan that fits your workflow"
+      ) as HTMLInputElement | undefined)?.value
+    ).toBe(pricingPlansDefaults.header?.title);
+    expect(
+      (findTextareaByPlaceholder(
+        visualView.container,
+        pricingPlansDefaults.header?.description ??
+          "Compare pricing tiers and pick the option matching your team stage."
+      ) as HTMLTextAreaElement | undefined)?.value
+    ).toBe(pricingPlansDefaults.header?.description);
+    expect((findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | undefined)?.value).toBe(
+      "2"
+    );
+    expect(visualView.container.textContent).toContain("No features yet.");
+
+    clickButtonByText(visualView.container, "Four Plans");
+    expect(visualView.container.textContent).toContain("Selected");
+    expect(
+      (findSelectByOptions(visualView.container, ["2", "3", "4", "5", "6"]) as HTMLSelectElement | undefined)?.value
+    ).toBe("2");
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <PricingPlansAdvancedEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="three-plans"
+    />
+  );
+
+  try {
+    expect((findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | undefined)?.value).toBe(
+      "md"
+    );
+    expect((findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | undefined)?.value).toBe(
+      "lg"
+    );
+  } finally {
+    advancedView.cleanup();
+  }
+});
