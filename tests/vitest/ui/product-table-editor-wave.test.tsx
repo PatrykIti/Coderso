@@ -335,6 +335,130 @@ test("ProductTable editors cover source controls, column toggles, label normaliz
   }
 });
 
+test("ProductTable editors fall back to hardcoded wizard limit and empty runtime counts when normalized data is sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/productTable", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/productTable")
+    >("../../../core/widgets/core/productTable");
+
+    return {
+      ...actual,
+      productTableDefaults: {
+        ...actual.productTableDefaults,
+        source: undefined,
+      },
+    };
+  });
+
+  const {
+    ProductTableAdvancedEditor,
+    ProductTableWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/ProductTableEditors");
+
+  const view = mount(
+    <>
+      <ProductTableWizardEditor
+        value={{}}
+        onChange={() => undefined}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+      <ProductTableAdvancedEditor
+        value={{}}
+        onChange={() => undefined}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    </>
+  );
+
+  try {
+    expect(
+      (findInputByLabel(view.container, "Limit") as HTMLInputElement | undefined)?.value
+    ).toBe("12");
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Resolved items: 0 · Total: 0")
+    );
+    expect(
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/productTable");
+    vi.resetModules();
+  }
+});
+
+test("ProductTable visual and advanced editors honor explicit toggle states and sparse runtime fallbacks", async () => {
+  const { ProductTableAdvancedEditor, ProductTableVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ProductTableEditors"
+  );
+
+  const visualView = mount(
+    <ProductTableVisualEditor
+      value={{
+        fields: {
+          showSlug: false,
+          showStatus: false,
+          showStock: false,
+          showCompareAt: true,
+          showCollectionCount: true,
+        },
+      }}
+      onChange={() => undefined}
+      variant="default"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect((findInputByLabel(visualView.container, "Show slug") as HTMLInputElement | undefined)?.checked).toBe(
+      false
+    );
+    expect((findInputByLabel(visualView.container, "Show status") as HTMLInputElement | undefined)?.checked).toBe(
+      false
+    );
+    expect((findInputByLabel(visualView.container, "Show stock") as HTMLInputElement | undefined)?.checked).toBe(
+      false
+    );
+    expect(
+      (findInputByLabel(visualView.container, "Show compare-at price") as
+        | HTMLInputElement
+        | undefined)?.checked
+    ).toBe(true);
+    expect(
+      (findInputByLabel(visualView.container, "Show collection count") as
+        | HTMLInputElement
+        | undefined)?.checked
+    ).toBe(true);
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <ProductTableAdvancedEditor
+      value={{}}
+      onChange={() => undefined}
+      variant="default"
+      onVariantChange={() => undefined}
+    />
+  );
+
+  try {
+    expect(normalizeText(advancedView.container.textContent)).toContain(
+      normalizeText("Resolved items: 0 · Total: 0")
+    );
+    expect(
+      (findInputByLabel(advancedView.container, "Runtime error flag") as
+        | HTMLInputElement
+        | undefined)?.value
+    ).toBe("");
+  } finally {
+    advancedView.cleanup();
+  }
+});
+
 test("ProductTable editors restore default labels and empty state when fields are cleared and drop blank runtime errors", async () => {
   const {
     ProductTableAdvancedEditor,

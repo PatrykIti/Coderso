@@ -274,3 +274,56 @@ test("ProductCompare editors cover source controls, field toggles, label normali
     view.cleanup();
   }
 });
+
+test("ProductCompare editors fall back to hardcoded wizard limit and empty runtime counts when normalized data is sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/productCompare", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/productCompare")
+    >("../../../core/widgets/core/productCompare");
+
+    return {
+      ...actual,
+      productCompareDefaults: {
+        ...actual.productCompareDefaults,
+        source: undefined,
+      },
+    };
+  });
+
+  const {
+    ProductCompareAdvancedEditor,
+    ProductCompareWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/ProductCompareEditors");
+
+  const view = mount(
+    <>
+      <ProductCompareWizardEditor
+        value={{}}
+        onChange={() => undefined}
+        variant="matrix"
+        onVariantChange={() => undefined}
+      />
+      <ProductCompareAdvancedEditor
+        value={{}}
+        onChange={() => undefined}
+        variant="matrix"
+        onVariantChange={() => undefined}
+      />
+    </>
+  );
+
+  try {
+    expect(normalizeText(view.container.textContent)).toContain(normalizeText("Current limit: 3."));
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Resolved rows: 0 · Total: 0")
+    );
+    expect(
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/productCompare");
+    vi.resetModules();
+  }
+});

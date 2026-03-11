@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 408 | 2026-03-11 | TASK-105 product compare and table branch cleanup | QA/Platform |
 | 407 | 2026-03-11 | TASK-105 logo cloud safety follow-up | QA/Platform |
 | 406 | 2026-03-11 | TASK-105 timeline line gap closure | QA/Platform |
 | 405 | 2026-03-10 | TASK-105 stats navigation pricing hero follow-up | QA/Platform |

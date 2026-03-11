@@ -261,13 +261,18 @@ Logo cloud safety follow-up on 2026-03-11:
 - Isolated targeted run for `LogoCloudEditors.tsx` stayed at `100.00%` lines / `64.00%` branches.
 - Canonical full-lane snapshot was not rebaselined separately for this narrow safety slice.
 
+Product compare/table branch cleanup on 2026-03-11:
+- Deepened `ProductCompareEditors` and `ProductTableEditors` around sparse/default fallback branches for wizard limits and empty runtime payload state.
+- Isolated targeted runs moved:
+  - `ProductCompareEditors.tsx` -> `100.00%` lines / `75.00%` branches
+  - `ProductTableEditors.tsx` -> `100.00%` lines / `75.00%` branches
+- Canonical full-lane snapshot was not rebaselined separately for this narrow branch-only slice.
+
 Remaining hotspots in this wave:
 - residual branch gaps in `FeatureGridEditors.tsx`
 - residual branch gaps in `PricingPlansEditors.tsx`
 - residual branch gaps in `NewsletterEditors.tsx`
 - residual branch gaps in `TeamEditors.tsx`
-- residual branch gaps in `ProductCompareEditors.tsx`
-- residual branch gaps in `ProductTableEditors.tsx`
 - residual branch gaps in `LogoCloudEditors.tsx`
 
 ## Testing Requirements
