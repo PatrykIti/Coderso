@@ -2,7 +2,6 @@
 
 import React, { act } from "react";
 import { createRoot } from "react-dom/client";
-import { renderToString } from "react-dom/server";
 import { afterEach, expect, test, vi } from "vitest";
 
 const pagePostState = vi.hoisted(() => {
@@ -528,6 +527,11 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
+const flushMicrotasks = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
 afterEach(() => {
   vi.restoreAllMocks();
   pagePostState.reset();
@@ -656,6 +660,153 @@ test("PageFilters forwards query and filter changes", async () => {
   }
 });
 
+test("PageListPage applies filters, refreshes on cache events, and creates without editor navigation when preference is off", async () => {
+  pagePostState.pages = [
+    pagePostState.pages[0],
+    {
+      ...pagePostState.pages[0],
+      id: "page-2",
+      title: "Docs hub",
+      slug: "/docs",
+      status: "published",
+      author: {
+        id: "author-2",
+        name: "Editor",
+        email: "editor@example.com",
+      },
+    },
+  ];
+
+  const { PageListPage } = await import(
+    "../../../core/admin/ui/pages/PageListPage"
+  );
+
+  const view = mount(<PageListPage />);
+
+  try {
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Showing 2 of 2 pages");
+    expect(pagePostState.pageRefreshCalls).toEqual([
+      { force: false, background: undefined },
+    ]);
+
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search pages by title..."]'
+    );
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    const statusSelect = selects.find((select) =>
+      select.querySelector('option[value="scheduled"]')
+    );
+    const authorSelect = selects.find((select) =>
+      select.querySelector('option[value="author-2"]')
+    );
+
+    act(() => {
+      setInputValue(searchInput ?? undefined, "missing");
+    });
+
+    expect(view.container.textContent).toContain("No pages match your current filters.");
+    expect(view.container.textContent).toContain("Showing 0 of 2 pages");
+
+    act(() => {
+      setInputValue(searchInput ?? undefined, "docs");
+      setSelectValue(statusSelect, "published");
+      setSelectValue(authorSelect, "author-2");
+    });
+
+    expect(view.container.textContent).toContain("Docs hub");
+    expect(view.container.textContent).toContain("Showing 1 of 2 pages");
+    expect(
+      Array.from(view.container.querySelectorAll("button")).filter(
+        (button) => button.textContent === "edit-page-row"
+      )
+    ).toHaveLength(1);
+
+    await act(async () => {
+      pagePostState.pageSubscribers.forEach((handler) =>
+        handler({ key: "postsList" })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.pageRefreshCalls).toHaveLength(1);
+
+    await act(async () => {
+      pagePostState.pageSubscribers.forEach((handler) =>
+        handler({ key: "pagesList" })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.pageRefreshCalls).toEqual([
+      { force: false, background: undefined },
+      { force: true, background: true },
+    ]);
+
+    const buttons = () => Array.from(view.container.querySelectorAll("button"));
+
+    act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Create New Page"))
+        ?.click();
+    });
+
+    expect(
+      view.container
+        .querySelector("[data-has-open-change='true']")
+        ?.getAttribute("data-sheet-open")
+    ).toBe("true");
+
+    const openAfterCreateToggle = view.container.querySelector(
+      "#page-open-after-create"
+    );
+    const titleInput = view.container.querySelector(
+      'input[placeholder="e.g. About us"]'
+    );
+
+    await act(async () => {
+      if (openAfterCreateToggle instanceof HTMLInputElement) {
+        openAfterCreateToggle.click();
+      }
+      setInputValue(titleInput ?? undefined, "Support");
+      buttons().find((button) => button.textContent === "Create Page")?.click();
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.setUserSettingCalls).toContainEqual({
+      key: "pages.openAfterCreate",
+      value: false,
+    });
+    expect(pagePostState.createPageCalls).toEqual([
+      {
+        title: "Support",
+        slug: "/support",
+        template: "landing",
+        data: {
+          blocks: [],
+          settings: { template: "landing" },
+        },
+      },
+    ]);
+    expect(pagePostState.pageRefreshCalls).toEqual([
+      { force: false, background: undefined },
+      { force: true, background: true },
+      { force: true, background: true },
+    ]);
+    expect(pagePostState.navigateCalls).not.toContain("/pages/created-page");
+    expect(
+      view.container
+        .querySelector("[data-has-open-change='true']")
+        ?.getAttribute("data-sheet-open")
+    ).toBe("false");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageListPage and PostsListPage drive create, preview, publish, duplicate, delete, and preferences", async () => {
   Object.defineProperty(window, "open", {
     configurable: true,
@@ -684,8 +835,7 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
 
   try {
     await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
+      await flushMicrotasks();
     });
 
     expect(view.container.textContent).toContain("Pages");
@@ -708,7 +858,7 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
       buttons().find((button) => button.textContent === "unpublish-post-row")?.click();
       buttons().find((button) => button.textContent === "duplicate-post-row")?.click();
       buttons().find((button) => button.textContent === "delete-post-row")?.click();
-      await Promise.resolve();
+      await flushMicrotasks();
     });
 
     expect(pagePostState.previewPageCalls).toContain("page-1");

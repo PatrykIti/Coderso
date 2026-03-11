@@ -47,9 +47,13 @@ Completed slices:
 - direct query/close coverage for `PagePreview`
 - deeper interaction coverage for `BlockList`
 - direct Vitest coverage for `blockTransforms`
+- deeper direct Vitest coverage for `FieldRenderer`
+- deeper `PageListPage` coverage for filters, cache refresh, and create-without-open flow
 
-Current `2026-03-11` snapshot after the first TASK-105-05 slice:
+Current `2026-03-11` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
+- `core/admin/ui/entries/FieldRenderer.tsx` -> `94.73%` lines / `83.33%` branches
+- `core/admin/ui/pages/PageListPage.tsx` -> `78.78%` lines / `51.78%` branches
 - `core/admin/ui/pages/PagePreview.tsx` -> `88.88%` lines / `91.66%` branches
 - `core/admin/ui/pages/builder/BlockList.tsx` -> `71.26%` lines / `63.51%` branches
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines / `67.92%` branches

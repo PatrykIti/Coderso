@@ -13,8 +13,35 @@ const entriesState = vi.hoisted(() => ({
     typeSlug,
     data: {},
   })),
+  relationItems: [
+    {
+      id: "related-1",
+      title: "Linked entry",
+      slug: "linked-entry",
+      status: "published",
+      updatedAt: "2026-03-06T12:00:00.000Z",
+      author: null,
+    },
+  ],
+  relationError: null as unknown,
+  listEntriesCached: vi.fn(async () => {
+    if (entriesState.relationError) throw entriesState.relationError;
+    return entriesState.relationItems;
+  }),
   reset() {
     entriesState.createEntry.mockClear();
+    entriesState.listEntriesCached.mockClear();
+    entriesState.relationItems = [
+      {
+        id: "related-1",
+        title: "Linked entry",
+        slug: "linked-entry",
+        status: "published",
+        updatedAt: "2026-03-06T12:00:00.000Z",
+        author: null,
+      },
+    ];
+    entriesState.relationError = null;
   },
 }));
 
@@ -239,27 +266,29 @@ vi.mock("@/services/apiClient", () => ({
 
 vi.mock("@/services/entriesClient", () => ({
   createEntry: entriesState.createEntry,
-  listEntriesCached: vi.fn(async () => [
-    {
-      id: "related-1",
-      title: "Linked entry",
-      slug: "linked-entry",
-      status: "published",
-      updatedAt: "2026-03-06T12:00:00.000Z",
-      author: null,
-    },
-  ]),
+  listEntriesCached: entriesState.listEntriesCached,
 }));
 
 vi.mock("@/ui/media/MediaPicker", () => ({
   MediaPicker: ({
     onChange,
+    multiple,
+    maxItems,
+    accept,
   }: {
     onChange: (value: unknown) => void;
+    multiple?: boolean;
+    maxItems?: number;
+    accept?: string[];
   }) => (
-    <button type="button" onClick={() => onChange("media-1")}>
-      media-picker
-    </button>
+    <div>
+      <button type="button" onClick={() => onChange("media-1")}>
+        media-picker
+      </button>
+      <span>{`media-multiple:${String(Boolean(multiple))}`}</span>
+      <span>{`media-max:${maxItems ?? "none"}`}</span>
+      <span>{`media-accept:${(accept ?? []).join("|") || "none"}`}</span>
+    </div>
   ),
 }));
 
@@ -299,6 +328,11 @@ const mount = (node: React.ReactNode) => {
 
   return {
     container,
+    rerender: (next: React.ReactNode) => {
+      act(() => {
+        root.render(next);
+      });
+    },
     cleanup: () => {
       act(() => {
         root.unmount();
@@ -738,5 +772,322 @@ test("PageTable and EntryTable forward row and selection actions", async () => {
 
   } finally {
     entryView.cleanup();
+  }
+});
+
+test("FieldRenderer covers primitive, media, relation fallback, and unknown field branches", async () => {
+  const { FieldRenderer } = await import(
+    "../../../core/admin/ui/entries/FieldRenderer"
+  );
+
+  const onChange = vi.fn();
+  const compactTextField = {
+    id: "field-text",
+    name: "headline",
+    type: "text",
+    label: "Headline",
+    help: "Custom text help",
+  } as const;
+
+  const textView = mount(
+    <FieldRenderer
+      field={compactTextField}
+      value="Hello"
+      onChange={onChange}
+      display="compact"
+    />
+  );
+
+  try {
+    expect(textView.container.innerHTML).toContain("Custom text help");
+    expect(textView.container.innerHTML).toContain("h-9 text-sm");
+
+    const textInput = textView.container.querySelector("input");
+    act(() => {
+      setInputValue(textInput ?? undefined, "Updated headline");
+    });
+    expect(onChange).toHaveBeenLastCalledWith("Updated headline");
+
+    textView.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-richtext",
+          name: "body",
+          type: "richtext",
+          label: "Body",
+        }}
+        value="Body copy"
+        onChange={onChange}
+      />
+    );
+    expect(textView.container.textContent).toContain("Long-form content with formatting.");
+
+    const textarea = textView.container.querySelector("textarea");
+    act(() => {
+      setTextareaValue(textarea ?? undefined, "Updated body");
+    });
+    expect(onChange).toHaveBeenLastCalledWith("Updated body");
+
+    textView.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-number",
+          name: "order",
+          type: "number",
+          label: "Order",
+        }}
+        value={12}
+        onChange={onChange}
+      />
+    );
+    const numberInput = textView.container.querySelector("input");
+    act(() => {
+      setInputValue(numberInput ?? undefined, "");
+    });
+    expect(onChange).toHaveBeenLastCalledWith(null);
+    act(() => {
+      setInputValue(numberInput ?? undefined, "42");
+    });
+    expect(onChange).toHaveBeenLastCalledWith(42);
+
+    textView.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-boolean",
+          name: "featured",
+          type: "boolean",
+          label: "Featured",
+        }}
+        value={false}
+        onChange={onChange}
+      />
+    );
+    const checkbox = textView.container.querySelector("input[type='checkbox']");
+    act(() => {
+      (checkbox as HTMLInputElement | null)?.click();
+    });
+    expect(onChange).toHaveBeenLastCalledWith(true);
+
+    textView.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-select",
+          name: "tone",
+          type: "select",
+          label: "Tone",
+          options: ["warm", "cool"],
+        }}
+        value="warm"
+        onChange={onChange}
+      />
+    );
+    const select = textView.container.querySelector("select");
+    act(() => {
+      setSelectValue(select ?? undefined, "cool");
+    });
+    expect(onChange).toHaveBeenLastCalledWith("cool");
+
+    textView.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-media",
+          name: "gallery",
+          type: "media",
+          label: "Gallery",
+          media: {
+            multiple: true,
+            maxItems: 3,
+            accept: ["image/png", "image/jpeg"],
+          },
+        }}
+        value={[]}
+        onChange={onChange}
+      />
+    );
+    expect(textView.container.textContent).toContain("Select up to 3 assets from the library.");
+    expect(textView.container.textContent).toContain("media-multiple:true");
+    expect(textView.container.textContent).toContain("media-max:3");
+    expect(textView.container.textContent).toContain("media-accept:image/png|image/jpeg");
+    act(() => {
+      Array.from(textView.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "media-picker")
+        ?.click();
+    });
+    expect(onChange).toHaveBeenLastCalledWith("media-1");
+
+    textView.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-relation-empty",
+          name: "related",
+          type: "relation",
+          label: "Related",
+          relation: { target: "" },
+        }}
+        value=""
+        onChange={onChange}
+        display="compact"
+      />
+    );
+    expect(textView.container.textContent).toContain(
+      "Choose a related content type in the Content Type editor to enable picker."
+    );
+    expect(textView.container.innerHTML).toContain("Add a relation target in the content type first");
+
+    textView.rerender(
+      <FieldRenderer
+        field={
+          {
+            id: "field-unsupported",
+            name: "unknown",
+            type: "unsupported",
+            label: "Unsupported",
+          } as never
+        }
+        value={null}
+        onChange={onChange}
+      />
+    );
+    expect(textView.container.textContent).toBe("");
+  } finally {
+    textView.cleanup();
+  }
+});
+
+test("FieldRenderer relation picker covers single, multiple, search, empty, and error states", async () => {
+  const { FieldRenderer } = await import(
+    "../../../core/admin/ui/entries/FieldRenderer"
+  );
+
+  const onChange = vi.fn();
+  entriesState.relationItems = [
+    {
+      id: "related-1",
+      title: "Linked entry",
+      slug: "linked-entry",
+      status: "published",
+      updatedAt: "2026-03-06T12:00:00.000Z",
+      author: null,
+    },
+    {
+      id: "related-2",
+      title: "Second reference",
+      slug: "second-reference",
+      status: "draft",
+      updatedAt: "2026-03-06T12:00:00.000Z",
+      author: null,
+    },
+  ];
+
+  const view = mount(
+    <FieldRenderer
+      field={{
+        id: "field-relation",
+        name: "linked-post",
+        type: "relation",
+        label: "Linked post",
+        relation: { target: "articles" },
+      }}
+      value=""
+      onChange={onChange}
+      relationTargets={[{ slug: "articles", name: "Articles" }]}
+    />
+  );
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain(
+      "Link this entry to related content."
+    );
+    expect(view.container.textContent).toContain("Linked entry");
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    act(() => {
+      buttons.find((button) => button.textContent?.includes("Linked entry"))?.click();
+    });
+    expect(onChange).toHaveBeenLastCalledWith("related-1");
+
+    const searchInput = view.container.querySelector("input");
+    act(() => {
+      setInputValue(searchInput ?? undefined, "missing");
+    });
+    expect(view.container.textContent).toContain("No matches for");
+
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-relation-multi",
+          name: "linked-posts",
+          type: "relation",
+          label: "Linked posts",
+          help: "Use relation help",
+          relation: { target: "articles-multi", multiple: true },
+        }}
+        value={["related-1"]}
+        onChange={onChange}
+        relationTargets={[{ slug: "articles-multi", name: "Articles" }]}
+        display="compact"
+      />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("Use relation help");
+    expect(view.container.innerHTML).toContain("h-9 text-sm");
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent?.includes("Second reference"))
+        ?.click();
+    });
+    expect(onChange).toHaveBeenLastCalledWith(["related-1", "related-2"]);
+
+    entriesState.relationItems = [];
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-relation-empty",
+          name: "linked-empty",
+          type: "relation",
+          label: "Linked empty",
+          relation: { target: "articles-empty" },
+        }}
+        value=""
+        onChange={onChange}
+        relationTargets={[{ slug: "articles-empty", name: "Articles" }]}
+      />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("No items found yet.");
+
+    entriesState.relationError = {
+      name: "ApiClientError",
+      message: "Relation lookup failed",
+    };
+    view.rerender(
+      <FieldRenderer
+        field={{
+          id: "field-relation-error",
+          name: "linked-error",
+          type: "relation",
+          label: "Linked error",
+          relation: { target: "articles-error" },
+        }}
+        value=""
+        onChange={onChange}
+        relationTargets={[{ slug: "articles-error", name: "Articles" }]}
+      />
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(view.container.textContent).toContain("Relation lookup failed");
+  } finally {
+    view.cleanup();
   }
 });

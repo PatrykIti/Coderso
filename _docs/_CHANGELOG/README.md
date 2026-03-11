@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 413 | 2026-03-11 | TASK-105 field renderer and page list follow-up | QA/Platform |
 | 412 | 2026-03-11 | TASK-105 entries pages posts foundation slice | QA/Platform |
 | 411 | 2026-03-11 | TASK-105 newsletter team logo branch refactor follow-up | QA/Platform |
 | 410 | 2026-03-11 | TASK-105 newsletter pricing safety follow-up | QA/Platform |
