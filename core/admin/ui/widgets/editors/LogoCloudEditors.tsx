@@ -279,6 +279,7 @@ export function LogoCloudWizardEditor({
   onVariantChange,
 }: WidgetEditorProps<LogoCloudData>) {
   const normalized = normalizeValue(value);
+  const header = normalized.header ?? logoCloudDefaults.header!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
 
   return (
@@ -305,7 +306,7 @@ export function LogoCloudWizardEditor({
       <div className="space-y-2">
         <p className="text-sm font-medium">Section title</p>
         <Input
-          value={normalized.header?.title ?? ""}
+          value={header.title}
           onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
           placeholder="Trusted by teams worldwide"
         />
@@ -334,8 +335,8 @@ export function LogoCloudWizardEditor({
         <p className="text-sm font-medium">Basic logo names</p>
         {logos.slice(0, 3).map((logo, index) => (
           <Input
-            key={logo.id ?? `wizard-logo-${index + 1}`}
-            value={logo.name ?? ""}
+            key={logo.id}
+            value={logo.name}
             onChange={(event) =>
               updateLogo(value, onChange, index, { name: event.target.value })
             }
@@ -354,6 +355,8 @@ export function LogoCloudVisualEditor({
   onVariantChange,
 }: WidgetEditorProps<LogoCloudData>) {
   const normalized = normalizeValue(value);
+  const header = normalized.header ?? logoCloudDefaults.header!;
+  const style = normalized.style ?? logoCloudDefaults.style!;
   const logos = normalizeLogoCloudLogos(normalized.logos);
 
   return (
@@ -391,7 +394,7 @@ export function LogoCloudVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Title</p>
           <Input
-            value={normalized.header?.title ?? ""}
+            value={header.title}
             onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
             placeholder="Trusted by teams worldwide"
           />
@@ -399,7 +402,7 @@ export function LogoCloudVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Description</p>
           <Textarea
-            value={normalized.header?.description ?? ""}
+            value={header.description}
             onChange={(event) =>
               updateHeader(value, onChange, { description: event.target.value })
             }
@@ -413,7 +416,7 @@ export function LogoCloudVisualEditor({
         description="Manage logo names, image URLs, and optional target links."
       >
         {logos.map((logo, index) => (
-          <div key={logo.id ?? `logo-${index + 1}`} className="space-y-3 rounded-lg border p-3">
+          <div key={logo.id} className="space-y-3 rounded-lg border p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-semibold">Logo {index + 1}</p>
               <div className="flex gap-2">
@@ -450,7 +453,7 @@ export function LogoCloudVisualEditor({
             <div className="space-y-2">
               <p className="text-sm font-medium">Name</p>
               <Input
-                value={logo.name ?? ""}
+                value={logo.name}
                 onChange={(event) =>
                   updateLogo(value, onChange, index, { name: event.target.value })
                 }
@@ -497,7 +500,7 @@ export function LogoCloudVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Logo height</p>
           <Select
-            value={normalized.style?.logoHeight ?? "md"}
+            value={style.logoHeight}
             onValueChange={(next) =>
               updateStyle(value, onChange, { logoHeight: next as LogoCloudHeight })
             }
@@ -518,7 +521,7 @@ export function LogoCloudVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Gap</p>
           <Select
-            value={normalized.style?.gap ?? "md"}
+            value={style.gap}
             onValueChange={(next) =>
               updateStyle(value, onChange, { gap: next as LogoCloudGap })
             }
@@ -539,7 +542,7 @@ export function LogoCloudVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Alignment</p>
           <Select
-            value={normalized.style?.alignment ?? "center"}
+            value={style.alignment}
             onValueChange={(next) =>
               updateStyle(value, onChange, { alignment: next as LogoCloudAlignment })
             }
@@ -565,7 +568,7 @@ export function LogoCloudVisualEditor({
             </p>
           </div>
           <Switch
-            checked={Boolean(normalized.style?.grayscale)}
+            checked={style.grayscale}
             onCheckedChange={(checked) =>
               updateStyle(value, onChange, { grayscale: Boolean(checked) })
             }
@@ -580,7 +583,7 @@ export function LogoCloudVisualEditor({
             </p>
           </div>
           <Switch
-            checked={Boolean(normalized.style?.hoverColor)}
+            checked={style.hoverColor}
             onCheckedChange={(checked) =>
               updateStyle(value, onChange, { hoverColor: Boolean(checked) })
             }
@@ -596,6 +599,7 @@ export function LogoCloudAdvancedEditor({
   onChange,
 }: WidgetEditorProps<LogoCloudData>) {
   const normalized = normalizeValue(value);
+  const style = normalized.style ?? logoCloudDefaults.style!;
 
   return (
     <div className="space-y-4">
@@ -606,7 +610,7 @@ export function LogoCloudAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Logo height token</p>
           <Select
-            value={normalized.style?.logoHeight ?? "md"}
+            value={style.logoHeight}
             onValueChange={(next) =>
               updateStyle(value, onChange, { logoHeight: next as LogoCloudHeight })
             }
@@ -626,7 +630,7 @@ export function LogoCloudAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Gap token</p>
           <Select
-            value={normalized.style?.gap ?? "md"}
+            value={style.gap}
             onValueChange={(next) =>
               updateStyle(value, onChange, { gap: next as LogoCloudGap })
             }
@@ -646,7 +650,7 @@ export function LogoCloudAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Alignment token</p>
           <Select
-            value={normalized.style?.alignment ?? "center"}
+            value={style.alignment}
             onValueChange={(next) =>
               updateStyle(value, onChange, { alignment: next as LogoCloudAlignment })
             }

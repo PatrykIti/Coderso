@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import {
+  newsletterDefaults,
   normalizeNewsletterData,
   resolveNewsletterVariant,
   type NewsletterData,
@@ -238,6 +239,8 @@ export function NewsletterWizardEditor({
   onVariantChange,
 }: WidgetEditorProps<NewsletterData>) {
   const normalized = normalizeValue(value);
+  const submit = normalized.submit ?? newsletterDefaults.submit!;
+  const consent = normalized.consent ?? newsletterDefaults.consent!;
 
   return (
     <div className="space-y-4">
@@ -263,7 +266,7 @@ export function NewsletterWizardEditor({
       <div className="space-y-2">
         <p className="text-sm font-medium">Title</p>
         <Input
-          value={normalized.title ?? ""}
+          value={normalized.title}
           onChange={(event) =>
             updateValue(value, onChange, (current) => ({
               ...current,
@@ -277,7 +280,7 @@ export function NewsletterWizardEditor({
       <div className="space-y-2">
         <p className="text-sm font-medium">Description</p>
         <Textarea
-          value={normalized.description ?? ""}
+          value={normalized.description}
           onChange={(event) =>
             updateValue(value, onChange, (current) => ({
               ...current,
@@ -291,7 +294,7 @@ export function NewsletterWizardEditor({
       <div className="space-y-2">
         <p className="text-sm font-medium">Button label</p>
         <Input
-          value={normalized.submit?.label ?? ""}
+          value={submit.label}
           onChange={(event) => updateSubmit(value, onChange, { label: event.target.value })}
           placeholder="Subscribe"
         />
@@ -305,16 +308,16 @@ export function NewsletterWizardEditor({
           </p>
         </div>
         <Switch
-          checked={normalized.consent?.enabled ?? false}
+          checked={consent.enabled}
           onCheckedChange={(checked) => updateConsent(value, onChange, { enabled: checked })}
         />
       </div>
 
-      {normalized.consent?.enabled ? (
+      {consent.enabled ? (
         <div className="space-y-2">
           <p className="text-sm font-medium">Consent label</p>
           <Input
-            value={normalized.consent?.label ?? ""}
+            value={consent.label}
             onChange={(event) => updateConsent(value, onChange, { label: event.target.value })}
             placeholder="I agree to receive updates."
           />
@@ -331,8 +334,12 @@ export function NewsletterVisualEditor({
   onVariantChange,
 }: WidgetEditorProps<NewsletterData>) {
   const normalized = normalizeValue(value);
+  const submit = normalized.submit ?? newsletterDefaults.submit!;
+  const consent = normalized.consent ?? newsletterDefaults.consent!;
+  const integration = normalized.integration ?? newsletterDefaults.integration!;
+  const style = normalized.style ?? newsletterDefaults.style!;
   const resolvedVariant = resolveNewsletterVariant(variant);
-  const integrationMode = normalized.integration?.mode ?? "action-url";
+  const integrationMode = integration.mode;
 
   return (
     <div className="space-y-4">
@@ -350,7 +357,7 @@ export function NewsletterVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Title</p>
           <Input
-            value={normalized.title ?? ""}
+            value={normalized.title}
             onChange={(event) =>
               updateValue(value, onChange, (current) => ({
                 ...current,
@@ -364,7 +371,7 @@ export function NewsletterVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Description</p>
           <Textarea
-            value={normalized.description ?? ""}
+            value={normalized.description}
             onChange={(event) =>
               updateValue(value, onChange, (current) => ({
                 ...current,
@@ -378,7 +385,7 @@ export function NewsletterVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Email placeholder</p>
           <Input
-            value={normalized.placeholder ?? ""}
+            value={normalized.placeholder}
             onChange={(event) =>
               updateValue(value, onChange, (current) => ({
                 ...current,
@@ -397,7 +404,7 @@ export function NewsletterVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Button label</p>
           <Input
-            value={normalized.submit?.label ?? ""}
+            value={submit.label}
             onChange={(event) => updateSubmit(value, onChange, { label: event.target.value })}
             placeholder="Subscribe"
           />
@@ -406,7 +413,7 @@ export function NewsletterVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Success message</p>
           <Input
-            value={normalized.submit?.successMessage ?? ""}
+            value={submit.successMessage}
             onChange={(event) =>
               updateSubmit(value, onChange, { successMessage: event.target.value })
             }
@@ -422,17 +429,17 @@ export function NewsletterVisualEditor({
             </p>
           </div>
           <Switch
-            checked={normalized.consent?.enabled ?? false}
+            checked={consent.enabled}
             onCheckedChange={(checked) => updateConsent(value, onChange, { enabled: checked })}
           />
         </div>
 
-        {normalized.consent?.enabled ? (
+        {consent.enabled ? (
           <>
             <div className="space-y-2">
               <p className="text-sm font-medium">Consent label</p>
               <Input
-                value={normalized.consent?.label ?? ""}
+                value={consent.label}
                 onChange={(event) =>
                   updateConsent(value, onChange, { label: event.target.value })
                 }
@@ -443,7 +450,7 @@ export function NewsletterVisualEditor({
             <div className="flex items-center justify-between rounded-md border p-2">
               <p className="text-sm font-medium">Consent required</p>
               <Switch
-                checked={normalized.consent?.required ?? false}
+                checked={consent.required}
                 onCheckedChange={(checked) =>
                   updateConsent(value, onChange, { required: checked })
                 }
@@ -484,7 +491,7 @@ export function NewsletterVisualEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Form action URL</p>
             <Input
-              value={normalized.integration?.actionUrl ?? ""}
+              value={integration.actionUrl}
               onChange={(event) =>
                 updateIntegration(value, onChange, {
                   actionUrl: event.target.value,
@@ -497,7 +504,7 @@ export function NewsletterVisualEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Webhook ID</p>
             <Input
-              value={normalized.integration?.webhookId ?? ""}
+              value={integration.webhookId}
               onChange={(event) =>
                 updateIntegration(value, onChange, {
                   webhookId: event.target.value,
@@ -530,7 +537,7 @@ export function NewsletterVisualEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Spacing</p>
             <Select
-              value={normalized.style?.spacing ?? "md"}
+              value={style.spacing}
               onValueChange={(next) =>
                 updateStyle(value, onChange, {
                   spacing: next as StyleData["spacing"],
@@ -553,7 +560,7 @@ export function NewsletterVisualEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Alignment</p>
             <Select
-              value={normalized.style?.alignment ?? "start"}
+              value={style.alignment}
               onValueChange={(next) =>
                 updateStyle(value, onChange, {
                   alignment: next as StyleData["alignment"],
@@ -588,6 +595,9 @@ export function NewsletterAdvancedEditor({
   variant,
 }: WidgetEditorProps<NewsletterData>) {
   const normalized = normalizeValue(value);
+  const consent = normalized.consent ?? newsletterDefaults.consent!;
+  const integration = normalized.integration ?? newsletterDefaults.integration!;
+  const style = normalized.style ?? newsletterDefaults.style!;
 
   return (
     <div className="space-y-4">
@@ -599,7 +609,7 @@ export function NewsletterAdvancedEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Spacing token</p>
             <Select
-              value={normalized.style?.spacing ?? "md"}
+              value={style.spacing}
               onValueChange={(next) =>
                 updateStyle(value, onChange, {
                   spacing: next as StyleData["spacing"],
@@ -622,7 +632,7 @@ export function NewsletterAdvancedEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Alignment token</p>
             <Select
-              value={normalized.style?.alignment ?? "start"}
+              value={style.alignment}
               onValueChange={(next) =>
                 updateStyle(value, onChange, {
                   alignment: next as StyleData["alignment"],
@@ -651,7 +661,7 @@ export function NewsletterAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Integration mode</p>
           <Select
-            value={normalized.integration?.mode ?? "action-url"}
+            value={integration.mode}
             onValueChange={(next) =>
               updateIntegration(value, onChange, {
                 mode: next as IntegrationData["mode"],
@@ -675,7 +685,7 @@ export function NewsletterAdvancedEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Action URL (raw)</p>
             <Input
-              value={normalized.integration?.actionUrl ?? ""}
+              value={integration.actionUrl}
               onChange={(event) =>
                 updateIntegration(value, onChange, {
                   actionUrl: event.target.value,
@@ -688,7 +698,7 @@ export function NewsletterAdvancedEditor({
           <div className="space-y-2">
             <p className="text-sm font-medium">Webhook ID (raw)</p>
             <Input
-              value={normalized.integration?.webhookId ?? ""}
+              value={integration.webhookId}
               onChange={(event) =>
                 updateIntegration(value, onChange, {
                   webhookId: event.target.value,
@@ -707,9 +717,9 @@ export function NewsletterAdvancedEditor({
         <p className="text-xs text-muted-foreground">
           Resolved variant: {resolveNewsletterVariant(variant)}. Resolved integration mode:
           {" "}
-          {normalized.integration?.mode ?? "action-url"}. Consent required:
+          {integration.mode}. Consent required:
           {" "}
-          {normalized.consent?.required ? "true" : "false"}.
+          {consent.required ? "true" : "false"}.
         </p>
         <Button type="button" variant="outline" onClick={() => onChange(normalized)}>
           Normalize newsletter payload

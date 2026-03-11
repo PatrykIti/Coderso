@@ -236,7 +236,8 @@ Additional widget-editor residual-closure snapshot (from `bun run test:coverage`
 - logo cloud safety follow-up added defensive default/no-handler coverage without changing the canonical full-lane snapshot
 - product compare/table branch cleanup moved both files to `75.00%` branches in isolated targeted runs without a separate full-lane rebaseline
 - newsletter/pricing safety follow-up added defensive default/no-handler coverage without changing the canonical full-lane snapshot
-- remaining widget-editor focus after this slice -> residual branch closure in `FeatureGridEditors`, `PricingPlansEditors`, `NewsletterEditors`, `TeamEditors`, and `LogoCloudEditors`
+- newsletter/team/logo refactor follow-up moved the widget-editor aggregate further to `100.00%` lines / `78.41%` branches in the canonical full-lane snapshot
+- remaining widget-editor focus after this slice -> residual branch closure in `FeatureGridEditors`, `PricingPlansEditors`, and `LogoCloudEditors`
 
 This means the next stage is not runner cleanup anymore.
 It is real test authoring across still-uncovered Vitest-owned surfaces.

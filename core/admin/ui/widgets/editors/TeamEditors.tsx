@@ -467,8 +467,8 @@ export function TeamWizardEditor({
         <p className="text-sm font-medium">Primary member names</p>
         {members.slice(0, 3).map((member, index) => (
           <Input
-            key={member.id ?? `wizard-member-${index + 1}`}
-            value={member.name ?? ""}
+            key={member.id}
+            value={member.name}
             onChange={(event) =>
               updateMember(value, onChange, index, { name: event.target.value })
             }
@@ -487,6 +487,8 @@ export function TeamVisualEditor({
   onVariantChange,
 }: WidgetEditorProps<TeamData>) {
   const normalized = normalizeValue(value);
+  const header = normalized.header ?? teamDefaults.header!;
+  const style = normalized.style ?? teamDefaults.style!;
   const members = normalizeTeamMembers(normalized.members);
 
   return (
@@ -524,7 +526,7 @@ export function TeamVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Title</p>
           <Input
-            value={normalized.header?.title ?? ""}
+            value={header.title}
             onChange={(event) => updateHeader(value, onChange, { title: event.target.value })}
             placeholder="Meet the team"
           />
@@ -532,7 +534,7 @@ export function TeamVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Description</p>
           <Textarea
-            value={normalized.header?.description ?? ""}
+            value={header.description}
             onChange={(event) =>
               updateHeader(value, onChange, { description: event.target.value })
             }
@@ -547,7 +549,7 @@ export function TeamVisualEditor({
       >
         {members.map((member, memberIndex) => (
           <div
-            key={member.id ?? `member-${memberIndex + 1}`}
+            key={member.id}
             className="space-y-3 rounded-lg border p-3"
           >
             <div className="flex items-center justify-between gap-2">
@@ -586,7 +588,7 @@ export function TeamVisualEditor({
             <div className="space-y-2">
               <p className="text-sm font-medium">Name</p>
               <Input
-                value={member.name ?? ""}
+                value={member.name}
                 onChange={(event) =>
                   updateMember(value, onChange, memberIndex, { name: event.target.value })
                 }
@@ -596,7 +598,7 @@ export function TeamVisualEditor({
             <div className="space-y-2">
               <p className="text-sm font-medium">Role</p>
               <Input
-                value={member.role ?? ""}
+                value={member.role}
                 onChange={(event) =>
                   updateMember(value, onChange, memberIndex, { role: event.target.value })
                 }
@@ -606,7 +608,7 @@ export function TeamVisualEditor({
             <div className="space-y-2">
               <p className="text-sm font-medium">Bio</p>
               <Textarea
-                value={member.bio ?? ""}
+                value={member.bio}
                 onChange={(event) =>
                   updateMember(value, onChange, memberIndex, { bio: event.target.value })
                 }
@@ -644,7 +646,7 @@ export function TeamVisualEditor({
           const socialLinks = normalizeTeamSocialLinks(member.socialLinks);
           return (
             <div
-              key={`social-links-${member.id ?? memberIndex}`}
+              key={`social-links-${member.id}`}
               className="space-y-3 rounded-lg border p-3"
             >
               <div className="flex items-center justify-between gap-2">
@@ -670,11 +672,11 @@ export function TeamVisualEditor({
                 <div className="space-y-2">
                   {socialLinks.map((link, socialIndex) => (
                     <div
-                      key={link.id ?? `social-${socialIndex + 1}`}
+                      key={link.id}
                       className="grid grid-cols-1 gap-2 rounded-md border p-2 sm:grid-cols-[1fr_1fr_auto]"
                     >
                       <Input
-                        value={link.label ?? ""}
+                        value={link.label}
                         onChange={(event) =>
                           updateMemberSocialLink(
                             value,
@@ -687,7 +689,7 @@ export function TeamVisualEditor({
                         placeholder="LinkedIn"
                       />
                       <Input
-                        value={link.url ?? ""}
+                        value={link.url}
                         onChange={(event) =>
                           updateMemberSocialLink(
                             value,
@@ -725,7 +727,7 @@ export function TeamVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Columns</p>
           <Select
-            value={normalized.style?.columns ?? "3"}
+            value={style.columns}
             onValueChange={(next) =>
               updateStyle(value, onChange, { columns: next as TeamColumns })
             }
@@ -745,7 +747,7 @@ export function TeamVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Gap</p>
           <Select
-            value={normalized.style?.gap ?? "md"}
+            value={style.gap}
             onValueChange={(next) => updateStyle(value, onChange, { gap: next as TeamGap })}
           >
             <SelectTrigger>
@@ -763,7 +765,7 @@ export function TeamVisualEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Card radius</p>
           <Select
-            value={normalized.style?.radius ?? "lg"}
+            value={style.radius}
             onValueChange={(next) => updateStyle(value, onChange, { radius: next as TeamRadius })}
           >
             <SelectTrigger>
@@ -780,14 +782,14 @@ export function TeamVisualEditor({
         </div>
         <ColorField
           label="Card background"
-          value={normalized.style?.cardSurface}
+          value={style.cardSurface}
           onChange={(next) => updateStyle(value, onChange, { cardSurface: next })}
           placeholder="var(--color-bg)"
           pickerFallback="#ffffff"
         />
         <ColorField
           label="Card border"
-          value={normalized.style?.cardBorder}
+          value={style.cardBorder}
           onChange={(next) => updateStyle(value, onChange, { cardBorder: next })}
           placeholder="var(--color-border)"
           pickerFallback="#e2e8f0"
@@ -802,6 +804,7 @@ export function TeamAdvancedEditor({
   onChange,
 }: WidgetEditorProps<TeamData>) {
   const normalized = normalizeValue(value);
+  const style = normalized.style ?? teamDefaults.style!;
 
   return (
     <div className="space-y-4">
@@ -812,7 +815,7 @@ export function TeamAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Columns token</p>
           <Select
-            value={normalized.style?.columns ?? "3"}
+            value={style.columns}
             onValueChange={(next) =>
               updateStyle(value, onChange, { columns: next as TeamColumns })
             }
@@ -832,7 +835,7 @@ export function TeamAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Gap token</p>
           <Select
-            value={normalized.style?.gap ?? "md"}
+            value={style.gap}
             onValueChange={(next) => updateStyle(value, onChange, { gap: next as TeamGap })}
           >
             <SelectTrigger>
@@ -850,7 +853,7 @@ export function TeamAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Radius token</p>
           <Select
-            value={normalized.style?.radius ?? "lg"}
+            value={style.radius}
             onValueChange={(next) => updateStyle(value, onChange, { radius: next as TeamRadius })}
           >
             <SelectTrigger>
@@ -868,7 +871,7 @@ export function TeamAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Card surface token</p>
           <Input
-            value={normalized.style?.cardSurface ?? ""}
+            value={style.cardSurface}
             onChange={(event) =>
               updateStyle(value, onChange, { cardSurface: event.target.value })
             }
@@ -878,7 +881,7 @@ export function TeamAdvancedEditor({
         <div className="space-y-2">
           <p className="text-sm font-medium">Card border token</p>
           <Input
-            value={normalized.style?.cardBorder ?? ""}
+            value={style.cardBorder}
             onChange={(event) =>
               updateStyle(value, onChange, { cardBorder: event.target.value })
             }

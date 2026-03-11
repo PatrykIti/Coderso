@@ -281,11 +281,24 @@ Newsletter/pricing safety follow-up on 2026-03-11:
   - `PricingPlansEditors.tsx` -> `100.00%` lines / `59.80%` branches
 - Canonical full-lane snapshot was not rebaselined separately for this narrow safety slice.
 
+Newsletter/team/logo refactor follow-up on 2026-03-11:
+- Removed redundant nullish/default branches after `normalizeNewsletterData`, `normalizeTeamData`, and `normalizeLogoCloudData` inside the corresponding editors.
+- Kept behavior unchanged while collapsing dead UI-only branch noise that could never differ after normalization.
+- Fresh canonical full-lane snapshot from `coverage/vitest/coverage-summary.json` after this refactor batch:
+  - `% Stmts`: `60.90`
+  - `% Branch`: `51.47`
+  - `% Funcs`: `65.56`
+  - `% Lines`: `63.81`
+- Updated widget-editor aggregate:
+  - `core/admin/ui/widgets/editors/*` -> `100.00%` lines / `78.41%` branches across `40` tracked files
+- Updated authoritative file snapshots from the canonical full-lane run:
+  - `NewsletterEditors.tsx` -> `100.00%` lines / `70.00%` branches
+  - `TeamEditors.tsx` -> `100.00%` lines / `70.00%` branches
+  - `LogoCloudEditors.tsx` -> `100.00%` lines / `71.87%` branches
+
 Remaining hotspots in this wave:
 - residual branch gaps in `FeatureGridEditors.tsx`
 - residual branch gaps in `PricingPlansEditors.tsx`
-- residual branch gaps in `NewsletterEditors.tsx`
-- residual branch gaps in `TeamEditors.tsx`
 - residual branch gaps in `LogoCloudEditors.tsx`
 
 ## Testing Requirements

@@ -672,3 +672,95 @@ test("Team visual editor covers member-count expansion, social add-link, and raw
     view.cleanup();
   }
 });
+
+test("Team editors render sparse defaults and ignore variant changes without a handler", async () => {
+  const { TeamAdvancedEditor, TeamVisualEditor, TeamWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/TeamEditors"
+  );
+
+  const sparseValue: TeamData = {
+    header: {},
+    members: [{} as never],
+    style: {},
+  };
+
+  const wizardView = mount(
+    <TeamWizardEditor value={sparseValue} onChange={() => undefined} variant="legacy-team" />
+  );
+
+  try {
+    expect(
+      (findSelectByOptions(wizardView.container, ["cards", "compact-list", "spotlight"]) as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("cards");
+    expect((findSelectByOptions(wizardView.container, ["1", "12"]) as HTMLSelectElement | undefined)?.value).toBe(
+      "1"
+    );
+    expect((findInputByPlaceholder(wizardView.container, "Member 1 name") as HTMLInputElement | undefined)?.value).toBe(
+      "Team Member 1"
+    );
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <TeamVisualEditor value={sparseValue} onChange={() => undefined} variant="legacy-team" />
+  );
+
+  try {
+    const structureSection = findSectionByTitle(visualView.container, "Variant and member structure");
+    clickButtonByText(structureSection as ParentNode, "Compact List");
+
+    expect(
+      (findInputByPlaceholder(visualView.container, "Meet the team") as HTMLInputElement | undefined)?.value
+    ).toBe(teamDefaults.header?.title);
+    expect(
+      (findTextareaByPlaceholder(
+        visualView.container,
+        "Introduce key people behind delivery, support, and strategy."
+      ) as HTMLTextAreaElement | undefined)?.value
+    ).toBe(teamDefaults.header?.description);
+    expect(
+      (findInputByPlaceholder(visualView.container, "Anna Kowalska") as HTMLInputElement | undefined)?.value
+    ).toBe("Team Member 1");
+    expect(
+      (findInputByPlaceholder(visualView.container, "Head of Product") as HTMLInputElement | undefined)?.value
+    ).toBe("Role");
+    expect(
+      (findTextareaByPlaceholder(
+        visualView.container,
+        "Short bio describing responsibilities and value."
+      ) as HTMLTextAreaElement | undefined)?.value
+    ).toBe("Short bio describing responsibilities and value.");
+    expect(findSectionByTitle(visualView.container, "Social links")?.textContent).toContain(
+      "No social links configured."
+    );
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <TeamAdvancedEditor value={sparseValue} onChange={() => undefined} variant="cards" />
+  );
+
+  try {
+    expect((findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as HTMLSelectElement | undefined)?.value).toBe(
+      "3"
+    );
+    expect((findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | undefined)?.value).toBe(
+      "md"
+    );
+    expect((findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | undefined)?.value).toBe(
+      "lg"
+    );
+    expect(
+      (findInputByPlaceholder(advancedView.container, "var(--color-bg)") as HTMLInputElement | undefined)?.value
+    ).toBe(teamDefaults.style?.cardSurface);
+    expect(
+      (findInputByPlaceholder(advancedView.container, "var(--color-border)") as HTMLInputElement | undefined)?.value
+    ).toBe(teamDefaults.style?.cardBorder);
+  } finally {
+    advancedView.cleanup();
+  }
+});
