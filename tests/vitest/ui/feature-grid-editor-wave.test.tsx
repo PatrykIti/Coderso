@@ -4,7 +4,10 @@ import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { FeatureGridData } from "../../../core/widgets/core/featureGrid";
+import {
+  featureGridDefaults,
+  type FeatureGridData,
+} from "../../../core/widgets/core/featureGrid";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -508,5 +511,114 @@ test("FeatureGrid editors cover variant changes, card editing, style tokens, and
     expect(snapshot?.textContent).toContain('"ctaHref": "/automation"');
   } finally {
     view.cleanup();
+  }
+});
+
+test("FeatureGrid editors render sparse fallback defaults and ignore variant changes when no handler is provided", async () => {
+  const {
+    FeatureGridAdvancedEditor,
+    FeatureGridVisualEditor,
+    FeatureGridWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/FeatureGridEditors");
+
+  const sparseValue: FeatureGridData = {
+    header: {},
+    items: [{} as never],
+    style: {},
+  };
+
+  const wizardView = mount(
+    <FeatureGridWizardEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="cards-3"
+    />
+  );
+
+  try {
+    expect(
+      (findInputByPlaceholder(wizardView.container, "Everything your team needs") as
+        | HTMLInputElement
+        | undefined)?.value
+    ).toBe(featureGridDefaults.header?.title);
+    expect(
+      (findTextareasByPlaceholder(
+        wizardView.container,
+        "Use focused cards to explain your strongest product capabilities."
+      )[0] as HTMLTextAreaElement | undefined)?.value
+    ).toBe(featureGridDefaults.header?.description);
+    expect((findSelectsByOptions(wizardView.container, ["1", "2", "3", "4", "5", "6", "7", "8"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "1"
+    );
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <FeatureGridVisualEditor value={sparseValue} onChange={() => undefined} variant="cards-3" />
+  );
+
+  try {
+    const layoutSection = findSectionByTitle(visualView.container, "Variant and layout structure");
+    const headerSection = findSectionByTitle(visualView.container, "Header copy");
+    const featureCardsSection = findSectionByTitle(visualView.container, "Feature cards and actions");
+    const colorsSection = findSectionByTitle(visualView.container, "Colors and borders");
+
+    clickByText(layoutSection as ParentNode, "Cards 4");
+
+    expect((findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "3"
+    );
+    expect((findSelectsByOptions(layoutSection as ParentNode, ["sm", "md", "lg"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "md"
+    );
+    expect(
+      (findSelectsByOptions(layoutSection as ParentNode, ["1", "2", "3", "4", "5", "6", "7", "8"])[0] as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("1");
+    expect(
+      (findInputByPlaceholder(headerSection as ParentNode, "Feature highlights") as HTMLInputElement | undefined)?.value
+    ).toBe(featureGridDefaults.header?.eyebrow);
+    expect(
+      (findInputByPlaceholder(featureCardsSection as ParentNode, "Feature 1") as HTMLInputElement | undefined)?.value
+    ).toBe(featureGridDefaults.items?.[0]?.title);
+    expect(
+      (findInputByPlaceholder(featureCardsSection as ParentNode, "⚡") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+    expect(
+      (findInputByPlaceholder(colorsSection as ParentNode, "var(--color-bg)") as HTMLInputElement | undefined)?.value
+    ).toBe(featureGridDefaults.style?.surfaceColor);
+    expect(
+      (findInputByPlaceholder(colorsSection as ParentNode, "var(--color-border)") as HTMLInputElement | undefined)?.value
+    ).toBe(featureGridDefaults.style?.borderColor);
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <FeatureGridAdvancedEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="cards-3"
+    />
+  );
+
+  try {
+    const layoutSection = findSectionByTitle(advancedView.container, "Layout tokens");
+    expect((findSelectsByOptions(layoutSection as ParentNode, ["2", "3", "4"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "3"
+    );
+    expect((findSelectsByOptions(layoutSection as ParentNode, ["sm", "md", "lg"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "md"
+    );
+    expect((findSelectsByOptions(layoutSection as ParentNode, ["0", "1", "2", "3"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "1"
+    );
+    expect((findSelectsByOptions(layoutSection as ParentNode, ["none", "md", "lg", "xl"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "lg"
+    );
+  } finally {
+    advancedView.cleanup();
   }
 });

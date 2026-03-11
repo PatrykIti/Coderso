@@ -268,6 +268,11 @@ Product compare/table branch cleanup on 2026-03-11:
   - `ProductTableEditors.tsx` -> `100.00%` lines / `75.00%` branches
 - Canonical full-lane snapshot was not rebaselined separately for this narrow branch-only slice.
 
+Feature grid safety follow-up on 2026-03-11:
+- Added sparse/default fallback assertions for `FeatureGridEditors` across wizard, visual, and advanced modes plus inert variant-card coverage without a handler.
+- Isolated targeted run for `FeatureGridEditors.tsx` stayed at `100.00%` lines / `58.97%` branches.
+- Canonical full-lane snapshot was not rebaselined separately for this narrow safety slice.
+
 Remaining hotspots in this wave:
 - residual branch gaps in `FeatureGridEditors.tsx`
 - residual branch gaps in `PricingPlansEditors.tsx`
