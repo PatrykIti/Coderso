@@ -244,8 +244,19 @@ Stats/navigation/pricing/hero follow-up on 2026-03-10:
   - `PricingPlansEditors.tsx` -> `100.00%` lines / `59.80%` branches
   - `HeroEditors.tsx` -> `100.00%` lines / `91.32%` branches
 
+Timeline line-gap closure on 2026-03-11:
+- Deepened `TimelineEditors` coverage around the remaining visual `Up` reordering path.
+- Fresh canonical full-lane snapshot from `coverage/vitest/coverage-summary.json` after this slice:
+  - `% Stmts`: `60.87`
+  - `% Branch`: `51.45`
+  - `% Funcs`: `65.56`
+  - `% Lines`: `63.78`
+- Updated widget-editor aggregate:
+  - `core/admin/ui/widgets/editors/*` -> `100.00%` lines / `77.47%` branches across `40` tracked files
+- Updated authoritative file snapshot:
+  - `TimelineEditors.tsx` -> `100.00%` lines / `84.21%` branches
+
 Remaining hotspots in this wave:
-- `TimelineEditors.tsx`
 - residual branch gaps in `FeatureGridEditors.tsx`
 - residual branch gaps in `PricingPlansEditors.tsx`
 - residual branch gaps in `NewsletterEditors.tsx`

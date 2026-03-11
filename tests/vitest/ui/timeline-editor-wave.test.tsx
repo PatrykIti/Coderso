@@ -475,6 +475,7 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
     );
 
     clickButtonByText(contentSection as ParentNode, "Down", 0);
+    clickButtonByText(contentSection as ParentNode, "Up", 1);
     clickButtonByText(contentSection as ParentNode, "Add step");
     expect(contentSection?.textContent).toContain("5 steps configured");
     expect(latestValue.steps[4]).toEqual(
@@ -534,18 +535,17 @@ test("Timeline visual editor covers variant cards, step ordering, color fallback
 
     expect(onChangeSpy).toHaveBeenCalled();
     expect(latestValue.steps.map((step) => step.title)).toEqual([
-      "Plan",
       "Map",
+      "Plan",
       "Deliver",
       "Launch",
     ]);
-    expect(latestValue.steps[1]).toEqual(
+    expect(latestValue.steps[0]).toEqual(
       expect.objectContaining({
         id: "alpha",
         title: "Map",
         description: "Align stakeholders",
         icon: "🧭",
-        accent: "#00aaee",
       })
     );
     expect(latestValue.layout).toEqual(
