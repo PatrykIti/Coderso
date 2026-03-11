@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 9 tasks
-- **In Progress:** 4 tasks
+- **To Do:** 8 tasks
+- **In Progress:** 5 tasks
 - **Done:** 633 tasks
 
 ---
@@ -41,7 +41,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
-| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | Deepen editor shell and inspector coverage |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
@@ -57,6 +56,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: admin services, SDK/custom screens, small UI leafs, themes editor leafs, booking tabs, and plugin/media/site leafs shipped |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: themes leafs, theme editor page, booking tabs, and form canvas covered; listings/forms/editor shells remain |
+| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: EntryList shell, PagePreview, BlockList interactions, and post blockTransforms covered; heavy editor shells remain |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: `EntryTeaserEditors` moved into direct Vitest coverage; `PostsFeed`, `ContentList`, `ListingFilters`, `StatsKpi`, and `Product*` remain |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 

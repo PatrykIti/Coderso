@@ -97,6 +97,16 @@ Canonical full-lane rebaseline after the coverage report-path fix (from `coverag
 - aggregate `core/admin/ui/widgets/editors/*` -> `99.17%` lines, `77.13%` branches across `40` tracked files
 - previous “flat” comparisons against `/tmp/nextless-vitest-cov/coverage-summary.json` are superseded; that file was a stale artifact, not the current full-lane snapshot
 
+Current snapshot after the first `TASK-105-05` entries/pages/posts foundation slice (from `bun run test:coverage` on 2026-03-11):
+- `% Stmts`: `61.76`
+- `% Branch`: `52.25`
+- `% Funcs`: `66.57`
+- `% Lines`: `64.70`
+- `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines, `75.17%` branches
+- `core/admin/ui/pages/PagePreview.tsx` -> `88.88%` lines, `91.66%` branches
+- `core/admin/ui/pages/builder/BlockList.tsx` -> `71.26%` lines, `63.51%` branches
+- `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines, `67.92%` branches
+
 Additional widget-editor product/template snapshot (from `bun run test:coverage` on 2026-03-09):
 - `% Stmts`: `53.20`
 - `% Branch`: `46.79`
@@ -337,6 +347,7 @@ Completed waves:
 - shell-level action coverage for `BookingPage`
 - interactive page-level coverage for `ThemesPage`
 - direct create/edit/no-template coverage for `ThemeProfileDrawer`
+- first `TASK-105-05` foundation slice for `EntryList`, `PagePreview`, page-builder `BlockList`, and post `blockTransforms`
 - direct Vitest coverage for `EntryTeaserEditors`
 - direct Vitest coverage for `ListingFiltersEditors`
 - direct Vitest coverage for `PostsFeedEditors`
