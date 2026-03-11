@@ -601,3 +601,121 @@ test("LogoCloud advanced covers normalization defaults, technical tokens, and re
 
   cleanup();
 });
+
+test("LogoCloud editors render sparse header and style fallbacks with safe defaults", async () => {
+  const {
+    LogoCloudAdvancedEditor,
+    LogoCloudVisualEditor,
+    LogoCloudWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/LogoCloudEditors");
+
+  const baseValue: LogoCloudData = {
+    header: {},
+    logos: [{} as never],
+    style: {},
+  };
+
+  const wizardHarness = mountLogoCloudHarness({
+    initialValue: baseValue,
+    initialVariant: "grid",
+    render: (props) => <LogoCloudWizardEditor {...props} />,
+  });
+
+  try {
+    expect(getInputByPlaceholder(wizardHarness.container, "Trusted by teams worldwide").value).toBe(
+      logoCloudDefaults.header?.title
+    );
+    expect(getLogoNameInputs(wizardHarness.container)[0]?.value).toBe("Acme");
+  } finally {
+    wizardHarness.cleanup();
+  }
+
+  const visualHarness = mountLogoCloudHarness({
+    initialValue: baseValue,
+    initialVariant: "grid",
+    render: (props) => <LogoCloudVisualEditor {...props} />,
+  });
+
+  try {
+    expect(
+      getInputByPlaceholder(visualHarness.container, "Trusted by teams worldwide").value
+    ).toBe(logoCloudDefaults.header?.title);
+    expect(
+      getTextareaByPlaceholder(visualHarness.container, "Showcase partner and client logos.").value
+    ).toBe(logoCloudDefaults.header?.description);
+    expect(getInputByPlaceholder(visualHarness.container, "Logo 1").value).toBe("Acme");
+    expect(
+      getInputByPlaceholder(visualHarness.container, "https://cdn.example.com/logo.svg").value
+    ).toBe("");
+    expect(getInputByPlaceholder(visualHarness.container, "#").value).toBe("");
+
+    const styleSection = getSectionByTitle(visualHarness.container, "Display style");
+    const selects = getSelects(styleSection);
+    expect(selects[0]?.value).toBe("md");
+    expect(selects[1]?.value).toBe("md");
+    expect(selects[2]?.value).toBe("center");
+
+    const switches = getCheckboxes(styleSection);
+    expect(switches[0]?.checked).toBe(true);
+    expect(switches[1]?.checked).toBe(true);
+  } finally {
+    visualHarness.cleanup();
+  }
+
+  const advancedHarness = mountLogoCloudHarness({
+    initialValue: baseValue,
+    initialVariant: "grid",
+    render: (props) => <LogoCloudAdvancedEditor {...props} />,
+  });
+
+  try {
+    const technicalSection = getSectionByTitle(advancedHarness.container, "Technical layout tokens");
+    const selects = getSelects(technicalSection);
+    expect(selects[0]?.value).toBe("md");
+    expect(selects[1]?.value).toBe("md");
+    expect(selects[2]?.value).toBe("center");
+  } finally {
+    advancedHarness.cleanup();
+  }
+});
+
+test("LogoCloud editors ignore variant changes safely when no handler is provided", async () => {
+  const { LogoCloudVisualEditor, LogoCloudWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/LogoCloudEditors"
+  );
+
+  const sharedValue: LogoCloudData = {
+    logos: [
+      { id: "logo-1", name: "North Labs", href: "#" },
+      { id: "logo-2", name: "Orbit", href: "#" },
+    ],
+  };
+
+  const wizardView = mount(
+    <LogoCloudWizardEditor value={sharedValue} onChange={() => undefined} variant="grid" />
+  );
+
+  try {
+    const variantSelect = getSelectByOptions(wizardView.container, ["grid", "strip", "dense"]);
+    expect(variantSelect.value).toBe("grid");
+    setSelectValue(variantSelect, "strip");
+    expect(variantSelect.value).toBe("grid");
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <LogoCloudVisualEditor value={sharedValue} onChange={() => undefined} variant="grid" />
+  );
+
+  try {
+    const stripButton = getButtonsByText(visualView.container, "Strip")[0];
+    clickButton(stripButton);
+
+    const gridButton = getButtonsByText(visualView.container, "Grid")[0];
+    expect(normalizeText(gridButton.textContent)).toContain("selected");
+    expect(normalizeText(stripButton.textContent)).toContain("pick");
+  } finally {
+    visualView.cleanup();
+  }
+});

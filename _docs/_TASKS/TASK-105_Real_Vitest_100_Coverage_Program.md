@@ -233,6 +233,7 @@ Additional widget-editor residual-closure snapshot (from `bun run test:coverage`
 - footer/team/navigation/logo/divider/entry follow-up moved the widget-editor aggregate further to `99.76%` lines / `77.43%` branches in the canonical full-lane snapshot
 - stats/navigation/pricing/hero follow-up moved the widget-editor aggregate further to `99.97%` lines / `77.47%` branches in the canonical full-lane snapshot
 - timeline line-gap closure moved the widget-editor aggregate to `100.00%` lines / `77.47%` branches in the canonical full-lane snapshot
+- logo cloud safety follow-up added defensive default/no-handler coverage without changing the canonical full-lane snapshot
 - remaining widget-editor focus after this slice -> residual branch closure in `FeatureGridEditors`, `PricingPlansEditors`, `NewsletterEditors`, `TeamEditors`, `ProductCompareEditors`, `ProductTableEditors`, and `LogoCloudEditors`
 
 This means the next stage is not runner cleanup anymore.

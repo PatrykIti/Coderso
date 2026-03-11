@@ -256,6 +256,11 @@ Timeline line-gap closure on 2026-03-11:
 - Updated authoritative file snapshot:
   - `TimelineEditors.tsx` -> `100.00%` lines / `84.21%` branches
 
+Logo cloud safety follow-up on 2026-03-11:
+- Added sparse/default fallback assertions across wizard, visual, and advanced editors plus no-handler variant safety coverage.
+- Isolated targeted run for `LogoCloudEditors.tsx` stayed at `100.00%` lines / `64.00%` branches.
+- Canonical full-lane snapshot was not rebaselined separately for this narrow safety slice.
+
 Remaining hotspots in this wave:
 - residual branch gaps in `FeatureGridEditors.tsx`
 - residual branch gaps in `PricingPlansEditors.tsx`
