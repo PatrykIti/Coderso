@@ -60,6 +60,7 @@ Completed slices:
 - deeper preview, adapter-callback, and image-picker coverage for `PostEditorCanvas`
 - direct hook lifecycle and editor callback coverage for `usePostEditorState`
 - deeper `PageListPage` coverage for filters, cache refresh, and create-without-open flow
+- deeper `PageListPage` lifecycle, refresh, and action-error coverage
 - deeper `PostsListPage` coverage for tag filters, cancelled deletes, and create-without-open flow
 - deeper `PostsListPage` lifecycle, refresh, and action-error coverage
 - direct `happy-dom` shell coverage for `PostClassicEditorShell`
@@ -67,7 +68,7 @@ Completed slices:
 Current `2026-03-12` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
 - `core/admin/ui/entries/FieldRenderer.tsx` -> `94.73%` lines / `83.33%` branches
-- `core/admin/ui/pages/PageListPage.tsx` -> `78.78%` lines / `51.78%` branches
+- `core/admin/ui/pages/PageListPage.tsx` -> `95.45%` lines / `78.57%` branches
 - `core/admin/ui/pages/PagePreview.tsx` -> `88.88%` lines / `91.66%` branches
 - `core/admin/ui/pages/builder/BlockList.tsx` -> `71.26%` lines / `63.51%` branches
 - `core/admin/ui/posts/PostsListPage.tsx` -> `94.69%` lines / `73.01%` branches

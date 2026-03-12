@@ -40,6 +40,7 @@ const pagePostState = vi.hoisted(() => {
     apiError,
     pages: [{ ...page }],
     posts: [{ ...post }],
+    cachedPagesOverride: undefined as typeof page[] | null | undefined,
     cachedPostsOverride: undefined as typeof post[] | null | undefined,
     pageError: null as unknown,
     postError: null as unknown,
@@ -49,6 +50,7 @@ const pagePostState = vi.hoisted(() => {
     deletePostError: null as unknown,
     publishPageError: null as unknown,
     publishPostError: null as unknown,
+    unpublishPageError: null as unknown,
     unpublishPostError: null as unknown,
     previewPageError: null as unknown,
     previewPostError: null as unknown,
@@ -77,6 +79,7 @@ const pagePostState = vi.hoisted(() => {
     reset() {
       this.pages = [{ ...page }];
       this.posts = [{ ...post }];
+      this.cachedPagesOverride = undefined;
       this.cachedPostsOverride = undefined;
       this.pageError = null;
       this.postError = null;
@@ -86,6 +89,7 @@ const pagePostState = vi.hoisted(() => {
       this.deletePostError = null;
       this.publishPageError = null;
       this.publishPostError = null;
+      this.unpublishPageError = null;
       this.unpublishPostError = null;
       this.previewPageError = null;
       this.previewPostError = null;
@@ -272,7 +276,10 @@ vi.mock("@/services/userSettingsClient", () => ({
 }));
 
 vi.mock("@/services/pagesClient", () => ({
-  getCachedPages: () => pagePostState.pages,
+  getCachedPages: () =>
+    pagePostState.cachedPagesOverride === undefined
+      ? pagePostState.pages
+      : pagePostState.cachedPagesOverride,
   listPagesCached: vi.fn(async ({ force }: { force?: boolean } = {}) => {
     pagePostState.pageRefreshCalls.push({
       force,
@@ -308,6 +315,7 @@ vi.mock("@/services/pagesClient", () => ({
   }),
   unpublishPage: vi.fn(async (id: string) => {
     pagePostState.unpublishPageCalls.push(id);
+    if (pagePostState.unpublishPageError) throw pagePostState.unpublishPageError;
     return { ok: true };
   }),
 }));
@@ -674,6 +682,169 @@ test("PageFilters forwards query and filter changes", async () => {
     expect(onAuthorChange).toHaveBeenCalledWith("author-1");
   } finally {
     view.cleanup();
+  }
+});
+
+test("PageListPage loads without cache, refreshes on matching cache events, and surfaces load failures", async () => {
+  pagePostState.cachedPagesOverride = null;
+  pagePostState.pageError = pagePostState.apiError("Pages unavailable.");
+  pagePostState.getUserSettings.mockRejectedValueOnce(new Error("prefs unavailable"));
+
+  const { PageListPage } = await import(
+    "../../../core/admin/ui/pages/PageListPage"
+  );
+
+  const view = mount(<PageListPage />);
+
+  try {
+    expect(view.container.textContent).toContain("Loading pages");
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Pages unavailable.");
+    expect(pagePostState.getUserSettings).toHaveBeenCalled();
+
+    pagePostState.pageError = new Error("generic page load failure");
+    await act(async () => {
+      pagePostState.pageSubscribers.forEach((handler) =>
+        handler({ key: "pagesList" })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Failed to load pages.");
+
+    pagePostState.pageError = null;
+    await act(async () => {
+      pagePostState.pageSubscribers.forEach((handler) =>
+        handler({ key: "pagesList" })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Landing");
+    expect(pagePostState.pageRefreshCalls).toEqual([
+      { force: true, background: true },
+      { force: true, background: true },
+      { force: true, background: true },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageListPage opens drawer via sheet controls, creates with navigation, and reports action failures", async () => {
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => true),
+  });
+  Object.defineProperty(window, "open", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(),
+  });
+
+  const { PageListPage } = await import(
+    "../../../core/admin/ui/pages/PageListPage"
+  );
+
+  const view = mount(<PageListPage />);
+
+  try {
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    const buttons = () => Array.from(view.container.querySelectorAll("button"));
+    const titleInput = () =>
+      view.container.querySelector('input[placeholder="e.g. About us"]');
+
+    act(() => {
+      buttons().find((button) => button.textContent === "sheet-trigger-open")?.click();
+    });
+    expect(
+      view.container
+        .querySelector("[data-has-open-change='true']")
+        ?.getAttribute("data-sheet-open")
+    ).toBe("true");
+
+    act(() => {
+      buttons().find((button) => button.textContent === "sheet-trigger-close")?.click();
+    });
+    expect(
+      view.container
+        .querySelector("[data-has-open-change='true']")
+        ?.getAttribute("data-sheet-open")
+    ).toBe("false");
+
+    act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Create New Page"))
+        ?.click();
+      setInputValue(titleInput() ?? undefined, "Docs Home");
+    });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    pagePostState.createPageError = new Error("create page generic failure");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "Create Page")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Failed to create page.");
+
+    pagePostState.createPageError = null;
+    await act(async () => {
+      setInputValue(titleInput() ?? undefined, "Docs Home");
+      await flushMicrotasks();
+      buttons().find((button) => button.textContent === "Create Page")?.click();
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.navigateCalls).toContain("/pages/created-page");
+
+    pagePostState.previewPageError = pagePostState.apiError("Preview page denied.");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "preview-page-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Preview page denied.");
+
+    pagePostState.publishPageError = new Error("publish page generic failure");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "publish-page-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Failed to publish page.");
+
+    pagePostState.unpublishPageError = pagePostState.apiError("Unpublish page denied.");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "unpublish-page-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Unpublish page denied.");
+
+    pagePostState.duplicatePageError = new Error("duplicate page generic failure");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "duplicate-page-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Failed to duplicate page.");
+
+    pagePostState.deletePageError = pagePostState.apiError("Delete page denied.");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "delete-page-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Delete page denied.");
+  } finally {
+    view.cleanup();
+    delete (window as Window & { confirm?: unknown }).confirm;
+    delete (window as Window & { open?: unknown }).open;
   }
 });
 

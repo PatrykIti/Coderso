@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 448 | 2026-03-12 | TASK-105 page list page lifecycle coverage | QA/Platform |
 | 447 | 2026-03-12 | TASK-105 posts list page lifecycle coverage | QA/Platform |
 | 446 | 2026-03-12 | TASK-105 post editor canvas preview follow-up | QA/Platform |
 | 445 | 2026-03-12 | TASK-105 post richtext selection and layout follow-up | QA/Platform |
