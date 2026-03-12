@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { shouldReturnFocus } from "../../../core/admin/ui/posts/editor/hooks/useFocusReturn";
 

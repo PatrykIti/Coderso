@@ -17,6 +17,9 @@ This repository uses a hybrid testing model aligned with the product architectur
   - pure admin utilities
   - admin/UI component logic
   - SDK/shared contracts
+  - validation schema suites
+  - Bun-free assistant helper/provider/planner suites
+  - Bun-free posts editor/model helper suites
   - DOM-rich editor helpers through `happy-dom`
   - UI integration/render suites moved from `tests/integration/ui/*`
 

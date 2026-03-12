@@ -35,6 +35,20 @@ Move the obviously Bun-free validation and search unit suites into `tests/vitest
 
 - `tests/unit/search/searchHistoryService.test.ts`
 
+## Progress Notes
+
+Completed in this slice:
+- moved all `tests/unit/validation/*` suites into `tests/vitest/validation/*`
+
+Blocked in this slice:
+- `tests/unit/search/filterEngine.test.ts`
+- `tests/unit/search/listingRuntimeService.test.ts`
+- `tests/unit/search/searchIndexService.test.ts`
+- `tests/unit/search/searchService.test.ts`
+
+Current blocker:
+- the search modules still pull `core/db/client` at import time through `searchService` or listing/query dependencies, so they are not yet real Vitest-safe targets without refactor.
+
 ## Acceptance Criteria
 
 1. Validation schema tests no longer depend on `bun:test`.

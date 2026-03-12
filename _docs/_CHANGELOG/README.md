@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 418 | 2026-03-12 | TASK-105 posts pure suite migration | QA/Platform |
+| 417 | 2026-03-12 | TASK-105 validation and assistant suite migration | QA/Platform |
 | 416 | 2026-03-12 | TASK-105 custom screens legacy suite migration | QA/Platform |
 | 415 | 2026-03-12 | TASK-105 legacy bun-free duplicate suite cleanup | QA/Platform |
 | 414 | 2026-03-11 | TASK-105 posts list and classic shell jump | QA/Platform |

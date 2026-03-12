@@ -32,9 +32,9 @@ Initial `2026-03-12` findings from the re-audit:
 - `search` splits into:
   - Bun-free pure logic: `filterEngine`, `listingRuntimeService`, `searchIndexService`, `searchService`
   - Bun keep: `searchHistoryService` because it is DB-backed.
-- `assistant` currently looks largely Bun-free by import shape and is a strong next migration candidate.
+- `assistant` pure helpers are now partially migrated into `tests/vitest/assistant/*`, but the higher-level docs/indexing/provider orchestration suites still need refactor-first treatment.
 - `posts` splits into:
-  - Bun-free pure editor/domain leaves (`block-transforms`, serializer, command engine, layout state, preferences, outline, stats, document models)
+  - pure editor/domain leaves have now been moved into `tests/vitest/posts/*`
   - Bun keep or verify carefully: DB/schema/runtime renderer and any file still coupled to runtime/public rendering contracts.
 - `forms` splits into:
   - Bun-free pure contracts/settings/helpers

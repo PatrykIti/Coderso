@@ -19,6 +19,16 @@ This document is the practical ownership companion to `_docs/TESTING_STRATEGY.md
 - `tests/unit/sdk/*`
 - `tests/integration/ui/*` (migrated to `tests/vitest/ui-integration/*`)
 
+## Follow-up migration notes (2026-03-12)
+
+- Legacy Bun-free duplicates were removed from `tests/unit/ui/*`, the Bun-free part of `tests/unit/admin/*`, `tests/unit/sdk/*`, and `tests/unit/customScreens/*` after confirming Vitest-owned replacements.
+- `tests/unit/validation/*` has now been moved into `tests/vitest/validation/*`.
+- The Bun-free assistant helper slice (`assistantMetrics`, `assistantQuota`, `assistantRedaction`, `openRouterProvider`, `siteBuilderPlanner`) has now been moved into `tests/vitest/assistant/*`.
+- The Bun-free posts editor/model helper slice has now been moved into `tests/vitest/posts/*`, while the DB/runtime post cases remain in Bun.
+- `search` remains split:
+  - `searchHistoryService` stays in Bun because it is DB-backed,
+  - the remaining search unit suites are still blocked by import-time DB coupling and remain refactor-first.
+
 ## Strong Bun ownership clusters
 
 - DB-backed service tests

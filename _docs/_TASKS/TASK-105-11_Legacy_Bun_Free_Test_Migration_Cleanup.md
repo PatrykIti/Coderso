@@ -41,6 +41,9 @@ Completed slices:
 - removed duplicated Bun-free legacy suites in the Bun-free part of `tests/unit/admin/*`
 - removed duplicated Bun-free helper suites in `tests/unit/sdk/*`
 - moved `bindingResolver` into `tests/vitest/customScreens/*` and removed legacy Bun `customScreens` duplicates
+- moved all validation schema suites into `tests/vitest/validation/*`
+- moved the Bun-free assistant helper/provider/planner suites into `tests/vitest/assistant/*`
+- moved the Bun-free posts editor/model suites into `tests/vitest/posts/*`
 
 Remaining slices:
 - refactor-first cluster audit for `posts/forms/search/server/assistant/validation`

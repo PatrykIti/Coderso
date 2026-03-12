@@ -5,7 +5,7 @@
 **Category:** QA + Platform  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-11-03-01  
-**Status:** To Do
+**Status:** Done (2026-03-12)
 
 ---
 
@@ -25,6 +25,13 @@ Split the clearly Bun-free post editor/model suites out of `tests/unit/posts/*` 
 1. Pure posts editor/model suites no longer depend on `bun:test`.
 2. Runtime or DB-coupled post suites stay in Bun with explicit reasoning.
 3. The split reduces the old blanket `posts` refactor-first bucket.
+
+## Completion Notes
+
+- Moved the pure posts editor/model suites into `tests/vitest/posts/*`.
+- Removed the old Bun `block-transforms.test.ts` duplicate because the stronger Vitest suite already exists.
+- Left `schema.test.ts` in Bun because it is DB-backed.
+- Left `post-block-runtime-renderer.test.tsx` out of this migration because runtime/media lookup coupling still blocks a clean Vitest move.
 
 ## Testing Requirements
 

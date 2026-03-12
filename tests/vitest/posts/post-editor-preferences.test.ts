@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import {
   POST_EDITOR_PREFERENCES_LEGACY_STORAGE_KEY,

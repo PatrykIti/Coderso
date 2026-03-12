@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { buildPostDocumentOutline } from "../../../core/services/posts/editor/postDocumentOutline";
 
