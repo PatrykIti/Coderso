@@ -181,6 +181,64 @@ test("PostEditorCanvas renders media placeholder when image is not configured", 
   expect(html).toContain("Click to choose image from media library");
 });
 
+test("PostEditorCanvas renders embed previews for supported providers and falls back on invalid urls", () => {
+  const html = renderToString(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "embed-youtube",
+            type: "embed",
+            attrs: { provider: "youtube", url: "https://www.youtube.com/watch?v=abc123" },
+            content: null,
+          },
+          {
+            id: "embed-vimeo",
+            type: "embed",
+            attrs: { provider: "vimeo", url: "https://vimeo.com/54321" },
+            content: null,
+          },
+          {
+            id: "embed-loom",
+            type: "embed",
+            attrs: { provider: "loom", url: "https://www.loom.com/share/demo-id" },
+            content: null,
+          },
+          {
+            id: "embed-custom",
+            type: "embed",
+            attrs: { provider: "custom", url: "https://example.com/embed/demo" },
+            content: null,
+          },
+          {
+            id: "embed-invalid",
+            type: "embed",
+            attrs: { provider: "youtube", url: "notaurl" },
+            content: null,
+          },
+        ],
+      }}
+      title="Embeds"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onOpenBlockDetails={() => undefined}
+    />
+  );
+
+  expect(html).toContain("https://www.youtube.com/embed/abc123");
+  expect(html).toContain("https://player.vimeo.com/video/54321");
+  expect(html).toContain("https://www.loom.com/embed/demo-id");
+  expect(html).toContain("https://example.com/embed/demo");
+  expect(html).toContain("data-post-editor-media-placeholder=\"embed\"");
+  expect(html).toContain("Click to configure embed URL");
+});
+
 test("PostEditorCanvas renders delete control for selected block", () => {
   const html = renderToString(
     <PostEditorCanvas

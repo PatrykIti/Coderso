@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 446 | 2026-03-12 | TASK-105 post editor canvas preview follow-up | QA/Platform |
 | 445 | 2026-03-12 | TASK-105 post richtext selection and layout follow-up | QA/Platform |
 | 444 | 2026-03-12 | TASK-105 post editor state hook coverage | QA/Platform |
 | 443 | 2026-03-12 | TASK-105 post editor canvas interaction coverage | QA/Platform |

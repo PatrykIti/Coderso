@@ -57,6 +57,7 @@ Completed slices:
 - deeper selection, formatting, and image-layout interaction coverage for `PostRichTextAdapter`
 - direct `happy-dom` branch coverage for `PostsTable`
 - direct interaction coverage for `PostEditorCanvas`
+- deeper preview, adapter-callback, and image-picker coverage for `PostEditorCanvas`
 - direct hook lifecycle and editor callback coverage for `usePostEditorState`
 - deeper `PageListPage` coverage for filters, cache refresh, and create-without-open flow
 - deeper `PostsListPage` coverage for tag filters, cancelled deletes, and create-without-open flow
@@ -70,6 +71,7 @@ Current `2026-03-12` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/pages/builder/BlockList.tsx` -> `71.26%` lines / `63.51%` branches
 - `core/admin/ui/posts/PostsListPage.tsx` -> `79.54%` lines / `47.61%` branches
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `91.00%` lines / `74.43%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `85.29%` lines / `70.09%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `80.97%` lines / `61.41%` branches
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `90.10%` lines / `74.33%` branches
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines / `67.92%` branches

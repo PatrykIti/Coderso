@@ -78,6 +78,11 @@ vi.mock("@/components/ui/dialog", () => ({
     onOpenChange?: (open: boolean) => void;
   }) => (
     <div data-dialog-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+      {open ? (
+        <button type="button" onClick={() => onOpenChange?.(false)}>
+          dialog-close
+        </button>
+      ) : null}
       {open ? children : null}
     </div>
   ),
@@ -394,6 +399,7 @@ test("PostEditorCanvas routes title change, empty-state insertion, and root dese
     ) as HTMLTextAreaElement | null;
     if (!titleInput) throw new Error("missing title input");
 
+    focusElement(titleInput);
     setTextareaValue(titleInput, "Post title");
     clickByText(view.container, "Add section");
     (view.container.querySelector("[data-post-editor-canvas='article']") as HTMLElement)?.click();
@@ -475,6 +481,74 @@ test("PostEditorCanvas routes writing-canvas adapter callbacks to document updat
     });
     expect(onTransformBlock).toHaveBeenCalledWith("block-1", "heading");
     expect(onUpdateBlockAttrs).toHaveBeenCalledWith("block-1", { level: 2 });
+    expect(onUpdateDocumentTypography).toHaveBeenCalledWith({
+      fontFamily: "serif",
+      baseTextScale: "md",
+    });
+    expect(onUpdateDocumentTypography).toHaveBeenLastCalledWith({
+      fontFamily: "sans",
+      baseTextScale: "xl",
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostEditorCanvas routes rich-text block adapter callbacks to paragraph block hooks", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const onSelectBlock = vi.fn();
+  const onUpdateBlockContent = vi.fn();
+  const onInsertBlock = vi.fn();
+  const onTransformBlock = vi.fn();
+  const onUpdateBlockAttrs = vi.fn();
+  const onUpdateDocumentTypography = vi.fn();
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "paragraph-1",
+            type: "paragraph",
+            attrs: {},
+            content: "<p>Hello</p>",
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="paragraph-1"
+      insertFocusToken={0}
+      onSelectBlock={onSelectBlock}
+      onUpdateBlockContent={onUpdateBlockContent}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onTransformBlock={onTransformBlock}
+      onUpdateDocumentTypography={onUpdateDocumentTypography}
+      onInsertBlock={onInsertBlock}
+    />
+  );
+
+  try {
+    clickByText(view.container, "adapter-focus");
+    clickByText(view.container, "adapter-change");
+    clickByText(view.container, "adapter-slash");
+    clickByText(view.container, "adapter-transform");
+    clickByText(view.container, "adapter-font");
+    clickByText(view.container, "adapter-scale");
+
+    expect(onSelectBlock).toHaveBeenCalledWith("paragraph-1");
+    expect(onUpdateBlockContent).toHaveBeenCalledWith("paragraph-1", "<p>Changed</p>");
+    expect(onInsertBlock).toHaveBeenCalledWith("quote", {
+      source: "slash",
+      target: { mode: "after-block", blockId: "paragraph-1" },
+    });
+    expect(onTransformBlock).toHaveBeenCalledWith("paragraph-1", "heading");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("paragraph-1", { level: 2 });
     expect(onUpdateDocumentTypography).toHaveBeenCalledWith({
       fontFamily: "serif",
       baseTextScale: "md",
@@ -651,6 +725,11 @@ test("PostEditorCanvas opens image picker, loads media, applies selected asset, 
     expect(pickerView.container.textContent).toContain("Select Image");
     expect(pickerView.container.textContent).toContain("media-grid:1");
 
+    const searchInput = pickerView.container.querySelector(
+      'input[placeholder="Search by file name, title, or original name"]'
+    );
+    setInputValue(searchInput ?? undefined, "hero");
+
     clickByText(pickerView.container, "select-media:media-1.png");
 
     expect(onSelectBlock).toHaveBeenCalledWith("image-1");
@@ -696,5 +775,85 @@ test("PostEditorCanvas opens image picker, loads media, applies selected asset, 
     expect(lookupView.container.innerHTML).toContain('alt="Hero alt"');
   } finally {
     lookupView.cleanup();
+  }
+});
+
+test("PostEditorCanvas resets image picker state on close and surfaces media load errors", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "image-3", type: "image", attrs: {}, content: null }],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-3"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    clickByText(view.container, "Click to choose image from media library");
+    await flush();
+
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search by file name, title, or original name"]'
+    );
+    setInputValue(searchInput ?? undefined, "banner");
+
+    clickByText(view.container, "dialog-close");
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Select Image");
+
+    clickByText(view.container, "Click to choose image from media library");
+    await flush();
+
+    const reopenedSearchInput = view.container.querySelector(
+      'input[placeholder="Search by file name, title, or original name"]'
+    ) as HTMLInputElement | null;
+    expect(reopenedSearchInput?.value).toBe("");
+  } finally {
+    view.cleanup();
+  }
+
+  mediaState.reset();
+  mediaState.error = {
+    name: "ApiClientError",
+    message: "Media unavailable.",
+  };
+
+  const errorView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "image-4", type: "image", attrs: {}, content: null }],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-4"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    clickByText(errorView.container, "Click to choose image from media library");
+    await flush();
+
+    expect(errorView.container.textContent).toContain("Media unavailable.");
+  } finally {
+    errorView.cleanup();
   }
 });
