@@ -5,7 +5,7 @@
 **Category:** QA + Platform  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-105-11-01  
-**Status:** To Do
+**Status:** Done (2026-03-12)
 
 ---
 
@@ -30,6 +30,12 @@ Migrate the next Bun-free legacy suites that still validate pure domain logic ra
 1. Pure custom-screen and SDK helper suites no longer depend on `bun:test`.
 2. The moved suites run green under `tests/vitest/*`.
 3. Coverage ownership for `core/services/customScreens/*` and related helpers becomes cleaner and more explicit.
+
+## Completion Notes
+
+- Moved `tests/unit/customScreens/bindingResolver.test.ts` into `tests/vitest/customScreens/bindingResolver.test.ts`.
+- Removed the legacy Bun duplicate for `tests/unit/customScreens/customScreenService.test.ts` because the stronger Vitest suite already exists.
+- Left the remaining Bun-owned SDK runtime/storage cases in Bun.
 
 ## Testing Requirements
 

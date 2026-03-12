@@ -40,9 +40,9 @@ Completed slices:
 - removed duplicated Bun-free legacy suites in `tests/unit/ui/*`
 - removed duplicated Bun-free legacy suites in the Bun-free part of `tests/unit/admin/*`
 - removed duplicated Bun-free helper suites in `tests/unit/sdk/*`
+- moved `bindingResolver` into `tests/vitest/customScreens/*` and removed legacy Bun `customScreens` duplicates
 
 Remaining slices:
-- `tests/unit/customScreens/*` and the next Bun-free pure-domain leaves
 - refactor-first cluster audit for `posts/forms/search/server/assistant/validation`
 
 ## Sub-Tasks
