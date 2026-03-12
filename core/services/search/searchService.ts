@@ -1,8 +1,5 @@
 import { eq, ilike, or, sql } from "drizzle-orm";
 
-import { db } from "../../db/client";
-import { contentEntries, contentTypes, media, pages, users } from "../../db/schema";
-import { getSetting } from "../settings/settingsService";
 import { hashEmail, isLikelyEmail, normalizeEmail, resolveEmailValue } from "../security/piiEmail";
 
 export type SearchItemType = "page" | "entry" | "media" | "user";
@@ -57,6 +54,8 @@ export async function searchAll(query: string, options: SearchOptions = {}) {
   const tsQuery = buildPrefixQuery(normalized);
   if (!tsQuery) return [] as SearchItem[];
   const likeQuery = `%${normalized}%`;
+  const [{ db }, { contentEntries, contentTypes, media, pages, users }] =
+    await Promise.all([import("../../db/client"), import("../../db/schema")]);
 
   const emailQuery = isLikelyEmail(normalized) ? normalizeEmail(normalized) : null;
   const emailHash = emailQuery ? hashEmail(emailQuery) : null;
@@ -203,6 +202,7 @@ type CategoryOverrides = Record<string, CategoryOverride>;
 
 async function getCategoryOverrides(): Promise<CategoryOverrides> {
   try {
+    const { getSetting } = await import("../settings/settingsService");
     const value = await getSetting("search.categoryOverrides");
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     return value as CategoryOverrides;

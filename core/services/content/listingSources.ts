@@ -1,10 +1,5 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
-import { db } from "../../db/client";
-import { contentTaxonomies, contentTerms } from "../../db/schema";
-import { listUsers } from "../admin/usersService";
-import { listEntries } from "./entryService";
-import { listPosts } from "./postsService";
 import type { ListingSource, ListingSourceConfig, ListingSort } from "./queryBuilderService";
 
 export type ListingSourceRow = Record<string, unknown>;
@@ -35,6 +30,7 @@ const entryFieldAllowlist = [
 ] as const;
 
 const fetchEntriesRows = async (config: ListingSourceConfig) => {
+  const { listEntries } = await import("./entryService");
   const typeId = config.contentTypeId?.trim();
   if (!typeId) return [];
 
@@ -61,6 +57,7 @@ const fetchEntriesRows = async (config: ListingSourceConfig) => {
 };
 
 const fetchPostsRows = async (config: ListingSourceConfig) => {
+  const { listPosts } = await import("./postsService");
   const rows = await listPosts();
   const includeDrafts = config.includeDrafts === true;
   const filtered = includeDrafts
@@ -84,6 +81,7 @@ const fetchPostsRows = async (config: ListingSourceConfig) => {
 };
 
 const fetchUsersRows = async () => {
+  const { listUsers } = await import("../admin/usersService");
   const rows = await listUsers();
   return rows.map((row) => ({
     id: row.id,
@@ -98,6 +96,10 @@ const fetchUsersRows = async () => {
 };
 
 const fetchTaxonomiesRows = async (config: ListingSourceConfig) => {
+  const [{ db }, { contentTaxonomies, contentTerms }] = await Promise.all([
+    import("../../db/client"),
+    import("../../db/schema"),
+  ]);
   const taxonomyId = config.taxonomyId?.trim();
 
   const rows = await db

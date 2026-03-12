@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { resolveListingFiltersRuntimeData } from "../../../core/services/search/listingRuntimeService";
 import type { ListingQueryRecord } from "../../../core/services/content/listingQueriesService";

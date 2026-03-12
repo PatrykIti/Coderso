@@ -1,8 +1,7 @@
-import {
-  executeListingQuery,
-  type ListingQuery,
+import type {
+  ListingExecutionResult,
+  ListingQuery,
 } from "../content/queryBuilderService";
-import { getListingQuery } from "../content/listingQueriesService";
 import {
   normalizeListingFacetConfigs,
   type ListingFacetConfig,
@@ -15,13 +14,26 @@ import {
 } from "./filterEngine";
 
 type ListingRuntimeResolverDeps = {
-  getListingQueryById: typeof getListingQuery;
-  executeListing: typeof executeListingQuery;
+  getListingQueryById: (
+    id: string
+  ) => Promise<{ query: ListingQuery } | null>;
+  executeListing: (input: unknown) => Promise<ListingExecutionResult>;
 };
 
-const defaultDeps: ListingRuntimeResolverDeps = {
-  getListingQueryById: getListingQuery,
-  executeListing: executeListingQuery,
+let defaultDepsPromise: Promise<ListingRuntimeResolverDeps> | null = null;
+
+const getDefaultDeps = async (): Promise<ListingRuntimeResolverDeps> => {
+  if (!defaultDepsPromise) {
+    defaultDepsPromise = Promise.all([
+      import("../content/listingQueriesService"),
+      import("../content/queryBuilderService"),
+    ]).then(([listingQueriesModule, queryBuilderModule]) => ({
+      getListingQueryById: listingQueriesModule.getListingQuery,
+      executeListing: queryBuilderModule.executeListingQuery,
+    }));
+  }
+
+  return defaultDepsPromise;
 };
 
 const normalizeListingQueryForRuntime = (query: ListingQuery, preview: boolean): ListingQuery => {
@@ -74,10 +86,6 @@ export async function resolveListingFiltersRuntimeData(
   input: ListingFiltersRuntimeInput,
   deps: Partial<ListingRuntimeResolverDeps> = {}
 ): Promise<ListingFiltersRuntimeResult> {
-  const runtimeDeps: ListingRuntimeResolverDeps = {
-    ...defaultDeps,
-    ...deps,
-  };
   const listingQueryId = (input.listingQueryId ?? "").trim();
   const facets = normalizeListingFacetConfigs(input.facets);
   if (!listingQueryId) {
@@ -88,6 +96,13 @@ export async function resolveListingFiltersRuntimeData(
       total: 0,
     };
   }
+  const runtimeDeps: ListingRuntimeResolverDeps =
+    deps.getListingQueryById && deps.executeListing
+      ? (deps as ListingRuntimeResolverDeps)
+      : {
+          ...(await getDefaultDeps()),
+          ...deps,
+        };
 
   const listingQuery = await runtimeDeps.getListingQueryById(listingQueryId);
   if (!listingQuery) {

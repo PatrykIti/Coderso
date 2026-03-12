@@ -1,9 +1,5 @@
 import { and, eq, ilike, notInArray, or, sql } from "drizzle-orm";
 
-import { db } from "../../db/client";
-import { contentEntries, contentTypes, pages, posts } from "../../db/schema";
-import { POST_CONTENT_TYPE_SLUG } from "../content/postsService";
-import { isPostContentTypeSlug } from "../posts/runtime/postBlockRuntimeMapper";
 import type { ContentRouteSetting } from "../settings/settingsService";
 import { buildPrefixQuery, normalizeSearchQuery, resolveSearchLimit } from "./searchService";
 
@@ -48,6 +44,7 @@ type PublicPostSearchRow = {
 };
 
 const POST_TYPE_SLUGS = ["post", "posts"] as const;
+const DEFAULT_POST_CONTENT_TYPE_SLUG = "post";
 
 const publicSources: PublicSearchSource[] = ["pages", "entries", "posts"];
 
@@ -125,75 +122,82 @@ export type SearchPublicIndexDeps = {
   }) => Promise<PublicPostSearchRow[]>;
 };
 
-const defaultDeps: SearchPublicIndexDeps = {
-  listPages: ({ tsQuery, likeQuery, limit }) =>
-    db
-      .select({
-        id: pages.id,
-        title: pages.title,
-        slug: pages.slug,
-        updatedAt: pages.updatedAt,
-      })
-      .from(pages)
-      .where(
-        and(
-          eq(pages.status, "published"),
-          or(
-            sql`to_tsvector('simple', ${pages.title} || ' ' || ${pages.slug}) @@ to_tsquery('simple', ${tsQuery})`,
-            ilike(pages.title, likeQuery),
-            ilike(pages.slug, likeQuery)
+const buildDefaultDeps = async (): Promise<SearchPublicIndexDeps> => {
+  const [{ db }, { contentEntries, contentTypes, pages, posts }] = await Promise.all([
+    import("../../db/client"),
+    import("../../db/schema"),
+  ]);
+
+  return {
+    listPages: ({ tsQuery, likeQuery, limit }) =>
+      db
+        .select({
+          id: pages.id,
+          title: pages.title,
+          slug: pages.slug,
+          updatedAt: pages.updatedAt,
+        })
+        .from(pages)
+        .where(
+          and(
+            eq(pages.status, "published"),
+            or(
+              sql`to_tsvector('simple', ${pages.title} || ' ' || ${pages.slug}) @@ to_tsquery('simple', ${tsQuery})`,
+              ilike(pages.title, likeQuery),
+              ilike(pages.slug, likeQuery)
+            )
           )
         )
-      )
-      .limit(limit),
-  listEntries: ({ tsQuery, likeQuery, limit }) =>
-    db
-      .select({
-        id: contentEntries.id,
-        title: sql<string>`coalesce(${contentEntries.title}, ${contentEntries.data} ->> 'title')`.as(
-          "title"
-        ),
-        slug: contentEntries.slug,
-        updatedAt: contentEntries.updatedAt,
-        typeSlug: contentTypes.slug,
-      })
-      .from(contentEntries)
-      .innerJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
-      .where(
-        and(
-          eq(contentEntries.status, "published"),
-          notInArray(contentTypes.slug, [...POST_TYPE_SLUGS]),
-          or(
-            sql`to_tsvector('simple', coalesce(${contentEntries.title}, '') || ' ' || ${contentEntries.slug} || ' ' || coalesce(${contentEntries.data} ->> 'title', '')) @@ to_tsquery('simple', ${tsQuery})`,
-            ilike(contentEntries.title, likeQuery),
-            ilike(contentEntries.slug, likeQuery),
-            ilike(sql`${contentEntries.data} ->> 'title'`, likeQuery)
+        .limit(limit),
+    listEntries: ({ tsQuery, likeQuery, limit }) =>
+      db
+        .select({
+          id: contentEntries.id,
+          title: sql<string>`coalesce(${contentEntries.title}, ${contentEntries.data} ->> 'title')`.as(
+            "title"
+          ),
+          slug: contentEntries.slug,
+          updatedAt: contentEntries.updatedAt,
+          typeSlug: contentTypes.slug,
+        })
+        .from(contentEntries)
+        .innerJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
+        .where(
+          and(
+            eq(contentEntries.status, "published"),
+            notInArray(contentTypes.slug, [...POST_TYPE_SLUGS]),
+            or(
+              sql`to_tsvector('simple', coalesce(${contentEntries.title}, '') || ' ' || ${contentEntries.slug} || ' ' || coalesce(${contentEntries.data} ->> 'title', '')) @@ to_tsquery('simple', ${tsQuery})`,
+              ilike(contentEntries.title, likeQuery),
+              ilike(contentEntries.slug, likeQuery),
+              ilike(sql`${contentEntries.data} ->> 'title'`, likeQuery)
+            )
           )
         )
-      )
-      .limit(limit),
-  listPosts: ({ tsQuery, likeQuery, limit }) =>
-    db
-      .select({
-        id: posts.id,
-        title: posts.title,
-        slug: posts.slug,
-        updatedAt: posts.updatedAt,
-      })
-      .from(posts)
-      .where(
-        and(
-          eq(posts.status, "published"),
-          or(
-            sql`to_tsvector('simple', coalesce(${posts.title}, '') || ' ' || ${posts.slug} || ' ' || coalesce(${posts.excerpt}, '') || ' ' || coalesce(${posts.data} ->> 'title', '')) @@ to_tsquery('simple', ${tsQuery})`,
-            ilike(posts.title, likeQuery),
-            ilike(posts.slug, likeQuery),
-            ilike(posts.excerpt, likeQuery),
-            ilike(sql`${posts.data} ->> 'title'`, likeQuery)
+        .limit(limit),
+    listPosts: ({ tsQuery, likeQuery, limit }) =>
+      db
+        .select({
+          id: posts.id,
+          title: posts.title,
+          slug: posts.slug,
+          updatedAt: posts.updatedAt,
+        })
+        .from(posts)
+        .where(
+          and(
+            eq(posts.status, "published"),
+            or(
+              sql`to_tsvector('simple', coalesce(${posts.title}, '') || ' ' || ${posts.slug} || ' ' || coalesce(${posts.excerpt}, '') || ' ' || coalesce(${posts.data} ->> 'title', '')) @@ to_tsquery('simple', ${tsQuery})`,
+              ilike(posts.title, likeQuery),
+              ilike(posts.slug, likeQuery),
+              ilike(posts.excerpt, likeQuery),
+              ilike(sql`${posts.data} ->> 'title'`, likeQuery)
+            )
           )
         )
-      )
-      .limit(limit),
+        .limit(limit),
+  };
 };
 
 export function parsePublicSearchSources(input: string | undefined) {
@@ -201,13 +205,17 @@ export function parsePublicSearchSources(input: string | undefined) {
 }
 
 const resolvePostsRouteType = (routes: ContentRouteSetting[]) =>
-  routes.find((entry) => entry.enabled && isPostContentTypeSlug(entry.type))
-    ?.type ?? POST_CONTENT_TYPE_SLUG;
+  routes.find(
+    (entry) =>
+      entry.enabled &&
+      typeof entry.type === "string" &&
+      POST_TYPE_SLUGS.includes(entry.type as (typeof POST_TYPE_SLUGS)[number])
+  )?.type ?? DEFAULT_POST_CONTENT_TYPE_SLUG;
 
 export async function searchPublicIndex(
   query: string,
   options: SearchPublicIndexOptions = {},
-  deps: SearchPublicIndexDeps = defaultDeps
+  deps?: SearchPublicIndexDeps
 ): Promise<PublicSearchResult> {
   const normalizedQuery = normalizeSearchQuery(query);
   const normalizedSources = normalizeSources(options.sources);
@@ -233,12 +241,13 @@ export async function searchPublicIndex(
   const perSource = Math.max(1, Math.ceil(limit / Math.max(normalizedSources.length, 1)));
   const likeQuery = `%${normalizedQuery}%`;
   const routes = options.contentRoutes ?? [];
+  const runtimeDeps = deps ?? (await buildDefaultDeps());
   const includePages = normalizedSources.includes("pages");
   const includeEntries = normalizedSources.includes("entries");
   const includePosts = normalizedSources.includes("posts");
 
   const pageRows = includePages
-    ? await deps.listPages({
+    ? await runtimeDeps.listPages({
         tsQuery,
         likeQuery,
         limit: perSource,
@@ -246,7 +255,7 @@ export async function searchPublicIndex(
     : [];
 
   const entryRows = includeEntries
-    ? await deps.listEntries({
+    ? await runtimeDeps.listEntries({
         tsQuery,
         likeQuery,
         limit: perSource,
@@ -254,7 +263,7 @@ export async function searchPublicIndex(
     : [];
 
   const postRows = includePosts
-    ? await deps.listPosts({
+    ? await runtimeDeps.listPosts({
         tsQuery,
         likeQuery,
         limit: perSource,

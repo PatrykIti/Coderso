@@ -5,7 +5,7 @@
 **Category:** QA + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-105-11-01, TASK-105-11-02  
-**Status:** In Progress (2026-03-12)
+**Status:** Done (2026-03-12)
 
 ---
 
@@ -27,7 +27,7 @@ Re-audit the remaining `tests/unit/*` clusters that were previously marked `refa
 
 ## Audit Snapshot
 
-Initial `2026-03-12` findings from the re-audit:
+Final `2026-03-12` findings from the re-audit:
 - `validation` looks fully Bun-free and is a direct Vitest migration candidate.
 - `search` splits into:
   - Bun-free pure logic: `filterEngine`, `listingRuntimeService`, `searchIndexService`, `searchService`
@@ -57,6 +57,16 @@ Initial `2026-03-12` findings from the re-audit:
 1. Remaining Bun unit suites are explicitly justified.
 2. Newly-eligible Bun-free suites are called out with concrete migration targets.
 3. No ambiguous cluster remains undocumented.
+
+## Completion Notes
+
+- The audit is now translated into physical subtask files and delivered migration slices for `validation`, `assistant`, pure `posts`, pure `forms`, pure `server` helpers, and pure `search` logic.
+- The remaining ambiguous areas are no longer broad buckets:
+  - DB-backed `searchHistoryService`
+  - DB/runtime post cases
+  - DB/runtime forms cases
+  - Bun-owned server boundary cases
+  - higher-level mixed assistant/service modules
 
 ## Testing Requirements
 

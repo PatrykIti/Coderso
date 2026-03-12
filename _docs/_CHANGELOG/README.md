@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 423 | 2026-03-12 | TASK-105 refactor-first audit closure | QA/Platform |
+| 422 | 2026-03-12 | TASK-105 search pure suite migration | QA/Platform |
 | 420 | 2026-03-12 | TASK-105 server helper suite migration | QA/Platform |
 | 419 | 2026-03-12 | TASK-105 forms pure suite migration | QA/Platform |
 | 418 | 2026-03-12 | TASK-105 posts pure suite migration | QA/Platform |

@@ -5,7 +5,7 @@
 **Category:** QA + Platform  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-105-11-03  
-**Status:** In Progress (2026-03-12)
+**Status:** Done (2026-03-12)
 
 ---
 
@@ -39,15 +39,16 @@ Move the obviously Bun-free validation and search unit suites into `tests/vitest
 
 Completed in this slice:
 - moved all `tests/unit/validation/*` suites into `tests/vitest/validation/*`
-
-Blocked in this slice:
 - `tests/unit/search/filterEngine.test.ts`
 - `tests/unit/search/listingRuntimeService.test.ts`
 - `tests/unit/search/searchIndexService.test.ts`
 - `tests/unit/search/searchService.test.ts`
 
-Current blocker:
-- the search modules still pull `core/db/client` at import time through `searchService` or listing/query dependencies, so they are not yet real Vitest-safe targets without refactor.
+Kept in Bun:
+- `tests/unit/search/searchHistoryService.test.ts`
+
+Refactor delivered in this slice:
+- removed import-time `db/client` coupling from the pure `search*` module paths so the moved Vitest suites can import them safely without `DATABASE_URL`
 
 ## Acceptance Criteria
 

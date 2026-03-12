@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 10 tasks
-- **In Progress:** 9 tasks
-- **Done:** 639 tasks
+- **To Do:** 9 tasks
+- **In Progress:** 6 tasks
+- **Done:** 642 tasks
 
 ---
 
@@ -60,8 +60,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: EntryList, FieldRenderer, PageListPage, PostsListPage, PagePreview, BlockList, PostClassicEditorShell, and post blockTransforms covered; deeper editor internals remain |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: `EntryTeaserEditors` moved into direct Vitest coverage; `PostsFeed`, `ContentList`, `ListingFilters`, `StatsKpi`, and `Product*` remain |
 | TASK-105-11 | Legacy Bun-Free Test Migration Cleanup | High | Large | In progress: duplicate Bun-free suites removed from `tests/unit/ui`, `tests/unit/admin`, `tests/unit/sdk`, and `tests/unit/customScreens`; refactor-first audit remains |
-| TASK-105-11-03 | Refactor-First Cluster Ownership Audit | High | Medium | In progress: validation, assistant, pure posts, Bun-free forms helpers, and pure server helpers moved; search is blocked by import-time DB coupling and the remaining server cases are now explicit Bun keep |
-| TASK-105-11-03-01 | Validation and Search Pure Suites Move to Vitest | High | Medium | In progress: validation moved to Vitest; pure search logic is still blocked by import-time DB coupling |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 
 ---
@@ -71,10 +69,13 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-105-10 | Coverage Gap Rebaseline and Lane Backlog | High | Medium | Done: 2026-03-08 Vitest snapshot, lane split, and concrete remaining test backlog documented |
+| TASK-105-11-03 | Refactor-First Cluster Ownership Audit | High | Medium | Done: split delivered for validation, assistant, pure posts, pure forms, pure server helpers, and pure search logic; only explicit Bun-owned or deeper mixed cases remain |
+| TASK-105-11-03-05 | Server Cluster Bun Ownership Freeze | Medium | Medium | Done: explicit Bun ownership documented for the remaining server unit cluster |
 | TASK-105-11-03-06 | Server Pure Helper Suites Move to Vitest | Medium | Medium | Done: moved pure server helper suites to Vitest and left boundary/server contract suites in Bun |
 | TASK-105-11-03-04 | Forms Pure Contracts and Helper Suites Move to Vitest | High | Medium | Done: moved Bun-free forms contract/helper suites to Vitest and left DB/runtime-coupled cases in Bun |
 | TASK-105-11-03-03 | Posts Pure Editor Model Suites Move to Vitest | High | Large | Done: moved pure posts editor/model suites to Vitest and left DB/runtime-coupled cases in Bun |
 | TASK-105-11-03-02 | Assistant Pure Service Suites Move to Vitest | High | Medium | Done: moved Bun-free assistant metrics/quota/redaction/provider/planner suites into Vitest |
+| TASK-105-11-03-01 | Validation and Search Pure Suites Move to Vitest | High | Medium | Done: moved validation and pure search logic suites to Vitest and left DB search history in Bun |
 | TASK-105-11-02 | Custom Screens and Pure Domain Legacy Suites Move to Vitest | High | Medium | Done: moved `bindingResolver` to Vitest and removed legacy Bun `customScreens` duplicates |
 | TASK-105-11-01 | UI, Admin, and SDK Duplicate Legacy Suites Move to Vitest | High | Medium | Done: removed Bun-free duplicate suites after confirming Vitest-owned replacements |
 | TASK-105-07 | SDK Plugin Manifest and Custom Screens Service Wave | Medium | Medium | Done: plugin manifest, SDK client/server, and custom screen service gained direct Vitest coverage |

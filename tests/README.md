@@ -22,6 +22,7 @@ This repository uses a hybrid testing model aligned with the product architectur
   - Bun-free posts editor/model helper suites
   - Bun-free forms contract/helper suites
   - Bun-free server helper suites
+  - Bun-free search pure-logic suites
   - DOM-rich editor helpers through `happy-dom`
   - UI integration/render suites moved from `tests/integration/ui/*`
 
