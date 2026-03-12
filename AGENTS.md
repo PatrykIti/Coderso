@@ -28,6 +28,7 @@ Follow these rules when working in this repo:
 - Prefer internal admin endpoints (`/admin/api/*`) unless a public endpoint is explicitly required by architecture/product behavior.
 - Do not add production code fallbacks only to satisfy tests. Update tests/wrappers/mocks to match real behavior.
 - Own schemas, enums, defaults, and `normalize*` helpers in the domain/service contract module. Routes may re-export them, but admin/runtime code must import the owner instead of duplicating contract logic.
+- For Bun-free modules, avoid import-time coupling to `db/client`, runtime/server adapters, settings services, or integration services. Keep pure logic in standalone modules or use lazy default deps so Vitest can import the module without env/runtime side effects.
 - For DB changes, always include full migration artifacts:
   - SQL migration file,
   - `meta/*_snapshot.json`,
@@ -67,6 +68,7 @@ Follow these rules when working in this repo:
   - admin/UI,
   - SDK/shared contracts,
   - widget/content logic that does not depend on runtime Bun APIs.
+- A suite is not Bun-free if importing its production module immediately triggers DB/settings/runtime coupling. Refactor the production module first instead of forcing the test into Vitest with brittle mocks.
 - Introduce new lane changes additively first and keep the existing command surface green while migrating ownership.
 - Prefer `tests/vitest/*` for Bun-free suites by default. Use `tests/vitest/ui-integration/*` for Bun-free integration render flows.
 - Do not migrate runtime tests to Vitest only to improve coverage numbers.

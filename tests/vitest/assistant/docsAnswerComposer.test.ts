@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { composeDocsAnswer } from "../../../core/services/assistant/docsAnswerComposer";
 import type { DocsSearchHit } from "../../../core/services/assistant/docsTypes";

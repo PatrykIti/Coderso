@@ -25,6 +25,10 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 429 | 2026-03-12 | TASK-105 post runtime media seam | QA/Platform |
+| 428 | 2026-03-12 | TASK-105 import boundary guardrails | Docs/Architecture |
+| 427 | 2026-03-12 | TASK-105 forms runtime and nonce seams | QA/Platform |
+| 426 | 2026-03-12 | TASK-105 assistant provider and docs seams | QA/Platform |
 | 425 | 2026-03-12 | TASK-105 legacy migration cleanup closure | QA/Platform |
 | 424 | 2026-03-12 | TASK-105 server settings helper migration | QA/Platform |
 | 423 | 2026-03-12 | TASK-105 refactor-first audit closure | QA/Platform |

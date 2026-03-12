@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { resolveAssistantProvider } from "../../../core/services/assistant/providers";
 

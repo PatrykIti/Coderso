@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { resolveFormSubmissionAccess } from "../../../core/services/forms/formRuntimeResolver";
 

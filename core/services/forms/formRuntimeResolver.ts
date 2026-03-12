@@ -1,7 +1,7 @@
-import { getForm, listFormFields, toFieldRecord } from "./formsService";
 import { createFormSubmissionNonce } from "./submissionNonce";
 import { normalizeSubmissionAccess } from "./submissionAccess";
 import { getDefaultFormSettings, normalizeFormSettings } from "./formSettings";
+import type { NormalizedFormField } from "./validation";
 
 export type FormRuntimeResolution = {
   formId: string;
@@ -13,7 +13,7 @@ export type FormRuntimeResolution = {
   settings: ReturnType<typeof getDefaultFormSettings>;
   submissionAccess: "public" | "internal";
   submissionNonce?: string | null;
-  fields: ReturnType<typeof toFieldRecord>[];
+  fields: NormalizedFormField[];
   error?: string;
 };
 
@@ -24,6 +24,7 @@ export async function resolveFormRuntimeData(
   formId: string,
   options: { preview: boolean }
 ): Promise<FormRuntimeResolution> {
+  const { getForm, listFormFields, toFieldRecord } = await import("./formsService");
   const form = await getForm(formId);
   if (!form) {
     return {

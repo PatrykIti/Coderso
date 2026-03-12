@@ -1,8 +1,5 @@
 import type { AssistantLlmProvider } from "../../settings/settingsService";
-import {
-  getIntegrationRuntimeConfig,
-  type IntegrationRuntimeConfig,
-} from "../../integrations/integrationsService";
+import type { IntegrationRuntimeConfig } from "../../integrations/integrationsService";
 import { createOpenRouterProvider } from "./openRouterProvider";
 import type { AssistantProvider } from "./providerTypes";
 
@@ -12,7 +9,10 @@ type ProviderResolverDeps = {
 };
 
 const defaultDeps: ProviderResolverDeps = {
-  getIntegrationRuntimeConfig,
+  getIntegrationRuntimeConfig: async (id: string) => {
+    const { getIntegrationRuntimeConfig } = await import("../../integrations/integrationsService");
+    return getIntegrationRuntimeConfig(id);
+  },
   createOpenRouterProvider,
 };
 

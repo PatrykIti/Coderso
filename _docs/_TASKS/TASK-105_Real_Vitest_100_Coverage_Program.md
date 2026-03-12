@@ -338,6 +338,7 @@ It is real test authoring across still-uncovered Vitest-owned surfaces.
 8. Final branch/statement gap closure.
 9. QA/docs/changelog/board closure.
 10. Legacy Bun-free test migration cleanup.
+11. Mixed-module product refactors for runner eligibility.
 
 ## Progress
 
@@ -436,6 +437,7 @@ Remaining large clusters:
 8. `TASK-105-08_Final_Per_File_100_Gap_Closure.md`
 9. `TASK-105-09_QA_Docs_Changelog_and_Closure.md`
 10. `TASK-105-11_Legacy_Bun_Free_Test_Migration_Cleanup.md`
+11. `TASK-105-12_Mixed_Module_Product_Refactors_for_Runner_Eligibility.md`
 10. `TASK-105-10_Coverage_Gap_Rebaseline_and_Lane_Backlog.md`
 
 ## Implementation Order

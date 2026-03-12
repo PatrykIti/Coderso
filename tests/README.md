@@ -43,5 +43,6 @@ bun run test:coverage:all
 
 - Prefer adding new Bun-free tests to `tests/vitest/*`.
 - Keep existing Bun suites when they validate runtime semantics.
+- Keep Bun-free production modules import-safe for Vitest: avoid top-level imports of DB/settings/runtime services in pure helpers; use pure seams or lazy default deps instead.
 - Use `// @vitest-environment happy-dom` for DOM-heavy Vitest files.
 - Do not move runtime/plugin/install/security/perf suites to Vitest only for coverage.

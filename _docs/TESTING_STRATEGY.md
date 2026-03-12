@@ -198,6 +198,7 @@ To make the hybrid strategy sustainable:
 3. Keep admin/UI code independent from runtime kernel details.
 4. Test plugin/widget bundles with real built fixtures where runtime behavior matters.
 5. Use DB-conditional tests only where DB behavior is part of the contract.
+6. Do not let Bun-free helpers import DB/settings/runtime modules at module load time. Prefer pure helper modules or lazy default deps so Vitest can import the code without env/runtime side effects.
 
 Recommended adapter seams:
 - `RuntimeHttpServer`
@@ -206,6 +207,7 @@ Recommended adapter seams:
 - `RuntimeAssetResolver`
 
 The wider the Bun surface leaks into application logic, the harder the repo becomes to test and evolve.
+The same applies to import-time coupling: if a pure helper imports DB/settings/runtime code on load, runner ownership will drift back toward Bun even when the behavior itself is Bun-free.
 
 ## CI And Release Gates
 

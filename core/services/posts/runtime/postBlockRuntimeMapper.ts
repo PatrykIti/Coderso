@@ -8,13 +8,14 @@ import {
   resolvePostStableAnchorId,
   sanitizePostHeadingAnchorId,
 } from "../editor/postDocumentOutline";
-import { getMediaById } from "../../media/mediaService";
 import {
   resolvePostImageLayoutFromAttrs,
   type PostImageMargin,
   type PostImageWidth,
   type PostImageWrap,
 } from "../postImageWrapLayout";
+
+type ReadMediaById = typeof import("../../media/mediaService").getMediaById;
 
 const DEFAULT_EXCERPT_MAX_LENGTH = 220;
 const META_DESCRIPTION_MAX_LENGTH = 160;
@@ -298,7 +299,7 @@ export type PostRuntimeMappedDocument = {
 };
 
 type MapRuntimeOptions = {
-  getMediaById?: typeof getMediaById;
+  getMediaById?: ReadMediaById;
 };
 
 const resolveRuntimeLayout = (attrs: Record<string, unknown>): RuntimeBlockLayout => ({
@@ -338,7 +339,7 @@ const mapListItems = (content: unknown) => {
 const resolveImageSrc = async (
   mediaId: string | null,
   mediaCache: Map<string, string | null>,
-  readMedia: typeof getMediaById
+  readMedia: ReadMediaById
 ) => {
   if (!mediaId) return null;
   if (mediaId.startsWith("http://") || mediaId.startsWith("https://")) return mediaId;
@@ -357,6 +358,11 @@ const resolveImageSrc = async (
     mediaCache.set(mediaId, null);
     return null;
   }
+};
+
+const getDefaultMediaReader = async (): Promise<ReadMediaById> => {
+  const { getMediaById } = await import("../../media/mediaService");
+  return getMediaById;
 };
 
 const pushRuntimeWarning = (warnings: string[], warning: string | undefined) => {
@@ -647,7 +653,10 @@ export async function mapPostDocumentForRuntime(
   const baseDocument = coercePostDocument(data);
   const runtimeLegacy = adaptLegacyDocumentForRuntime(baseDocument);
   const document = runtimeLegacy.document;
-  const readMedia = options?.getMediaById ?? getMediaById;
+  const readMedia: ReadMediaById = async (mediaId) => {
+    const resolver = options?.getMediaById ?? (await getDefaultMediaReader());
+    return resolver(mediaId);
+  };
   const mediaCache = new Map<string, string | null>();
   const warnings = [...runtimeLegacy.warnings];
 

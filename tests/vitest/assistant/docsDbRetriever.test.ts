@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { rankAssistantDocsDbRows } from "../../../core/services/assistant/docsDbRetriever";
 

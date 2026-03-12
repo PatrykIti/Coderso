@@ -1,7 +1,6 @@
 import path from "node:path";
 import { readdir, readFile, stat } from "node:fs/promises";
 
-import { getSetting } from "../settings/settingsService";
 import type { DocsChunk, DocsIndex, DocsIndexStatus } from "./docsTypes";
 
 const DEFAULT_DOC_PATHS = ["_docs"];
@@ -349,6 +348,7 @@ const resolveAssistantDocPaths = async (override?: string[]) => {
     return normalizeConfiguredPaths(override);
   }
   try {
+    const { getSetting } = await import("../settings/settingsService");
     const value = await getSetting("assistant.docs.paths");
     return normalizeConfiguredPaths(value);
   } catch {
@@ -480,6 +480,7 @@ export const initializeDocsIndexOnBootIfEnabled = async (
   options: BuildDocsIndexOptions = {}
 ) => {
   try {
+    const { getSetting } = await import("../settings/settingsService");
     const [reindexOnBoot, docsBackend, sourceRootValue] = await Promise.all([
       getSetting("assistant.docs.reindexOnBoot"),
       getSetting("assistant.docs.backend"),

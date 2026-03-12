@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import React from "react";
+import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import { PostBlockRuntimeRenderer } from "../../../core/services/posts/runtime/postBlockRuntimeRenderer";
