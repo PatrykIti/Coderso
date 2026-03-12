@@ -20,7 +20,7 @@ This repository uses a hybrid testing model aligned with the product architectur
   - validation schema suites
   - Bun-free assistant helper/provider/planner suites
   - Bun-free posts editor/model helper suites
-  - Bun-free forms contract/helper suites
+  - Bun-free forms contract/helper/automation-core suites
   - Bun-free server helper suites
   - Bun-free search pure-logic suites
   - DOM-rich editor helpers through `happy-dom`

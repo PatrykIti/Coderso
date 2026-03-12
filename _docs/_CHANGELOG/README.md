@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 430 | 2026-03-12 | TASK-105 forms automation runner dependency split | QA/Platform |
 | 429 | 2026-03-12 | TASK-105 post runtime media seam | QA/Platform |
 | 428 | 2026-03-12 | TASK-105 import boundary guardrails | Docs/Architecture |
 | 427 | 2026-03-12 | TASK-105 forms runtime and nonce seams | QA/Platform |

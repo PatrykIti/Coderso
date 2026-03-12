@@ -5,7 +5,7 @@
 **Category:** QA + Platform + Architecture  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-11  
-**Status:** In Progress (2026-03-12)
+**Status:** Done (2026-03-12)
 
 ---
 
@@ -37,12 +37,12 @@ This task starts after the legacy suite migration cleanup:
 Completed slices:
 - assistant provider/docs lazy dependency seams
 - forms runtime resolver / nonce boundary seams
+- forms automation runner dependency split
 - posts runtime renderer media lookup seam
 - import-boundary guardrails added to `AGENTS.md`, `_docs/TESTING_STRATEGY.md`, and `tests/README.md`
 
 Remaining slices:
-- forms automation runner dependency split
-- final docs/changelog closure after the remaining product refactors
+- none; the mixed-module runner-eligibility track is now closed
 
 ## Sub-Tasks
 
@@ -57,6 +57,12 @@ Remaining slices:
 1. Remaining mixed modules expose a clear pure seam for Vitest-owned logic.
 2. Import-time DB/settings/runtime coupling is reduced or removed where the logic is meant to stay Bun-free.
 3. AGENTS/docs explicitly tell contributors how to avoid recreating the coupling.
+
+## Completion Notes
+
+- `formAutomationRunner` is now split into a Vitest-safe core module plus a thin lazy runtime wrapper, closing the last forms blocker in this track.
+- The previously delivered assistant/docs, forms runtime/nonce, and posts runtime-media seams remain in place and are now joined by the final forms automation runner split.
+- After this closure, the remaining `TASK-105` backlog is ordinary product coverage work, not mixed-module runner-eligibility cleanup.
 
 ## Testing Requirements
 

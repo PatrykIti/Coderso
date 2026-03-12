@@ -26,11 +26,17 @@ This document is the practical ownership companion to `_docs/TESTING_STRATEGY.md
 - The Bun-free assistant helper slice (`assistantMetrics`, `assistantQuota`, `assistantRedaction`, `openRouterProvider`, `siteBuilderPlanner`) has now been moved into `tests/vitest/assistant/*`.
 - The Bun-free posts editor/model helper slice has now been moved into `tests/vitest/posts/*`, while the DB/runtime post cases remain in Bun.
 - The Bun-free forms contract/helper slice has now been moved into `tests/vitest/forms/*`, while DB-backed service/submission cases remain in Bun.
+- The Bun-free forms automation runner core now lives in `core/services/forms/formAutomationRunnerCore.ts`, and its orchestration suite has moved to `tests/vitest/forms/formAutomationRunnerCore.test.ts`; the runtime wrapper in `formAutomationRunner.ts` remains lazy and server-owned.
 - The Bun-free server helper slice (`errorHandler`, `requestBody`, `routeMatcher`, `solutionKitSchemas`, `styleUrl`) has now been moved into `tests/vitest/server/*`.
 - The Bun-free search pure-logic slice (`filterEngine`, `listingRuntimeService`, `searchIndexService`, `searchService`) has now been moved into `tests/vitest/search/*`.
 - `search` remains split:
   - `searchHistoryService` stays in Bun because it is DB-backed,
   - the remaining search unit backlog is now the DB-backed history case only.
+
+## Refactor-first closure update (2026-03-12)
+
+- The original refactor-first blocker set from the 2026-03-06 snapshot is now either migrated to Vitest or intentionally left in Bun for DB/runtime reasons.
+- `formAutomationRunner` was the last mixed forms blocker in that set and is now closed through the new Vitest-owned core plus lazy runtime wrapper.
 
 ## Strong Bun ownership clusters
 
@@ -43,7 +49,7 @@ This document is the practical ownership companion to `_docs/TESTING_STRATEGY.md
 - `tests/perf/*`
 - `tests/security/*`
 
-## Refactor-first clusters
+## Historical refactor-first clusters
 
 - `assistant`
 - `posts`
@@ -52,7 +58,7 @@ This document is the practical ownership companion to `_docs/TESTING_STRATEGY.md
 - `server`
 - `validation`
 
-These areas often mix pure logic with DB or runtime adapters and should be split before further migration.
+These areas described the 2026-03-06 baseline and have since been addressed by the migration and refactor waves above.
 
 ## Bun coverage hotspots from baseline report
 

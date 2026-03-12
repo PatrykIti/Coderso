@@ -5,7 +5,7 @@
 **Category:** Platform + Forms  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-105-12-02  
-**Status:** To Do
+**Status:** Done (2026-03-12)
 
 ---
 
@@ -18,6 +18,13 @@ Extract a pure automation-runner core from the current mixed `formAutomationRunn
 1. Pure automation orchestration becomes import-safe for Vitest.
 2. Runtime wiring remains in a thin wrapper with explicit default deps.
 3. Existing behavior and action run persistence semantics remain unchanged.
+
+## Completion Notes
+
+- Extracted the Bun-free orchestration and action execution flow into `core/services/forms/formAutomationRunnerCore.ts`.
+- Converted `core/services/forms/formAutomationRunner.ts` into a thin runtime wrapper with lazy default deps for form actions, form settings lookup, email transport/settings, and entry persistence.
+- Moved the orchestration suite from `tests/unit/forms/formAutomationRunner.test.ts` into `tests/vitest/forms/formAutomationRunnerCore.test.ts`.
+- Revalidated the existing Bun-owned route surface separately so runtime form submission and retry paths still import cleanly through the server boundary.
 
 ## Testing Requirements
 

@@ -425,6 +425,8 @@ Remaining large clusters:
 - deeper `listings` editor/page flows
 - settings, popups, audit, users, content-types, media, auth, and other non-wave admin surfaces now quantified by `TASK-105-10`
 
+The mixed-module runner-eligibility track in `TASK-105-12` is now closed; the remaining backlog is direct product coverage work rather than import-boundary cleanup.
+
 ## Sub-Tasks
 
 1. `TASK-105-01_Vitest_Coverage_Matrix_and_Invariants.md`

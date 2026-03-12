@@ -1,22 +1,22 @@
-import { expect, test } from "bun:test";
+import { expect, test, vi } from "vitest";
 
 import {
-  retryFormAutomationRun,
-  runFormAutomation,
-} from "../../../core/services/forms/formAutomationRunner";
+  retryFormAutomationRunCore,
+  runFormAutomationCore,
+  type FormAutomationRunnerCoreDeps,
+} from "../../../core/services/forms/formAutomationRunnerCore";
+import type { NormalizedFormAction } from "../../../core/services/forms/formActionsContract";
 import type {
   CreateFormActionRunInput,
-  FormActionRecord,
   FormActionRunRecord,
 } from "../../../core/services/forms/formActionsService";
 
 const now = new Date("2026-02-18T10:00:00.000Z");
 
 const createAction = (
-  overrides: Partial<FormActionRecord>
-): FormActionRecord => ({
+  overrides: Partial<NormalizedFormAction>
+): NormalizedFormAction => ({
   id: overrides.id ?? "action-1",
-  formId: overrides.formId ?? "form-1",
   type: overrides.type ?? "success_message",
   label: overrides.label ?? "Action",
   enabled: overrides.enabled ?? true,
@@ -24,8 +24,6 @@ const createAction = (
   condition: overrides.condition ?? { operator: "always" },
   config: overrides.config ?? { message: "Done" },
   orderIndex: overrides.orderIndex ?? 0,
-  createdAt: overrides.createdAt ?? now,
-  updatedAt: overrides.updatedAt ?? now,
 });
 
 const createRunRecord = (
@@ -52,10 +50,45 @@ const createRunRecord = (
   createdAt: now,
 });
 
-test("runFormAutomation executes ordered actions and merges runtime outcome", async () => {
+const createCoreDeps = (
+  overrides: Partial<FormAutomationRunnerCoreDeps> = {}
+): FormAutomationRunnerCoreDeps => ({
+  listActions: async () => [],
+  createRun: async (input) => createRunRecord(input, 0),
+  resolveNextAttempt: async () => 1,
+  getRunById: async () => null,
+  getFormSettingsById: async () => null,
+  getEmailSettings: async () => ({
+    smtp: {
+      host: "smtp.example.com",
+      port: 587,
+      secure: false,
+      user: "mailer@example.com",
+      password: "secret",
+    },
+    from: {
+      name: "Nextless",
+      email: "hello@example.com",
+    },
+  }),
+  createEmailTransport: async () => ({
+    sendMail: async () => ({
+      messageId: "message-1",
+      response: "queued",
+    }),
+  }),
+  getEntryBySlug: async () => null,
+  createEntry: async () => ({ id: "entry-1" }),
+  updateEntry: async () => ({ id: "entry-1" }),
+  fetchFn: async () => new Response("ok", { status: 200 }),
+  sleep: async () => undefined,
+  ...overrides,
+});
+
+test("runFormAutomationCore executes ordered actions and merges runtime outcome", async () => {
   const logs: CreateFormActionRunInput[] = [];
 
-  const result = await runFormAutomation(
+  const result = await runFormAutomationCore(
     {
       formId: "form-1",
       submissionId: "submission-1",
@@ -64,7 +97,7 @@ test("runFormAutomation executes ordered actions and merges runtime outcome", as
       },
       submittedAt: now,
     },
-    {
+    createCoreDeps({
       listActions: async () => [
         createAction({
           id: "message",
@@ -86,7 +119,7 @@ test("runFormAutomation executes ordered actions and merges runtime outcome", as
         logs.push(input);
         return createRunRecord(input, logs.length - 1);
       },
-    }
+    })
   );
 
   expect(result.successMessage).toBe("Thanks Patryk");
@@ -96,10 +129,60 @@ test("runFormAutomation executes ordered actions and merges runtime outcome", as
   expect(logs[1]?.status).toBe("success");
 });
 
-test("runFormAutomation skips action when condition is not met", async () => {
+test("runFormAutomationCore renders email actions with configured sender defaults", async () => {
+  const deliveries: Array<Record<string, string | undefined>> = [];
+
+  const result = await runFormAutomationCore(
+    {
+      formId: "form-1",
+      submissionId: "submission-1",
+      submissionPayload: {
+        email: "lead@example.com",
+        name: "Patryk",
+      },
+      submittedAt: now,
+    },
+    createCoreDeps({
+      listActions: async () => [
+        createAction({
+          id: "email",
+          type: "email",
+          label: "Send email",
+          config: {
+            to: "{{submission.email}}",
+            subject: "Lead {{submission.name}}",
+            text: "Body for {{submission.name}}",
+          },
+        }),
+      ],
+      createEmailTransport: async () => ({
+        sendMail: async (message) => {
+          deliveries.push(message);
+          return {
+            messageId: "message-1",
+            response: "queued",
+          };
+        },
+      }),
+    })
+  );
+
+  expect(result.runs).toHaveLength(1);
+  expect(result.runs[0]?.status).toBe("success");
+  expect(deliveries).toEqual([
+    {
+      from: "Nextless <hello@example.com>",
+      to: "lead@example.com",
+      subject: "Lead Patryk",
+      text: "Body for Patryk",
+    },
+  ]);
+});
+
+test("runFormAutomationCore skips action when condition is not met", async () => {
   const logs: CreateFormActionRunInput[] = [];
 
-  const result = await runFormAutomation(
+  const result = await runFormAutomationCore(
     {
       formId: "form-1",
       submissionId: "submission-1",
@@ -107,7 +190,7 @@ test("runFormAutomation skips action when condition is not met", async () => {
         intent: "support",
       },
     },
-    {
+    createCoreDeps({
       listActions: async () => [
         createAction({
           id: "conditional",
@@ -125,7 +208,7 @@ test("runFormAutomation skips action when condition is not met", async () => {
         logs.push(input);
         return createRunRecord(input, logs.length - 1);
       },
-    }
+    })
   );
 
   expect(result.redirectUrl).toBeNull();
@@ -134,10 +217,10 @@ test("runFormAutomation skips action when condition is not met", async () => {
   expect(logs[0]?.responsePayload).toEqual({ reason: "condition_not_met" });
 });
 
-test("runFormAutomation stops when action fails and continueOnError is false", async () => {
+test("runFormAutomationCore stops when action fails and continueOnError is false", async () => {
   const logs: CreateFormActionRunInput[] = [];
 
-  const result = await runFormAutomation(
+  const result = await runFormAutomationCore(
     {
       formId: "form-1",
       submissionId: "submission-1",
@@ -145,16 +228,18 @@ test("runFormAutomation stops when action fails and continueOnError is false", a
         email: "lead@example.com",
       },
     },
-    {
+    createCoreDeps({
       listActions: async () => [
         createAction({
-          id: "email",
-          type: "email",
+          id: "webhook",
+          type: "webhook",
           continueOnError: false,
           config: {
-            to: "{{submission.email}}",
-            subject: "Lead",
-            text: "Body",
+            url: "https://example.com/hook",
+            method: "POST",
+            headers: {},
+            includeSubmission: true,
+            timeoutMs: 1000,
           },
         }),
         createAction({
@@ -169,19 +254,21 @@ test("runFormAutomation stops when action fails and continueOnError is false", a
         logs.push(input);
         return createRunRecord(input, logs.length - 1);
       },
-    }
+      fetchFn: async () => new Response("failed", { status: 500 }),
+    })
   );
 
   expect(result.runs).toHaveLength(1);
   expect(result.runs[0]?.status).toBe("failed");
 });
 
-test("runFormAutomation retries failed action when retry policy is enabled", async () => {
+test("runFormAutomationCore retries failed action when retry policy is enabled", async () => {
   const logs: CreateFormActionRunInput[] = [];
+  const sleep = vi.fn(async () => undefined);
   let fetchCalls = 0;
   let attemptCounter = 0;
 
-  const result = await runFormAutomation(
+  const result = await runFormAutomationCore(
     {
       formId: "form-1",
       submissionId: "submission-1",
@@ -195,7 +282,7 @@ test("runFormAutomation retries failed action when retry policy is enabled", asy
         },
       },
     },
-    {
+    createCoreDeps({
       listActions: async () => [
         createAction({
           id: "webhook",
@@ -225,7 +312,8 @@ test("runFormAutomation retries failed action when retry policy is enabled", asy
         }
         return new Response("ok", { status: 200 });
       },
-    }
+      sleep,
+    })
   );
 
   expect(result.runs).toHaveLength(2);
@@ -233,9 +321,10 @@ test("runFormAutomation retries failed action when retry policy is enabled", asy
   expect(result.runs[1]?.status).toBe("success");
   expect(result.runs[1]?.attempt).toBe(2);
   expect(logs[0]?.responsePayload).toEqual({ retryScheduled: true, retryDelayMs: 50 });
+  expect(sleep).toHaveBeenCalledWith(50);
 });
 
-test("retryFormAutomationRun reruns failed action snapshot", async () => {
+test("retryFormAutomationRunCore reruns failed action snapshot", async () => {
   const runInputs: CreateFormActionRunInput[] = [];
 
   const sourceRun = createRunRecord(
@@ -257,15 +346,18 @@ test("retryFormAutomationRun reruns failed action snapshot", async () => {
     0
   );
 
-  const retry = await retryFormAutomationRun("run-1", {
-    getRunById: async () => sourceRun,
-    getFormById: async () => null,
-    resolveNextAttempt: async () => 2,
-    createRun: async (input) => {
-      runInputs.push(input);
-      return createRunRecord(input, runInputs.length);
-    },
-  });
+  const retry = await retryFormAutomationRunCore(
+    "run-1",
+    createCoreDeps({
+      getRunById: async () => sourceRun,
+      getFormSettingsById: async () => null,
+      resolveNextAttempt: async () => 2,
+      createRun: async (input) => {
+        runInputs.push(input);
+        return createRunRecord(input, runInputs.length);
+      },
+    })
+  );
 
   expect(retry.run.status).toBe("success");
   expect(retry.run.trigger).toBe("retry");

@@ -403,7 +403,7 @@ const mapWritingCanvasNodesForRuntime = async (
   content: unknown,
   blockId: string,
   mediaCache: Map<string, string | null>,
-  readMedia: typeof getMediaById,
+  readMedia: ReadMediaById,
   warnings: string[]
 ): Promise<RuntimeWritingCanvasNode[]> => {
   if (!isRecord(content) || !Array.isArray(content.nodes)) {
