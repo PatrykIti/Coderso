@@ -48,6 +48,7 @@ Completed slices:
 - deeper interaction coverage for `BlockList`
 - direct Vitest coverage for `blockTransforms`
 - deeper direct Vitest coverage for `FieldRenderer`
+- direct `happy-dom` branch coverage for `PageTable`
 - deeper `PageListPage` coverage for filters, cache refresh, and create-without-open flow
 - deeper `PostsListPage` coverage for tag filters, cancelled deletes, and create-without-open flow
 - direct `happy-dom` shell coverage for `PostClassicEditorShell`
