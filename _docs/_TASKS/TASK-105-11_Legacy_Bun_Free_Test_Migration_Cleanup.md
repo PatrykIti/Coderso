@@ -5,7 +5,7 @@
 **Category:** QA + Platform  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-102, TASK-104, TASK-105  
-**Status:** In Progress (2026-03-12)
+**Status:** Done (2026-03-12)
 
 ---
 
@@ -50,7 +50,13 @@ Completed slices:
 - moved the Bun-free server settings-bound helper suites into `tests/vitest/server/*`
 
 Remaining slices:
-- refactor-first cluster audit for `posts/forms/search/server/assistant/validation`
+- none inside the legacy Bun-free migration cleanup scope
+
+## Completion Notes
+
+- The Bun-free legacy suite migration track is complete for the mechanically movable areas.
+- Remaining Bun-owned test cases are now explicit and intentional rather than legacy leftovers.
+- Remaining mixed modules now require code refactors, not more runner-cleanup bookkeeping.
 
 ## Sub-Tasks
 
