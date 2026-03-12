@@ -48,6 +48,7 @@ Completed slices:
 - booking tabs: `Availability`, `Services`, `Reservations`, `SlotPreview`
 - booking resource tab coverage
 - shell-level booking flows for `BookingPage`
+- booking follow-up branches for cancel handlers, reservation-status errors, empty slot preview success state, and direct `bookingHelpers.ts` coverage
 - commerce leaf panels and small editor sections
 - form leaf: `FormCanvas`
 - forms support panels and list/create flow

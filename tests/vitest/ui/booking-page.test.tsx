@@ -1080,3 +1080,55 @@ test("BookingPage reports validation errors for invalid schedule, blackout, rese
     view.cleanup();
   }
 });
+
+test("BookingPage handles cancel flows, reservation-status errors, resource save errors, and empty slot previews", async () => {
+  window.history.replaceState({}, "", "/admin/coderso/booking");
+  const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
+  const view = mount(<BookingPage />);
+
+  try {
+    await flush();
+
+    clickByText(view.container, "edit-resource");
+    await flush();
+    expect(view.container.textContent).toContain("editing-resource:resource-1");
+
+    clickByText(view.container, "cancel-resource");
+    await flush();
+    expect(view.container.textContent).toContain("editing-resource:none");
+
+    clickByText(view.container, "edit-service");
+    await flush();
+    expect(view.container.textContent).toContain("editing-service:service-1");
+
+    clickByText(view.container, "cancel-service");
+    await flush();
+    expect(view.container.textContent).toContain("editing-service:none");
+
+    bookingPageState.resourceSaveError = new Error("Resource write failed");
+    clickByText(view.container, "fill-resource");
+    clickByText(view.container, "submit-resource");
+    await flush();
+    expect(view.container.textContent).toContain("Resource save failed");
+    expect(view.container.textContent).toContain("Resource write failed");
+
+    bookingPageState.resourceSaveError = null;
+    bookingPageState.reservationStatusError = new Error("Reservation status failed");
+    clickByText(view.container, "draft-reservation-status");
+    clickByText(view.container, "update-reservation-status");
+    await flush();
+    expect(view.container.textContent).toContain("Status update failed");
+    expect(view.container.textContent).toContain("Reservation status failed");
+
+    bookingPageState.reservationStatusError = null;
+    bookingPageState.previewSlots = [];
+    clickByText(view.container, "fill-slot-preview");
+    clickByText(view.container, "preview-slots");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "No available slots for selected date and resource."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
