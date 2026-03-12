@@ -59,6 +59,7 @@ Completed slices:
 - direct create/edit/save/invert coverage for `ThemeTemplateDrawer`
 - interactive page-level coverage for `ThemesPage`
 - direct create/edit/no-template coverage for `ThemeProfileDrawer`
+- themes follow-up branches for first-profile auto-activation, template/profile save failures, and remaining topbar/card/state token editing paths in `ThemeTemplateDrawer`
 
 Current `2026-03-08` forms snapshot after the latest slice:
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `81.25%` lines / `65.95%` branches

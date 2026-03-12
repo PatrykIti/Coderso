@@ -605,3 +605,65 @@ test("ThemesPage renders empty and error states", async () => {
     errorView.cleanup();
   }
 });
+
+test("ThemesPage auto-activates the first profile and reports template/profile save failures", async () => {
+  const { ThemesPage } = await import("../../../core/admin/ui/themes/ThemesPage");
+
+  themesState.profiles = [];
+  themesState.cachedProfiles = [];
+
+  const activateView = mount(<ThemesPage />);
+
+  try {
+    await flush();
+
+    clickByText(activateView.container, "New Profile");
+    clickByText(activateView.container, "save-profile-drawer");
+    await flush();
+
+    expect(themesState.createProfileCalls.at(-1)).toEqual({
+      name: "Studio Profile",
+      description: "Fresh profile",
+      templateId: "template-1",
+      isActive: true,
+    });
+  } finally {
+    activateView.cleanup();
+  }
+
+  themesState.reset();
+  themesState.saveTemplateError = { name: "ApiClientError", message: "Template save denied" };
+
+  const templateErrorView = mount(<ThemesPage />);
+
+  try {
+    await flush();
+
+    clickByText(templateErrorView.container, "New Template");
+    clickByText(templateErrorView.container, "save-template-drawer");
+    await flush();
+
+    expect(templateErrorView.container.textContent).toContain("Template save denied");
+  } finally {
+    templateErrorView.cleanup();
+  }
+
+  themesState.reset();
+  themesState.saveProfileError = new Error("Profile exploded");
+
+  const profileErrorView = mount(<ThemesPage />);
+
+  try {
+    await flush();
+
+    clickByText(profileErrorView.container, "New Profile");
+    clickByText(profileErrorView.container, "save-profile-drawer");
+    await flush();
+
+    expect(profileErrorView.container.textContent).toContain(
+      "Failed to save theme profile."
+    );
+  } finally {
+    profileErrorView.cleanup();
+  }
+});
