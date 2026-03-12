@@ -762,6 +762,42 @@ vi.mock("../../../core/admin/ui/booking/components/ReservationsTab", () => ({
       >
         fill-invalid-reservation
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          onReservationFormChange({
+            serviceId: "service-1",
+            resourceId: "resource-1",
+            startsAt: "2026-03-10T10:00",
+            endsAt: "2026-03-10T11:00",
+            timezone: "Europe/Warsaw",
+            customerName: "",
+            customerEmail: "grace@example.com",
+            customerPhone: "+48111222333",
+            notes: "",
+          })
+        }
+      >
+        fill-reservation-missing-name
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onReservationFormChange({
+            serviceId: "service-1",
+            resourceId: "resource-1",
+            startsAt: "2026-03-10T11:00",
+            endsAt: "2026-03-10T10:00",
+            timezone: "Europe/Warsaw",
+            customerName: "Grace Hopper",
+            customerEmail: "grace@example.com",
+            customerPhone: "+48111222333",
+            notes: "",
+          })
+        }
+      >
+        fill-reservation-invalid-range
+      </button>
       <button type="button" onClick={onCreateReservation}>
         create-reservation
       </button>
@@ -1127,6 +1163,45 @@ test("BookingPage handles cancel flows, reservation-status errors, resource save
     await flush();
     expect(view.container.textContent).toContain(
       "No available slots for selected date and resource."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BookingPage reports delete-service/delete-blackout failures and reservation validation errors", async () => {
+  window.history.replaceState({}, "", "/admin/coderso/booking");
+  const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
+  const view = mount(<BookingPage />);
+
+  try {
+    await flush();
+
+    bookingPageState.serviceDeleteError = new Error("Service delete failed");
+    clickByText(view.container, "delete-service");
+    await flush();
+    expect(view.container.textContent).toContain("Delete failed");
+    expect(view.container.textContent).toContain("Service delete failed");
+
+    bookingPageState.serviceDeleteError = null;
+    bookingPageState.blackoutDeleteError = {
+      name: "ApiClientError",
+      message: "Blackout delete denied",
+    };
+    clickByText(view.container, "delete-blackout");
+    await flush();
+    expect(view.container.textContent).toContain("Unable to delete blackout.");
+
+    clickByText(view.container, "fill-reservation-missing-name");
+    clickByText(view.container, "create-reservation");
+    await flush();
+    expect(view.container.textContent).toContain("Customer name is required.");
+
+    clickByText(view.container, "fill-reservation-invalid-range");
+    clickByText(view.container, "create-reservation");
+    await flush();
+    expect(view.container.textContent).toContain(
+      "End time must be later than start time."
     );
   } finally {
     view.cleanup();

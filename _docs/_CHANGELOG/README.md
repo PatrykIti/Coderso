@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 435 | 2026-03-12 | TASK-105 booking validation and delete branch follow-up | QA/Platform |
 | 434 | 2026-03-12 | TASK-105 themes drawer and page branch follow-up | QA/Platform |
 | 433 | 2026-03-12 | TASK-105 listings editor and binding branch follow-up | QA/Platform |
 | 432 | 2026-03-12 | TASK-105 booking helper and page branch follow-up | QA/Platform |

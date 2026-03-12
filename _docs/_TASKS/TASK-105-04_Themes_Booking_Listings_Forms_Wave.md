@@ -49,6 +49,7 @@ Completed slices:
 - booking resource tab coverage
 - shell-level booking flows for `BookingPage`
 - booking follow-up branches for cancel handlers, reservation-status errors, empty slot preview success state, and direct `bookingHelpers.ts` coverage
+- booking follow-up branches for delete-service/delete-blackout errors and reservation validation on missing customer name plus reversed time ranges
 - commerce leaf panels and small editor sections
 - form leaf: `FormCanvas`
 - forms support panels and list/create flow
