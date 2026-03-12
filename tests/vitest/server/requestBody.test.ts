@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { parseRequestBody } from "../../../core/server/requestBody";
 import { ApiError } from "../../../core/server/errorHandler";

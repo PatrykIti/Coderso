@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { ApiError } from "../../../core/server/errorHandler";
 import { validate } from "../../../core/server/validation/schemaValidator";

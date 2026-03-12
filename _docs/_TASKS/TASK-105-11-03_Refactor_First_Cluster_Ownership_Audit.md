@@ -39,7 +39,9 @@ Initial `2026-03-12` findings from the re-audit:
 - `forms` splits into:
   - pure contracts/settings/helpers have now been moved into `tests/vitest/forms/*`
   - DB-coupled Bun keep for service and submission persistence flows.
-- `server` remains the strongest Bun keep cluster because those tests validate server contract modules even when they do not directly instantiate `Bun.serve`.
+- `server` now splits into:
+  - Vitest-owned pure helpers: `errorHandler`, `requestBody`, `routeMatcher`, `solutionKitSchemas`, `styleUrl`
+  - Bun keep: the remaining server-boundary contract suites, especially anything tied to settings/runtime or public API behavior
 
 ## Sub-Tasks
 
@@ -48,6 +50,7 @@ Initial `2026-03-12` findings from the re-audit:
 3. `TASK-105-11-03-03_Posts_Pure_Editor_Model_Suites_Move_to_Vitest.md`
 4. `TASK-105-11-03-04_Forms_Pure_Contracts_and_Helper_Suites_Move_to_Vitest.md`
 5. `TASK-105-11-03-05_Server_Cluster_Bun_Ownership_Freeze.md`
+6. `TASK-105-11-03-06_Server_Pure_Helper_Suites_Move_to_Vitest.md`
 
 ## Acceptance Criteria
 

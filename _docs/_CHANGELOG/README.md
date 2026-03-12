@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 420 | 2026-03-12 | TASK-105 server helper suite migration | QA/Platform |
 | 419 | 2026-03-12 | TASK-105 forms pure suite migration | QA/Platform |
 | 418 | 2026-03-12 | TASK-105 posts pure suite migration | QA/Platform |
 | 417 | 2026-03-12 | TASK-105 validation and assistant suite migration | QA/Platform |

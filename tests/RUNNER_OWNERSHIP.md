@@ -26,6 +26,7 @@ This document is the practical ownership companion to `_docs/TESTING_STRATEGY.md
 - The Bun-free assistant helper slice (`assistantMetrics`, `assistantQuota`, `assistantRedaction`, `openRouterProvider`, `siteBuilderPlanner`) has now been moved into `tests/vitest/assistant/*`.
 - The Bun-free posts editor/model helper slice has now been moved into `tests/vitest/posts/*`, while the DB/runtime post cases remain in Bun.
 - The Bun-free forms contract/helper slice has now been moved into `tests/vitest/forms/*`, while DB-backed service/submission cases remain in Bun.
+- The Bun-free server helper slice (`errorHandler`, `requestBody`, `routeMatcher`, `solutionKitSchemas`, `styleUrl`) has now been moved into `tests/vitest/server/*`.
 - `search` remains split:
   - `searchHistoryService` stays in Bun because it is DB-backed,
   - the remaining search unit suites are still blocked by import-time DB coupling and remain refactor-first.

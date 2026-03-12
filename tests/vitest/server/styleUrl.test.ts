@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { resolveDevCssUrl } from "../../../core/server/utils/styleUrl";
 
