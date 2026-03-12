@@ -38,8 +38,9 @@ const pagePostState = vi.hoisted(() => {
 
   return {
     apiError,
-    pages: [page],
-    posts: [post],
+    pages: [{ ...page }],
+    posts: [{ ...post }],
+    cachedPostsOverride: undefined as typeof post[] | null | undefined,
     pageError: null as unknown,
     postError: null as unknown,
     createPageError: null as unknown,
@@ -48,6 +49,7 @@ const pagePostState = vi.hoisted(() => {
     deletePostError: null as unknown,
     publishPageError: null as unknown,
     publishPostError: null as unknown,
+    unpublishPostError: null as unknown,
     previewPageError: null as unknown,
     previewPostError: null as unknown,
     duplicatePageError: null as unknown,
@@ -73,6 +75,9 @@ const pagePostState = vi.hoisted(() => {
     duplicatePostCalls: [] as string[],
     getUserSettings: vi.fn(async () => ({ "pages.openAfterCreate": true })),
     reset() {
+      this.pages = [{ ...page }];
+      this.posts = [{ ...post }];
+      this.cachedPostsOverride = undefined;
       this.pageError = null;
       this.postError = null;
       this.createPageError = null;
@@ -81,6 +86,7 @@ const pagePostState = vi.hoisted(() => {
       this.deletePostError = null;
       this.publishPageError = null;
       this.publishPostError = null;
+      this.unpublishPostError = null;
       this.previewPageError = null;
       this.previewPostError = null;
       this.duplicatePageError = null;
@@ -104,7 +110,8 @@ const pagePostState = vi.hoisted(() => {
       this.unpublishPostCalls = [];
       this.duplicatePageCalls = [];
       this.duplicatePostCalls = [];
-      this.getUserSettings.mockClear();
+      this.getUserSettings.mockReset();
+      this.getUserSettings.mockImplementation(async () => ({ "pages.openAfterCreate": true }));
     },
   };
 });
@@ -228,6 +235,12 @@ vi.mock("@/components/ui/sheet", () => ({
     onOpenChange?: (open: boolean) => void;
   }) => (
     <div data-sheet-open={String(Boolean(open))} data-has-open-change={String(Boolean(onOpenChange))}>
+      <button type="button" onClick={() => onOpenChange?.(true)}>
+        sheet-trigger-open
+      </button>
+      <button type="button" onClick={() => onOpenChange?.(false)}>
+        sheet-trigger-close
+      </button>
       {children}
     </div>
   ),
@@ -300,7 +313,10 @@ vi.mock("@/services/pagesClient", () => ({
 }));
 
 vi.mock("@/services/postsClient", () => ({
-  getCachedPosts: () => pagePostState.posts,
+  getCachedPosts: () =>
+    pagePostState.cachedPostsOverride === undefined
+      ? pagePostState.posts
+      : pagePostState.cachedPostsOverride,
   listPostsCached: vi.fn(async ({ force }: { force?: boolean } = {}) => {
     pagePostState.postRefreshCalls.push({
       force,
@@ -336,6 +352,7 @@ vi.mock("@/services/postsClient", () => ({
   }),
   unpublishPost: vi.fn(async (id: string) => {
     pagePostState.unpublishPostCalls.push(id);
+    if (pagePostState.unpublishPostError) throw pagePostState.unpublishPostError;
     return { ok: true };
   }),
 }));
@@ -938,6 +955,171 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
   } finally {
     view.cleanup();
     delete (window as Window & { confirm?: unknown }).confirm;
+  }
+});
+
+test("PostsListPage loads without cache, refreshes on matching cache events, and surfaces load failures", async () => {
+  pagePostState.cachedPostsOverride = null;
+  pagePostState.postError = pagePostState.apiError("Posts unavailable.");
+  pagePostState.getUserSettings.mockRejectedValueOnce(new Error("prefs unavailable"));
+
+  const { PostsListPage } = await import(
+    "../../../core/admin/ui/posts/PostsListPage"
+  );
+
+  const view = mount(<PostsListPage />);
+
+  try {
+    expect(view.container.textContent).toContain("Loading posts");
+
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Posts unavailable.");
+    expect(pagePostState.getUserSettings).toHaveBeenCalled();
+
+    pagePostState.postError = new Error("generic load failure");
+    await act(async () => {
+      pagePostState.postSubscribers.forEach((handler) =>
+        handler({ key: "postsList" })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Failed to load posts.");
+
+    pagePostState.postError = null;
+    await act(async () => {
+      pagePostState.postSubscribers.forEach((handler) =>
+        handler({ key: "postsList" })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Product launch");
+    expect(pagePostState.postRefreshCalls).toEqual([
+      { force: true, background: true },
+      { force: true, background: true },
+      { force: true, background: true },
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsListPage opens drawer via sheet controls, creates with navigation, and reports action failures", async () => {
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => true),
+  });
+  Object.defineProperty(window, "open", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(),
+  });
+
+  const { PostsListPage } = await import(
+    "../../../core/admin/ui/posts/PostsListPage"
+  );
+
+  const view = mount(<PostsListPage />);
+
+  try {
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    const buttons = () => Array.from(view.container.querySelectorAll("button"));
+    const titleInput = () =>
+      view.container.querySelector(
+        'input[placeholder="e.g. Product launch update"]'
+      );
+
+    act(() => {
+      buttons().find((button) => button.textContent === "sheet-trigger-open")?.click();
+    });
+    expect(
+      view.container
+        .querySelector("[data-has-open-change='true']")
+        ?.getAttribute("data-sheet-open")
+    ).toBe("true");
+
+    act(() => {
+      buttons().find((button) => button.textContent === "sheet-trigger-close")?.click();
+    });
+    expect(
+      view.container
+        .querySelector("[data-has-open-change='true']")
+        ?.getAttribute("data-sheet-open")
+    ).toBe("false");
+
+    act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Create New Post"))
+        ?.click();
+      setInputValue(titleInput() ?? undefined, "Launch Memo");
+    });
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    pagePostState.createPostError = new Error("create generic failure");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "Create Post")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Failed to create post.");
+
+    pagePostState.createPostError = null;
+    await act(async () => {
+      setInputValue(titleInput() ?? undefined, "Launch Memo");
+      await flushMicrotasks();
+      buttons().find((button) => button.textContent === "Create Post")?.click();
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.navigateCalls).toContain("/coderso/posts/created-post");
+
+    pagePostState.previewPostError = pagePostState.apiError("Preview denied.");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "preview-post-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Preview denied.");
+
+    pagePostState.publishPostError = new Error("publish generic failure");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "publish-post-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Failed to publish post.");
+
+    pagePostState.unpublishPostError = pagePostState.apiError("Unpublish denied.");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "unpublish-post-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Unpublish denied.");
+
+    pagePostState.duplicatePostError = new Error("duplicate generic failure");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "duplicate-post-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Failed to duplicate post.");
+
+    pagePostState.deletePostError = pagePostState.apiError("Delete denied.");
+    await act(async () => {
+      buttons().find((button) => button.textContent === "delete-post-row")?.click();
+      await flushMicrotasks();
+    });
+    expect(view.container.textContent).toContain("Delete denied.");
+  } finally {
+    view.cleanup();
+    delete (window as Window & { confirm?: unknown }).confirm;
+    delete (window as Window & { open?: unknown }).open;
   }
 });
 
