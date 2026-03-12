@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 443 | 2026-03-12 | TASK-105 post editor canvas interaction coverage | QA/Platform |
 | 442 | 2026-03-12 | TASK-105 posts table branch coverage | QA/Platform |
 | 441 | 2026-03-12 | TASK-105 post richtext adapter dom flow coverage | QA/Platform |
 | 440 | 2026-03-12 | TASK-105 post richtext toolbar interaction coverage | QA/Platform |
