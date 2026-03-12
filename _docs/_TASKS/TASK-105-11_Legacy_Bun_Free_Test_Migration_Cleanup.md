@@ -44,6 +44,7 @@ Completed slices:
 - moved all validation schema suites into `tests/vitest/validation/*`
 - moved the Bun-free assistant helper/provider/planner suites into `tests/vitest/assistant/*`
 - moved the Bun-free posts editor/model suites into `tests/vitest/posts/*`
+- moved the Bun-free forms contract/helper suites into `tests/vitest/forms/*`
 
 Remaining slices:
 - refactor-first cluster audit for `posts/forms/search/server/assistant/validation`

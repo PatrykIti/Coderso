@@ -37,7 +37,7 @@ Initial `2026-03-12` findings from the re-audit:
   - pure editor/domain leaves have now been moved into `tests/vitest/posts/*`
   - Bun keep or verify carefully: DB/schema/runtime renderer and any file still coupled to runtime/public rendering contracts.
 - `forms` splits into:
-  - Bun-free pure contracts/settings/helpers
+  - pure contracts/settings/helpers have now been moved into `tests/vitest/forms/*`
   - DB-coupled Bun keep for service and submission persistence flows.
 - `server` remains the strongest Bun keep cluster because those tests validate server contract modules even when they do not directly instantiate `Bun.serve`.
 

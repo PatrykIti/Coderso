@@ -5,7 +5,7 @@
 **Category:** QA + Platform  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-105-11-03-01  
-**Status:** To Do
+**Status:** Done (2026-03-12)
 
 ---
 
@@ -18,6 +18,12 @@ Move the clearly Bun-free forms contract/helper suites into Vitest while leaving
 1. Pure forms contract/helper suites no longer depend on `bun:test`.
 2. DB-backed forms service/submission tests stay in Bun.
 3. The forms cluster gets split by real dependency shape rather than folder name.
+
+## Completion Notes
+
+- Moved the Bun-free forms contract/helper suites into `tests/vitest/forms/*`.
+- Left DB-backed forms service/submission suites in Bun.
+- Left `formAutomationRunner`, `formRuntimeResolver`, and `submissionNonce` out of the migration because they still need refactor or boundary cleanup before a clean Vitest move.
 
 ## Testing Requirements
 
