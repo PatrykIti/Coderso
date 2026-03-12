@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 439 | 2026-03-12 | TASK-105 post richtext paste helper follow-up | QA/Platform |
 | 438 | 2026-03-12 | TASK-105 post richtext helper export coverage | QA/Platform |
 | 437 | 2026-03-12 | TASK-105 block settings interaction coverage | QA/Platform |
 | 436 | 2026-03-12 | TASK-105 page table branch coverage | QA/Platform |

@@ -51,6 +51,7 @@ Completed slices:
 - direct `happy-dom` branch coverage for `PageTable`
 - direct interactive coverage for `BlockSettings`
 - direct helper-export coverage for `PostRichTextAdapter`
+- richer helper-export coverage for `PostRichTextAdapter` clipboard image fallbacks, custom layout html, and remaining paste-mode branches
 - deeper `PageListPage` coverage for filters, cache refresh, and create-without-open flow
 - deeper `PostsListPage` coverage for tag filters, cancelled deletes, and create-without-open flow
 - direct `happy-dom` shell coverage for `PostClassicEditorShell`
