@@ -33,7 +33,36 @@ vi.mock("../../../core/widgets/renderers/widgetRenderer", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/pages/builder/BlockToolbar", () => ({
-  BlockToolbar: () => <div data-block-toolbar="true" />,
+  BlockToolbar: ({
+    onMoveUp,
+    onMoveDown,
+    onDuplicate,
+    onDelete,
+    disableMoveUp,
+    disableMoveDown,
+  }: {
+    onMoveUp: () => void;
+    onMoveDown: () => void;
+    onDuplicate: () => void;
+    onDelete: () => void;
+    disableMoveUp?: boolean;
+    disableMoveDown?: boolean;
+  }) => (
+    <div data-block-toolbar="true">
+      <button type="button" disabled={disableMoveUp} onClick={onMoveUp}>
+        toolbar-up
+      </button>
+      <button type="button" disabled={disableMoveDown} onClick={onMoveDown}>
+        toolbar-down
+      </button>
+      <button type="button" onClick={onDuplicate}>
+        toolbar-duplicate
+      </button>
+      <button type="button" onClick={onDelete}>
+        toolbar-delete
+      </button>
+    </div>
+  ),
 }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -137,6 +166,10 @@ const getSlotContainer = (container: HTMLElement, label: string) => {
   const slotContainer = marker?.parentElement?.parentElement;
   return slotContainer instanceof HTMLDivElement ? slotContainer : null;
 };
+
+const getButtonByText = (root: ParentNode, text: string) =>
+  Array.from(root.querySelectorAll("button")).find((element) => normalizeText(element) === text) ??
+  null;
 
 const createDataTransfer = (initial: Record<string, string> = {}) => {
   const store = new Map(Object.entries(initial));
@@ -344,6 +377,103 @@ test("BlockList forwards slot insert and move-to-slot drops", () => {
       createDataTransfer({ "block-id": "child-block" })
     );
     expect(onMoveToSlot).toHaveBeenCalledWith("child-block", "slot-parent", "main");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockList routes inner select, toolbar actions, slot dragover, and drag reset state", () => {
+  registerWidget(fixedSlotDefinition);
+
+  const onSelect = vi.fn();
+  const onMove = vi.fn();
+  const onDuplicate = vi.fn();
+  const onDelete = vi.fn();
+  const parent: Block = {
+    ...createBlock("slot-layout"),
+    id: "slot-parent",
+    slots: { main: [{ ...createBlock("hero"), id: "nested-hero" }] },
+  };
+
+  const view = mount(
+    <BlockList
+      blocks={[parent, blockB]}
+      selectedId={null}
+      onSelect={onSelect}
+      onMove={onMove}
+      onDuplicate={onDuplicate}
+      onDelete={onDelete}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Nested 1");
+
+    const parentSelectButton = Array.from(view.container.querySelectorAll("button")).find((element) =>
+      normalizeText(element).includes("Slot Layout")
+    );
+    if (!(parentSelectButton instanceof HTMLButtonElement)) {
+      throw new Error("missing slot layout button");
+    }
+
+    act(() => {
+      parentSelectButton.click();
+    });
+    expect(onSelect).toHaveBeenCalledWith("slot-parent");
+
+    const newsletterRow = getBlockRow(view.container, "Newsletter");
+    const parentRow = getBlockRow(view.container, "Slot Layout");
+    if (!newsletterRow) {
+      throw new Error("missing newsletter row");
+    }
+    if (!parentRow) {
+      throw new Error("missing parent row");
+    }
+
+    const toolbarUp = getButtonByText(newsletterRow, "toolbar-up");
+    const toolbarDown = getButtonByText(parentRow, "toolbar-down");
+    const toolbarDuplicate = getButtonByText(newsletterRow, "toolbar-duplicate");
+    const toolbarDelete = getButtonByText(newsletterRow, "toolbar-delete");
+
+    act(() => {
+      (toolbarUp as HTMLButtonElement | null)?.click();
+      (toolbarDown as HTMLButtonElement | null)?.click();
+      (toolbarDuplicate as HTMLButtonElement | null)?.click();
+      (toolbarDelete as HTMLButtonElement | null)?.click();
+    });
+
+    expect(onMove).toHaveBeenCalledWith([], 1, 0);
+    expect(onMove).toHaveBeenCalledWith([], 0, 1);
+    expect(onDuplicate).toHaveBeenCalledWith("b");
+    expect(onDelete).toHaveBeenCalledWith("b");
+
+    const reorderGrip = view.container.querySelector('[aria-label="Reorder Slot Layout"]');
+    if (!(parentRow instanceof HTMLDivElement) || !(reorderGrip instanceof HTMLElement)) {
+      throw new Error("missing drag handles");
+    }
+
+    const dragTransfer = dispatchDragEvent(reorderGrip, "dragstart");
+    dispatchDragEvent(newsletterRow, "dragover", dragTransfer);
+    expect(newsletterRow.className).toContain("border-primary/40");
+
+    dispatchDragEvent(parentRow, "dragend", dragTransfer);
+    expect(newsletterRow.className).not.toContain("border-primary/40");
+
+    const slotContainer = getSlotContainer(view.container, "Main");
+    if (!(slotContainer instanceof HTMLDivElement)) {
+      throw new Error("missing slot container");
+    }
+
+    const dragOverEvent = new Event("dragover", { bubbles: true, cancelable: true });
+    Object.defineProperty(dragOverEvent, "dataTransfer", {
+      value: createDataTransfer({ "widget-type": "newsletter" }),
+    });
+
+    act(() => {
+      slotContainer.dispatchEvent(dragOverEvent);
+    });
+
+    expect(dragOverEvent.defaultPrevented).toBe(true);
   } finally {
     view.cleanup();
   }
