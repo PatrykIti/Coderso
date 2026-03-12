@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 437 | 2026-03-12 | TASK-105 block settings interaction coverage | QA/Platform |
 | 436 | 2026-03-12 | TASK-105 page table branch coverage | QA/Platform |
 | 435 | 2026-03-12 | TASK-105 booking validation and delete branch follow-up | QA/Platform |
 | 434 | 2026-03-12 | TASK-105 themes drawer and page branch follow-up | QA/Platform |
