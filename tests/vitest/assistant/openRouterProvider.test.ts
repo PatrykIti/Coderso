@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { createOpenRouterProvider } from "../../../core/services/assistant/providers/openRouterProvider";
 
@@ -100,9 +100,7 @@ test("createOpenRouterProvider retries once on retryable HTTP status", async () 
   const result = await provider.complete({
     systemPrompt: "Strict RAG mode",
     userMessage: "Question",
-    snippets: [
-      { path: "_docs/a.md", heading: "h", content: "c" },
-    ],
+    snippets: [{ path: "_docs/a.md", heading: "h", content: "c" }],
     limits: {
       maxInputTokens: 8192,
       maxOutputTokens: 128,

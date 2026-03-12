@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, test } from "vitest";
 
 import { validate } from "../../../core/server/validation/schemaValidator";
 import { listingFilterPreviewSchema } from "../../../core/server/validation/filterSchemas";

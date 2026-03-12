@@ -5,7 +5,7 @@
 **Category:** QA + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-105-11-01, TASK-105-11-02  
-**Status:** To Do
+**Status:** In Progress (2026-03-12)
 
 ---
 
@@ -24,6 +24,30 @@ Re-audit the remaining `tests/unit/*` clusters that were previously marked `refa
 4. `tests/unit/server/*`
 5. `tests/unit/assistant/*`
 6. `tests/unit/validation/*`
+
+## Audit Snapshot
+
+Initial `2026-03-12` findings from the re-audit:
+- `validation` looks fully Bun-free and is a direct Vitest migration candidate.
+- `search` splits into:
+  - Bun-free pure logic: `filterEngine`, `listingRuntimeService`, `searchIndexService`, `searchService`
+  - Bun keep: `searchHistoryService` because it is DB-backed.
+- `assistant` currently looks largely Bun-free by import shape and is a strong next migration candidate.
+- `posts` splits into:
+  - Bun-free pure editor/domain leaves (`block-transforms`, serializer, command engine, layout state, preferences, outline, stats, document models)
+  - Bun keep or verify carefully: DB/schema/runtime renderer and any file still coupled to runtime/public rendering contracts.
+- `forms` splits into:
+  - Bun-free pure contracts/settings/helpers
+  - DB-coupled Bun keep for service and submission persistence flows.
+- `server` remains the strongest Bun keep cluster because those tests validate server contract modules even when they do not directly instantiate `Bun.serve`.
+
+## Sub-Tasks
+
+1. `TASK-105-11-03-01_Validation_and_Search_Pure_Suites_Move_to_Vitest.md`
+2. `TASK-105-11-03-02_Assistant_Pure_Service_Suites_Move_to_Vitest.md`
+3. `TASK-105-11-03-03_Posts_Pure_Editor_Model_Suites_Move_to_Vitest.md`
+4. `TASK-105-11-03-04_Forms_Pure_Contracts_and_Helper_Suites_Move_to_Vitest.md`
+5. `TASK-105-11-03-05_Server_Cluster_Bun_Ownership_Freeze.md`
 
 ## Acceptance Criteria
 
