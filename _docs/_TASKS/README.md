@@ -56,7 +56,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: admin services, SDK/custom screens, small UI leafs, themes editor leafs, booking tabs, and plugin/media/site leafs shipped |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: themes leafs, theme editor page, booking tabs, and form canvas covered; listings/forms/editor shells remain |
-| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: EntryList, FieldRenderer, PageListPage, PagePreview, BlockList, and post blockTransforms covered; heavy editor shells remain |
+| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: EntryList, FieldRenderer, PageListPage, PostsListPage, PagePreview, BlockList, PostClassicEditorShell, and post blockTransforms covered; deeper editor internals remain |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: `EntryTeaserEditors` moved into direct Vitest coverage; `PostsFeed`, `ContentList`, `ListingFilters`, `StatsKpi`, and `Product*` remain |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 

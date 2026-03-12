@@ -115,6 +115,14 @@ Current snapshot after the `TASK-105-05` entries/pages follow-up slice (from `bu
 - `core/admin/ui/entries/FieldRenderer.tsx` -> `94.73%` lines, `83.33%` branches
 - `core/admin/ui/pages/PageListPage.tsx` -> `78.78%` lines, `51.78%` branches
 
+Current snapshot after the `TASK-105-05` posts shell jump (from `bun run test:coverage` on 2026-03-11):
+- `% Stmts`: `62.53`
+- `% Branch`: `52.99`
+- `% Funcs`: `67.18`
+- `% Lines`: `65.54`
+- `core/admin/ui/posts/PostsListPage.tsx` -> `79.54%` lines, `47.61%` branches
+- `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `91.00%` lines, `74.43%` branches
+
 Additional widget-editor product/template snapshot (from `bun run test:coverage` on 2026-03-09):
 - `% Stmts`: `53.20`
 - `% Branch`: `46.79`
@@ -357,6 +365,7 @@ Completed waves:
 - direct create/edit/no-template coverage for `ThemeProfileDrawer`
 - first `TASK-105-05` foundation slice for `EntryList`, `PagePreview`, page-builder `BlockList`, and post `blockTransforms`
 - second `TASK-105-05` follow-up slice for `FieldRenderer` and `PageListPage`
+- third `TASK-105-05` follow-up slice for `PostsListPage` and `PostClassicEditorShell`
 - direct Vitest coverage for `EntryTeaserEditors`
 - direct Vitest coverage for `ListingFiltersEditors`
 - direct Vitest coverage for `PostsFeedEditors`

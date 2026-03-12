@@ -49,6 +49,8 @@ Completed slices:
 - direct Vitest coverage for `blockTransforms`
 - deeper direct Vitest coverage for `FieldRenderer`
 - deeper `PageListPage` coverage for filters, cache refresh, and create-without-open flow
+- deeper `PostsListPage` coverage for tag filters, cancelled deletes, and create-without-open flow
+- direct `happy-dom` shell coverage for `PostClassicEditorShell`
 
 Current `2026-03-11` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -56,11 +58,13 @@ Current `2026-03-11` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/pages/PageListPage.tsx` -> `78.78%` lines / `51.78%` branches
 - `core/admin/ui/pages/PagePreview.tsx` -> `88.88%` lines / `91.66%` branches
 - `core/admin/ui/pages/builder/BlockList.tsx` -> `71.26%` lines / `63.51%` branches
+- `core/admin/ui/posts/PostsListPage.tsx` -> `79.54%` lines / `47.61%` branches
+- `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `91.00%` lines / `74.43%` branches
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines / `67.92%` branches
 
 Remaining slices:
-- `FieldRenderer`, `PageListPage`, `PageTable`, and the remaining page-builder panels
-- posts editor shells and internals (`PostClassicEditorShell`, `PostEditorCanvas`, `PostRichTextAdapter`)
+- `PageTable` and the remaining page-builder panels
+- posts editor internals (`PostEditorCanvas`, `PostRichTextAdapter`) plus deeper `PostsTable` / classic-shell cleanup
 - block/document inspector flows and related schema branches
 
 ## Testing Requirements

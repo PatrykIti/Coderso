@@ -807,6 +807,140 @@ test("PageListPage applies filters, refreshes on cache events, and creates witho
   }
 });
 
+test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips cancelled deletes, and creates without editor navigation when preference is off", async () => {
+  pagePostState.posts = [
+    {
+      ...pagePostState.posts[0],
+      tags: ["campaign"],
+    },
+    {
+      ...pagePostState.posts[0],
+      id: "post-2",
+      title: "Roadmap",
+      slug: "roadmap",
+      status: "published",
+      tags: ["planning"],
+      author: {
+        id: "author-2",
+        name: "Editor",
+        email: "editor@example.com",
+      },
+    },
+  ];
+
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => false),
+  });
+
+  const { PostsListPage } = await import(
+    "../../../core/admin/ui/posts/PostsListPage"
+  );
+
+  const view = mount(<PostsListPage />);
+
+  try {
+    await act(async () => {
+      await flushMicrotasks();
+    });
+
+    expect(view.container.textContent).toContain("Product launch");
+    expect(view.container.textContent).toContain("Roadmap");
+    expect(pagePostState.postRefreshCalls).toEqual([
+      { force: true, background: true },
+    ]);
+
+    const searchInput = view.container.querySelector(
+      'input[placeholder="Search pages by title..."]'
+    );
+
+    act(() => {
+      setInputValue(searchInput ?? undefined, "unknown");
+    });
+
+    expect(view.container.textContent).not.toContain("Product launch");
+    expect(view.container.textContent).not.toContain("Roadmap");
+
+    act(() => {
+      setInputValue(searchInput ?? undefined, "campaign");
+    });
+
+    expect(view.container.textContent).toContain("Product launch");
+    expect(view.container.textContent).not.toContain("Roadmap");
+
+    await act(async () => {
+      pagePostState.postSubscribers.forEach((handler) =>
+        handler({ key: "pagesList" })
+      );
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.postRefreshCalls).toHaveLength(1);
+
+    const buttons = () => Array.from(view.container.querySelectorAll("button"));
+
+    act(() => {
+      buttons().find((button) => button.textContent === "delete-post-row")?.click();
+    });
+
+    expect(pagePostState.deletePostCalls).toEqual([]);
+
+    act(() => {
+      buttons()
+        .find((button) => button.textContent?.includes("Create New Post"))
+        ?.click();
+    });
+
+    expect(
+      view.container
+        .querySelector("[data-has-open-change='true']")
+        ?.getAttribute("data-sheet-open")
+    ).toBe("true");
+
+    const openAfterCreateToggle = view.container.querySelector(
+      "#post-open-after-create"
+    );
+    const titleInput = view.container.querySelector(
+      'input[placeholder="e.g. Product launch update"]'
+    );
+
+    await act(async () => {
+      if (openAfterCreateToggle instanceof HTMLInputElement) {
+        openAfterCreateToggle.click();
+      }
+      setInputValue(titleInput ?? undefined, "Release Notes");
+      buttons().find((button) => button.textContent === "Create Post")?.click();
+      await flushMicrotasks();
+    });
+
+    expect(pagePostState.setUserSettingCalls).toContainEqual({
+      key: "pages.openAfterCreate",
+      value: false,
+    });
+    expect(pagePostState.createPostCalls).toEqual([
+      {
+        title: "Release Notes",
+        slug: "release-notes",
+        data: {},
+      },
+    ]);
+    expect(pagePostState.postRefreshCalls).toEqual([
+      { force: true, background: true },
+      { force: true, background: true },
+    ]);
+    expect(pagePostState.navigateCalls).not.toContain("/coderso/posts/created-post");
+    expect(
+      view.container
+        .querySelector("[data-has-open-change='true']")
+        ?.getAttribute("data-sheet-open")
+    ).toBe("false");
+  } finally {
+    view.cleanup();
+    delete (window as Window & { confirm?: unknown }).confirm;
+  }
+});
+
 test("PageListPage and PostsListPage drive create, preview, publish, duplicate, delete, and preferences", async () => {
   Object.defineProperty(window, "open", {
     configurable: true,
