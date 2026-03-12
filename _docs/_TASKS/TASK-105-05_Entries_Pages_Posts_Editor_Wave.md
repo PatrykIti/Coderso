@@ -54,6 +54,7 @@ Completed slices:
 - richer helper-export coverage for `PostRichTextAdapter` clipboard image fallbacks, custom layout html, and remaining paste-mode branches
 - direct interaction coverage for `PostRichTextToolbar`
 - direct DOM interaction coverage for `PostRichTextAdapter` toolbar fallback callbacks, slash insert flow, rich-text paste directives, and clipboard image upload/unavailable states
+- direct `happy-dom` branch coverage for `PostsTable`
 - deeper `PageListPage` coverage for filters, cache refresh, and create-without-open flow
 - deeper `PostsListPage` coverage for tag filters, cancelled deletes, and create-without-open flow
 - direct `happy-dom` shell coverage for `PostClassicEditorShell`
