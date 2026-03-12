@@ -1,5 +1,3 @@
-import { getSetting } from "../../services/settings/settingsService";
-
 export type HostPolicyDecision = {
   allow: boolean;
   reason?: "admin_host_required" | "public_host_required" | "host_mismatch";
@@ -68,6 +66,7 @@ export const evaluateHostPolicy = (input: {
 };
 
 export async function enforceHostPolicy(req: Request) {
+  const { getSetting } = await import("../../services/settings/settingsService");
   const [adminBaseUrl, publicBaseUrl, adminPath, adminRedirectEnabled] = await Promise.all([
     getSetting("site.adminBaseUrl"),
     getSetting("site.publicBaseUrl"),

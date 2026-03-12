@@ -1,5 +1,3 @@
-import { getSetting } from "../../services/settings/settingsService";
-
 export type PublicUrlContext = {
   host?: string | null;
   forwardedHost?: string | null;
@@ -13,10 +11,11 @@ type PublicBaseUrlSources = {
   context?: PublicUrlContext;
 };
 
-const isHttpProtocol = (protocol: string) =>
-  protocol === "http:" || protocol === "https:";
+function isHttpProtocol(protocol: string) {
+  return protocol === "http:" || protocol === "https:";
+}
 
-const normalizeHttpUrl = (value: unknown) => {
+function normalizeHttpUrl(value: unknown) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -28,9 +27,9 @@ const normalizeHttpUrl = (value: unknown) => {
   } catch {
     return null;
   }
-};
+}
 
-const normalizeHost = (value: string | null | undefined) => {
+function normalizeHost(value: string | null | undefined) {
   if (typeof value !== "string") return null;
   const first = value
     .split(",")
@@ -44,9 +43,9 @@ const normalizeHost = (value: string | null | undefined) => {
   } catch {
     return null;
   }
-};
+}
 
-const normalizeProto = (value: string | null | undefined) => {
+function normalizeProto(value: string | null | undefined) {
   if (typeof value !== "string") return null;
   const first = value
     .split(",")
@@ -55,23 +54,23 @@ const normalizeProto = (value: string | null | undefined) => {
   if (!first) return null;
   const normalized = first.endsWith(":") ? first : `${first}:`;
   return isHttpProtocol(normalized) ? normalized.slice(0, -1) : null;
-};
+}
 
-const readHostname = (host: string) => {
+function readHostname(host: string) {
   try {
     return new URL(`http://${host}`).hostname.toLowerCase();
   } catch {
     return host.toLowerCase();
   }
-};
+}
 
-const isLoopbackHost = (host: string | null) => {
+function isLoopbackHost(host: string | null) {
   if (!host) return false;
   const hostname = readHostname(host);
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-};
+}
 
-const resolveProtocol = (context: PublicUrlContext | undefined, host: string | null) => {
+function resolveProtocol(context: PublicUrlContext | undefined, host: string | null) {
   const candidates = [context?.forwardedProto, context?.protocol];
   for (const candidate of candidates) {
     if (typeof candidate !== "string") continue;
@@ -81,7 +80,7 @@ const resolveProtocol = (context: PublicUrlContext | undefined, host: string | n
     return normalized;
   }
   return isLoopbackHost(host) ? "http" : "https";
-};
+}
 
 export function resolvePublicBaseUrlFromSources(
   sources: PublicBaseUrlSources
@@ -106,6 +105,7 @@ export function resolvePublicBaseUrlFromSources(
 export async function resolvePublicBaseUrl(
   context?: PublicUrlContext
 ): Promise<string | null> {
+  const { getSetting } = await import("../../services/settings/settingsService");
   const settingValue = await getSetting("site.publicBaseUrl");
   return resolvePublicBaseUrlFromSources({
     settingValue,

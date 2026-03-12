@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 9 tasks
 - **In Progress:** 6 tasks
-- **Done:** 642 tasks
+- **Done:** 643 tasks
 
 ---
 
@@ -71,6 +71,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-10 | Coverage Gap Rebaseline and Lane Backlog | High | Medium | Done: 2026-03-08 Vitest snapshot, lane split, and concrete remaining test backlog documented |
 | TASK-105-11-03 | Refactor-First Cluster Ownership Audit | High | Medium | Done: split delivered for validation, assistant, pure posts, pure forms, pure server helpers, and pure search logic; only explicit Bun-owned or deeper mixed cases remain |
 | TASK-105-11-03-05 | Server Cluster Bun Ownership Freeze | Medium | Medium | Done: explicit Bun ownership documented for the remaining server unit cluster |
+| TASK-105-11-03-07 | Server Settings-Bound Helper Suites Move to Vitest | Medium | Medium | Done: moved `hostPolicy`, `publicBaseUrl`, and `previewUrls` to Vitest after lazy settings-import refactor |
 | TASK-105-11-03-06 | Server Pure Helper Suites Move to Vitest | Medium | Medium | Done: moved pure server helper suites to Vitest and left boundary/server contract suites in Bun |
 | TASK-105-11-03-04 | Forms Pure Contracts and Helper Suites Move to Vitest | High | Medium | Done: moved Bun-free forms contract/helper suites to Vitest and left DB/runtime-coupled cases in Bun |
 | TASK-105-11-03-03 | Posts Pure Editor Model Suites Move to Vitest | High | Large | Done: moved pure posts editor/model suites to Vitest and left DB/runtime-coupled cases in Bun |

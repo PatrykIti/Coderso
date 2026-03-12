@@ -47,6 +47,7 @@ Completed slices:
 - moved the Bun-free forms contract/helper suites into `tests/vitest/forms/*`
 - moved the Bun-free server helper suites into `tests/vitest/server/*`
 - moved the Bun-free search pure-logic suites into `tests/vitest/search/*`
+- moved the Bun-free server settings-bound helper suites into `tests/vitest/server/*`
 
 Remaining slices:
 - refactor-first cluster audit for `posts/forms/search/server/assistant/validation`

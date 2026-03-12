@@ -40,8 +40,8 @@ Final `2026-03-12` findings from the re-audit:
   - pure contracts/settings/helpers have now been moved into `tests/vitest/forms/*`
   - DB-coupled Bun keep for service and submission persistence flows.
 - `server` now splits into:
-  - Vitest-owned pure helpers: `errorHandler`, `requestBody`, `routeMatcher`, `solutionKitSchemas`, `styleUrl`
-  - Bun keep: the remaining server-boundary contract suites, especially anything tied to settings/runtime or public API behavior
+  - Vitest-owned pure helpers: `errorHandler`, `requestBody`, `routeMatcher`, `solutionKitSchemas`, `styleUrl`, `hostPolicy`, `publicBaseUrl`, `previewUrls`
+  - Bun keep: `adminAssetsRouting` and `publicBookingApi` as the remaining server-boundary contract cases
 
 ## Sub-Tasks
 
@@ -51,6 +51,7 @@ Final `2026-03-12` findings from the re-audit:
 4. `TASK-105-11-03-04_Forms_Pure_Contracts_and_Helper_Suites_Move_to_Vitest.md`
 5. `TASK-105-11-03-05_Server_Cluster_Bun_Ownership_Freeze.md`
 6. `TASK-105-11-03-06_Server_Pure_Helper_Suites_Move_to_Vitest.md`
+7. `TASK-105-11-03-07_Server_Settings_Bound_Helper_Suites_Move_to_Vitest.md`
 
 ## Acceptance Criteria
 
