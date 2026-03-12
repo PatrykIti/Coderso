@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 441 | 2026-03-12 | TASK-105 post richtext adapter dom flow coverage | QA/Platform |
 | 440 | 2026-03-12 | TASK-105 post richtext toolbar interaction coverage | QA/Platform |
 | 439 | 2026-03-12 | TASK-105 post richtext paste helper follow-up | QA/Platform |
 | 438 | 2026-03-12 | TASK-105 post richtext helper export coverage | QA/Platform |
