@@ -80,6 +80,18 @@ vi.mock("../../../core/admin/ui/posts/editor/richtext/PostRichTextToolbar", () =
       <button type="button" aria-label="Bold" onClick={() => onCommand("bold")}>
         bold
       </button>
+      <button type="button" onClick={() => onCommand("highlight")}>
+        highlight
+      </button>
+      <button type="button" onClick={() => onCommand("inline-code")}>
+        inline-code
+      </button>
+      <button type="button" onClick={() => onCommand("align-center")}>
+        align-center
+      </button>
+      <button type="button" onClick={() => onCommand("clear-formatting")}>
+        clear-formatting
+      </button>
       <button type="button" onClick={() => onFontFamilyChange?.("serif")}>
         font-serif
       </button>
@@ -160,6 +172,49 @@ const setSelectionAtEnd = (element: HTMLElement) => {
   range.collapse(false);
   selection.removeAllRanges();
   selection.addRange(range);
+};
+
+const findTextNode = (root: Node, text: string) => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let current = walker.nextNode();
+  while (current) {
+    if (current instanceof Text && current.nodeValue?.includes(text)) {
+      return current;
+    }
+    current = walker.nextNode();
+  }
+  throw new Error(`Missing text node: ${text}`);
+};
+
+const setRangeSelection = (
+  startNode: Text,
+  startOffset: number,
+  endNode: Text,
+  endOffset: number
+) => {
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.setStart(startNode, startOffset);
+  range.setEnd(endNode, endOffset);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  document.dispatchEvent(new Event("selectionchange"));
+};
+
+const setCollapsedSelection = (node: Text, offset: number) => {
+  setRangeSelection(node, offset, node, offset);
+};
+
+const setSelectValue = (element: Element | null | undefined, value: string) => {
+  if (!(element instanceof HTMLSelectElement)) {
+    throw new Error(`Missing select for value: ${value}`);
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+  descriptor?.set?.call(element, value);
+  act(() => {
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 };
 
 const flush = async () => {
@@ -304,6 +359,145 @@ test("PostRichTextAdapter opens slash menu and clears standalone slash content o
   }
 });
 
+test("PostRichTextAdapter applies inline typography to selection and reuses typography spans", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const onFontFamilyChange = vi.fn();
+  const onBaseTextScaleChange = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState("<p>Alpha <strong>Beta</strong></p>");
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onFontFamilyChange={onFontFamilyChange}
+        onBaseTextScaleChange={onBaseTextScaleChange}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+
+    const alphaNode = findTextNode(editor, "Alpha");
+    const betaNode = findTextNode(editor, "Beta");
+    setRangeSelection(alphaNode, 0, betaNode, betaNode.nodeValue?.length ?? 4);
+
+    clickByText(view.container, "font-serif");
+    await flush();
+
+    const selectedSpan = editor.querySelector('span[data-font="serif"]');
+    expect(selectedSpan).not.toBeNull();
+
+    const serifNode = findTextNode(editor, "Alpha");
+    setRangeSelection(serifNode, 0, serifNode, serifNode.nodeValue?.length ?? 5);
+
+    clickByText(view.container, "scale-lg");
+    await flush();
+
+    expect(onFontFamilyChange).not.toHaveBeenCalled();
+    expect(onBaseTextScaleChange).not.toHaveBeenCalled();
+    expect(editor.innerHTML).toContain('data-font="serif"');
+    expect(editor.innerHTML).toContain('data-text-scale="lg"');
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter wraps collapsed caret tokens with highlight and inline code", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("<p>Gamma Delta</p>");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+
+    const initialNode = findTextNode(editor, "Gamma Delta");
+    setCollapsedSelection(initialNode, 1);
+    clickByText(view.container, "inline-code");
+    await flush();
+
+    expect(editor.innerHTML).toContain("<code>Gamma</code>");
+
+    const deltaNode = findTextNode(editor, "Delta");
+    setCollapsedSelection(deltaNode, 1);
+    clickByText(view.container, "highlight");
+    await flush();
+
+    expect(editor.innerHTML).toContain("<mark>Delta</mark>");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter applies block alignment and clears formatting for selected blocks", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState(
+      '<p data-align="right"><span data-font="serif"><mark>Styled</mark></span></p>'
+    );
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+
+    const styledNode = findTextNode(editor, "Styled");
+    setRangeSelection(styledNode, 0, styledNode, styledNode.nodeValue?.length ?? 6);
+
+    clickByText(view.container, "align-center");
+    await flush();
+    expect(editor.innerHTML).toContain('data-align="center"');
+
+    clickByText(view.container, "clear-formatting");
+    await flush();
+
+    expect(execCommand).toHaveBeenCalledWith("removeFormat", false, undefined);
+    expect(execCommand).toHaveBeenCalledWith("unlink", false, undefined);
+    expect(editor.innerHTML).not.toContain("data-align");
+    expect(editor.innerHTML).not.toContain("data-font");
+    expect(editor.innerHTML).not.toContain("<mark");
+    expect(editor.innerHTML).toContain("<p>Styled</p>");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostRichTextAdapter routes rich-text paste directives and image-paste unavailable hint", async () => {
   const execCommand = vi.fn(() => false);
   Object.defineProperty(document, "execCommand", {
@@ -437,8 +631,23 @@ test("PostRichTextAdapter uploads clipboard images and exposes image layout cont
     expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes("data-media-id"))).toBe(
       true
     );
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    setSelectValue(selects[0], "left");
+    setSelectValue(selects[1], "66");
+    setSelectValue(selects[2], "lg");
+    await flush();
+
     expect(view.container.textContent).toContain("Image uploaded and inserted.");
     expect(view.container.textContent).toContain("Selected image layout");
+    expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-wrap="left"'))).toBe(
+      true
+    );
+    expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-width="66"'))).toBe(
+      true
+    );
+    expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-margin="lg"'))).toBe(
+      true
+    );
   } finally {
     view.cleanup();
   }
