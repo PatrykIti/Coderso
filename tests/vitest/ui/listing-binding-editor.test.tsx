@@ -375,3 +375,92 @@ test("BindingEditor handles exists conditions, condition removal, and binding de
     view.cleanup();
   }
 });
+
+test("BindingEditor reorders conditions and clears blank fallback values", async () => {
+  const { BindingEditor } = await import(
+    "../../../core/admin/ui/listings/components/BindingEditor"
+  );
+
+  const onChangeSpy = vi.fn();
+  const initialValue: ListingTemplateField[] = [
+    {
+      key: "title",
+      source: "data.title",
+      label: null,
+      fallback: "N/A",
+      format: "text",
+      conditions: [
+        {
+          id: "cond-1",
+          field: "status",
+          op: "eq",
+          value: "published",
+        },
+        {
+          id: "cond-2",
+          field: "price",
+          op: "gt",
+          value: 10,
+        },
+      ],
+    },
+  ];
+
+  const Harness = () => {
+    const [value, setValue] = useState<ListingTemplateField[]>(initialValue);
+    return (
+      <BindingEditor
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const section = view.container.querySelector(".space-y-3.rounded-lg.border.p-3") as HTMLElement;
+    const fallbackInput = findInputByPlaceholder(view.container, "Fallback value (optional)");
+
+    act(() => {
+      setInputValue(fallbackInput, "   ");
+    });
+
+    let bindings = onChangeSpy.mock.lastCall?.[0] as ListingTemplateField[];
+    expect(bindings[0]?.fallback).toBeNull();
+
+    const conditionRows = Array.from(
+      section.querySelectorAll(".grid.gap-2.md\\:grid-cols-\\[minmax\\(0\\,1fr\\)_180px_minmax\\(0\\,1fr\\)_auto\\]")
+    );
+    const secondConditionButtons = Array.from(
+      (conditionRows[1] as HTMLElement).querySelectorAll("button")
+    );
+
+    clickElement(secondConditionButtons[0]);
+
+    bindings = onChangeSpy.mock.lastCall?.[0] as ListingTemplateField[];
+    expect(bindings[0]?.conditions?.map((condition) => condition.id)).toEqual([
+      "cond-2",
+      "cond-1",
+    ]);
+
+    const updatedConditionRows = Array.from(
+      section.querySelectorAll(".grid.gap-2.md\\:grid-cols-\\[minmax\\(0\\,1fr\\)_180px_minmax\\(0\\,1fr\\)_auto\\]")
+    );
+    const firstConditionButtons = Array.from(
+      (updatedConditionRows[0] as HTMLElement).querySelectorAll("button")
+    );
+    clickElement(firstConditionButtons[1]);
+
+    bindings = onChangeSpy.mock.lastCall?.[0] as ListingTemplateField[];
+    expect(bindings[0]?.conditions?.map((condition) => condition.id)).toEqual([
+      "cond-1",
+      "cond-2",
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});

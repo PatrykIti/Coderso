@@ -1160,3 +1160,41 @@ test("ListingEditorPage create mode creates queries and reports preview/load err
     errorView.cleanup();
   }
 });
+
+test("ListingEditorPage reports query-not-found and generic preview failures", async () => {
+  window.history.replaceState({}, "", "/admin/coderso/listings/query-1");
+  const { ListingEditorPage } = await import(
+    "../../../core/admin/ui/listings/ListingEditorPage"
+  );
+
+  listingsState.detailResult = null;
+  const missingView = mount(<ListingEditorPage />);
+
+  try {
+    await flush();
+
+    expect(missingView.container.textContent).toContain("Listing query error");
+    expect(missingView.container.textContent).toContain("Listing query not found.");
+  } finally {
+    missingView.cleanup();
+  }
+
+  listingsState.reset();
+  listingsState.previewQueryError = new Error("boom");
+  window.history.replaceState({}, "", "/admin/coderso/listings/new");
+
+  const previewErrorView = mount(<ListingEditorPage />);
+
+  try {
+    await flush();
+
+    clickButtonByText(previewErrorView.container, "Run preview");
+    await flush();
+
+    expect(previewErrorView.container.textContent).toContain(
+      "Failed to run listing preview."
+    );
+  } finally {
+    previewErrorView.cleanup();
+  }
+});

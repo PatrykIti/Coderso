@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 433 | 2026-03-12 | TASK-105 listings editor and binding branch follow-up | QA/Platform |
 | 432 | 2026-03-12 | TASK-105 booking helper and page branch follow-up | QA/Platform |
 | 431 | 2026-03-12 | TASK-105 forms builder and action log branch follow-up | QA/Platform |
 | 430 | 2026-03-12 | TASK-105 forms automation runner dependency split | QA/Platform |

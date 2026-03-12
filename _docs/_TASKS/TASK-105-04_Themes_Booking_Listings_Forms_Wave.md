@@ -55,6 +55,7 @@ Completed slices:
 - direct builder shell, automation, and action-log coverage for `FormBuilderPage`, `FormActionsPanel`, and `FormActionLogsPage`
 - forms builder/actions/logs follow-up branches for missing-form guards, generic load/retry errors, mobile field sheet callbacks, action relabel/reorder, fallback labels, and entry-mapping removal
 - listings hooks, list/search/filter flows, deeper `ListingTemplateManager` branches, direct `ListingEditorPage` coverage, and direct `BindingEditor` coverage
+- listings follow-up branches for query-not-found/generic preview editor states and binding condition reordering plus blank fallback clearing
 - direct create/edit/save/invert coverage for `ThemeTemplateDrawer`
 - interactive page-level coverage for `ThemesPage`
 - direct create/edit/no-template coverage for `ThemeProfileDrawer`
