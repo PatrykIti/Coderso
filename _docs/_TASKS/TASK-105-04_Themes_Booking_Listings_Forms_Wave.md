@@ -52,6 +52,7 @@ Completed slices:
 - form leaf: `FormCanvas`
 - forms support panels and list/create flow
 - direct builder shell, automation, and action-log coverage for `FormBuilderPage`, `FormActionsPanel`, and `FormActionLogsPage`
+- forms builder/actions/logs follow-up branches for missing-form guards, generic load/retry errors, mobile field sheet callbacks, action relabel/reorder, fallback labels, and entry-mapping removal
 - listings hooks, list/search/filter flows, deeper `ListingTemplateManager` branches, direct `ListingEditorPage` coverage, and direct `BindingEditor` coverage
 - direct create/edit/save/invert coverage for `ThemeTemplateDrawer`
 - interactive page-level coverage for `ThemesPage`

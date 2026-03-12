@@ -503,3 +503,113 @@ test("FormActionsPanel updates conditions, webhook and entry-sync config, orderi
     view.cleanup();
   }
 });
+
+test("FormActionsPanel supports fallback labels, action relabeling, move-down ordering, and mapping removal", async () => {
+  const { FormActionsPanel } = await import(
+    "../../../core/admin/ui/forms/FormActionsPanel"
+  );
+
+  const onChangeSpy = vi.fn();
+  const initialActions: FormActionInput[] = [
+    {
+      type: "redirect",
+      label: "Redirect first",
+      enabled: true,
+      continueOnError: true,
+      condition: { operator: "always" },
+      config: { url: "/start" },
+      orderIndex: 0,
+    },
+    {
+      type: "entry_sync",
+      label: "Entry sync",
+      enabled: true,
+      continueOnError: true,
+      condition: { operator: "always" },
+      config: {
+        contentTypeId: "articles",
+        mode: "create",
+        titleTemplate: "{{submission.name}}",
+        slugTemplate: "{{submissionId}}",
+        dataMapping: {
+          headline: "{{submission.name}}",
+        },
+      },
+      orderIndex: 1,
+    },
+    {
+      type: "custom_action" as unknown as FormActionInput["type"],
+      label: "Custom action",
+      enabled: true,
+      continueOnError: true,
+      condition: { operator: "unexpected" } as FormActionInput["condition"],
+      config: {
+        message: "Fallback message",
+      },
+      orderIndex: 2,
+    },
+  ];
+
+  const Harness = () => {
+    const [actions, setActions] = useState<FormActionInput[]>(initialActions);
+    return (
+      <FormActionsPanel
+        actions={actions}
+        contentTypes={[{ id: "articles", name: "Articles" }]}
+        onOpenLogs={() => undefined}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setActions(next);
+        }}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect(view.container.textContent).toContain("custom_action");
+
+    const sections = () => Array.from(view.container.querySelectorAll("section"));
+    const redirectSection = sections()[0] as HTMLElement;
+    const redirectLabelInput = Array.from(redirectSection.querySelectorAll("input")).find(
+      (element) =>
+        element instanceof HTMLInputElement &&
+        element.getAttribute("placeholder") === "Action label"
+    );
+
+    act(() => {
+      setInputValue(redirectLabelInput, "Redirect renamed");
+    });
+
+    const entrySection = sections()[1] as HTMLElement;
+    const entryButtonsBeforeMove = Array.from(entrySection.querySelectorAll("button"));
+    const removePairButton = entryButtonsBeforeMove[entryButtonsBeforeMove.length - 1];
+
+    clickElement(removePairButton);
+
+    const afterRemove = onChangeSpy.mock.lastCall?.[0] as FormActionInput[];
+    expect(afterRemove[1]?.config).toEqual(
+      expect.objectContaining({
+        dataMapping: {},
+      })
+    );
+
+    const redirectButtons = Array.from(redirectSection.querySelectorAll("button"));
+    const moveDownButton = redirectButtons.find((button) =>
+      button.textContent?.includes("↓")
+    );
+
+    clickElement(moveDownButton);
+
+    const movedActions = onChangeSpy.mock.lastCall?.[0] as FormActionInput[];
+    expect(movedActions.map((action) => action.type)).toEqual([
+      "entry_sync",
+      "redirect",
+      "custom_action",
+    ]);
+    expect(movedActions[1]?.label).toBe("Redirect renamed");
+  } finally {
+    view.cleanup();
+  }
+});

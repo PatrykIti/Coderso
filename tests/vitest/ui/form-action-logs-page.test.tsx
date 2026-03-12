@@ -358,7 +358,7 @@ test("FormActionLogsPage loads stats, filters runs, retries failures, refreshes 
   }
 });
 
-test("FormActionLogsPage reports load and retry errors", async () => {
+test("FormActionLogsPage reports api and generic load/retry errors", async () => {
   window.history.replaceState({}, "", "/admin/forms/form-1/action-runs");
   const { FormActionLogsPage } = await import(
     "../../../core/admin/ui/forms/FormActionLogsPage"
@@ -374,6 +374,39 @@ test("FormActionLogsPage reports load and retry errors", async () => {
     expect(errorView.container.textContent).toContain("Runs failed");
   } finally {
     errorView.cleanup();
+  }
+
+  actionLogsState.reset();
+  window.history.replaceState({}, "", "/admin/forms/form-1/action-runs");
+  actionLogsState.listError = new Error("boom");
+
+  const genericLoadView = mount(<FormActionLogsPage />);
+
+  try {
+    await flush();
+
+    expect(genericLoadView.container.textContent).toContain(
+      "Failed to load action logs."
+    );
+  } finally {
+    genericLoadView.cleanup();
+  }
+
+  actionLogsState.reset();
+  window.history.replaceState({}, "", "/admin/forms/form-1/action-runs");
+  actionLogsState.retryError = actionLogsState.apiError("Retry denied");
+
+  const apiRetryView = mount(<FormActionLogsPage />);
+
+  try {
+    await flush();
+
+    clickByText(apiRetryView.container, "Retry");
+    await flush();
+
+    expect(apiRetryView.container.textContent).toContain("Retry denied");
+  } finally {
+    apiRetryView.cleanup();
   }
 
   actionLogsState.reset();

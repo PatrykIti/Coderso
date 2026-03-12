@@ -755,6 +755,24 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
     expect(view.container.textContent).toContain("canvas:3");
     expect(view.container.textContent).toContain("Unsaved changes");
 
+    const mobileSelectButtons = Array.from(view.container.querySelectorAll("button")).filter(
+      (button) => button.textContent === "select-first-field"
+    );
+    const mobileAddButtons = Array.from(view.container.querySelectorAll("button")).filter(
+      (button) => button.textContent === "add-library-field"
+    );
+
+    act(() => {
+      mobileSelectButtons.at(-1)?.click();
+      mobileAddButtons.at(-1)?.click();
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("canvas:4");
+
+    clickByText(view.container, "canvas-select-field");
+    await flush();
+
     clickByText(view.container, "Runtime preview");
     await flush();
 
@@ -830,14 +848,58 @@ test("FormBuilderPage hydrates cache, tracks dirty state, refreshes remote updat
   }
 });
 
-test("FormBuilderPage reports load and save errors", async () => {
+test("FormBuilderPage handles routes without form ids", async () => {
+  window.history.replaceState({}, "", "/admin/forms");
+  const { FormBuilderPage } = await import(
+    "../../../core/admin/ui/forms/FormBuilderPage"
+  );
+
+  const view = mount(<FormBuilderPage />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("Loading form builder");
+    expect(formsPageState.detailCalls).toHaveLength(0);
+    expect(formsPageState.actionsCalls).toHaveLength(0);
+
+    clickByText(view.container, "Action logs");
+
+    expect(formsPageState.navigateCalls).toHaveLength(0);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormBuilderPage reports not-found, load, and save errors", async () => {
   window.history.replaceState({}, "", "/admin/forms/form-1");
   const { FormBuilderPage } = await import(
     "../../../core/admin/ui/forms/FormBuilderPage"
   );
 
   formsPageState.formDetail = null as never;
-  formsPageState.detailError = formsPageState.apiError("Detail failed");
+
+  const missingView = mount(<FormBuilderPage />);
+
+  try {
+    await flush();
+
+    expect(missingView.container.textContent).toContain("Unable to load form");
+    expect(missingView.container.textContent).toContain("Form not found.");
+
+    clickByText(missingView.container, "change-form-name");
+    await flush();
+    clickByText(missingView.container, "Save form");
+    await flush();
+
+    expect(formsPageState.updateFormCalls).toHaveLength(0);
+  } finally {
+    missingView.cleanup();
+  }
+
+  formsPageState.reset();
+  window.history.replaceState({}, "", "/admin/forms/form-1");
+  formsPageState.detailError = new Error("boom");
 
   const loadView = mount(<FormBuilderPage />);
 
@@ -845,7 +907,7 @@ test("FormBuilderPage reports load and save errors", async () => {
     await flush();
 
     expect(loadView.container.textContent).toContain("Unable to load form");
-    expect(loadView.container.textContent).toContain("Detail failed");
+    expect(loadView.container.textContent).toContain("Failed to load form.");
   } finally {
     loadView.cleanup();
   }
