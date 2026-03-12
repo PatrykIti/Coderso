@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
-- **In Progress:** 5 tasks
-- **Done:** 633 tasks
+- **To Do:** 11 tasks
+- **In Progress:** 6 tasks
+- **Done:** 634 tasks
 
 ---
 
@@ -43,6 +43,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
+| TASK-105-11-02 | Custom Screens and Pure Domain Legacy Suites Move to Vitest | High | Medium | Migrate remaining Bun-free legacy custom screens and helper suites |
+| TASK-105-11-03 | Refactor-First Cluster Ownership Audit | High | Medium | Reclassify remaining Bun unit clusters by true runner ownership |
+| TASK-105-11-04 | QA, Docs, Changelog, and Closure | Medium | Medium | Final ownership summary, docs, board, and changelog sync |
 | TASK-101-09 | Assistant Action Engine (RAG + Typed Actions) | High | Large | Prompt -> typed plan -> dry-run/confirm -> execute with audit/idempotency |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
@@ -58,6 +61,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: themes leafs, theme editor page, booking tabs, and form canvas covered; listings/forms/editor shells remain |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: EntryList, FieldRenderer, PageListPage, PostsListPage, PagePreview, BlockList, PostClassicEditorShell, and post blockTransforms covered; deeper editor internals remain |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: `EntryTeaserEditors` moved into direct Vitest coverage; `PostsFeed`, `ContentList`, `ListingFilters`, `StatsKpi`, and `Product*` remain |
+| TASK-105-11 | Legacy Bun-Free Test Migration Cleanup | High | Large | In progress: duplicate Bun-free suites removed from `tests/unit/ui`, `tests/unit/admin`, and `tests/unit/sdk`; refactor-first and pure-domain cleanup remains |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 
 ---
@@ -67,6 +71,7 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-105-10 | Coverage Gap Rebaseline and Lane Backlog | High | Medium | Done: 2026-03-08 Vitest snapshot, lane split, and concrete remaining test backlog documented |
+| TASK-105-11-01 | UI, Admin, and SDK Duplicate Legacy Suites Move to Vitest | High | Medium | Done: removed Bun-free duplicate suites after confirming Vitest-owned replacements |
 | TASK-105-07 | SDK Plugin Manifest and Custom Screens Service Wave | Medium | Medium | Done: plugin manifest, SDK client/server, and custom screen service gained direct Vitest coverage |
 | TASK-105-03 | Small UI and Support Component Wave | Medium | Medium | Done: block library, redirects/page leafs, form canvas, media details panel, plugin filters, theme routes/tokens, and related page leafs covered |
 | TASK-105-02 | Admin Services Zero Coverage Wave | High | Medium | Done: api keys, email, integrations, taxonomy, webhooks, and session cache now have direct Vitest tests |
