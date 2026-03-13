@@ -127,7 +127,7 @@ Current `2026-03-10` widget editor snapshot after the latest residual-closure fo
 - `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` -> `100.00%` lines / `62.50%` branches
 - `core/admin/ui/widgets/editors/TimelineEditors.tsx` -> `99.10%` lines / `84.21%` branches
 - `core/admin/ui/widgets/editors/NewsletterEditors.tsx` -> `93.65%` lines / `61.42%` branches
-- `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` -> `98.07%` lines / `64.28%` branches
+- `core/admin/ui/widgets/editors/SearchBoxEditors.tsx` -> `100.00%` lines / `73.80%` branches
 - `core/admin/ui/widgets/editors/SectionEditors.tsx` -> `100.00%` lines / `61.22%` branches
 - `core/admin/ui/widgets/editors/TabsEditors.tsx` -> `100.00%` lines / `64.86%` branches
 - `core/admin/ui/widgets/editors/SplitLayoutEditors.tsx` -> `100.00%` lines / `96.96%` branches
@@ -304,6 +304,11 @@ Newsletter/team/logo refactor follow-up on 2026-03-11:
   - `NewsletterEditors.tsx` -> `100.00%` lines / `70.00%` branches
   - `TeamEditors.tsx` -> `100.00%` lines / `70.00%` branches
   - `LogoCloudEditors.tsx` -> `100.00%` lines / `71.87%` branches
+
+Search box follow-up on 2026-03-13:
+- Deepened `SearchBoxEditors` coverage around wizard mode switching, persisted global endpoint state, and clearing listing-query selection back to the sentinel empty option.
+- Isolated targeted run for `SearchBoxEditors.tsx` moved to `100.00%` lines / `73.80%` branches.
+- Canonical full-lane snapshot was not rebaselined separately for this narrow follow-up slice.
 
 Remaining hotspots in this wave:
 - residual branch gaps in `FeatureGridEditors.tsx`

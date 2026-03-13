@@ -499,3 +499,71 @@ test("SearchBox advanced editor covers runtime snapshot, global source toggles, 
     view.cleanup();
   }
 });
+
+test("SearchBox wizard editor covers unknown listing labels, mode switching, and query clearing", async () => {
+  const { SearchBoxWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/SearchBoxEditors"
+  );
+
+  let latestValue: SearchBoxData = {
+    mode: "listing",
+    listingQueryId: "missing-query",
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<SearchBoxData>(latestValue);
+    return (
+      <SearchBoxWizardEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="default"
+        onVariantChange={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Auto apply on input");
+    expect(
+      (
+        findSelectByOptions(view.container, ["__no_listing_query__", "query-1"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("__no_listing_query__");
+
+    setSelectValue(findSelectByOptions(view.container, ["listing", "global"]), "global");
+    expect(latestValue.mode).toBe("global");
+    expect(view.container.textContent).toContain("Global search sources");
+
+    setInputValue(findInputByPlaceholder(view.container, "/api/search"), "/api/site-search");
+
+    setSelectValue(findSelectByOptions(view.container, ["listing", "global"]), "listing");
+    expect(latestValue.mode).toBe("listing");
+    expect(view.container.textContent).toContain("Auto apply on input");
+
+    const querySelect = findSelectByOptions(view.container, [
+      "__no_listing_query__",
+      "query-1",
+    ]);
+    setSelectValue(querySelect, "query-1");
+    expect(latestValue.listingQueryId).toBe("query-1");
+
+    setSelectValue(querySelect, "__no_listing_query__");
+
+    expect(latestValue).toMatchObject({
+      mode: "listing",
+      listingQueryId: "",
+      endpoint: "/api/site-search",
+    });
+    expect(view.container.textContent).toContain("No listing query selected");
+  } finally {
+    view.cleanup();
+  }
+});

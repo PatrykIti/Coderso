@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 463 | 2026-03-13 | TASK-105 search box mode and reset follow-up | QA/Platform |
 | 462 | 2026-03-13 | TASK-105 FAQ accordion sparse default coverage | QA/Platform |
 | 461 | 2026-03-13 | TASK-105 testimonials sparse default coverage | QA/Platform |
 | 460 | 2026-03-13 | TASK-105 pricing plans guard behavior | QA/Platform |
