@@ -74,6 +74,7 @@ Completed slices:
 - direct interaction coverage for `DocumentInspector`
 - direct interaction coverage for `BlockInspector`
 - direct interaction coverage for `PostDetailsSidebar`
+- direct hook coverage for `usePostEditorLayout`
 
 Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -93,6 +94,7 @@ Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `90.10%` lines / `74.33%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts` -> `100%` lines / `96.07%` branches
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines / `67.92%` branches
 
 Remaining slices:
