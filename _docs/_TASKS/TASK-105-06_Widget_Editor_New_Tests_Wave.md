@@ -55,6 +55,7 @@ Completed slices:
 - direct Vitest coverage for `TemplateSectionEditors`
 - deeper follow-up coverage for `ListingFiltersEditors`
 - direct Vitest coverage for `PricingPlansEditors`
+- guard-behavior coverage for `PricingPlansEditors`
 - direct Vitest coverage for `TeamEditors`
 - deeper style-fallback coverage for `TeamEditors`
 - direct Vitest coverage for `TestimonialsEditors`

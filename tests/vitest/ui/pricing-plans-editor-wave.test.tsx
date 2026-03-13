@@ -848,3 +848,81 @@ test("PricingPlans editors render sparse defaults and ignore variant changes wit
     advancedView.cleanup();
   }
 });
+
+test("PricingPlans visual editor keeps payload stable when guard actions are triggered at bounds", async () => {
+  const { PricingPlansVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/PricingPlansEditors"
+  );
+
+  let latestValue: PricingPlansData = {
+    plans: [
+      {
+        id: "starter",
+        name: "Starter",
+        price: "$19",
+        features: ["Email support"],
+      },
+      {
+        id: "growth",
+        name: "Growth",
+        price: "$49",
+        features: ["API", "Automation"],
+      },
+    ],
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<PricingPlansData>(latestValue);
+
+    return (
+      <PricingPlansVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="three-plans"
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const before = structuredClone(latestValue);
+    const planCards = getPlanCards(view.container);
+
+    clickButtonByText(planCards[0] ?? view.container, "Move up");
+    clickButtonByText(planCards[0] ?? view.container, "Remove");
+    clickButtonByText(planCards[1] ?? view.container, "Move down");
+
+    const secondPlanCard = getPlanCards(view.container)[1];
+    const featureRows = getFeatureRows(secondPlanCard ?? view.container);
+    clickButtonByText(featureRows[1] ?? secondPlanCard ?? view.container, "Move down");
+
+    expect(latestValue).toEqual(before);
+  } finally {
+    view.cleanup();
+  }
+
+  latestValue = {
+    plans: [
+      { id: "one", name: "One", price: "$1", features: [] },
+      { id: "two", name: "Two", price: "$2", features: [] },
+      { id: "three", name: "Three", price: "$3", features: [] },
+      { id: "four", name: "Four", price: "$4", features: [] },
+      { id: "five", name: "Five", price: "$5", features: [] },
+      { id: "six", name: "Six", price: "$6", features: [] },
+    ],
+  };
+
+  const maxView = mount(<Harness />);
+
+  try {
+    const beforeMax = structuredClone(latestValue);
+    clickButtonByText(maxView.container, "Add plan");
+    expect(latestValue).toEqual(beforeMax);
+  } finally {
+    maxView.cleanup();
+  }
+});
