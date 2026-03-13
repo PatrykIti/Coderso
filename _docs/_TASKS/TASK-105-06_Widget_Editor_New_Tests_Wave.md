@@ -50,6 +50,7 @@ Completed slices:
 - direct Vitest coverage for `ProductGalleryEditors`
 - deeper fallback coverage for `ProductGalleryEditors`
 - direct Vitest coverage for `ProductTableEditors`
+- direct fallback coverage for `ProductTableEditors`
 - direct Vitest coverage for `TemplateSectionEditors`
 - deeper follow-up coverage for `ListingFiltersEditors`
 - direct Vitest coverage for `PricingPlansEditors`
@@ -102,7 +103,7 @@ Current `2026-03-10` widget editor snapshot after the latest residual-closure fo
 - `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` -> `93.93%` lines / `73.33%` branches
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` -> `100.00%` lines / `100.00%` branches
 - `core/admin/ui/widgets/editors/ProductGalleryEditors.tsx` -> `100.00%` lines / `73.68%` branches
-- `core/admin/ui/widgets/editors/ProductTableEditors.tsx` -> `100.00%` lines / `62.50%` branches
+- `core/admin/ui/widgets/editors/ProductTableEditors.tsx` -> `100.00%` lines / `100.00%` branches
 - `core/admin/ui/widgets/editors/TemplateSectionEditors.tsx` -> `100.00%` lines / `71.79%` branches
 - `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` -> `97.18%` lines / `58.82%` branches
 - `core/admin/ui/widgets/editors/TeamEditors.tsx` -> `97.67%` lines / `60.71%` branches

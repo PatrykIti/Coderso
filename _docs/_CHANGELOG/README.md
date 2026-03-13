@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 457 | 2026-03-13 | TASK-105 product table fallback coverage | QA/Platform |
 | 456 | 2026-03-13 | TASK-105 product compare fallback coverage | QA/Platform |
 | 455 | 2026-03-13 | TASK-105 product gallery fallback coverage | QA/Platform |
 | 454 | 2026-03-13 | TASK-105 posts feed fallback coverage | QA/Platform |

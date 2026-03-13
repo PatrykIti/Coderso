@@ -604,3 +604,44 @@ test("ProductTable editors restore default labels and empty state when fields ar
     view.cleanup();
   }
 });
+
+test("ProductTable advanced editor falls back when normalized resolved summary is sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/productTable", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/productTable")
+    >("../../../core/widgets/core/productTable");
+
+    return {
+      ...actual,
+      normalizeProductTableData: (value: ProductTableData) => ({
+        ...actual.normalizeProductTableData(value),
+        resolved: {
+          resolvedAt: "",
+          error: "",
+        } as ProductTableData["resolved"],
+      }),
+    };
+  });
+
+  const { ProductTableAdvancedEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ProductTableEditors"
+  );
+
+  const view = mount(
+    <ProductTableAdvancedEditor value={{}} onChange={() => undefined} variant="default" />
+  );
+
+  try {
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Resolved items: 0 · Total: 0")
+    );
+    expect(
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/productTable");
+    vi.resetModules();
+  }
+});
