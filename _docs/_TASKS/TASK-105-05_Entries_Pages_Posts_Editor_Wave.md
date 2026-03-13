@@ -69,6 +69,7 @@ Completed slices:
 - deeper preview, no-id, and classic-shell error coverage for `PostClassicEditorShell`
 - direct interaction coverage for `DocumentInspector`
 - direct interaction coverage for `BlockInspector`
+- direct interaction coverage for `PostDetailsSidebar`
 
 Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -82,6 +83,7 @@ Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `86.47%` lines / `66.66%` branches
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx` -> `98.50%` lines / `93.44%` branches
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx` -> `100%` lines / `100%` branches
+- `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `90.10%` lines / `74.33%` branches
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines / `67.92%` branches
 

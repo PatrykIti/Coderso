@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 467 | 2026-03-13 | TASK-105 post details sidebar direct coverage | QA/Platform |
 | 466 | 2026-03-13 | TASK-105 logo cloud sparse default coverage | QA/Platform |
 | 465 | 2026-03-13 | TASK-105 contact sparse default coverage | QA/Platform |
 | 464 | 2026-03-13 | TASK-105 footer sparse empty-state coverage | QA/Platform |
