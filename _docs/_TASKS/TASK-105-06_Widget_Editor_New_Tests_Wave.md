@@ -73,6 +73,7 @@ Completed slices:
 - direct Vitest coverage for `FooterEditors`
 - deeper sparse/empty-state coverage for `FooterEditors`
 - direct Vitest coverage for `LogoCloudEditors`
+- deeper sparse-default coverage for `LogoCloudEditors`
 - direct Vitest coverage for `RichTextSectionEditors`
 - direct Vitest coverage for `GalleryMosaicEditors`
 - direct Vitest coverage for `CtaBannerEditors`
@@ -124,7 +125,7 @@ Current `2026-03-10` widget editor snapshot after the latest residual-closure fo
 - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` -> `96.42%` lines / `66.37%` branches
 - `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` -> `100.00%` lines / `82.05%` branches
 - `core/admin/ui/widgets/editors/FooterEditors.tsx` -> `100.00%` lines / `92.10%` branches
-- `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` -> `98.80%` lines / `64.00%` branches
+- `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` -> `100.00%` lines / `81.25%` branches
 - `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` -> `89.69%` lines / `63.79%` branches
 - `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` -> `95.74%` lines / `66.66%` branches
 - `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` -> `100.00%` lines / `62.50%` branches
