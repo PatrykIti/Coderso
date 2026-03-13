@@ -327,3 +327,44 @@ test("ProductCompare editors fall back to hardcoded wizard limit and empty runti
     vi.resetModules();
   }
 });
+
+test("ProductCompare advanced editor falls back when normalized resolved summary is sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/productCompare", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/productCompare")
+    >("../../../core/widgets/core/productCompare");
+
+    return {
+      ...actual,
+      normalizeProductCompareData: (value: ProductCompareData) => ({
+        ...actual.normalizeProductCompareData(value),
+        resolved: {
+          resolvedAt: "",
+          error: "",
+        } as ProductCompareData["resolved"],
+      }),
+    };
+  });
+
+  const { ProductCompareAdvancedEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ProductCompareEditors"
+  );
+
+  const view = mount(
+    <ProductCompareAdvancedEditor value={{}} onChange={() => undefined} variant="matrix" />
+  );
+
+  try {
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Resolved rows: 0 · Total: 0")
+    );
+    expect(
+      (findInputByLabel(view.container, "Runtime error flag") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/productCompare");
+    vi.resetModules();
+  }
+});
