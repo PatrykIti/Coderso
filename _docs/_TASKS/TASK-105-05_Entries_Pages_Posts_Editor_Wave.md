@@ -59,6 +59,7 @@ Completed slices:
 - direct DOM interaction coverage for `PostRichTextAdapter` toolbar fallback callbacks, slash insert flow, rich-text paste directives, and clipboard image upload/unavailable states
 - deeper selection, formatting, and image-layout interaction coverage for `PostRichTextAdapter`
 - deeper command engine, link flow, and slash-close coverage for `PostRichTextAdapter`
+- direct DOM coverage for `postRichTextCommandEngine`
 - direct `happy-dom` branch coverage for `PostsTable`
 - direct interaction coverage for `PostEditorCanvas`
 - deeper preview, adapter-callback, and image-picker coverage for `PostEditorCanvas`
@@ -85,6 +86,7 @@ Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `92.06%` lines / `78.19%` branches
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `85.29%` lines / `70.09%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `86.47%` lines / `66.66%` branches
+- `core/admin/ui/posts/editor/richtext/postRichTextCommandEngine.ts` -> `81.66%` lines / `72.05%` branches
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx` -> `98.50%` lines / `93.44%` branches
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx` -> `100%` lines / `100%` branches
