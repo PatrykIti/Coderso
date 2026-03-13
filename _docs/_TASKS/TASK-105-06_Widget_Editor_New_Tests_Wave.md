@@ -83,6 +83,7 @@ Completed slices:
 - deeper value-path coverage for `CtaBannerEditors`
 - deeper branch and line coverage for `HeroEditors`
 - deeper branch and line coverage for `ContentListEditors`
+- deeper fallback and async-cleanup coverage for `PostsFeedEditors`
 - deeper branch and token coverage for `SectionEditors`
 - deeper branch coverage for `GridColumnsEditors`
 - deeper branch coverage for `ToggleBlockEditors`
@@ -93,7 +94,7 @@ Completed slices:
 Current `2026-03-10` widget editor snapshot after the latest residual-closure follow-up:
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines / `66.04%` branches
 - `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `100.00%` lines / `74.59%` branches
-- `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `96.70%` lines / `64.00%` branches
+- `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `100.00%` lines / `73.33%` branches
 - `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `85.38%` lines / `64.66%` branches
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `87.50%` lines / `66.07%` branches
 - `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` -> `93.93%` lines / `73.33%` branches

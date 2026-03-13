@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 454 | 2026-03-13 | TASK-105 posts feed fallback coverage | QA/Platform |
 | 453 | 2026-03-13 | TASK-105 post classic editor shell follow-up | QA/Platform |
 | 452 | 2026-03-13 | TASK-105 block inspector direct coverage | QA/Platform |
 | 451 | 2026-03-13 | TASK-105 document inspector direct coverage | QA/Platform |

@@ -36,8 +36,10 @@ const postsFeedState = vi.hoisted(() => ({
     },
   ],
   postsError: null as unknown,
+  listPostsImpl: null as null | (() => Promise<unknown>),
   reset() {
     this.postsError = null;
+    this.listPostsImpl = null;
   },
 }));
 
@@ -178,10 +180,23 @@ vi.mock("@/services/apiClient", () => ({
 
 vi.mock("@/services/postsClient", () => ({
   listPostsCached: vi.fn(async () => {
+    if (postsFeedState.listPostsImpl) {
+      return postsFeedState.listPostsImpl();
+    }
     if (postsFeedState.postsError) throw postsFeedState.postsError;
     return postsFeedState.posts;
   }),
 }));
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+};
 
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
@@ -623,4 +638,163 @@ test("PostsFeed editors cover category filtering, manual deselection, empty cata
   } finally {
     postsFeedState.posts = originalPosts;
   }
+});
+
+test("PostsFeed editors fall back for invalid numeric/select values and sparse defaults", async () => {
+  const {
+    PostsFeedAdvancedEditor,
+    PostsFeedVisualEditor,
+    PostsFeedWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/PostsFeedEditors");
+
+  let latestValue: PostsFeedData = {
+    source: {
+      mode: "latest",
+      limit: 5,
+      sort: "published-desc",
+    },
+    style: {
+      columns: "3",
+      gap: "md",
+      cardStyle: "outlined",
+      ctaLabel: "",
+    },
+  } as PostsFeedData;
+
+  const Harness = () => {
+    const [value, setValue] = useState<PostsFeedData>(latestValue);
+    return (
+      <>
+        <PostsFeedWizardEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="unknown"
+          onVariantChange={() => undefined}
+        />
+        <PostsFeedVisualEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="unknown"
+          onVariantChange={() => undefined}
+        />
+        <PostsFeedAdvancedEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="unknown"
+          onVariantChange={() => undefined}
+        />
+      </>
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    await flush();
+
+    expect(findSelectByOptions(view.container, ["cards", "list", "compact"])).toBeInstanceOf(
+      HTMLSelectElement
+    );
+
+    act(() => {
+      setInputValue(
+        Array.from(view.container.querySelectorAll("input")).find(
+          (element) => element instanceof HTMLInputElement && element.type === "number"
+        ),
+        "not-a-number"
+      );
+      setSelectValue(
+        findSelectByOptions(view.container, [
+          "published-desc",
+          "published-asc",
+          "updated-desc",
+          "updated-asc",
+          "title-asc",
+          "title-desc",
+        ]),
+        "invalid-sort"
+      );
+      setSelectValue(findSelectByOptions(view.container, ["1", "2", "3"]), "invalid-columns");
+      setSelectValue(findSelectByOptions(view.container, ["sm", "md", "lg"]), "invalid-gap");
+      setSelectValue(
+        findSelectByOptions(view.container, ["outlined", "elevated", "minimal"]),
+        "invalid-style"
+      );
+    });
+
+    expect(latestValue.source).toEqual(
+      expect.objectContaining({
+        limit: 1,
+        sort: "published-desc",
+      })
+    );
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        columns: "3",
+        gap: "md",
+        cardStyle: "outlined",
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsFeed editors ignore async post option resolution after unmount", async () => {
+  const { PostsFeedWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/PostsFeedEditors"
+  );
+
+  const resolveDeferred = createDeferred<typeof postsFeedState.posts>();
+  postsFeedState.listPostsImpl = () => resolveDeferred.promise;
+
+  const view = mount(
+    <PostsFeedWizardEditor
+      value={{ source: { mode: "manual" } }}
+      onChange={() => undefined}
+      variant="cards"
+    />
+  );
+
+  try {
+    await flush();
+  } finally {
+    view.cleanup();
+  }
+
+  await act(async () => {
+    resolveDeferred.resolve(postsFeedState.posts);
+    await Promise.resolve();
+  });
+
+  const rejectDeferred = createDeferred<typeof postsFeedState.posts>();
+  postsFeedState.listPostsImpl = () => rejectDeferred.promise;
+
+  const rejectView = mount(
+    <PostsFeedWizardEditor
+      value={{ source: { mode: "manual" } }}
+      onChange={() => undefined}
+      variant="cards"
+    />
+  );
+
+  try {
+    await flush();
+  } finally {
+    rejectView.cleanup();
+  }
+
+  await act(async () => {
+    rejectDeferred.reject(new Error("late failure"));
+    await Promise.resolve();
+  });
 });
