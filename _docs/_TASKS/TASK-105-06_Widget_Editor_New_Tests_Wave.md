@@ -43,6 +43,7 @@ Completed slices:
 - direct Vitest coverage for `ListingFiltersEditors`
 - direct Vitest coverage for `PostsFeedEditors`
 - initial direct Vitest coverage for `ContentListEditors`
+- deeper sparse-default coverage for `ContentListEditors`
 - direct Vitest coverage for `StatsKpiEditors`
 - direct Vitest coverage for `CommerceWidgetEditorShared`
 - direct Vitest coverage for `ProductCompareEditors`
@@ -99,7 +100,7 @@ Current `2026-03-10` widget editor snapshot after the latest residual-closure fo
 - `core/admin/ui/widgets/editors/EntryTeaserEditors.tsx` -> `90.84%` lines / `66.04%` branches
 - `core/admin/ui/widgets/editors/ListingFiltersEditors.tsx` -> `100.00%` lines / `74.59%` branches
 - `core/admin/ui/widgets/editors/PostsFeedEditors.tsx` -> `100.00%` lines / `73.33%` branches
-- `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `85.38%` lines / `64.66%` branches
+- `core/admin/ui/widgets/editors/ContentListEditors.tsx` -> `100.00%` lines / `93.98%` branches
 - `core/admin/ui/widgets/editors/StatsKpiEditors.tsx` -> `87.50%` lines / `66.07%` branches
 - `core/admin/ui/widgets/editors/CommerceWidgetEditorShared.tsx` -> `93.93%` lines / `73.33%` branches
 - `core/admin/ui/widgets/editors/ProductCompareEditors.tsx` -> `100.00%` lines / `100.00%` branches

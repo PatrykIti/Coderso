@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 459 | 2026-03-13 | TASK-105 content list sparse default coverage | QA/Platform |
 | 458 | 2026-03-13 | TASK-105 team style fallback coverage | QA/Platform |
 | 457 | 2026-03-13 | TASK-105 product table fallback coverage | QA/Platform |
 | 456 | 2026-03-13 | TASK-105 product compare fallback coverage | QA/Platform |

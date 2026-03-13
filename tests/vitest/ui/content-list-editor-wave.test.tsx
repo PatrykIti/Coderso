@@ -978,6 +978,168 @@ test("ContentList wizard editor ignores late loader failures after source-mode t
   }
 });
 
+test("ContentList editors fall back to default source, style, field, and runtime values when normalized data is sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/contentList", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/contentList")
+    >("../../../core/widgets/core/contentList");
+
+    return {
+      ...actual,
+      normalizeContentListData: (value: ContentListData) => ({
+        ...actual.normalizeContentListData(value),
+        source: {
+          mode: undefined,
+          contentTypeId: undefined,
+          listingQueryId: undefined,
+          listingTemplateId: undefined,
+          limit: undefined,
+          statusScope: undefined,
+          sort: undefined,
+        } as ContentListData["source"],
+        filters: {
+          taxonomy: undefined,
+          authorId: undefined,
+          searchQuery: undefined,
+          featuredOnly: undefined,
+        } as ContentListData["filters"],
+        fields: {
+          showImage: undefined,
+          showExcerpt: undefined,
+          showMeta: undefined,
+          showCta: undefined,
+        } as ContentListData["fields"],
+        style: {
+          columns: undefined,
+          gap: undefined,
+          cardStyle: undefined,
+          ctaLabel: undefined,
+          backgroundColor: undefined,
+          borderColor: undefined,
+          textColor: undefined,
+        } as ContentListData["style"],
+        emptyState: {
+          title: undefined,
+          description: undefined,
+        } as ContentListData["emptyState"],
+        resolved: undefined,
+      }),
+    };
+  });
+
+  const {
+    ContentListAdvancedEditor,
+    ContentListVisualEditor,
+    ContentListWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/ContentListEditors");
+
+  const view = mount(
+    <>
+      <ContentListWizardEditor
+        value={{} as ContentListData}
+        onChange={() => undefined}
+        variant="unknown-layout"
+      />
+      <ContentListVisualEditor
+        value={{} as ContentListData}
+        onChange={() => undefined}
+        variant="unknown-layout"
+      />
+      <ContentListAdvancedEditor
+        value={{} as ContentListData}
+        onChange={() => undefined}
+        variant="unknown-layout"
+      />
+    </>
+  );
+
+  try {
+    expect(
+      (findSelectsByOptions(view.container, ["legacy", "listing"])[0] as HTMLSelectElement | undefined)
+        ?.value
+    ).toBe("legacy");
+    expect(
+      (findSelectsByOptions(view.container, ["cards", "list", "compact"])[0] as HTMLSelectElement | undefined)
+        ?.value
+    ).toBe("cards");
+    expect((findNumberInputs(view.container)[0] as HTMLInputElement | undefined)?.value).toBe("6");
+    expect((findSelectsByOptions(view.container, ["1", "2", "3"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "3"
+    );
+    expect((findSelectsByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "md"
+    );
+    expect(
+      (findSelectsByOptions(view.container, ["outlined", "elevated", "minimal"])[0] as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("outlined");
+    expect(
+      (findSelectsByOptions(
+        view.container,
+        ["published", "all", "draft", "scheduled", "archived"]
+      )[0] as HTMLSelectElement | undefined)?.value
+    ).toBe("published");
+    expect(
+      (findSelectsByOptions(
+        view.container,
+        [
+          "published-desc",
+          "published-asc",
+          "updated-desc",
+          "updated-asc",
+          "title-asc",
+          "title-desc",
+        ]
+      )[0] as HTMLSelectElement | undefined)?.value
+    ).toBe("published-desc");
+    expect((findInputByPlaceholder(view.container, "Read more") as HTMLInputElement | undefined)?.value).toBe(
+      "Read more"
+    );
+    expect((findInputByPlaceholder(view.container, "No items found") as HTMLInputElement | undefined)?.value).toBe(
+      ""
+    );
+    expect(
+      (
+        findTextareaByPlaceholder(
+          view.container,
+          "Adjust filters or publish entries for this content type."
+        ) as HTMLTextAreaElement | undefined
+      )?.value
+    ).toBe("");
+    expect((findCheckboxByLabelText(view.container, "Show image") as HTMLInputElement | undefined)?.checked).toBe(
+      true
+    );
+    expect((findCheckboxByLabelText(view.container, "Show excerpt") as HTMLInputElement | undefined)?.checked).toBe(
+      true
+    );
+    expect((findCheckboxByLabelText(view.container, "Show meta") as HTMLInputElement | undefined)?.checked).toBe(
+      true
+    );
+    expect((findCheckboxByLabelText(view.container, "Show CTA link") as HTMLInputElement | undefined)?.checked).toBe(
+      true
+    );
+    expect((findCheckboxByLabelText(view.container, "Featured only") as HTMLInputElement | undefined)?.checked).toBe(
+      false
+    );
+    expect((findInputByPlaceholder(view.container, "var(--color-bg)") as HTMLInputElement | undefined)?.value).toBe(
+      ""
+    );
+    expect((findInputByPlaceholder(view.container, "var(--color-border)") as HTMLInputElement | undefined)?.value).toBe(
+      ""
+    );
+    expect((findInputByPlaceholder(view.container, "var(--color-text)") as HTMLInputElement | undefined)?.value).toBe(
+      ""
+    );
+    expect(view.container.textContent).toContain('"items": []');
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/contentList");
+    vi.resetModules();
+  }
+});
+
 test("ContentList editors surface content type and listings loading errors", async () => {
   const {
     ContentListAdvancedEditor,
