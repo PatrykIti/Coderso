@@ -702,3 +702,61 @@ test("PostClassicEditorShell surfaces refresh conflicts, publish errors, and met
     view.cleanup();
   }
 });
+
+test("PostClassicEditorShell handles missing post ids, generic preview failures, and manual slug edits", async () => {
+  const { PostClassicEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostClassicEditorShell"
+  );
+
+  classicState.path = "/admin/coderso/settings";
+
+  const missingIdView = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+
+    const missingButtons = Array.from(missingIdView.container.querySelectorAll("button"));
+    act(() => {
+      missingButtons.find((button) => button.textContent === "Runtime preview")?.click();
+    });
+    await flush();
+
+    expect(classicState.previewPostCalls).toEqual([]);
+    expect(missingIdView.container.textContent).toContain("preview-url:none");
+    expect(missingIdView.container.textContent).toContain("preview-error:none");
+    expect(missingIdView.container.textContent).toContain("preview-loading:false");
+  } finally {
+    missingIdView.cleanup();
+  }
+
+  classicState.cachedPost = classicState.createPost("post-4", "draft", {
+    slug: "initial-slug",
+  });
+  classicState.fetchedPost = classicState.cachedPost;
+  classicState.path = "/admin/coderso/posts/post-4?editor=classic";
+  classicState.nextPreviewError = new Error("preview crashed");
+
+  const genericPreviewView = mount(<PostClassicEditorShell />);
+
+  try {
+    await flush();
+
+    const slugInput = genericPreviewView.container.querySelector(
+      'input[placeholder="post-slug"]'
+    );
+    const buttons = Array.from(genericPreviewView.container.querySelectorAll("button"));
+
+    act(() => {
+      setInputValue(slugInput, "manual-slug");
+      buttons.find((button) => button.textContent === "Runtime preview")?.click();
+    });
+    await flush();
+
+    expect(genericPreviewView.container.textContent).toContain("unsaved:true");
+    expect(genericPreviewView.container.textContent).toContain(
+      "preview-error:Failed to generate preview."
+    );
+  } finally {
+    genericPreviewView.cleanup();
+  }
+});

@@ -66,6 +66,7 @@ Completed slices:
 - deeper `PostsListPage` coverage for tag filters, cancelled deletes, and create-without-open flow
 - deeper `PostsListPage` lifecycle, refresh, and action-error coverage
 - direct `happy-dom` shell coverage for `PostClassicEditorShell`
+- deeper preview, no-id, and classic-shell error coverage for `PostClassicEditorShell`
 - direct interaction coverage for `DocumentInspector`
 - direct interaction coverage for `BlockInspector`
 
@@ -76,7 +77,7 @@ Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/pages/PagePreview.tsx` -> `88.88%` lines / `91.66%` branches
 - `core/admin/ui/pages/builder/BlockList.tsx` -> `90.80%` lines / `74.32%` branches
 - `core/admin/ui/posts/PostsListPage.tsx` -> `94.69%` lines / `73.01%` branches
-- `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `91.00%` lines / `74.43%` branches
+- `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `92.06%` lines / `78.19%` branches
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `85.29%` lines / `70.09%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `86.47%` lines / `66.66%` branches
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx` -> `98.50%` lines / `93.44%` branches
