@@ -49,6 +49,7 @@ Completed slices:
 - deeper drag-state, toolbar, and slot-interaction coverage for `BlockList`
 - direct interaction coverage for `WizardPanel`
 - direct interaction coverage for `WidgetPicker`
+- deeper drag-state and drop-fallback coverage for `PostListViewPanel`
 - direct Vitest coverage for `blockTransforms`
 - deeper direct Vitest coverage for `FieldRenderer`
 - direct `happy-dom` branch coverage for `PageTable`
@@ -87,6 +88,7 @@ Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `85.29%` lines / `70.09%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `86.47%` lines / `66.66%` branches
 - `core/admin/ui/posts/editor/richtext/postRichTextCommandEngine.ts` -> `81.66%` lines / `72.05%` branches
+- `core/admin/ui/posts/editor/blocks/PostListViewPanel.tsx` -> `100%` lines / `94.59%` branches
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx` -> `98.50%` lines / `93.44%` branches
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx` -> `100%` lines / `100%` branches

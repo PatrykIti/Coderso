@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 471 | 2026-03-13 | TASK-105 post list view panel dnd coverage | QA/Platform |
 | 470 | 2026-03-13 | TASK-105 post richtext command engine DOM coverage | QA/Platform |
 | 469 | 2026-03-13 | TASK-105 widget picker direct coverage | QA/Platform |
 | 468 | 2026-03-13 | TASK-105 wizard panel direct coverage | QA/Platform |
