@@ -1325,3 +1325,162 @@ test("NavigationAdvancedEditor updates layout tokens and runtime toggles", async
     view.cleanup();
   }
 });
+
+test("Navigation editors fall back to default source, items, behavior, and layout values for sparse payloads", async () => {
+  const {
+    NavigationAdvancedEditor,
+    NavigationVisualEditor,
+    NavigationWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/NavigationEditors");
+
+  const sparseValue = {
+    logo: {
+      type: "text",
+      value: "",
+      href: "",
+    },
+    items: [],
+    layout: {},
+    behavior: {},
+    style: {},
+  } as NavigationData;
+
+  const wizardView = mount(
+    <NavigationWizardEditor value={sparseValue} onChange={() => undefined} variant="simple" />
+  );
+
+  try {
+    expect(
+      (
+        findSelectByOptions(wizardView.container, ["manual", "menu", "pages"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("manual");
+    expect(
+      (findInputByPlaceholder(wizardView.container, "Item 1 label") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("Home");
+    expect(
+      (findInputByPlaceholder(wizardView.container, "/path") as HTMLInputElement | undefined)?.value
+    ).toBe("/");
+    expect(
+      (findInputByPlaceholder(wizardView.container, "Nextless") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("");
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <NavigationVisualEditor value={sparseValue} onChange={() => undefined} variant="simple" />
+  );
+
+  try {
+    const mobileSection = findSectionByTitle(visualView.container, "Mobile Behavior");
+    const colorsSection = findSectionByTitle(
+      visualView.container,
+      "Colors, Borders, Typography"
+    );
+    const surfaceSection = findSectionByTitle(
+      visualView.container,
+      "Surface and Runtime Behavior"
+    );
+
+    expect(normalizeText(visualView.container.textContent)).toContain(
+      normalizeText("CTA is disabled for the Simple variant.")
+    );
+    expect(
+      (findInputByPlaceholder(visualView.container, "Item 1 label") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("Home");
+    expect(
+      (
+        findSelectByOptions(
+          mobileSection as ParentNode,
+          ["expanded", "drawer", "minimal"]
+        ) as HTMLSelectElement | undefined
+      )?.value
+    ).toBe("expanded");
+    expect(
+      (
+        findCheckboxes(mobileSection as ParentNode)[0] as HTMLInputElement | undefined
+      )?.checked
+    ).toBe(false);
+    expect(
+      (findInputByPlaceholder(colorsSection as ParentNode, "#ffffff") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("");
+    expect(
+      (
+        findSelectByOptions(colorsSection as ParentNode, ["0", "1", "2", "3"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("1");
+    expect(
+      (
+        findSelectByOptions(colorsSection as ParentNode, ["xs", "sm", "base", "lg"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("sm");
+    expect(
+      (
+        findSelectByOptions(
+          colorsSection as ParentNode,
+          ["normal", "medium", "semibold", "bold"]
+        ) as HTMLSelectElement | undefined
+      )?.value
+    ).toBe("medium");
+    expect(
+      (
+        findCheckboxes(surfaceSection as ParentNode)[0] as HTMLInputElement | undefined
+      )?.checked
+    ).toBe(false);
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <NavigationAdvancedEditor value={sparseValue} onChange={() => undefined} variant="simple" />
+  );
+
+  try {
+    expect(
+      (
+        findSelectByOptions(
+          advancedView.container,
+          ["left", "center", "right"]
+        ) as HTMLSelectElement | undefined
+      )?.value
+    ).toBe("right");
+    expect(
+      (
+        findSelectByOptions(
+          advancedView.container,
+          ["5xl", "6xl", "7xl"]
+        ) as HTMLSelectElement | undefined
+      )?.value
+    ).toBe("6xl");
+    expect(
+      (
+        findSelectByOptions(advancedView.container, ["2", "3", "4", "5"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("4");
+    expect(
+      (
+        findSelectByOptions(advancedView.container, ["2", "3", "4", "6"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("4");
+    const toggles = findCheckboxes(advancedView.container);
+    expect(toggles[0]?.checked).toBe(false);
+    expect(toggles[1]?.checked).toBe(false);
+  } finally {
+    advancedView.cleanup();
+  }
+});
