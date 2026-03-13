@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 464 | 2026-03-13 | TASK-105 footer sparse empty-state coverage | QA/Platform |
 | 463 | 2026-03-13 | TASK-105 feature grid sparse default coverage | QA/Platform |
 | 462 | 2026-03-13 | TASK-105 FAQ accordion sparse default coverage | QA/Platform |
 | 461 | 2026-03-13 | TASK-105 testimonials sparse default coverage | QA/Platform |
