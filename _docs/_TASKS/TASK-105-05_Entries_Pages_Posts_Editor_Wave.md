@@ -47,6 +47,7 @@ Completed slices:
 - direct query/close coverage for `PagePreview`
 - deeper interaction coverage for `BlockList`
 - deeper drag-state, toolbar, and slot-interaction coverage for `BlockList`
+- direct interaction coverage for `WizardPanel`
 - direct Vitest coverage for `blockTransforms`
 - deeper direct Vitest coverage for `FieldRenderer`
 - direct `happy-dom` branch coverage for `PageTable`
@@ -77,6 +78,7 @@ Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/pages/PageListPage.tsx` -> `95.45%` lines / `78.57%` branches
 - `core/admin/ui/pages/PagePreview.tsx` -> `88.88%` lines / `91.66%` branches
 - `core/admin/ui/pages/builder/BlockList.tsx` -> `90.80%` lines / `74.32%` branches
+- `core/admin/ui/pages/builder/WizardPanel.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/posts/PostsListPage.tsx` -> `94.69%` lines / `73.01%` branches
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `92.06%` lines / `78.19%` branches
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `85.29%` lines / `70.09%` branches
