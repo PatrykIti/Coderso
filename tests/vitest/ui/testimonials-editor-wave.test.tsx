@@ -809,3 +809,153 @@ test("Testimonials visual editor covers header copy, card field updates, picker 
     view.cleanup();
   }
 });
+
+test("Testimonials editors fall back when normalized header, style, and item fields are sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/testimonials", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/testimonials")
+    >("../../../core/widgets/core/testimonials");
+
+    return {
+      ...actual,
+      normalizeTestimonialsData: (value: TestimonialsData) => ({
+        ...actual.normalizeTestimonialsData(value),
+        header: {
+          eyebrow: undefined,
+          title: undefined,
+          description: undefined,
+        } as TestimonialsData["header"],
+        testimonials: [
+          {
+            id: undefined,
+            quote: undefined,
+            author: undefined,
+            role: undefined,
+            avatar: undefined,
+            sourceLabel: undefined,
+            rating: undefined,
+          },
+          {
+            id: undefined,
+            quote: undefined,
+            author: undefined,
+            role: undefined,
+            avatar: undefined,
+            sourceLabel: undefined,
+            rating: undefined,
+          },
+        ] as TestimonialsData["testimonials"],
+        style: {
+          spacing: undefined,
+          cardSurface: undefined,
+          cardBorder: undefined,
+          textColor: undefined,
+          accentColor: undefined,
+        } as TestimonialsData["style"],
+      }),
+      normalizeTestimonialsItems: () =>
+        [
+          {
+            id: undefined,
+            quote: undefined,
+            author: undefined,
+            role: undefined,
+            avatar: undefined,
+            sourceLabel: undefined,
+            rating: undefined,
+          },
+          {
+            id: undefined,
+            quote: undefined,
+            author: undefined,
+            role: undefined,
+            avatar: undefined,
+            sourceLabel: undefined,
+            rating: undefined,
+          },
+        ] as TestimonialsData["testimonials"],
+    };
+  });
+
+  const { TestimonialsAdvancedEditor, TestimonialsVisualEditor, TestimonialsWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/TestimonialsEditors");
+
+  const view = mount(
+    <>
+      <TestimonialsWizardEditor
+        value={{} as TestimonialsData}
+        onChange={() => undefined}
+        variant="legacy"
+      />
+      <TestimonialsVisualEditor
+        value={{} as TestimonialsData}
+        onChange={() => undefined}
+        variant="legacy"
+      />
+      <TestimonialsAdvancedEditor
+        value={{} as TestimonialsData}
+        onChange={() => undefined}
+        variant="legacy"
+      />
+    </>
+  );
+
+  try {
+    expect(
+      (findSelectByOptions(view.container, ["grid", "spotlight", "slider-static"]) as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("grid");
+    expect(
+      (
+        findInputByPlaceholder(view.container, "Trusted by teams that ship fast") as
+          | HTMLInputElement
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (findTextareaByPlaceholder(view.container, "Customer quote") as HTMLTextAreaElement | undefined)
+        ?.value
+    ).toBe("");
+    expect(
+      (findInputByPlaceholder(view.container, "Author name") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+    expect(
+      (findInputByPlaceholder(view.container, "Role or position") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+    expect(
+      (
+        findInputByPlaceholder(view.container, "https://cdn.example.com/avatar.jpg") as
+          | HTMLInputElement
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (findInputByPlaceholder(view.container, "Acme Studio") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+    expect(
+      (findSelectByOptions(view.container, ["0", "1", "2", "3", "4", "5"])[0] as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("0");
+    expect(
+      (findSelectByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | undefined)
+        ?.value
+    ).toBe("sm");
+    expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");
+    expect(findColorInputForPlaceholder(view.container, "var(--color-border)").value).toBe(
+      "#e2e8f0"
+    );
+    expect(findColorInputForPlaceholder(view.container, "var(--color-text)").value).toBe(
+      "#0f172a"
+    );
+    expect(findColorInputForPlaceholder(view.container, "var(--color-primary)").value).toBe(
+      "#1d4ed8"
+    );
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/testimonials");
+    vi.resetModules();
+  }
+});
