@@ -4,7 +4,7 @@ import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import type { ContactData } from "../../../core/widgets/core/contact";
+import { contactDefaults, type ContactData } from "../../../core/widgets/core/contact";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -648,5 +648,140 @@ test("ContactAdvancedEditor covers map metadata updates, normalization, and diag
     );
   } finally {
     view.cleanup();
+  }
+});
+
+test("Contact editors cover sparse defaults, minimal variant fallback, and default map metadata state", async () => {
+  const {
+    ContactAdvancedEditor,
+    ContactVisualEditor,
+    ContactWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/ContactEditors");
+
+  const sparseValue: ContactData = {
+    form: {},
+    contact: {},
+    map: {},
+    style: {},
+  };
+
+  const wizardView = mount(
+    <ContactWizardEditor value={sparseValue} onChange={() => undefined} variant="form-left" />
+  );
+
+  try {
+    expect(
+      (findInputByPlaceholder(wizardView.container, "Send message") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("Send message");
+    expect(
+      (findInputByPlaceholder(wizardView.container, "+1 555 123 456") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe(contactDefaults.contact?.phone);
+  } finally {
+    wizardView.cleanup();
+  }
+
+  let latestValue: ContactData = sparseValue;
+
+  const VisualHarness = () => {
+    const [value, setValue] = useState<ContactData>(latestValue);
+
+    return (
+      <ContactVisualEditor
+        value={value}
+        onChange={(next) => {
+          latestValue = next;
+          setValue(next);
+        }}
+        variant="minimal"
+      />
+    );
+  };
+
+  const visualView = mount(<VisualHarness />);
+
+  try {
+    expect(visualView.container.textContent).toContain(
+      "Columns apply only to `form-left` and `form-right` variants."
+    );
+    clickButtonByText(visualView.container, "Form left");
+    expect(visualView.container.textContent).toContain(
+      "Columns apply only to `form-left` and `form-right` variants."
+    );
+
+    const mapSection = findSection(visualView.container, "Map source and display behavior");
+    if (!mapSection) {
+      throw new Error("Missing map section");
+    }
+
+    expect(findInputByPlaceholder(visualView.container, "https://maps.google.com/...")).toBeUndefined();
+
+    setCheckboxValue(mapSection.querySelector("input[type='checkbox']") ?? undefined, true);
+    setInputValue(
+      findInputByPlaceholder(visualView.container, "https://maps.google.com/..."),
+      "https://maps.example.com/minimal"
+    );
+
+    expect(latestValue.map).toMatchObject({
+      enabled: true,
+      embedUrl: "https://maps.example.com/minimal",
+    });
+
+    const colorsSection = findSection(visualView.container, "Colors, borders, and surface styling");
+    if (!colorsSection) {
+      throw new Error("Missing colors section");
+    }
+
+    expect(
+      (findInputByPlaceholder(colorsSection, "transparent or #f8fafc") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe(contactDefaults.style?.background);
+    expect(
+      (findInputByPlaceholder(colorsSection, "var(--color-bg) or #ffffff") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe(contactDefaults.style?.surfaceColor);
+    expect(
+      (
+        findSelectByOptions(colorsSection, ["0", "1", "2", "3"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("1");
+
+    const spacingSection = findSection(visualView.container, "Spacing and columns");
+    if (!spacingSection) {
+      throw new Error("Missing spacing section");
+    }
+
+    expect(
+      (
+        findSelectByOptions(spacingSection, ["sm", "md", "lg", "xl"]) as
+          | HTMLSelectElement
+          | undefined
+      )?.value
+    ).toBe("md");
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <ContactAdvancedEditor value={sparseValue} onChange={() => undefined} />
+  );
+
+  try {
+    expect(
+      (advancedView.container.querySelector("input[type='checkbox']") as HTMLInputElement | undefined)
+        ?.checked
+    ).toBe(false);
+    expect(
+      (
+        findInputByPlaceholder(advancedView.container, "https://maps.google.com/...") as
+          | HTMLInputElement
+          | undefined
+      )?.value
+    ).toBe("");
+  } finally {
+    advancedView.cleanup();
   }
 });

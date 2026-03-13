@@ -116,7 +116,7 @@ Current `2026-03-10` widget editor snapshot after the latest residual-closure fo
 - `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` -> `100.00%` lines / `91.66%` branches
 - `core/admin/ui/widgets/editors/HeroEditors.tsx` -> `99.35%` lines / `91.32%` branches
 - `core/admin/ui/widgets/editors/NavigationEditors.tsx` -> `91.73%` lines / `72.12%` branches
-- `core/admin/ui/widgets/editors/ContactEditors.tsx` -> `92.85%` lines / `63.80%` branches
+- `core/admin/ui/widgets/editors/ContactEditors.tsx` -> `100.00%` lines / `65.71%` branches
 - `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` -> `100.00%` lines / `70.58%` branches
 - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` -> `96.42%` lines / `66.37%` branches
 - `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` -> `88.23%` lines / `58.97%` branches
@@ -308,6 +308,11 @@ Newsletter/team/logo refactor follow-up on 2026-03-11:
 Search box follow-up on 2026-03-13:
 - Deepened `SearchBoxEditors` coverage around wizard mode switching, persisted global endpoint state, and clearing listing-query selection back to the sentinel empty option.
 - Isolated targeted run for `SearchBoxEditors.tsx` moved to `100.00%` lines / `73.80%` branches.
+- Canonical full-lane snapshot was not rebaselined separately for this narrow follow-up slice.
+
+Contact sparse-default follow-up on 2026-03-13:
+- Added explicit sparse/default assertions for `ContactEditors` across wizard, visual, and advanced modes, including inert minimal-variant clicks without a handler plus default map metadata state.
+- Isolated targeted run for `ContactEditors.tsx` stayed at `100.00%` lines / `65.71%` branches.
 - Canonical full-lane snapshot was not rebaselined separately for this narrow follow-up slice.
 
 Remaining hotspots in this wave:
