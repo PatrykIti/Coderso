@@ -6,6 +6,12 @@ import { expect, test, vi } from "vitest";
 
 import { FormPicker } from "../../../core/admin/ui/pages/builder/FormPicker";
 import { TemplatePicker } from "../../../core/admin/ui/pages/builder/TemplatePicker";
+import { WidgetPicker } from "../../../core/admin/ui/pages/builder/WidgetPicker";
+
+vi.mock("lucide-react", () => ({
+  Plus: () => <span>plus-icon</span>,
+  Search: () => <span>search-icon</span>,
+}));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -42,9 +48,17 @@ vi.mock("@/components/ui/input", () => ({
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   }) => {
     const matchValue =
-      placeholder === "Find forms..." ? "support" : "footer";
+      placeholder === "Find forms..."
+        ? "support"
+        : placeholder === "Find components..."
+          ? "feature"
+          : "footer";
     const missingValue =
-      placeholder === "Find forms..." ? "missing" : "unknown";
+      placeholder === "Find forms..."
+        ? "missing"
+        : placeholder === "Find components..."
+          ? "unknown-widget"
+          : "unknown";
 
     return (
       <div>
@@ -94,12 +108,36 @@ const templatesState = vi.hoisted(() => ({
   current: { items: [], isLoading: false, error: null as string | null },
 }));
 
+const widgetPickerState = vi.hoisted(() => ({
+  current: [
+    {
+      type: "hero",
+      title: "Hero",
+      description: "Hero content block",
+    },
+    {
+      type: "feature-grid",
+      title: "Feature Grid",
+      description: "Benefits grid",
+    },
+    {
+      type: "template-section",
+      title: "Template Section",
+      description: "Should stay hidden",
+    },
+  ],
+}));
+
 vi.mock("@/ui/forms/hooks/useForms", () => ({
   useForms: () => formsState.current,
 }));
 
 vi.mock("@/ui/widgets/hooks/useWidgetTemplates", () => ({
   useWidgetTemplates: () => templatesState.current,
+}));
+
+vi.mock("../../../core/admin/ui/pages/builder/widgetRegistry", () => ({
+  getWidgetRegistry: () => widgetPickerState.current,
 }));
 
 const mount = (node: React.ReactNode) => {
@@ -174,7 +212,7 @@ test("FormPicker renders loading, error, filtering, and add flows", () => {
 
     act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "")
+        .find((button) => button.textContent === "plus-icon")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
@@ -238,7 +276,7 @@ test("TemplatePicker renders loading, error, filtering, and add flows", () => {
 
     act(() => {
       Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "")
+        .find((button) => button.textContent === "plus-icon")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
@@ -254,6 +292,44 @@ test("TemplatePicker renders loading, error, filtering, and add flows", () => {
     });
 
     expect(view.container.textContent).toContain("No templates match this search.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("WidgetPicker filters registry items, hides template sections, and forwards add flow", () => {
+  const onAdd = vi.fn();
+  const view = mount(<WidgetPicker onAdd={onAdd} />);
+
+  try {
+    expect(view.container.textContent).toContain("Hero");
+    expect(view.container.textContent).toContain("Feature Grid");
+    expect(view.container.textContent).not.toContain("Template Section");
+
+    act(() => {
+      view.container
+        .querySelector("button[data-input-action='match']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain("Feature Grid");
+    expect(view.container.textContent).not.toContain("Hero");
+
+    const addButtons = Array.from(view.container.querySelectorAll("button")).filter(
+      (button) => button.textContent === "plus-icon"
+    );
+    act(() => {
+      addButtons[0]?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onAdd).toHaveBeenCalledWith("feature-grid");
+
+    act(() => {
+      view.container
+        .querySelector("button[data-input-action='empty']")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(view.container.textContent).toContain("No components match this search.");
   } finally {
     view.cleanup();
   }
