@@ -317,3 +317,67 @@ test("ProductGallery visual editor updates the empty-state description in isolat
     view.cleanup();
   }
 });
+
+test("ProductGallery editors fall back to default layout values and empty runtime totals", async () => {
+  const {
+    ProductGalleryAdvancedEditor,
+    ProductGalleryWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/ProductGalleryEditors");
+
+  let latestValue: ProductGalleryData = {
+    style: {
+      columns: "bogus" as never,
+      cardStyle: "unknown" as never,
+    },
+  };
+
+  const Harness = () => {
+    const [value, setValue] = useState<ProductGalleryData>(latestValue);
+
+    return (
+      <>
+        <ProductGalleryWizardEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="gallery"
+        />
+        <ProductGalleryAdvancedEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant="gallery"
+        />
+      </>
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const columnsSelect = findSelectByLabel(view.container, "Columns");
+    const cardStyleSelect = findSelectByLabel(view.container, "Card style");
+
+    expect((columnsSelect as HTMLSelectElement | undefined)?.value).toBe("3");
+    expect((cardStyleSelect as HTMLSelectElement | undefined)?.value).toBe("outlined");
+    expect(normalizeText(view.container.textContent)).toContain(
+      normalizeText("Resolved items: 0 · Total: 0")
+    );
+
+    setSelectValue(columnsSelect, "invalid-columns");
+    setSelectValue(cardStyleSelect, "invalid-card-style");
+
+    expect(latestValue.style).toEqual(
+      expect.objectContaining({
+        columns: "3",
+        cardStyle: "outlined",
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
