@@ -80,11 +80,32 @@ vi.mock("../../../core/admin/ui/posts/editor/richtext/PostRichTextToolbar", () =
       <button type="button" aria-label="Bold" onClick={() => onCommand("bold")}>
         bold
       </button>
+      <button type="button" onClick={() => onCommand("italic")}>
+        italic
+      </button>
+      <button type="button" onClick={() => onCommand("underline")}>
+        underline
+      </button>
+      <button type="button" onClick={() => onCommand("strike")}>
+        strike
+      </button>
+      <button type="button" onClick={() => onCommand("link")}>
+        link
+      </button>
       <button type="button" onClick={() => onCommand("highlight")}>
         highlight
       </button>
       <button type="button" onClick={() => onCommand("inline-code")}>
         inline-code
+      </button>
+      <button type="button" onClick={() => onCommand("heading-1")}>
+        heading-1
+      </button>
+      <button type="button" onClick={() => onCommand("bullet-list")}>
+        bullet-list
+      </button>
+      <button type="button" onClick={() => onCommand("ordered-list")}>
+        ordered-list
       </button>
       <button type="button" onClick={() => onCommand("align-center")}>
         align-center
@@ -107,17 +128,24 @@ vi.mock("../../../core/admin/ui/posts/editor/blocks/SlashCommandMenu", () => ({
     open,
     query,
     onSelect,
+    onClose,
   }: {
     open: boolean;
     query: string;
     onSelect: (type: "quote") => void;
+    onClose?: () => void;
   }) => (
     <div>
       <span>{`slash:${open ? "open" : "closed"}:${query}`}</span>
       {open ? (
-        <button type="button" onClick={() => onSelect("quote")}>
-          slash-select
-        </button>
+        <>
+          <button type="button" onClick={() => onSelect("quote")}>
+            slash-select
+          </button>
+          <button type="button" onClick={() => onClose?.()}>
+            slash-close
+          </button>
+        </>
       ) : null}
     </div>
   ),
@@ -359,6 +387,74 @@ test("PostRichTextAdapter opens slash menu and clears standalone slash content o
   }
 });
 
+test("PostRichTextAdapter routes native-inline and link commands", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const originalPrompt = window.prompt;
+  const prompt = vi
+    .fn()
+    .mockReturnValueOnce("https://example.com")
+    .mockReturnValueOnce("Example link")
+    .mockReturnValueOnce("https://example.com/selected")
+    .mockReturnValueOnce("   ");
+  Object.defineProperty(window, "prompt", {
+    value: prompt,
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("<p>Link target</p>");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    setSelectionAtEnd(editor);
+
+    clickByText(view.container, "italic");
+    clickByText(view.container, "underline");
+    clickByText(view.container, "strike");
+
+    const linkNode = findTextNode(editor, "Link");
+    setCollapsedSelection(linkNode, 1);
+    clickByText(view.container, "link");
+
+    const targetNode = findTextNode(editor, "target");
+    setRangeSelection(targetNode, 0, targetNode, targetNode.nodeValue?.length ?? 6);
+    clickByText(view.container, "link");
+    clickByText(view.container, "link");
+
+    expect(execCommand).toHaveBeenCalledWith("italic", false, undefined);
+    expect(execCommand).toHaveBeenCalledWith("underline", false, undefined);
+    expect(execCommand).toHaveBeenCalledWith("strikeThrough", false, undefined);
+    expect(execCommand).toHaveBeenCalledWith(
+      "insertHTML",
+      false,
+      '<a href="https://example.com">Example link</a>'
+    );
+    expect(execCommand).toHaveBeenCalledWith("createLink", false, "https://example.com/selected");
+    expect(execCommand).toHaveBeenCalledWith("unlink", false, undefined);
+  } finally {
+    Object.defineProperty(window, "prompt", {
+      value: originalPrompt,
+      configurable: true,
+      writable: true,
+    });
+    view.cleanup();
+  }
+});
+
 test("PostRichTextAdapter applies inline typography to selection and reuses typography spans", async () => {
   const execCommand = vi.fn(() => false);
   Object.defineProperty(document, "execCommand", {
@@ -412,6 +508,43 @@ test("PostRichTextAdapter applies inline typography to selection and reuses typo
     expect(editor.innerHTML).toContain('data-text-scale="lg"');
   } finally {
     view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter falls back for block commands without block wrappers", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const HeadingHarness = () => {
+    const [value, setValue] = useState("Loose text");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const headingView = mount(<HeadingHarness />);
+
+  try {
+    const editor = getEditor(headingView.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    clickByText(headingView.container, "heading-1");
+    await flush();
+    expect(editor.innerHTML).toContain("<h1>Loose text</h1>");
+
+    act(() => {
+      editor.innerHTML = "Loose text";
+      setSelectionAtEnd(editor);
+    });
+    clickByText(headingView.container, "clear-formatting");
+    await flush();
+
+    expect(editor.innerHTML).toContain("<p>Loose text</p>");
+  } finally {
+    headingView.cleanup();
   }
 });
 
@@ -631,6 +764,7 @@ test("PostRichTextAdapter uploads clipboard images and exposes image layout cont
     expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes("data-media-id"))).toBe(
       true
     );
+    dispatchEditorEvent(editor, "mouseup");
     const selects = Array.from(view.container.querySelectorAll("select"));
     setSelectValue(selects[0], "left");
     setSelectValue(selects[1], "66");
@@ -648,6 +782,50 @@ test("PostRichTextAdapter uploads clipboard images and exposes image layout cont
     expect(onChangeSpy.mock.calls.some((call) => String(call[0]).includes('data-margin="lg"'))).toBe(
       true
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter closes slash menu and emits blur callback", async () => {
+  const onEditorBlur = vi.fn();
+
+  const Harness = () => {
+    const [value, setValue] = useState("");
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onEditorBlur={onEditorBlur}
+        onSlashInsertBlock={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    act(() => {
+      editor.innerHTML = "/quote";
+      setSelectionAtEnd(editor);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("slash:open:quote");
+
+    clickByText(view.container, "slash-close");
+    expect(view.container.textContent).toContain("slash:closed:");
+
+    act(() => {
+      editor.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
+      editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    expect(onEditorBlur).toHaveBeenCalledWith("/quote");
   } finally {
     view.cleanup();
   }

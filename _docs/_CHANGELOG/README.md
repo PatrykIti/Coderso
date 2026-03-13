@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 450 | 2026-03-13 | TASK-105 post richtext command follow-up | QA/Platform |
 | 449 | 2026-03-12 | TASK-105 block list interaction follow-up | QA/Platform |
 | 448 | 2026-03-12 | TASK-105 page list page lifecycle coverage | QA/Platform |
 | 447 | 2026-03-12 | TASK-105 posts list page lifecycle coverage | QA/Platform |

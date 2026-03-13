@@ -56,6 +56,7 @@ Completed slices:
 - direct interaction coverage for `PostRichTextToolbar`
 - direct DOM interaction coverage for `PostRichTextAdapter` toolbar fallback callbacks, slash insert flow, rich-text paste directives, and clipboard image upload/unavailable states
 - deeper selection, formatting, and image-layout interaction coverage for `PostRichTextAdapter`
+- deeper command engine, link flow, and slash-close coverage for `PostRichTextAdapter`
 - direct `happy-dom` branch coverage for `PostsTable`
 - direct interaction coverage for `PostEditorCanvas`
 - deeper preview, adapter-callback, and image-picker coverage for `PostEditorCanvas`
@@ -66,7 +67,7 @@ Completed slices:
 - deeper `PostsListPage` lifecycle, refresh, and action-error coverage
 - direct `happy-dom` shell coverage for `PostClassicEditorShell`
 
-Current `2026-03-12` snapshot after the latest TASK-105-05 follow-up:
+Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
 - `core/admin/ui/entries/FieldRenderer.tsx` -> `94.73%` lines / `83.33%` branches
 - `core/admin/ui/pages/PageListPage.tsx` -> `95.45%` lines / `78.57%` branches
@@ -75,7 +76,7 @@ Current `2026-03-12` snapshot after the latest TASK-105-05 follow-up:
 - `core/admin/ui/posts/PostsListPage.tsx` -> `94.69%` lines / `73.01%` branches
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `91.00%` lines / `74.43%` branches
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `85.29%` lines / `70.09%` branches
-- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `80.97%` lines / `61.41%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `86.47%` lines / `66.66%` branches
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `90.10%` lines / `74.33%` branches
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines / `67.92%` branches
 
