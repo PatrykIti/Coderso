@@ -302,6 +302,22 @@ const findAllInputsByPlaceholder = (container: HTMLElement, placeholder: string)
       element instanceof HTMLInputElement && element.getAttribute("placeholder") === placeholder
   );
 
+const findColorInputForPlaceholder = (
+  container: HTMLElement,
+  placeholder: string,
+  index = 0
+) => {
+  const textInput = findAllInputsByPlaceholder(container, placeholder)[index];
+  if (!(textInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing input with placeholder "${placeholder}" (${index})`);
+  }
+  const colorInput = textInput.parentElement?.querySelector('input[type="color"]');
+  if (!(colorInput instanceof HTMLInputElement)) {
+    throw new Error(`Missing color input for placeholder "${placeholder}" (${index})`);
+  }
+  return colorInput;
+};
+
 type EditorKind = "wizard" | "visual" | "advanced";
 
 const renderEditor = async ({
@@ -643,5 +659,117 @@ test("FaqAccordion advanced editor normalizes malformed payloads, applies techni
     expect(view.container.textContent).toContain("Frequently asked questions");
   } finally {
     view.cleanup();
+  }
+});
+
+test("FaqAccordion editors fall back to default UI values when normalized payload is sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/faqAccordion", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/faqAccordion")
+    >("../../../core/widgets/core/faqAccordion");
+
+    return {
+      ...actual,
+      normalizeFaqAccordionData: (value: FaqAccordionData) => ({
+        ...actual.normalizeFaqAccordionData(value),
+        header: {
+          title: undefined,
+          description: undefined,
+        } as FaqAccordionData["header"],
+        options: {
+          allowMultipleOpen: undefined,
+          defaultOpenIndex: undefined,
+        } as FaqAccordionData["options"],
+        style: {
+          surface: undefined,
+          border: undefined,
+          divider: undefined,
+          spacing: undefined,
+        } as FaqAccordionData["style"],
+      }),
+      normalizeFaqAccordionItems: () =>
+        [
+          {
+            id: undefined,
+            question: undefined,
+            answer: undefined,
+          },
+          {
+            id: undefined,
+            question: undefined,
+            answer: undefined,
+          },
+        ] as FaqAccordionData["items"],
+    };
+  });
+
+  const { FaqAccordionAdvancedEditor, FaqAccordionVisualEditor, FaqAccordionWizardEditor } =
+    await import("../../../core/admin/ui/widgets/editors/FaqAccordionEditors");
+
+  const view = mount(
+    <>
+      <FaqAccordionWizardEditor
+        value={{} as FaqAccordionData}
+        onChange={() => undefined}
+        variant="legacy"
+      />
+      <FaqAccordionVisualEditor
+        value={{} as FaqAccordionData}
+        onChange={() => undefined}
+        variant="legacy"
+      />
+      <FaqAccordionAdvancedEditor
+        value={{} as FaqAccordionData}
+        onChange={() => undefined}
+        variant="legacy"
+      />
+    </>
+  );
+
+  try {
+    expect(
+      (findSelectByOptions(view.container, ["single-column", "two-column", "compact"]) as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("single-column");
+    expect(
+      (findInputByPlaceholder(view.container, "Frequently asked questions") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("");
+    expect(
+      (
+        findTextareaByPlaceholder(view.container, "Address objections with short and clear answers.") as
+          | HTMLTextAreaElement
+          | undefined
+      )?.value
+    ).toBe("");
+    expect(
+      (findInputByPlaceholder(view.container, "Question 1") as HTMLInputElement | undefined)?.value
+    ).toBe("");
+    expect(
+      (findTextareaByPlaceholder(view.container, "Answer 1") as HTMLTextAreaElement | undefined)?.value
+    ).toBe("");
+    expect(
+      (findSelectByOptions(view.container, ["sm", "md", "lg"])[0] as HTMLSelectElement | undefined)
+        ?.value
+    ).toBe("sm");
+    expect(
+      (view.container.querySelector("input[type='number']") as HTMLInputElement | null)?.value
+    ).toBe("0");
+    expect(
+      (view.container.querySelector("input[type='checkbox']") as HTMLInputElement | null)?.checked
+    ).toBe(false);
+    expect(findColorInputForPlaceholder(view.container, "var(--color-bg)").value).toBe("#ffffff");
+    expect(findColorInputForPlaceholder(view.container, "var(--color-border)", 0).value).toBe(
+      "#e2e8f0"
+    );
+    expect(findColorInputForPlaceholder(view.container, "var(--color-border)", 1).value).toBe(
+      "#e2e8f0"
+    );
+  } finally {
+    view.cleanup();
+    vi.doUnmock("../../../core/widgets/core/faqAccordion");
+    vi.resetModules();
   }
 });

@@ -61,6 +61,7 @@ Completed slices:
 - direct Vitest coverage for `TestimonialsEditors`
 - deeper sparse-default coverage for `TestimonialsEditors`
 - direct Vitest coverage for `FaqAccordionEditors`
+- deeper sparse-default coverage for `FaqAccordionEditors`
 - direct Vitest coverage for `HeroEditors`
 - direct Vitest coverage for `NavigationEditors`
 - direct Vitest coverage for `ContactEditors`
@@ -112,7 +113,7 @@ Current `2026-03-10` widget editor snapshot after the latest residual-closure fo
 - `core/admin/ui/widgets/editors/PricingPlansEditors.tsx` -> `97.18%` lines / `58.82%` branches
 - `core/admin/ui/widgets/editors/TeamEditors.tsx` -> `100.00%` lines / `74.00%` branches
 - `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` -> `100.00%` lines / `86.66%` branches
-- `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` -> `89.77%` lines / `60.00%` branches
+- `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` -> `100.00%` lines / `91.66%` branches
 - `core/admin/ui/widgets/editors/HeroEditors.tsx` -> `99.35%` lines / `91.32%` branches
 - `core/admin/ui/widgets/editors/NavigationEditors.tsx` -> `91.73%` lines / `72.12%` branches
 - `core/admin/ui/widgets/editors/ContactEditors.tsx` -> `92.85%` lines / `63.80%` branches
