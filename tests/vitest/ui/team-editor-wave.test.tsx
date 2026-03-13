@@ -764,3 +764,73 @@ test("Team editors render sparse defaults and ignore variant changes without a h
     advancedView.cleanup();
   }
 });
+
+test("Team editors fall back when normalized style is missing and social labels are sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/team", async () => {
+    const actual = await vi.importActual<typeof import("../../../core/widgets/core/team")>(
+      "../../../core/widgets/core/team"
+    );
+
+    return {
+      ...actual,
+      normalizeTeamData: (value: TeamData) => ({
+        ...actual.normalizeTeamData(value),
+        style: undefined,
+      }),
+    };
+  });
+
+  const { TeamAdvancedEditor, TeamVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/TeamEditors"
+  );
+
+  const value: TeamData = {
+    members: [
+      {
+        name: "",
+        role: "",
+        bio: "",
+        socialLinks: [{ label: "", url: "" }],
+      },
+    ],
+  };
+
+  const visualView = mount(
+    <TeamVisualEditor value={value} onChange={() => undefined} variant="cards" />
+  );
+
+  try {
+    expect(findSectionByTitle(visualView.container, "Social links")?.textContent).toContain(
+      "Member 1"
+    );
+    expect(
+      (findInputByPlaceholder(visualView.container, "var(--color-bg)") as HTMLInputElement | undefined)?.value
+    ).toBe(teamDefaults.style?.cardSurface);
+    expect(
+      (findInputByPlaceholder(visualView.container, "var(--color-border)") as HTMLInputElement | undefined)?.value
+    ).toBe(teamDefaults.style?.cardBorder);
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <TeamAdvancedEditor value={value} onChange={() => undefined} variant="cards" />
+  );
+
+  try {
+    expect(
+      (findSelectByOptions(advancedView.container, ["1", "2", "3", "4"]) as HTMLSelectElement | undefined)?.value
+    ).toBe("3");
+    expect(
+      (findSelectByOptions(advancedView.container, ["sm", "md", "lg"]) as HTMLSelectElement | undefined)?.value
+    ).toBe("md");
+    expect(
+      (findSelectByOptions(advancedView.container, ["none", "md", "lg", "xl"]) as HTMLSelectElement | undefined)?.value
+    ).toBe("lg");
+  } finally {
+    advancedView.cleanup();
+    vi.doUnmock("../../../core/widgets/core/team");
+    vi.resetModules();
+  }
+});
