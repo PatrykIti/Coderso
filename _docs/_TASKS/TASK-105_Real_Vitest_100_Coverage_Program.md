@@ -563,3 +563,16 @@ for (const wave of backlog) {
 - `tests/README.md`
 - `tests/RUNNER_OWNERSHIP.md`
 - `_docs/_CHANGELOG/*.md`
+
+## Latest Snapshot
+
+Current snapshot after the latest page-editor and adapter micro-follow-up on `2026-03-14`:
+- `% Stmts`: `68.64`
+- `% Branch`: `59.37`
+- `% Funcs`: `72.27`
+- `% Lines`: `71.79`
+- `core/admin/ui/pages/PageEditor.tsx` -> `84.84%` lines / `67.71%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `96.66%` lines / `86.90%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- next `TASK-105-05` hotspots are now led by `PageEditor.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches

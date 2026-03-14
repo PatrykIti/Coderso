@@ -253,10 +253,14 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
     blocks,
     selectedId,
     onSelect,
+    onDuplicate,
+    onDelete,
   }: {
     blocks: Array<{ id: string; type: string }>;
     selectedId: string | null;
     onSelect: (id: string | null) => void;
+    onDuplicate?: (id: string) => void;
+    onDelete?: (id: string) => void;
   }) => (
     <div>
       <span>{`block-count:${blocks.length}`}</span>
@@ -267,6 +271,21 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
         onClick={() => onSelect(blocks[blocks.length - 1]?.id ?? null)}
       >
         select-last-block
+      </button>
+      <button
+        type="button"
+        onClick={() => onDuplicate?.(selectedId ?? blocks[0]?.id ?? "missing")}
+      >
+        duplicate-selected-block
+      </button>
+      <button
+        type="button"
+        onClick={() => onDelete?.(selectedId ?? blocks[0]?.id ?? "missing")}
+      >
+        delete-selected-block
+      </button>
+      <button type="button" onClick={() => onDelete?.("missing-block")}>
+        delete-missing-block
       </button>
     </div>
   ),
@@ -826,5 +845,42 @@ test("PageEditor handles mobile details, no-page preview/settings guards, and no
     expect(noPageView.container.textContent).toContain("Loading page...");
   } finally {
     noPageView.cleanup();
+  }
+});
+
+test("PageEditor duplicates and deletes selected blocks with selection fallback", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({
+    id: "page-1",
+    currentData: { blocks: [createBlock("hero"), createBlock("compare-timeline")] },
+  });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("block-count:2");
+    expect(view.container.textContent).toContain("settings-block:hero");
+
+    clickButton(view.container, "select-last-block");
+    await flush();
+    expect(view.container.textContent).toContain("settings-block:compare-timeline");
+
+    clickButton(view.container, "duplicate-selected-block");
+    await flush();
+    expect(view.container.textContent).toContain("block-count:3");
+
+    clickButton(view.container, "delete-selected-block");
+    await flush();
+    expect(view.container.textContent).toContain("block-count:2");
+    expect(view.container.textContent).toContain("settings-block:hero");
+
+    clickButton(view.container, "delete-missing-block");
+    await flush();
+    expect(view.container.textContent).toContain("block-count:2");
+  } finally {
+    view.cleanup();
   }
 });

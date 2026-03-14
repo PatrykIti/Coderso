@@ -54,7 +54,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-14 page-settings/adapter baseline is 71.72% lines; widgets are line-complete, editor/page follow-ups remain, and broader low-line admin surfaces still need explicit closure slices |
+| TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-14 page-editor/adapter baseline is 71.79% lines; widgets are line-complete, editor/page follow-ups remain, and broader low-line admin surfaces still need explicit closure slices |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: ThemeExportDialog and FormListPage are now covered; booking leaf tabs, ThemeTemplateDrawer, FormCanvas, and ListingListPage remain |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: DeviceSwitcher, PageRowActions, PostListViewSidebar, PostEditorPage, and more direct editor internals are now covered; `PageSettingsDrawer` is near closure while `PageEditor`, toolbar/inserter, and deeper posts editor branches remain |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |

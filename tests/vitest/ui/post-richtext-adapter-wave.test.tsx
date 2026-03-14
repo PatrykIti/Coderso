@@ -1227,6 +1227,57 @@ test("PostRichTextAdapter updates image layout on keyup and clears paste hint af
   }
 });
 
+test("PostRichTextAdapter handles quote shortcut and ignores paste payloads with no rich text or images", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("<p>Quoted text</p>");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    const quotedNode = findTextNode(editor, "Quoted text");
+    setRangeSelection(quotedNode, 0, quotedNode, quotedNode.nodeValue?.length ?? 11);
+
+    act(() => {
+      editor.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "5",
+          shiftKey: true,
+          altKey: true,
+          bubbles: true,
+        })
+      );
+    });
+    await flush();
+
+    expect(editor.innerHTML).toContain("<blockquote>Quoted text</blockquote>");
+
+    await dispatchPaste(
+      editor,
+      createClipboardData({
+        html: "",
+        text: "",
+      })
+    );
+
+    expect(view.container.textContent).not.toContain("Paste notice:");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostRichTextAdapter keeps slash menu closed without slash handler and respects block transform mode", async () => {
   const execCommand = vi.fn(() => false);
   Object.defineProperty(document, "execCommand", {

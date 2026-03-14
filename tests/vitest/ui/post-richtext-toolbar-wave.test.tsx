@@ -74,12 +74,18 @@ vi.mock("@/components/ui/select", () => {
       children,
       onValueChange,
       value,
+      disabled,
     }: {
       children: React.ReactNode;
       onValueChange?: (value: string) => void;
       value?: string;
+      disabled?: boolean;
     }) => (
-      <select value={value} onChange={(event) => onValueChange?.(event.target.value)}>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onValueChange?.(event.target.value)}
+      >
         {collectOptions(children).map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
@@ -287,6 +293,60 @@ test("PostRichTextToolbar renders heading-only groups without writing-canvas tex
     clickByText(view.container, "Heading 6");
 
     expect(onCommand).toHaveBeenCalledWith("heading-6");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextToolbar uses inline layout controls for quote profile", () => {
+  const onCommand = vi.fn();
+  const view = mount(<PostRichTextToolbar profile="quote" onCommand={onCommand} />);
+
+  try {
+    expect(view.container.textContent).toContain("Type");
+    expect(view.container.textContent).not.toContain("Text");
+    expect(view.container.textContent).not.toContain("Headings");
+    expect(view.container.textContent).not.toContain("List");
+
+    clickByAriaLabel(view.container, "Align center");
+    clickByAriaLabel(view.container, "Clear formatting");
+
+    expect(onCommand.mock.calls.map((call) => call[0])).toEqual([
+      "align-center",
+      "clear-formatting",
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextToolbar disables typography controls when disabled", () => {
+  const onFontFamilyChange = vi.fn();
+  const onBaseTextScaleChange = vi.fn();
+  const view = mount(
+    <PostRichTextToolbar
+      profile="writing-canvas"
+      onCommand={() => undefined}
+      disabled
+      fontFamily="sans"
+      baseTextScale="md"
+      onFontFamilyChange={onFontFamilyChange}
+      onBaseTextScaleChange={onBaseTextScaleChange}
+    />
+  );
+
+  try {
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    const boldButton = buttons.find((button) => button.getAttribute("aria-label") === "Bold");
+    expect(
+      buttons.find((button) => button.textContent?.includes("More formatting"))?.hasAttribute(
+        "disabled"
+      )
+    ).toBe(true);
+    expect(boldButton?.hasAttribute("disabled")).toBe(true);
+
+    expect(onFontFamilyChange).not.toHaveBeenCalled();
+    expect(onBaseTextScaleChange).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

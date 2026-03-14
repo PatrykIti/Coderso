@@ -174,6 +174,17 @@ Updated remaining slices after this follow-up:
 - page-owned work is now much more concentrated in `PageEditor.tsx`; `PageSettingsDrawer.tsx` is close to closure
 - editor chrome still has the best remaining ROI in `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and residual `PostRichTextAdapter.tsx` branches
 
+Current `2026-03-14` snapshot after the latest page-editor and adapter micro-follow-up:
+- `core/admin/ui/pages/PageEditor.tsx` -> `84.84%` lines / `67.71%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `96.66%` lines / `86.90%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `83.80%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+
+Updated remaining slices after this micro-follow-up:
+- page-owned work remains led by `PageEditor.tsx`
+- editor chrome is still concentrated in `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
+
 ## Testing Requirements
 
 - `bun run test:vitest`
