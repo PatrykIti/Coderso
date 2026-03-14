@@ -94,6 +94,8 @@ Completed slices:
 - direct `PostListViewSidebar` coverage for tab switching, insert catalog routing, and child callback forwarding
 - direct `PostRichTextToolbar` coverage for writing-canvas/heading profile groups and advanced formatting toggles
 - direct `BlockInserter` coverage for most-used rendering, category filtering, disabled insertion, and keyboard insertion
+- deeper `PageSettingsDrawer` coverage for default section layout controls, background media URL state, and additional local drawer branches
+- deeper `PostRichTextAdapter` coverage for paste-hint timeout clearing, image layout selection via keyboard, and additional slash/image cleanup behavior
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -161,6 +163,16 @@ Current `2026-03-14` snapshot after the page leaf / sidebar / toolbar / inserter
 Updated remaining slices after this follow-up:
 - pages follow-up is now led by `PageEditor` and `PageSettingsDrawer`, while `DeviceSwitcher` and `PageRowActions` are effectively closed
 - posts follow-up is now concentrated in `PostRichTextToolbar`, `BlockInserter`, `PostBlockEditorShell`, `PostRichTextAdapter`, and the remaining higher-order branches in `PostEditorCanvas` / `usePostEditorState`
+
+Current `2026-03-14` snapshot after the latest page-settings and adapter follow-up:
+- `core/admin/ui/pages/PageEditor.tsx` -> `83.03%` lines / `65.47%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `96.66%` lines / `86.90%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `83.80%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `89.46%` lines / `70.83%` branches
+
+Updated remaining slices after this follow-up:
+- page-owned work is now much more concentrated in `PageEditor.tsx`; `PageSettingsDrawer.tsx` is close to closure
+- editor chrome still has the best remaining ROI in `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and residual `PostRichTextAdapter.tsx` branches
 
 ## Testing Requirements
 

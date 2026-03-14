@@ -1130,6 +1130,103 @@ test("PostRichTextAdapter closes slash menu on Escape and clears selected image 
   }
 });
 
+test("PostRichTextAdapter updates image layout on keyup and clears paste hint after timeout or clean paste", async () => {
+  vi.useFakeTimers();
+
+  const timeoutView = mount(
+    <PostRichTextAdapter
+      value=""
+      onChange={() => undefined}
+      onSlashInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    const editor = getEditor(timeoutView.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    await dispatchPaste(
+      editor,
+      createClipboardData({
+        html: `
+          <p>Table of contents</p>
+          <p><a href="#_Toc100">1. Intro 1</a></p>
+          <p><a href="#_Toc200">2. Setup 3</a></p>
+          <p><a href="#_Toc300">3. Output 5</a></p>
+          <h1>Intro</h1>
+          <p>Body</p>
+        `,
+        text: "",
+      })
+    );
+    expect(timeoutView.container.textContent).toContain("Paste notice:");
+
+    await act(async () => {
+      vi.advanceTimersByTime(7000);
+    });
+    expect(timeoutView.container.textContent).not.toContain("Paste notice:");
+
+    act(() => {
+      editor.innerHTML =
+        '<p><img src="/media/example.png" data-wrap="right" data-width="75" data-margin="md" alt="Example"></p>';
+      const image = editor.querySelector("img");
+      if (!(image instanceof HTMLImageElement)) {
+        throw new Error("missing image");
+      }
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNode(image);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      editor.dispatchEvent(new KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true }));
+    });
+
+    expect(timeoutView.container.textContent).toContain("Selected image layout");
+  } finally {
+    timeoutView.cleanup();
+    vi.useRealTimers();
+  }
+
+  const cleanPasteView = mount(
+    <PostRichTextAdapter value="" onChange={() => undefined} onPasteDirectives={() => undefined} />
+  );
+
+  try {
+    const editor = getEditor(cleanPasteView.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    await dispatchPaste(
+      editor,
+      createClipboardData({
+        html: `
+          <p>Table of contents</p>
+          <p><a href="#_Toc100">1. Intro 1</a></p>
+          <p><a href="#_Toc200">2. Setup 3</a></p>
+          <p><a href="#_Toc300">3. Output 5</a></p>
+          <h1>Intro</h1>
+          <p>Body</p>
+        `,
+        text: "",
+      })
+    );
+    expect(cleanPasteView.container.textContent).toContain("Paste notice:");
+
+    await dispatchPaste(
+      editor,
+      createClipboardData({
+        html: "<p>Plain content</p>",
+        text: "Plain content",
+      })
+    );
+
+    expect(cleanPasteView.container.textContent).not.toContain("Paste notice:");
+  } finally {
+    cleanPasteView.cleanup();
+  }
+});
+
 test("PostRichTextAdapter keeps slash menu closed without slash handler and respects block transform mode", async () => {
   const execCommand = vi.fn(() => false);
   Object.defineProperty(document, "execCommand", {

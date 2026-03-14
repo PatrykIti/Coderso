@@ -461,3 +461,79 @@ test("PageSettingsDrawer toggles navigation, clamps revision retention, resets l
     view.cleanup();
   }
 });
+
+test("PageSettingsDrawer saves background media URL and default section layout controls", async () => {
+  const onSave = vi.fn(async () => false);
+
+  const view = mount(
+    <PageSettingsDrawer
+      open
+      onOpenChange={() => undefined}
+      page={basePage}
+      settings={baseSettings}
+      onSave={onSave}
+    />
+  );
+
+  try {
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    const inputs = Array.from(view.container.querySelectorAll("input"));
+    const toggles = Array.from(view.container.querySelectorAll('input[type="checkbox"]'));
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+
+    setInputValue(
+      inputs.find((input) => input.placeholder === "https://cdn.example.com/background.jpg"),
+      "https://cdn.example.com/background.jpg"
+    );
+    setSelectValue(selects[4], "narrow");
+    act(() => {
+      toggles.at(-1)?.click();
+    });
+    setSelectValue(selects[5], "xl");
+    setSelectValue(selects[6], "sm");
+    setSelectValue(selects[7], "lg");
+    setSelectValue(selects[8], "xs");
+
+    act(() => {
+      buttons.find((button) => button.textContent?.includes("Save settings"))?.click();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          layout: expect.objectContaining({
+            wrapper: expect.objectContaining({
+              background: expect.objectContaining({
+                image: "https://cdn.example.com/background.jpg",
+                media: expect.objectContaining({
+                  type: "image",
+                  source: "external",
+                  src: "https://cdn.example.com/background.jpg",
+                }),
+              }),
+            }),
+            sections: expect.objectContaining({
+              defaults: expect.objectContaining({
+                container: "narrow",
+                padding: expect.objectContaining({
+                  top: "xl",
+                  bottom: "sm",
+                }),
+                margin: expect.objectContaining({
+                  top: "lg",
+                  bottom: "xs",
+                }),
+              }),
+            }),
+          }),
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
