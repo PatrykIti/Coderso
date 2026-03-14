@@ -390,3 +390,74 @@ test("PageSettingsDrawer disables max width for full container and does not auto
     view.cleanup();
   }
 });
+
+test("PageSettingsDrawer toggles navigation, clamps revision retention, resets layout defaults, and accepts raw background values", async () => {
+  const onSave = vi.fn(async () => false);
+
+  const view = mount(
+    <PageSettingsDrawer
+      open
+      onOpenChange={() => undefined}
+      page={basePage}
+      settings={baseSettings}
+      onSave={onSave}
+    />
+  );
+
+  try {
+    const inputs = Array.from(view.container.querySelectorAll("input"));
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    const navToggle = view.container.querySelector('input[type="checkbox"]');
+
+    if (!(navToggle instanceof HTMLInputElement)) {
+      throw new Error("Missing navigation toggle");
+    }
+
+    act(() => {
+      navToggle.click();
+    });
+
+    setInputValue(inputs.find((input) => input.type === "number"), "999");
+    setSelectValue(selects[2], "full");
+    setInputValue(inputs.find((input) => input.type === "color"), "#123456");
+    setInputValue(
+      Array.from(view.container.querySelectorAll("input")).find(
+        (input) => input.placeholder === "#ffffff or transparent"
+      ),
+      "transparent"
+    );
+
+    act(() => {
+      buttons.find((button) => button.textContent?.includes("Reset to theme defaults"))?.click();
+    });
+
+    setInputValue(inputs.find((input) => input.type === "number"), "0");
+
+    act(() => {
+      buttons.find((button) => button.textContent?.includes("Save settings"))?.click();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({
+          showInNav: false,
+          revisionRetention: 1,
+          layout: expect.objectContaining({
+            wrapper: expect.objectContaining({
+              background: expect.objectContaining({
+                color: "transparent",
+              }),
+            }),
+          }),
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});

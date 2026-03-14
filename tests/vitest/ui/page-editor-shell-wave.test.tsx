@@ -779,3 +779,52 @@ test("PageEditor handles mobile library insert flows and ignores invalid non-pag
     invalidPathView.cleanup();
   }
 });
+
+test("PageEditor handles mobile details, no-page preview/settings guards, and non-api settings save failure", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({
+    id: "page-1",
+    currentData: { blocks: [createBlock("hero"), createBlock("compare-timeline")] },
+  });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+  pageEditorState.updatePage.mockRejectedValueOnce(new Error("settings-boom"));
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("settings-block:hero");
+
+    clickButton(view.container, "select-last-block");
+    await flush();
+    expect(view.container.textContent).toContain("settings-block:compare-timeline");
+
+    clickButton(view.container, "Details");
+    await flush();
+    expect(view.container.textContent).toContain("sheet:right");
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    clickButton(view.container, "settings-save");
+    await flush();
+    expect(view.container.textContent).toContain("Page settings error");
+    expect(view.container.textContent).toContain("Failed to update page settings.");
+  } finally {
+    view.cleanup();
+  }
+
+  pageEditorState.reset();
+  window.history.replaceState({}, "", "/admin/coderso/pages");
+  const noPageView = mount(<PageEditor />);
+
+  try {
+    await flush();
+    clickButton(noPageView.container, "Runtime preview");
+    await flush();
+    expect(pageEditorState.previewPage).not.toHaveBeenCalled();
+    expect(noPageView.container.textContent).toContain("Loading page...");
+  } finally {
+    noPageView.cleanup();
+  }
+});

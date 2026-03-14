@@ -8,6 +8,7 @@ const postShellState = vi.hoisted(() => ({
   navigate: vi.fn(),
   focusCapture: vi.fn(),
   focusReturn: vi.fn(),
+  layoutHookCalls: [] as Array<Record<string, unknown>>,
   layout: {
     state: {
       secondarySidebar: "inserter" as "inserter" | "list-view" | null,
@@ -152,6 +153,7 @@ const postShellState = vi.hoisted(() => ({
     this.navigate.mockReset();
     this.focusCapture.mockReset();
     this.focusReturn.mockReset();
+    this.layoutHookCalls = [];
     for (const value of Object.values(this.layout)) {
       if (typeof value === "function" && "mockReset" in value) {
         (value as ReturnType<typeof vi.fn>).mockReset();
@@ -211,7 +213,10 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/hooks/usePostEditorLayout", () => ({
-  usePostEditorLayout: () => postShellState.layout,
+  usePostEditorLayout: (options: Record<string, unknown>) => {
+    postShellState.layoutHookCalls.push(options);
+    return postShellState.layout;
+  },
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/inspector/PostDetailsSidebar", () => ({
@@ -691,5 +696,45 @@ test("PostBlockEditorShell persists focus mode, clears stored layout when restor
     postShellState.layout.state.focusRestore = null;
     postShellState.preferences.preferences.restoreLastSidebarsState = true;
     postShellState.preferences.initialPreferences.restoreLastSidebarsState = true;
+  }
+});
+
+test("PostBlockEditorShell seeds layout hook options from stored layout and focus-mode preferences", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.preferences.initialPreferences.focusModeOnOpen = true;
+  postShellState.preferences.initialPreferences.defaultInspectorTab = "block" as never;
+  postShellState.preferences.initialPreferences.restoreLastSidebarsState = true;
+  window.localStorage.setItem(
+    "nextless.posts.editor.layout.v1",
+    JSON.stringify({
+      secondarySidebar: null,
+      detailsOpen: false,
+      detailsTab: "block",
+      leftRailMode: "list-view",
+    })
+  );
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(postShellState.layoutHookCalls.at(-1)).toMatchObject({
+      initialSecondarySidebar: null,
+      initialDetailsOpen: false,
+      initialDetailsTab: "block",
+      initialFocusMode: true,
+      initialLeftRailMode: "list-view",
+    });
+  } finally {
+    view.cleanup();
+    window.localStorage.clear();
+    postShellState.preferences.initialPreferences.focusModeOnOpen = false;
+    postShellState.preferences.initialPreferences.defaultInspectorTab = "post" as never;
   }
 });

@@ -1072,6 +1072,64 @@ test("PostRichTextAdapter closes slash menu and emits blur callback", async () =
   }
 });
 
+test("PostRichTextAdapter closes slash menu on Escape and clears selected image layout on blur", async () => {
+  const view = mount(
+    <PostRichTextAdapter
+      value=""
+      onChange={() => undefined}
+      onSlashInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    act(() => {
+      editor.innerHTML = "/quote";
+      setSelectionAtEnd(editor);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await flush();
+    expect(view.container.textContent).toContain("slash:open:quote");
+
+    act(() => {
+      editor.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+    });
+    expect(view.container.textContent).toContain("slash:closed:");
+
+    act(() => {
+      editor.innerHTML =
+        '<p><img src="/media/example.png" data-wrap="left" data-width="66" data-margin="lg" alt="Example"></p>';
+      const image = editor.querySelector("img");
+      if (!(image instanceof HTMLImageElement)) {
+        throw new Error("missing image");
+      }
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNode(image);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      editor.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Selected image layout");
+
+    act(() => {
+      editor.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
+      editor.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+
+    expect(view.container.textContent).not.toContain("Selected image layout");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostRichTextAdapter keeps slash menu closed without slash handler and respects block transform mode", async () => {
   const execCommand = vi.fn(() => false);
   Object.defineProperty(document, "execCommand", {
