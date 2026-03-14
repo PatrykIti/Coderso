@@ -197,6 +197,18 @@ Updated remaining slices after this micro-follow-up:
 - page-owned work remains led by `PageEditor.tsx`
 - editor chrome still concentrates on `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
 
+Current `2026-03-14` snapshot after the latest page-editor reorder and shell-error follow-up:
+- `core/admin/ui/pages/PageEditor.tsx` -> `85.45%` lines / `68.60%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `96.66%` lines / `86.90%` branches
+- `core/admin/ui.posts.editor.PostBlockEditorShell.tsx` -> `95.34%` lines / `83.80%` branches
+- `core/admin/ui.posts.editor.richtext.PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
+- `core/admin/ui.posts.editor.richtext.PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- `core/admin/ui.posts.editor.blocks.BlockInserter.tsx` -> `89.85%` lines / `76.27%` branches
+
+Updated remaining slices after this micro-follow-up:
+- page-owned work is still led by `PageEditor.tsx`, but its remaining shell-state backlog is smaller after reordering and error-path coverage
+- editor chrome still concentrates on `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
+
 ## Testing Requirements
 
 - `bun run test:vitest`

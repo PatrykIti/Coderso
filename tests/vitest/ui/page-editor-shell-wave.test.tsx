@@ -919,3 +919,35 @@ test("PageEditor reorders blocks and ignores invalid move targets", async () => 
     view.cleanup();
   }
 });
+
+test("PageEditor reports generic autosave-settings and discard-revision failures", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({ id: "page-1" });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+  pageEditorState.autosavePage.mockRejectedValueOnce(new Error("autosave-failed"));
+  pageEditorState.discardPageRevision.mockRejectedValueOnce(new Error("discard-failed"));
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    clickButton(view.container, "settings-autosave");
+    await flush();
+
+    expect(view.container.textContent).toContain("Page settings error");
+    expect(view.container.textContent).toContain("Failed to autosave page settings.");
+
+    clickButton(view.container, "History");
+    await flush();
+    clickButton(view.container, "discard-revision");
+    await flush();
+
+    expect(view.container.textContent).toContain("revision-error:Failed to discard autosave.");
+  } finally {
+    view.cleanup();
+  }
+});
