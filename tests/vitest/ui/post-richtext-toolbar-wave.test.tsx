@@ -384,3 +384,76 @@ test("PostRichTextToolbar shows typography-only row without advanced toggle when
     view.cleanup();
   }
 });
+
+test("PostRichTextToolbar falls back to writing-canvas defaults and supports partial typography controls", () => {
+  const onCommand = vi.fn();
+  const onFontFamilyChange = vi.fn();
+  const view = mount(
+    <PostRichTextToolbar
+      onCommand={onCommand}
+      fontFamily="mono"
+      onFontFamilyChange={onFontFamilyChange}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Text");
+    expect(view.container.textContent).toContain("List");
+    expect(view.container.textContent).toContain("Code");
+    expect(view.container.textContent).toContain("More formatting");
+    expect(view.container.textContent).toContain("Typography reads from block.");
+
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    expect(selects).toHaveLength(1);
+
+    act(() => {
+      setSelectValue(selects[0], "serif");
+    });
+
+    clickByText(view.container, "Text");
+    clickByText(view.container, "Heading 3");
+
+    expect(onFontFamilyChange).toHaveBeenCalledWith("serif");
+    expect(onCommand).toHaveBeenCalledWith("heading-3");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextToolbar keeps grouped controls inert when disabled", () => {
+  const onCommand = vi.fn();
+  const view = mount(
+    <PostRichTextToolbar profile="writing-canvas" onCommand={onCommand} disabled />
+  );
+
+  try {
+    const typeButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Type")
+    ) as HTMLButtonElement | undefined;
+    const textButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Text")
+    ) as HTMLButtonElement | undefined;
+    const listButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("List")
+    ) as HTMLButtonElement | undefined;
+    const codeButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Code")
+    ) as HTMLButtonElement | undefined;
+
+    expect(typeButton?.disabled).toBe(true);
+    expect(textButton?.disabled).toBe(true);
+    expect(listButton?.disabled).toBe(true);
+    expect(codeButton?.disabled).toBe(true);
+
+    act(() => {
+      typeButton?.click();
+      textButton?.click();
+      listButton?.click();
+      codeButton?.click();
+    });
+
+    expect(onCommand).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});

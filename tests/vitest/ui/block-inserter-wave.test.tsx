@@ -179,3 +179,95 @@ test("BlockInserter renders header mode and inserts from most-used when enabled"
     view.cleanup();
   }
 });
+
+test("BlockInserter wraps keyboard navigation, resets active item after filters, and ignores empty results", () => {
+  const onInsertBlock = vi.fn();
+  const view = mount(
+    <BlockInserter
+      onInsertBlock={onInsertBlock}
+      showHeader={false}
+      recentlyUsedTypes={["image", "button"]}
+    />
+  );
+
+  try {
+    const listbox = view.container.querySelector('[role="listbox"]');
+    if (!(listbox instanceof HTMLElement)) {
+      throw new Error("Missing listbox");
+    }
+
+    const tabs = Array.from(view.container.querySelectorAll('[role="tab"]'));
+    const allTab = tabs.find((tab) => tab.textContent?.includes("All"));
+    const textTab = tabs.find((tab) => tab.textContent?.includes("Text"));
+    if (!(allTab instanceof HTMLButtonElement) || !(textTab instanceof HTMLButtonElement)) {
+      throw new Error("Missing category tabs");
+    }
+
+    expect(allTab.getAttribute("aria-pressed")).toBe("true");
+
+    act(() => {
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+    });
+    act(() => {
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+
+    expect(onInsertBlock).toHaveBeenCalledWith("embed");
+
+    act(() => {
+      textTab.click();
+    });
+    expect(textTab.getAttribute("aria-pressed")).toBe("true");
+    expect(allTab.getAttribute("aria-pressed")).toBe("false");
+
+    act(() => {
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+
+    expect(onInsertBlock).toHaveBeenLastCalledWith("writing-canvas");
+
+    const input = view.container.querySelector('input[aria-label="Search blocks"]');
+    setInputValue(input, "zzz");
+
+    act(() => {
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+
+    expect(onInsertBlock).toHaveBeenCalledTimes(2);
+
+    setInputValue(input, "");
+    act(() => {
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+
+    expect(onInsertBlock).toHaveBeenCalledTimes(3);
+    expect(onInsertBlock).toHaveBeenLastCalledWith("writing-canvas");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockInserter ignores keyboard navigation when disabled", () => {
+  const onInsertBlock = vi.fn();
+  const view = mount(
+    <BlockInserter onInsertBlock={onInsertBlock} disabled recentlyUsedTypes={["image"]} />
+  );
+
+  try {
+    const listbox = view.container.querySelector('[role="listbox"]');
+    if (!(listbox instanceof HTMLElement)) {
+      throw new Error("Missing listbox");
+    }
+
+    act(() => {
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }));
+      listbox.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
+
+    expect(onInsertBlock).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});

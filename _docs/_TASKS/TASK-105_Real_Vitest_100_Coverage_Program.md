@@ -597,3 +597,18 @@ Current snapshot after the latest page-editor reorder and shell-error follow-up 
 - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
 - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `89.85%` lines / `76.27%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
+
+Current snapshot after the latest page-editor state and editor chrome input follow-up on `2026-03-14`:
+- `% Stmts`: `68.89`
+- `% Branch`: `59.63`
+- `% Funcs`: `72.41`
+- `% Lines`: `72.06`
+- `458` Vitest files / `1684` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.15%` lines / `77.57%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `96.66%` lines / `86.90%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `90.07%` lines / `76.13%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `92.45%` lines / `75.18%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `85.96%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `98.55%` lines / `81.35%` branches
+- widget/editor line closure remains intact, but the best `TASK-105-05` ROI is now concentrated in `PostRichTextToolbar.tsx`, `PostRichTextAdapter.tsx`, `PostEditorCanvas.tsx`, and smaller residual page/shell edges
+- broader low-line admin backlog outside the active wave still materially dominates the program tail (`AuditTable.tsx`, `PopupEditorForm.tsx`, `WidgetTemplateCategoryDrawer.tsx`, `UserDetailsDrawer.tsx`, `BackupsPage.tsx`)

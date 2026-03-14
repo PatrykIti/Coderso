@@ -1429,3 +1429,186 @@ test("PostRichTextAdapter keeps slash menu closed without slash handler and resp
     transformView.cleanup();
   }
 });
+
+test("PostRichTextAdapter inserts paragraphs on Enter outside lists but leaves list Enter alone", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("<p>Alpha</p>");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+
+    const alphaNode = findTextNode(editor, "Alpha");
+    setCollapsedSelection(alphaNode, alphaNode.nodeValue?.length ?? 5);
+    act(() => {
+      editor.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      );
+    });
+
+    expect(execCommand).toHaveBeenCalledWith("insertParagraph", false, undefined);
+
+    execCommand.mockClear();
+    act(() => {
+      editor.innerHTML = "<ul><li>List item</li></ul>";
+      const listNode = findTextNode(editor, "List item");
+      setCollapsedSelection(listNode, listNode.nodeValue?.length ?? 9);
+      editor.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      );
+    });
+
+    expect(execCommand).not.toHaveBeenCalledWith("insertParagraph", false, undefined);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter resolves collapsed inline wrappers from element and trailing offsets", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("<p><strong>Gamma</strong> Delta</p>");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+
+    const strong = editor.querySelector("strong");
+    if (!(strong instanceof HTMLElement)) {
+      throw new Error("missing strong");
+    }
+    const selection = window.getSelection();
+    const strongRange = document.createRange();
+    strongRange.setStart(strong, 0);
+    strongRange.setEnd(strong, 0);
+    selection?.removeAllRanges();
+    selection?.addRange(strongRange);
+    document.dispatchEvent(new Event("selectionchange"));
+
+    clickByText(view.container, "inline-code");
+    await flush();
+    expect(editor.innerHTML).toContain("<code>Gamma</code>");
+
+    const paragraph = editor.querySelector("p");
+    if (!(paragraph instanceof HTMLParagraphElement)) {
+      throw new Error("missing paragraph");
+    }
+    const paragraphRange = document.createRange();
+    paragraphRange.setStart(paragraph, paragraph.childNodes.length);
+    paragraphRange.setEnd(paragraph, paragraph.childNodes.length);
+    selection?.removeAllRanges();
+    selection?.addRange(paragraphRange);
+    document.dispatchEvent(new Event("selectionchange"));
+
+    clickByText(view.container, "highlight");
+    await flush();
+    expect(editor.innerHTML).toContain("<mark>Delta</mark>");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter uploads images from clipboard files fallback and normalizes invalid selected image layout", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const onChangeSpy = vi.fn();
+  const onUploadClipboardImage = vi.fn(async () => ({
+    id: "media-files-fallback",
+    key: "files-fallback",
+    url: "/media/files-fallback.png",
+  }));
+
+  const Harness = () => {
+    const [value, setValue] = useState("");
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={(next) => {
+          onChangeSpy(next);
+          setValue(next);
+        }}
+        onUploadClipboardImage={onUploadClipboardImage}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    setSelectionAtEnd(editor);
+
+    const imageFile = new File(["img"], "files-fallback.png", {
+      type: "image/png",
+    });
+    await dispatchPaste(
+      editor,
+      createClipboardData({
+        items: [],
+        files: [imageFile],
+      })
+    );
+
+    expect(onUploadClipboardImage).toHaveBeenCalledTimes(1);
+    expect(view.container.textContent).toContain("Image uploaded and inserted.");
+    expect(
+      onChangeSpy.mock.calls.some((call) => String(call[0]).includes("media-files-fallback"))
+    ).toBe(true);
+
+    act(() => {
+      editor.innerHTML =
+        '<p><img src="/media/raw.png" data-wrap="diagonal" data-width="999" data-margin="huge" alt="Raw"></p>';
+      const image = editor.querySelector("img");
+      if (!(image instanceof HTMLImageElement)) {
+        throw new Error("missing image");
+      }
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNode(image);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      editor.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+    await flush();
+
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    expect(selects[0]?.value).toBe("none");
+    expect(selects[1]?.value).toBe("50");
+    expect(selects[2]?.value).toBe("md");
+  } finally {
+    view.cleanup();
+  }
+});
