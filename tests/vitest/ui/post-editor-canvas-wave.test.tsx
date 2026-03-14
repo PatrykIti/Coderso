@@ -857,3 +857,213 @@ test("PostEditorCanvas resets image picker state on close and surfaces media loa
     errorView.cleanup();
   }
 });
+
+test("PostEditorCanvas skips direct-url lookup, tolerates unresolved lookup failures, and uses bare media patches", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  mediaState.reset();
+  const directUrlView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "image-url",
+            type: "image",
+            attrs: { mediaId: "/media/direct.png" },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+    expect(mediaState.calls).not.toContain(false);
+    expect(directUrlView.container.innerHTML).toContain('/media/direct.png');
+  } finally {
+    directUrlView.cleanup();
+  }
+
+  mediaState.reset();
+  mediaState.error = new Error("lookup exploded");
+  const unresolvedLookupView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "image-missing",
+            type: "image",
+            attrs: { mediaId: "missing-media" },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+    expect(mediaState.calls).toContain(false);
+    expect(unresolvedLookupView.container.textContent).toContain(
+      "Click to choose image from media library"
+    );
+  } finally {
+    unresolvedLookupView.cleanup();
+  }
+
+  mediaState.reset();
+  mediaState.records = [
+    {
+      id: "media-2",
+      key: "uploads/plain.png",
+      url: "/media/plain.png",
+      originalName: "plain.png",
+      type: "image",
+      mimeType: "image/png",
+      size: 120,
+      width: 800,
+      height: 600,
+      alt: "",
+      title: "Plain",
+      caption: "",
+      createdAt: "2026-03-12T10:00:00.000Z",
+    },
+  ];
+
+  const onUpdateBlockAttrs = vi.fn();
+  const barePatchView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "image-bare", type: "image", attrs: {}, content: null }],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-bare"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    clickByText(barePatchView.container, "Click to choose image from media library");
+    await flush();
+    clickByText(barePatchView.container, "select-media:plain.png");
+
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("image-bare", {
+      mediaId: "media-2",
+    });
+  } finally {
+    barePatchView.cleanup();
+  }
+});
+
+test("PostEditorCanvas schedules focus restoration, cancels pending frames, and surfaces generic picker load errors", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const scrollSpy = vi
+    .spyOn(HTMLElement.prototype, "scrollIntoView")
+    .mockImplementation(() => undefined);
+  const focusSpy = vi
+    .spyOn(HTMLTextAreaElement.prototype, "focus")
+    .mockImplementation(() => undefined);
+
+  let rafCallback: FrameRequestCallback | null = null;
+  const requestAnimationFrameSpy = vi
+    .spyOn(window, "requestAnimationFrame")
+    .mockImplementation((callback: FrameRequestCallback) => {
+      rafCallback = callback;
+      return 17;
+    });
+  const cancelAnimationFrameSpy = vi
+    .spyOn(window, "cancelAnimationFrame")
+    .mockImplementation(() => undefined);
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "code-focus", type: "code", attrs: {}, content: "const answer = 42;" }],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="code-focus"
+      insertFocusToken={1}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    expect(scrollSpy).toHaveBeenCalled();
+    expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1);
+    expect(focusSpy).not.toHaveBeenCalled();
+
+    act(() => {
+      rafCallback?.(0);
+    });
+
+    expect(focusSpy).toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+
+  expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(17);
+
+  mediaState.reset();
+  mediaState.error = new Error("generic picker failure");
+  const genericErrorView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "image-generic", type: "image", attrs: {}, content: null }],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-generic"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    clickByText(genericErrorView.container, "Click to choose image from media library");
+    await flush();
+
+    expect(genericErrorView.container.textContent).toContain("Failed to load media assets.");
+  } finally {
+    genericErrorView.cleanup();
+  }
+});

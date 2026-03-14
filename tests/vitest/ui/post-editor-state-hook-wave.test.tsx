@@ -818,3 +818,46 @@ test("usePostEditorState reports restore and upload failures and handles move-to
     view.cleanup();
   }
 });
+
+test("usePostEditorState handles revision drawer toggles and generic async failure branches", async () => {
+  hookState.cachedPost = hookState.createPost("post-1");
+  hookState.fetchedPost = hookState.cachedPost;
+  hookState.revisions = [hookState.createRevision("rev-1")];
+
+  const view = mountHook();
+  try {
+    await waitFor(() => view.current().loading === false);
+
+    act(() => {
+      view.current().setRevisionsOpen(false);
+    });
+    expect(hookState.listRevisionCalls).toHaveLength(0);
+
+    act(() => {
+      view.current().setRevisionsOpen(true);
+    });
+    await waitFor(() => view.current().revisionsOpen === true);
+    await waitFor(() => view.current().revisions.length === 1);
+
+    hookState.nextRestoreError = new Error("restore exploded");
+    await act(async () => {
+      await expect(view.current().restoreRevision("rev-1")).rejects.toThrow("restore exploded");
+    });
+    expect(view.current().revisionsError).toBe("Failed to restore revision.");
+
+    hookState.nextUploadError = new Error("upload exploded");
+    await expect(
+      view.current().uploadClipboardImage(
+        new File(["image"], "clipboard-generic.png", { type: "image/png" })
+      )
+    ).rejects.toThrow("upload exploded");
+
+    hookState.nextDeleteError = new Error("delete exploded");
+    await act(async () => {
+      await expect(view.current().moveToTrash()).resolves.toBe(false);
+    });
+    expect(view.current().error).toBe("Failed to move post to trash.");
+  } finally {
+    view.cleanup();
+  }
+});

@@ -7,7 +7,19 @@ vi.mock("@/components/ui/badge", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
+  Button: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    disabled?: boolean;
+    onClick?: () => void;
+  }) => (
+    <button type="button" disabled={disabled} onClick={onClick}>
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock("@/components/ui/card", () => ({
@@ -19,8 +31,12 @@ vi.mock("@/components/ui/card", () => ({
 }));
 
 vi.mock("@/components/ui/checkbox", () => ({
-  Checkbox: ({ checked }: { checked?: boolean }) => (
-    <input type="checkbox" checked={checked} readOnly />
+  Checkbox: ({ checked, defaultChecked }: { checked?: boolean; defaultChecked?: boolean }) => (
+    <input
+      type="checkbox"
+      checked={checked ?? defaultChecked}
+      readOnly
+    />
   ),
 }));
 
@@ -200,6 +216,103 @@ test("BookingAvailabilityTab renders loading, schedules, and blackout states", (
   expect(filledHtml).toContain("Create blackout");
 });
 
+test("BookingAvailabilityTab renders empty states, disabled save, and blackout resource fallbacks", () => {
+  const emptyHtml = renderToString(
+    <BookingAvailabilityTab
+      resources={[]}
+      resourcesById={new Map()}
+      selectedResourceId=""
+      onSelectResource={() => undefined}
+      scheduleRows={[]}
+      scheduleDraft={{
+        dayOfWeek: "1",
+        startTime: "09:00",
+        endTime: "17:00",
+        timezone: "Europe/Warsaw",
+        isAvailable: false,
+      }}
+      scheduleLoading={false}
+      scheduleSaving={false}
+      onScheduleDraftChange={() => undefined}
+      onAddScheduleRow={() => undefined}
+      onRemoveScheduleRow={() => undefined}
+      onSaveSchedules={() => undefined}
+      blackoutForm={{
+        resourceId: "all",
+        startsAt: "2026-03-06T09:00",
+        endsAt: "2026-03-06T12:00",
+        reason: "",
+      }}
+      blackouts={[]}
+      blackoutsLoading={false}
+      saving={false}
+      onBlackoutFormChange={() => undefined}
+      onCreateBlackout={() => undefined}
+      onDeleteBlackout={() => undefined}
+    />
+  );
+
+  const fallbackHtml = renderToString(
+    <BookingAvailabilityTab
+      resources={[resource]}
+      resourcesById={new Map([[resource.id, resource]])}
+      selectedResourceId={resource.id}
+      onSelectResource={() => undefined}
+      scheduleRows={[]}
+      scheduleDraft={{
+        dayOfWeek: "5",
+        startTime: "08:00",
+        endTime: "12:00",
+        timezone: "UTC",
+        isAvailable: true,
+      }}
+      scheduleLoading={false}
+      scheduleSaving={false}
+      onScheduleDraftChange={() => undefined}
+      onAddScheduleRow={() => undefined}
+      onRemoveScheduleRow={() => undefined}
+      onSaveSchedules={() => undefined}
+      blackoutForm={{
+        resourceId: "all",
+        startsAt: "2026-03-07T09:00",
+        endsAt: "2026-03-07T12:00",
+        reason: "",
+      }}
+      blackouts={[
+        {
+          id: "blackout-all",
+          resourceId: null,
+          startsAt: "2026-03-06T09:00:00.000Z",
+          endsAt: "2026-03-06T12:00:00.000Z",
+          reason: "",
+          createdAt: "2026-03-06T08:00:00.000Z",
+          updatedAt: "2026-03-06T08:00:00.000Z",
+        },
+        {
+          id: "blackout-missing",
+          resourceId: "missing-resource",
+          startsAt: "2026-03-07T09:00:00.000Z",
+          endsAt: "2026-03-07T12:00:00.000Z",
+          reason: "",
+          createdAt: "2026-03-07T08:00:00.000Z",
+          updatedAt: "2026-03-07T08:00:00.000Z",
+        },
+      ]}
+      blackoutsLoading={false}
+      saving={false}
+      onBlackoutFormChange={() => undefined}
+      onCreateBlackout={() => undefined}
+      onDeleteBlackout={() => undefined}
+    />
+  );
+
+  expect(emptyHtml).toContain("No schedule rows.");
+  expect(emptyHtml).toContain("No blackout windows yet.");
+  expect(emptyHtml).toContain("disabled");
+  expect(fallbackHtml).toContain("All resources");
+  expect(fallbackHtml).toContain("missing-resource");
+});
+
 test("BookingReservationsTab renders loading, populated table, and manual form", () => {
   const loadingHtml = renderToString(
     <BookingReservationsTab
@@ -280,6 +393,84 @@ test("BookingReservationsTab renders loading, populated table, and manual form",
   expect(filledHtml).toContain("Room A");
   expect(filledHtml).toContain("Create reservation");
   expect(filledHtml).toContain("Manual reservation creation");
+});
+
+test("BookingReservationsTab renders empty reservations and falls back to raw ids", () => {
+  const emptyHtml = renderToString(
+    <BookingReservationsTab
+      reservations={[]}
+      reservationsLoading={false}
+      services={[]}
+      resources={[]}
+      servicesById={new Map()}
+      resourcesById={new Map()}
+      reservationStatusDrafts={{}}
+      reservationForm={{
+        serviceId: "",
+        resourceId: "",
+        startsAt: "2026-03-06T10:00",
+        endsAt: "2026-03-06T11:00",
+        timezone: "Europe/Warsaw",
+        customerName: "",
+        customerEmail: "",
+        customerPhone: "",
+        notes: "",
+      }}
+      saving={false}
+      onReservationFormChange={() => undefined}
+      onReservationStatusDraftChange={() => undefined}
+      onCreateReservation={() => undefined}
+      onUpdateReservationStatus={() => undefined}
+    />
+  );
+
+  const fallbackHtml = renderToString(
+    <BookingReservationsTab
+      reservations={[
+        {
+          id: "reservation-2",
+          serviceId: "service-missing",
+          resourceId: "resource-missing",
+          status: "pending",
+          startsAt: "2026-03-06T10:00:00.000Z",
+          endsAt: "2026-03-06T11:00:00.000Z",
+          timezone: "Europe/Warsaw",
+          customerName: "Grace Hopper",
+          customerEmail: "",
+          customerPhone: "",
+          notes: "",
+          createdAt: "2026-03-06T08:00:00.000Z",
+          updatedAt: "2026-03-06T08:00:00.000Z",
+        },
+      ]}
+      reservationsLoading={false}
+      services={[]}
+      resources={[]}
+      servicesById={new Map()}
+      resourcesById={new Map()}
+      reservationStatusDrafts={{}}
+      reservationForm={{
+        serviceId: "",
+        resourceId: "",
+        startsAt: "2026-03-06T10:00",
+        endsAt: "2026-03-06T11:00",
+        timezone: "Europe/Warsaw",
+        customerName: "",
+        customerEmail: "",
+        customerPhone: "",
+        notes: "",
+      }}
+      saving={false}
+      onReservationFormChange={() => undefined}
+      onReservationStatusDraftChange={() => undefined}
+      onCreateReservation={() => undefined}
+      onUpdateReservationStatus={() => undefined}
+    />
+  );
+
+  expect(emptyHtml).toContain("No reservations yet.");
+  expect(fallbackHtml).toContain("service-missing");
+  expect(fallbackHtml).toContain("resource-missing");
 });
 
 test("BookingServicesTab renders services, edit form, and resource assignment", () => {
@@ -367,6 +558,50 @@ test("BookingServicesTab renders services, edit form, and resource assignment", 
   expect(filledHtml).toContain("Save assignment");
 });
 
+test("BookingServicesTab renders empty service and resource-assignment fallbacks", () => {
+  const html = renderToString(
+    <BookingServicesTab
+      services={[]}
+      servicesLoading={false}
+      selectedServiceId=""
+      editingServiceId={null}
+      serviceForm={{
+        name: "",
+        slug: "",
+        description: "",
+        status: "draft",
+        submissionAccess: "public",
+        durationMinutes: "30",
+        bufferBeforeMinutes: "0",
+        bufferAfterMinutes: "0",
+        priceCents: "",
+        currency: "",
+      }}
+      resources={[]}
+      serviceResourceIds={[]}
+      requiredServiceResourceIds={[]}
+      serviceResourceLoading={false}
+      serviceResourceSaving={false}
+      saving={false}
+      onSelectService={() => undefined}
+      onServiceFormChange={() => undefined}
+      onSubmitService={() => undefined}
+      onEditService={() => undefined}
+      onDeleteService={() => undefined}
+      onCancelEdit={() => undefined}
+      onToggleServiceResource={() => undefined}
+      onToggleRequiredServiceResource={() => undefined}
+      onSaveServiceResources={() => undefined}
+    />
+  );
+
+  expect(html).toContain("No services yet.");
+  expect(html).toContain("New service");
+  expect(html).toContain("Create service");
+  expect(html).toContain("Create resources first to configure mapping.");
+  expect(html).toContain("disabled");
+});
+
 test("BookingSlotPreviewTab renders empty and populated preview results", () => {
   const emptyHtml = renderToString(
     <BookingSlotPreviewTab
@@ -416,4 +651,28 @@ test("BookingSlotPreviewTab renders empty and populated preview results", () => 
   expect(filledHtml).toContain("Result count:");
   expect(filledHtml).toContain(">1<");
   expect(filledHtml).toContain("Ends:");
+});
+
+test("BookingSlotPreviewTab disables preview while loading", () => {
+  const html = renderToString(
+    <BookingSlotPreviewTab
+      services={[]}
+      resources={[]}
+      slotPreviewForm={{
+        serviceId: "",
+        resourceId: "",
+        date: "",
+        timezone: "UTC",
+        intervalMinutes: "15",
+      }}
+      previewSlots={[]}
+      previewLoading
+      onSlotPreviewFormChange={() => undefined}
+      onPreviewSlots={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Result count:");
+  expect(html).toContain(">0<");
+  expect(html).toContain("disabled");
 });

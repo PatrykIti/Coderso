@@ -29,6 +29,8 @@ test("ListingListPage renders listings shell and loading state", () => {
   expect(html).toContain("Listings");
   expect(html).toContain("New query");
   expect(html).toContain("Loading listing queries");
+  expect(html).toContain("Queries");
+  expect(html).toContain("Templates");
 });
 
 test("ListingListPage renders cached queries without loading placeholder", () => {
@@ -70,6 +72,36 @@ test("ListingListPage renders cached queries without loading placeholder", () =>
 
     expect(html).toContain("Cached listing query");
     expect(html).not.toContain("Loading listing queries");
+  } finally {
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("ListingListPage keeps cached empty state without loading placeholder", () => {
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    storage.setItem(
+      cacheKeys.listingQueriesList,
+      JSON.stringify({
+        value: [],
+        savedAt: Date.now(),
+      })
+    );
+
+    const html = renderAdminUi(<ListingListPage />, {
+      path: "/admin/coderso/listings",
+    });
+
+    expect(html).not.toContain("Loading listing queries");
+    expect(html).toContain("Queries");
+    expect(html).toContain("Templates");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

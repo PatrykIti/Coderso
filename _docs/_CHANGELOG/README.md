@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 475 | 2026-03-14 | TASK-105 deeper editor shell and canvas follow-up coverage | QA/Platform |
+| 474 | 2026-03-14 | TASK-105 editor and admin follow-up coverage | QA/Platform |
 | 473 | 2026-03-13 | TASK-105 navigation sparse default coverage | QA/Platform |
 | 472 | 2026-03-13 | TASK-105 post editor layout hook coverage | QA/Platform |
 | 471 | 2026-03-13 | TASK-105 post list view panel dnd coverage | QA/Platform |

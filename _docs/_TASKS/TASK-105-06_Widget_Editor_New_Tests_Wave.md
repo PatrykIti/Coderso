@@ -310,10 +310,19 @@ Newsletter/team/logo refactor follow-up on 2026-03-11:
   - `TeamEditors.tsx` -> `100.00%` lines / `70.00%` branches
   - `LogoCloudEditors.tsx` -> `100.00%` lines / `71.87%` branches
 
+Fresh canonical `2026-03-14` rebaseline:
+- `core/admin/ui/widgets/editors/*` -> `100.00%` lines / `83.01%` branches across `40` tracked files
+- the latest full-lane report confirms the wave is now effectively line-complete; remaining work here is branch-only hardening and infra-noise handling in `core/admin/ui/widgets/editors/index.ts`
+- current lowest branch files in the shipped editor set are:
+  - `PricingPlansEditors.tsx` -> `100.00%` lines / `59.80%` branches
+  - `TabsEditors.tsx` -> `100.00%` lines / `64.86%` branches
+  - `GalleryMosaicEditors.tsx` -> `100.00%` lines / `66.66%` branches
+  - `SearchBoxEditors.tsx` -> `100.00%` lines / `66.66%` branches
+  - `CompareTimelineEditors.tsx` -> `100.00%` lines / `67.25%` branches
+
 Remaining hotspots in this wave:
-- residual branch gaps in `FeatureGridEditors.tsx`
-- residual branch gaps in `PricingPlansEditors.tsx`
-- residual branch gaps in `LogoCloudEditors.tsx`
+- residual branch-only cleanup in `PricingPlansEditors.tsx`, `TabsEditors.tsx`, `GalleryMosaicEditors.tsx`, `SearchBoxEditors.tsx`, and `CompareTimelineEditors.tsx`
+- ownership-noise import coverage for `core/admin/ui/widgets/editors/index.ts` if the project chooses to keep that barrel inside the lane metric
 
 ## Testing Requirements
 

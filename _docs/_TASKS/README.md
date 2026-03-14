@@ -54,10 +54,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: admin services, SDK/custom screens, small UI leafs, themes editor leafs, booking tabs, plugin/media/site leafs, and mixed-module refactor track shipped |
-| TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: themes leafs, theme editor page, booking tabs, and form canvas covered; listings/forms/editor shells remain |
-| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: EntryList, FieldRenderer, PageListPage, PostsListPage, PagePreview, BlockList, PostClassicEditorShell, and post blockTransforms covered; deeper editor internals remain |
-| TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: `EntryTeaserEditors` moved into direct Vitest coverage; `PostsFeed`, `ContentList`, `ListingFilters`, `StatsKpi`, and `Product*` remain |
+| TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-14 deeper editor baseline is 71.35% lines; widgets are line-complete, editor/page follow-ups remain, and broader low-line admin surfaces still need explicit closure slices |
+| TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: ThemeExportDialog and FormListPage are now covered; booking leaf tabs, ThemeTemplateDrawer, FormCanvas, and ListingListPage remain |
+| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: VisualPanel, EntryBulkActionsBar, EntryTable, PostEditorLayout, PostDocumentOutline, inspectorSchemas, and PostEditorPage are now covered; PageEditor/PageSettingsDrawer plus deeper posts editor internals remain |
+| TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 
 ---

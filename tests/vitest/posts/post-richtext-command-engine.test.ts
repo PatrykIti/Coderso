@@ -68,6 +68,14 @@ test("root html normalization skips values that already contain block tags", () 
   expect(applyCommandToRootHtmlWithoutBlocks("paragraph", "<blockquote>Body</blockquote>")).toBeNull();
 });
 
+test("root html normalization wraps list commands and rejects unsupported commands", () => {
+  expect(applyCommandToRootHtmlWithoutBlocks("bullet-list", "Plain text node")).toBe(
+    "<ul><li>Plain text node</li></ul>"
+  );
+  expect(applyCommandToRootHtmlWithoutBlocks("ordered-list", "")).toBe("<ol><li><br></li></ol>");
+  expect(applyCommandToRootHtmlWithoutBlocks("align-center", "Plain text node")).toBeNull();
+});
+
 test("command kind and fallback mappings are deterministic", () => {
   expect(getPostRichTextCommandKind("bold")).toBe("native-inline");
   expect(getPostRichTextCommandKind("inline-code")).toBe("inline-wrapper");
@@ -170,4 +178,27 @@ test("executeBlockCommandOnBlocks handles list wrapping, unwrapping, quote toggl
   expect(executeBlockCommandOnBlocks("heading-4", [paragraphForHeading])).toBe(true);
   expect(root.querySelector("h4")?.textContent).toContain("Quote");
   expect(executeBlockCommandOnBlocks("align-left", [paragraphForHeading])).toBe(false);
+});
+
+test("executeBlockCommandOnBlocks converts existing lists into heading blocks", () => {
+  document.body.innerHTML = `
+    <div id="root">
+      <ul data-align="right">
+        <li>Alpha</li>
+        <li>Beta</li>
+      </ul>
+    </div>
+  `;
+
+  const list = document.querySelector("ul");
+  if (!(list instanceof HTMLElement)) {
+    throw new Error("missing list");
+  }
+
+  expect(executeBlockCommandOnBlocks("heading-2", [list])).toBe(true);
+
+  const heading = document.querySelector("h2");
+  expect(heading?.getAttribute("data-align")).toBe("right");
+  expect(heading?.innerHTML).toBe("Alpha<br>Beta");
+  expect(document.querySelector("ul")).toBeNull();
 });

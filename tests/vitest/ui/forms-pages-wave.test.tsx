@@ -96,6 +96,7 @@ const formsPageState = vi.hoisted(() => {
     contentTypes: [{ id: "articles", name: "Articles" }],
     listError: null as unknown,
     createError: null as unknown,
+    createReturnsNull: false,
     deleteError: null as unknown,
     detailError: null as unknown,
     updateError: null as unknown,
@@ -141,6 +142,7 @@ const formsPageState = vi.hoisted(() => {
       this.contentTypes = [{ id: "articles", name: "Articles" }];
       this.listError = null;
       this.createError = null;
+      this.createReturnsNull = false;
       this.deleteError = null;
       this.detailError = null;
       this.updateError = null;
@@ -235,6 +237,7 @@ vi.mock("@/services/formsClient", async () => {
     createForm: vi.fn(async (input) => {
       formsPageState.createCalls.push(input);
       if (formsPageState.createError) throw formsPageState.createError;
+      if (formsPageState.createReturnsNull) return null;
       return { ...formsPageState.form, id: "created-form", ...input };
     }),
     deleteForm: vi.fn(async (id: string) => {
@@ -409,12 +412,16 @@ vi.mock("../../../core/admin/ui/forms/FormTable", () => ({
       {items.map((item) => (
         <div key={item.id}>{item.name}</div>
       ))}
-      <button type="button" onClick={() => onEdit(items[0]!.id)}>
-        edit-form-row
-      </button>
-      <button type="button" onClick={() => onDelete?.(items[0]!.id)}>
-        delete-form-row
-      </button>
+      {items[0] ? (
+        <>
+          <button type="button" onClick={() => onEdit(items[0]!.id)}>
+            edit-form-row
+          </button>
+          <button type="button" onClick={() => onDelete?.(items[0]!.id)}>
+            delete-form-row
+          </button>
+        </>
+      ) : null}
     </div>
   ),
 }));
@@ -685,7 +692,7 @@ test("useForms consumes cache, refreshes, and reacts to cache bus events", async
   }
 });
 
-test("FormListPage creates, deletes, and reports form errors", async () => {
+test("FormListPage creates, refreshes fallback, deletes, and reports form errors", async () => {
   const { FormListPage } = await import(
     "../../../core/admin/ui/forms/FormListPage"
   );
@@ -702,6 +709,7 @@ test("FormListPage creates, deletes, and reports form errors", async () => {
       buttons().find((button) => button.textContent?.includes("New form"))?.click();
       buttons().find((button) => button.textContent === "create-form-drawer")?.click();
     });
+    await flush();
 
     expect(formsPageState.createCalls[0]).toEqual({
       name: "Created form",
@@ -709,6 +717,15 @@ test("FormListPage creates, deletes, and reports form errors", async () => {
       status: "draft",
       description: "Created from drawer",
     });
+    expect(formsPageState.navigateCalls).toContain("/forms/created-form");
+
+    formsPageState.createReturnsNull = true;
+    act(() => {
+      buttons().find((button) => button.textContent === "create-form-drawer")?.click();
+    });
+    await flush();
+    expect(formsPageState.listCalls.at(-1)).toBe(true);
+
     act(() => {
       buttons().find((button) => button.textContent === "delete-form-row")?.click();
     });
@@ -719,6 +736,34 @@ test("FormListPage creates, deletes, and reports form errors", async () => {
     act(() => {
       buttons().find((button) => button.textContent === "create-form-drawer")?.click();
     });
+    await flush();
+    expect(view.container.textContent).toContain("Forms update failed");
+    expect(view.container.textContent).toContain("Create failed");
+
+    formsPageState.createError = null;
+    formsPageState.deleteError = new Error("boom");
+    act(() => {
+      buttons().find((button) => button.textContent === "delete-form-row")?.click();
+    });
+    await flush();
+    expect(view.container.textContent).toContain("Failed to delete form.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("FormListPage reports load failures", async () => {
+  formsPageState.listError = formsPageState.apiError("Forms load failed");
+  const { FormListPage } = await import(
+    "../../../core/admin/ui/forms/FormListPage"
+  );
+
+  const view = mount(<FormListPage />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Unable to load forms");
+    expect(view.container.textContent).toContain("Forms load failed");
   } finally {
     view.cleanup();
   }

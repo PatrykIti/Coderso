@@ -75,32 +75,70 @@ Completed slices:
 - direct interaction coverage for `BlockInspector`
 - direct interaction coverage for `PostDetailsSidebar`
 - direct hook coverage for `usePostEditorLayout`
+- direct `VisualPanel` coverage for variant fallback, variant descriptions, generic variant button routing, and visual callback forwarding
+- direct `EntryBulkActionsBar` coverage for disabled/applying state plus apply/clear callback forwarding
+- direct `EntryTable` coverage for empty state, title render variants, selection styling, author/date fallbacks, and checkbox callbacks
+- direct `PostEditorLayout` coverage for `viewportMode="auto"`, mobile close handlers, and compact desktop sidebars
+- direct `PostDocumentOutline` coverage for warning labels, outline checks, active selection styling, and empty fallback
+- direct `inspectorSchemas` coverage for option catalogs, block style scope, and normalization helpers
+- deeper command engine coverage for list-root wrapping, unsupported command fallback, and list-to-heading conversion
+- direct `PostEditorPage` coverage for async settings-mode resolution, query override fetch skip, and block fallback on settings failure
+- direct `PageSettingsDrawer` coverage for auto-slug generation, slug-touch preservation, dirty-close autosave, save skip-autosave, and custom template fallback
+- deeper `PageEditor` coverage for path-derived page id, generic load/preview failures, and template/revision fetch failures
+- deeper `PostBlockEditorShell` coverage for loading render, secondary/details reopen paths, and cancelled trash flow
+- deeper `PostEditorCanvas` coverage for direct-url media skip, unresolved lookup fallback, bare media patching, generic picker load failure, and focus/scroll side-effects
+- deeper `PostRichTextAdapter` coverage for image upload count/result fallbacks, mixed-content slash selection, directive forwarding on insert fallback, and generic upload failures
+- deeper `usePostEditorState` coverage for revision drawer toggles and generic restore/upload/delete failure handling
 
-Current `2026-03-13` snapshot after the latest TASK-105-05 follow-up:
+Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
 - `core/admin/ui/entries/FieldRenderer.tsx` -> `94.73%` lines / `83.33%` branches
+- `core/admin/ui/entries/EntryTable.tsx` -> `94.11%` lines / `92.00%` branches
+- `core/admin/ui/entries/EntryBulkActionsBar.tsx` -> `100.00%` lines / `100.00%` branches
 - `core/admin/ui/pages/PageListPage.tsx` -> `95.45%` lines / `78.57%` branches
 - `core/admin/ui/pages/PagePreview.tsx` -> `88.88%` lines / `91.66%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `74.54%` lines / `58.29%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `73.33%` lines / `70.23%` branches
 - `core/admin/ui/pages/builder/BlockList.tsx` -> `90.80%` lines / `74.32%` branches
+- `core/admin/ui/pages/builder/VisualPanel.tsx` -> `100.00%` lines / `92.30%` branches
 - `core/admin/ui/pages/builder/WizardPanel.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/pages/builder/WidgetPicker.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/posts/PostsListPage.tsx` -> `94.69%` lines / `73.01%` branches
+- `core/admin/ui/posts/PostEditorPage.tsx` -> `72.72%` lines / `60.00%` branches
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `92.06%` lines / `78.19%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `75.96%` lines / `58.09%` branches
 - `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `85.29%` lines / `70.09%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `86.47%` lines / `66.66%` branches
-- `core/admin/ui/posts/editor/richtext/postRichTextCommandEngine.ts` -> `81.66%` lines / `72.05%` branches
+- `core/admin/ui/posts/editor/richtext/postRichTextCommandEngine.ts` -> `90.55%` lines / `79.41%` branches
 - `core/admin/ui/posts/editor/blocks/PostListViewPanel.tsx` -> `100%` lines / `94.59%` branches
 - `core/admin/ui/posts/editor/inspector/BlockInspector.tsx` -> `98.50%` lines / `93.44%` branches
 - `core/admin/ui/posts/editor/inspector/DocumentInspector.tsx` -> `100%` lines / `100%` branches
 - `core/admin/ui/posts/editor/inspector/PostDetailsSidebar.tsx` -> `100%` lines / `100%` branches
+- `core/admin/ui/posts/editor/inspector/inspectorSchemas.ts` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/posts/editor/layout/PostEditorLayout.tsx` -> `100.00%` lines / `94.23%` branches
+- `core/admin/ui/posts/editor/outline/PostDocumentOutline.tsx` -> `100.00%` lines / `91.30%` branches
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `90.10%` lines / `74.33%` branches
 - `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts` -> `100%` lines / `96.07%` branches
 - `core/admin/ui/posts/editor/blocks/blockTransforms.ts` -> `98.27%` lines / `67.92%` branches
 
 Remaining slices:
-- `PageTable` and the remaining page-builder panels
-- posts editor internals (`PostEditorCanvas`, `PostRichTextAdapter`) plus deeper classic-shell cleanup
-- block/document inspector flows and related schema branches
+- page-builder follow-up has moved off `VisualPanel`; the remaining builder work is concentrated in `BlockList` support and broader `PageEditor` / `PageSettingsDrawer` shells
+- entries follow-up should now focus on any remaining editor-shell header/table support (`EntryEditorHeader`, residual `EntryEditor`, `EntryChecklist`)
+- posts follow-up should focus on `PostBlockEditorShell`, `PostEditorPage`, `PostEditorCanvas`, `PostRichTextAdapter`, and `usePostEditorState`
+- broader `PageEditor` / `PageSettingsDrawer` state coverage still sits inside this wave even though the first list/table/page slices already landed
+
+Current `2026-03-14` snapshot after the deeper editor shell/canvas/state slice:
+- `core/admin/ui/pages/PageEditor.tsx` -> `78.78%` lines / `63.67%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `82.22%` lines / `79.76%` branches
+- `core/admin/ui/posts/PostEditorPage.tsx` -> `100.00%` lines / `85.00%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `82.94%` lines / `63.80%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `89.33%` lines / `72.50%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `87.26%` lines / `68.47%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `91.66%` lines / `76.54%` branches
+
+Updated remaining slices:
+- pages follow-up is now led by the remaining `PageEditor` and `PageSettingsDrawer` failure/mobile/state branches
+- posts follow-up is now concentrated in `PostBlockEditorShell`, `PostEditorCanvas`, `PostRichTextAdapter`, and the remaining async/service edges in `usePostEditorState`
 
 ## Testing Requirements
 

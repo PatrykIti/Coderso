@@ -215,7 +215,18 @@ vi.mock("../../../core/admin/ui/posts/editor/hooks/usePostEditorLayout", () => (
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/inspector/PostDetailsSidebar", () => ({
-  PostDetailsSidebar: () => <div>post-details-sidebar</div>,
+  PostDetailsSidebar: ({
+    document,
+  }: {
+    document?: { onMoveToTrash?: () => void };
+  }) => (
+    <div>
+      <div>post-details-sidebar</div>
+      <button type="button" onClick={() => document?.onMoveToTrash?.()}>
+        move-to-trash
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/layout/PostEditorLayout", () => ({
@@ -241,6 +252,9 @@ vi.mock("../../../core/admin/ui/posts/editor/layout/PostEditorLayout", () => ({
       <div>{detailsSidebar}</div>
       <button type="button" onClick={() => onSecondarySidebarOpenChange(false)}>
         close-secondary-shell
+      </button>
+      <button type="button" onClick={() => onSecondarySidebarOpenChange(true)}>
+        open-secondary-shell
       </button>
       <button type="button" onClick={() => onDetailsSidebarOpenChange(false)}>
         close-details-shell
@@ -563,6 +577,50 @@ test("PostBlockEditorShell handles move-to-trash confirm flow and list-view inte
     expect(postShellState.layout.setLeftRailMode).toHaveBeenCalledWith("list-view");
     expect(postShellState.editor.selectBlock).toHaveBeenCalledWith("block-2");
     expect(postShellState.layout.openDetails).toHaveBeenCalledWith("block");
+  } finally {
+    view.cleanup();
+    delete (window as Window & { confirm?: unknown }).confirm;
+  }
+});
+
+test("PostBlockEditorShell handles loading shell, details reopen, and cancelled trash flow", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.secondarySidebarOpen = false;
+  postShellState.layout.detailsSidebarOpen = false;
+  postShellState.layout.showInserter = false;
+  postShellState.layout.showListView = false;
+  postShellState.editor.loading = true;
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+  postShellState.editor.selectedBlock = null;
+  postShellState.editor.deletingPost = false;
+
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => false),
+  });
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    expect(view.container.textContent).toContain("Loading post editor...");
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+
+    act(() => {
+      buttons.find((button) => button.textContent === "toggle-details")?.click();
+      buttons.find((button) => button.textContent === "open-secondary-shell")?.click();
+      buttons.find((button) => button.textContent === "move-to-trash")?.click();
+    });
+
+    expect(postShellState.layout.openDetailsForSelection).toHaveBeenCalledWith(false);
+    expect(postShellState.layout.setLeftRailMode).toHaveBeenCalledWith("outline");
+    expect(postShellState.layout.openListView).toHaveBeenCalled();
+    expect(postShellState.editor.moveToTrash).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
     delete (window as Window & { confirm?: unknown }).confirm;

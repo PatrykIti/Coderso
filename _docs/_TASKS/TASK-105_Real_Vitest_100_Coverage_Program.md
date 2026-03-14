@@ -123,6 +123,55 @@ Current snapshot after the `TASK-105-05` posts shell jump (from `bun run test:co
 - `core/admin/ui/posts/PostsListPage.tsx` -> `79.54%` lines, `47.61%` branches
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `91.00%` lines, `74.43%` branches
 
+Fresh canonical full-lane rebaseline after the latest `2026-03-14` run of `bun run test:coverage`:
+- `% Stmts`: `67.58`
+- `% Branch`: `58.19`
+- `% Funcs`: `71.25`
+- `% Lines`: `70.78`
+- infrastructure-noise files still sitting at `0%`: `11` (`types.ts` / `index.ts` ownership noise first documented in `TASK-105-10`)
+- `core/admin/ui/widgets/editors/*` -> `100.00%` lines / `83.01%` branches across `40` tracked files
+- `core/admin/ui/forms/*` -> `88.68%` lines / `68.84%` branches
+- `core/admin/ui/listings/*` -> `88.67%` lines / `70.25%` branches
+- `core/admin/ui/booking/*` -> `93.86%` lines / `72.16%` branches
+- `core/admin/ui/themes/*` -> `88.96%` lines / `78.22%` branches
+- `core/admin/ui/entries/*` -> `84.48%` lines / `70.31%` branches
+- `core/admin/ui/pages/*` -> `81.48%` lines / `68.56%` branches
+- `core/admin/ui/posts/*` -> `90.73%` lines / `77.51%` branches
+- current `TASK-105-05` hotspots are now `VisualPanel.tsx` (`62.50%` lines), `inspectorSchemas.ts` (`60.71%`), `PostEditorLayout.tsx` (`61.53%`), `PostDocumentOutline.tsx` (`68.75%`), `EntryTable.tsx` (`70.58%`), `PostBlockEditorShell.tsx` (`75.96%`), `PageEditor.tsx` (`74.54%`), `PostEditorCanvas.tsx` (`85.29%`), `PostRichTextAdapter.tsx` (`86.47%`), and `usePostEditorState.ts` (`90.10%`)
+- current `TASK-105-04` hotspots are now booking leaf tabs (`AvailabilityTab.tsx`, `ReservationsTab.tsx`, `ServicesTab.tsx`, `SlotPreviewTab.tsx`), `ThemeExportDialog.tsx`, `ThemeTemplateDrawer.tsx`, `FormCanvas.tsx`, `FormListPage.tsx`, and `ListingListPage.tsx`
+- despite the gains in `TASK-105-04..06`, the lane still has major backlog outside those waves; `TASK-105-08` remains premature until broader low-line admin surfaces are folded into explicit follow-up slices
+
+Current snapshot after the latest `TASK-105-04` and `TASK-105-05` follow-up slice on `2026-03-14`:
+- `% Stmts`: `67.86`
+- `% Branch`: `58.51`
+- `% Funcs`: `71.59`
+- `% Lines`: `71.05`
+- `core/admin/ui/pages/builder/VisualPanel.tsx` -> `100.00%` lines / `92.30%` branches
+- `core/admin/ui/entries/EntryBulkActionsBar.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/entries/EntryTable.tsx` -> `94.11%` lines / `92.00%` branches
+- `core/admin/ui/posts/editor/layout/PostEditorLayout.tsx` -> `100.00%` lines / `94.23%` branches
+- `core/admin/ui/posts/editor/outline/PostDocumentOutline.tsx` -> `100.00%` lines / `91.30%` branches
+- `core/admin/ui/posts/editor/inspector/inspectorSchemas.ts` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/posts/editor/richtext/postRichTextCommandEngine.ts` -> `90.55%` lines / `79.41%` branches
+- `core/admin/ui/forms/FormListPage.tsx` -> `90.32%` lines / `83.33%` branches
+- `core/admin/ui/themes/ThemeExportDialog.tsx` -> `100.00%` lines / `100.00%` branches
+- next `TASK-105-05` hotspots are now `PostEditorCanvas.tsx` (`85.29%` lines), `PostRichTextAdapter.tsx` (`86.47%`), `usePostEditorState.ts` (`90.10%`), `PageEditor.tsx` (`74.54%`), `PageSettingsDrawer.tsx` (`73.33%`), `PostBlockEditorShell.tsx` (`75.96%`), and `PostEditorPage.tsx` (`72.72%`)
+- next `TASK-105-04` hotspots remain booking leaf tab internals plus `FormCanvas.tsx`, `ListingListPage.tsx`, and `ThemeTemplateDrawer.tsx`
+
+Current snapshot after the deeper editor shell/canvas/state follow-up on `2026-03-14`:
+- `% Stmts`: `68.17`
+- `% Branch`: `58.83`
+- `% Funcs`: `71.76`
+- `% Lines`: `71.35`
+- `core/admin/ui/posts/PostEditorPage.tsx` -> `100.00%` lines / `85.00%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `82.94%` lines / `63.80%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `78.78%` lines / `63.67%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `82.22%` lines / `79.76%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `89.33%` lines / `72.50%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `87.26%` lines / `68.47%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `91.66%` lines / `76.54%` branches
+- next `TASK-105-05` hotspots are now concentrated in `PageEditor.tsx`, `PageSettingsDrawer.tsx`, `PostBlockEditorShell.tsx`, `PostEditorCanvas.tsx`, `PostRichTextAdapter.tsx`, and the remaining `usePostEditorState.ts` async branches
+
 Additional widget-editor product/template snapshot (from `bun run test:coverage` on 2026-03-09):
 - `% Stmts`: `53.20`
 - `% Branch`: `46.79`

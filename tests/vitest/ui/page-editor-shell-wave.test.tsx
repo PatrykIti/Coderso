@@ -321,17 +321,20 @@ vi.mock("../../../core/admin/ui/pages/PageRevisionDrawer", () => ({
   PageRevisionDrawer: ({
     open,
     revisions,
+    error,
     onRestore,
     onDiscard,
   }: {
     open: boolean;
     revisions: Array<{ id: string }>;
+    error?: string | null;
     onRestore: (id: string) => void;
     onDiscard: (id: string) => void;
   }) =>
     open ? (
       <div>
         <span>{`revision-count:${revisions.length}`}</span>
+        <span>{`revision-error:${error ?? "none"}`}</span>
         <button type="button" onClick={() => onRestore(revisions[0]?.id ?? "rev-published")}>
           restore-revision
         </button>
@@ -347,12 +350,14 @@ vi.mock("../../../core/admin/ui/pages/PageSettingsDrawer", () => ({
     open,
     templateOptions,
     templateOptionsLoading,
+    templateOptionsError,
     onSave,
     onAutosave,
   }: {
     open: boolean;
     templateOptions: Array<{ key: string; label: string }> | null;
     templateOptionsLoading: boolean;
+    templateOptionsError?: string | null;
     onSave: (payload: {
       title: string;
       slug: string;
@@ -380,6 +385,7 @@ vi.mock("../../../core/admin/ui/pages/PageSettingsDrawer", () => ({
       <div>
         <span>{`template-options:${templateOptions?.length ?? 0}`}</span>
         <span>{`template-options-loading:${String(templateOptionsLoading)}`}</span>
+        <span>{`template-options-error:${templateOptionsError ?? "none"}`}</span>
         <button
           type="button"
           onClick={() =>
@@ -672,6 +678,56 @@ test("PageEditor handles preview, draft/publish, settings persistence, autosave,
       "page-1",
       "rev-autosave"
     );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor resolves page id from location and surfaces generic preview/template/revision/load failures", async () => {
+  pageEditorState.reset();
+  window.history.replaceState({}, "", "/admin/coderso/pages/page-2");
+  pageEditorState.currentPage = createPage({ id: "page-2", title: "Fallback page" });
+  pageEditorState.getPageCached.mockRejectedValueOnce(new Error("load-failed"));
+
+  const loadingView = mount(<PageEditor />);
+
+  try {
+    await flush();
+    expect(pageEditorState.getPageCached).toHaveBeenCalledWith("page-2", {
+      force: true,
+    });
+    expect(loadingView.container.textContent).toContain("Page error");
+    expect(loadingView.container.textContent).toContain("Failed to load page.");
+  } finally {
+    loadingView.cleanup();
+  }
+
+  pageEditorState.reset();
+  const initialPage = createPage({ id: "page-1" });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+  pageEditorState.previewPage.mockRejectedValueOnce(new Error("preview-failed"));
+  pageEditorState.getPageTemplateOptions.mockRejectedValueOnce(new Error("templates-failed"));
+  pageEditorState.listPageRevisions.mockRejectedValueOnce(new Error("history-failed"));
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Runtime preview");
+    await flush();
+    expect(view.container.textContent).toContain("preview-error:Failed to generate preview.");
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    await flush();
+    expect(pageEditorState.getPageTemplateOptions).toHaveBeenCalledTimes(1);
+
+    clickButton(view.container, "History");
+    await flush();
+    await flush();
+    expect(pageEditorState.listPageRevisions).toHaveBeenCalledTimes(1);
   } finally {
     view.cleanup();
   }
