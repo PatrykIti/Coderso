@@ -927,6 +927,115 @@ test("PageEditor handles mobile library insert flows, applies page defaults, and
   }
 });
 
+test("PageEditor uses image background fallback, starts without selection for empty blocks, and falls back to default data on refresh/settings persistence", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({
+    id: "page-1",
+    currentData: {
+      blocks: [],
+      settings: {
+        layout: normalizePageLayoutSettings({
+          wrapper: {
+            container: "default",
+            maxWidth: "6xl",
+            background: {
+              color: "#f8fafc",
+              image: "https://cdn.test/page-bg.png",
+              media: {
+                type: "image",
+                source: "library",
+              },
+            },
+          },
+          sections: {
+            defaults: {
+              container: "default",
+              padding: { top: "md", bottom: "md" },
+              margin: { top: "none", bottom: "none" },
+            },
+            gap: "md",
+          },
+          applyDefaultsToNewBlocks: true,
+        }),
+      },
+    },
+  });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).toContain("block-count:0");
+    expect(view.container.textContent).toContain("selected-block:none");
+    expect(view.container.textContent).toContain("settings-block:none");
+
+    const backgroundShell = Array.from(view.container.querySelectorAll("div")).find(
+      (candidate) =>
+        candidate instanceof HTMLDivElement
+        && candidate.style.backgroundImage.includes("page-bg.png")
+    ) as HTMLDivElement | undefined;
+    if (!backgroundShell) {
+      throw new Error("Missing background shell");
+    }
+
+    expect(backgroundShell.style.backgroundImage).toContain("page-bg.png");
+    expect(backgroundShell.style.backgroundSize).toBe("cover");
+    expect(backgroundShell.style.backgroundPosition).toContain("center");
+
+    pageEditorState.currentPage = {
+      ...createPage({
+        id: "page-1",
+        title: "Fallback blocks page",
+      }),
+      currentData: undefined,
+    } as PageDetail;
+    act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Fallback blocks page");
+    expect(view.container.textContent).toContain("block-count:2");
+    expect(view.container.textContent).toContain("block-types:hero,compare-timeline");
+    expect(view.container.textContent).toContain("settings-block:hero");
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    clickButton(view.container, "settings-save");
+    await flush();
+
+    const settingsSavePayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1] as {
+      data?: { blocks?: unknown[]; settings?: Record<string, unknown> };
+    };
+    expect(settingsSavePayload.data?.blocks).toHaveLength(2);
+    expect(settingsSavePayload.data?.settings).toMatchObject({
+      template: "landing",
+      showInNav: false,
+      revisionRetention: 12,
+    });
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    clickButton(view.container, "settings-autosave");
+    await flush();
+
+    const autosavePayload = pageEditorState.autosavePage.mock.calls.at(-1)?.[1] as {
+      data?: { blocks?: unknown[]; settings?: Record<string, unknown> };
+    };
+    expect(autosavePayload.data?.blocks).toHaveLength(2);
+    expect(autosavePayload.data?.settings).toMatchObject({
+      template: "landing",
+      showInNav: true,
+      revisionRetention: 15,
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor inserts into slots, mutates selected blocks, and warns before unload", async () => {
   pageEditorState.reset();
   const initialPage = createPage({

@@ -64,6 +64,7 @@ Completed slices:
 - direct close-path coverage for `ThemeExportDialog`
 - direct `FormListPage` coverage for create success, refresh fallback, load failure, and delete error paths
 - direct `ListingListPage` coverage for cached empty state and tab shell rendering
+- direct `ListingListPage` coverage for loading hook states, load alerts, API and generic delete failures, and successful refresh after delete
 - booking leaf follow-up coverage for empty/fallback states in `AvailabilityTab`, `ReservationsTab`, `ServicesTab`, and `SlotPreviewTab`
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
@@ -80,6 +81,13 @@ Current `2026-03-14` listings snapshot after the latest follow-up slice:
 - `core/admin/ui/listings/ListingTemplateManager.tsx` -> `86.20%` lines / `72.22%` branches
 - `core/admin/ui/listings/ListingListPage.tsx` -> `69.23%` lines / `50.00%` branches
 - aggregate `core/admin/ui/listings/*` average -> `88.67%` lines / `70.25%` branches across `10` tracked files
+
+Current `2026-03-14` listings snapshot after the latest list-page follow-up:
+- `core/admin/ui/listings/ListingEditorPage.tsx` -> `89.79%` lines / `73.72%` branches
+- `core/admin/ui/listings/components/BindingEditor.tsx` -> `94.02%` lines / `75.86%` branches
+- `core/admin/ui/listings/ListingTemplateManager.tsx` -> `86.20%` lines / `72.22%` branches
+- `core/admin/ui/listings/ListingListPage.tsx` -> `100.00%` lines / `100.00%` branches
+- aggregate `core/admin/ui/listings/*` average -> `91.74%` lines / `74.39%` branches across `10` tracked files
 
 Current `2026-03-14` themes snapshot after the latest follow-up slice:
 - `core/admin/ui/themes/ThemesPage.tsx` -> `94.06%` lines / `78.57%` branches
@@ -101,7 +109,7 @@ Remaining slices:
 - booking leaf tabs now dominate the remaining wave backlog, especially `AvailabilityTab`, `ReservationsTab`, `ServicesTab`, and `SlotPreviewTab`
 - residual themes work is now concentrated in `ThemeTemplateDrawer`
 - forms follow-up should focus on `FormCanvas` and the remaining branch-heavy `FormBuilderPage` paths
-- listings follow-up should focus on `ListingListPage` plus residual lower-value cleanup in `ListingEditorPage` / `ListingTemplateManager`
+- listings follow-up is no longer led by `ListingListPage`; the residual listings work is now lower-value cleanup in `ListingEditorPage` / `ListingTemplateManager`
 
 ## Testing Requirements
 

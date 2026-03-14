@@ -110,6 +110,7 @@ Completed slices:
 - deeper `usePostEditorState` coverage for in-flight delete guarding, invalid selected-block no-ops, and attribute patching when block attrs are not records
 - deeper `PostRichTextAdapter` helper coverage for clipboard image extraction, default insert HTML escaping, and paste-mode resolution helpers
 - deeper `PostRichTextAdapter` coverage for multi-warning paste-hint suffixes, default non-Error upload failure messaging, and typography-class mapping across serif/mono scales
+- deeper `PageEditor` coverage for wrapper image fallback, empty-block initial selection null, refresh fallback to `defaultBlocks`, and settings save/autosave payload fallback when `currentData` is missing
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -299,6 +300,22 @@ Current `2026-03-14` snapshot after the latest adapter paste and typography foll
 Updated remaining slices after this follow-up:
 - current `TASK-105-05` ROI is concentrated in residual adapter/media/preview edges and smaller async shell residue rather than broad component gaps
 - once these last editor-specific branches flatten further, the next meaningful gains will likely come from shifting focus to broader low-line admin backlog or back to `TASK-105-04`
+
+Current `2026-03-14` snapshot after the latest page-editor fallback follow-up:
+- `% Stmts`: `69.05`
+- `% Branch`: `60.09`
+- `% Funcs`: `72.52`
+- `% Lines`: `72.21`
+- `459` Vitest files / `1705` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `88.57%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `78.44%` branches
+
+Updated remaining slices after this follow-up:
+- `PageEditor.tsx` is no longer a large branch outlier, so the next `TASK-105-05` ROI is concentrated in residual adapter/media/async edges rather than broad page-shell behavior
+- broader low-line admin backlog keeps getting relatively more important as the editor wave compresses
 
 ## Testing Requirements
 
