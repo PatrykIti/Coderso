@@ -677,3 +677,15 @@ Current snapshot after the latest page-editor and listings list follow-up on `20
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `78.44%` branches
 - the shipped Vitest lane is now above `60%` branches, `ListingListPage.tsx` is effectively closed, and the remaining ROI is increasingly split between residual editor-edge flattening and the broader low-line admin backlog
+
+Current snapshot after the latest forms and themes follow-up on `2026-03-14`:
+- `% Stmts`: `69.10`
+- `% Branch`: `60.17`
+- `% Funcs`: `72.60`
+- `% Lines`: `72.26`
+- `460` Vitest files / `1708` tests
+- `core/admin/ui/forms/FormCanvas.tsx` -> `100.00%` lines / `94.64%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- `core/admin/ui/listings/ListingListPage.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
+- the next best ROI now tilts more clearly toward `TASK-105-04` booking/theme residue and broader low-line admin backlog, because several former medium-coverage editor/forms/listings surfaces are now effectively closed

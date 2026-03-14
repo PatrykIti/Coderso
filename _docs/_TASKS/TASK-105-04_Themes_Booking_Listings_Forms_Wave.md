@@ -66,6 +66,8 @@ Completed slices:
 - direct `ListingListPage` coverage for cached empty state and tab shell rendering
 - direct `ListingListPage` coverage for loading hook states, load alerts, API and generic delete failures, and successful refresh after delete
 - booking leaf follow-up coverage for empty/fallback states in `AvailabilityTab`, `ReservationsTab`, `ServicesTab`, and `SlotPreviewTab`
+- direct `FormCanvas` DOM coverage for form and field selection, remove-action bubbling guards, multi-step normalization, and checkbox fallback copy
+- deeper `ThemeTemplateDrawer` coverage for color text-input normalization without hash prefixes across base, typography, input, topbar, card, and state token fields
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `85.00%` lines / `70.21%` branches
@@ -74,6 +76,14 @@ Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/forms/FormCanvas.tsx` -> `76.66%` lines / `73.21%` branches
 - `core/admin/ui/forms/FormListPage.tsx` -> `90.32%` lines / `83.33%` branches
 - aggregate `core/admin/ui/forms/*` average -> `89.24%` lines / `69.48%` branches across `13` tracked files
+
+Current `2026-03-14` forms snapshot after the latest canvas follow-up:
+- `core/admin/ui/forms/FormBuilderPage.tsx` -> `85.00%` lines / `70.21%` branches
+- `core/admin/ui/forms/FormActionsPanel.tsx` -> `92.61%` lines / `65.62%` branches
+- `core/admin/ui/forms/FormActionLogsPage.tsx` -> `100.00%` lines / `81.81%` branches
+- `core/admin/ui/forms/FormCanvas.tsx` -> `100.00%` lines / `94.64%` branches
+- `core/admin/ui/forms/FormListPage.tsx` -> `90.32%` lines / `83.33%` branches
+- aggregate `core/admin/ui/forms/*` average -> `91.03%` lines / `71.13%` branches across `13` tracked files
 
 Current `2026-03-14` listings snapshot after the latest follow-up slice:
 - `core/admin/ui/listings/ListingEditorPage.tsx` -> `89.79%` lines / `73.72%` branches
@@ -96,6 +106,13 @@ Current `2026-03-14` themes snapshot after the latest follow-up slice:
 - `core/admin/ui/themes/ThemeExportDialog.tsx` -> `100.00%` lines / `100.00%` branches
 - aggregate `core/admin/ui/themes/*` average -> `89.65%` lines / `78.22%` branches across `11` tracked files
 
+Current `2026-03-14` themes snapshot after the latest template-drawer follow-up:
+- `core/admin/ui/themes/ThemesPage.tsx` -> `94.06%` lines / `78.57%` branches
+- `core/admin/ui/themes/ThemeProfileDrawer.tsx` -> `100.00%` lines / `94.59%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- `core/admin/ui/themes/ThemeExportDialog.tsx` -> `100.00%` lines / `100.00%` branches
+- aggregate `core/admin/ui/themes/*` average -> `90.34%` lines / `78.59%` branches across `11` tracked files
+
 Current `2026-03-14` booking snapshot after the latest follow-up slice:
 - `core/admin/ui/booking/BookingPage.tsx` -> `92.93%` lines / `65.06%` branches
 - `core/admin/ui/booking/bookingHelpers.ts` -> `98.27%` lines / `97.82%` branches
@@ -108,7 +125,7 @@ Current `2026-03-14` booking snapshot after the latest follow-up slice:
 Remaining slices:
 - booking leaf tabs now dominate the remaining wave backlog, especially `AvailabilityTab`, `ReservationsTab`, `ServicesTab`, and `SlotPreviewTab`
 - residual themes work is now concentrated in `ThemeTemplateDrawer`
-- forms follow-up should focus on `FormCanvas` and the remaining branch-heavy `FormBuilderPage` paths
+- forms follow-up is no longer led by `FormCanvas`; the residual forms work is concentrated in branch-heavier `FormBuilderPage` paths
 - listings follow-up is no longer led by `ListingListPage`; the residual listings work is now lower-value cleanup in `ListingEditorPage` / `ListingTemplateManager`
 
 ## Testing Requirements

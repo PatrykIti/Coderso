@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 487 | 2026-03-14 | TASK-105 form canvas and theme drawer follow-up coverage | QA/Platform |
 | 486 | 2026-03-14 | TASK-105 page editor and listings list follow-up coverage | QA/Platform |
 | 485 | 2026-03-14 | TASK-105 adapter paste and typography branch follow-up | QA/Platform |
 | 484 | 2026-03-14 | TASK-105 hook helper follow-up coverage | QA/Platform |
