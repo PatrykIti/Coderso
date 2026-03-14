@@ -576,3 +576,14 @@ Current snapshot after the latest page-editor and adapter micro-follow-up on `20
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
 - next `TASK-105-05` hotspots are now led by `PageEditor.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
+
+Current snapshot after the latest page-editor, toolbar, inserter, and adapter follow-up on `2026-03-14`:
+- `% Stmts`: `68.66`
+- `% Branch`: `59.38`
+- `% Funcs`: `72.31`
+- `% Lines`: `71.81`
+- `core/admin/ui/pages/PageEditor.tsx` -> `84.84%` lines / `67.71%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `89.85%` lines / `76.27%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
+- next `TASK-105-05` hotspots are now led by `PageEditor.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches

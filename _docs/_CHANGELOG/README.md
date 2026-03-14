@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 479 | 2026-03-14 | TASK-105 editor chrome micro follow-up coverage | QA/Platform |
 | 478 | 2026-03-14 | TASK-105 page editor and adapter micro follow-up | QA/Platform |
 | 477 | 2026-03-14 | TASK-105 page settings and adapter follow-up coverage | QA/Platform |
 | 476 | 2026-03-14 | TASK-105 page leafs sidebar and editor chrome coverage | QA/Platform |

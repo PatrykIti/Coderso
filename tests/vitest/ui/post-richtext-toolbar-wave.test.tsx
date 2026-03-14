@@ -351,3 +351,36 @@ test("PostRichTextToolbar disables typography controls when disabled", () => {
     view.cleanup();
   }
 });
+
+test("PostRichTextToolbar shows typography-only row without advanced toggle when profile has no advanced actions", () => {
+  const onFontFamilyChange = vi.fn();
+  const onBaseTextScaleChange = vi.fn();
+  const view = mount(
+    <PostRichTextToolbar
+      profile="callout"
+      onCommand={() => undefined}
+      fontFamily="mono"
+      baseTextScale="lg"
+      onFontFamilyChange={onFontFamilyChange}
+      onBaseTextScaleChange={onBaseTextScaleChange}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Typography reads from block.");
+    expect(view.container.textContent).not.toContain("More formatting");
+    expect(view.container.textContent).not.toContain("Code");
+    expect(view.container.textContent).not.toContain("List");
+
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    act(() => {
+      setSelectValue(selects[0], "sans");
+      setSelectValue(selects[1], "sm");
+    });
+
+    expect(onFontFamilyChange).toHaveBeenCalledWith("sans");
+    expect(onBaseTextScaleChange).toHaveBeenCalledWith("sm");
+  } finally {
+    view.cleanup();
+  }
+});

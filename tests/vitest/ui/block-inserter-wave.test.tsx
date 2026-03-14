@@ -64,6 +64,18 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+const clickByText = (container: HTMLElement, text: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(text)
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button: ${text}`);
+  }
+  act(() => {
+    button.click();
+  });
+};
+
 const setInputValue = (element: Element | null | undefined, value: string) => {
   if (!(element instanceof HTMLInputElement)) {
     throw new Error(`Missing input for value: ${value}`);
@@ -136,6 +148,33 @@ test("BlockInserter supports keyboard insertion from the current active option",
 
     expect(onInsertBlock).toHaveBeenNthCalledWith(1, "writing-canvas");
     expect(onInsertBlock).toHaveBeenNthCalledWith(2, "writing-canvas");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("BlockInserter renders header mode and inserts from most-used when enabled", () => {
+  const onInsertBlock = vi.fn();
+  const view = mount(
+    <BlockInserter
+      onInsertBlock={onInsertBlock}
+      recentlyUsedTypes={["image", "button"]}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Block inserter");
+    expect(view.container.textContent).toContain("Most used");
+    expect(view.container.querySelector('input[aria-label="Search blocks"]')).not.toBeNull();
+
+    clickByText(view.container, "Image");
+    expect(onInsertBlock).toHaveBeenCalledWith("image");
+
+    const searchInput = view.container.querySelector('input[aria-label="Search blocks"]');
+    setInputValue(searchInput, "button");
+
+    expect(view.container.textContent).toContain("Button");
+    expect(view.container.textContent).not.toContain("Image");
   } finally {
     view.cleanup();
   }

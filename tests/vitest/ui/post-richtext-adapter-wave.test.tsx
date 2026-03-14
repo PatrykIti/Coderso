@@ -4,7 +4,10 @@ import React, { act, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { PostRichTextAdapter } from "../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter";
+import {
+  PostRichTextAdapter,
+  buildPostRichTextPasteInsert,
+} from "../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -100,6 +103,15 @@ vi.mock("../../../core/admin/ui/posts/editor/richtext/PostRichTextToolbar", () =
       </button>
       <button type="button" onClick={() => onCommand("heading-1")}>
         heading-1
+      </button>
+      <button type="button" onClick={() => onCommand("type-section")}>
+        type-section
+      </button>
+      <button type="button" onClick={() => onCommand("type-heading")}>
+        type-heading
+      </button>
+      <button type="button" onClick={() => onCommand("type-quote")}>
+        type-quote
       </button>
       <button type="button" onClick={() => onCommand("bullet-list")}>
         bullet-list
@@ -1276,6 +1288,60 @@ test("PostRichTextAdapter handles quote shortcut and ignores paste payloads with
   } finally {
     view.cleanup();
   }
+});
+
+test("PostRichTextAdapter routes type commands through onBlockTypeChange and exposes multi-warning paste insert diagnostics", async () => {
+  const onBlockTypeChange = vi.fn();
+  const Harness = () => {
+    const [value, setValue] = useState("<p>Section text</p>");
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onBlockTypeChange={onBlockTypeChange}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    clickByText(view.container, "type-section");
+    clickByText(view.container, "type-heading");
+    clickByText(view.container, "type-quote");
+
+    expect(onBlockTypeChange.mock.calls).toEqual([
+      ["writing-canvas", undefined],
+      ["heading", { level: 2 }],
+      ["quote", undefined],
+    ]);
+  } finally {
+    view.cleanup();
+  }
+
+  const pasteInsert = buildPostRichTextPasteInsert({
+    html: `
+      <p class="MsoHeading1" style="mso-outline-level:1">Table of contents</p>
+      <p><a href="#_Toc100">1. Intro 1</a></p>
+      <p><a href="#_Toc200">2. Setup 3</a></p>
+      <p><a href="#_Toc300">3. Output 5</a></p>
+      <table><tr><td>unsupported</td></tr></table>
+      <p>Body</p>
+    `,
+    text: "",
+  });
+
+  expect(pasteInsert.mode).toBe("writing-canvas");
+  expect(pasteInsert.directives.replaceWordTocWithDynamicToc).toBe(true);
+  expect(pasteInsert.warnings.length).toBeGreaterThan(1);
+  expect(pasteInsert.warnings.some((warning) => warning.includes("Unsupported HTML markup"))).toBe(
+    true
+  );
+  expect(pasteInsert.warnings.some((warning) => warning.includes("dynamic TOC"))).toBe(true);
 });
 
 test("PostRichTextAdapter keeps slash menu closed without slash handler and respects block transform mode", async () => {

@@ -255,12 +255,14 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
     onSelect,
     onDuplicate,
     onDelete,
+    onMove,
   }: {
     blocks: Array<{ id: string; type: string }>;
     selectedId: string | null;
     onSelect: (id: string | null) => void;
     onDuplicate?: (id: string) => void;
     onDelete?: (id: string) => void;
+    onMove?: (path: unknown, from: number, to: number) => void;
   }) => (
     <div>
       <span>{`block-count:${blocks.length}`}</span>
@@ -286,6 +288,12 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
       </button>
       <button type="button" onClick={() => onDelete?.("missing-block")}>
         delete-missing-block
+      </button>
+      <button type="button" onClick={() => onMove?.([], 0, 1)}>
+        move-first-block-down
+      </button>
+      <button type="button" onClick={() => onMove?.([], 0, -1)}>
+        invalid-move-block
       </button>
     </div>
   ),
@@ -880,6 +888,33 @@ test("PageEditor duplicates and deletes selected blocks with selection fallback"
     clickButton(view.container, "delete-missing-block");
     await flush();
     expect(view.container.textContent).toContain("block-count:2");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor reorders blocks and ignores invalid move targets", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({
+    id: "page-1",
+    currentData: { blocks: [createBlock("hero"), createBlock("compare-timeline")] },
+  });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("block-types:hero,compare-timeline");
+
+    clickButton(view.container, "move-first-block-down");
+    await flush();
+    expect(view.container.textContent).toContain("block-types:compare-timeline,hero");
+
+    clickButton(view.container, "invalid-move-block");
+    await flush();
+    expect(view.container.textContent).toContain("block-types:compare-timeline,hero");
   } finally {
     view.cleanup();
   }
