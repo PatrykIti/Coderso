@@ -2,7 +2,10 @@ import React from "react";
 import { expect, test } from "vitest";
 
 import {
+  buildClipboardImageInsertHtml,
+  extractClipboardImageFiles,
   resolvePostRichTextCommandKind,
+  resolveClipboardPasteMode,
   resolvePostRichTextShortcutCommand,
 } from "../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter";
 
@@ -33,4 +36,64 @@ test("adapter dispatch kind resolver is stable for core commands", () => {
   expect(resolvePostRichTextCommandKind("ordered-list")).toBe("list-format");
   expect(resolvePostRichTextCommandKind("align-center")).toBe("alignment");
   expect(resolvePostRichTextCommandKind("clear-formatting")).toBe("clear-formatting");
+});
+
+test("clipboard helper exports normalize image extraction, insert html, and paste mode", () => {
+  const itemImage = new File(["img"], "item-image.png", { type: "image/png" });
+  const fileImage = new File(["img"], "fallback-photo.jpg", { type: "image/jpeg" });
+  const nonImage = new File(["txt"], "note.txt", { type: "text/plain" });
+
+  expect(
+    extractClipboardImageFiles({
+      items: [
+        { kind: "string", type: "text/plain" },
+        { kind: "file", type: "image/png", getAsFile: () => itemImage },
+        { kind: "file", type: "image/jpeg", getAsFile: () => null },
+      ],
+      files: [fileImage],
+    })
+  ).toEqual([itemImage]);
+
+  expect(
+    extractClipboardImageFiles({
+      items: [{ kind: "file", type: "image/png", getAsFile: () => null }],
+      files: [fileImage, nonImage],
+    })
+  ).toEqual([fileImage]);
+
+  const html = buildClipboardImageInsertHtml(
+    { id: 'media<&>"', url: "https://cdn.test/image?a=1&b=2" },
+    "  Poster <alt>  "
+  );
+  expect(html).toContain('data-media-id="media&lt;&amp;&gt;&quot;"');
+  expect(html).toContain('alt="Poster &lt;alt&gt;"');
+  expect(html).toContain('data-wrap="none"');
+  expect(html).toContain('data-width="50"');
+  expect(html).toContain('data-margin="md"');
+
+  expect(
+    resolveClipboardPasteMode({
+      normalizedHtml: "<p>Rich</p>",
+      imageFilesCount: 0,
+    })
+  ).toBe("rich-text");
+  expect(
+    resolveClipboardPasteMode({
+      normalizedHtml: "",
+      imageFilesCount: 0,
+      hasPostPasteDirectives: true,
+    })
+  ).toBe("rich-text");
+  expect(
+    resolveClipboardPasteMode({
+      normalizedHtml: "",
+      imageFilesCount: 2,
+    })
+  ).toBe("images");
+  expect(
+    resolveClipboardPasteMode({
+      normalizedHtml: "",
+      imageFilesCount: 0,
+    })
+  ).toBe("none");
 });

@@ -107,6 +107,8 @@ Completed slices:
 - deeper `PostBlockEditorShell` coverage for focus-restore layout persistence and shell-driven list-view close behavior with outline focus return
 - deeper `usePostEditorState` coverage for writing-flow normalization helpers, decoded route-id parsing, and draft-sync guard helpers
 - deeper `PostEditorCanvas` coverage for selected callout typography/profile routing, custom TOC preview copy, direct-url image preview metadata, and styled button preview behavior
+- deeper `usePostEditorState` coverage for in-flight delete guarding, invalid selected-block no-ops, and attribute patching when block attrs are not records
+- deeper `PostRichTextAdapter` helper coverage for clipboard image extraction, default insert HTML escaping, and paste-mode resolution helpers
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -266,6 +268,21 @@ Current `2026-03-14` snapshot after the latest shell/state/canvas branch-hardeni
 Updated remaining slices after this follow-up:
 - current `TASK-105-05` ROI is no longer in broad shell gaps; it is mostly residual async/media/preview branches across `PageEditor.tsx`, `PostEditorCanvas.tsx`, `usePostEditorState.ts`, `PostRichTextAdapter.tsx`, and `PostRichTextToolbar.tsx`
 - the overall program tail is now increasingly shaped by broader low-line admin backlog outside this editor-focused wave rather than by any single large editor surface
+
+Current `2026-03-14` snapshot after the latest hook/helper follow-up:
+- `% Stmts`: `69.03`
+- `% Branch`: `59.95`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1698` tests
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `88.57%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+
+Updated remaining slices after this follow-up:
+- the next `TASK-105-05` ROI is now concentrated in residual async/media/preview edges rather than in helper-export coverage; the helper-owning surfaces are no longer the best leverage point
+- broader low-line admin backlog still dominates the overall program tail once the current editor wave is squeezed further
 
 ## Testing Requirements
 

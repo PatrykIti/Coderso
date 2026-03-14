@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { PostDetail, PostRevision, PostStatus } from "../../../core/admin/services/postsClient";
+import { deletePost } from "../../../core/admin/services/postsClient";
 
 type CacheEvent = { key: string };
 
@@ -936,6 +937,86 @@ test("usePostEditorState reports restore and upload failures and handles move-to
     });
     expect(hookState.deleteCalls).toEqual(["post-1", "post-1"]);
   } finally {
+    view.cleanup();
+  }
+});
+
+test("usePostEditorState guards missing selected blocks, patches non-record attrs, and ignores duplicate delete requests in flight", async () => {
+  hookState.cachedPost = hookState.createPost("post-1", {
+    data: {
+      featuredImage: "/media/hero.png",
+      document: {
+        version: 1,
+        blocks: [
+          {
+            id: "paragraph-1",
+            type: "paragraph",
+            attrs: null,
+            content: "Body",
+          },
+        ],
+        meta: {},
+      },
+    },
+  });
+  hookState.fetchedPost = hookState.cachedPost;
+
+  let resolveDelete: ((value: { ok: boolean }) => void) | null = null;
+  vi.mocked(deletePost).mockImplementationOnce(async (id: string) => {
+    hookState.deleteCalls.push(id);
+    return await new Promise<{ ok: boolean }>((resolve) => {
+      resolveDelete = resolve;
+    });
+  });
+
+  const view = mountHook();
+  let firstDeletePromise: Promise<boolean> | null = null;
+  try {
+    await waitFor(() => view.current().loading === false);
+
+    act(() => {
+      view.current().updateSelectedBlockAttrs({ align: "center" });
+    });
+    expect(view.current().selectedBlock?.attrs).toMatchObject({ align: "center" });
+
+    act(() => {
+      view.current().selectBlock("missing-block");
+    });
+    expect(view.current().selectedBlock).toBeNull();
+
+    act(() => {
+      view.current().updateSelectedBlockContent("ignored");
+      view.current().updateSelectedBlockAttrs({ width: "wide" });
+      view.current().deleteSelectedBlock();
+      view.current().moveSelectedBlock("up");
+      view.current().transformSelectedBlock("quote");
+    });
+
+    await act(async () => {
+      firstDeletePromise = view.current().moveToTrash();
+      await Promise.resolve();
+    });
+    await waitFor(() => view.current().deletingPost === true);
+
+    await act(async () => {
+      await expect(view.current().moveToTrash()).resolves.toBe(false);
+    });
+
+    resolveDelete?.({ ok: true });
+    await act(async () => {
+      await expect(firstDeletePromise).resolves.toBe(true);
+    });
+
+    expect(hookState.deleteCalls).toEqual(["post-1"]);
+  } finally {
+    if (resolveDelete) {
+      resolveDelete({ ok: true });
+    }
+    if (firstDeletePromise) {
+      await act(async () => {
+        await firstDeletePromise;
+      });
+    }
     view.cleanup();
   }
 });

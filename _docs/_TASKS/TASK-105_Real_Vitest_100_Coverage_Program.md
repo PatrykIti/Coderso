@@ -640,3 +640,15 @@ Current snapshot after the latest shell/state/canvas branch-hardening follow-up 
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
 - editor-shell branch hardening is now materially better, so the active-wave ROI is mostly residual async/media edges while the long-tail program backlog remains dominated by low-line admin surfaces outside `TASK-105-05`
+
+Current snapshot after the latest hook/helper follow-up on `2026-03-14`:
+- `% Stmts`: `69.03`
+- `% Branch`: `59.95`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1698` tests
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `88.57%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+- helper-export hardening continues to move the lane, but the best remaining ROI is now mostly in residual async/media/preview branches and in low-line admin backlog outside the active editor wave
