@@ -256,6 +256,8 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
     onDuplicate,
     onDelete,
     onMove,
+    onInsert,
+    onMoveToSlot,
   }: {
     blocks: Array<{ id: string; type: string }>;
     selectedId: string | null;
@@ -263,6 +265,8 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
     onDuplicate?: (id: string) => void;
     onDelete?: (id: string) => void;
     onMove?: (path: unknown, from: number, to: number) => void;
+    onInsert?: (parentId: string, slotId: string, type: string) => void;
+    onMoveToSlot?: (blockId: string, parentId: string, slotId: string) => void;
   }) => (
     <div>
       <span>{`block-count:${blocks.length}`}</span>
@@ -295,6 +299,32 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockList", () => ({
       <button type="button" onClick={() => onMove?.([], 0, -1)}>
         invalid-move-block
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          const hero = blocks.find((block) => block.type === "hero") ?? blocks[0];
+          if (!hero) return;
+          onInsert?.(hero.id, "content", "compare-timeline");
+        }}
+      >
+        insert-into-hero-slot
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const hero = blocks.find((block) => block.type === "hero") ?? blocks[0];
+          const selectedBlock = blocks.find((block) => block.id === selectedId);
+          const fallback = [...blocks]
+            .reverse()
+            .find((block) => block.id !== hero?.id);
+          if (!hero) return;
+          const moving = selectedBlock?.id !== hero.id ? selectedBlock : fallback;
+          if (!moving) return;
+          onMoveToSlot?.(moving.id, hero.id, "content");
+        }}
+      >
+        move-selected-into-hero-slot
+      </button>
     </div>
   ),
 }));
@@ -303,13 +333,46 @@ vi.mock("../../../core/admin/ui/pages/builder/BlockSettings", () => ({
   BlockSettings: ({
     block,
     widget,
+    onChange,
   }: {
-    block?: { id: string; type: string } | null;
+    block?: {
+      id: string;
+      type: string;
+      layout?: {
+        container?: string;
+        padding?: { top?: string; bottom?: string };
+        margin?: { top?: string; bottom?: string };
+      };
+    } | null;
     widget?: { type: string } | null;
+    onChange?: (next: {
+      id: string;
+      type: string;
+      layout?: {
+        container?: string;
+        padding?: { top?: string; bottom?: string };
+        margin?: { top?: string; bottom?: string };
+      };
+    }) => void;
   }) => (
     <div>
       <span>{`settings-block:${block?.type ?? "none"}`}</span>
       <span>{`settings-widget:${widget?.type ?? "none"}`}</span>
+      <span>
+        {`settings-layout:${block?.layout?.container ?? "none"}:${block?.layout?.padding?.top ?? "none"}:${block?.layout?.padding?.bottom ?? "none"}:${block?.layout?.margin?.top ?? "none"}:${block?.layout?.margin?.bottom ?? "none"}`}
+      </span>
+      <button
+        type="button"
+        onClick={() => {
+          if (!block) return;
+          onChange?.({
+            ...block,
+            type: "unknown-widget",
+          });
+        }}
+      >
+        mutate-selected-block
+      </button>
     </div>
   ),
 }));
@@ -532,10 +595,16 @@ const flush = async () => {
   });
 };
 
-const clickButton = (container: HTMLElement, label: string) => {
-  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+const clickButton = (
+  container: HTMLElement,
+  label: string,
+  occurrence: "first" | "last" = "first"
+) => {
+  const matches = Array.from(container.querySelectorAll("button")).filter((candidate) =>
     candidate.textContent?.includes(label)
   );
+  const button =
+    occurrence === "last" ? matches[matches.length - 1] : matches[0];
 
   if (!button) {
     throw new Error(`Missing button: ${label}`);
@@ -545,6 +614,11 @@ const clickButton = (container: HTMLElement, label: string) => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
   });
 };
+
+const apiError = (message: string) => ({
+  kind: "api" as const,
+  message,
+});
 
 beforeEach(() => {
   pageEditorState.reset();
@@ -760,11 +834,39 @@ test("PageEditor resolves page id from location and surfaces generic preview/tem
   }
 });
 
-test("PageEditor handles mobile library insert flows and ignores invalid non-page paths", async () => {
+test("PageEditor handles mobile library insert flows, applies page defaults, and ignores invalid non-page paths", async () => {
   pageEditorState.reset();
   const initialPage = createPage({
     id: "page-1",
-    currentData: { blocks: [createBlock("hero")] },
+    currentData: {
+      blocks: [createBlock("hero")],
+      settings: {
+        layout: normalizePageLayoutSettings({
+          wrapper: {
+            container: "default",
+            maxWidth: "5xl",
+            padding: { top: "sm", bottom: "md" },
+            background: {
+              color: "#111827",
+              media: {
+                type: "video",
+                source: "external",
+                src: "https://cdn.test/page-bg.mp4",
+              },
+            },
+          },
+          sections: {
+            defaults: {
+              container: "narrow",
+              padding: { top: "sm", bottom: "lg" },
+              margin: { top: "xs", bottom: "md" },
+            },
+            gap: "lg",
+          },
+          applyDefaultsToNewBlocks: true,
+        }),
+      },
+    },
   });
   pageEditorState.cachedPage = initialPage;
   pageEditorState.currentPage = clonePage(initialPage);
@@ -774,22 +876,40 @@ test("PageEditor handles mobile library insert flows and ignores invalid non-pag
   try {
     await flush();
     expect(view.container.textContent).toContain("block-count:1");
+    expect(
+      view.container.querySelector('video[src="https://cdn.test/page-bg.mp4"]')
+    ).not.toBeNull();
 
     clickButton(view.container, "Components");
     await flush();
     expect(view.container.textContent).toContain("sheet:left");
 
-    clickButton(view.container, "add-template");
+    clickButton(view.container, "add-widget", "last");
     await flush();
     expect(view.container.textContent).toContain("block-count:2");
-    expect(view.container.textContent).toContain("block-types:hero,template-section");
+    expect(view.container.textContent).toContain("block-types:hero,hero");
+    expect(view.container.textContent).toContain("settings-layout:narrow:sm:lg:xs:md");
+    expect(view.container.textContent).not.toContain("sheet:left");
 
     clickButton(view.container, "Components");
     await flush();
-    clickButton(view.container, "add-form");
+    clickButton(view.container, "add-template", "last");
     await flush();
     expect(view.container.textContent).toContain("block-count:3");
-    expect(view.container.textContent).toContain("block-types:hero,template-section,form-embed");
+    expect(view.container.textContent).toContain("block-types:hero,hero,template-section");
+    expect(view.container.textContent).toContain("settings-block:template-section");
+    expect(view.container.textContent).not.toContain("sheet:left");
+
+    clickButton(view.container, "Components");
+    await flush();
+    clickButton(view.container, "add-form", "last");
+    await flush();
+    expect(view.container.textContent).toContain("block-count:4");
+    expect(view.container.textContent).toContain(
+      "block-types:hero,hero,template-section,form-embed"
+    );
+    expect(view.container.textContent).toContain("settings-block:form-embed");
+    expect(view.container.textContent).not.toContain("sheet:left");
   } finally {
     view.cleanup();
   }
@@ -804,6 +924,64 @@ test("PageEditor handles mobile library insert flows and ignores invalid non-pag
     expect(invalidPathView.container.textContent).toContain("Loading page...");
   } finally {
     invalidPathView.cleanup();
+  }
+});
+
+test("PageEditor inserts into slots, mutates selected blocks, and warns before unload", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({
+    id: "page-1",
+    currentData: { blocks: [createBlock("hero"), createBlock("compare-timeline")] },
+  });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("block-count:2");
+    expect(view.container.textContent).toContain("settings-block:hero");
+
+    clickButton(view.container, "insert-into-hero-slot");
+    await flush();
+
+    expect(view.container.textContent).toContain("Unsaved changes");
+    expect(view.container.textContent).toContain("block-count:2");
+    expect(view.container.textContent).toContain("settings-block:compare-timeline");
+
+    clickButton(view.container, "select-last-block");
+    await flush();
+    clickButton(view.container, "move-selected-into-hero-slot");
+    await flush();
+
+    expect(view.container.textContent).toContain("block-count:1");
+    expect(view.container.textContent).toContain("settings-block:compare-timeline");
+
+    clickButton(view.container, "mutate-selected-block");
+    await flush();
+
+    expect(view.container.textContent).toContain("settings-block:unknown-widget");
+    expect(view.container.textContent).toContain("settings-widget:none");
+    expect(
+      Array.from(view.container.querySelectorAll("button")).find((button) =>
+        button.textContent?.includes("Details")
+      )
+    ).toHaveProperty("disabled", true);
+
+    const beforeUnload = new Event("beforeunload", {
+      cancelable: true,
+    }) as BeforeUnloadEvent & { returnValue: string };
+    beforeUnload.returnValue = "keep";
+
+    act(() => {
+      window.dispatchEvent(beforeUnload);
+    });
+
+    expect(beforeUnload.defaultPrevented).toBe(true);
+    expect(beforeUnload.returnValue).toBe("");
+  } finally {
+    view.cleanup();
   }
 });
 
@@ -856,6 +1034,73 @@ test("PageEditor handles mobile details, no-page preview/settings guards, and no
   }
 });
 
+test("PageEditor surfaces API client error messages across page, settings, and revision flows", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({ id: "page-1" });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    pageEditorState.getPageCached.mockRejectedValueOnce(apiError("Remote refresh denied"));
+    act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    await flush();
+    expect(view.container.textContent).toContain("Page error");
+    expect(view.container.textContent).toContain("Remote refresh denied");
+
+    pageEditorState.previewPage.mockRejectedValueOnce(apiError("Preview denied"));
+    clickButton(view.container, "Runtime preview");
+    await flush();
+    expect(view.container.textContent).toContain("preview-error:Preview denied");
+
+    pageEditorState.updatePage.mockRejectedValueOnce(apiError("Draft denied"));
+    clickButton(view.container, "Save draft");
+    await flush();
+    expect(view.container.textContent).toContain("Draft denied");
+
+    pageEditorState.publishPage.mockRejectedValueOnce(apiError("Publish denied"));
+    clickButton(view.container, "Publish");
+    await flush();
+    expect(view.container.textContent).toContain("Publish denied");
+
+    clickButton(view.container, "Page settings");
+    await flush();
+    await flush();
+    expect(pageEditorState.getPageTemplateOptions).toHaveBeenCalledTimes(1);
+
+    pageEditorState.updatePage.mockRejectedValueOnce(apiError("Settings denied"));
+    clickButton(view.container, "settings-save");
+    await flush();
+    expect(view.container.textContent).toContain("Page settings error");
+    expect(view.container.textContent).toContain("Settings denied");
+
+    pageEditorState.listPageRevisions.mockImplementationOnce(async () => {
+      throw apiError("History denied");
+    });
+    clickButton(view.container, "History");
+    await flush();
+    await flush();
+    expect(view.container.textContent).toContain("revision-error:History denied");
+
+    pageEditorState.restorePageRevision.mockRejectedValueOnce(apiError("Restore denied"));
+    clickButton(view.container, "restore-revision");
+    await flush();
+    expect(view.container.textContent).toContain("revision-error:Restore denied");
+
+    pageEditorState.discardPageRevision.mockRejectedValueOnce(apiError("Discard denied"));
+    clickButton(view.container, "discard-revision");
+    await flush();
+    expect(view.container.textContent).toContain("revision-error:Discard denied");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor duplicates and deletes selected blocks with selection fallback", async () => {
   pageEditorState.reset();
   const initialPage = createPage({
@@ -888,6 +1133,52 @@ test("PageEditor duplicates and deletes selected blocks with selection fallback"
     clickButton(view.container, "delete-missing-block");
     await flush();
     expect(view.container.textContent).toContain("block-count:2");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor clears unsaved and remote-update flags when publish completes without refreshed data", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({
+    id: "page-1",
+    currentData: { blocks: [createBlock("hero")] },
+  });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "add-widget");
+    await flush();
+    expect(view.container.textContent).toContain("Unsaved changes");
+
+    pageEditorState.currentPage = createPage({
+      id: "page-1",
+      title: "Remote Homepage",
+      currentData: { blocks: [createBlock("hero")] },
+    });
+    act(() => {
+      pageEditorState.triggerCacheEvent("page-detail:page-1");
+    });
+    await flush();
+    expect(view.container.textContent).toContain("Updated in another tab");
+
+    pageEditorState.getPageCached.mockResolvedValueOnce(null);
+    clickButton(view.container, "Publish");
+    await flush();
+
+    expect(pageEditorState.publishPage).toHaveBeenCalledWith(
+      "page-1",
+      expect.objectContaining({
+        blocks: expect.any(Array),
+      })
+    );
+    expect(view.container.textContent).not.toContain("Unsaved changes");
+    expect(view.container.textContent).not.toContain("Updated in another tab");
   } finally {
     view.cleanup();
   }
