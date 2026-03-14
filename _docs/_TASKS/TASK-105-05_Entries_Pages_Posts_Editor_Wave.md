@@ -100,6 +100,10 @@ Completed slices:
 - deeper `PostRichTextToolbar` coverage for default writing-canvas fallback, partial typography controls, and disabled grouped-control behavior
 - deeper `BlockInserter` coverage for wrapped keyboard navigation, category reset behavior, empty-result no-op handling, and disabled keyboard guards
 - deeper `PostRichTextAdapter` coverage for non-list Enter insertion, collapsed inline wrapper range resolution from element/trailing offsets, clipboard `files` fallback uploads, and invalid selected-image layout normalization
+- deeper `PostEditorCanvas` coverage for delete/replace-image flows, mixed list preview rendering, and provider-specific embed URL fallbacks
+- deeper `PostRichTextToolbar` coverage for base-text-scale-only controls and mouse-down focus-guard behavior
+- deeper `PostRichTextAdapter` coverage for loose-root list wrapping, native list fallback without selection, slash-close when slash syntax is removed, and cancelled link-prompt no-op behavior
+- stabilized `bun run test:coverage` by stopping the coverage wrapper from double-cleaning the reports directory after the wrapper already recreates `coverage/vitest/.tmp`
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -225,6 +229,23 @@ Current `2026-03-14` snapshot after the latest page-editor state and editor chro
 Updated remaining slices after this follow-up:
 - page-owned shell work is no longer centered on a large `PageEditor.tsx` gap; the remaining page-side residue is mostly narrower shell/load edges plus any residual `BlockList` support branches
 - posts/editor chrome now gets the best ROI from `PostRichTextToolbar.tsx`, `PostRichTextAdapter.tsx`, `PostEditorCanvas.tsx`, and smaller residual `PostBlockEditorShell.tsx` / `usePostEditorState.ts` async edges
+
+Current `2026-03-14` snapshot after the latest editor canvas, adapter, and toolbar follow-up:
+- `% Stmts`: `69.01`
+- `% Branch`: `59.75`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1691` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.15%` lines / `77.57%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `79.45%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `83.80%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `98.55%` lines / `81.35%` branches
+
+Updated remaining slices after this follow-up:
+- editor-shell ROI is now mostly concentrated in smaller `PageEditor.tsx` residue, `PostBlockEditorShell.tsx`, `usePostEditorState.ts`, and any remaining `PostEditorCanvas.tsx` higher-order preview/media edges
+- editor chrome follow-up is no longer centered on `BlockInserter.tsx`; the most relevant remaining chrome work is the residual `PostRichTextAdapter.tsx` / `PostRichTextToolbar.tsx` branches while the broader program tail is increasingly dominated by low-line admin surfaces outside this wave
 
 ## Testing Requirements
 

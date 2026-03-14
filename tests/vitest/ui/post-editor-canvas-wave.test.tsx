@@ -1181,3 +1181,156 @@ test("PostEditorCanvas title focus clears selection and image toolbar falls back
     view.cleanup();
   }
 });
+
+test("PostEditorCanvas routes delete and replace-image controls without deselecting the canvas shell", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  mediaState.reset();
+  const onDeleteBlock = vi.fn();
+  const onSelectBlock = vi.fn();
+  const onUpdateBlockAttrs = vi.fn();
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "image-delete",
+            type: "image",
+            attrs: { mediaId: "   " },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-delete"
+      insertFocusToken={0}
+      onSelectBlock={onSelectBlock}
+      onUpdateBlockContent={() => undefined}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onInsertBlock={() => undefined}
+      onDeleteBlock={onDeleteBlock}
+    />
+  );
+
+  try {
+    const deleteButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.getAttribute("aria-label") === "Delete block: Image"
+    ) as HTMLButtonElement | undefined;
+    if (!deleteButton) {
+      throw new Error("missing delete button");
+    }
+
+    act(() => {
+      deleteButton.click();
+    });
+
+    expect(onDeleteBlock).toHaveBeenCalledWith("image-delete");
+
+    clickByText(view.container, "Replace image");
+    await flush();
+
+    expect(view.container.textContent).toContain("Select Image");
+    expect(view.container.textContent).toContain("selected-media:none");
+
+    clickByText(view.container, "select-media:media-1.png");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("image-delete", {
+      mediaId: "media-1",
+      alt: "Hero alt",
+      caption: "Hero caption",
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostEditorCanvas previews mixed list content and resolves provider-specific embed URL fallbacks", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "list-mixed",
+            type: "list",
+            attrs: {},
+            content: ["Visible item", 42, null],
+          },
+          {
+            id: "embed-youtube-short",
+            type: "embed",
+            attrs: {
+              provider: "youtube",
+              url: "https://youtu.be/short-id",
+            },
+            content: null,
+          },
+          {
+            id: "embed-youtube-path",
+            type: "embed",
+            attrs: {
+              provider: "youtube",
+              url: "https://www.youtube.com/shorts/path-id",
+            },
+            content: null,
+          },
+          {
+            id: "embed-vimeo",
+            type: "embed",
+            attrs: {
+              provider: "vimeo",
+              url: "https://vimeo.com/channels/staffpicks/123456789",
+            },
+            content: null,
+          },
+          {
+            id: "embed-loom-invalid",
+            type: "embed",
+            attrs: {
+              provider: "loom",
+              url: "https://www.loom.com/not-a-share-id",
+            },
+            content: null,
+          },
+          {
+            id: "embed-custom-invalid",
+            type: "embed",
+            attrs: {
+              provider: "custom",
+              url: "notaurl",
+            },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onOpenBlockDetails={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Visible item");
+    expect(view.container.textContent).not.toContain(">42<");
+    expect(view.container.innerHTML).toContain("https://www.youtube.com/embed/short-id");
+    expect(view.container.innerHTML).toContain("https://www.youtube.com/embed/path-id");
+    expect(view.container.innerHTML).toContain("https://player.vimeo.com/video/123456789");
+    expect(view.container.textContent).toContain("Click to configure embed URL");
+  } finally {
+    view.cleanup();
+  }
+});

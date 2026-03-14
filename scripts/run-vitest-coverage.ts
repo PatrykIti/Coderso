@@ -25,7 +25,7 @@ const proc = Bun.spawn(
     "--config",
     "vitest.config.ts",
     "--coverage",
-    "--coverage.clean=true",
+    "--coverage.clean=false",
     `--coverage.reportsDirectory=${coverageDir}`,
   ],
   {

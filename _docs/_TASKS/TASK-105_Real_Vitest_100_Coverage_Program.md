@@ -612,3 +612,17 @@ Current snapshot after the latest page-editor state and editor chrome input foll
 - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `98.55%` lines / `81.35%` branches
 - widget/editor line closure remains intact, but the best `TASK-105-05` ROI is now concentrated in `PostRichTextToolbar.tsx`, `PostRichTextAdapter.tsx`, `PostEditorCanvas.tsx`, and smaller residual page/shell edges
 - broader low-line admin backlog outside the active wave still materially dominates the program tail (`AuditTable.tsx`, `PopupEditorForm.tsx`, `WidgetTemplateCategoryDrawer.tsx`, `UserDetailsDrawer.tsx`, `BackupsPage.tsx`)
+
+Current snapshot after the latest editor canvas, adapter, and toolbar follow-up on `2026-03-14`:
+- `% Stmts`: `69.01`
+- `% Branch`: `59.75`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1691` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.15%` lines / `77.57%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `79.45%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `98.55%` lines / `81.35%` branches
+- `scripts/run-vitest-coverage.ts` no longer double-cleans the reports directory, which removes the intermittent `coverage/vitest/.tmp` / HTML report `ENOENT` failures during `bun run test:coverage`
+- the `TASK-105-05` hotspot list is now dominated by smaller shell/media/async residues, while the overall program tail is increasingly driven by low-line admin surfaces outside the current editor-focused wave

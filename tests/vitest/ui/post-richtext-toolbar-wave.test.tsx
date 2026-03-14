@@ -160,6 +160,38 @@ const setSelectValue = (element: Element | undefined, value: string) => {
   element.dispatchEvent(new Event("change", { bubbles: true }));
 };
 
+const dispatchMouseDownByText = (container: HTMLElement, text: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
+    candidate.textContent?.includes(text)
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button for mouse down: ${text}`);
+  }
+
+  const event = new MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+  });
+  const result = button.dispatchEvent(event);
+  return { event, result };
+};
+
+const dispatchMouseDownByAriaLabel = (container: HTMLElement, label: string) => {
+  const button = Array.from(container.querySelectorAll("button")).find(
+    (candidate) => candidate.getAttribute("aria-label") === label
+  );
+  if (!(button instanceof HTMLButtonElement)) {
+    throw new Error(`Missing button for mouse down aria-label: ${label}`);
+  }
+
+  const event = new MouseEvent("mousedown", {
+    bubbles: true,
+    cancelable: true,
+  });
+  const result = button.dispatchEvent(event);
+  return { event, result };
+};
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -452,6 +484,51 @@ test("PostRichTextToolbar keeps grouped controls inert when disabled", () => {
       codeButton?.click();
     });
 
+    expect(onCommand).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextToolbar supports base-text-scale-only controls and prevents mouse-down focus stealing", () => {
+  const onCommand = vi.fn();
+  const onBaseTextScaleChange = vi.fn();
+  const view = mount(
+    <PostRichTextToolbar
+      profile="writing-canvas"
+      onCommand={onCommand}
+      baseTextScale="xl"
+      onBaseTextScaleChange={onBaseTextScaleChange}
+    />
+  );
+
+  try {
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    expect(selects).toHaveLength(1);
+    expect(view.container.textContent).toContain("Typography reads from block.");
+    expect(view.container.textContent).toContain("More formatting");
+
+    const typeMouseDown = dispatchMouseDownByText(view.container, "Type");
+    const moreFormattingMouseDown = dispatchMouseDownByText(
+      view.container,
+      "More formatting"
+    );
+    const boldMouseDown = dispatchMouseDownByAriaLabel(view.container, "Bold");
+
+    expect(typeMouseDown.result).toBe(false);
+    expect(typeMouseDown.event.defaultPrevented).toBe(true);
+    expect(moreFormattingMouseDown.result).toBe(false);
+    expect(moreFormattingMouseDown.event.defaultPrevented).toBe(true);
+    expect(boldMouseDown.result).toBe(false);
+    expect(boldMouseDown.event.defaultPrevented).toBe(true);
+
+    act(() => {
+      setSelectValue(selects[0], "sm");
+      setSelectValue(selects[0], "bad-scale");
+    });
+
+    expect(onBaseTextScaleChange).toHaveBeenNthCalledWith(1, "sm");
+    expect(onBaseTextScaleChange).toHaveBeenNthCalledWith(2, "md");
     expect(onCommand).not.toHaveBeenCalled();
   } finally {
     view.cleanup();

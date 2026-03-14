@@ -1477,6 +1477,41 @@ test("PostRichTextAdapter inserts paragraphs on Enter outside lists but leaves l
   }
 });
 
+test("PostRichTextAdapter wraps loose root content as a bullet list and falls back to native ordered-list commands", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("Loose text");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+
+    clickByText(view.container, "bullet-list");
+    await flush();
+    expect(editor.innerHTML).toContain("<ul><li>Loose text</li></ul>");
+
+    execCommand.mockClear();
+    clickByText(view.container, "ordered-list");
+    await flush();
+
+    expect(execCommand).toHaveBeenCalledWith("insertOrderedList", false, undefined);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostRichTextAdapter resolves collapsed inline wrappers from element and trailing offsets", async () => {
   const execCommand = vi.fn(() => false);
   Object.defineProperty(document, "execCommand", {
@@ -1528,6 +1563,47 @@ test("PostRichTextAdapter resolves collapsed inline wrappers from element and tr
     clickByText(view.container, "highlight");
     await flush();
     expect(editor.innerHTML).toContain("<mark>Delta</mark>");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter closes slash menu when content no longer matches slash command syntax", async () => {
+  const Harness = () => {
+    const [value, setValue] = useState("");
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onSlashInsertBlock={() => undefined}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    act(() => {
+      editor.innerHTML = "/quote";
+      setSelectionAtEnd(editor);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await flush();
+    expect(view.container.textContent).toContain("slash:open:quote");
+
+    act(() => {
+      editor.innerHTML = "regular text";
+      setSelectionAtEnd(editor);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("slash:closed:");
+    expect(view.container.textContent).not.toContain("slash:open:quote");
   } finally {
     view.cleanup();
   }
@@ -1609,6 +1685,83 @@ test("PostRichTextAdapter uploads images from clipboard files fallback and norma
     expect(selects[1]?.value).toBe("50");
     expect(selects[2]?.value).toBe("md");
   } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter falls back to native list commands when no block selection is available", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("<p>Alpha</p>");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    window.getSelection()?.removeAllRanges();
+
+    clickByText(view.container, "bullet-list");
+    clickByText(view.container, "ordered-list");
+
+    expect(execCommand).toHaveBeenCalledWith("insertUnorderedList", false, undefined);
+    expect(execCommand).toHaveBeenCalledWith("insertOrderedList", false, undefined);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter leaves link commands inert when the URL prompt is cancelled", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const originalPrompt = window.prompt;
+  Object.defineProperty(window, "prompt", {
+    value: vi.fn(() => null),
+    configurable: true,
+    writable: true,
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("<p>Link target</p>");
+    return <PostRichTextAdapter value={value} onChange={setValue} />;
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    setSelectionAtEnd(editor);
+    execCommand.mockClear();
+
+    clickByText(view.container, "link");
+
+    expect(execCommand).not.toHaveBeenCalledWith("insertHTML", expect.anything(), expect.anything());
+    expect(execCommand).not.toHaveBeenCalledWith("createLink", expect.anything(), expect.anything());
+    expect(execCommand).not.toHaveBeenCalledWith("unlink", expect.anything(), expect.anything());
+  } finally {
+    Object.defineProperty(window, "prompt", {
+      value: originalPrompt,
+      configurable: true,
+      writable: true,
+    });
     view.cleanup();
   }
 });
