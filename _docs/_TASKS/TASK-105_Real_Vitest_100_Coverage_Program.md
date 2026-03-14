@@ -652,3 +652,15 @@ Current snapshot after the latest hook/helper follow-up on `2026-03-14`:
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
 - `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
 - helper-export hardening continues to move the lane, but the best remaining ROI is now mostly in residual async/media/preview branches and in low-line admin backlog outside the active editor wave
+
+Current snapshot after the latest adapter paste and typography follow-up on `2026-03-14`:
+- `% Stmts`: `69.03`
+- `% Branch`: `60.00`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1698` tests
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `78.44%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+- the active editor wave has now pushed the shipped Vitest lane to a clean `60.00%` branch baseline, and the remaining ROI is increasingly about residual edge-case flattening versus broader low-line admin backlog selection

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 485 | 2026-03-14 | TASK-105 adapter paste and typography branch follow-up | QA/Platform |
 | 484 | 2026-03-14 | TASK-105 hook helper follow-up coverage | QA/Platform |
 | 483 | 2026-03-14 | TASK-105 shell state and canvas branch hardening | QA/Platform |
 | 482 | 2026-03-14 | TASK-105 editor canvas follow-up and coverage wrapper stabilization | QA/Platform |

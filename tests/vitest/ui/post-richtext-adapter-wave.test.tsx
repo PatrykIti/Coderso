@@ -1344,6 +1344,136 @@ test("PostRichTextAdapter routes type commands through onBlockTypeChange and exp
   expect(pasteInsert.warnings.some((warning) => warning.includes("dynamic TOC"))).toBe(true);
 });
 
+test("PostRichTextAdapter surfaces multi-warning paste suffixes and default upload-failure messages", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const imageFile = new File(["img"], "clipboard.png", { type: "image/png" });
+  const onUploadClipboardImage = vi.fn(async () => {
+    throw "upload-string-error";
+  });
+
+  const Harness = () => {
+    const [value, setValue] = useState("");
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onUploadClipboardImage={onUploadClipboardImage}
+      />
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    const editor = getEditor(view.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    setSelectionAtEnd(editor);
+
+    await dispatchPaste(
+      editor,
+      createClipboardData({
+        html: `
+          <p class="MsoHeading1" style="mso-outline-level:1">Table of contents</p>
+          <p><a href="#_Toc100">1. Intro 1</a></p>
+          <p><a href="#_Toc200">2. Setup 3</a></p>
+          <p><a href="#_Toc300">3. Output 5</a></p>
+          <table><tr><td>unsupported</td></tr></table>
+          <p>Body</p>
+        `,
+        text: "",
+      })
+    );
+
+    expect(view.container.textContent).toContain("Paste notice:");
+    expect(view.container.textContent).toContain("(+1 more)");
+
+    await dispatchPaste(
+      editor,
+      createClipboardData({
+        items: [
+          {
+            kind: "file",
+            type: "image/png",
+            getAsFile: () => imageFile,
+          },
+        ],
+      })
+    );
+
+    expect(view.container.textContent).toContain(
+      "Image upload failed: Image upload failed."
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextAdapter applies placeholder and editor typography classes for serif and mono scales", async () => {
+  const serifView = mount(
+    <PostRichTextAdapter
+      value=""
+      onChange={() => undefined}
+      fontFamily="serif"
+      baseTextScale="xl"
+    />
+  );
+
+  try {
+    const placeholder = Array.from(serifView.container.querySelectorAll("div")).find(
+      (candidate) =>
+        candidate.textContent?.includes("Start writing")
+        && candidate.className.includes("pointer-events-none")
+    ) as HTMLDivElement | undefined;
+    const editor = getEditor(serifView.container);
+    if (!placeholder || !editor) {
+      throw new Error("missing serif editor nodes");
+    }
+
+    expect(placeholder.className).toContain("text-2xl");
+    expect(placeholder.className).toContain("font-serif");
+    expect(editor.className).toContain("text-2xl");
+    expect(editor.className).toContain("font-serif");
+  } finally {
+    serifView.cleanup();
+  }
+
+  const monoView = mount(
+    <PostRichTextAdapter
+      value=""
+      onChange={() => undefined}
+      fontFamily="mono"
+      baseTextScale="sm"
+    />
+  );
+
+  try {
+    const placeholder = Array.from(monoView.container.querySelectorAll("div")).find(
+      (candidate) =>
+        candidate.textContent?.includes("Start writing")
+        && candidate.className.includes("pointer-events-none")
+    ) as HTMLDivElement | undefined;
+    const editor = getEditor(monoView.container);
+    if (!placeholder || !editor) {
+      throw new Error("missing mono editor nodes");
+    }
+
+    expect(placeholder.className).toContain("text-base");
+    expect(placeholder.className).toContain("font-mono");
+    expect(editor.className).toContain("text-base");
+    expect(editor.className).toContain("font-mono");
+  } finally {
+    monoView.cleanup();
+  }
+});
+
 test("PostRichTextAdapter keeps slash menu closed without slash handler and respects block transform mode", async () => {
   const execCommand = vi.fn(() => false);
   Object.defineProperty(document, "execCommand", {

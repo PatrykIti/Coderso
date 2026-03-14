@@ -109,6 +109,7 @@ Completed slices:
 - deeper `PostEditorCanvas` coverage for selected callout typography/profile routing, custom TOC preview copy, direct-url image preview metadata, and styled button preview behavior
 - deeper `usePostEditorState` coverage for in-flight delete guarding, invalid selected-block no-ops, and attribute patching when block attrs are not records
 - deeper `PostRichTextAdapter` helper coverage for clipboard image extraction, default insert HTML escaping, and paste-mode resolution helpers
+- deeper `PostRichTextAdapter` coverage for multi-warning paste-hint suffixes, default non-Error upload failure messaging, and typography-class mapping across serif/mono scales
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -283,6 +284,21 @@ Current `2026-03-14` snapshot after the latest hook/helper follow-up:
 Updated remaining slices after this follow-up:
 - the next `TASK-105-05` ROI is now concentrated in residual async/media/preview edges rather than in helper-export coverage; the helper-owning surfaces are no longer the best leverage point
 - broader low-line admin backlog still dominates the overall program tail once the current editor wave is squeezed further
+
+Current `2026-03-14` snapshot after the latest adapter paste and typography follow-up:
+- `% Stmts`: `69.03`
+- `% Branch`: `60.00`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1698` tests
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `78.44%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+
+Updated remaining slices after this follow-up:
+- current `TASK-105-05` ROI is concentrated in residual adapter/media/preview edges and smaller async shell residue rather than broad component gaps
+- once these last editor-specific branches flatten further, the next meaningful gains will likely come from shifting focus to broader low-line admin backlog or back to `TASK-105-04`
 
 ## Testing Requirements
 
