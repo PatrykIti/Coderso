@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 483 | 2026-03-14 | TASK-105 shell state and canvas branch hardening | QA/Platform |
 | 482 | 2026-03-14 | TASK-105 editor canvas follow-up and coverage wrapper stabilization | QA/Platform |
 | 481 | 2026-03-14 | TASK-105 page editor state and editor chrome input follow-up | QA/Platform |
 | 480 | 2026-03-14 | TASK-105 page editor reorder and shell-error follow-up | QA/Platform |

@@ -703,6 +703,52 @@ test("PostBlockEditorShell persists focus mode, clears stored layout when restor
   }
 });
 
+test("PostBlockEditorShell persists focus-restore layout values while focus mode is enabled", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.focusMode = true;
+  postShellState.layout.state.focusMode = true;
+  postShellState.layout.state.focusRestore = {
+    secondarySidebar: "list-view",
+    detailsOpen: false,
+  } as never;
+  postShellState.layout.state.secondarySidebar = "inserter";
+  postShellState.layout.state.detailsOpen = true;
+  postShellState.layout.state.detailsTab = "block";
+  postShellState.layout.state.leftRailMode = "list-view";
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(
+      JSON.parse(window.localStorage.getItem("nextless.posts.editor.layout.v1") ?? "{}")
+    ).toMatchObject({
+      secondarySidebar: "list-view",
+      detailsOpen: false,
+      detailsTab: "block",
+      leftRailMode: "list-view",
+    });
+    expect(window.localStorage.getItem("nextless.posts.editor.focusMode")).toBe("1");
+  } finally {
+    view.cleanup();
+    window.localStorage.clear();
+    postShellState.layout.focusMode = false;
+    postShellState.layout.state.focusMode = false;
+    postShellState.layout.state.focusRestore = null;
+    postShellState.layout.state.secondarySidebar = "inserter";
+    postShellState.layout.state.detailsOpen = true;
+    postShellState.layout.state.detailsTab = "document";
+    postShellState.layout.state.leftRailMode = "outline";
+  }
+});
+
 test("PostBlockEditorShell seeds layout hook options from stored layout and focus-mode preferences", async () => {
   const { PostBlockEditorShell } = await import(
     "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
@@ -829,6 +875,42 @@ test("PostBlockEditorShell closes already-open outline or inserter toggles", asy
     expect(postShellState.focusReturn).toHaveBeenCalledWith("inserter");
   } finally {
     view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell closes list-view sidebars through the shell callback and returns focus to outline", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.secondarySidebarOpen = true;
+  postShellState.layout.showInserter = false;
+  postShellState.layout.showListView = true;
+  postShellState.layout.leftRailMode = "list-view";
+  postShellState.layout.state.leftRailMode = "list-view";
+  postShellState.layout.state.secondarySidebar = "list-view";
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "close-secondary-shell")
+        ?.click();
+    });
+
+    expect(postShellState.layout.closeSecondarySidebar).toHaveBeenCalled();
+    expect(postShellState.focusReturn).toHaveBeenCalledWith("outline");
+  } finally {
+    view.cleanup();
+    postShellState.layout.showListView = false;
+    postShellState.layout.leftRailMode = "outline";
+    postShellState.layout.state.leftRailMode = "outline";
+    postShellState.layout.state.secondarySidebar = "inserter";
   }
 });
 

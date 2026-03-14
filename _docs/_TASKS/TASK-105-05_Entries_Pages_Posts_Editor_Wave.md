@@ -104,6 +104,9 @@ Completed slices:
 - deeper `PostRichTextToolbar` coverage for base-text-scale-only controls and mouse-down focus-guard behavior
 - deeper `PostRichTextAdapter` coverage for loose-root list wrapping, native list fallback without selection, slash-close when slash syntax is removed, and cancelled link-prompt no-op behavior
 - stabilized `bun run test:coverage` by stopping the coverage wrapper from double-cleaning the reports directory after the wrapper already recreates `coverage/vitest/.tmp`
+- deeper `PostBlockEditorShell` coverage for focus-restore layout persistence and shell-driven list-view close behavior with outline focus return
+- deeper `usePostEditorState` coverage for writing-flow normalization helpers, decoded route-id parsing, and draft-sync guard helpers
+- deeper `PostEditorCanvas` coverage for selected callout typography/profile routing, custom TOC preview copy, direct-url image preview metadata, and styled button preview behavior
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -246,6 +249,23 @@ Current `2026-03-14` snapshot after the latest editor canvas, adapter, and toolb
 Updated remaining slices after this follow-up:
 - editor-shell ROI is now mostly concentrated in smaller `PageEditor.tsx` residue, `PostBlockEditorShell.tsx`, `usePostEditorState.ts`, and any remaining `PostEditorCanvas.tsx` higher-order preview/media edges
 - editor chrome follow-up is no longer centered on `BlockInserter.tsx`; the most relevant remaining chrome work is the residual `PostRichTextAdapter.tsx` / `PostRichTextToolbar.tsx` branches while the broader program tail is increasingly dominated by low-line admin surfaces outside this wave
+
+Current `2026-03-14` snapshot after the latest shell/state/canvas branch-hardening follow-up:
+- `% Stmts`: `69.01`
+- `% Branch`: `59.91`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1691` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.15%` lines / `77.57%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `88.57%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.08%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+
+Updated remaining slices after this follow-up:
+- current `TASK-105-05` ROI is no longer in broad shell gaps; it is mostly residual async/media/preview branches across `PageEditor.tsx`, `PostEditorCanvas.tsx`, `usePostEditorState.ts`, `PostRichTextAdapter.tsx`, and `PostRichTextToolbar.tsx`
+- the overall program tail is now increasingly shaped by broader low-line admin backlog outside this editor-focused wave rather than by any single large editor surface
 
 ## Testing Requirements
 

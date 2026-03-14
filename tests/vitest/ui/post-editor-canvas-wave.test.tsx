@@ -230,6 +230,9 @@ vi.mock("../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter", () =
     onBlockTypeChange,
     onFontFamilyChange,
     onBaseTextScaleChange,
+    toolbarProfile,
+    fontFamily,
+    baseTextScale,
   }: {
     value: string;
     onChange: (next: string) => void;
@@ -240,9 +243,14 @@ vi.mock("../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter", () =
     onBlockTypeChange?: (type: "heading", attrs?: Record<string, unknown>) => void;
     onFontFamilyChange?: (value: "serif") => void;
     onBaseTextScaleChange?: (value: "xl") => void;
+    toolbarProfile?: string;
+    fontFamily?: string;
+    baseTextScale?: string;
   }) => (
     <div>
       <span>{`adapter:${value}`}</span>
+      <span>{`adapter-profile:${toolbarProfile ?? "none"}`}</span>
+      <span>{`adapter-typography:${fontFamily ?? "none"}:${baseTextScale ?? "none"}`}</span>
       <button type="button" onClick={() => onFocus?.()}>
         adapter-focus
       </button>
@@ -1332,5 +1340,136 @@ test("PostEditorCanvas previews mixed list content and resolves provider-specifi
     expect(view.container.textContent).toContain("Click to configure embed URL");
   } finally {
     view.cleanup();
+  }
+});
+
+test("PostEditorCanvas uses document typography for selected callout blocks and renders richer preview defaults", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const onTransformBlock = vi.fn();
+  const onUpdateBlockAttrs = vi.fn();
+  const onUpdateDocumentTypography = vi.fn();
+  const onOpenBlockDetails = vi.fn();
+
+  const selectedView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {
+          typography: {
+            fontFamily: "mono",
+            baseTextScale: "xl",
+          },
+        },
+        blocks: [
+          {
+            id: "callout-1",
+            type: "callout",
+            attrs: {},
+            content: "<p>Alert</p>",
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="callout-1"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onTransformBlock={onTransformBlock}
+      onUpdateDocumentTypography={onUpdateDocumentTypography}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    expect(selectedView.container.textContent).toContain("adapter-profile:callout");
+    expect(selectedView.container.textContent).toContain("adapter-typography:mono:xl");
+
+    clickByText(selectedView.container, "adapter-transform");
+    clickByText(selectedView.container, "adapter-font");
+    clickByText(selectedView.container, "adapter-scale");
+
+    expect(onTransformBlock).toHaveBeenCalledWith("callout-1", "heading");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("callout-1", { level: 2 });
+    expect(onUpdateDocumentTypography).toHaveBeenNthCalledWith(1, {
+      fontFamily: "serif",
+      baseTextScale: "xl",
+    });
+    expect(onUpdateDocumentTypography).toHaveBeenNthCalledWith(2, {
+      fontFamily: "mono",
+      baseTextScale: "xl",
+    });
+  } finally {
+    selectedView.cleanup();
+  }
+
+  const previewView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "toc-custom",
+            type: "toc",
+            attrs: { title: "Contents" },
+            content: null,
+          },
+          {
+            id: "image-captioned",
+            type: "image",
+            attrs: {
+              mediaId: "https://cdn.test/image.png",
+              alt: "Poster alt",
+              caption: "Poster caption",
+            },
+            content: null,
+          },
+          {
+            id: "button-styled",
+            type: "button",
+            attrs: {
+              label: "Read more",
+              url: " https://example.com/read-more ",
+              variant: "link",
+              size: "lg",
+            },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onOpenBlockDetails={onOpenBlockDetails}
+    />
+  );
+
+  try {
+    expect(previewView.container.textContent).toContain("Contents");
+    expect(previewView.container.innerHTML).toContain('alt="Poster alt"');
+    expect(previewView.container.textContent).toContain("Poster caption");
+
+    const button = Array.from(previewView.container.querySelectorAll("button")).find((candidate) =>
+      candidate.textContent?.includes("Read more")
+    ) as HTMLButtonElement | undefined;
+    expect(button?.className).toContain("underline-offset-4");
+    expect(button?.className).toContain("h-11");
+
+    act(() => {
+      button?.click();
+    });
+
+    expect(onOpenBlockDetails).toHaveBeenCalledWith("button-styled");
+  } finally {
+    previewView.cleanup();
   }
 });

@@ -56,7 +56,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-14 editor shell baseline is 72.19% lines; `PageEditor` and `PostEditorCanvas` are near closure, editor chrome residue is smaller, and broader low-line admin surfaces still need explicit closure slices |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: ThemeExportDialog and FormListPage are now covered; booking leaf tabs, ThemeTemplateDrawer, FormCanvas, and ListingListPage remain |
-| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` and `PostEditorCanvas` are now above 95% lines, `BlockInserter` is effectively out of the hot path, and the remaining ROI is concentrated in residual editor shell/media/async branches |
+| TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor`, `PostEditorCanvas`, and `PostBlockEditorShell` are now in the mid-90s by lines, branch hardening improved in `usePostEditorState`, and the remaining ROI is concentrated in smaller editor shell/media/async residue |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 

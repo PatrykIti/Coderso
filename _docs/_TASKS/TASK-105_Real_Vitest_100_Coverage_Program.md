@@ -626,3 +626,17 @@ Current snapshot after the latest editor canvas, adapter, and toolbar follow-up 
 - `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `98.55%` lines / `81.35%` branches
 - `scripts/run-vitest-coverage.ts` no longer double-cleans the reports directory, which removes the intermittent `coverage/vitest/.tmp` / HTML report `ENOENT` failures during `bun run test:coverage`
 - the `TASK-105-05` hotspot list is now dominated by smaller shell/media/async residues, while the overall program tail is increasingly driven by low-line admin surfaces outside the current editor-focused wave
+
+Current snapshot after the latest shell/state/canvas branch-hardening follow-up on `2026-03-14`:
+- `% Stmts`: `69.01`
+- `% Branch`: `59.91`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1691` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.15%` lines / `77.57%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `88.57%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.08%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+- editor-shell branch hardening is now materially better, so the active-wave ROI is mostly residual async/media edges while the long-tail program backlog remains dominated by low-line admin surfaces outside `TASK-105-05`

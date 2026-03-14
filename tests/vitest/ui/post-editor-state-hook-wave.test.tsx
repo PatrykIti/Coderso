@@ -426,7 +426,13 @@ vi.mock("../../../core/admin/ui/posts/editor/hooks/usePostAutosave", () => ({
   },
 }));
 
-import { usePostEditorState } from "../../../core/admin/ui/posts/editor/hooks/usePostEditorState";
+import {
+  buildSilentSyncSnapshot,
+  normalizeEditorDocumentForWritingFlow,
+  normalizePostDraftSyncMode,
+  shouldDeferRefreshForDirtyState,
+  usePostEditorState,
+} from "../../../core/admin/ui/posts/editor/hooks/usePostEditorState";
 
 const mountHook = () => {
   const latest: { current: ReturnType<typeof usePostEditorState> | null } = {
@@ -484,6 +490,92 @@ afterEach(() => {
   hookState.reset();
 });
 
+test("usePostEditorState helper exports normalize writing-flow documents and sync guards", () => {
+  const normalizedWrapped = normalizeEditorDocumentForWritingFlow({
+    version: 1,
+    blocks: [
+      {
+        id: "empty-paragraph",
+        type: "paragraph",
+        attrs: null,
+        content: null,
+      },
+      {
+        id: "canvas-1",
+        type: "writing-canvas",
+        attrs: {},
+        content: {
+          version: 1,
+          nodes: [{ id: "node-1", type: "paragraph", text: "Body" }],
+        },
+      },
+    ],
+    meta: {},
+  });
+
+  expect(normalizedWrapped.blocks).toHaveLength(1);
+  expect(normalizedWrapped.blocks[0]?.type).toBe("writing-canvas");
+
+  const normalizedParagraph = normalizeEditorDocumentForWritingFlow({
+    version: 1,
+    blocks: [
+      {
+        id: "",
+        type: "paragraph",
+        attrs: {},
+        content: null,
+      },
+    ],
+    meta: {},
+  });
+
+  expect(normalizedParagraph.blocks).toHaveLength(1);
+  expect(normalizedParagraph.blocks[0]?.id).toBe("block-1");
+  expect(normalizedParagraph.blocks[0]?.type).toBe("writing-canvas");
+  expect(normalizedParagraph.blocks[0]?.content).toEqual(
+    expect.objectContaining({
+      version: 1,
+      nodes: [
+        expect.objectContaining({
+          type: "paragraph",
+          text: "",
+        }),
+      ],
+    })
+  );
+
+  const snapshot = buildSilentSyncSnapshot(
+    hookState.createPost("post-2", {
+      title: "Snapshot post",
+      slug: "snapshot-post",
+      status: "published",
+      data: {
+        document: {
+          version: 1,
+          blocks: [],
+          meta: {},
+        },
+        featuredImage: 42 as unknown as string,
+      },
+    }),
+    "2026-03-12T14:00:00.000Z"
+  );
+
+  expect(snapshot.title).toBe("Snapshot post");
+  expect(snapshot.slug).toBe("snapshot-post");
+  expect(snapshot.status).toBe("published");
+  expect(snapshot.featuredImage).toBe("");
+  expect(snapshot.savedAt).toBe("2026-03-12T14:00:00.000Z");
+  expect(snapshot.metadataDraft.tagsInput).toBe("alpha, beta");
+  expect(snapshot.metadataDraft.categoryId).toBe("cat-1");
+
+  expect(normalizePostDraftSyncMode(undefined)).toBe("silent");
+  expect(normalizePostDraftSyncMode("hydrate")).toBe("hydrate");
+  expect(shouldDeferRefreshForDirtyState(undefined, true)).toBe(true);
+  expect(shouldDeferRefreshForDirtyState({ allowDirty: false }, false)).toBe(false);
+  expect(shouldDeferRefreshForDirtyState({ allowDirty: true }, true)).toBe(false);
+});
+
 test("usePostEditorState reports missing post id without fetching", async () => {
   hookState.path = "/admin/coderso/settings";
 
@@ -497,6 +589,35 @@ test("usePostEditorState reports missing post id without fetching", async () => 
     expect(hookState.autosaveOptions?.enabled).toBe(false);
   } finally {
     view.cleanup();
+  }
+});
+
+test("usePostEditorState decodes post ids from the route and treats /posts without an id as missing", async () => {
+  hookState.path = "/admin/coderso/posts/post%202?editor=writing#details";
+  hookState.fetchedPost = hookState.createPost("post 2");
+
+  const resolvedView = mountHook();
+  try {
+    await waitFor(() => resolvedView.current().loading === false);
+
+    expect(resolvedView.current().postId).toBe("post 2");
+    expect(hookState.getPostCalls[0]).toEqual({ id: "post 2", force: true });
+  } finally {
+    resolvedView.cleanup();
+  }
+
+  hookState.reset();
+  hookState.path = "/admin/coderso/posts";
+
+  const missingView = mountHook();
+  try {
+    await waitFor(() => missingView.current().loading === false);
+
+    expect(missingView.current().postId).toBeNull();
+    expect(missingView.current().error).toBe("Post ID is missing.");
+    expect(hookState.getPostCalls).toEqual([]);
+  } finally {
+    missingView.cleanup();
   }
 });
 
