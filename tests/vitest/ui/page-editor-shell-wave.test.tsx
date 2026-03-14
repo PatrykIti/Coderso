@@ -732,3 +732,50 @@ test("PageEditor resolves page id from location and surfaces generic preview/tem
     view.cleanup();
   }
 });
+
+test("PageEditor handles mobile library insert flows and ignores invalid non-page paths", async () => {
+  pageEditorState.reset();
+  const initialPage = createPage({
+    id: "page-1",
+    currentData: { blocks: [createBlock("hero")] },
+  });
+  pageEditorState.cachedPage = initialPage;
+  pageEditorState.currentPage = clonePage(initialPage);
+
+  const view = mount(<PageEditor pageId="page-1" initialPage={initialPage} />);
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("block-count:1");
+
+    clickButton(view.container, "Components");
+    await flush();
+    expect(view.container.textContent).toContain("sheet:left");
+
+    clickButton(view.container, "add-template");
+    await flush();
+    expect(view.container.textContent).toContain("block-count:2");
+    expect(view.container.textContent).toContain("block-types:hero,template-section");
+
+    clickButton(view.container, "Components");
+    await flush();
+    clickButton(view.container, "add-form");
+    await flush();
+    expect(view.container.textContent).toContain("block-count:3");
+    expect(view.container.textContent).toContain("block-types:hero,template-section,form-embed");
+  } finally {
+    view.cleanup();
+  }
+
+  pageEditorState.reset();
+  window.history.replaceState({}, "", "/admin/coderso/settings");
+  const invalidPathView = mount(<PageEditor />);
+
+  try {
+    await flush();
+    expect(pageEditorState.getPageCached).not.toHaveBeenCalled();
+    expect(invalidPathView.container.textContent).toContain("Loading page...");
+  } finally {
+    invalidPathView.cleanup();
+  }
+});

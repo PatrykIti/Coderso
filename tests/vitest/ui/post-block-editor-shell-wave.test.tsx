@@ -626,3 +626,70 @@ test("PostBlockEditorShell handles loading shell, details reopen, and cancelled 
     delete (window as Window & { confirm?: unknown }).confirm;
   }
 });
+
+test("PostBlockEditorShell persists focus mode, clears stored layout when restore is disabled, and only navigates on successful trash", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.focusMode = true;
+  postShellState.layout.state.focusMode = true;
+  postShellState.layout.state.focusRestore = {
+    secondarySidebar: "list-view",
+    detailsOpen: false,
+  } as never;
+  postShellState.layout.state.secondarySidebar = "inserter";
+  postShellState.layout.state.detailsOpen = true;
+  postShellState.preferences.preferences.restoreLastSidebarsState = false;
+  postShellState.preferences.initialPreferences.restoreLastSidebarsState = false;
+  postShellState.editor.loading = false;
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+
+  window.localStorage.setItem("nextless.posts.editor.layout.v1", "{invalid");
+
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => true),
+  });
+
+  postShellState.editor.moveToTrash.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    expect(window.localStorage.getItem("nextless.posts.editor.focusMode")).toBe("1");
+    expect(window.localStorage.getItem("nextless.posts.editor.layout.v1")).toBeNull();
+
+    act(() => {
+      buttons.find((button) => button.textContent === "move-to-trash")?.click();
+      buttons.find((button) => button.textContent === "move-to-trash")?.click();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(postShellState.editor.moveToTrash).toHaveBeenCalledTimes(2);
+    expect(postShellState.navigate).toHaveBeenCalledWith("/admin/posts", {
+      replace: true,
+    });
+  } finally {
+    view.cleanup();
+    delete (window as Window & { confirm?: unknown }).confirm;
+    window.localStorage.clear();
+    postShellState.layout.focusMode = false;
+    postShellState.layout.state.focusMode = false;
+    postShellState.layout.state.focusRestore = null;
+    postShellState.preferences.preferences.restoreLastSidebarsState = true;
+    postShellState.preferences.initialPreferences.restoreLastSidebarsState = true;
+  }
+});

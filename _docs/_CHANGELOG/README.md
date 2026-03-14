@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 476 | 2026-03-14 | TASK-105 page leafs sidebar and editor chrome coverage | QA/Platform |
 | 475 | 2026-03-14 | TASK-105 deeper editor shell and canvas follow-up coverage | QA/Platform |
 | 474 | 2026-03-14 | TASK-105 editor and admin follow-up coverage | QA/Platform |
 | 473 | 2026-03-13 | TASK-105 navigation sparse default coverage | QA/Platform |

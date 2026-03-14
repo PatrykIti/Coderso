@@ -89,6 +89,11 @@ Completed slices:
 - deeper `PostEditorCanvas` coverage for direct-url media skip, unresolved lookup fallback, bare media patching, generic picker load failure, and focus/scroll side-effects
 - deeper `PostRichTextAdapter` coverage for image upload count/result fallbacks, mixed-content slash selection, directive forwarding on insert fallback, and generic upload failures
 - deeper `usePostEditorState` coverage for revision drawer toggles and generic restore/upload/delete failure handling
+- direct `DeviceSwitcher` coverage for controlled and uncontrolled state transitions
+- direct `PageRowActions` coverage for publish/unpublish/delete availability and callback routing
+- direct `PostListViewSidebar` coverage for tab switching, insert catalog routing, and child callback forwarding
+- direct `PostRichTextToolbar` coverage for writing-canvas/heading profile groups and advanced formatting toggles
+- direct `BlockInserter` coverage for most-used rendering, category filtering, disabled insertion, and keyboard insertion
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/entries/EntryList.tsx` -> `94.21%` lines / `75.17%` branches
@@ -139,6 +144,23 @@ Current `2026-03-14` snapshot after the deeper editor shell/canvas/state slice:
 Updated remaining slices:
 - pages follow-up is now led by the remaining `PageEditor` and `PageSettingsDrawer` failure/mobile/state branches
 - posts follow-up is now concentrated in `PostBlockEditorShell`, `PostEditorCanvas`, `PostRichTextAdapter`, and the remaining async/service edges in `usePostEditorState`
+
+Current `2026-03-14` snapshot after the page leaf / sidebar / toolbar / inserter slice:
+- `core/admin/ui/pages/DeviceSwitcher.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/pages/PageRowActions.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/posts/editor/sidebars/PostListViewSidebar.tsx` -> `100.00%` lines / `85.71%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `85.50%` lines / `76.27%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `82.12%` lines / `64.12%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `82.22%` lines / `82.14%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `86.82%` lines / `69.52%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `90.07%` lines / `76.13%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `88.20%` lines / `70.10%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `79.20%` branches
+
+Updated remaining slices after this follow-up:
+- pages follow-up is now led by `PageEditor` and `PageSettingsDrawer`, while `DeviceSwitcher` and `PageRowActions` are effectively closed
+- posts follow-up is now concentrated in `PostRichTextToolbar`, `BlockInserter`, `PostBlockEditorShell`, `PostRichTextAdapter`, and the remaining higher-order branches in `PostEditorCanvas` / `usePostEditorState`
 
 ## Testing Requirements
 

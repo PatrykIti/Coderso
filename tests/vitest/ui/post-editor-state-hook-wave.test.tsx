@@ -861,3 +861,49 @@ test("usePostEditorState handles revision drawer toggles and generic async failu
     view.cleanup();
   }
 });
+
+test("usePostEditorState reports missing remote post, successful preview, and generic unpublish/revision failures", async () => {
+  hookState.cachedPost = null;
+  hookState.fetchedPost = null;
+
+  const missingView = mountHook();
+  try {
+    await waitFor(() => missingView.current().loading === false);
+    expect(missingView.current().error).toBe("Post not found.");
+  } finally {
+    missingView.cleanup();
+  }
+
+  hookState.reset();
+  hookState.cachedPost = hookState.createPost("post-1");
+  hookState.fetchedPost = hookState.cachedPost;
+  hookState.revisions = [hookState.createRevision("rev-1")];
+
+  const view = mountHook();
+  try {
+    await waitFor(() => view.current().loading === false);
+
+    await act(async () => {
+      await view.current().preview();
+    });
+    await waitFor(() => view.current().previewLoading === false);
+
+    expect(view.current().previewOpen).toBe(true);
+    expect(view.current().previewUrl).toBe("/preview/post-1");
+    expect(view.current().previewError).toBeNull();
+
+    hookState.nextUnpublishError = new Error("unpublish exploded");
+    await act(async () => {
+      await expect(view.current().unpublish()).rejects.toThrow("unpublish exploded");
+    });
+    expect(view.current().error).toBe("Failed to move post to draft.");
+
+    hookState.nextRevisionsError = new Error("revisions exploded");
+    act(() => {
+      view.current().openRevisions();
+    });
+    await waitFor(() => view.current().revisionsError === "Failed to load post revisions.");
+  } finally {
+    view.cleanup();
+  }
+});

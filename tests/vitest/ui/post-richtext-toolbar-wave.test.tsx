@@ -237,3 +237,57 @@ test("PostRichTextToolbar hides advanced row when profile has no advanced action
     view.cleanup();
   }
 });
+
+test("PostRichTextToolbar exposes profile-specific dropdown groups and advanced formatting toggles", () => {
+  const onCommand = vi.fn();
+  const view = mount(
+    <PostRichTextToolbar
+      profile="writing-canvas"
+      onCommand={onCommand}
+      fontFamily="mono"
+      baseTextScale="lg"
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Type");
+    expect(view.container.textContent).toContain("Text");
+    expect(view.container.textContent).toContain("List");
+    expect(view.container.textContent).toContain("Code");
+    expect(view.container.textContent).toContain("More formatting");
+    expect(view.container.textContent).not.toContain("Typography reads from block.");
+
+    clickByText(view.container, "More formatting");
+    clickByAriaLabel(view.container, "Underline");
+    clickByText(view.container, "Code");
+    clickByText(view.container, "Code block");
+    clickByAriaLabel(view.container, "Align right");
+
+    expect(onCommand.mock.calls.map((call) => call[0])).toEqual([
+      "underline",
+      "code-block",
+      "align-right",
+    ]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostRichTextToolbar renders heading-only groups without writing-canvas text group", () => {
+  const onCommand = vi.fn();
+  const view = mount(<PostRichTextToolbar profile="heading" onCommand={onCommand} />);
+
+  try {
+    expect(view.container.textContent).toContain("Type");
+    expect(view.container.textContent).toContain("Headings");
+    expect(view.container.textContent).not.toContain("Text");
+    expect(view.container.textContent).not.toContain("List");
+
+    clickByText(view.container, "Headings");
+    clickByText(view.container, "Heading 6");
+
+    expect(onCommand).toHaveBeenCalledWith("heading-6");
+  } finally {
+    view.cleanup();
+  }
+});

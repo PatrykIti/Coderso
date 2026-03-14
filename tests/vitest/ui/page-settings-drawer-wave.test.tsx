@@ -307,3 +307,86 @@ test("PageSettingsDrawer autosaves dirty drafts on close and forwards reopen req
     view.cleanup();
   }
 });
+
+test("PageSettingsDrawer disables submit for blank title and slug", async () => {
+  const onSave = vi.fn(async () => true);
+
+  const view = mount(
+    <PageSettingsDrawer
+      open
+      onOpenChange={() => undefined}
+      page={basePage}
+      settings={baseSettings}
+      onSave={onSave}
+    />
+  );
+
+  try {
+    const inputs = Array.from(view.container.querySelectorAll("input"));
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    const saveButton = buttons.find((button) => button.textContent?.includes("Save settings"));
+
+    setInputValue(inputs[0], "   ");
+    setInputValue(inputs[1], "");
+
+    if (!(saveButton instanceof HTMLButtonElement)) {
+      throw new Error("Missing save button");
+    }
+
+    expect(saveButton.disabled).toBe(true);
+    act(() => {
+      saveButton.click();
+    });
+
+    expect(onSave).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageSettingsDrawer disables max width for full container and does not autosave clean close", async () => {
+  const onAutosave = vi.fn(async () => undefined);
+
+  const view = mount(
+    <PageSettingsDrawer
+      open
+      onOpenChange={() => undefined}
+      page={basePage}
+      settings={{
+        ...baseSettings,
+        layout: {
+          ...baseSettings.layout,
+          wrapper: {
+            ...baseSettings.layout.wrapper,
+            container: "full",
+          },
+        },
+      }}
+      onSave={async () => false}
+      onAutosave={onAutosave}
+    />
+  );
+
+  try {
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    const disabledSelects = selects.filter(
+      (element): element is HTMLSelectElement =>
+        element instanceof HTMLSelectElement && element.disabled
+    );
+
+    expect(disabledSelects).toHaveLength(1);
+
+    act(() => {
+      buttons.find((button) => button.textContent === "trigger-close")?.click();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(onAutosave).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});

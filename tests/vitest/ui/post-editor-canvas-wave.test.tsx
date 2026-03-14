@@ -691,6 +691,58 @@ test("PostEditorCanvas selected controls update button, embed, list, and code bl
   }
 });
 
+test("PostEditorCanvas renders preview fallbacks for toc, list, button, and embed blocks", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          { id: "toc-1", type: "toc", attrs: {}, content: null },
+          { id: "list-empty", type: "list", attrs: {}, content: [] },
+          { id: "button-default", type: "button", attrs: {}, content: null },
+          { id: "embed-empty", type: "embed", attrs: {}, content: null },
+          {
+            id: "embed-valid",
+            type: "embed",
+            attrs: {
+              provider: "loom",
+              url: "https://www.loom.com/share/demo-clip",
+              aspect: "1:1",
+              lazy: false,
+            },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onOpenBlockDetails={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Table of contents");
+    expect(view.container.textContent).toContain("One item per line...");
+    expect(view.container.textContent).toContain("Button");
+    expect(view.container.textContent).toContain("Target: #");
+    expect(view.container.textContent).toContain("Click to configure embed URL");
+    expect(view.container.innerHTML).toContain("https://www.loom.com/embed/demo-clip");
+    expect(view.container.innerHTML).toContain('loading="eager"');
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostEditorCanvas opens image picker, loads media, applies selected asset, and resolves existing media ids", async () => {
   const { PostEditorCanvas } = await import(
     "../../../core/admin/ui/posts/editor/PostEditorCanvas"
@@ -1065,5 +1117,67 @@ test("PostEditorCanvas schedules focus restoration, cancels pending frames, and 
     expect(genericErrorView.container.textContent).toContain("Failed to load media assets.");
   } finally {
     genericErrorView.cleanup();
+  }
+});
+
+test("PostEditorCanvas title focus clears selection and image toolbar falls back to default control values", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  mediaState.reset();
+  const onSelectBlock = vi.fn();
+  const onUpdateBlockAttrs = vi.fn();
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "image-toolbar",
+            type: "image",
+            attrs: {
+              mediaId: "/media/default-image.png",
+              wrap: "weird",
+              widthPercent: 999,
+            },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-toolbar"
+      insertFocusToken={0}
+      onSelectBlock={onSelectBlock}
+      onUpdateBlockContent={() => undefined}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+    expect(mediaState.calls).not.toContain(false);
+
+    const titleInput = view.container.querySelector(
+      "[data-post-editor-title-input='true']"
+    ) as HTMLTextAreaElement | null;
+    if (!titleInput) throw new Error("missing title input");
+
+    act(() => {
+      titleInput.dispatchEvent(new Event("focusin", { bubbles: true }));
+      titleInput.dispatchEvent(new FocusEvent("focus", { bubbles: false }));
+    });
+
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    expect((selects[0] as HTMLSelectElement | undefined)?.value).toBe("none");
+    expect((selects[1] as HTMLSelectElement | undefined)?.value).toBe("50");
+
+    expect(onSelectBlock).toHaveBeenCalledWith(null);
+    expect(onUpdateBlockAttrs).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
   }
 });

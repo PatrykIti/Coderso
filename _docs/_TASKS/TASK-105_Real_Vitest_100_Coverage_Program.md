@@ -172,6 +172,24 @@ Current snapshot after the deeper editor shell/canvas/state follow-up on `2026-0
 - `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `91.66%` lines / `76.54%` branches
 - next `TASK-105-05` hotspots are now concentrated in `PageEditor.tsx`, `PageSettingsDrawer.tsx`, `PostBlockEditorShell.tsx`, `PostEditorCanvas.tsx`, `PostRichTextAdapter.tsx`, and the remaining `usePostEditorState.ts` async branches
 
+Current snapshot after the page leaf / sidebar / toolbar / inserter follow-up on `2026-03-14`:
+- `% Stmts`: `68.37`
+- `% Branch`: `59.11`
+- `% Funcs`: `71.93`
+- `% Lines`: `71.55`
+- `core/admin/ui/pages/DeviceSwitcher.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/pages/PageRowActions.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/posts/editor/sidebars/PostListViewSidebar.tsx` -> `100.00%` lines / `85.71%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `85.50%` lines / `76.27%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `82.12%` lines / `64.12%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `82.22%` lines / `82.14%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `86.82%` lines / `69.52%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `90.07%` lines / `76.13%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `88.20%` lines / `70.10%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `79.20%` branches
+- next `TASK-105-05` hotspots are now concentrated in `PageEditor.tsx`, `PageSettingsDrawer.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, `PostBlockEditorShell.tsx`, and `PostRichTextAdapter.tsx`
+
 Additional widget-editor product/template snapshot (from `bun run test:coverage` on 2026-03-09):
 - `% Stmts`: `53.20`
 - `% Branch`: `46.79`

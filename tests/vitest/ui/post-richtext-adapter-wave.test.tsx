@@ -1071,3 +1071,89 @@ test("PostRichTextAdapter closes slash menu and emits blur callback", async () =
     view.cleanup();
   }
 });
+
+test("PostRichTextAdapter keeps slash menu closed without slash handler and respects block transform mode", async () => {
+  const execCommand = vi.fn(() => false);
+  Object.defineProperty(document, "execCommand", {
+    value: execCommand,
+    configurable: true,
+    writable: true,
+  });
+
+  const plainView = mount(<PostRichTextAdapter value="" onChange={() => undefined} />);
+
+  try {
+    const editor = getEditor(plainView.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    act(() => {
+      editor.innerHTML = "/quote";
+      setSelectionAtEnd(editor);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await flush();
+
+    expect(plainView.container.textContent).toContain("slash:closed:");
+    expect(plainView.container.textContent).not.toContain("slash:open:quote");
+  } finally {
+    plainView.cleanup();
+  }
+
+  const onBlockTypeChange = vi.fn();
+  const TypeOnlyHarness = () => {
+    const [value, setValue] = useState("Loose text");
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onBlockTypeChange={onBlockTypeChange}
+        blockTransformMode="type-only"
+      />
+    );
+  };
+
+  const typeOnlyView = mount(<TypeOnlyHarness />);
+
+  try {
+    const editor = getEditor(typeOnlyView.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    clickByText(typeOnlyView.container, "heading-1");
+    await flush();
+
+    expect(onBlockTypeChange).not.toHaveBeenCalled();
+    expect(editor.innerHTML).toContain("Loose text");
+  } finally {
+    typeOnlyView.cleanup();
+  }
+
+  const onFormatTransform = vi.fn();
+  const TransformHarness = () => {
+    const [value, setValue] = useState("Loose text");
+    return (
+      <PostRichTextAdapter
+        value={value}
+        onChange={setValue}
+        onBlockTypeChange={onFormatTransform}
+      />
+    );
+  };
+
+  const transformView = mount(<TransformHarness />);
+
+  try {
+    const editor = getEditor(transformView.container);
+    if (!editor) throw new Error("missing editor");
+
+    dispatchEditorEvent(editor, "focus");
+    clickByText(transformView.container, "heading-1");
+    await flush();
+
+    expect(onFormatTransform).toHaveBeenCalledWith("heading", { level: 1 });
+    expect(editor.innerHTML).not.toContain("<h1>Loose text</h1>");
+  } finally {
+    transformView.cleanup();
+  }
+});
