@@ -752,3 +752,16 @@ Current snapshot after the latest low-line admin follow-up on `2026-03-15`:
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `80.29%` lines / `82.05%` branches
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
 - the full-lane tail is now more clearly dominated by a shrinking set of medium admin editors plus the remaining very low-line tables/drawers rather than by the former page/post editor hotspots
+
+Current snapshot after the latest theme and users/roles follow-up on `2026-03-15`:
+- `% Stmts`: `70.10`
+- `% Branch`: `60.83`
+- `% Funcs`: `74.09`
+- `% Lines`: `73.28`
+- `469` Vitest files / `1733` tests
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `85.40%` lines / `84.61%` branches
+- `core/admin/ui/roles/RoleList.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/roles/RoleEditor.tsx` -> `93.93%` lines / `91.43%` branches
+- `core/admin/ui/users/UserEditor.tsx` -> `96.77%` lines / `94.44%` branches
+- `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
+- the active tail is now less about broad editor shells and more about selective theme cleanup plus the remaining low-line admin backlog outside the now-mature users/roles surfaces

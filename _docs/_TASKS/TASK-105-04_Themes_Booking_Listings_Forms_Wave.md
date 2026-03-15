@@ -123,6 +123,13 @@ Current `2026-03-15` themes snapshot after the latest drawer-normalization follo
 - `core/admin/ui/themes/ThemeExportDialog.tsx` -> `100.00%` lines / `100.00%` branches
 - aggregate `core/admin/ui/themes/*` average -> `90.80%` lines / `79.33%` branches across `11` tracked files
 
+Current `2026-03-15` themes snapshot after the latest navigation/input follow-up:
+- `core/admin/ui/themes/ThemesPage.tsx` -> `94.06%` lines / `78.57%` branches
+- `core/admin/ui/themes/ThemeProfileDrawer.tsx` -> `100.00%` lines / `94.59%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `85.40%` lines / `84.61%` branches
+- `core/admin/ui/themes/ThemeExportDialog.tsx` -> `100.00%` lines / `100.00%` branches
+- aggregate `core/admin/ui/themes/*` average -> `91.26%` lines / `79.56%` branches across `11` tracked files
+
 Current `2026-03-14` booking snapshot after the latest follow-up slice:
 - `core/admin/ui/booking/BookingPage.tsx` -> `92.93%` lines / `65.06%` branches
 - `core/admin/ui/booking/bookingHelpers.ts` -> `98.27%` lines / `97.82%` branches
@@ -152,7 +159,7 @@ Current `2026-03-15` booking snapshot after the latest interactive leaf-tab foll
 
 Remaining slices:
 - booking leaf tabs no longer dominate the wave backlog; they are now line-closed, and the remaining `TASK-105-04` ROI is led by `ThemeTemplateDrawer` plus any broader booking/page-shell cleanup
-- residual themes work is still concentrated in `ThemeTemplateDrawer`, but its remaining gap is now smaller and more branch-oriented than before
+- residual themes work is still concentrated in `ThemeTemplateDrawer`, but it now sits in the mid-80s for both lines and branches, so the remaining gains are narrower and more selective than before
 - forms follow-up is no longer led by `FormCanvas`; the residual forms work is concentrated in branch-heavier `FormBuilderPage` paths
 - listings follow-up is no longer led by `ListingListPage`; the residual listings work is now lower-value cleanup in `ListingEditorPage` / `ListingTemplateManager`
 

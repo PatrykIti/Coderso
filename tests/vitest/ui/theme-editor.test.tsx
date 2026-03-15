@@ -748,3 +748,105 @@ test("ThemeTemplateDrawer normalizes blank and invalid color text inputs while p
     view.cleanup();
   }
 });
+
+test("ThemeTemplateDrawer updates remaining input and navigation fields from text values", async () => {
+  const { ThemeTemplateDrawer } = await import(
+    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
+  );
+
+  const onSave = vi.fn(async () => undefined);
+  const template = {
+    id: "tpl-6",
+    name: "Transit",
+    description: "Navigation-heavy palette",
+    tokens: {
+      base: { bg: "#111111", surface: "#1b1b1b", border: "#2f2f2f", text: "#f5f5f5" },
+      typography: {
+        mutedText: "#9a9a9a",
+        sans: "Inter",
+        display: "Space Grotesk",
+        sm: "0.875rem",
+        md: "1rem",
+        lg: "1.125rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+      },
+      buttons: {
+        primary: { bg: "#fafafa", text: "#111111", hoverBg: "#e0e0e0", hoverText: "#111111" },
+        secondary: { bg: "#262626", text: "#ededed", hoverBg: "#303030", hoverText: "#ffffff" },
+        outline: { border: "#555555", text: "#f5f5f5", hoverBg: "#202020", hoverText: "#ffffff" },
+        ghost: { hoverBg: "#2a2a2a", hoverText: "#ffffff" },
+      },
+      inputs: {
+        bg: "#121212",
+        border: "#3a3a3a",
+        text: "#fafafa",
+        placeholder: "#8a8a8a",
+        focusRing: "#7dd3fc",
+      },
+      sidebar: {
+        bg: "#161616",
+        text: "#e5e5e5",
+        activeBg: "#262626",
+        activeText: "#ffffff",
+        hoverBg: "#202020",
+      },
+      topbar: {
+        bg: "#181818",
+        text: "#f5f5f5",
+        border: "#2d2d2d",
+      },
+      card: {
+        bg: "#181818",
+        border: "#2f2f2f",
+      },
+      state: {
+        success: "#10b981",
+        warning: "#f59e0b",
+        danger: "#ef4444",
+      },
+    },
+  };
+
+  const view = mount(
+    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+  );
+
+  try {
+    act(() => {
+      setInputValue(findColorTextInputByLabel(view.container, "Focus Ring"), " 1122aa ");
+      setInputValue(findColorTextInputByLabel(view.container, "Input Text"), "334455");
+      setInputValue(findColorTextInputByLabel(view.container, "Sidebar Text"), "556677");
+      setInputValue(findColorTextInputByLabel(view.container, "Active Background"), "778899");
+      setInputValue(findColorTextInputByLabel(view.container, "Active Text"), "99aabb");
+      setInputValue(findColorTextInputByLabel(view.container, "Hover Background"), "bbccdd");
+      setInputValue(findColorTextInputByLabel(view.container, "Top Bar Background"), "ccddee");
+      setInputValue(findColorTextInputByLabel(view.container, "Top Bar Text"), "ddeeff");
+    });
+
+    clickButtonByText(view.container, "Save Template");
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tokens: expect.objectContaining({
+          inputs: expect.objectContaining({
+            text: "#334455",
+            focusRing: "#1122aa",
+          }),
+          sidebar: expect.objectContaining({
+            text: "#556677",
+            activeBg: "#778899",
+            activeText: "#99aabb",
+            hoverBg: "#bbccdd",
+          }),
+          topbar: expect.objectContaining({
+            bg: "#ccddee",
+            text: "#ddeeff",
+          }),
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
