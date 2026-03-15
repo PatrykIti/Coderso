@@ -765,3 +765,16 @@ Current snapshot after the latest theme and users/roles follow-up on `2026-03-15
 - `core/admin/ui/users/UserEditor.tsx` -> `96.77%` lines / `94.44%` branches
 - `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
 - the active tail is now less about broad editor shells and more about selective theme cleanup plus the remaining low-line admin backlog outside the now-mature users/roles surfaces
+
+Current snapshot after the latest users shell and theme closure follow-up on `2026-03-15`:
+- `% Stmts`: `70.81`
+- `% Branch`: `61.35`
+- `% Funcs`: `74.92`
+- `% Lines`: `74.04`
+- `471` Vitest files / `1741` tests
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `100.00%` lines / `87.17%` branches
+- `core/admin/ui/roles/RoleList.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/users/UserEditor.tsx` -> `96.77%` lines / `94.44%` branches
+- `core/admin/ui/users/UserList.tsx` -> `100.00%` lines / `95.45%` branches
+- `core/admin/ui/users/UsersRolesPage.tsx` -> `88.39%` lines / `73.57%` branches
+- the remaining tail is now much less about users/roles core shells and more about the broader low-line admin backlog plus residual branch-only theme/page cleanup

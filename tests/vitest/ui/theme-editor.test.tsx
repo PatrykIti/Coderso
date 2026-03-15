@@ -749,6 +749,205 @@ test("ThemeTemplateDrawer normalizes blank and invalid color text inputs while p
   }
 });
 
+test("ThemeTemplateDrawer updates remaining typography, button, and input token callbacks", async () => {
+  const { ThemeTemplateDrawer } = await import(
+    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
+  );
+
+  const onSave = vi.fn(async () => undefined);
+  const template = {
+    id: "tpl-6",
+    name: "Contrast",
+    description: "High contrast admin palette",
+    tokens: {
+      base: { bg: "#111111", surface: "#1f1f1f", border: "#333333", text: "#eeeeee" },
+      typography: {
+        mutedText: "#999999",
+        sans: "IBM Plex Sans",
+        display: "IBM Plex Serif",
+        sm: "0.875rem",
+        md: "1rem",
+        lg: "1.125rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+      },
+      buttons: {
+        primary: { bg: "#f4f4f5", text: "#101010", hoverBg: "#d4d4d8", hoverText: "#111111" },
+        secondary: { bg: "#27272a", text: "#f4f4f5", hoverBg: "#3f3f46", hoverText: "#ffffff" },
+        outline: { border: "#52525b", text: "#f4f4f5", hoverBg: "#18181b", hoverText: "#ffffff" },
+        ghost: { hoverBg: "#27272a", hoverText: "#fafafa" },
+      },
+      inputs: {
+        bg: "#171717",
+        border: "#404040",
+        text: "#fafafa",
+        placeholder: "#737373",
+        focusRing: "#38bdf8",
+      },
+      sidebar: {
+        bg: "#18181b",
+        text: "#e4e4e7",
+        activeBg: "#27272a",
+        activeText: "#ffffff",
+        hoverBg: "#3f3f46",
+      },
+      topbar: {
+        bg: "#09090b",
+        text: "#f4f4f5",
+        border: "#27272a",
+      },
+      card: {
+        bg: "#111827",
+        border: "#374151",
+      },
+      state: {
+        success: "#22c55e",
+        warning: "#f59e0b",
+        danger: "#ef4444",
+      },
+    },
+  };
+
+  const view = mount(
+    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+  );
+
+  try {
+    const colorInputs = findColorInputs(view.container);
+
+    act(() => {
+      setInputValue(colorInputs[3], "#010203");
+      setInputValue(findInputByPlaceholder(view.container, "0.875rem"), "0.9375rem");
+      setInputValue(findInputByPlaceholder(view.container, "1rem"), "1.0625rem");
+      setInputValue(findInputByPlaceholder(view.container, "1.125rem"), "1.1875rem");
+      setInputValue(findInputByPlaceholder(view.container, "1.25rem"), "1.375rem");
+      setInputValue(colorInputs[6], "#111122");
+      setInputValue(colorInputs[7], "#222233");
+      setInputValue(colorInputs[8], "#333344");
+      setInputValue(colorInputs[9], "#444455");
+      setInputValue(colorInputs[10], "#555566");
+      setInputValue(colorInputs[11], "#666677");
+      setInputValue(colorInputs[12], "#777788");
+      setInputValue(colorInputs[13], "#888899");
+      setInputValue(colorInputs[14], "#9999aa");
+      setInputValue(colorInputs[15], "#aaaabb");
+      setInputValue(colorInputs[16], "#bbbbcc");
+      setInputValue(colorInputs[17], "#ccccdd");
+      setInputValue(colorInputs[18], "#ddddee");
+      setInputValue(colorInputs[20], "#123123");
+      setInputValue(colorInputs[21], "#234234");
+      setInputValue(colorInputs[22], "#345345");
+      setInputValue(colorInputs[23], "#456456");
+    });
+
+    clickButtonByText(view.container, "Save Template");
+
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tokens: expect.objectContaining({
+          typography: expect.objectContaining({
+            sm: "0.9375rem",
+            md: "1.0625rem",
+            lg: "1.1875rem",
+            xl: "1.375rem",
+          }),
+          base: expect.objectContaining({
+            text: "#010203",
+          }),
+          buttons: expect.objectContaining({
+            primary: expect.objectContaining({
+              text: "#111122",
+              hoverBg: "#222233",
+              hoverText: "#333344",
+            }),
+            secondary: expect.objectContaining({
+              bg: "#444455",
+              text: "#555566",
+              hoverBg: "#666677",
+              hoverText: "#777788",
+            }),
+            outline: expect.objectContaining({
+              border: "#888899",
+              text: "#9999aa",
+              hoverBg: "#aaaabb",
+              hoverText: "#bbbbcc",
+            }),
+            ghost: expect.objectContaining({
+              hoverBg: "#ccccdd",
+              hoverText: "#ddddee",
+            }),
+          }),
+          inputs: expect.objectContaining({
+            border: "#123123",
+            text: "#234234",
+            placeholder: "#345345",
+            focusRing: "#456456",
+          }),
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ThemeTemplateDrawer save is a no-op when onSave is omitted", async () => {
+  const { ThemeTemplateDrawer } = await import(
+    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
+  );
+
+  const onOpenChange = vi.fn();
+  const view = mount(<ThemeTemplateDrawer open onOpenChange={onOpenChange} />);
+
+  try {
+    act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Admin Pro"), "No Save Handler");
+      setInputValue(findInputByPlaceholder(view.container, "Short summary"), "Still interactive");
+    });
+
+    expect(() => {
+      clickButtonByText(view.container, "Create Template");
+    }).not.toThrow();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ThemeTemplateDrawer inverts shorthand hex values in base colors", async () => {
+  const { ThemeTemplateDrawer } = await import(
+    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
+  );
+
+  const onSave = vi.fn(async () => undefined);
+  const view = mount(
+    <ThemeTemplateDrawer open onOpenChange={() => undefined} onSave={onSave} />
+  );
+
+  try {
+    act(() => {
+      setInputValue(findInputByPlaceholder(view.container, "Admin Pro"), "Shorthand");
+      setInputValue(findColorTextInputByLabel(view.container, "Background"), "#abc");
+    });
+
+    clickButtonByText(view.container, "Invert section");
+    clickButtonByText(view.container, "Create Template");
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tokens: expect.objectContaining({
+          base: expect.objectContaining({
+            bg: "#554433",
+          }),
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("ThemeTemplateDrawer updates remaining input and navigation fields from text values", async () => {
   const { ThemeTemplateDrawer } = await import(
     "../../../core/admin/ui/themes/ThemeTemplateDrawer"

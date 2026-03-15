@@ -130,6 +130,13 @@ Current `2026-03-15` themes snapshot after the latest navigation/input follow-up
 - `core/admin/ui/themes/ThemeExportDialog.tsx` -> `100.00%` lines / `100.00%` branches
 - aggregate `core/admin/ui/themes/*` average -> `91.26%` lines / `79.56%` branches across `11` tracked files
 
+Current `2026-03-15` themes snapshot after the latest callback and shorthand-hex closure follow-up:
+- `core/admin/ui/themes/ThemesPage.tsx` -> `94.06%` lines / `78.57%` branches
+- `core/admin/ui/themes/ThemeProfileDrawer.tsx` -> `100.00%` lines / `94.59%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `100.00%` lines / `87.17%` branches
+- `core/admin/ui/themes/ThemeExportDialog.tsx` -> `100.00%` lines / `100.00%` branches
+- aggregate `core/admin/ui/themes/*` average -> `92.59%` lines / `79.79%` branches across `11` tracked files
+
 Current `2026-03-14` booking snapshot after the latest follow-up slice:
 - `core/admin/ui/booking/BookingPage.tsx` -> `92.93%` lines / `65.06%` branches
 - `core/admin/ui/booking/bookingHelpers.ts` -> `98.27%` lines / `97.82%` branches
@@ -158,8 +165,8 @@ Current `2026-03-15` booking snapshot after the latest interactive leaf-tab foll
 - booking leaf tabs are now line-closed; remaining booking work is branch-only or sits in the page shell rather than in the tab components
 
 Remaining slices:
-- booking leaf tabs no longer dominate the wave backlog; they are now line-closed, and the remaining `TASK-105-04` ROI is led by `ThemeTemplateDrawer` plus any broader booking/page-shell cleanup
-- residual themes work is still concentrated in `ThemeTemplateDrawer`, but it now sits in the mid-80s for both lines and branches, so the remaining gains are narrower and more selective than before
+- booking leaf tabs no longer dominate the wave backlog; they are now line-closed, and the remaining `TASK-105-04` ROI is now mostly branch-only theme/page-shell cleanup rather than leaf line gaps
+- residual themes work is no longer led by line gaps in `ThemeTemplateDrawer`; the remaining gain in this wave is narrower branch cleanup across the broader theme/page shell
 - forms follow-up is no longer led by `FormCanvas`; the residual forms work is concentrated in branch-heavier `FormBuilderPage` paths
 - listings follow-up is no longer led by `ListingListPage`; the residual listings work is now lower-value cleanup in `ListingEditorPage` / `ListingTemplateManager`
 

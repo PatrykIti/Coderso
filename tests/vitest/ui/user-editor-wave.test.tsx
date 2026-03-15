@@ -253,6 +253,15 @@ const setCheckboxValue = (element: Element | null | undefined, checked: boolean)
   });
 };
 
+const dispatchCheckboxChange = (element: Element | null | undefined) => {
+  if (!(element instanceof HTMLInputElement)) {
+    throw new Error("Missing checkbox for manual change dispatch");
+  }
+  act(() => {
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
 const clickByText = (container: HTMLElement, text: string) => {
   const button = Array.from(container.querySelectorAll("button")).find((candidate) =>
     candidate.textContent?.includes(text)
@@ -373,6 +382,49 @@ test("UserEditor edit mode protects locked roles, updates status, and saves rema
       {
         name: "Grace Hopper",
         email: "grace@example.com",
+        roleIds: ["admin"],
+        status: "active",
+      },
+      "edit"
+    );
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("UserEditor ignores direct toggle callbacks for already-selected locked roles", () => {
+  const onOpenChange = vi.fn();
+  const onSave = vi.fn();
+
+  const view = mount(
+    <UserEditor
+      open
+      user={{
+        id: "user-locked",
+        name: "Primary Admin",
+        email: "primary@example.com",
+        roleIds: ["admin"],
+        status: "active",
+      }}
+      roles={roles}
+      lockedRoleIds={["admin"]}
+      onOpenChange={onOpenChange}
+      onSave={onSave}
+    />
+  );
+
+  try {
+    const adminCheckbox = findCheckboxByRoleLabel(view.container, "Admin");
+    expect((adminCheckbox as HTMLInputElement | null)?.disabled).toBe(true);
+
+    dispatchCheckboxChange(adminCheckbox);
+    clickByText(view.container, "Save changes");
+
+    expect(onSave).toHaveBeenCalledWith(
+      {
+        name: "Primary Admin",
+        email: "primary@example.com",
         roleIds: ["admin"],
         status: "active",
       },

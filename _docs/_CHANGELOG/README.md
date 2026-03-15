@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 494 | 2026-03-15 | TASK-105 users roles shell and theme closure follow-up | QA/Platform |
 | 493 | 2026-03-15 | TASK-105 theme and users roles follow-up coverage | QA/Platform |
 | 492 | 2026-03-15 | TASK-105 low-line admin editor follow-up | QA/Platform |
 | 491 | 2026-03-15 | TASK-105 theme drawer and user details follow-up coverage | QA/Platform |
