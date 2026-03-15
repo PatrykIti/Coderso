@@ -25,6 +25,38 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 496 | 2026-03-13 | TASK-105 footer sparse empty-state coverage | QA/Platform |
+| 495 | 2026-03-13 | TASK-105 feature grid sparse default coverage | QA/Platform |
+| 494 | 2026-03-15 | TASK-105 users roles shell and theme closure follow-up | QA/Platform |
+| 493 | 2026-03-15 | TASK-105 theme and users roles follow-up coverage | QA/Platform |
+| 492 | 2026-03-15 | TASK-105 low-line admin editor follow-up | QA/Platform |
+| 491 | 2026-03-15 | TASK-105 theme drawer and user details follow-up coverage | QA/Platform |
+| 490 | 2026-03-15 | TASK-105 audit table coverage follow-up | QA/Platform |
+| 489 | 2026-03-15 | TASK-105 booking leaf interaction follow-up coverage | QA/Platform |
+| 488 | 2026-03-15 | TASK-105 booking services tab fallback coverage | QA/Platform |
+| 487 | 2026-03-14 | TASK-105 form canvas and theme drawer follow-up coverage | QA/Platform |
+| 486 | 2026-03-14 | TASK-105 page editor and listings list follow-up coverage | QA/Platform |
+| 485 | 2026-03-14 | TASK-105 adapter paste and typography branch follow-up | QA/Platform |
+| 484 | 2026-03-14 | TASK-105 hook helper follow-up coverage | QA/Platform |
+| 483 | 2026-03-14 | TASK-105 shell state and canvas branch hardening | QA/Platform |
+| 482 | 2026-03-14 | TASK-105 editor canvas follow-up and coverage wrapper stabilization | QA/Platform |
+| 481 | 2026-03-14 | TASK-105 page editor state and editor chrome input follow-up | QA/Platform |
+| 480 | 2026-03-14 | TASK-105 page editor reorder and shell-error follow-up | QA/Platform |
+| 479 | 2026-03-14 | TASK-105 editor chrome micro follow-up coverage | QA/Platform |
+| 478 | 2026-03-14 | TASK-105 page editor and adapter micro follow-up | QA/Platform |
+| 477 | 2026-03-14 | TASK-105 page settings and adapter follow-up coverage | QA/Platform |
+| 476 | 2026-03-14 | TASK-105 page leafs sidebar and editor chrome coverage | QA/Platform |
+| 475 | 2026-03-14 | TASK-105 deeper editor shell and canvas follow-up coverage | QA/Platform |
+| 474 | 2026-03-14 | TASK-105 editor and admin follow-up coverage | QA/Platform |
+| 473 | 2026-03-13 | TASK-105 navigation sparse default coverage | QA/Platform |
+| 472 | 2026-03-13 | TASK-105 post editor layout hook coverage | QA/Platform |
+| 471 | 2026-03-13 | TASK-105 post list view panel dnd coverage | QA/Platform |
+| 470 | 2026-03-13 | TASK-105 post richtext command engine DOM coverage | QA/Platform |
+| 469 | 2026-03-13 | TASK-105 widget picker direct coverage | QA/Platform |
+| 468 | 2026-03-13 | TASK-105 wizard panel direct coverage | QA/Platform |
+| 467 | 2026-03-13 | TASK-105 post details sidebar direct coverage | QA/Platform |
+| 466 | 2026-03-13 | TASK-105 logo cloud sparse default coverage | QA/Platform |
+| 465 | 2026-03-13 | TASK-105 contact sparse default coverage | QA/Platform |
 | 464 | 2026-03-13 | TASK-105 contact sparse default follow-up | QA/Platform |
 | 463 | 2026-03-13 | TASK-105 search box mode and reset follow-up | QA/Platform |
 | 462 | 2026-03-13 | TASK-105 FAQ accordion sparse default coverage | QA/Platform |

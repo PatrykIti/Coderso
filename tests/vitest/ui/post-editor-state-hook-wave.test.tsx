@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import type { PostDetail, PostRevision, PostStatus } from "../../../core/admin/services/postsClient";
+import { deletePost } from "../../../core/admin/services/postsClient";
 
 type CacheEvent = { key: string };
 
@@ -426,7 +427,13 @@ vi.mock("../../../core/admin/ui/posts/editor/hooks/usePostAutosave", () => ({
   },
 }));
 
-import { usePostEditorState } from "../../../core/admin/ui/posts/editor/hooks/usePostEditorState";
+import {
+  buildSilentSyncSnapshot,
+  normalizeEditorDocumentForWritingFlow,
+  normalizePostDraftSyncMode,
+  shouldDeferRefreshForDirtyState,
+  usePostEditorState,
+} from "../../../core/admin/ui/posts/editor/hooks/usePostEditorState";
 
 const mountHook = () => {
   const latest: { current: ReturnType<typeof usePostEditorState> | null } = {
@@ -484,6 +491,92 @@ afterEach(() => {
   hookState.reset();
 });
 
+test("usePostEditorState helper exports normalize writing-flow documents and sync guards", () => {
+  const normalizedWrapped = normalizeEditorDocumentForWritingFlow({
+    version: 1,
+    blocks: [
+      {
+        id: "empty-paragraph",
+        type: "paragraph",
+        attrs: null,
+        content: null,
+      },
+      {
+        id: "canvas-1",
+        type: "writing-canvas",
+        attrs: {},
+        content: {
+          version: 1,
+          nodes: [{ id: "node-1", type: "paragraph", text: "Body" }],
+        },
+      },
+    ],
+    meta: {},
+  });
+
+  expect(normalizedWrapped.blocks).toHaveLength(1);
+  expect(normalizedWrapped.blocks[0]?.type).toBe("writing-canvas");
+
+  const normalizedParagraph = normalizeEditorDocumentForWritingFlow({
+    version: 1,
+    blocks: [
+      {
+        id: "",
+        type: "paragraph",
+        attrs: {},
+        content: null,
+      },
+    ],
+    meta: {},
+  });
+
+  expect(normalizedParagraph.blocks).toHaveLength(1);
+  expect(normalizedParagraph.blocks[0]?.id).toBe("block-1");
+  expect(normalizedParagraph.blocks[0]?.type).toBe("writing-canvas");
+  expect(normalizedParagraph.blocks[0]?.content).toEqual(
+    expect.objectContaining({
+      version: 1,
+      nodes: [
+        expect.objectContaining({
+          type: "paragraph",
+          text: "",
+        }),
+      ],
+    })
+  );
+
+  const snapshot = buildSilentSyncSnapshot(
+    hookState.createPost("post-2", {
+      title: "Snapshot post",
+      slug: "snapshot-post",
+      status: "published",
+      data: {
+        document: {
+          version: 1,
+          blocks: [],
+          meta: {},
+        },
+        featuredImage: 42 as unknown as string,
+      },
+    }),
+    "2026-03-12T14:00:00.000Z"
+  );
+
+  expect(snapshot.title).toBe("Snapshot post");
+  expect(snapshot.slug).toBe("snapshot-post");
+  expect(snapshot.status).toBe("published");
+  expect(snapshot.featuredImage).toBe("");
+  expect(snapshot.savedAt).toBe("2026-03-12T14:00:00.000Z");
+  expect(snapshot.metadataDraft.tagsInput).toBe("alpha, beta");
+  expect(snapshot.metadataDraft.categoryId).toBe("cat-1");
+
+  expect(normalizePostDraftSyncMode(undefined)).toBe("silent");
+  expect(normalizePostDraftSyncMode("hydrate")).toBe("hydrate");
+  expect(shouldDeferRefreshForDirtyState(undefined, true)).toBe(true);
+  expect(shouldDeferRefreshForDirtyState({ allowDirty: false }, false)).toBe(false);
+  expect(shouldDeferRefreshForDirtyState({ allowDirty: true }, true)).toBe(false);
+});
+
 test("usePostEditorState reports missing post id without fetching", async () => {
   hookState.path = "/admin/coderso/settings";
 
@@ -497,6 +590,35 @@ test("usePostEditorState reports missing post id without fetching", async () => 
     expect(hookState.autosaveOptions?.enabled).toBe(false);
   } finally {
     view.cleanup();
+  }
+});
+
+test("usePostEditorState decodes post ids from the route and treats /posts without an id as missing", async () => {
+  hookState.path = "/admin/coderso/posts/post%202?editor=writing#details";
+  hookState.fetchedPost = hookState.createPost("post 2");
+
+  const resolvedView = mountHook();
+  try {
+    await waitFor(() => resolvedView.current().loading === false);
+
+    expect(resolvedView.current().postId).toBe("post 2");
+    expect(hookState.getPostCalls[0]).toEqual({ id: "post 2", force: true });
+  } finally {
+    resolvedView.cleanup();
+  }
+
+  hookState.reset();
+  hookState.path = "/admin/coderso/posts";
+
+  const missingView = mountHook();
+  try {
+    await waitFor(() => missingView.current().loading === false);
+
+    expect(missingView.current().postId).toBeNull();
+    expect(missingView.current().error).toBe("Post ID is missing.");
+    expect(hookState.getPostCalls).toEqual([]);
+  } finally {
+    missingView.cleanup();
   }
 });
 
@@ -814,6 +936,175 @@ test("usePostEditorState reports restore and upload failures and handles move-to
       await expect(view.current().moveToTrash()).resolves.toBe(true);
     });
     expect(hookState.deleteCalls).toEqual(["post-1", "post-1"]);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("usePostEditorState guards missing selected blocks, patches non-record attrs, and ignores duplicate delete requests in flight", async () => {
+  hookState.cachedPost = hookState.createPost("post-1", {
+    data: {
+      featuredImage: "/media/hero.png",
+      document: {
+        version: 1,
+        blocks: [
+          {
+            id: "paragraph-1",
+            type: "paragraph",
+            attrs: null,
+            content: "Body",
+          },
+        ],
+        meta: {},
+      },
+    },
+  });
+  hookState.fetchedPost = hookState.cachedPost;
+
+  let resolveDelete: ((value: { ok: boolean }) => void) | null = null;
+  vi.mocked(deletePost).mockImplementationOnce(async (id: string) => {
+    hookState.deleteCalls.push(id);
+    return await new Promise<{ ok: boolean }>((resolve) => {
+      resolveDelete = resolve;
+    });
+  });
+
+  const view = mountHook();
+  let firstDeletePromise: Promise<boolean> | null = null;
+  try {
+    await waitFor(() => view.current().loading === false);
+
+    act(() => {
+      view.current().updateSelectedBlockAttrs({ align: "center" });
+    });
+    expect(view.current().selectedBlock?.attrs).toMatchObject({ align: "center" });
+
+    act(() => {
+      view.current().selectBlock("missing-block");
+    });
+    expect(view.current().selectedBlock).toBeNull();
+
+    act(() => {
+      view.current().updateSelectedBlockContent("ignored");
+      view.current().updateSelectedBlockAttrs({ width: "wide" });
+      view.current().deleteSelectedBlock();
+      view.current().moveSelectedBlock("up");
+      view.current().transformSelectedBlock("quote");
+    });
+
+    await act(async () => {
+      firstDeletePromise = view.current().moveToTrash();
+      await Promise.resolve();
+    });
+    await waitFor(() => view.current().deletingPost === true);
+
+    await act(async () => {
+      await expect(view.current().moveToTrash()).resolves.toBe(false);
+    });
+
+    resolveDelete?.({ ok: true });
+    await act(async () => {
+      await expect(firstDeletePromise).resolves.toBe(true);
+    });
+
+    expect(hookState.deleteCalls).toEqual(["post-1"]);
+  } finally {
+    if (resolveDelete) {
+      resolveDelete({ ok: true });
+    }
+    if (firstDeletePromise) {
+      await act(async () => {
+        await firstDeletePromise;
+      });
+    }
+    view.cleanup();
+  }
+});
+
+test("usePostEditorState handles revision drawer toggles and generic async failure branches", async () => {
+  hookState.cachedPost = hookState.createPost("post-1");
+  hookState.fetchedPost = hookState.cachedPost;
+  hookState.revisions = [hookState.createRevision("rev-1")];
+
+  const view = mountHook();
+  try {
+    await waitFor(() => view.current().loading === false);
+
+    act(() => {
+      view.current().setRevisionsOpen(false);
+    });
+    expect(hookState.listRevisionCalls).toHaveLength(0);
+
+    act(() => {
+      view.current().setRevisionsOpen(true);
+    });
+    await waitFor(() => view.current().revisionsOpen === true);
+    await waitFor(() => view.current().revisions.length === 1);
+
+    hookState.nextRestoreError = new Error("restore exploded");
+    await act(async () => {
+      await expect(view.current().restoreRevision("rev-1")).rejects.toThrow("restore exploded");
+    });
+    expect(view.current().revisionsError).toBe("Failed to restore revision.");
+
+    hookState.nextUploadError = new Error("upload exploded");
+    await expect(
+      view.current().uploadClipboardImage(
+        new File(["image"], "clipboard-generic.png", { type: "image/png" })
+      )
+    ).rejects.toThrow("upload exploded");
+
+    hookState.nextDeleteError = new Error("delete exploded");
+    await act(async () => {
+      await expect(view.current().moveToTrash()).resolves.toBe(false);
+    });
+    expect(view.current().error).toBe("Failed to move post to trash.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("usePostEditorState reports missing remote post, successful preview, and generic unpublish/revision failures", async () => {
+  hookState.cachedPost = null;
+  hookState.fetchedPost = null;
+
+  const missingView = mountHook();
+  try {
+    await waitFor(() => missingView.current().loading === false);
+    expect(missingView.current().error).toBe("Post not found.");
+  } finally {
+    missingView.cleanup();
+  }
+
+  hookState.reset();
+  hookState.cachedPost = hookState.createPost("post-1");
+  hookState.fetchedPost = hookState.cachedPost;
+  hookState.revisions = [hookState.createRevision("rev-1")];
+
+  const view = mountHook();
+  try {
+    await waitFor(() => view.current().loading === false);
+
+    await act(async () => {
+      await view.current().preview();
+    });
+    await waitFor(() => view.current().previewLoading === false);
+
+    expect(view.current().previewOpen).toBe(true);
+    expect(view.current().previewUrl).toBe("/preview/post-1");
+    expect(view.current().previewError).toBeNull();
+
+    hookState.nextUnpublishError = new Error("unpublish exploded");
+    await act(async () => {
+      await expect(view.current().unpublish()).rejects.toThrow("unpublish exploded");
+    });
+    expect(view.current().error).toBe("Failed to move post to draft.");
+
+    hookState.nextRevisionsError = new Error("revisions exploded");
+    act(() => {
+      view.current().openRevisions();
+    });
+    await waitFor(() => view.current().revisionsError === "Failed to load post revisions.");
   } finally {
     view.cleanup();
   }

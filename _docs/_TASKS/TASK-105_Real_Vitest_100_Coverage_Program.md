@@ -123,6 +123,84 @@ Current snapshot after the `TASK-105-05` posts shell jump (from `bun run test:co
 - `core/admin/ui/posts/PostsListPage.tsx` -> `79.54%` lines, `47.61%` branches
 - `core/admin/ui/posts/editor/PostClassicEditorShell.tsx` -> `91.00%` lines, `74.43%` branches
 
+Fresh canonical full-lane rebaseline after the latest `2026-03-14` run of `bun run test:coverage`:
+- `% Stmts`: `67.58`
+- `% Branch`: `58.19`
+- `% Funcs`: `71.25`
+- `% Lines`: `70.78`
+- infrastructure-noise files still sitting at `0%`: `11` (`types.ts` / `index.ts` ownership noise first documented in `TASK-105-10`)
+- `core/admin/ui/widgets/editors/*` -> `100.00%` lines / `83.01%` branches across `40` tracked files
+- `core/admin/ui/forms/*` -> `88.68%` lines / `68.84%` branches
+- `core/admin/ui/listings/*` -> `88.67%` lines / `70.25%` branches
+- `core/admin/ui/booking/*` -> `93.86%` lines / `72.16%` branches
+- `core/admin/ui/themes/*` -> `88.96%` lines / `78.22%` branches
+- `core/admin/ui/entries/*` -> `84.48%` lines / `70.31%` branches
+- `core/admin/ui/pages/*` -> `81.48%` lines / `68.56%` branches
+- `core/admin/ui/posts/*` -> `90.73%` lines / `77.51%` branches
+- current `TASK-105-05` hotspots are now `VisualPanel.tsx` (`62.50%` lines), `inspectorSchemas.ts` (`60.71%`), `PostEditorLayout.tsx` (`61.53%`), `PostDocumentOutline.tsx` (`68.75%`), `EntryTable.tsx` (`70.58%`), `PostBlockEditorShell.tsx` (`75.96%`), `PageEditor.tsx` (`74.54%`), `PostEditorCanvas.tsx` (`85.29%`), `PostRichTextAdapter.tsx` (`86.47%`), and `usePostEditorState.ts` (`90.10%`)
+- current `TASK-105-04` hotspots are now booking leaf tabs (`AvailabilityTab.tsx`, `ReservationsTab.tsx`, `ServicesTab.tsx`, `SlotPreviewTab.tsx`), `ThemeExportDialog.tsx`, `ThemeTemplateDrawer.tsx`, `FormCanvas.tsx`, `FormListPage.tsx`, and `ListingListPage.tsx`
+- despite the gains in `TASK-105-04..06`, the lane still has major backlog outside those waves; `TASK-105-08` remains premature until broader low-line admin surfaces are folded into explicit follow-up slices
+
+Current snapshot after the latest `TASK-105-04` and `TASK-105-05` follow-up slice on `2026-03-14`:
+- `% Stmts`: `67.86`
+- `% Branch`: `58.51`
+- `% Funcs`: `71.59`
+- `% Lines`: `71.05`
+- `core/admin/ui/pages/builder/VisualPanel.tsx` -> `100.00%` lines / `92.30%` branches
+- `core/admin/ui/entries/EntryBulkActionsBar.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/entries/EntryTable.tsx` -> `94.11%` lines / `92.00%` branches
+- `core/admin/ui/posts/editor/layout/PostEditorLayout.tsx` -> `100.00%` lines / `94.23%` branches
+- `core/admin/ui/posts/editor/outline/PostDocumentOutline.tsx` -> `100.00%` lines / `91.30%` branches
+- `core/admin/ui/posts/editor/inspector/inspectorSchemas.ts` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/posts/editor/richtext/postRichTextCommandEngine.ts` -> `90.55%` lines / `79.41%` branches
+- `core/admin/ui/forms/FormListPage.tsx` -> `90.32%` lines / `83.33%` branches
+- `core/admin/ui/themes/ThemeExportDialog.tsx` -> `100.00%` lines / `100.00%` branches
+- next `TASK-105-05` hotspots are now `PostEditorCanvas.tsx` (`85.29%` lines), `PostRichTextAdapter.tsx` (`86.47%`), `usePostEditorState.ts` (`90.10%`), `PageEditor.tsx` (`74.54%`), `PageSettingsDrawer.tsx` (`73.33%`), `PostBlockEditorShell.tsx` (`75.96%`), and `PostEditorPage.tsx` (`72.72%`)
+- next `TASK-105-04` hotspots remain booking leaf tab internals plus `FormCanvas.tsx`, `ListingListPage.tsx`, and `ThemeTemplateDrawer.tsx`
+
+Current snapshot after the deeper editor shell/canvas/state follow-up on `2026-03-14`:
+- `% Stmts`: `68.17`
+- `% Branch`: `58.83`
+- `% Funcs`: `71.76`
+- `% Lines`: `71.35`
+- `core/admin/ui/posts/PostEditorPage.tsx` -> `100.00%` lines / `85.00%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `82.94%` lines / `63.80%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `78.78%` lines / `63.67%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `82.22%` lines / `79.76%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `89.33%` lines / `72.50%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `87.26%` lines / `68.47%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `91.66%` lines / `76.54%` branches
+- next `TASK-105-05` hotspots are now concentrated in `PageEditor.tsx`, `PageSettingsDrawer.tsx`, `PostBlockEditorShell.tsx`, `PostEditorCanvas.tsx`, `PostRichTextAdapter.tsx`, and the remaining `usePostEditorState.ts` async branches
+
+Current snapshot after the page leaf / sidebar / toolbar / inserter follow-up on `2026-03-14`:
+- `% Stmts`: `68.37`
+- `% Branch`: `59.11`
+- `% Funcs`: `71.93`
+- `% Lines`: `71.55`
+- `core/admin/ui/pages/DeviceSwitcher.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/pages/PageRowActions.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/posts/editor/sidebars/PostListViewSidebar.tsx` -> `100.00%` lines / `85.71%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `85.50%` lines / `76.27%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `82.12%` lines / `64.12%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `82.22%` lines / `82.14%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `86.82%` lines / `69.52%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `90.07%` lines / `76.13%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `88.20%` lines / `70.10%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `79.20%` branches
+- next `TASK-105-05` hotspots are now concentrated in `PageEditor.tsx`, `PageSettingsDrawer.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, `PostBlockEditorShell.tsx`, and `PostRichTextAdapter.tsx`
+
+Current snapshot after the latest page-settings and adapter follow-up on `2026-03-14`:
+- `% Stmts`: `68.56`
+- `% Branch`: `59.26`
+- `% Funcs`: `72.24`
+- `% Lines`: `71.72`
+- `core/admin/ui/pages/PageEditor.tsx` -> `83.03%` lines / `65.47%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `96.66%` lines / `86.90%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `83.80%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `89.46%` lines / `70.83%` branches
+- next `TASK-105-05` hotspots are now led by `PageEditor.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
+
 Additional widget-editor product/template snapshot (from `bun run test:coverage` on 2026-03-09):
 - `% Stmts`: `53.20`
 - `% Branch`: `46.79`
@@ -485,3 +563,218 @@ for (const wave of backlog) {
 - `tests/README.md`
 - `tests/RUNNER_OWNERSHIP.md`
 - `_docs/_CHANGELOG/*.md`
+
+## Latest Snapshot
+
+Current snapshot after the latest page-editor and adapter micro-follow-up on `2026-03-14`:
+- `% Stmts`: `68.64`
+- `% Branch`: `59.37`
+- `% Funcs`: `72.27`
+- `% Lines`: `71.79`
+- `core/admin/ui/pages/PageEditor.tsx` -> `84.84%` lines / `67.71%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `96.66%` lines / `86.90%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- next `TASK-105-05` hotspots are now led by `PageEditor.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
+
+Current snapshot after the latest page-editor, toolbar, inserter, and adapter follow-up on `2026-03-14`:
+- `% Stmts`: `68.66`
+- `% Branch`: `59.38`
+- `% Funcs`: `72.31`
+- `% Lines`: `71.81`
+- `core/admin/ui/pages/PageEditor.tsx` -> `84.84%` lines / `67.71%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `89.85%` lines / `76.27%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
+- next `TASK-105-05` hotspots are now led by `PageEditor.tsx`, `PostRichTextToolbar.tsx`, `BlockInserter.tsx`, and the remaining `PostRichTextAdapter.tsx` branches
+
+Current snapshot after the latest page-editor reorder and shell-error follow-up on `2026-03-14`:
+- `% Stmts`: `68.66`
+- `% Branch`: `59.38`
+- `% Funcs`: `72.31`
+- `% Lines`: `71.81`
+- `core/admin/ui/pages/PageEditor.tsx` -> `85.45%` lines / `68.60%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `84.21%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `89.85%` lines / `76.27%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `90.09%` lines / `72.28%` branches
+
+Current snapshot after the latest page-editor state and editor chrome input follow-up on `2026-03-14`:
+- `% Stmts`: `68.89`
+- `% Branch`: `59.63`
+- `% Funcs`: `72.41`
+- `% Lines`: `72.06`
+- `458` Vitest files / `1684` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.15%` lines / `77.57%` branches
+- `core/admin/ui/pages/PageSettingsDrawer.tsx` -> `96.66%` lines / `86.90%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `90.07%` lines / `76.13%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `92.45%` lines / `75.18%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `86.48%` lines / `85.96%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `98.55%` lines / `81.35%` branches
+- widget/editor line closure remains intact, but the best `TASK-105-05` ROI is now concentrated in `PostRichTextToolbar.tsx`, `PostRichTextAdapter.tsx`, `PostEditorCanvas.tsx`, and smaller residual page/shell edges
+- broader low-line admin backlog outside the active wave still materially dominates the program tail (`AuditTable.tsx`, `PopupEditorForm.tsx`, `WidgetTemplateCategoryDrawer.tsx`, `UserDetailsDrawer.tsx`, `BackupsPage.tsx`)
+
+Current snapshot after the latest editor canvas, adapter, and toolbar follow-up on `2026-03-14`:
+- `% Stmts`: `69.01`
+- `% Branch`: `59.75`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1691` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.15%` lines / `77.57%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `79.45%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+- `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` -> `98.55%` lines / `81.35%` branches
+- `scripts/run-vitest-coverage.ts` no longer double-cleans the reports directory, which removes the intermittent `coverage/vitest/.tmp` / HTML report `ENOENT` failures during `bun run test:coverage`
+- the `TASK-105-05` hotspot list is now dominated by smaller shell/media/async residues, while the overall program tail is increasingly driven by low-line admin surfaces outside the current editor-focused wave
+
+Current snapshot after the latest shell/state/canvas branch-hardening follow-up on `2026-03-14`:
+- `% Stmts`: `69.01`
+- `% Branch`: `59.91`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1691` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.15%` lines / `77.57%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `88.57%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.08%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+- editor-shell branch hardening is now materially better, so the active-wave ROI is mostly residual async/media edges while the long-tail program backlog remains dominated by low-line admin surfaces outside `TASK-105-05`
+
+Current snapshot after the latest hook/helper follow-up on `2026-03-14`:
+- `% Stmts`: `69.03`
+- `% Branch`: `59.95`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1698` tests
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` -> `95.34%` lines / `88.57%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `76.63%` branches
+- helper-export hardening continues to move the lane, but the best remaining ROI is now mostly in residual async/media/preview branches and in low-line admin backlog outside the active editor wave
+
+Current snapshot after the latest adapter paste and typography follow-up on `2026-03-14`:
+- `% Stmts`: `69.03`
+- `% Branch`: `60.00`
+- `% Funcs`: `72.51`
+- `% Lines`: `72.19`
+- `458` Vitest files / `1698` tests
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `78.44%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextToolbar.tsx` -> `90.54%` lines / `87.71%` branches
+- the active editor wave has now pushed the shipped Vitest lane to a clean `60.00%` branch baseline, and the remaining ROI is increasingly about residual edge-case flattening versus broader low-line admin backlog selection
+
+Current snapshot after the latest page-editor and listings list follow-up on `2026-03-14`:
+- `% Stmts`: `69.05`
+- `% Branch`: `60.09`
+- `% Funcs`: `72.52`
+- `% Lines`: `72.21`
+- `459` Vitest files / `1705` tests
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
+- `core/admin/ui/listings/ListingListPage.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/posts/editor/PostEditorCanvas.tsx` -> `95.22%` lines / `85.49%` branches
+- `core/admin/ui/posts/editor/hooks/usePostEditorState.ts` -> `94.27%` lines / `80.56%` branches
+- `core/admin/ui/posts/editor/richtext/PostRichTextAdapter.tsx` -> `94.02%` lines / `78.44%` branches
+- the shipped Vitest lane is now above `60%` branches, `ListingListPage.tsx` is effectively closed, and the remaining ROI is increasingly split between residual editor-edge flattening and the broader low-line admin backlog
+
+Current snapshot after the latest forms and themes follow-up on `2026-03-14`:
+- `% Stmts`: `69.10`
+- `% Branch`: `60.17`
+- `% Funcs`: `72.60`
+- `% Lines`: `72.26`
+- `460` Vitest files / `1708` tests
+- `core/admin/ui/forms/FormCanvas.tsx` -> `100.00%` lines / `94.64%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- `core/admin/ui/listings/ListingListPage.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
+- the next best ROI now tilts more clearly toward `TASK-105-04` booking/theme residue and broader low-line admin backlog, because several former medium-coverage editor/forms/listings surfaces are now effectively closed
+
+Current snapshot after the latest booking services-tab follow-up on `2026-03-15`:
+- `% Stmts`: `69.10`
+- `% Branch`: `60.20`
+- `% Funcs`: `72.60`
+- `% Lines`: `72.26`
+- `460` Vitest files / `1709` tests
+- `core/admin/ui/booking/components/ServicesTab.tsx` -> `34.78%` lines / `97.22%` branches
+- `core/admin/ui/forms/FormCanvas.tsx` -> `100.00%` lines / `94.64%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
+- the lane branch baseline moved again, and the remaining `TASK-105-04` ROI is now more clearly concentrated in booking leaf-tab line gaps plus residual `ThemeTemplateDrawer` work
+
+Current snapshot after the latest booking leaf interaction follow-up on `2026-03-15`:
+- `% Stmts`: `69.27`
+- `% Branch`: `60.20`
+- `% Funcs`: `73.11`
+- `% Lines`: `72.46`
+- `461` Vitest files / `1713` tests
+- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `100.00%` lines / `88.46%` branches
+- `core/admin/ui/booking/components/ReservationsTab.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/booking/components/ServicesTab.tsx` -> `100.00%` lines / `97.22%` branches
+- `core/admin/ui/booking/components/SlotPreviewTab.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- booking leaf tabs are now line-closed, so the next ROI shifts more cleanly to `ThemeTemplateDrawer` and broader low-line admin backlog outside the editor wave
+
+Current snapshot after the latest theme drawer and user details follow-up on `2026-03-15`:
+- `% Stmts`: `69.62`
+- `% Branch`: `60.38`
+- `% Funcs`: `73.41`
+- `% Lines`: `72.82`
+- `464` Vitest files / `1719` tests
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `80.29%` lines / `82.05%` branches
+- `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
+- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `100.00%` lines / `88.46%` branches
+- `core/admin/ui/booking/components/ServicesTab.tsx` -> `100.00%` lines / `97.22%` branches
+- the remaining ROI is increasingly in residual theme/page-shell gaps and in the broader low-line admin backlog, because several table/drawer surfaces are now effectively closed
+
+Current snapshot after the latest audit table follow-up on `2026-03-15`:
+- `% Stmts`: `69.27`
+- `% Branch`: `60.20`
+- `% Funcs`: `73.11`
+- `% Lines`: `72.46`
+- `461` Vitest files / `1713` tests
+- `core/admin/ui/audit/AuditTable.tsx` -> `91.67%` lines / `100.00%` branches
+- `core/admin/ui/audit/AuditList.tsx` -> `32.29%` lines / `5.26%` branches
+- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `100.00%` lines / `88.46%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- the low-line admin backlog is now more granular: single-table or single-drawer surfaces can still move the lane materially without reopening the large editor clusters
+
+Current snapshot after the latest low-line admin follow-up on `2026-03-15`:
+- `% Stmts`: `69.98`
+- `% Branch`: `60.76`
+- `% Funcs`: `73.79`
+- `% Lines`: `73.16`
+- `467` Vitest files / `1724` tests
+- `core/admin/ui/backups/BackupsPage.tsx` -> `92.30%` lines / `72.22%` branches
+- `core/admin/ui/audit/AuditList.tsx` -> `94.79%` lines / `77.63%` branches
+- `core/admin/ui/audit/AuditTable.tsx` -> `91.67%` lines / `100.00%` branches
+- `core/admin/ui/roles/RoleEditor.tsx` -> `93.93%` lines / `91.43%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `80.29%` lines / `82.05%` branches
+- `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
+- the full-lane tail is now more clearly dominated by a shrinking set of medium admin editors plus the remaining very low-line tables/drawers rather than by the former page/post editor hotspots
+
+Current snapshot after the latest theme and users/roles follow-up on `2026-03-15`:
+- `% Stmts`: `70.10`
+- `% Branch`: `60.83`
+- `% Funcs`: `74.09`
+- `% Lines`: `73.28`
+- `469` Vitest files / `1733` tests
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `85.40%` lines / `84.61%` branches
+- `core/admin/ui/roles/RoleList.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/roles/RoleEditor.tsx` -> `93.93%` lines / `91.43%` branches
+- `core/admin/ui/users/UserEditor.tsx` -> `96.77%` lines / `94.44%` branches
+- `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
+- the active tail is now less about broad editor shells and more about selective theme cleanup plus the remaining low-line admin backlog outside the now-mature users/roles surfaces
+
+Current snapshot after the latest users shell and theme closure follow-up on `2026-03-15`:
+- `% Stmts`: `70.81`
+- `% Branch`: `61.35`
+- `% Funcs`: `74.92`
+- `% Lines`: `74.04`
+- `471` Vitest files / `1741` tests
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `100.00%` lines / `87.17%` branches
+- `core/admin/ui/roles/RoleList.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/users/UserEditor.tsx` -> `96.77%` lines / `94.44%` branches
+- `core/admin/ui/users/UserList.tsx` -> `100.00%` lines / `95.45%` branches
+- `core/admin/ui/users/UsersRolesPage.tsx` -> `88.39%` lines / `73.57%` branches
+- the remaining tail is now much less about users/roles core shells and more about the broader low-line admin backlog plus residual branch-only theme/page cleanup

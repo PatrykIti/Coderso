@@ -1,8 +1,12 @@
+// @vitest-environment happy-dom
+
 import { expect, test } from "vitest";
 
 import {
   applyCommandToBlockTags,
+  applyAlignmentToBlocks,
   applyCommandToRootHtmlWithoutBlocks,
+  executeBlockCommandOnBlocks,
   getPostRichTextCommandKind,
   normalizePostRichTextBlockTag,
   resolveAlignmentForCommand,
@@ -64,6 +68,14 @@ test("root html normalization skips values that already contain block tags", () 
   expect(applyCommandToRootHtmlWithoutBlocks("paragraph", "<blockquote>Body</blockquote>")).toBeNull();
 });
 
+test("root html normalization wraps list commands and rejects unsupported commands", () => {
+  expect(applyCommandToRootHtmlWithoutBlocks("bullet-list", "Plain text node")).toBe(
+    "<ul><li>Plain text node</li></ul>"
+  );
+  expect(applyCommandToRootHtmlWithoutBlocks("ordered-list", "")).toBe("<ol><li><br></li></ol>");
+  expect(applyCommandToRootHtmlWithoutBlocks("align-center", "Plain text node")).toBeNull();
+});
+
 test("command kind and fallback mappings are deterministic", () => {
   expect(getPostRichTextCommandKind("bold")).toBe("native-inline");
   expect(getPostRichTextCommandKind("inline-code")).toBe("inline-wrapper");
@@ -96,5 +108,97 @@ test("block tag normalization maps editor divs to paragraphs", () => {
   expect(normalizePostRichTextBlockTag("div")).toBe("p");
   expect(normalizePostRichTextBlockTag("p")).toBe("p");
   expect(normalizePostRichTextBlockTag("blockquote")).toBe("blockquote");
+  expect(normalizePostRichTextBlockTag(undefined)).toBeNull();
+  expect(normalizePostRichTextBlockTag(null)).toBeNull();
   expect(normalizePostRichTextBlockTag("section")).toBeNull();
+});
+
+test("applyAlignmentToBlocks updates selected blocks and rejects invalid alignments", () => {
+  document.body.innerHTML = `
+    <div id="root">
+      <p>One</p>
+      <blockquote>Two</blockquote>
+    </div>
+  `;
+
+  const blocks = Array.from(document.querySelectorAll<HTMLElement>("p, blockquote"));
+  expect(applyAlignmentToBlocks(blocks, "center")).toBe(true);
+  expect(blocks[0]?.getAttribute("data-align")).toBe("center");
+  expect(blocks[1]?.getAttribute("data-align")).toBe("center");
+  expect(applyAlignmentToBlocks(blocks, "invalid" as never)).toBe(false);
+  expect(applyAlignmentToBlocks([], "left")).toBe(false);
+});
+
+test("executeBlockCommandOnBlocks handles list wrapping, unwrapping, quote toggles, and heading transforms", () => {
+  document.body.innerHTML = `
+    <div id="root">
+      <p>Alpha</p>
+      <p>Beta</p>
+      <blockquote>Quote</blockquote>
+      <ul data-align="right">
+        <li>First</li>
+        <li>Second</li>
+      </ul>
+    </div>
+  `;
+
+  const root = document.getElementById("root");
+  if (!(root instanceof HTMLDivElement)) {
+    throw new Error("missing root");
+  }
+
+  const firstParagraphs = Array.from(root.querySelectorAll("p")).slice(0, 2);
+  expect(executeBlockCommandOnBlocks("bullet-list", firstParagraphs)).toBe(true);
+  const list = root.querySelector("ul");
+  expect(list?.textContent).toContain("Alpha");
+  expect(list?.textContent).toContain("Beta");
+
+  const wrappedList = root.querySelector("ul");
+  if (!(wrappedList instanceof HTMLElement)) {
+    throw new Error("missing wrapped list");
+  }
+  expect(executeBlockCommandOnBlocks("bullet-list", [wrappedList])).toBe(true);
+  const unwrappedParagraphs = Array.from(root.querySelectorAll("p"));
+  expect(unwrappedParagraphs.some((node) => node.textContent?.includes("Alpha"))).toBe(true);
+
+  const quoteBlock = root.querySelector("blockquote");
+  if (!(quoteBlock instanceof HTMLElement)) {
+    throw new Error("missing quote block");
+  }
+  expect(executeBlockCommandOnBlocks("quote", [quoteBlock])).toBe(true);
+  expect(root.querySelector("blockquote")).toBeNull();
+  expect(Array.from(root.querySelectorAll("p")).some((node) => node.textContent?.includes("Quote"))).toBe(true);
+
+  const paragraphForHeading = Array.from(root.querySelectorAll("p")).find((node) =>
+    node.textContent?.includes("Quote")
+  );
+  if (!(paragraphForHeading instanceof HTMLElement)) {
+    throw new Error("missing paragraph for heading transform");
+  }
+  expect(executeBlockCommandOnBlocks("heading-4", [paragraphForHeading])).toBe(true);
+  expect(root.querySelector("h4")?.textContent).toContain("Quote");
+  expect(executeBlockCommandOnBlocks("align-left", [paragraphForHeading])).toBe(false);
+});
+
+test("executeBlockCommandOnBlocks converts existing lists into heading blocks", () => {
+  document.body.innerHTML = `
+    <div id="root">
+      <ul data-align="right">
+        <li>Alpha</li>
+        <li>Beta</li>
+      </ul>
+    </div>
+  `;
+
+  const list = document.querySelector("ul");
+  if (!(list instanceof HTMLElement)) {
+    throw new Error("missing list");
+  }
+
+  expect(executeBlockCommandOnBlocks("heading-2", [list])).toBe(true);
+
+  const heading = document.querySelector("h2");
+  expect(heading?.getAttribute("data-align")).toBe("right");
+  expect(heading?.innerHTML).toBe("Alpha<br>Beta");
+  expect(document.querySelector("ul")).toBeNull();
 });

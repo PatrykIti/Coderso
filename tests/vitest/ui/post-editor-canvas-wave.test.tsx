@@ -230,6 +230,9 @@ vi.mock("../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter", () =
     onBlockTypeChange,
     onFontFamilyChange,
     onBaseTextScaleChange,
+    toolbarProfile,
+    fontFamily,
+    baseTextScale,
   }: {
     value: string;
     onChange: (next: string) => void;
@@ -240,9 +243,14 @@ vi.mock("../../../core/admin/ui/posts/editor/richtext/PostRichTextAdapter", () =
     onBlockTypeChange?: (type: "heading", attrs?: Record<string, unknown>) => void;
     onFontFamilyChange?: (value: "serif") => void;
     onBaseTextScaleChange?: (value: "xl") => void;
+    toolbarProfile?: string;
+    fontFamily?: string;
+    baseTextScale?: string;
   }) => (
     <div>
       <span>{`adapter:${value}`}</span>
+      <span>{`adapter-profile:${toolbarProfile ?? "none"}`}</span>
+      <span>{`adapter-typography:${fontFamily ?? "none"}:${baseTextScale ?? "none"}`}</span>
       <button type="button" onClick={() => onFocus?.()}>
         adapter-focus
       </button>
@@ -691,6 +699,58 @@ test("PostEditorCanvas selected controls update button, embed, list, and code bl
   }
 });
 
+test("PostEditorCanvas renders preview fallbacks for toc, list, button, and embed blocks", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          { id: "toc-1", type: "toc", attrs: {}, content: null },
+          { id: "list-empty", type: "list", attrs: {}, content: [] },
+          { id: "button-default", type: "button", attrs: {}, content: null },
+          { id: "embed-empty", type: "embed", attrs: {}, content: null },
+          {
+            id: "embed-valid",
+            type: "embed",
+            attrs: {
+              provider: "loom",
+              url: "https://www.loom.com/share/demo-clip",
+              aspect: "1:1",
+              lazy: false,
+            },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onOpenBlockDetails={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Table of contents");
+    expect(view.container.textContent).toContain("One item per line...");
+    expect(view.container.textContent).toContain("Button");
+    expect(view.container.textContent).toContain("Target: #");
+    expect(view.container.textContent).toContain("Click to configure embed URL");
+    expect(view.container.innerHTML).toContain("https://www.loom.com/embed/demo-clip");
+    expect(view.container.innerHTML).toContain('loading="eager"');
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostEditorCanvas opens image picker, loads media, applies selected asset, and resolves existing media ids", async () => {
   const { PostEditorCanvas } = await import(
     "../../../core/admin/ui/posts/editor/PostEditorCanvas"
@@ -855,5 +915,561 @@ test("PostEditorCanvas resets image picker state on close and surfaces media loa
     expect(errorView.container.textContent).toContain("Media unavailable.");
   } finally {
     errorView.cleanup();
+  }
+});
+
+test("PostEditorCanvas skips direct-url lookup, tolerates unresolved lookup failures, and uses bare media patches", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  mediaState.reset();
+  const directUrlView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "image-url",
+            type: "image",
+            attrs: { mediaId: "/media/direct.png" },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+    expect(mediaState.calls).not.toContain(false);
+    expect(directUrlView.container.innerHTML).toContain('/media/direct.png');
+  } finally {
+    directUrlView.cleanup();
+  }
+
+  mediaState.reset();
+  mediaState.error = new Error("lookup exploded");
+  const unresolvedLookupView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "image-missing",
+            type: "image",
+            attrs: { mediaId: "missing-media" },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+    expect(mediaState.calls).toContain(false);
+    expect(unresolvedLookupView.container.textContent).toContain(
+      "Click to choose image from media library"
+    );
+  } finally {
+    unresolvedLookupView.cleanup();
+  }
+
+  mediaState.reset();
+  mediaState.records = [
+    {
+      id: "media-2",
+      key: "uploads/plain.png",
+      url: "/media/plain.png",
+      originalName: "plain.png",
+      type: "image",
+      mimeType: "image/png",
+      size: 120,
+      width: 800,
+      height: 600,
+      alt: "",
+      title: "Plain",
+      caption: "",
+      createdAt: "2026-03-12T10:00:00.000Z",
+    },
+  ];
+
+  const onUpdateBlockAttrs = vi.fn();
+  const barePatchView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "image-bare", type: "image", attrs: {}, content: null }],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-bare"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    clickByText(barePatchView.container, "Click to choose image from media library");
+    await flush();
+    clickByText(barePatchView.container, "select-media:plain.png");
+
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("image-bare", {
+      mediaId: "media-2",
+    });
+  } finally {
+    barePatchView.cleanup();
+  }
+});
+
+test("PostEditorCanvas schedules focus restoration, cancels pending frames, and surfaces generic picker load errors", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const scrollSpy = vi
+    .spyOn(HTMLElement.prototype, "scrollIntoView")
+    .mockImplementation(() => undefined);
+  const focusSpy = vi
+    .spyOn(HTMLTextAreaElement.prototype, "focus")
+    .mockImplementation(() => undefined);
+
+  let rafCallback: FrameRequestCallback | null = null;
+  const requestAnimationFrameSpy = vi
+    .spyOn(window, "requestAnimationFrame")
+    .mockImplementation((callback: FrameRequestCallback) => {
+      rafCallback = callback;
+      return 17;
+    });
+  const cancelAnimationFrameSpy = vi
+    .spyOn(window, "cancelAnimationFrame")
+    .mockImplementation(() => undefined);
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "code-focus", type: "code", attrs: {}, content: "const answer = 42;" }],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="code-focus"
+      insertFocusToken={1}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    expect(scrollSpy).toHaveBeenCalled();
+    expect(requestAnimationFrameSpy).toHaveBeenCalledTimes(1);
+    expect(focusSpy).not.toHaveBeenCalled();
+
+    act(() => {
+      rafCallback?.(0);
+    });
+
+    expect(focusSpy).toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+
+  expect(cancelAnimationFrameSpy).toHaveBeenCalledWith(17);
+
+  mediaState.reset();
+  mediaState.error = new Error("generic picker failure");
+  const genericErrorView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [{ id: "image-generic", type: "image", attrs: {}, content: null }],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-generic"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    clickByText(genericErrorView.container, "Click to choose image from media library");
+    await flush();
+
+    expect(genericErrorView.container.textContent).toContain("Failed to load media assets.");
+  } finally {
+    genericErrorView.cleanup();
+  }
+});
+
+test("PostEditorCanvas title focus clears selection and image toolbar falls back to default control values", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  mediaState.reset();
+  const onSelectBlock = vi.fn();
+  const onUpdateBlockAttrs = vi.fn();
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "image-toolbar",
+            type: "image",
+            attrs: {
+              mediaId: "/media/default-image.png",
+              wrap: "weird",
+              widthPercent: 999,
+            },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-toolbar"
+      insertFocusToken={0}
+      onSelectBlock={onSelectBlock}
+      onUpdateBlockContent={() => undefined}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    await flush();
+    expect(mediaState.calls).not.toContain(false);
+
+    const titleInput = view.container.querySelector(
+      "[data-post-editor-title-input='true']"
+    ) as HTMLTextAreaElement | null;
+    if (!titleInput) throw new Error("missing title input");
+
+    act(() => {
+      titleInput.dispatchEvent(new Event("focusin", { bubbles: true }));
+      titleInput.dispatchEvent(new FocusEvent("focus", { bubbles: false }));
+    });
+
+    const selects = Array.from(view.container.querySelectorAll("select"));
+    expect((selects[0] as HTMLSelectElement | undefined)?.value).toBe("none");
+    expect((selects[1] as HTMLSelectElement | undefined)?.value).toBe("50");
+
+    expect(onSelectBlock).toHaveBeenCalledWith(null);
+    expect(onUpdateBlockAttrs).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostEditorCanvas routes delete and replace-image controls without deselecting the canvas shell", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  mediaState.reset();
+  const onDeleteBlock = vi.fn();
+  const onSelectBlock = vi.fn();
+  const onUpdateBlockAttrs = vi.fn();
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "image-delete",
+            type: "image",
+            attrs: { mediaId: "   " },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="image-delete"
+      insertFocusToken={0}
+      onSelectBlock={onSelectBlock}
+      onUpdateBlockContent={() => undefined}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onInsertBlock={() => undefined}
+      onDeleteBlock={onDeleteBlock}
+    />
+  );
+
+  try {
+    const deleteButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.getAttribute("aria-label") === "Delete block: Image"
+    ) as HTMLButtonElement | undefined;
+    if (!deleteButton) {
+      throw new Error("missing delete button");
+    }
+
+    act(() => {
+      deleteButton.click();
+    });
+
+    expect(onDeleteBlock).toHaveBeenCalledWith("image-delete");
+
+    clickByText(view.container, "Replace image");
+    await flush();
+
+    expect(view.container.textContent).toContain("Select Image");
+    expect(view.container.textContent).toContain("selected-media:none");
+
+    clickByText(view.container, "select-media:media-1.png");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("image-delete", {
+      mediaId: "media-1",
+      alt: "Hero alt",
+      caption: "Hero caption",
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostEditorCanvas previews mixed list content and resolves provider-specific embed URL fallbacks", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "list-mixed",
+            type: "list",
+            attrs: {},
+            content: ["Visible item", 42, null],
+          },
+          {
+            id: "embed-youtube-short",
+            type: "embed",
+            attrs: {
+              provider: "youtube",
+              url: "https://youtu.be/short-id",
+            },
+            content: null,
+          },
+          {
+            id: "embed-youtube-path",
+            type: "embed",
+            attrs: {
+              provider: "youtube",
+              url: "https://www.youtube.com/shorts/path-id",
+            },
+            content: null,
+          },
+          {
+            id: "embed-vimeo",
+            type: "embed",
+            attrs: {
+              provider: "vimeo",
+              url: "https://vimeo.com/channels/staffpicks/123456789",
+            },
+            content: null,
+          },
+          {
+            id: "embed-loom-invalid",
+            type: "embed",
+            attrs: {
+              provider: "loom",
+              url: "https://www.loom.com/not-a-share-id",
+            },
+            content: null,
+          },
+          {
+            id: "embed-custom-invalid",
+            type: "embed",
+            attrs: {
+              provider: "custom",
+              url: "notaurl",
+            },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onOpenBlockDetails={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Visible item");
+    expect(view.container.textContent).not.toContain(">42<");
+    expect(view.container.innerHTML).toContain("https://www.youtube.com/embed/short-id");
+    expect(view.container.innerHTML).toContain("https://www.youtube.com/embed/path-id");
+    expect(view.container.innerHTML).toContain("https://player.vimeo.com/video/123456789");
+    expect(view.container.textContent).toContain("Click to configure embed URL");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostEditorCanvas uses document typography for selected callout blocks and renders richer preview defaults", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const onTransformBlock = vi.fn();
+  const onUpdateBlockAttrs = vi.fn();
+  const onUpdateDocumentTypography = vi.fn();
+  const onOpenBlockDetails = vi.fn();
+
+  const selectedView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {
+          typography: {
+            fontFamily: "mono",
+            baseTextScale: "xl",
+          },
+        },
+        blocks: [
+          {
+            id: "callout-1",
+            type: "callout",
+            attrs: {},
+            content: "<p>Alert</p>",
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId="callout-1"
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onUpdateBlockAttrs={onUpdateBlockAttrs}
+      onTransformBlock={onTransformBlock}
+      onUpdateDocumentTypography={onUpdateDocumentTypography}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    expect(selectedView.container.textContent).toContain("adapter-profile:callout");
+    expect(selectedView.container.textContent).toContain("adapter-typography:mono:xl");
+
+    clickByText(selectedView.container, "adapter-transform");
+    clickByText(selectedView.container, "adapter-font");
+    clickByText(selectedView.container, "adapter-scale");
+
+    expect(onTransformBlock).toHaveBeenCalledWith("callout-1", "heading");
+    expect(onUpdateBlockAttrs).toHaveBeenCalledWith("callout-1", { level: 2 });
+    expect(onUpdateDocumentTypography).toHaveBeenNthCalledWith(1, {
+      fontFamily: "serif",
+      baseTextScale: "xl",
+    });
+    expect(onUpdateDocumentTypography).toHaveBeenNthCalledWith(2, {
+      fontFamily: "mono",
+      baseTextScale: "xl",
+    });
+  } finally {
+    selectedView.cleanup();
+  }
+
+  const previewView = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "toc-custom",
+            type: "toc",
+            attrs: { title: "Contents" },
+            content: null,
+          },
+          {
+            id: "image-captioned",
+            type: "image",
+            attrs: {
+              mediaId: "https://cdn.test/image.png",
+              alt: "Poster alt",
+              caption: "Poster caption",
+            },
+            content: null,
+          },
+          {
+            id: "button-styled",
+            type: "button",
+            attrs: {
+              label: "Read more",
+              url: " https://example.com/read-more ",
+              variant: "link",
+              size: "lg",
+            },
+            content: null,
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+      onOpenBlockDetails={onOpenBlockDetails}
+    />
+  );
+
+  try {
+    expect(previewView.container.textContent).toContain("Contents");
+    expect(previewView.container.innerHTML).toContain('alt="Poster alt"');
+    expect(previewView.container.textContent).toContain("Poster caption");
+
+    const button = Array.from(previewView.container.querySelectorAll("button")).find((candidate) =>
+      candidate.textContent?.includes("Read more")
+    ) as HTMLButtonElement | undefined;
+    expect(button?.className).toContain("underline-offset-4");
+    expect(button?.className).toContain("h-11");
+
+    act(() => {
+      button?.click();
+    });
+
+    expect(onOpenBlockDetails).toHaveBeenCalledWith("button-styled");
+  } finally {
+    previewView.cleanup();
   }
 });

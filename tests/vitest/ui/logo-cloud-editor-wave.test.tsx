@@ -719,3 +719,86 @@ test("LogoCloud editors ignore variant changes safely when no handler is provide
     visualView.cleanup();
   }
 });
+
+test("LogoCloud editors fall back when normalized header and style are omitted", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/logoCloud", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/logoCloud")
+    >("../../../core/widgets/core/logoCloud");
+
+    return {
+      ...actual,
+      normalizeLogoCloudData: (value: LogoCloudData) => ({
+        ...actual.normalizeLogoCloudData(value),
+        header: undefined,
+        style: undefined,
+      }),
+      normalizeLogoCloudLogos: () =>
+        [
+          {
+            id: "mock-logo-1",
+            name: undefined,
+            image: undefined,
+            href: undefined,
+          },
+          {
+            id: "mock-logo-2",
+            name: undefined,
+            image: undefined,
+            href: undefined,
+          },
+        ] as LogoCloudData["logos"],
+    };
+  });
+
+  const { LogoCloudAdvancedEditor, LogoCloudVisualEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/LogoCloudEditors"
+  );
+
+  const sparseValue: LogoCloudData = {
+    logos: [{} as never],
+  };
+
+  const visualView = mount(
+    <LogoCloudVisualEditor value={sparseValue} onChange={() => undefined} variant="legacy-cloud" />
+  );
+
+  try {
+    expect(
+      (getInputByPlaceholder(visualView.container, "Trusted by teams worldwide") as HTMLInputElement)
+        .value
+    ).toBe(logoCloudDefaults.header?.title);
+    expect(
+      (getTextareaByPlaceholder(visualView.container, "Showcase partner and client logos.") as HTMLTextAreaElement)
+        .value
+    ).toBe(logoCloudDefaults.header?.description);
+
+    const styleSection = getSectionByTitle(visualView.container, "Display style");
+    const selects = getSelects(styleSection);
+    expect(selects[0]?.value).toBe("md");
+    expect(selects[1]?.value).toBe("md");
+    expect(selects[2]?.value).toBe("center");
+    const switches = getCheckboxes(styleSection);
+    expect(switches[0]?.checked).toBe(true);
+    expect(switches[1]?.checked).toBe(true);
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <LogoCloudAdvancedEditor value={sparseValue} onChange={() => undefined} variant="legacy-cloud" />
+  );
+
+  try {
+    const technicalSection = getSectionByTitle(advancedView.container, "Technical layout tokens");
+    const selects = getSelects(technicalSection);
+    expect(selects[0]?.value).toBe("md");
+    expect(selects[1]?.value).toBe("md");
+    expect(selects[2]?.value).toBe("center");
+  } finally {
+    advancedView.cleanup();
+    vi.doUnmock("../../../core/widgets/core/logoCloud");
+    vi.resetModules();
+  }
+});

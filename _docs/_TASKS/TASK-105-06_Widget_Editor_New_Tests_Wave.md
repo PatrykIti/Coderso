@@ -64,12 +64,17 @@ Completed slices:
 - deeper sparse-default coverage for `FaqAccordionEditors`
 - direct Vitest coverage for `HeroEditors`
 - direct Vitest coverage for `NavigationEditors`
+- deeper sparse-default coverage for `NavigationEditors`
 - direct Vitest coverage for `ContactEditors`
+- deeper sparse-default coverage for `ContactEditors`
 - direct Vitest coverage for `BookingCalendarEditors`
 - direct Vitest coverage for `CompareTimelineEditors`
 - direct Vitest coverage for `FeatureGridEditors`
+- deeper sparse-default coverage for `FeatureGridEditors`
 - direct Vitest coverage for `FooterEditors`
+- deeper sparse/empty-state coverage for `FooterEditors`
 - direct Vitest coverage for `LogoCloudEditors`
+- deeper sparse-default coverage for `LogoCloudEditors`
 - direct Vitest coverage for `RichTextSectionEditors`
 - direct Vitest coverage for `GalleryMosaicEditors`
 - direct Vitest coverage for `CtaBannerEditors`
@@ -115,13 +120,13 @@ Current `2026-03-10` widget editor snapshot after the latest residual-closure fo
 - `core/admin/ui/widgets/editors/TestimonialsEditors.tsx` -> `100.00%` lines / `86.66%` branches
 - `core/admin/ui/widgets/editors/FaqAccordionEditors.tsx` -> `100.00%` lines / `91.66%` branches
 - `core/admin/ui/widgets/editors/HeroEditors.tsx` -> `99.35%` lines / `91.32%` branches
-- `core/admin/ui/widgets/editors/NavigationEditors.tsx` -> `91.73%` lines / `72.12%` branches
-- `core/admin/ui/widgets/editors/ContactEditors.tsx` -> `100.00%` lines / `65.71%` branches
+- `core/admin/ui/widgets/editors/NavigationEditors.tsx` -> `100.00%` lines / `81.41%` branches
+- `core/admin/ui/widgets/editors/ContactEditors.tsx` -> `100.00%` lines / `80.95%` branches
 - `core/admin/ui/widgets/editors/BookingCalendarEditors.tsx` -> `100.00%` lines / `70.58%` branches
 - `core/admin/ui/widgets/editors/CompareTimelineEditors.tsx` -> `96.42%` lines / `66.37%` branches
-- `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` -> `88.23%` lines / `58.97%` branches
-- `core/admin/ui/widgets/editors/FooterEditors.tsx` -> `96.85%` lines / `89.47%` branches
-- `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` -> `98.80%` lines / `64.00%` branches
+- `core/admin/ui/widgets/editors/FeatureGridEditors.tsx` -> `100.00%` lines / `82.05%` branches
+- `core/admin/ui/widgets/editors/FooterEditors.tsx` -> `100.00%` lines / `92.10%` branches
+- `core/admin/ui/widgets/editors/LogoCloudEditors.tsx` -> `100.00%` lines / `81.25%` branches
 - `core/admin/ui/widgets/editors/RichTextSectionEditors.tsx` -> `89.69%` lines / `63.79%` branches
 - `core/admin/ui/widgets/editors/GalleryMosaicEditors.tsx` -> `95.74%` lines / `66.66%` branches
 - `core/admin/ui/widgets/editors/CtaBannerEditors.tsx` -> `100.00%` lines / `62.50%` branches
@@ -315,10 +320,19 @@ Contact sparse-default follow-up on 2026-03-13:
 - Isolated targeted run for `ContactEditors.tsx` stayed at `100.00%` lines / `65.71%` branches.
 - Canonical full-lane snapshot was not rebaselined separately for this narrow follow-up slice.
 
+Fresh canonical `2026-03-14` rebaseline:
+- `core/admin/ui/widgets/editors/*` -> `100.00%` lines / `83.01%` branches across `40` tracked files
+- the latest full-lane report confirms the wave is now effectively line-complete; remaining work here is branch-only hardening and infra-noise handling in `core/admin/ui/widgets/editors/index.ts`
+- current lowest branch files in the shipped editor set are:
+  - `PricingPlansEditors.tsx` -> `100.00%` lines / `59.80%` branches
+  - `TabsEditors.tsx` -> `100.00%` lines / `64.86%` branches
+  - `GalleryMosaicEditors.tsx` -> `100.00%` lines / `66.66%` branches
+  - `SearchBoxEditors.tsx` -> `100.00%` lines / `66.66%` branches
+  - `CompareTimelineEditors.tsx` -> `100.00%` lines / `67.25%` branches
+
 Remaining hotspots in this wave:
-- residual branch gaps in `FeatureGridEditors.tsx`
-- residual branch gaps in `PricingPlansEditors.tsx`
-- residual branch gaps in `LogoCloudEditors.tsx`
+- residual branch-only cleanup in `PricingPlansEditors.tsx`, `TabsEditors.tsx`, `GalleryMosaicEditors.tsx`, `SearchBoxEditors.tsx`, and `CompareTimelineEditors.tsx`
+- ownership-noise import coverage for `core/admin/ui/widgets/editors/index.ts` if the project chooses to keep that barrel inside the lane metric
 
 ## Testing Requirements
 

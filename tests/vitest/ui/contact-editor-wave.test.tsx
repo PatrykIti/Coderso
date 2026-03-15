@@ -785,3 +785,139 @@ test("Contact editors cover sparse defaults, minimal variant fallback, and defau
     advancedView.cleanup();
   }
 });
+
+test("Contact editors fall back to empty/default UI values when normalized payload is sparse", async () => {
+  vi.resetModules();
+  vi.doMock("../../../core/widgets/core/contact", async () => {
+    const actual = await vi.importActual<
+      typeof import("../../../core/widgets/core/contact")
+    >("../../../core/widgets/core/contact");
+
+    return {
+      ...actual,
+      normalizeContactData: (value: ContactData) => ({
+        ...actual.normalizeContactData(value),
+        form: {
+          fields: ["name", "email", "message"],
+          required: [],
+          submitLabel: undefined,
+        } as ContactData["form"],
+        contact: {
+          phone: undefined,
+          email: undefined,
+          address: undefined,
+          hours: undefined,
+        } as ContactData["contact"],
+        map: {
+          enabled: undefined,
+          embedUrl: undefined,
+        } as ContactData["map"],
+        style: {
+          spacing: undefined,
+          background: undefined,
+          columns: undefined,
+          surfaceColor: undefined,
+          borderColor: undefined,
+          borderWidth: undefined,
+        } as ContactData["style"],
+      }),
+    };
+  });
+
+  const { ContactAdvancedEditor, ContactVisualEditor, ContactWizardEditor } = await import(
+    "../../../core/admin/ui/widgets/editors/ContactEditors"
+  );
+
+  const sparseValue: ContactData = {
+    form: {},
+    contact: {},
+    map: {},
+    style: {},
+  };
+
+  const wizardView = mount(
+    <ContactWizardEditor
+      value={sparseValue}
+      onChange={() => undefined}
+      variant="legacy-contact"
+    />
+  );
+
+  try {
+    expect(
+      (findSelectByOptions(wizardView.container, ["form-left", "form-right", "minimal"]) as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("form-left");
+    expect(
+      (findInputByPlaceholder(wizardView.container, "Send message") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("");
+    expect(
+      (findInputByPlaceholder(wizardView.container, "+1 555 123 456") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("");
+    expect(
+      (findInputByPlaceholder(wizardView.container, "hello@example.com") as HTMLInputElement | undefined)
+        ?.value
+    ).toBe("");
+    expect(
+      (
+        findTextareaByPlaceholder(wizardView.container, "123 Market Street") as
+          | HTMLTextAreaElement
+          | undefined
+      )?.value
+    ).toBe("");
+  } finally {
+    wizardView.cleanup();
+  }
+
+  const visualView = mount(
+    <ContactVisualEditor value={sparseValue} onChange={() => undefined} variant="legacy-contact" />
+  );
+
+  try {
+    const styleSection = findSection(visualView.container, "Colors, borders, and surface styling");
+    if (!(styleSection instanceof HTMLElement)) {
+      throw new Error("Missing style section");
+    }
+
+    expect(findInputByPlaceholder(visualView.container, "Send message")).toBeTruthy();
+    expect(findInputByPlaceholder(visualView.container, "https://maps.google.com/...")).toBeUndefined();
+    expect(
+      (findSelectByOptions(visualView.container, ["sm", "md", "lg", "xl"]) as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("md");
+    expect(
+      (findSelectByOptions(visualView.container, ["one", "two"]) as
+        | HTMLSelectElement
+        | undefined)?.value
+    ).toBe("two");
+    const colorInputs = Array.from(styleSection.querySelectorAll("input[type='color']")) as HTMLInputElement[];
+    expect(colorInputs.map((input) => input.value)).toEqual(["#ffffff", "#ffffff", "#e2e8f0"]);
+  } finally {
+    visualView.cleanup();
+  }
+
+  const advancedView = mount(
+    <ContactAdvancedEditor value={sparseValue} onChange={() => undefined} />
+  );
+
+  try {
+    expect(
+      (
+        advancedView.container.querySelector("input[type='checkbox']") as HTMLInputElement | null
+      )?.checked
+    ).toBe(false);
+    expect(
+      (findInputByPlaceholder(advancedView.container, "https://maps.google.com/...") as
+        | HTMLInputElement
+        | undefined)?.value
+    ).toBe("");
+  } finally {
+    advancedView.cleanup();
+    vi.doUnmock("../../../core/widgets/core/contact");
+    vi.resetModules();
+  }
+});

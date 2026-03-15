@@ -1,6 +1,10 @@
+// @vitest-environment happy-dom
+
 import React from "react";
 import type { ComponentType } from "react";
-import { expect, test } from "vitest";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { VisualPanel } from "../../../core/admin/ui/pages/builder/VisualPanel";
@@ -59,6 +63,8 @@ const StubVisual: ComponentType<WidgetEditorProps<Record<string, unknown>>> = ()
 );
 const StubEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = () => null;
 
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
 const baseBlock: Block = {
   id: "hero-1",
   type: "hero",
@@ -92,6 +98,30 @@ function createWidget(
     render: () => null,
   };
 }
+
+function mount(node: React.ReactNode) {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+
+  act(() => {
+    root.render(node);
+  });
+
+  return {
+    container,
+    cleanup: () => {
+      act(() => {
+        root.unmount();
+      });
+      container.remove();
+    },
+  };
+}
+
+afterEach(() => {
+  document.body.innerHTML = "";
+});
 
 test("VisualPanel keeps generic variant controls by default", () => {
   const html = renderAdminUi(
@@ -291,4 +321,121 @@ test("VisualPanel uses contact editor variant controls", () => {
   );
 
   expect(html).not.toContain("Choose a visual style for this widget.");
+});
+
+test("VisualPanel falls back to the first widget variant and renders described options", () => {
+  const captureVariant = vi.fn();
+  const InspectEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = ({
+    variant,
+  }) => {
+    captureVariant(variant);
+    return <div>Inspect visual editor</div>;
+  };
+
+  const widget: WidgetDefinition = {
+    ...createWidget(),
+    variants: [
+      { id: "stacked", label: "Stacked", description: "Primary hero layout" },
+      { id: "minimal", label: "Minimal" },
+    ],
+    editor: {
+      wizard: StubEditor,
+      visual: InspectEditor,
+      advanced: StubEditor,
+    },
+  };
+
+  const html = renderAdminUi(
+    <VisualPanel
+      widget={widget}
+      block={{ ...baseBlock, variant: undefined } as Block}
+      onChange={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Primary hero layout");
+  expect(html).toContain("Inspect visual editor");
+  expect(captureVariant).toHaveBeenCalledWith("stacked");
+});
+
+test("VisualPanel forwards generic variant clicks and visual editor callbacks", () => {
+  const onChange = vi.fn();
+  const InteractiveEditor: ComponentType<WidgetEditorProps<Record<string, unknown>>> = ({
+    value,
+    variant,
+    onChange: onValueChange,
+    onVariantChange,
+  }) => (
+    <div>
+      <p data-current-variant={variant}>{String(value.headline)}</p>
+      <button
+        type="button"
+        onClick={() => onValueChange({ headline: "Updated headline" })}
+      >
+        Editor update data
+      </button>
+      <button type="button" onClick={() => onVariantChange("split")}>
+        Editor update variant
+      </button>
+    </div>
+  );
+
+  const widget: WidgetDefinition = {
+    ...createWidget(),
+    variants: [
+      { id: "centered", label: "Centered", description: "Primary hero layout" },
+      { id: "split", label: "Split" },
+    ],
+    editor: {
+      wizard: StubEditor,
+      visual: InteractiveEditor,
+      advanced: StubEditor,
+    },
+  };
+
+  const { container, cleanup } = mount(
+    <VisualPanel widget={widget} block={baseBlock} onChange={onChange} />
+  );
+
+  const splitVariantButton = Array.from(container.querySelectorAll("button")).find((button) =>
+    button.textContent?.includes("Split")
+  );
+  const dataButton = Array.from(container.querySelectorAll("button")).find((button) =>
+    button.textContent?.includes("Editor update data")
+  );
+  const variantButton = Array.from(container.querySelectorAll("button")).find((button) =>
+    button.textContent?.includes("Editor update variant")
+  );
+
+  if (!(splitVariantButton instanceof HTMLButtonElement)) {
+    throw new Error("Missing split variant button");
+  }
+  if (!(dataButton instanceof HTMLButtonElement)) {
+    throw new Error("Missing editor data button");
+  }
+  if (!(variantButton instanceof HTMLButtonElement)) {
+    throw new Error("Missing editor variant button");
+  }
+
+  act(() => {
+    splitVariantButton.click();
+  });
+  expect(onChange).toHaveBeenLastCalledWith({ ...baseBlock, variant: "split" });
+
+  onChange.mockClear();
+  act(() => {
+    dataButton.click();
+  });
+  expect(onChange).toHaveBeenCalledWith({
+    ...baseBlock,
+    data: { headline: "Updated headline" },
+  });
+
+  onChange.mockClear();
+  act(() => {
+    variantButton.click();
+  });
+  expect(onChange).toHaveBeenCalledWith({ ...baseBlock, variant: "split" });
+
+  cleanup();
 });

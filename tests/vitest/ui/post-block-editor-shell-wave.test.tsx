@@ -8,6 +8,8 @@ const postShellState = vi.hoisted(() => ({
   navigate: vi.fn(),
   focusCapture: vi.fn(),
   focusReturn: vi.fn(),
+  layoutHookCalls: [] as Array<Record<string, unknown>>,
+  shortcutCalls: [] as Array<Record<string, unknown>>,
   layout: {
     state: {
       secondarySidebar: "inserter" as "inserter" | "list-view" | null,
@@ -152,6 +154,8 @@ const postShellState = vi.hoisted(() => ({
     this.navigate.mockReset();
     this.focusCapture.mockReset();
     this.focusReturn.mockReset();
+    this.layoutHookCalls = [];
+    this.shortcutCalls = [];
     for (const value of Object.values(this.layout)) {
       if (typeof value === "function" && "mockReset" in value) {
         (value as ReturnType<typeof vi.fn>).mockReset();
@@ -211,11 +215,25 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/hooks/usePostEditorLayout", () => ({
-  usePostEditorLayout: () => postShellState.layout,
+  usePostEditorLayout: (options: Record<string, unknown>) => {
+    postShellState.layoutHookCalls.push(options);
+    return postShellState.layout;
+  },
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/inspector/PostDetailsSidebar", () => ({
-  PostDetailsSidebar: () => <div>post-details-sidebar</div>,
+  PostDetailsSidebar: ({
+    document,
+  }: {
+    document?: { onMoveToTrash?: () => void };
+  }) => (
+    <div>
+      <div>post-details-sidebar</div>
+      <button type="button" onClick={() => document?.onMoveToTrash?.()}>
+        move-to-trash
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/layout/PostEditorLayout", () => ({
@@ -241,6 +259,9 @@ vi.mock("../../../core/admin/ui/posts/editor/layout/PostEditorLayout", () => ({
       <div>{detailsSidebar}</div>
       <button type="button" onClick={() => onSecondarySidebarOpenChange(false)}>
         close-secondary-shell
+      </button>
+      <button type="button" onClick={() => onSecondarySidebarOpenChange(true)}>
+        open-secondary-shell
       </button>
       <button type="button" onClick={() => onDetailsSidebarOpenChange(false)}>
         close-details-shell
@@ -421,7 +442,9 @@ vi.mock("../../../core/admin/ui/posts/editor/hooks/usePostEditorPreferences", ()
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/hooks/usePostEditorShortcuts", () => ({
-  usePostEditorShortcuts: vi.fn(),
+  usePostEditorShortcuts: (options: Record<string, unknown>) => {
+    postShellState.shortcutCalls.push(options);
+  },
 }));
 
 vi.mock("../../../core/admin/ui/posts/editor/hooks/useFocusReturn", () => ({
@@ -566,5 +589,362 @@ test("PostBlockEditorShell handles move-to-trash confirm flow and list-view inte
   } finally {
     view.cleanup();
     delete (window as Window & { confirm?: unknown }).confirm;
+  }
+});
+
+test("PostBlockEditorShell handles loading shell, details reopen, and cancelled trash flow", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.secondarySidebarOpen = false;
+  postShellState.layout.detailsSidebarOpen = false;
+  postShellState.layout.showInserter = false;
+  postShellState.layout.showListView = false;
+  postShellState.editor.loading = true;
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+  postShellState.editor.selectedBlock = null;
+  postShellState.editor.deletingPost = false;
+
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => false),
+  });
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    expect(view.container.textContent).toContain("Loading post editor...");
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+
+    act(() => {
+      buttons.find((button) => button.textContent === "toggle-details")?.click();
+      buttons.find((button) => button.textContent === "open-secondary-shell")?.click();
+      buttons.find((button) => button.textContent === "move-to-trash")?.click();
+    });
+
+    expect(postShellState.layout.openDetailsForSelection).toHaveBeenCalledWith(false);
+    expect(postShellState.layout.setLeftRailMode).toHaveBeenCalledWith("outline");
+    expect(postShellState.layout.openListView).toHaveBeenCalled();
+    expect(postShellState.editor.moveToTrash).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+    delete (window as Window & { confirm?: unknown }).confirm;
+  }
+});
+
+test("PostBlockEditorShell persists focus mode, clears stored layout when restore is disabled, and only navigates on successful trash", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.focusMode = true;
+  postShellState.layout.state.focusMode = true;
+  postShellState.layout.state.focusRestore = {
+    secondarySidebar: "list-view",
+    detailsOpen: false,
+  } as never;
+  postShellState.layout.state.secondarySidebar = "inserter";
+  postShellState.layout.state.detailsOpen = true;
+  postShellState.preferences.preferences.restoreLastSidebarsState = false;
+  postShellState.preferences.initialPreferences.restoreLastSidebarsState = false;
+  postShellState.editor.loading = false;
+  postShellState.editor.error = null;
+  postShellState.editor.autosaveError = null;
+
+  window.localStorage.setItem("nextless.posts.editor.layout.v1", "{invalid");
+
+  Object.defineProperty(window, "confirm", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(() => true),
+  });
+
+  postShellState.editor.moveToTrash.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    expect(window.localStorage.getItem("nextless.posts.editor.focusMode")).toBe("1");
+    expect(window.localStorage.getItem("nextless.posts.editor.layout.v1")).toBeNull();
+
+    act(() => {
+      buttons.find((button) => button.textContent === "move-to-trash")?.click();
+      buttons.find((button) => button.textContent === "move-to-trash")?.click();
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(postShellState.editor.moveToTrash).toHaveBeenCalledTimes(2);
+    expect(postShellState.navigate).toHaveBeenCalledWith("/admin/posts", {
+      replace: true,
+    });
+  } finally {
+    view.cleanup();
+    delete (window as Window & { confirm?: unknown }).confirm;
+    window.localStorage.clear();
+    postShellState.layout.focusMode = false;
+    postShellState.layout.state.focusMode = false;
+    postShellState.layout.state.focusRestore = null;
+    postShellState.preferences.preferences.restoreLastSidebarsState = true;
+    postShellState.preferences.initialPreferences.restoreLastSidebarsState = true;
+  }
+});
+
+test("PostBlockEditorShell persists focus-restore layout values while focus mode is enabled", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.focusMode = true;
+  postShellState.layout.state.focusMode = true;
+  postShellState.layout.state.focusRestore = {
+    secondarySidebar: "list-view",
+    detailsOpen: false,
+  } as never;
+  postShellState.layout.state.secondarySidebar = "inserter";
+  postShellState.layout.state.detailsOpen = true;
+  postShellState.layout.state.detailsTab = "block";
+  postShellState.layout.state.leftRailMode = "list-view";
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(
+      JSON.parse(window.localStorage.getItem("nextless.posts.editor.layout.v1") ?? "{}")
+    ).toMatchObject({
+      secondarySidebar: "list-view",
+      detailsOpen: false,
+      detailsTab: "block",
+      leftRailMode: "list-view",
+    });
+    expect(window.localStorage.getItem("nextless.posts.editor.focusMode")).toBe("1");
+  } finally {
+    view.cleanup();
+    window.localStorage.clear();
+    postShellState.layout.focusMode = false;
+    postShellState.layout.state.focusMode = false;
+    postShellState.layout.state.focusRestore = null;
+    postShellState.layout.state.secondarySidebar = "inserter";
+    postShellState.layout.state.detailsOpen = true;
+    postShellState.layout.state.detailsTab = "document";
+    postShellState.layout.state.leftRailMode = "outline";
+  }
+});
+
+test("PostBlockEditorShell seeds layout hook options from stored layout and focus-mode preferences", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.preferences.initialPreferences.focusModeOnOpen = true;
+  postShellState.preferences.initialPreferences.defaultInspectorTab = "block" as never;
+  postShellState.preferences.initialPreferences.restoreLastSidebarsState = true;
+  window.localStorage.setItem(
+    "nextless.posts.editor.layout.v1",
+    JSON.stringify({
+      secondarySidebar: null,
+      detailsOpen: false,
+      detailsTab: "block",
+      leftRailMode: "list-view",
+    })
+  );
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(postShellState.layoutHookCalls.at(-1)).toMatchObject({
+      initialSecondarySidebar: null,
+      initialDetailsOpen: false,
+      initialDetailsTab: "block",
+      initialFocusMode: true,
+      initialLeftRailMode: "list-view",
+    });
+  } finally {
+    view.cleanup();
+    window.localStorage.clear();
+    postShellState.preferences.initialPreferences.focusModeOnOpen = false;
+    postShellState.preferences.initialPreferences.defaultInspectorTab = "post" as never;
+  }
+});
+
+test("PostBlockEditorShell escape shortcut closes inserter, outline, and details in priority order", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    const shortcuts = postShellState.shortcutCalls.at(-1) as
+      | { onEscape?: () => void }
+      | undefined;
+    if (!shortcuts?.onEscape) {
+      throw new Error("Missing escape shortcut");
+    }
+
+    postShellState.layout.showInserter = true;
+    postShellState.layout.secondarySidebarOpen = true;
+    act(() => {
+      shortcuts.onEscape?.();
+    });
+    expect(postShellState.layout.closeSecondarySidebar).toHaveBeenCalled();
+    expect(postShellState.focusReturn).toHaveBeenCalledWith("inserter");
+
+    postShellState.layout.closeSecondarySidebar.mockClear();
+    postShellState.focusReturn.mockClear();
+    postShellState.layout.showInserter = false;
+    postShellState.layout.secondarySidebarOpen = true;
+    act(() => {
+      shortcuts.onEscape?.();
+    });
+    expect(postShellState.layout.closeSecondarySidebar).toHaveBeenCalled();
+    expect(postShellState.focusReturn).toHaveBeenCalledWith("outline");
+
+    postShellState.layout.closeSecondarySidebar.mockClear();
+    postShellState.focusReturn.mockClear();
+    postShellState.layout.secondarySidebarOpen = false;
+    postShellState.layout.detailsSidebarOpen = true;
+    act(() => {
+      shortcuts.onEscape?.();
+    });
+    expect(postShellState.layout.closeDetails).toHaveBeenCalled();
+    expect(postShellState.focusReturn).toHaveBeenCalledWith("details");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell closes already-open outline or inserter toggles", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.secondarySidebarOpen = true;
+  postShellState.layout.showInserter = false;
+  postShellState.layout.leftRailMode = "outline";
+  postShellState.layout.state.leftRailMode = "outline";
+  postShellState.layout.state.secondarySidebar = "list-view";
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const buttons = Array.from(view.container.querySelectorAll("button"));
+    act(() => {
+      buttons.find((button) => button.textContent === "toggle-outline")?.click();
+    });
+
+    expect(postShellState.layout.closeSecondarySidebar).toHaveBeenCalled();
+    expect(postShellState.focusReturn).toHaveBeenCalledWith("outline");
+
+    postShellState.layout.showInserter = true;
+    postShellState.layout.state.secondarySidebar = "inserter";
+    view.rerender(<PostBlockEditorShell />);
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "toggle-inserter")
+        ?.click();
+    });
+
+    expect(postShellState.focusReturn).toHaveBeenCalledWith("inserter");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostBlockEditorShell closes list-view sidebars through the shell callback and returns focus to outline", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.layout.secondarySidebarOpen = true;
+  postShellState.layout.showInserter = false;
+  postShellState.layout.showListView = true;
+  postShellState.layout.leftRailMode = "list-view";
+  postShellState.layout.state.leftRailMode = "list-view";
+  postShellState.layout.state.secondarySidebar = "list-view";
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "close-secondary-shell")
+        ?.click();
+    });
+
+    expect(postShellState.layout.closeSecondarySidebar).toHaveBeenCalled();
+    expect(postShellState.focusReturn).toHaveBeenCalledWith("outline");
+  } finally {
+    view.cleanup();
+    postShellState.layout.showListView = false;
+    postShellState.layout.leftRailMode = "outline";
+    postShellState.layout.state.leftRailMode = "outline";
+    postShellState.layout.state.secondarySidebar = "inserter";
+  }
+});
+
+test("PostBlockEditorShell tolerates malformed stored layout fields and falls back to default inspector tab", async () => {
+  const { PostBlockEditorShell } = await import(
+    "../../../core/admin/ui/posts/editor/PostBlockEditorShell"
+  );
+
+  postShellState.preferences.initialPreferences.defaultInspectorTab = "post" as never;
+  window.localStorage.setItem(
+    "nextless.posts.editor.layout.v1",
+    JSON.stringify({
+      secondarySidebar: "bad-value",
+      detailsOpen: "bad",
+      detailsTab: "weird",
+      leftRailMode: "also-bad",
+    })
+  );
+
+  const view = mount(<PostBlockEditorShell />);
+
+  try {
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(postShellState.layoutHookCalls.at(-1)).toMatchObject({
+      initialSecondarySidebar: "list-view",
+      initialDetailsOpen: true,
+      initialDetailsTab: "document",
+      initialLeftRailMode: "outline",
+    });
+  } finally {
+    view.cleanup();
+    window.localStorage.clear();
   }
 });

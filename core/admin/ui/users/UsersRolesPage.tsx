@@ -539,7 +539,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         </div>
       </div>
       <UserEditor
-        key={`${editingUser?.id ?? "new"}-${userEditorSeed}`}
+        key={`user-${editingUser?.id ?? "new"}-${userEditorSeed}`}
         open={userEditorOpen}
         user={editingUser}
         roles={roles}
@@ -560,7 +560,7 @@ export function UsersRolesPage({ permissions = defaultPermissions }: UsersRolesP
         onInvite={handleInviteUser}
       />
       <RoleEditor
-        key={`${editingRole?.id ?? "new"}-${roleEditorSeed}`}
+        key={`role-${editingRole?.id ?? "new"}-${roleEditorSeed}`}
         open={roleEditorOpen}
         role={editingRole}
         canManageRoles={roleActionsEnabled}

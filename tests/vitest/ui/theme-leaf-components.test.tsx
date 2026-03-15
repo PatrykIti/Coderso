@@ -6,6 +6,7 @@ import { renderToString } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 
 import { ThemeCard } from "../../../core/admin/ui/themes/ThemeCard";
+import { ThemeExportDialog } from "../../../core/admin/ui/themes/ThemeExportDialog";
 import { ThemePreviewPanel } from "../../../core/admin/ui/themes/ThemePreviewPanel";
 import { ThemeProfileCard } from "../../../core/admin/ui/themes/ThemeProfileCard";
 import { ThemeTemplateCard } from "../../../core/admin/ui/themes/ThemeTemplateCard";
@@ -36,6 +37,26 @@ vi.mock("@/components/ui/card", () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CardHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock("@/components/ui/checkbox", () => ({
+  Checkbox: ({ defaultChecked }: { defaultChecked?: boolean }) => (
+    <input type="checkbox" defaultChecked={defaultChecked} readOnly />
+  ),
+}));
+
+vi.mock("@/components/ui/dialog", () => ({
+  Dialog: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open?: boolean;
+  }) => (open ? <div>{children}</div> : null),
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
 }));
 
 vi.mock("@/components/ui/scroll-area", () => ({
@@ -161,4 +182,46 @@ test("ThemePreviewPanel renders typography, actions, and warning copy", () => {
   expect(html).toContain("Primary Action");
   expect(html).toContain("Info Card");
   expect(html).toContain("Heads up!");
+});
+
+test("ThemeExportDialog renders export options and forwards close actions", () => {
+  const onOpenChange = vi.fn();
+  const view = mount(
+    <ThemeExportDialog open onOpenChange={onOpenChange} />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Export Theme Config");
+    expect(view.container.textContent).toContain("Design tokens");
+    expect(view.container.textContent).toContain("Template presets");
+    expect(view.container.textContent).toContain("Typography scale");
+    expect(view.container.textContent).toContain("Responsive breakpoints");
+
+    const byLabel = (label: string) =>
+      Array.from(view.container.querySelectorAll("button")).find(
+        (button) => button.getAttribute("aria-label") === label
+      );
+    const byText = (text: string) =>
+      Array.from(view.container.querySelectorAll("button")).find((button) =>
+        button.textContent?.includes(text)
+      );
+
+    act(() => {
+      byLabel("Close export dialog")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      byText("Cancel")?.click();
+      byText("Export Config")?.click();
+    });
+
+    expect(onOpenChange).toHaveBeenNthCalledWith(1, false);
+    expect(onOpenChange).toHaveBeenNthCalledWith(2, false);
+    expect(onOpenChange).toHaveBeenNthCalledWith(3, false);
+  } finally {
+    view.cleanup();
+  }
+
+  const closedHtml = renderToString(
+    <ThemeExportDialog open={false} onOpenChange={() => undefined} />
+  );
+
+  expect(closedHtml).toBe("");
 });

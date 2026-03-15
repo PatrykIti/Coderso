@@ -423,3 +423,113 @@ test("Footer visual editor updates visible column titles and removes social link
     view.cleanup();
   }
 });
+
+test("Footer editors fall back safely for sparse columns, social, layout, and style data", async () => {
+  const {
+    FooterAdvancedEditor,
+    FooterVisualEditor,
+    FooterWizardEditor,
+  } = await import("../../../core/admin/ui/widgets/editors/FooterEditors");
+
+  let latestValue: FooterData = {
+    columns: [{ title: "", links: [] }],
+  };
+  let currentVariant = "minimal";
+
+  const Harness = () => {
+    const [value, setValue] = useState<FooterData>(latestValue);
+    const [variant, setVariant] = useState(currentVariant);
+
+    return (
+      <>
+        <FooterWizardEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={(next) => {
+            currentVariant = next;
+            setVariant(next);
+          }}
+        />
+        <FooterVisualEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={(next) => {
+            currentVariant = next;
+            setVariant(next);
+          }}
+        />
+        <FooterAdvancedEditor
+          value={value}
+          onChange={(next) => {
+            latestValue = next;
+            setValue(next);
+          }}
+          variant={variant}
+          onVariantChange={() => undefined}
+        />
+      </>
+    );
+  };
+
+  const view = mount(<Harness />);
+
+  try {
+    expect((findSelectsByOptions(view.container, ["columns-2", "columns-3", "minimal"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "minimal"
+    );
+    expect((findInputByPlaceholder(view.container, "Column 1 title") as HTMLInputElement | undefined)?.value).toBe(
+      "Column 1"
+    );
+    expect(view.container.textContent).toContain("No social links configured.");
+
+    const visualColumnsPanel = findPanelByTitle(view.container, "Columns and links");
+    clickByText(visualColumnsPanel as ParentNode, "Add link");
+    setInputValue(findInputByPlaceholder(visualColumnsPanel as ParentNode, "Label"), "Docs");
+    setInputValue(findInputByPlaceholder(visualColumnsPanel as ParentNode, "URL"), "/docs");
+
+    expect(latestValue.columns[0]?.links).toEqual([{ label: "Docs", href: "/docs" }]);
+
+    clickByText(visualColumnsPanel as ParentNode, "Remove");
+    expect(latestValue.columns[0]?.links).toEqual([]);
+
+    const socialPanel = findPanelByTitle(view.container, "Social links and icon style");
+    clickByText(socialPanel as ParentNode, "Add social");
+    const socialTypeSelect = findSelectsByOptions(
+      socialPanel as ParentNode,
+      ["linkedin", "twitter", "github", "youtube", "facebook", "instagram"]
+    )[0];
+    setSelectValue(socialTypeSelect, "twitter");
+    setInputValue(findInputByPlaceholder(socialPanel as ParentNode, "Social URL"), "https://x.com/example");
+
+    expect(latestValue.social).toEqual([
+      {
+        type: "twitter",
+        href: "https://x.com/example",
+      },
+    ]);
+
+    const advancedLayoutPanel = findPanelByTitle(view.container, "Layout tokens");
+    const selects = findSelectsByOptions(advancedLayoutPanel as ParentNode, ["left", "center", "right"]);
+    expect((selects[0] as HTMLSelectElement | undefined)?.value).toBe("left");
+    expect((selects[1] as HTMLSelectElement | undefined)?.value).toBe("right");
+    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["5xl", "6xl", "7xl"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "6xl"
+    );
+    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["4", "6", "8"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "6"
+    );
+    expect((findSelectsByOptions(advancedLayoutPanel as ParentNode, ["8", "10", "12"])[0] as HTMLSelectElement | undefined)?.value).toBe(
+      "10"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
