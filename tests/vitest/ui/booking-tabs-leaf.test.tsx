@@ -602,6 +602,65 @@ test("BookingServicesTab renders empty service and resource-assignment fallbacks
   expect(html).toContain("disabled");
 });
 
+test("BookingServicesTab renders public-access, no-price, and unchecked resource requirement states", () => {
+  const html = renderToString(
+    <BookingServicesTab
+      services={[
+        {
+          ...service,
+          id: "service-public",
+          name: "Walk-in",
+          priceCents: null,
+          currency: null,
+          settings: {},
+          status: "draft",
+        },
+      ]}
+      servicesLoading={false}
+      selectedServiceId=""
+      editingServiceId={null}
+      serviceForm={{
+        name: "",
+        slug: "",
+        description: "",
+        status: "draft",
+        submissionAccess: "public",
+        durationMinutes: "45",
+        bufferBeforeMinutes: "5",
+        bufferAfterMinutes: "5",
+        priceCents: "",
+        currency: "",
+      }}
+      resources={[resource]}
+      serviceResourceIds={[]}
+      requiredServiceResourceIds={[resource.id]}
+      serviceResourceLoading={false}
+      serviceResourceSaving={false}
+      saving={false}
+      onSelectService={() => undefined}
+      onServiceFormChange={() => undefined}
+      onSubmitService={() => undefined}
+      onEditService={() => undefined}
+      onDeleteService={() => undefined}
+      onCancelEdit={() => undefined}
+      onToggleServiceResource={() => undefined}
+      onToggleRequiredServiceResource={() => undefined}
+      onSaveServiceResources={() => undefined}
+    />
+  );
+
+  expect(html).toContain("Walk-in");
+  expect(html).toContain("public");
+  expect(html).toContain(">—<");
+  expect(html).toContain("New service");
+  expect(html).toContain("Create service");
+  expect(html).not.toContain("Cancel edit");
+  expect(html).toContain("Enabled");
+  expect(html).toContain("Required");
+  expect(html).toContain("Save assignment");
+  expect(html).toContain("disabled");
+});
+
 test("BookingSlotPreviewTab renders empty and populated preview results", () => {
   const emptyHtml = renderToString(
     <BookingSlotPreviewTab

@@ -689,3 +689,15 @@ Current snapshot after the latest forms and themes follow-up on `2026-03-14`:
 - `core/admin/ui/listings/ListingListPage.tsx` -> `100.00%` lines / `100.00%` branches
 - `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
 - the next best ROI now tilts more clearly toward `TASK-105-04` booking/theme residue and broader low-line admin backlog, because several former medium-coverage editor/forms/listings surfaces are now effectively closed
+
+Current snapshot after the latest booking services-tab follow-up on `2026-03-15`:
+- `% Stmts`: `69.10`
+- `% Branch`: `60.20`
+- `% Funcs`: `72.60`
+- `% Lines`: `72.26`
+- `460` Vitest files / `1709` tests
+- `core/admin/ui/booking/components/ServicesTab.tsx` -> `34.78%` lines / `97.22%` branches
+- `core/admin/ui/forms/FormCanvas.tsx` -> `100.00%` lines / `94.64%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
+- the lane branch baseline moved again, and the remaining `TASK-105-04` ROI is now more clearly concentrated in booking leaf-tab line gaps plus residual `ThemeTemplateDrawer` work
