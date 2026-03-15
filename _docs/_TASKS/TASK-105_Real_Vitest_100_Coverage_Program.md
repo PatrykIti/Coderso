@@ -738,3 +738,17 @@ Current snapshot after the latest audit table follow-up on `2026-03-15`:
 - `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `100.00%` lines / `88.46%` branches
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
 - the low-line admin backlog is now more granular: single-table or single-drawer surfaces can still move the lane materially without reopening the large editor clusters
+
+Current snapshot after the latest low-line admin follow-up on `2026-03-15`:
+- `% Stmts`: `69.98`
+- `% Branch`: `60.76`
+- `% Funcs`: `73.79`
+- `% Lines`: `73.16`
+- `467` Vitest files / `1724` tests
+- `core/admin/ui/backups/BackupsPage.tsx` -> `92.30%` lines / `72.22%` branches
+- `core/admin/ui/audit/AuditList.tsx` -> `94.79%` lines / `77.63%` branches
+- `core/admin/ui/audit/AuditTable.tsx` -> `91.67%` lines / `100.00%` branches
+- `core/admin/ui/roles/RoleEditor.tsx` -> `93.93%` lines / `91.43%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `80.29%` lines / `82.05%` branches
+- `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
+- the full-lane tail is now more clearly dominated by a shrinking set of medium admin editors plus the remaining very low-line tables/drawers rather than by the former page/post editor hotspots

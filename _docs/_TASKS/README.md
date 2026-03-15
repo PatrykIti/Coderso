@@ -54,8 +54,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `72.82%` lines with `60.38%` branches; several editor/forms/listings/booking/admin drawer surfaces are closed, and the remaining backlog is increasingly theme or low-line table/drawer cleanup |
-| TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, and `FormCanvas` are line-closed; the main residual cleanup in this wave is now the smaller, branch-heavier `ThemeTemplateDrawer` gap |
+| TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `73.16%` lines with `60.76%` branches; several editor/forms/listings/booking/admin drawer surfaces are closed, and the remaining backlog is increasingly theme plus a shrinking low-line admin editor tail |
+| TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, and `FormCanvas` are line-closed; the main residual cleanup in this wave is now the smaller but still meaningful `ThemeTemplateDrawer` gap |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 492 | 2026-03-15 | TASK-105 low-line admin editor follow-up | QA/Platform |
 | 491 | 2026-03-15 | TASK-105 theme drawer and user details follow-up coverage | QA/Platform |
 | 490 | 2026-03-15 | TASK-105 audit table coverage follow-up | QA/Platform |
 | 489 | 2026-03-15 | TASK-105 booking leaf interaction follow-up coverage | QA/Platform |
