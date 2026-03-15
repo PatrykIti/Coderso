@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 490 | 2026-03-15 | TASK-105 audit table coverage follow-up | QA/Platform |
 | 489 | 2026-03-15 | TASK-105 booking leaf interaction follow-up coverage | QA/Platform |
 | 488 | 2026-03-15 | TASK-105 booking services tab fallback coverage | QA/Platform |
 | 487 | 2026-03-14 | TASK-105 form canvas and theme drawer follow-up coverage | QA/Platform |

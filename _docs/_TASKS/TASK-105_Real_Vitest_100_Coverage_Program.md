@@ -714,3 +714,15 @@ Current snapshot after the latest booking leaf interaction follow-up on `2026-03
 - `core/admin/ui/booking/components/SlotPreviewTab.tsx` -> `100.00%` lines / `100.00%` branches
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
 - booking leaf tabs are now line-closed, so the next ROI shifts more cleanly to `ThemeTemplateDrawer` and broader low-line admin backlog outside the editor wave
+
+Current snapshot after the latest audit table follow-up on `2026-03-15`:
+- `% Stmts`: `69.27`
+- `% Branch`: `60.20`
+- `% Funcs`: `73.11`
+- `% Lines`: `72.46`
+- `461` Vitest files / `1713` tests
+- `core/admin/ui/audit/AuditTable.tsx` -> `91.67%` lines / `100.00%` branches
+- `core/admin/ui/audit/AuditList.tsx` -> `32.29%` lines / `5.26%` branches
+- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `100.00%` lines / `88.46%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- the low-line admin backlog is now more granular: single-table or single-drawer surfaces can still move the lane materially without reopening the large editor clusters
