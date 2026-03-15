@@ -69,6 +69,7 @@ Completed slices:
 - direct `FormCanvas` DOM coverage for form and field selection, remove-action bubbling guards, multi-step normalization, and checkbox fallback copy
 - deeper `ThemeTemplateDrawer` coverage for color text-input normalization without hash prefixes across base, typography, input, topbar, card, and state token fields
 - booking leaf follow-up coverage for `ServicesTab` public-access fallback rows, no-price rendering, unchecked assignment state, and disabled save-assignment behavior
+- direct interactive coverage for booking leaf tabs callback routing across `AvailabilityTab`, `ReservationsTab`, `ServicesTab`, and `SlotPreviewTab`
 
 Current `2026-03-14` snapshot after the latest follow-up slice:
 - `core/admin/ui/forms/FormBuilderPage.tsx` -> `85.00%` lines / `70.21%` branches
@@ -132,8 +133,17 @@ Current `2026-03-15` booking snapshot after the latest services-tab follow-up:
 - `core/admin/ui/booking/components/SlotPreviewTab.tsx` -> `44.44%` lines / `100.00%` branches
 - aggregate `core/admin/ui/booking/*` average -> `93.86%` lines / `74.77%` branches across `8` tracked files
 
+Current `2026-03-15` booking snapshot after the latest interactive leaf-tab follow-up:
+- `core/admin/ui/booking/BookingPage.tsx` -> `92.93%` lines / `65.06%` branches
+- `core/admin/ui/booking/bookingHelpers.ts` -> `98.27%` lines / `97.82%` branches
+- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `100.00%` lines / `88.46%` branches
+- `core/admin/ui/booking/components/ReservationsTab.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/booking/components/ServicesTab.tsx` -> `100.00%` lines / `97.22%` branches
+- `core/admin/ui/booking/components/SlotPreviewTab.tsx` -> `100.00%` lines / `100.00%` branches
+- booking leaf tabs are now line-closed; remaining booking work is branch-only or sits in the page shell rather than in the tab components
+
 Remaining slices:
-- booking leaf tabs still dominate the remaining wave backlog, but `ServicesTab` is now mostly branch-closed; the main residual leaf backlog sits in `AvailabilityTab`, `ReservationsTab`, and `SlotPreviewTab`
+- booking leaf tabs no longer dominate the wave backlog; they are now line-closed, and the remaining `TASK-105-04` ROI is led by `ThemeTemplateDrawer` plus any broader booking/page-shell cleanup
 - residual themes work is now concentrated in `ThemeTemplateDrawer`
 - forms follow-up is no longer led by `FormCanvas`; the residual forms work is concentrated in branch-heavier `FormBuilderPage` paths
 - listings follow-up is no longer led by `ListingListPage`; the residual listings work is now lower-value cleanup in `ListingEditorPage` / `ListingTemplateManager`

@@ -701,3 +701,16 @@ Current snapshot after the latest booking services-tab follow-up on `2026-03-15`
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
 - `core/admin/ui/pages/PageEditor.tsx` -> `95.45%` lines / `82.51%` branches
 - the lane branch baseline moved again, and the remaining `TASK-105-04` ROI is now more clearly concentrated in booking leaf-tab line gaps plus residual `ThemeTemplateDrawer` work
+
+Current snapshot after the latest booking leaf interaction follow-up on `2026-03-15`:
+- `% Stmts`: `69.27`
+- `% Branch`: `60.20`
+- `% Funcs`: `73.11`
+- `% Lines`: `72.46`
+- `461` Vitest files / `1713` tests
+- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `100.00%` lines / `88.46%` branches
+- `core/admin/ui/booking/components/ReservationsTab.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/booking/components/ServicesTab.tsx` -> `100.00%` lines / `97.22%` branches
+- `core/admin/ui/booking/components/SlotPreviewTab.tsx` -> `100.00%` lines / `100.00%` branches
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
+- booking leaf tabs are now line-closed, so the next ROI shifts more cleanly to `ThemeTemplateDrawer` and broader low-line admin backlog outside the editor wave
