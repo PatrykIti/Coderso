@@ -659,3 +659,92 @@ test("ThemeTemplateDrawer normalizes text-entered color values without hash pref
     view.cleanup();
   }
 });
+
+test("ThemeTemplateDrawer normalizes blank and invalid color text inputs while preserving hashed values", async () => {
+  const { ThemeTemplateDrawer } = await import(
+    "../../../core/admin/ui/themes/ThemeTemplateDrawer"
+  );
+
+  const onSave = vi.fn(async () => undefined);
+  const template = {
+    id: "tpl-5",
+    name: "Terminal",
+    description: "Terminal palette",
+    tokens: {
+      base: { bg: "#111111", surface: "#222222", border: "#333333", text: "#eeeeee" },
+      typography: {
+        mutedText: "#999999",
+        sans: "IBM Plex Sans",
+        display: "IBM Plex Mono",
+        sm: "0.875rem",
+        md: "1rem",
+        lg: "1.125rem",
+        xl: "1.25rem",
+        "2xl": "1.5rem",
+      },
+      buttons: {
+        primary: { bg: "#fafafa", text: "#111111", hoverBg: "#d4d4d4", hoverText: "#111111" },
+        secondary: { bg: "#2a2a2a", text: "#f5f5f5", hoverBg: "#303030", hoverText: "#ffffff" },
+        outline: { border: "#555555", text: "#f5f5f5", hoverBg: "#202020", hoverText: "#ffffff" },
+        ghost: { hoverBg: "#1f1f1f", hoverText: "#ffffff" },
+      },
+      inputs: {
+        bg: "#151515",
+        border: "#3a3a3a",
+        text: "#fafafa",
+        placeholder: "#888888",
+        focusRing: "#7dd3fc",
+      },
+      sidebar: {
+        bg: "#161616",
+        text: "#e5e5e5",
+        activeBg: "#262626",
+        activeText: "#ffffff",
+        hoverBg: "#202020",
+      },
+      topbar: {
+        bg: "#181818",
+        text: "#f5f5f5",
+        border: "#2d2d2d",
+      },
+      card: {
+        bg: "#181818",
+        border: "#2f2f2f",
+      },
+      state: {
+        success: "#10b981",
+        warning: "#f59e0b",
+        danger: "#ef4444",
+      },
+    },
+  };
+
+  const view = mount(
+    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+  );
+
+  try {
+    act(() => {
+      setInputValue(findColorTextInputByLabel(view.container, "Background"), "");
+      setInputValue(findColorTextInputByLabel(view.container, "Surface"), "zzzzzz");
+      setInputValue(findColorTextInputByLabel(view.container, "Border"), "#abcdef");
+    });
+
+    clickButtonByText(view.container, "Invert section");
+    clickButtonByText(view.container, "Save Template");
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tokens: expect.objectContaining({
+          base: expect.objectContaining({
+            bg: "#ffffff",
+            surface: "#zzzzzz",
+            border: "#543210",
+          }),
+        }),
+      })
+    );
+  } finally {
+    view.cleanup();
+  }
+});

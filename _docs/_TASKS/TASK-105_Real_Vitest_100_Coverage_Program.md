@@ -715,6 +715,18 @@ Current snapshot after the latest booking leaf interaction follow-up on `2026-03
 - `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `78.83%` lines / `76.92%` branches
 - booking leaf tabs are now line-closed, so the next ROI shifts more cleanly to `ThemeTemplateDrawer` and broader low-line admin backlog outside the editor wave
 
+Current snapshot after the latest theme drawer and user details follow-up on `2026-03-15`:
+- `% Stmts`: `69.62`
+- `% Branch`: `60.38`
+- `% Funcs`: `73.41`
+- `% Lines`: `72.82`
+- `464` Vitest files / `1719` tests
+- `core/admin/ui/themes/ThemeTemplateDrawer.tsx` -> `80.29%` lines / `82.05%` branches
+- `core/admin/ui/users/UserDetailsDrawer.tsx` -> `100.00%` lines / `94.12%` branches
+- `core/admin/ui/booking/components/AvailabilityTab.tsx` -> `100.00%` lines / `88.46%` branches
+- `core/admin/ui/booking/components/ServicesTab.tsx` -> `100.00%` lines / `97.22%` branches
+- the remaining ROI is increasingly in residual theme/page-shell gaps and in the broader low-line admin backlog, because several table/drawer surfaces are now effectively closed
+
 Current snapshot after the latest audit table follow-up on `2026-03-15`:
 - `% Stmts`: `69.27`
 - `% Branch`: `60.20`
