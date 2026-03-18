@@ -98,7 +98,6 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   "template-section": {
     complexity: "atomic",
@@ -109,49 +108,41 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   "split-layout": {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   tabs: {
     complexity: "atomic",
     audience: "intermediate",
     module: "engagement",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   accordion: {
     complexity: "atomic",
     audience: "intermediate",
     module: "engagement",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   "toggle-block": {
     complexity: "atomic",
     audience: "intermediate",
     module: "engagement",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   spacer: {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   divider: {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   stack: {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
-    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   hero: {
     complexity: "composite",
