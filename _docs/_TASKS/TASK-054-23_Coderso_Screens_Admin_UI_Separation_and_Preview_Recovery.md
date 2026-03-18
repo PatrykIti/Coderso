@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Widgets + CMS/Content  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-22, TASK-054-14, TASK-054-16, TASK-058  
-**Status:** To Do
+**Status:** Done (2026-03-18)
 
 ---
 
@@ -132,3 +132,9 @@ return openBoundScreenEditor();
 - `_docs/WIDGET_PACK_MATRIX.md`
 - `_docs/_CHANGELOG/*.md`
 
+## Completion Notes (2026-03-18)
+
+- Added dedicated `custom-screen-builder` widget surface with a minimal screen widget pack.
+- Hid screen-only widgets from `Coderso/Widgets` and page/template widget flows.
+- Added derived `collection-only | dashboard | editor` capabilities to custom screen records.
+- Updated builder preview and record workflow copy/routing to avoid blank or confusing states.

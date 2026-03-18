@@ -10,6 +10,10 @@ export type WidgetCategory =
 export type WidgetComplexity = "composite" | "atomic";
 
 export type WidgetAudience = "beginner" | "intermediate" | "advanced";
+export type WidgetSurface =
+  | "page-builder"
+  | "widget-library"
+  | "custom-screen-builder";
 
 export type WidgetPreset = {
   id: string;
@@ -53,6 +57,7 @@ export type WidgetDefinition<T = Record<string, unknown>> = {
   module?: string;
   presets?: WidgetPreset[];
   requires?: string[];
+  surfaces?: WidgetSurface[];
   canHaveChildren?: boolean;
   slots?: WidgetSlotDefinition[];
   variants: WidgetVariant[];

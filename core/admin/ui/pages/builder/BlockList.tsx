@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { WidgetRenderer } from "../../../../widgets/renderers/widgetRenderer";
 import type { WidgetRendererPageDefaults } from "../../../../widgets/renderers/widgetRenderer";
 import { resolveWidgetSlotTargets } from "../../../../widgets/slots";
-import type { Block } from "./types";
+import type { Block, WidgetDefinition } from "./types";
 import { getWidgetRegistry } from "./widgetRegistry";
 import type { BlockPath } from "./blockUtils";
 import { BlockToolbar } from "./BlockToolbar";
@@ -25,6 +25,7 @@ export type BlockListProps = {
   onMoveToSlot?: (blockId: string, parentId: string, slotId: string) => void;
   path?: BlockPath;
   depth?: number;
+  widgetRegistry?: WidgetDefinition[];
 };
 
 export function BlockList({
@@ -40,8 +41,9 @@ export function BlockList({
   onMoveToSlot,
   path,
   depth,
+  widgetRegistry: providedWidgetRegistry,
 }: BlockListProps) {
-  const widgetRegistry = getWidgetRegistry();
+  const widgetRegistry = providedWidgetRegistry ?? getWidgetRegistry();
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const listPath = path ?? [];
@@ -266,6 +268,7 @@ export function BlockList({
                           onMoveToSlot={onMoveToSlot}
                           path={[...listPath, { index, slotId: slot.slotId }]}
                           depth={level + 1}
+                          widgetRegistry={widgetRegistry}
                         />
                       ) : (
                         <div className="rounded-lg border border-dashed bg-muted/10 px-3 py-2 text-xs text-muted-foreground">

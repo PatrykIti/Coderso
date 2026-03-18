@@ -1,4 +1,4 @@
-import type { WidgetDefinition } from "./types";
+import type { WidgetDefinition, WidgetSurface } from "./types";
 import { getWidgetSlotKind } from "./slots";
 import {
   listWidgetPackMatrix,
@@ -13,6 +13,12 @@ const pluginTypePattern =
   /^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const widgetComplexityValues = new Set(["composite", "atomic"]);
 const widgetAudienceValues = new Set(["beginner", "intermediate", "advanced"]);
+const widgetSurfaceValues = new Set<WidgetSurface>([
+  "page-builder",
+  "widget-library",
+  "custom-screen-builder",
+]);
+const defaultWidgetSurfaces: WidgetSurface[] = ["page-builder", "widget-library"];
 
 export type ModulePackStatus = {
   module: string;
@@ -37,6 +43,36 @@ export type ModulePackStatus = {
   valid: boolean;
   notes?: string;
 };
+
+function normalizeWidgetSurfaces(value: unknown): WidgetSurface[] {
+  if (value === undefined) {
+    return [...defaultWidgetSurfaces];
+  }
+  if (!Array.isArray(value)) {
+    throw new Error("widget_surfaces_invalid");
+  }
+
+  const normalized = Array.from(
+    new Set(
+      value.map((entry) => {
+        if (typeof entry !== "string") {
+          throw new Error("widget_surfaces_invalid");
+        }
+        const surface = entry.trim() as WidgetSurface;
+        if (!widgetSurfaceValues.has(surface)) {
+          throw new Error("widget_surfaces_invalid");
+        }
+        return surface;
+      })
+    )
+  );
+
+  if (normalized.length === 0) {
+    throw new Error("widget_surfaces_invalid");
+  }
+
+  return normalized;
+}
 
 function isValidType(type: string) {
   return coreTypePattern.test(type) || pluginTypePattern.test(type);
@@ -97,6 +133,7 @@ export function registerWidget(def: WidgetDefinition<any>) {
   ) {
     throw new Error("widget_requires_invalid");
   }
+  const normalizedSurfaces = normalizeWidgetSurfaces(def.surfaces);
   if (!def.schema || typeof def.schema !== "object" || Array.isArray(def.schema)) {
     throw new Error("widget_schema_invalid");
   }
@@ -189,6 +226,7 @@ export function registerWidget(def: WidgetDefinition<any>) {
     module: normalizedModule,
     presets: def.presets ?? [],
     requires: def.requires ?? [],
+    surfaces: normalizedSurfaces,
   });
 }
 
@@ -198,6 +236,10 @@ export function getWidget(type: string): WidgetDefinition<any> | null {
 
 export function listWidgets(): WidgetDefinition<any>[] {
   return Array.from(registry.values());
+}
+
+export function listWidgetsForSurface(surface: WidgetSurface): WidgetDefinition<any>[] {
+  return listWidgets().filter((widget) => widget.surfaces?.includes(surface));
 }
 
 export function clearWidgets() {

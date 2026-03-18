@@ -437,14 +437,22 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - screen settings,
   - widget-level bindings dla zaznaczonego bloku,
   - bound preview, ktory materializuje drzewo widgetow przed renderem przez `WidgetRenderer`.
+- `Screens` nie korzysta juz z calej public/page widget library:
+  - insert library filtruje do surface `custom-screen-builder`,
+  - screen-only widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) sa ukryte w `Coderso/Widgets`,
+  - wspoldzielone prymitywy layoutowe musza byc jawnie dopuszczone do obu surface'ow.
+- Kazdy custom screen ma derived capabilities:
+  - `collection-only`: brak dedykowanego record screen; shortcut zawęża tylko liste rekordow,
+  - `dashboard`: screen moze previewowac dane rekordu, ale edycja zostaje w classic editor,
+  - `editor`: screen ma writable bindings i moze pelnic role dedykowanego record editor.
 - Workflow rekordow custom screen korzysta z istniejacego domain `entries`, bez nowego storage:
   - list route: `/admin/coderso/custom-screens/:screenId/entries`,
   - editor route: `/admin/coderso/custom-screens/:screenId/entries/:entryId`,
   - `contentTypeId` z `custom_screens` jest rozwiazywany do `content_types.slug`, a zapis/listowanie dalej ida przez `content_entries`.
-- Dedicated record editor pokazuje tylko pola wynikajace z `write/readwrite` bindings:
-  - preview czyta `read/readwrite`,
-  - edycja zapisuje standardowy `entry.data`,
-  - fallback do klasycznego `EntryEditor` pozostaje dostepny dla pelnego metadata/publish workflow.
+- Record workflow jest gate'owany przez capabilities:
+  - `collection-only` prowadzi rekord bezposrednio do classic editor,
+  - `dashboard` otwiera read-only screen z CTA do classic editor,
+  - `editor` pokazuje tylko pola wynikajace z `write/readwrite` bindings i zapisuje standardowy `entry.data`.
 
 ## Coderso Filters & Search (v2 beta)
 
@@ -1001,8 +1009,10 @@ Composite-first delivery (Coderso):
   - `complexity` (`composite|atomic`),
   - `audience` (`beginner|intermediate|advanced`),
   - `module`,
+  - `surfaces` (`page-builder|widget-library|custom-screen-builder`),
   - optional `presets[]` i `requires[]`,
-- admin widget library filtruje po `module` i `complexity`.
+- admin widget library filtruje po `module`, `complexity`, i surface `widget-library`.
+- `Screens` uzywa osobnego widget surface `custom-screen-builder`.
 - module pack matrix:
   - minimum per module: `1 page preset`, `2 section presets`, `3 composite widgets`,
   - enforcement profile: `strict` (runtime gate) / `advisory` (gap reporting),

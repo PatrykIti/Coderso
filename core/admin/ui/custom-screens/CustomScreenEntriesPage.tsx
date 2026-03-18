@@ -33,6 +33,7 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
+import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { EntryCreateDrawer } from "../entries/EntryCreateDrawer";
 import { resolveCustomScreenId } from "./routeParams";
@@ -53,14 +54,37 @@ type CustomScreenEntriesTableProps = {
   screenId: string;
   items: EntrySummary[];
   typeSlug: string;
+  screenMode: "collection-only" | "dashboard" | "editor";
   emptyMessage?: string;
   onDelete: (id: string) => void;
+};
+
+const buildClassicEditorHref = (typeSlug: string, entryId: string) =>
+  `/coderso/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entryId)}`;
+
+const buildScreenRecordHref = (
+  screenId: string,
+  typeSlug: string,
+  entryId: string,
+  mode: "collection-only" | "dashboard" | "editor"
+) =>
+  mode === "collection-only"
+    ? buildClassicEditorHref(typeSlug, entryId)
+    : `/coderso/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entryId)}`;
+
+const resolvePrimaryActionLabel = (
+  mode: "collection-only" | "dashboard" | "editor"
+) => {
+  if (mode === "collection-only") return "Classic editor";
+  if (mode === "dashboard") return "Open screen";
+  return "Edit record";
 };
 
 function CustomScreenEntriesTable({
   screenId,
   items,
   typeSlug,
+  screenMode,
   emptyMessage,
   onDelete,
 }: CustomScreenEntriesTableProps) {
@@ -99,7 +123,12 @@ function CustomScreenEntriesTable({
               <TableCell className="py-6 pl-6">
                 <div className="flex flex-col gap-1">
                   <AdminLink
-                    href={`/coderso/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(item.id)}`}
+                    href={buildScreenRecordHref(
+                      screenId,
+                      typeSlug,
+                      item.id,
+                      screenMode
+                    )}
                     className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
                   >
                     {item.title}
@@ -128,22 +157,29 @@ function CustomScreenEntriesTable({
                   <DropdownMenuContent align="end" className="w-44">
                     <DropdownMenuItem asChild>
                       <AdminLink
-                        href={`/coderso/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(item.id)}`}
+                        href={buildScreenRecordHref(
+                          screenId,
+                          typeSlug,
+                          item.id,
+                          screenMode
+                        )}
                         className="w-full"
                       >
                         <SquarePen className="h-4 w-4" />
-                        Edit record
+                        {resolvePrimaryActionLabel(screenMode)}
                       </AdminLink>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <AdminLink
-                        href={`/coderso/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(item.id)}`}
-                        className="w-full"
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Classic editor
-                      </AdminLink>
-                    </DropdownMenuItem>
+                    {screenMode === "collection-only" ? null : (
+                      <DropdownMenuItem asChild>
+                        <AdminLink
+                          href={buildClassicEditorHref(typeSlug, item.id)}
+                          className="w-full"
+                        >
+                          <Pencil className="h-4 w-4" />
+                          Classic editor
+                        </AdminLink>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       variant="destructive"
                       onClick={() => onDelete(item.id)}
@@ -194,6 +230,15 @@ export function CustomScreenEntriesPage() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const screenCapabilities = useMemo(
+    () =>
+      screen?.capabilities ??
+      resolveCustomScreenCapabilities({
+        blocks: screen?.blocks,
+        bindings: screen?.bindings,
+      }),
+    [screen]
+  );
 
   const refresh = useCallback(
     async (force = false) => {
@@ -330,7 +375,11 @@ export function CustomScreenEntriesPage() {
           title={screen?.name ? `${screen.name} Records` : "Custom Screen Records"}
           description={
             contentTypeName
-              ? `Manage ${contentTypeName} entries through the custom screen workflow.`
+              ? screenCapabilities.mode === "collection-only"
+                ? `Manage ${contentTypeName} entries through a dedicated records shortcut.`
+                : screenCapabilities.mode === "dashboard"
+                  ? `Manage ${contentTypeName} entries with a read-only screen preview and classic editing fallback.`
+                  : `Manage ${contentTypeName} entries through the dedicated screen workflow.`
               : "Load the bound content type to start working with records."
           }
           actions={
@@ -362,12 +411,21 @@ export function CustomScreenEntriesPage() {
             <AlertDescription>{actionError}</AlertDescription>
           </Alert>
         ) : null}
-        {screen && screen.bindings.length === 0 ? (
+        {screenCapabilities.mode === "collection-only" ? (
           <Alert>
-            <AlertTitle>No field bindings yet</AlertTitle>
+            <AlertTitle>Collection-only screen</AlertTitle>
             <AlertDescription>
-              This screen can already open records, but the dedicated editor becomes useful
-              after mapping widget props to content fields in the builder.
+              This shortcut narrows the records list for the selected content type. Add
+              dedicated screen widgets and field bindings in the builder if you want a
+              custom record screen instead of the classic editor.
+            </AlertDescription>
+          </Alert>
+        ) : screenCapabilities.mode === "dashboard" ? (
+          <Alert>
+            <AlertTitle>Read-only record screen</AlertTitle>
+            <AlertDescription>
+              This screen can preview mapped data for each record, but edits still happen
+              in the classic editor until writable bindings are added.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -376,6 +434,7 @@ export function CustomScreenEntriesPage() {
           screenId={screen?.id ?? ""}
           items={entries}
           typeSlug={contentTypeSlug ?? ""}
+          screenMode={screenCapabilities.mode}
           onDelete={handleDelete}
           emptyMessage={isLoading ? "Loading records..." : undefined}
         />

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 497 | 2026-03-18 | TASK-054-23 Coderso screens surface split and preview recovery | Admin/UI |
 | 496 | 2026-03-13 | TASK-105 footer sparse empty-state coverage | QA/Platform |
 | 495 | 2026-03-13 | TASK-105 feature grid sparse default coverage | QA/Platform |
 | 494 | 2026-03-15 | TASK-105 users roles shell and theme closure follow-up | QA/Platform |

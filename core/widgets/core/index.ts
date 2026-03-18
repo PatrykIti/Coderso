@@ -5,6 +5,7 @@ import type {
   WidgetDefinition,
   WidgetEditorProps,
   WidgetPreset,
+  WidgetSurface,
 } from "../types";
 import { getWidget, registerWidget } from "../registry";
 import { createCompareTimelineWidget, type CompareTimelineData } from "./compareTimeline";
@@ -60,6 +61,22 @@ import {
 } from "./templateSection";
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
 import { createTimelineWidget, type TimelineData } from "./timeline";
+import {
+  createScreenFieldGroupWidget,
+  type ScreenFieldGroupData,
+} from "./screenFieldGroup";
+import {
+  createScreenFieldValueWidget,
+  type ScreenFieldValueData,
+} from "./screenFieldValue";
+import {
+  createScreenRecordHeaderWidget,
+  type ScreenRecordHeaderData,
+} from "./screenRecordHeader";
+import {
+  createScreenTwoColumnWidget,
+  type ScreenTwoColumnData,
+} from "./screenTwoColumn";
 
 type EditorBundle<T> = {
   wizard: ComponentType<WidgetEditorProps<T>>;
@@ -73,6 +90,7 @@ type CoreWidgetMetadata = {
   module: string;
   presets?: WidgetPreset[];
   requires?: string[];
+  surfaces?: WidgetSurface[];
 };
 
 const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
@@ -80,6 +98,7 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   "template-section": {
     complexity: "atomic",
@@ -90,41 +109,49 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   "split-layout": {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   tabs: {
     complexity: "atomic",
     audience: "intermediate",
     module: "engagement",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   accordion: {
     complexity: "atomic",
     audience: "intermediate",
     module: "engagement",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   "toggle-block": {
     complexity: "atomic",
     audience: "intermediate",
     module: "engagement",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   spacer: {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   divider: {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   stack: {
     complexity: "atomic",
     audience: "advanced",
     module: "layout",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
   },
   hero: {
     complexity: "composite",
@@ -279,6 +306,30 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     audience: "beginner",
     module: "navigation",
   },
+  "screen-record-header": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "screens",
+    surfaces: ["custom-screen-builder"],
+  },
+  "screen-field-value": {
+    complexity: "composite",
+    audience: "beginner",
+    module: "screens",
+    surfaces: ["custom-screen-builder"],
+  },
+  "screen-field-group": {
+    complexity: "atomic",
+    audience: "intermediate",
+    module: "screens",
+    surfaces: ["custom-screen-builder"],
+  },
+  "screen-two-column": {
+    complexity: "atomic",
+    audience: "intermediate",
+    module: "screens",
+    surfaces: ["custom-screen-builder"],
+  },
 };
 
 export type CoreWidgetEditors = {
@@ -320,6 +371,10 @@ export type CoreWidgetEditors = {
   contact: EditorBundle<ContactData>;
   navigation: EditorBundle<NavigationData>;
   footer: EditorBundle<FooterData>;
+  screenRecordHeader: EditorBundle<ScreenRecordHeaderData>;
+  screenFieldValue: EditorBundle<ScreenFieldValueData>;
+  screenFieldGroup: EditorBundle<ScreenFieldGroupData>;
+  screenTwoColumn: EditorBundle<ScreenTwoColumnData>;
 };
 
 export function createCoreWidgetDefinitions(
@@ -364,6 +419,10 @@ export function createCoreWidgetDefinitions(
     createContactWidget(editors.contact),
     createNavigationWidget(editors.navigation),
     createFooterWidget(editors.footer),
+    createScreenRecordHeaderWidget(editors.screenRecordHeader),
+    createScreenFieldValueWidget(editors.screenFieldValue),
+    createScreenFieldGroupWidget(editors.screenFieldGroup),
+    createScreenTwoColumnWidget(editors.screenTwoColumn),
   ];
 
   return definitions.map((definition) => {
@@ -378,6 +437,7 @@ export function createCoreWidgetDefinitions(
       module: metadata.module,
       presets: metadata.presets,
       requires: metadata.requires,
+      surfaces: metadata.surfaces,
     };
   });
 }

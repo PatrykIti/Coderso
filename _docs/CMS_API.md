@@ -1049,11 +1049,20 @@ Custom screen payload (summary):
 
 Notes:
 - `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
+- builder insert library filtruje do widget surface `custom-screen-builder`; screen-only widgets nie sa zwracane przez widget library/catalog endpoints.
 - `bindings` mapuja `widgetId + propPath` do `contentType` field key.
 - `schemaVersion` jest wersjonowany (aktualnie `1`).
 - `showInSidebar=true` + `status=active` pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
 - `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.
 - builder preview rozwiazuje bindings przed przekazaniem blokow do `WidgetRenderer`.
+- response record niesie tez derived `capabilities`:
+  - `mode: "collection-only" | "dashboard" | "editor"`
+  - `hasBlocks`, `hasBindings`, `hasReadableBindings`, `hasWritableBindings`
+  - `supportsDedicatedPreview`, `supportsDedicatedEditor`
+- admin record workflow korzysta z `capabilities`:
+  - `collection-only` -> entries list shortcut + classic editor fallback,
+  - `dashboard` -> read-only record screen + classic editor CTA,
+  - `editor` -> dedicated screen editor with writable bound fields.
 - dedicated record workflow nie dodaje nowego API `custom-screen entries`; reuse is through existing internal entry endpoints:
   - `GET /content/:type/entries`
   - `POST /content/:type/entries`

@@ -144,6 +144,12 @@ const sections = buildDefaultNavSections({
   - dedicated records routes (`/admin/coderso/custom-screens/:screenId/entries*`) reuse existing entries domain while hiding classic Entries from the main workflow,
   - active screens can opt into direct left-menu shortcuts rendered after the `Coderso` group (`showInSidebar`, optional `sidebarLabel`),
   - classic Entries fallback remains available for metadata/publish operations outside the scoped custom-screen editor.
+- 054-23 done: Custom Screens follow-up delivered:
+  - widget registry gained surface scoping (`page-builder`, `widget-library`, `custom-screen-builder`),
+  - `Screens` now uses dedicated admin screen widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) plus explicit shared layout primitives,
+  - `Coderso/Widgets` and template/page flows hide screen-only widgets,
+  - custom screen responses expose derived `collection-only | dashboard | editor` capabilities,
+  - builder preview and records workflow now explain incomplete setups instead of falling through to blank or confusing states.
 - 055 done: Posts module delivered:
   - dedicated `Posts` list + editor routes (`/admin/coderso/posts`, `/admin/coderso/posts/:id`),
   - internal API aliases (`/admin/api/posts*`) on top of reserved `post` content type,

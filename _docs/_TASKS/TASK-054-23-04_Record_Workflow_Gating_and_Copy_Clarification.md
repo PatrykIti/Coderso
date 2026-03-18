@@ -5,7 +5,7 @@
 **Category:** Admin/UI + CMS/Content  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-23-01, TASK-054-23-03  
-**Status:** To Do
+**Status:** Done (2026-03-18)
 
 ---
 
@@ -90,3 +90,9 @@ renderBoundEditor(entry);
 
 - `_docs/ARCHITECTURE.md`
 - `_docs/CODERSO_MODULES.md`
+
+## Completion Notes (2026-03-18)
+
+- Records list now routes `collection-only` screens to the classic editor.
+- `dashboard` screens remain preview-first and `editor` screens remain editable.
+- Confusing `No field bindings yet` / `Preview unavailable` copy was replaced with product-level workflow messaging.

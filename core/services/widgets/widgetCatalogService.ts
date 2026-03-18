@@ -4,7 +4,7 @@ import type {
   WidgetDefinition,
   WidgetPreset,
 } from "../../widgets/types";
-import { listWidgets, validateModulePackMatrix } from "../../widgets/registry";
+import { listWidgetsForSurface, validateModulePackMatrix } from "../../widgets/registry";
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { listWidgetTemplates, type WidgetTemplateRecord } from "./widgetTemplateService";
 
@@ -64,7 +64,7 @@ export function buildWidgetCatalog(
 
 export async function listWidgetCatalog(): Promise<WidgetCatalogItem[]> {
   ensureRuntimeWidgetsRegistered();
-  const coreWidgets = listWidgets();
+  const coreWidgets = listWidgetsForSurface("widget-library");
   validateModulePackMatrix({ widgets: coreWidgets, strictOnly: true });
   const templates = await listWidgetTemplates();
   return buildWidgetCatalog(coreWidgets, templates);

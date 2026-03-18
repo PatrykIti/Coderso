@@ -10,6 +10,10 @@ import {
   normalizeCustomScreenSidebarConfig,
   type CustomScreenStatus,
 } from "./customScreenSchemas";
+import {
+  resolveCustomScreenCapabilities,
+  type CustomScreenCapabilities,
+} from "./capabilities";
 
 export type CustomScreenRecord = {
   id: string;
@@ -21,6 +25,7 @@ export type CustomScreenRecord = {
   schemaVersion: CustomScreenDefinitionVersion;
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
+  capabilities: CustomScreenCapabilities;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -92,6 +97,7 @@ const mapRow = (row: typeof customScreens.$inferSelect): CustomScreenRecord => {
     schemaVersion: definition.schemaVersion,
     blocks: definition.blocks,
     bindings: definition.bindings,
+    capabilities: resolveCustomScreenCapabilities(definition),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };

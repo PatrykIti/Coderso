@@ -5,7 +5,7 @@
 **Category:** CMS/Content + API + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-22-01, TASK-054-22-02, TASK-054-22-05  
-**Status:** To Do
+**Status:** Done (2026-03-18)
 
 ---
 
@@ -111,3 +111,9 @@ export function resolveCustomScreenCapabilities(screen: CustomScreenRecord) {
 - `_docs/CMS_API.md`
 - `_docs/ARCHITECTURE.md`
 - `_docs/CODERSO_MODULES.md`
+
+## Completion Notes (2026-03-18)
+
+- Added shared `resolveCustomScreenCapabilities(screen)` helper.
+- Custom screen responses now expose derived capabilities for admin UI gating.
+- Admin clients/UI no longer rely on local `bindings.length === 0` heuristics.

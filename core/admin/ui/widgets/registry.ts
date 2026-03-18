@@ -1,5 +1,5 @@
 import { registerCoreWidgets } from "../../../widgets/core";
-import { getWidget, listWidgets } from "../../../widgets/registry";
+import { getWidget, listWidgets, listWidgetsForSurface } from "../../../widgets/registry";
 import {
   CompareTimelineAdvancedEditor,
   CompareTimelineVisualEditor,
@@ -109,6 +109,18 @@ import {
   PricingPlansAdvancedEditor,
   PricingPlansVisualEditor,
   PricingPlansWizardEditor,
+  ScreenFieldGroupAdvancedEditor,
+  ScreenFieldGroupVisualEditor,
+  ScreenFieldGroupWizardEditor,
+  ScreenFieldValueAdvancedEditor,
+  ScreenFieldValueVisualEditor,
+  ScreenFieldValueWizardEditor,
+  ScreenRecordHeaderAdvancedEditor,
+  ScreenRecordHeaderVisualEditor,
+  ScreenRecordHeaderWizardEditor,
+  ScreenTwoColumnAdvancedEditor,
+  ScreenTwoColumnVisualEditor,
+  ScreenTwoColumnWizardEditor,
   TestimonialsAdvancedEditor,
   TestimonialsVisualEditor,
   TestimonialsWizardEditor,
@@ -309,12 +321,47 @@ export function ensureCoreWidgetsRegistered() {
       visual: FooterVisualEditor,
       advanced: FooterAdvancedEditor,
     },
+    screenRecordHeader: {
+      wizard: ScreenRecordHeaderWizardEditor,
+      visual: ScreenRecordHeaderVisualEditor,
+      advanced: ScreenRecordHeaderAdvancedEditor,
+    },
+    screenFieldValue: {
+      wizard: ScreenFieldValueWizardEditor,
+      visual: ScreenFieldValueVisualEditor,
+      advanced: ScreenFieldValueAdvancedEditor,
+    },
+    screenFieldGroup: {
+      wizard: ScreenFieldGroupWizardEditor,
+      visual: ScreenFieldGroupVisualEditor,
+      advanced: ScreenFieldGroupAdvancedEditor,
+    },
+    screenTwoColumn: {
+      wizard: ScreenTwoColumnWizardEditor,
+      visual: ScreenTwoColumnVisualEditor,
+      advanced: ScreenTwoColumnAdvancedEditor,
+    },
   });
 }
 
 export function listRegisteredWidgets() {
   ensureCoreWidgetsRegistered();
   return listWidgets();
+}
+
+export function listRegisteredPageWidgets() {
+  ensureCoreWidgetsRegistered();
+  return listWidgetsForSurface("page-builder");
+}
+
+export function listRegisteredWidgetLibraryWidgets() {
+  ensureCoreWidgetsRegistered();
+  return listWidgetsForSurface("widget-library");
+}
+
+export function listRegisteredScreenWidgets() {
+  ensureCoreWidgetsRegistered();
+  return listWidgetsForSurface("custom-screen-builder");
 }
 
 export function getRegisteredWidget(type: string) {

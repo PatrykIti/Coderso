@@ -123,6 +123,27 @@ Kazdy widget powinien zdefiniowac:
 - `schema`: JSON schema danych widgetu.
 - `defaults`: bezpieczne domyslne wartosci.
 - `fields`: pola widoczne w Wizard/Visual/Advanced.
+- `surfaces`: gdzie widget moze byc widoczny:
+  - `page-builder`
+  - `widget-library`
+  - `custom-screen-builder`
+
+## Surface scoping
+
+Widget registry nie jest juz jedna plaska lista dla wszystkich surface'ow.
+
+Zasady:
+- public/page widgets domyslnie naleza do `page-builder` + `widget-library`,
+- screen-only widgets naleza do `custom-screen-builder`,
+- tylko jawnie dopuszczone prymitywy layoutowe moga byc wspoldzielone miedzy wszystkimi surface'ami,
+- `Coderso/Widgets` pokazuje tylko surface `widget-library`,
+- `Coderso/Screens` pokazuje tylko surface `custom-screen-builder`.
+
+Minimalny screen widget pack dla admin UI:
+- `screen-record-header`
+- `screen-field-value`
+- `screen-field-group`
+- `screen-two-column`
 
 ---
 
@@ -169,6 +190,7 @@ type WidgetDefinition<T = Record<string, unknown>> = {
   title: string;
   description?: string;
   category: "layout" | "content" | "forms" | "navigation" | "media";
+  surfaces?: ("page-builder" | "widget-library" | "custom-screen-builder")[];
   canHaveChildren?: boolean;
   slots?: {
     id: string;

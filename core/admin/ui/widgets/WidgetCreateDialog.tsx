@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { listRegisteredWidgets } from "@/ui/widgets/registry";
+import { listRegisteredPageWidgets } from "@/ui/widgets/registry";
 import { createBlock } from "@/ui/pages/builder/blockUtils";
 import type { WidgetTemplateCategory } from "@/services/widgetTemplateCategoriesClient";
 
@@ -37,7 +37,7 @@ export function WidgetCreateDialog({
   categories,
   onCreate,
 }: WidgetCreateDialogProps) {
-  const widgets = useMemo(() => listRegisteredWidgets(), []);
+  const widgets = useMemo(() => listRegisteredPageWidgets(), []);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");

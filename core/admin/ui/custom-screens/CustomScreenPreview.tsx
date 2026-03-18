@@ -10,6 +10,7 @@ type CustomScreenPreviewProps = {
   blocks: Block[];
   bindings: CustomScreenBinding[];
   data: Record<string, unknown>;
+  emptyTitle?: string;
   emptyMessage?: string;
 };
 
@@ -17,6 +18,7 @@ export function CustomScreenPreview({
   blocks,
   bindings,
   data,
+  emptyTitle,
   emptyMessage,
 }: CustomScreenPreviewProps) {
   const previewBlocks = useMemo(
@@ -30,7 +32,9 @@ export function CustomScreenPreview({
         <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
           <LayoutTemplate className="h-10 w-10" />
         </div>
-        <h2 className="text-2xl font-semibold text-foreground">Preview unavailable</h2>
+        <h2 className="text-2xl font-semibold text-foreground">
+          {emptyTitle ?? "Preview unavailable"}
+        </h2>
         <p className="mt-3 max-w-sm text-sm text-muted-foreground">
           {emptyMessage ?? "Add widgets and bindings to preview the custom screen."}
         </p>

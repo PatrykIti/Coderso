@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Widgets  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-23-01, TASK-054-23-02  
-**Status:** To Do
+**Status:** Done (2026-03-18)
 
 ---
 
@@ -71,3 +71,8 @@ type ScreenPreviewResult = {
 
 - `_docs/CMS_API.md` (tylko jesli kontrakt preview payload/helper jest opisany)
 - `_docs/ARCHITECTURE.md`
+
+## Completion Notes (2026-03-18)
+
+- Builder preview now explains `missing content type`, `no screen widgets`, and `collection-only` states.
+- `Preview` no longer falls through to a silent blank state for incomplete screen setups.

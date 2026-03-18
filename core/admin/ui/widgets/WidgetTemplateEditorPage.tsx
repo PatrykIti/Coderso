@@ -45,7 +45,7 @@ import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
-import { listRegisteredWidgets } from "@/ui/widgets/registry";
+import { listRegisteredPageWidgets } from "@/ui/widgets/registry";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import { MediaPicker } from "@/ui/media/MediaPicker";
@@ -174,7 +174,7 @@ export function WidgetTemplateEditorPage() {
   });
   const isNew = !templateId || templateId === "new";
 
-  const widgets = useMemo(() => listRegisteredWidgets(), []);
+  const widgets = useMemo(() => listRegisteredPageWidgets(), []);
   const initialCategories = useMemo(
     () => getCachedWidgetTemplateCategories(),
     []

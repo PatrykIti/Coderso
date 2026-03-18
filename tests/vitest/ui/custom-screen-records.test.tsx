@@ -59,12 +59,21 @@ const seedCache = (storage: ReturnType<typeof createLocalStorage>) => {
         showInSidebar: true,
         sidebarLabel: "Catalog",
         schemaVersion: 1,
-        blocks: [],
+        blocks: [
+          {
+            id: "field-1",
+            type: "screen-field-value",
+            data: {
+              label: "Headline",
+              value: "Ocean View",
+            },
+          },
+        ],
         bindings: [
           {
             id: "binding-1",
-            widgetId: "hero-1",
-            propPath: "heading.title",
+            widgetId: "field-1",
+            propPath: "value",
             field: "headline",
             mode: "readwrite",
           },
@@ -115,6 +124,30 @@ const seedCache = (storage: ReturnType<typeof createLocalStorage>) => {
   );
 };
 
+const seedCollectionOnlyCache = (storage: ReturnType<typeof createLocalStorage>) => {
+  seedCache(storage);
+  const savedAt = Date.now();
+  storage.setItem(
+    cacheKeys.customScreenDetail("screen-1"),
+    JSON.stringify({
+      value: {
+        id: "screen-1",
+        name: "Property Catalog",
+        contentTypeId: "type-1",
+        status: "active",
+        showInSidebar: true,
+        sidebarLabel: "Catalog",
+        schemaVersion: 1,
+        blocks: [],
+        bindings: [],
+        createdAt: "2026-03-05T00:00:00.000Z",
+        updatedAt: "2026-03-05T00:00:00.000Z",
+      },
+      savedAt,
+    })
+  );
+};
+
 test("CustomScreenEntriesPage renders cached records", () => {
   const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
   const storage = createLocalStorage();
@@ -155,6 +188,30 @@ test("CustomScreenEntryEditor renders bound field editor from cached data", () =
     expect(html).toContain("Headline");
     expect(html).toContain("Classic editor");
     expect(html).toContain("Ocean View");
+  } finally {
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("CustomScreenEntriesPage explains collection-only screens and links to classic editor", () => {
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    seedCollectionOnlyCache(storage);
+
+    const html = renderAdminUi(<CustomScreenEntriesPage />, {
+      path: "/admin/coderso/custom-screens/screen-1/entries",
+    });
+
+    expect(html).toContain("Collection-only screen");
+    expect(html).toContain("/admin/coderso/entries/properties/entry-1");
+    expect(html).not.toContain("/admin/coderso/custom-screens/screen-1/entries/entry-1");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

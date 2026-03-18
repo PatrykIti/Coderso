@@ -3,6 +3,10 @@ import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storageCache";
 import type { WidgetBlock } from "../../widgets/types";
+import {
+  resolveCustomScreenCapabilities,
+  type CustomScreenCapabilities,
+} from "../../services/customScreens/capabilities";
 
 export type CustomScreenStatus = "draft" | "active";
 
@@ -12,6 +16,28 @@ export type CustomScreenBinding = {
   propPath: string;
   field: string;
   mode: "read" | "write" | "readwrite";
+};
+
+const isCustomScreenCapabilities = (
+  value: unknown
+): value is CustomScreenCapabilities => {
+  if (!isRecord(value)) return false;
+  const counts = isRecord(value.bindingCounts) ? value.bindingCounts : null;
+  return (
+    (value.mode === "collection-only" ||
+      value.mode === "dashboard" ||
+      value.mode === "editor") &&
+    typeof value.hasBlocks === "boolean" &&
+    typeof value.hasBindings === "boolean" &&
+    typeof value.hasReadableBindings === "boolean" &&
+    typeof value.hasWritableBindings === "boolean" &&
+    typeof value.supportsDedicatedPreview === "boolean" &&
+    typeof value.supportsDedicatedEditor === "boolean" &&
+    counts !== null &&
+    typeof counts.total === "number" &&
+    typeof counts.readable === "number" &&
+    typeof counts.writable === "number"
+  );
 };
 
 export type CustomScreenRecord = {
@@ -24,6 +50,7 @@ export type CustomScreenRecord = {
   schemaVersion: number;
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
+  capabilities?: CustomScreenCapabilities;
   createdAt: string;
   updatedAt: string;
 };
@@ -60,6 +87,7 @@ const isCustomScreenRecord = (value: unknown): value is CustomScreenRecord =>
   typeof value.schemaVersion === "number" &&
   Array.isArray(value.blocks) &&
   Array.isArray(value.bindings) &&
+  (value.capabilities === undefined || isCustomScreenCapabilities(value.capabilities)) &&
   typeof value.createdAt === "string" &&
   typeof value.updatedAt === "string";
 
@@ -73,6 +101,12 @@ const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenReco
   ...item,
   showInSidebar: item.showInSidebar ?? false,
   sidebarLabel: item.sidebarLabel ?? null,
+  capabilities:
+    item.capabilities ??
+    resolveCustomScreenCapabilities({
+      blocks: item.blocks,
+      bindings: item.bindings,
+    }),
 });
 
 const readScreensCache = () =>

@@ -1,6 +1,11 @@
 import { expect, test, afterEach, beforeEach } from "bun:test";
 
-import { clearWidgets, registerWidget, listWidgets } from "../../../core/widgets/registry";
+import {
+  clearWidgets,
+  listWidgets,
+  listWidgetsForSurface,
+  registerWidget,
+} from "../../../core/widgets/registry";
 import type { WidgetDefinition } from "../../../core/widgets/types";
 
 const Dummy = () => null;
@@ -62,6 +67,13 @@ test("registerWidget rejects invalid metadata", () => {
   expect(() => registerWidget({ ...baseDef, module: "  " })).toThrow(
     "widget_module_invalid"
   );
+  expect(() =>
+    registerWidget({
+      ...baseDef,
+      type: "hero-surface-invalid",
+      surfaces: ["invalid-surface" as "page-builder"],
+    })
+  ).toThrow("widget_surfaces_invalid");
 });
 
 test("registerWidget rejects minItems on fixed slot", () => {
@@ -90,4 +102,25 @@ test("registerWidget accepts repeatable slot limits", () => {
   });
 
   expect(listWidgets().some((item) => item.type === "layout-repeatable")).toBe(true);
+});
+
+test("listWidgetsForSurface filters definitions by surface visibility", () => {
+  registerWidget({
+    ...baseDef,
+    type: "screen-only",
+    surfaces: ["custom-screen-builder"],
+  });
+  registerWidget({
+    ...baseDef,
+    type: "shared-layout",
+    surfaces: ["page-builder", "widget-library", "custom-screen-builder"],
+  });
+
+  expect(listWidgetsForSurface("custom-screen-builder").map((item) => item.type)).toEqual([
+    "screen-only",
+    "shared-layout",
+  ]);
+  expect(listWidgetsForSurface("widget-library").map((item) => item.type)).toEqual([
+    "shared-layout",
+  ]);
 });

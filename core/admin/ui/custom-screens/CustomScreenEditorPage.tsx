@@ -40,8 +40,12 @@ import {
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { listRegisteredWidgets } from "@/ui/widgets/registry";
+import {
+  listRegisteredScreenWidgets,
+  listRegisteredWidgets,
+} from "@/ui/widgets/registry";
 import { WidgetCard } from "@/ui/widgets/WidgetCard";
+import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
 import { CustomScreenPreview } from "./CustomScreenPreview";
@@ -73,6 +77,29 @@ const widgetCategoryLabels: Record<string, string> = {
 };
 
 const normalizeText = (value: string) => value.trim();
+
+const collectBlockTypes = (blocks: Block[]): string[] => {
+  const result = new Set<string>();
+
+  const visit = (items: Block[]) => {
+    items.forEach((block) => {
+      result.add(block.type);
+      if (Array.isArray(block.children) && block.children.length > 0) {
+        visit(block.children);
+      }
+      if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+        Object.values(block.slots).forEach((slotItems) => {
+          if (Array.isArray(slotItems) && slotItems.length > 0) {
+            visit(slotItems as Block[]);
+          }
+        });
+      }
+    });
+  };
+
+  visit(blocks);
+  return Array.from(result);
+};
 
 const buildPreviewValue = (field: ContentField, property?: ContentSchemaProperty) => {
   if (property?.default !== undefined) {
@@ -143,7 +170,20 @@ export function CustomScreenEditorPage() {
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [canvasMode, setCanvasMode] = useState<"builder" | "preview">("builder");
 
-  const widgetRegistry = useMemo(() => listRegisteredWidgets(), []);
+  const screenWidgetRegistry = useMemo(() => listRegisteredScreenWidgets(), []);
+  const allWidgetRegistry = useMemo(() => listRegisteredWidgets(), []);
+  const widgetRegistry = useMemo(() => {
+    const byType = new Map(screenWidgetRegistry.map((widget) => [widget.type, widget]));
+    collectBlockTypes(blocks).forEach((type) => {
+      const existing = byType.get(type);
+      if (existing) return;
+      const legacy = allWidgetRegistry.find((widget) => widget.type === type);
+      if (legacy) {
+        byType.set(legacy.type, legacy);
+      }
+    });
+    return Array.from(byType.values());
+  }, [allWidgetRegistry, blocks, screenWidgetRegistry]);
   const [query, setQuery] = useState("");
   const selectedContentType = useMemo(
     () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
@@ -157,6 +197,34 @@ export function CustomScreenEditorPage() {
     () => buildPreviewData(selectedContentType),
     [selectedContentType]
   );
+  const previewCapabilities = useMemo(
+    () => resolveCustomScreenCapabilities({ blocks, bindings }),
+    [bindings, blocks]
+  );
+  const previewState = useMemo(() => {
+    if (!selectedContentType) {
+      return {
+        title: "Select a content type",
+        message:
+          "Choose the content type first so the preview can resolve sample values for mapped fields.",
+      };
+    }
+    if (blocks.length === 0) {
+      return {
+        title: "No screen widgets yet",
+        message:
+          "Add dedicated screen widgets from the library to start composing the admin screen.",
+      };
+    }
+    if (previewCapabilities.mode === "collection-only") {
+      return {
+        title: "Collection-only screen",
+        message:
+          "This setup currently narrows the records list only. Add dedicated screen widgets and map them to content fields to preview record data.",
+      };
+    }
+    return null;
+  }, [blocks.length, previewCapabilities.mode, selectedContentType]);
 
   const selectedBlock = findBlockById(blocks, selectedId);
   const selectedWidget = selectedBlock
@@ -244,7 +312,7 @@ export function CustomScreenEditorPage() {
 
   const filteredWidgets = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return widgetRegistry
+    return screenWidgetRegistry
       .filter((widget) => widget.type !== "template-section")
       .filter((widget) => {
         if (!normalized) return true;
@@ -254,7 +322,7 @@ export function CustomScreenEditorPage() {
           .toLowerCase();
         return haystack.includes(normalized);
       });
-  }, [query, widgetRegistry]);
+  }, [query, screenWidgetRegistry]);
 
   const handleAddBlock = (type: string) => {
     const nextBlock = createBlock(type);
@@ -344,7 +412,7 @@ export function CustomScreenEditorPage() {
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Find widgets..."
+            placeholder="Find screen widgets..."
             className="pl-9"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -355,7 +423,7 @@ export function CustomScreenEditorPage() {
         <div className="space-y-2">
           {filteredWidgets.length === 0 ? (
             <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
-              No widgets match this search.
+              No screen widgets match this search.
             </div>
           ) : null}
           {filteredWidgets.map((widget) => (
@@ -551,8 +619,8 @@ export function CustomScreenEditorPage() {
               </p>
               <p className="text-xs text-muted-foreground">
                 {canvasMode === "builder"
-                  ? "Drag widgets from the library or use the quick insert buttons."
-                  : "Preview uses content type defaults and the current field bindings."}
+                  ? "Drag dedicated screen widgets from the library or use the quick insert buttons."
+                  : "Preview uses sample content values and the current screen bindings."}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -649,21 +717,30 @@ export function CustomScreenEditorPage() {
                 Build your custom screen
               </h2>
               <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                Add widgets from the library to compose the admin experience for this
-                content type.
+                Add dedicated screen widgets from the library to compose the admin
+                experience for this content type.
               </p>
             </div>
           ) : canvasMode === "preview" ? (
+            previewState ? (
+              <CustomScreenPreview
+                blocks={[]}
+                bindings={[]}
+                data={{}}
+                emptyTitle={previewState.title}
+                emptyMessage={previewState.message}
+              />
+            ) : (
             <CustomScreenPreview
               blocks={blocks}
               bindings={bindings}
               data={previewData}
+              emptyTitle="Preview unavailable"
               emptyMessage={
-                selectedContentType
-                  ? "Add widgets to preview the custom screen."
-                  : "Select a content type to preview bound fields."
+                "Add dedicated screen widgets and bindings to preview the custom screen."
               }
             />
+            )
           ) : (
             <div
               className="w-full overflow-hidden rounded-xl border border-border/50 bg-background"
@@ -679,6 +756,7 @@ export function CustomScreenEditorPage() {
               <BlockList
                 blocks={blocks}
                 className="p-4"
+                widgetRegistry={widgetRegistry}
                 selectedId={selectedId}
                 onSelect={setSelectedId}
                 onMove={handleMove}

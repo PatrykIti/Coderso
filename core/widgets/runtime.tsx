@@ -54,6 +54,10 @@ export function ensureRuntimeWidgetsRegistered() {
     contact: noopEditors,
     navigation: noopEditors,
     footer: noopEditors,
+    screenRecordHeader: noopEditors,
+    screenFieldValue: noopEditors,
+    screenFieldGroup: noopEditors,
+    screenTwoColumn: noopEditors,
   });
   registered = true;
 }

@@ -43,7 +43,7 @@ import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { AdminLink } from "@/ui/shared/AdminLink";
-import { listRegisteredWidgets } from "@/ui/widgets/registry";
+import { listRegisteredWidgetLibraryWidgets } from "@/ui/widgets/registry";
 import { resolveAdminHref } from "@/utils/adminPaths";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
@@ -305,7 +305,7 @@ export function WidgetLibraryPage() {
   const templateEditHref = (id: string) =>
     resolveAdminHref(adminBasePath, `/admin/widgets/templates/${id}`);
 
-  const widgetDefinitions = useMemo(() => listRegisteredWidgets(), []);
+  const widgetDefinitions = useMemo(() => listRegisteredWidgetLibraryWidgets(), []);
   const widgetDefinitionMap = useMemo(
     () => new Map(widgetDefinitions.map((definition) => [definition.type, definition])),
     [widgetDefinitions]

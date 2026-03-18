@@ -5,7 +5,7 @@
 **Category:** QA + Documentation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-23-01, TASK-054-23-02, TASK-054-23-03, TASK-054-23-04  
-**Status:** To Do
+**Status:** Done (2026-03-18)
 
 ---
 
@@ -62,3 +62,9 @@ Domknac follow-up `Coderso/Screens` po zmianie kontraktu:
 - `_docs/WIDGET_PACK_MATRIX.md`
 - `_docs/_CHANGELOG/*.md`
 - `_docs/_TASKS/README.md`
+
+## Completion Notes (2026-03-18)
+
+- Ran `bun --cwd core lint`
+- Ran `bun --cwd core lint:types`
+- Ran targeted Bun and Vitest suites for custom screens and widget registry/library surfaces.

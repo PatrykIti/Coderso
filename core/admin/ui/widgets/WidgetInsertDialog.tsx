@@ -15,7 +15,7 @@ import { getPageCached } from "@/services/pagesClient";
 import { getWidgetTemplateCached } from "@/services/widgetTemplatesClient";
 import type { Block } from "@/ui/pages/builder/types";
 import { findBlockById } from "@/ui/pages/builder/blockUtils";
-import { listRegisteredWidgets } from "@/ui/widgets/registry";
+import { listRegisteredPageWidgets } from "@/ui/widgets/registry";
 
 import type { WidgetItem } from "./types";
 import { buildSlotOptions, mapWidgetBlockOptions } from "./widgetInsertUtils";
@@ -58,7 +58,7 @@ export function WidgetInsertDialog({
   const widgetMetaMap = useMemo(
     () =>
       new Map(
-        listRegisteredWidgets().map((item) => [
+        listRegisteredPageWidgets().map((item) => [
           item.type,
           {
             label: item.title,

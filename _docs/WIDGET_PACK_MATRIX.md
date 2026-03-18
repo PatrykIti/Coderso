@@ -46,3 +46,6 @@ Widget library module filter is pack-aware:
 - untracked modules are listed after tracked matrix modules.
 
 This keeps non-technical users focused on complete module packs first.
+
+Note:
+- screen-only widgets from surface `custom-screen-builder` are excluded from the page/widget-library module pack matrix.

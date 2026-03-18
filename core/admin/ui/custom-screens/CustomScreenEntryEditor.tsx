@@ -32,6 +32,7 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { resolveCustomScreenEntryParams } from "./routeParams";
 import { collectWritableBindingFields } from "../../../services/customScreens/bindingResolver";
+import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 import type { ContentField } from "../content-types/SchemaBuilder";
 
 const normalizeText = (value: string) => value.trim();
@@ -187,6 +188,18 @@ export function CustomScreenEntryEditor() {
       screen?.bindings.filter((binding) => binding.mode === "read").length ?? 0,
     [screen]
   );
+  const screenCapabilities = useMemo(
+    () =>
+      screen?.capabilities ??
+      resolveCustomScreenCapabilities({
+        blocks: screen?.blocks,
+        bindings: screen?.bindings,
+      }),
+    [screen]
+  );
+  const canEditInScreen = screenCapabilities.mode === "editor";
+  const isDashboardScreen = screenCapabilities.mode === "dashboard";
+  const isCollectionOnlyScreen = screenCapabilities.mode === "collection-only";
 
   const applyLoadedState = useCallback(
     (
@@ -349,13 +362,25 @@ export function CustomScreenEntryEditor() {
   const detailsPanel = (
     <div className="space-y-4 p-6">
       <div className="space-y-1">
-        <p className="text-sm font-medium">Bound fields</p>
+        <p className="text-sm font-medium">
+          {canEditInScreen ? "Bound fields" : "Screen workflow"}
+        </p>
         <p className="text-xs text-muted-foreground">
-          Edit only the content fields mapped by the custom screen bindings.
+          {canEditInScreen
+            ? "Edit only the content fields mapped by the custom screen bindings."
+            : isDashboardScreen
+              ? "This screen can preview mapped record data, but edits stay in the classic editor until writable bindings are added."
+              : "This shortcut currently narrows the records list. Add bound screen widgets if you want a dedicated record screen."}
         </p>
       </div>
 
-      {writableFields.length === 0 ? (
+      {!canEditInScreen ? (
+        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+          {isDashboardScreen
+            ? "Use the builder to add writable bindings when this preview screen should become an editor."
+            : "Use the builder to add dedicated screen widgets and field bindings before replacing the classic editor."}
+        </div>
+      ) : writableFields.length === 0 ? (
         <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
           This screen has no writable bindings yet. Use the builder to map widget props to
           content fields.
@@ -376,7 +401,7 @@ export function CustomScreenEntryEditor() {
       {readOnlyBindingCount > 0 ? (
         <div className="rounded-lg border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
           {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are
-          preview-only and remain read-only in this editor.
+          preview-only and remain read-only in this screen workflow.
         </div>
       ) : null}
     </div>
@@ -446,15 +471,17 @@ export function CustomScreenEntryEditor() {
               <SquareArrowOutUpRight className="h-4 w-4" />
               Classic editor
             </Button>
-            <Button
-              size="sm"
-              className="gap-2"
-              onClick={handleSave}
-              disabled={isSaving || isLoading || !contentType}
-            >
-              <Save className="h-4 w-4" />
-              {isSaving ? "Saving..." : "Save record"}
-            </Button>
+            {canEditInScreen ? (
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={handleSave}
+                disabled={isSaving || isLoading || !contentType}
+              >
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving..." : "Save record"}
+              </Button>
+            ) : null}
           </div>
         }
       >
@@ -465,7 +492,11 @@ export function CustomScreenEntryEditor() {
                 Custom screen preview
               </p>
               <p className="text-xs text-muted-foreground">
-                The canvas reflects the current entry data through widget bindings.
+                {canEditInScreen
+                  ? "The canvas reflects the current entry data through widget bindings."
+                  : isDashboardScreen
+                    ? "This screen previews the current record state, while edits stay in the classic editor."
+                    : "This screen currently acts as a records shortcut and does not replace the classic editor yet."}
               </p>
             </div>
             <Button
@@ -474,7 +505,7 @@ export function CustomScreenEntryEditor() {
               className="gap-2 lg:hidden"
               onClick={() => setDetailsOpen(true)}
             >
-              Bound fields
+              {canEditInScreen ? "Bound fields" : "Screen details"}
             </Button>
           </div>
         </div>
@@ -501,63 +532,103 @@ export function CustomScreenEntryEditor() {
                 </AlertDescription>
               </Alert>
             ) : null}
-            {screen && screen.bindings.length === 0 ? (
+            {isCollectionOnlyScreen ? (
               <Alert>
-                <AlertTitle>No bindings configured</AlertTitle>
+                <AlertTitle>Collection-only screen</AlertTitle>
                 <AlertDescription>
-                  This record still uses the selected content type, but the dedicated custom
-                  screen editor becomes useful after adding field bindings in the builder.
+                  This shortcut currently narrows the records list for this content type.
+                  Open the classic editor to edit the record, or add dedicated screen
+                  widgets and field bindings in the builder to create a custom record
+                  screen.
+                </AlertDescription>
+              </Alert>
+            ) : isDashboardScreen ? (
+              <Alert>
+                <AlertTitle>Read-only record screen</AlertTitle>
+                <AlertDescription>
+                  This screen can preview mapped data for the current record, but edits
+                  still happen in the classic editor until writable bindings are added.
                 </AlertDescription>
               </Alert>
             ) : null}
 
             <div className="space-y-4 rounded-2xl border bg-background p-6 shadow-sm">
-              <div className="space-y-3">
-                <Textarea
-                  value={title}
-                  onChange={(event) => handleTitleChange(event.target.value)}
-                  rows={1}
-                  className="min-h-0 resize-none overflow-hidden border-0 px-0 py-0 text-3xl font-semibold leading-tight tracking-tight shadow-none focus-visible:ring-0"
-                  placeholder="Record title"
-                />
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Slug
-                  </span>
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-                    <span className="text-xs text-muted-foreground">/</span>
-                    <Input
-                      value={slug}
-                      onChange={(event) => handleSlugChange(event.target.value)}
-                      className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={() => handleSlugChange(slugify(title))}
-                    >
-                      <RefreshCcw className="h-3 w-3" />
-                    </Button>
+              {canEditInScreen ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={title}
+                    onChange={(event) => handleTitleChange(event.target.value)}
+                    rows={1}
+                    className="min-h-0 resize-none overflow-hidden border-0 px-0 py-0 text-3xl font-semibold leading-tight tracking-tight shadow-none focus-visible:ring-0"
+                    placeholder="Record title"
+                  />
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Slug
+                    </span>
+                    <div className="flex flex-1 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                      <span className="text-xs text-muted-foreground">/</span>
+                      <Input
+                        value={slug}
+                        onChange={(event) => handleSlugChange(event.target.value)}
+                        className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => handleSlugChange(slugify(title))}
+                      >
+                        <RefreshCcw className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Record title
+                    </p>
+                    <p className="text-3xl font-semibold leading-tight tracking-tight text-foreground">
+                      {title || "Untitled record"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Slug
+                    </p>
+                    <p className="rounded-lg border bg-muted/30 px-3 py-2 text-sm font-mono text-muted-foreground">
+                      /{slug || "draft-slug"}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {isLoading ? (
               <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
                 Loading custom screen record...
               </div>
+            ) : screen && isCollectionOnlyScreen ? (
+              <CustomScreenPreview
+                blocks={[]}
+                bindings={[]}
+                data={{}}
+                emptyTitle="Classic editor required"
+                emptyMessage="This screen does not define a dedicated record view yet. Use the classic editor for edits, or add bound screen widgets in the builder."
+              />
             ) : screen ? (
               <CustomScreenPreview
                 blocks={screen.blocks}
                 bindings={screen.bindings}
                 data={buildPayloadData()}
-                emptyMessage="Add widgets to preview this custom screen."
+                emptyTitle="No preview widgets yet"
+                emptyMessage="Add dedicated screen widgets to preview this custom screen."
               />
             ) : (
               <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-                Record preview unavailable.
+                Screen record unavailable.
               </div>
             )}
           </div>

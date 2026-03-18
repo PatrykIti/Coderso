@@ -14,7 +14,7 @@ test("FieldBindingPanel renders empty state without selected block", () => {
     />
   );
 
-  expect(html).toContain("Select a widget block to configure field bindings.");
+  expect(html).toContain("Select a screen widget block to configure field bindings.");
 });
 
 test("FieldBindingPanel renders existing bindings for a selected block", () => {

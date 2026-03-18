@@ -149,6 +149,20 @@ export {
   SearchBoxVisualEditor,
   SearchBoxWizardEditor,
 } from "./SearchBoxEditors";
+export {
+  ScreenFieldGroupAdvancedEditor,
+  ScreenFieldGroupVisualEditor,
+  ScreenFieldGroupWizardEditor,
+  ScreenFieldValueAdvancedEditor,
+  ScreenFieldValueVisualEditor,
+  ScreenFieldValueWizardEditor,
+  ScreenRecordHeaderAdvancedEditor,
+  ScreenRecordHeaderVisualEditor,
+  ScreenRecordHeaderWizardEditor,
+  ScreenTwoColumnAdvancedEditor,
+  ScreenTwoColumnVisualEditor,
+  ScreenTwoColumnWizardEditor,
+} from "./ScreenEditors";
 
 export {
   TemplateSectionAdvancedEditor,

@@ -101,7 +101,7 @@ export function FieldBindingPanel({
   if (!selectedBlock) {
     return (
       <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-        Select a widget block to configure field bindings.
+        Select a screen widget block to configure field bindings.
       </div>
     );
   }
@@ -120,8 +120,8 @@ export function FieldBindingPanel({
         <div className="space-y-1">
           <p className="text-sm font-medium">Field bindings</p>
           <p className="text-xs text-muted-foreground">
-            Map widget props from <span className="font-medium">{selectedBlock.type}</span> to
-            content fields.
+            Map screen widget props from <span className="font-medium">{selectedBlock.type}</span>{" "}
+            to content fields.
           </p>
         </div>
         <Button

@@ -5,7 +5,7 @@
 **Category:** Widgets + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-054-23-01, TASK-054-14, TASK-054-16  
-**Status:** To Do
+**Status:** Done (2026-03-18)
 
 ---
 
@@ -118,3 +118,9 @@ const widgetLibraryItems = listWidgets().filter((widget) =>
 - `_docs/WIDGETS.md`
 - `_docs/WIDGET_PACK_MATRIX.md`
 - `_docs/CODERSO_MODULES.md`
+
+## Completion Notes (2026-03-18)
+
+- Extended widget registry metadata with `surfaces`.
+- Added `screen-record-header`, `screen-field-value`, `screen-field-group`, and `screen-two-column`.
+- `Coderso/Widgets` and page/template flows now filter to `widget-library` / `page-builder` surfaces, while `Screens` uses `custom-screen-builder`.

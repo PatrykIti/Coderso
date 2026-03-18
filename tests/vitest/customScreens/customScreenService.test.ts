@@ -101,6 +101,7 @@ test("listCustomScreens maps normalized custom screen records", async () => {
   expect(result[0]?.id).toBe("screen-1");
   expect(result[0]?.bindings[0]?.id).toBe("section-1-title");
   expect(result[0]?.sidebarLabel).toBe(" Catalog ");
+  expect(result[0]?.capabilities.mode).toBe("editor");
 });
 
 test("getCustomScreen returns null when the row is missing", async () => {
@@ -137,6 +138,7 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
   expect(mockDb.state.lastInsertValues?.updatedAt).toBeInstanceOf(Date);
   expect(result.status).toBe("draft");
   expect(result.bindings[0]?.id).toBe("section-1-title");
+  expect(result.capabilities.mode).toBe("editor");
 });
 
 test("createCustomScreen rejects invalid payloads", async () => {
@@ -198,6 +200,7 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
   expect(mockDb.state.lastUpdateValues?.updatedAt).toBeInstanceOf(Date);
   expect(result?.name).toBe("Updated catalog");
   expect(result?.sidebarLabel).toBeNull();
+  expect(result?.capabilities.mode).toBe("collection-only");
 });
 
 test("deleteCustomScreen returns the normalized deleted record or null", async () => {
