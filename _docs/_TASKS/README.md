@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 14 tasks
 - **In Progress:** 5 tasks
 - **Done:** 651 tasks
 
@@ -39,6 +39,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-23 | Coderso Screens Admin UI Separation and Preview Recovery | High | Large | Follow-up: dedicated screen widgets, preview diagnostics, and mode-based record workflow |
+| TASK-054-23-01 | Screen Contract, Mode Model, and Gating | High | Medium | Define `collection-only` / `dashboard` / `editor` capability contract and back-compat |
+| TASK-054-23-02 | Dedicated Screen Widget Pack and Surface Scoping | High | Large | Separate screen widgets from page/widget library surfaces |
+| TASK-054-23-03 | Screen Preview and Builder Diagnostics | High | Medium | Replace blank preview with deterministic diagnostics and sample-data states |
+| TASK-054-23-04 | Record Workflow Gating and Copy Clarification | High | Medium | Route records by screen mode and replace confusing bindings/preview copy |
+| TASK-054-23-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Lint, route/UI tests, docs, changelog, and kanban sync |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
