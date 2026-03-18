@@ -22,6 +22,22 @@ test("customScreenUpdateSchema requires at least one property", () => {
   expect(() => validate(customScreenUpdateSchema, {})).toThrow("Invalid payload");
 });
 
+test("custom screen schemas accept nullable sidebarLabel", () => {
+  expect(() =>
+    validate(customScreenCreateSchema, {
+      name: "Catalog",
+      contentTypeId: "type-1",
+      sidebarLabel: null,
+    })
+  ).not.toThrow();
+
+  expect(() =>
+    validate(customScreenUpdateSchema, {
+      sidebarLabel: null,
+    })
+  ).not.toThrow();
+});
+
 test("normalizeCustomScreenDefinition returns defaults", () => {
   const definition = normalizeCustomScreenDefinition();
   expect(definition.schemaVersion).toBe(1);

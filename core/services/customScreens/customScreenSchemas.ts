@@ -207,7 +207,12 @@ export const customScreenCreateSchema = {
     contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
     status: { enum: customScreenStatusValues },
     showInSidebar: { type: "boolean" },
-    sidebarLabel: { type: "string", minLength: 1, maxLength: 160 },
+    sidebarLabel: {
+      anyOf: [
+        { type: "string", minLength: 1, maxLength: 160 },
+        { type: "null" },
+      ],
+    },
     schemaVersion: { enum: [1] },
     blocks: {
       type: "array",
@@ -231,7 +236,12 @@ export const customScreenUpdateSchema = {
     contentTypeId: { type: "string", minLength: 1, maxLength: 64 },
     status: { enum: customScreenStatusValues },
     showInSidebar: { type: "boolean" },
-    sidebarLabel: { type: "string", minLength: 1, maxLength: 160 },
+    sidebarLabel: {
+      anyOf: [
+        { type: "string", minLength: 1, maxLength: 160 },
+        { type: "null" },
+      ],
+    },
     schemaVersion: { enum: [1] },
     blocks: {
       type: "array",
