@@ -111,7 +111,7 @@ const solutionKitsCatalogSeed: SolutionKitCatalogSeed[] = [
       "reviews_social_proof",
       "collect_qualified_leads",
     ],
-    recommendedModules: ["booking", "forms", "reviews", "widgets", "entries"],
+    recommendedModules: ["engine", "entries", "widgets", "forms", "booking", "reviews"],
     features: [
       "Service catalog blocks",
       "Booking-first homepage",
@@ -265,7 +265,7 @@ const solutionKitsCatalogSeed: SolutionKitCatalogSeed[] = [
       "For clinics and practices that need clear service pages, intake forms, and reputation sections.",
     businessTypes: ["medical_clinic"],
     defaultGoals: ["online_booking", "lead_generation", "reviews_social_proof"],
-    recommendedModules: ["booking", "forms", "reviews", "widgets", "entries"],
+    recommendedModules: ["engine", "entries", "widgets", "forms", "booking", "reviews"],
     features: [
       "Doctor/team listing scaffolding",
       "Appointment funnel",
@@ -406,7 +406,7 @@ const solutionKitsCatalogSeed: SolutionKitCatalogSeed[] = [
       "For beauty and wellness brands that need a visual homepage with quick booking and promotions.",
     businessTypes: ["beauty_salon"],
     defaultGoals: ["online_booking", "lead_generation", "reviews_social_proof"],
-    recommendedModules: ["booking", "forms", "reviews", "widgets"],
+    recommendedModules: ["engine", "entries", "widgets", "forms", "booking", "reviews"],
     features: [
       "Offer and package highlights",
       "Gallery-friendly sections",
@@ -548,7 +548,7 @@ const solutionKitsCatalogSeed: SolutionKitCatalogSeed[] = [
       "For aggregator-like websites requiring listings, filters, and searchable service cards.",
     businessTypes: ["services_directory"],
     defaultGoals: ["catalog_showcase", "lead_generation", "collect_qualified_leads"],
-    recommendedModules: ["listings", "filters", "search", "forms", "entries"],
+    recommendedModules: ["engine", "entries", "widgets", "forms", "listings", "filters", "search"],
     features: [
       "Directory listing page scaffolding",
       "Filter/search module presets",
@@ -692,7 +692,7 @@ const solutionKitsCatalogSeed: SolutionKitCatalogSeed[] = [
       "For teams that need quick catalog launch with product showcases and conversion pages.",
     businessTypes: ["small_ecommerce"],
     defaultGoals: ["sell_products", "catalog_showcase", "reviews_social_proof"],
-    recommendedModules: ["commerce", "widgets", "forms", "reviews", "listings"],
+    recommendedModules: ["engine", "entries", "widgets", "forms", "commerce", "reviews"],
     features: [
       "Product showcase page scaffolding",
       "Compare/table widget-ready structure",

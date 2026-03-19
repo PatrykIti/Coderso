@@ -566,6 +566,11 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - review pozwala ograniczyc execution do `enabledStepIds`,
   - apply endpoint dostaje typed `plan` payload, backend filtruje `resourceBlueprint` przed install run,
   - run metadata (`run.options.wizard`) przechowuje plan snapshot do `rerun` i `clone as draft`.
+- Admin navigation focus contract:
+  - selected kit moze byc persistowany client-side jako active admin preference,
+  - `AdminShell` wyprowadza z niego `CodersoFeatureFlags`,
+  - gating dotyczy tylko grupy `Coderso`; top-level `Main/Tools/Admin` pozostaja bez zmian,
+  - `Solution Kits` pozostaje widoczne niezaleznie od aktywnego kitu.
 - Install engine foundation (service + DB):
   - `solution_kit_install_runs` trzyma execution context (`dry_run|apply|rollback`, status, summary),
   - `solution_kit_install_items` trzyma per-resource trace (operation + snapshots + rollback_action),

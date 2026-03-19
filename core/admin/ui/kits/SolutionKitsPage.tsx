@@ -11,6 +11,10 @@ import {
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { AiSiteWizard } from "@/ui/setup/AiSiteWizard";
+import {
+  getActiveSolutionKitId,
+  setActiveSolutionKitId,
+} from "@/services/solutionKitSelection";
 
 import { SolutionKitCard } from "./SolutionKitCard";
 import { useSolutionKits } from "./hooks/useSolutionKits";
@@ -32,9 +36,16 @@ const formatIncludeLabel = (value: string) =>
 export function SolutionKitsPage() {
   const { items, isLoading, error } = useSolutionKits();
 
-  const [selectedId, setSelectedId] = useState<SolutionKitId | null>(null);
+  const [selectedId, setSelectedId] = useState<SolutionKitId | null>(() =>
+    getActiveSolutionKitId()
+  );
   const [selectedKit, setSelectedKit] = useState<SolutionKitDefinition | null>(null);
   const effectiveSelectedId = selectedId ?? items[0]?.id ?? null;
+
+  const handleSelectKit = (kitId: SolutionKitId) => {
+    setSelectedId(kitId);
+    setActiveSolutionKitId(kitId);
+  };
 
   useEffect(() => {
     if (!effectiveSelectedId) return;
@@ -95,7 +106,7 @@ export function SolutionKitsPage() {
                   key={kit.id}
                   kit={kit}
                   isActive={kit.id === effectiveSelectedId}
-                  onSelect={setSelectedId}
+                  onSelect={handleSelectKit}
                 />
               ))}
             </div>
@@ -114,7 +125,7 @@ export function SolutionKitsPage() {
               kits={items}
               selectedKitId={effectiveSelectedId}
               selectedKit={selectedKit}
-              onSelectKit={setSelectedId}
+              onSelectKit={handleSelectKit}
             />
 
             {selectedSummary ? (
@@ -162,6 +173,36 @@ export function SolutionKitsPage() {
                           </div>
                         </div>
                       ) : null}
+
+                      {selectedSummary?.recommendedModules.length ? (
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Recommended modules</p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedSummary.recommendedModules.map((moduleId) => (
+                              <Badge key={`recommended:${moduleId}`} variant="outline" className="text-[11px]">
+                                {moduleId}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {(manifest.optionalModules?.length ?? 0) > 0 ? (
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">Optional modules</p>
+                          <div className="flex flex-wrap gap-2">
+                            {manifest.optionalModules?.map((moduleId) => (
+                              <Badge key={`optional:${moduleId}`} variant="outline" className="text-[11px]">
+                                {moduleId}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <p className="text-xs text-muted-foreground">
+                        Selecting a kit can focus the `Coderso` sidebar on the modules recommended for this vertical.
+                      </p>
 
                       {(manifest.postInstallTasks?.length ?? 0) > 0 ? (
                         <div className="space-y-1">

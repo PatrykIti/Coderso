@@ -5,7 +5,7 @@
 **Category:** Kits + Product Contract  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-17-01  
-**Status:** To Do
+**Status:** Done (2026-03-19)
 
 ---
 
@@ -45,3 +45,8 @@ wiarygodna. Ten task robi jawny audit i korekty katalogu.
 - `_docs/CMS_API.md`
 - `_docs/CODERSO_MODULES.md`
 
+## Completion Notes (2026-03-19)
+
+- Audited `recommendedModules` against known `CodersoModuleId` values and blueprint needs.
+- Added missing foundation modules such as `engine`, `entries`, and `widgets` where blueprint capabilities required them.
+- Corrected obvious catalog mismatch for `small-ecommerce` by removing `listings` from the recommended module set.

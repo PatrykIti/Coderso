@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Kits + Navigation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-13, TASK-054-17, TASK-054  
-**Status:** In Progress (2026-03-19)
+**Status:** Done (2026-03-19)
 
 ---
 
@@ -116,3 +116,10 @@ Rekomendowany module gating contract:
 - `_docs/ADMIN_NAVIGATION.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*.md`
+
+## Completion Notes (2026-03-19)
+
+- Added persisted active-kit preference in admin UI.
+- `AdminShell` now derives `CodersoFeatureFlags` from the active solution kit and narrows the Coderso sidebar.
+- Audited and corrected solution kit module lists against actual blueprint capabilities.
+- Exposed module scope more clearly in Solution Kits details and AI wizard review.

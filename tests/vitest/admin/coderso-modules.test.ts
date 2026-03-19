@@ -10,6 +10,7 @@ import {
   buildCustomScreenShortcutNavItems,
   buildDefaultNavSections,
 } from "../../../core/admin/ui/navigation/sidebarConfig";
+import { buildCodersoFeatureFlagsForSolutionKit } from "../../../core/admin/services/solutionKitSelection";
 
 const ids = new Set(CODERSO_MODULE_REGISTRY.map((module) => module.id));
 
@@ -87,6 +88,47 @@ test("buildDefaultNavSections composes Coderso group from registry", () => {
     true
   );
   expect(coderso?.items.some((item) => item.href === "/admin/coderso/posts")).toBe(false);
+});
+
+test("buildDefaultNavSections narrows Coderso group for an active solution kit", () => {
+  const flags = buildCodersoFeatureFlagsForSolutionKit({
+    id: "automotive-workshop",
+    title: "Automotive Workshop",
+    shortDescription: "Workshop starter",
+    recommendedModules: ["engine", "entries", "widgets", "forms", "booking", "reviews"],
+    features: [],
+    manifest: {
+      id: "automotive-workshop",
+      title: "Automotive Workshop",
+      vertical: "automotive-workshop",
+      includes: {
+        contentTypes: ["service"],
+        entries: [],
+        widgets: ["hero", "feature-grid", "testimonials", "cta-banner"],
+        templates: ["service-home", "service-list"],
+        forms: ["service-request"],
+        menus: ["primary", "footer"],
+      },
+      requiredModules: ["engine", "entries", "widgets", "forms", "booking", "reviews"],
+      optionalModules: [],
+      postInstallTasks: [],
+    },
+  });
+
+  const sections = buildDefaultNavSections(flags);
+  const main = sections.find((section) => section.title === "Main");
+  const coderso = main?.groups?.find((group) => group.id === "coderso");
+  const hrefs = coderso?.items.map((item) => item.href) ?? [];
+
+  expect(hrefs).toEqual([
+    "/admin/coderso/engine",
+    "/admin/coderso/entries",
+    "/admin/coderso/widgets",
+    "/admin/coderso/forms",
+    "/admin/coderso/booking",
+    "/admin/coderso/reviews",
+    "/admin/coderso/solution-kits",
+  ]);
 });
 
 test("buildCustomScreenShortcutNavItems returns only active sidebar screens", () => {

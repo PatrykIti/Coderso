@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Navigation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-30-01  
-**Status:** To Do
+**Status:** Done (2026-03-19)
 
 ---
 
@@ -61,3 +61,8 @@ Rules:
 - `_docs/ADMIN_NAVIGATION.md`
 - `_docs/CODERSO_MODULES.md`
 
+## Completion Notes (2026-03-19)
+
+- `AdminShell` now reads the active solution kit and rebuilds `buildDefaultNavSections(flags)` dynamically.
+- Coderso sidebar narrows to active-kit modules while `Solution Kits` remains visible.
+- Default nav remains unchanged when no active kit is selected.

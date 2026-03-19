@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-13-04, TASK-054-17-03  
-**Status:** To Do
+**Status:** Done (2026-03-19)
 
 ---
 
@@ -59,3 +59,8 @@ Persistence:
 - `_docs/SOLUTION_KITS.md`
 - `_docs/CMS_API.md`
 
+## Completion Notes (2026-03-19)
+
+- Added `core/admin/services/solutionKitSelection.ts`.
+- `SolutionKitsPage` now writes the active solution kit to shared admin preference storage.
+- `AiSiteWizard` selection flow now updates the same persisted active kit.

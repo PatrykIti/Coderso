@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 import {
   appendNavItemsAfterGroup,
   buildCustomScreenShortcutNavItems,
+  buildDefaultNavSections,
   defaultFooterItems,
-  defaultNavSections,
   type NavSection,
   type NavItem,
 } from "@/ui/navigation/sidebarConfig";
@@ -28,6 +28,17 @@ import {
   listCustomScreensCached,
   type CustomScreenRecord,
 } from "@/services/customScreensClient";
+import {
+  getActiveSolutionKitId,
+  subscribeActiveSolutionKitId,
+  buildCodersoFeatureFlagsForSolutionKit,
+} from "@/services/solutionKitSelection";
+import {
+  getCachedSolutionKits,
+  listSolutionKitsCached,
+  type SolutionKitId,
+  type SolutionKitSummary,
+} from "@/services/solutionKitsClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
@@ -59,7 +70,7 @@ type AdminShellProps = {
 
 export function AdminShell({
   children,
-  navSections = defaultNavSections,
+  navSections,
   footerItems = defaultFooterItems,
   activeHref,
   breadcrumbs,
@@ -74,14 +85,32 @@ export function AdminShell({
   const [customScreens, setCustomScreens] = useState<CustomScreenRecord[]>(
     () => getCachedCustomScreens() ?? []
   );
+  const [solutionKits, setSolutionKits] = useState<SolutionKitSummary[]>(
+    () => getCachedSolutionKits() ?? []
+  );
+  const [activeSolutionKitId, setActiveSolutionKitId] = useState<SolutionKitId | null>(
+    () => getActiveSolutionKitId()
+  );
   const adminBasePath = useAdminBasePath();
+  const activeSolutionKit = useMemo(
+    () => solutionKits.find((item) => item.id === activeSolutionKitId) ?? null,
+    [activeSolutionKitId, solutionKits]
+  );
+  const solutionKitFlags = useMemo(
+    () => buildCodersoFeatureFlagsForSolutionKit(activeSolutionKit),
+    [activeSolutionKit]
+  );
+  const baseNavSections = useMemo(
+    () => navSections ?? buildDefaultNavSections(solutionKitFlags),
+    [navSections, solutionKitFlags]
+  );
   const hasCodersoGroup = useMemo(
-    () => navSections.some((section) => section.groups?.some((group) => group.id === "coderso")),
-    [navSections]
+    () => baseNavSections.some((section) => section.groups?.some((group) => group.id === "coderso")),
+    [baseNavSections]
   );
   const navGroupDefaults = useMemo(
-    () => collectDefaultGroupState(navSections),
-    [navSections]
+    () => collectDefaultGroupState(baseNavSections),
+    [baseNavSections]
   );
   const [navGroupState, setNavGroupState] = useState<Record<string, boolean>>(() => {
     if (typeof window === "undefined") return navGroupDefaults;
@@ -106,6 +135,13 @@ export function AdminShell({
   }, [hasCodersoGroup]);
 
   useEffect(() => {
+    if (!hasCodersoGroup) return;
+    listSolutionKitsCached()
+      .then((items) => setSolutionKits(items))
+      .catch(() => undefined);
+  }, [hasCodersoGroup]);
+
+  useEffect(() => {
     if (!hasCodersoGroup) return undefined;
     return subscribeCacheEvents((event) => {
       if (event.key !== cacheKeys.customScreensList) return;
@@ -115,14 +151,21 @@ export function AdminShell({
     });
   }, [hasCodersoGroup]);
 
+  useEffect(() => {
+    if (!hasCodersoGroup) return undefined;
+    return subscribeActiveSolutionKitId((kitId) => {
+      setActiveSolutionKitId(kitId);
+    });
+  }, [hasCodersoGroup]);
+
   const navSectionsWithCustomScreens = useMemo(
     () =>
       appendNavItemsAfterGroup(
-        navSections,
+        baseNavSections,
         "coderso",
         buildCustomScreenShortcutNavItems(customScreens)
       ),
-    [customScreens, navSections]
+    [baseNavSections, customScreens]
   );
 
   const resolvedSections = useMemo(

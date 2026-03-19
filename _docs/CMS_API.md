@@ -1588,6 +1588,10 @@ Plan response highlights:
 - transparent `steps[]` list (`id`, `title`, `description`, `editable`, `affectsResources`),
 - `settingsPatch` preview (no side effects in this endpoint).
 
+Admin UI note:
+- `selectedKitId` can also be persisted client-side as an admin preference to focus the `Coderso` sidebar on kit-relevant modules.
+- This preference is not a dedicated persisted API resource in v1; it is an admin UI concern layered on top of list/detail payloads and kit manifests.
+
 Install engine:
 - `solution_kit_install_runs` stores one run per `dry_run` / `apply` / `rollback`,
 - `solution_kit_install_items` stores per-resource operation trace (`content_type|form|page|menu`),

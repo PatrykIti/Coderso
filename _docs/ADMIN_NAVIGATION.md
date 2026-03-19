@@ -24,6 +24,9 @@ internal screens. This reduces loading flashes and keeps cached data warm.
 - Tiered catalog (v1-v3) is documented in `_docs/CODERSO_MODULES.md`.
 - Sidebar can expose future modules through feature flags passed to
   `buildDefaultNavSections(flags)` (`CodersoFeatureFlags`).
+- When an active `Solution Kit` is selected in admin UI, `AdminShell` may derive
+  `CodersoFeatureFlags` from the kit and narrow only the `Coderso` group.
+- No active solution kit means the default full `Coderso` group remains visible.
 - Group collapse state is persisted in local storage (`nextless.admin.navGroupState`).
 - On mobile, selecting a Coderso child route closes the drawer automatically.
 

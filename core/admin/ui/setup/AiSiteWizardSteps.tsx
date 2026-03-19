@@ -505,6 +505,9 @@ export function AiSiteWizardStepContent({
           <p className="text-sm font-medium text-foreground">Modules</p>
           {guidedPlan ? (
             <div className="mt-2 space-y-2">
+              <p className="text-xs text-muted-foreground">
+                The selected kit can focus the `Coderso` sidebar on the modules listed below.
+              </p>
               <div className="flex flex-wrap gap-2">
                 {guidedPlan.modules.required.map((moduleId) => (
                   <Badge key={`required:${moduleId}`} variant="default" className="text-[11px]">

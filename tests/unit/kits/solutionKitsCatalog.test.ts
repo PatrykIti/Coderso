@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 
 import { solutionKitsCatalog } from "../../../core/services/kits/solutionKitsCatalog";
+import { CODERSO_MODULE_REGISTRY } from "../../../core/admin/ui/navigation/codersoModules";
 
 const normalizePageSlug = (value: string) => {
   const trimmed = value.trim();
@@ -62,4 +63,32 @@ test("solution kit resource blueprint keys are unique and internally consistent"
       }
     }
   }
+});
+
+test("solution kit recommended modules stay aligned with known Coderso modules and core blueprint needs", () => {
+  const knownModules = new Set(CODERSO_MODULE_REGISTRY.map((module) => module.id));
+
+  for (const kit of solutionKitsCatalog) {
+    for (const moduleId of kit.recommendedModules) {
+      expect(knownModules.has(moduleId as (typeof CODERSO_MODULE_REGISTRY)[number]["id"])).toBe(true);
+    }
+
+    if (kit.resourceBlueprint.contentTypes.length > 0) {
+      expect(kit.recommendedModules).toContain("engine");
+      expect(kit.recommendedModules).toContain("entries");
+    }
+
+    if (kit.resourceBlueprint.pages.length > 0) {
+      expect(kit.recommendedModules).toContain("widgets");
+    }
+  }
+
+  const beautySalon = solutionKitsCatalog.find((kit) => kit.id === "beauty-salon");
+  const servicesDirectory = solutionKitsCatalog.find((kit) => kit.id === "services-directory");
+  const smallEcommerce = solutionKitsCatalog.find((kit) => kit.id === "small-ecommerce");
+
+  expect(beautySalon?.recommendedModules).toContain("entries");
+  expect(servicesDirectory?.recommendedModules).toContain("widgets");
+  expect(smallEcommerce?.recommendedModules).toContain("entries");
+  expect(smallEcommerce?.recommendedModules).not.toContain("listings");
 });

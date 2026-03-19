@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-054-30-02, TASK-054-30-03  
-**Status:** To Do
+**Status:** Done (2026-03-19)
 
 ---
 
@@ -41,3 +41,7 @@ takie, a nie inne moduly.
 - `_docs/SOLUTION_KITS.md`
 - `_docs/ARCHITECTURE.md`
 
+## Completion Notes (2026-03-19)
+
+- `SolutionKitsPage` now surfaces required, recommended, and optional module scope more clearly.
+- `AiSiteWizard` module review now explains that selected kit modules can focus the Coderso sidebar.

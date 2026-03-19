@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 504 | 2026-03-19 | TASK-054-30 solution kits module audit and sidebar gating | Admin/UI |
 | 503 | 2026-03-19 | TASK-054-29 widget template builder toolbar and mobile panel UX fixes | Admin/UI |
 | 502 | 2026-03-19 | TASK-054-28 widget template builder settings details and canvas action parity | Admin/UI |
 | 501 | 2026-03-19 | TASK-054-27 custom screen builder canvas action parity | Admin/UI |

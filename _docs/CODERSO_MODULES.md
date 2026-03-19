@@ -141,6 +141,10 @@ const sections = buildDefaultNavSections({
   - template-level metadata moved out of the canvas header and into a right-side `Settings` tab,
   - block-level options remain in `Details`,
   - primary template builder actions now live in the sticky canvas area instead of shell topbar.
+- 054-30 done: Solution Kits module audit and sidebar gating delivered:
+  - active solution kit can now focus the `Coderso` sidebar through derived feature flags,
+  - kit module lists were audited against actual blueprint capabilities,
+  - `Solution Kits` details and AI wizard now explain required/recommended/optional module scope more clearly.
 - 054-15 done: Plugin contract and package manifest delivered:
   - strict `CodersoPluginManifest` contract with target version aliases and normalized provides/dependencies,
   - runtime manifest validator + contribution registrar + dependency fail-fast checks,
