@@ -39,7 +39,7 @@ export function WidgetCatalogFilters({
         onValueChange={(value) =>
           onTabChange(value === "all" ? "all" : "recommended")
         }
-      >
+        >
         <TabsList className="h-9">
           <TabsTrigger value="recommended" className="text-xs">
             Recommended <Badge variant="outline" className="ml-2 text-[10px]">{recommendedCount}</Badge>

@@ -2,6 +2,8 @@ import { expect, test } from "vitest";
 
 import {
   buildWidgetModuleOptions,
+  countWidgetLibraryWidgets,
+  countWidgetLibraryWidgetsByCategory,
   filterWidgetLibraryItems,
   matchesTemplateCategory,
   normalizeCategoryValue,
@@ -98,6 +100,59 @@ test("filterWidgetLibraryItems applies module and complexity filters in widgets 
 
   expect(items).toHaveLength(1);
   expect(items[0]?.name).toBe("Spacer");
+});
+
+test("countWidgetLibraryWidgets and category counts respect the same widget filters as the grid", () => {
+  const widgets = [
+    {
+      name: "Hero",
+      categoryLabel: "Layout",
+      category: "layout",
+      complexity: "composite" as const,
+      module: "content",
+      source: "core" as const,
+    },
+    {
+      name: "Spacer",
+      categoryLabel: "Layout",
+      category: "layout",
+      complexity: "atomic" as const,
+      module: "layout",
+      source: "core" as const,
+    },
+    {
+      name: "Feature Grid",
+      categoryLabel: "Content",
+      category: "content",
+      complexity: "composite" as const,
+      module: "content",
+      source: "core" as const,
+    },
+  ];
+
+  expect(
+    countWidgetLibraryWidgets(widgets, {
+      query: "",
+      widgetTab: "recommended",
+      widgetModule: "all",
+      widgetComplexity: "all",
+    })
+  ).toBe(2);
+
+  expect(
+    countWidgetLibraryWidgetsByCategory(widgets, {
+      query: "",
+      widgetTab: "recommended",
+      widgetModule: "all",
+      widgetComplexity: "all",
+    })
+  ).toEqual({
+    layout: 1,
+    content: 1,
+    forms: 0,
+    navigation: 0,
+    media: 0,
+  });
 });
 
 test("buildWidgetModuleOptions sorts strict ready modules first", () => {

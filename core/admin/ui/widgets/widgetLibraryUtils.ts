@@ -49,6 +49,11 @@ export type WidgetModuleOption = {
   enforcement?: ModulePackStatus["enforcement"];
 };
 
+export type WidgetScopeCountOptions = Pick<
+  WidgetFilterOptions,
+  "query" | "widgetTab" | "widgetModule" | "widgetComplexity"
+>;
+
 const toSource = (value: WidgetFilterItem["source"]): WidgetSource =>
   value === "template" ? "template" : "core";
 
@@ -113,6 +118,47 @@ export const filterWidgetLibraryItems = <T extends WidgetFilterItem>(
     return left.name.localeCompare(right.name);
   });
 };
+
+export function countWidgetLibraryWidgets<T extends WidgetFilterItem>(
+  widgets: T[],
+  options: WidgetScopeCountOptions
+) {
+  return filterWidgetLibraryItems(widgets, {
+    ...options,
+    activeScope: "widgets",
+    templateCategory: "all",
+    widgetCategory: "all",
+  }).length;
+}
+
+export function countWidgetLibraryWidgetsByCategory<T extends WidgetFilterItem>(
+  widgets: T[],
+  options: WidgetScopeCountOptions
+) {
+  const categories: WidgetCategoryId[] = [
+    "layout",
+    "content",
+    "forms",
+    "navigation",
+    "media",
+  ];
+
+  return categories.reduce<Record<WidgetCategoryId, number>>((result, category) => {
+    result[category] = filterWidgetLibraryItems(widgets, {
+      ...options,
+      activeScope: "widgets",
+      templateCategory: "all",
+      widgetCategory: category,
+    }).length;
+    return result;
+  }, {
+    layout: 0,
+    content: 0,
+    forms: 0,
+    navigation: 0,
+    media: 0,
+  });
+}
 
 const toDisplayLabel = (value: string) =>
   value

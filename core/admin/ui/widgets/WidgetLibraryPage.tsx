@@ -67,6 +67,8 @@ import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
 import { WidgetInsertDialog } from "./WidgetInsertDialog";
 import {
   buildWidgetModuleOptions,
+  countWidgetLibraryWidgets,
+  countWidgetLibraryWidgetsByCategory,
   filterWidgetLibraryItems,
   normalizeCategoryValue,
 } from "./widgetLibraryUtils";
@@ -269,7 +271,7 @@ export function WidgetLibraryPage() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<WidgetView>("grid");
   const [activeScope, setActiveScope] = useState<LibraryScope>("widgets");
-  const [widgetTab, setWidgetTab] = useState<WidgetLibraryTab>("recommended");
+  const [widgetTab, setWidgetTab] = useState<WidgetLibraryTab>("all");
   const [advancedMode, setAdvancedMode] = useState(false);
   const [widgetCategory, setWidgetCategory] =
     useState<WidgetCategoryFilter>("all");
@@ -483,22 +485,26 @@ export function WidgetLibraryPage() {
       }
     });
   }, [refreshCatalog, refreshCategories, refreshPages]);
-  const widgetCategoryCounts = useMemo(() => {
-    const counts: Record<WidgetCategoryId, number> = {
-      layout: 0,
-      content: 0,
-      forms: 0,
-      navigation: 0,
-      media: 0,
-    };
-    for (const widget of widgets) {
-      if (widget.source !== "core") continue;
-      if (widget.category in counts) {
-        counts[widget.category as WidgetCategoryId] += 1;
-      }
-    }
-    return counts;
-  }, [widgets]);
+  const widgetScopeCount = useMemo(
+    () =>
+      countWidgetLibraryWidgets(widgets, {
+        query,
+        widgetTab,
+        widgetModule,
+        widgetComplexity,
+      }),
+    [widgets, query, widgetTab, widgetModule, widgetComplexity]
+  );
+  const widgetCategoryCounts = useMemo(
+    () =>
+      countWidgetLibraryWidgetsByCategory(widgets, {
+        query,
+        widgetTab,
+        widgetModule,
+        widgetComplexity,
+      }),
+    [widgets, query, widgetTab, widgetModule, widgetComplexity]
+  );
 
   const scopeCounts = useMemo(
     () => ({
@@ -899,7 +905,7 @@ export function WidgetLibraryPage() {
                         : activeScope === "widgets" &&
                           widgetCategory === category.id;
                       const count = isAllWidgets
-                        ? scopeCounts.widgets
+                        ? widgetScopeCount
                         : widgetCategoryCounts[category.id as WidgetCategoryId] ??
                           0;
 

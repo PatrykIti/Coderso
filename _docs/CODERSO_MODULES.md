@@ -124,8 +124,11 @@ const sections = buildDefaultNavSections({
   - parent `TASK-054-13` moved to Done.
 - 054-14 done: Composite-first widget strategy delivered:
   - widget metadata contract (`complexity`, `audience`, `module`, `presets`, `requires`) added to registry/catalog,
-  - widget library default flow changed to `Recommended` composite-first mode,
-  - `All widgets` + `Advanced mode` + module/complexity filters introduced for progressive disclosure UX.
+  - widget library introduced `Recommended` + `All widgets` + `Advanced mode` + module/complexity filters for progressive disclosure UX.
+- 054-25 done: Widget Library follow-up delivered:
+  - default active tab is now `All widgets`,
+  - `Recommended` remains available as a composite-only helper filter,
+  - left-side widget counts now align with the same active filter basis as the grid.
 - 054-15 done: Plugin contract and package manifest delivered:
   - strict `CodersoPluginManifest` contract with target version aliases and normalized provides/dependencies,
   - runtime manifest validator + contribution registrar + dependency fail-fast checks,

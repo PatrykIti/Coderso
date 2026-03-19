@@ -20,4 +20,7 @@ test("WidgetLibraryPage renders categories and widget grid", () => {
   expect(html).toContain("border-border/60");
   expect(html).toContain("Create Widget");
   expect(html).not.toContain("New Template");
+  expect(html).toMatch(
+    /<button[^>]*role="tab"[^>]*data-state="active"[^>]*>All widgets/
+  );
 });

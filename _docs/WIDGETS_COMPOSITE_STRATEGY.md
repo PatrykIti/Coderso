@@ -41,13 +41,13 @@ Registry behavior:
 ## Admin UX Contract
 
 Widget library exposes:
-- tab `Recommended` (composite-only default),
+- tab `Recommended` (optional composite-only helper),
 - tab `All widgets` (composite + atomic),
 - `Advanced mode` toggle,
 - filters: `Module` and `Complexity`.
 
 Default intent:
-- beginner users start in `Recommended`,
+- beginner users can switch to `Recommended`,
 - atomic widgets remain available but are not the primary onboarding path.
 
 ## Catalog/API Contract

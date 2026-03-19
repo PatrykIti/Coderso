@@ -1003,8 +1003,8 @@ Wymagany model konfiguracji (dla wszystkich widgetow, pluginow i addonow):
 - Zawsze mozna przejsc do Advanced po wstepnej konfiguracji.
 
 Composite-first delivery (Coderso):
-- default flow dla nietechnicznych userow: `Recommended` (composite widgets),
-- secondary flow: `All widgets` (composite + atomic),
+- default flow: `All widgets` (composite + atomic),
+- secondary helper flow dla nietechnicznych userow: `Recommended` (composite widgets),
 - widget metadata contract:
   - `complexity` (`composite|atomic`),
   - `audience` (`beginner|intermediate|advanced`),
