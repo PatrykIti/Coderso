@@ -1,10 +1,9 @@
-import { Eye, Search, Settings2, SquarePen } from "lucide-react";
+import { Eye, Settings2, SquarePen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -44,7 +43,6 @@ import {
   listRegisteredScreenWidgets,
   listRegisteredWidgets,
 } from "@/ui/widgets/registry";
-import { WidgetCard } from "@/ui/widgets/WidgetCard";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
@@ -65,16 +63,9 @@ import {
   updateBlockById,
   type BlockPath,
 } from "@/ui/pages/builder/blockUtils";
+import { WidgetPicker } from "@/ui/pages/builder/WidgetPicker";
 import type { Block } from "@/ui/pages/builder/types";
 import type { ContentField } from "../content-types/SchemaBuilder";
-
-const widgetCategoryLabels: Record<string, string> = {
-  layout: "Layout",
-  content: "Content",
-  forms: "Forms",
-  navigation: "Navigation",
-  media: "Media",
-};
 
 const normalizeText = (value: string) => value.trim();
 
@@ -184,7 +175,6 @@ export function CustomScreenEditorPage() {
     });
     return Array.from(byType.values());
   }, [allWidgetRegistry, blocks, screenWidgetRegistry]);
-  const [query, setQuery] = useState("");
   const selectedContentType = useMemo(
     () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
     [contentTypeId, contentTypes]
@@ -310,20 +300,6 @@ export function CustomScreenEditorPage() {
     });
   }, [hasUnsavedChanges, isCreateMode, refreshScreen, screenId]);
 
-  const filteredWidgets = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return screenWidgetRegistry
-      .filter((widget) => widget.type !== "template-section")
-      .filter((widget) => {
-        if (!normalized) return true;
-        const haystack = [widget.title, widget.description, widget.type]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return haystack.includes(normalized);
-      });
-  }, [query, screenWidgetRegistry]);
-
   const handleAddBlock = (type: string) => {
     const nextBlock = createBlock(type);
     updateBlocks([...blocks, nextBlock]);
@@ -407,42 +383,15 @@ export function CustomScreenEditorPage() {
   };
 
   const libraryPanel = (
-    <div className="flex h-full flex-col">
-      <div className="border-b p-4">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Find screen widgets..."
-            className="pl-9"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-        </div>
-      </div>
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-2">
-          {filteredWidgets.length === 0 ? (
-            <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
-              No screen widgets match this search.
-            </div>
-          ) : null}
-          {filteredWidgets.map((widget) => (
-            <WidgetCard
-              key={widget.type}
-              name={widget.title}
-              categoryLabel={widgetCategoryLabels[widget.category] ?? widget.category}
-              variant="compact"
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData("widget-type", widget.type);
-                event.dataTransfer.effectAllowed = "copy";
-              }}
-              onSelect={() => handleAddBlock(widget.type)}
-            />
-          ))}
-        </div>
-      </ScrollArea>
-    </div>
+    <WidgetPicker
+      widgets={screenWidgetRegistry}
+      onAdd={handleAddBlock}
+      draggable
+      onDragStart={(event, type) => {
+        event.dataTransfer.setData("widget-type", type);
+        event.dataTransfer.effectAllowed = "copy";
+      }}
+    />
   );
 
   const screenSettingsPanel = (

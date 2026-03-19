@@ -9,10 +9,28 @@ import { getWidgetRegistry } from "./widgetRegistry";
 
 type WidgetPickerProps = {
   onAdd: (type: string) => void;
+  widgets?: Array<{
+    type: string;
+    title: string;
+    description?: string;
+  }>;
+  searchPlaceholder?: string;
+  emptyMessage?: string;
+  draggable?: boolean;
+  onDragStart?: (event: React.DragEvent<HTMLDivElement>, type: string) => void;
 };
 
-export function WidgetPicker({ onAdd }: WidgetPickerProps) {
-  const widgetRegistry = getWidgetRegistry().filter((widget) => widget.type !== "template-section");
+export function WidgetPicker({
+  onAdd,
+  widgets,
+  searchPlaceholder = "Find components...",
+  emptyMessage = "No components match this search.",
+  draggable = false,
+  onDragStart,
+}: WidgetPickerProps) {
+  const widgetRegistry = (widgets ?? getWidgetRegistry()).filter(
+    (widget) => widget.type !== "template-section"
+  );
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
   const filteredWidgets = useMemo(() => {
@@ -31,7 +49,7 @@ export function WidgetPicker({ onAdd }: WidgetPickerProps) {
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Find components..."
+            placeholder={searchPlaceholder}
             className="pl-9"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -42,13 +60,15 @@ export function WidgetPicker({ onAdd }: WidgetPickerProps) {
         <div className="space-y-3">
           {filteredWidgets.length === 0 ? (
             <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
-              No components match this search.
+              {emptyMessage}
             </div>
           ) : null}
           {filteredWidgets.map((widget) => (
             <div
               key={widget.type}
               className="rounded-lg border bg-background p-3 shadow-sm"
+              draggable={draggable}
+              onDragStart={(event) => onDragStart?.(event, widget.type)}
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
