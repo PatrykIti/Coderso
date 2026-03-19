@@ -129,6 +129,10 @@ const sections = buildDefaultNavSections({
   - default active tab is now `All widgets`,
   - `Recommended` remains available as a composite-only helper filter,
   - left-side widget counts now align with the same active filter basis as the grid.
+- 054-26 done: Widget Library CTA cleanup delivered:
+  - removed the misleading `Create Widget` CTA from widget library,
+  - admin authoring path remains `New Template`,
+  - docs now state explicitly that real widget types are code/plugin-authored, not created from admin UI.
 - 054-15 done: Plugin contract and package manifest delivered:
   - strict `CodersoPluginManifest` contract with target version aliases and normalized provides/dependencies,
   - runtime manifest validator + contribution registrar + dependency fail-fast checks,

@@ -26,7 +26,6 @@ import { getCachedPages, getPageCached, listPagesCached, updatePage, type PageSu
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { getCachedWidgetCatalog, listWidgetCatalogCached, type WidgetCatalogItem } from "@/services/widgetsClient";
 import {
-  createWidgetTemplate,
   getWidgetTemplateCached,
   updateWidgetTemplate,
 } from "@/services/widgetTemplatesClient";
@@ -62,7 +61,6 @@ import type { Block } from "@/ui/pages/builder/types";
 import { WidgetCard } from "./WidgetCard";
 import { WidgetCatalogFilters } from "./WidgetCatalogFilters";
 import { WidgetTemplateCategoryDrawer } from "./WidgetTemplateCategoryDrawer";
-import { WidgetCreateDialog } from "./WidgetCreateDialog";
 import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
 import { WidgetInsertDialog } from "./WidgetInsertDialog";
 import {
@@ -287,7 +285,6 @@ export function WidgetLibraryPage() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [favoritesError, setFavoritesError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [selectedWidget, setSelectedWidget] = useState<WidgetWithPreview | null>(
@@ -772,21 +769,6 @@ export function WidgetLibraryPage() {
     }
   };
 
-  const handleCreateTemplate = async (payload: {
-    name: string;
-    description?: string | null;
-    category: string;
-    blocks: Array<Record<string, unknown>>;
-  }) => {
-    const created = await createWidgetTemplate({
-      name: payload.name,
-      description: payload.description ?? null,
-      category: payload.category,
-      blocks: payload.blocks,
-    });
-    navigate(templateEditHref(created.id));
-  };
-
   const handleEditTemplate = (widget: WidgetWithPreview | null) => {
     if (!widget || widget.source !== "template") return;
     navigate(templateEditHref(widget.id));
@@ -806,7 +788,6 @@ export function WidgetLibraryPage() {
   );
 
   const showTemplateAction = activeScope === "templates";
-  const showWidgetAction = activeScope === "widgets";
   return (
     <AdminShell
       activeHref="/admin/widgets"
@@ -1042,16 +1023,6 @@ export function WidgetLibraryPage() {
                     </AdminLink>
                   </Button>
                 ) : null}
-                {showWidgetAction ? (
-                  <Button
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setCreateOpen(true)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create Widget
-                  </Button>
-                ) : null}
               </div>
             </div>
             <ScrollArea className="flex-1 min-h-0 pr-2">
@@ -1119,12 +1090,6 @@ export function WidgetLibraryPage() {
         primaryActionLabel={
           selectedWidget?.source === "template" ? "Edit Template" : undefined
         }
-      />
-      <WidgetCreateDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        categories={templateCategories}
-        onCreate={handleCreateTemplate}
       />
       <WidgetTemplateCategoryDrawer
         open={categoriesOpen}

@@ -139,6 +139,11 @@ Zasady:
 - `Coderso/Widgets` pokazuje tylko surface `widget-library`,
 - `Coderso/Screens` pokazuje tylko surface `custom-screen-builder`.
 
+Uwaga:
+- `Widget Library` nie sluzy do tworzenia nowych realnych widget types z admin UI.
+- nowe widget types nadal sa code/plugin-authored i musza byc zarejestrowane w widget registry,
+- z poziomu admina user moze tworzyc `widget templates` przez flow `New Template`.
+
 Minimalny screen widget pack dla admin UI:
 - `screen-record-header`
 - `screen-field-value`
