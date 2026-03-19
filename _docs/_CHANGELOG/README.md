@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 501 | 2026-03-19 | TASK-054-27 custom screen builder canvas action parity | Admin/UI |
 | 500 | 2026-03-19 | TASK-054-26 widget library CTA clarity and template-only authoring | Admin/UI |
 | 499 | 2026-03-19 | TASK-054-25 widget library default tab and count alignment | Admin/UI |
 | 498 | 2026-03-19 | TASK-054-24 widget template builder card parity | Admin/UI |

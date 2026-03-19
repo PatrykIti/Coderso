@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 660 tasks
+- **Done:** 661 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-27 | Custom Screen Builder Canvas Action Parity | Medium | Small | Done: primary screen-builder actions moved from shell header into the sticky canvas action bar |
 | TASK-054-26 | Widget Library CTA Clarity and Template-Only Authoring | Medium | Small | Done: removed misleading `Create Widget` CTA and documented template-only authoring in admin UI |
 | TASK-054-25 | Widget Library Default Tab and Count Alignment | Medium | Small | Done: `All widgets` is now default and category counts follow the same filter basis as the grid |
 | TASK-054-24 | Widget Template Builder Page Builder Card Parity | Medium | Small | Done: template builder now reuses the same widget picker/card pattern as page builder |

@@ -1,4 +1,4 @@
-import { Eye, Settings2, SquarePen } from "lucide-react";
+import { ArrowLeft, Eye, Save, Settings2, SquarePen } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -534,101 +534,111 @@ export function CustomScreenEditorPage() {
         name={name}
         status={status}
         hasUnsavedChanges={hasUnsavedChanges}
-        isSaving={isSaving}
         isCreateMode={isCreateMode}
-        saveDisabled={isLoading}
-        additionalActions={
-          !isCreateMode && screenId ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={() =>
-                navigate(
-                  `/coderso/custom-screens/${encodeURIComponent(screenId)}/entries`
-                )
-              }
-            >
-              <SquarePen className="h-4 w-4" />
-              Open records
-            </Button>
-          ) : null
-        }
-        onSave={handleSave}
-        onBack={() => navigate("/coderso/custom-screens")}
         leftPanel={libraryPanel}
         rightPanel={detailsPanel}
         rightPanelClassName="p-6"
       >
         <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-2">
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {canvasMode === "builder" ? "Screen canvas" : "Bound preview"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {canvasMode === "builder"
-                  ? "Drag dedicated screen widgets from the library or use the quick insert buttons."
-                  : "Preview uses sample content values and the current screen bindings."}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="space-y-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {canvasMode === "builder" ? "Screen canvas" : "Bound preview"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {canvasMode === "builder"
+                    ? "Drag dedicated screen widgets from the library or use the quick insert buttons."
+                    : "Preview uses sample content values and the current screen bindings."}
+                </p>
+              </div>
+              {!isCreateMode && screenId ? (
                 <Button
-                  variant={canvasMode === "builder" ? "secondary" : "ghost"}
+                  variant="outline"
                   size="sm"
                   className="gap-2"
-                  onClick={() => setCanvasMode("builder")}
+                  onClick={() =>
+                    navigate(
+                      `/coderso/custom-screens/${encodeURIComponent(screenId)}/entries`
+                    )
+                  }
                 >
                   <SquarePen className="h-4 w-4" />
-                  Builder
+                  Open records
                 </Button>
-                <Button
-                  variant={canvasMode === "preview" ? "secondary" : "ghost"}
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setCanvasMode("preview")}
-                >
-                  <Eye className="h-4 w-4" />
-                  Preview
-                </Button>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 sm:hidden"
-                onClick={() =>
-                  setCanvasMode((current) =>
-                    current === "builder" ? "preview" : "builder"
-                  )
-                }
-              >
-                {canvasMode === "builder" ? (
-                  <>
-                    <Eye className="h-4 w-4" />
-                    Preview
-                  </>
-                ) : (
-                  <>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
+                  <Button
+                    variant={canvasMode === "builder" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setCanvasMode("builder")}
+                  >
                     <SquarePen className="h-4 w-4" />
                     Builder
-                  </>
-                )}
+                  </Button>
+                  <Button
+                    variant={canvasMode === "preview" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setCanvasMode("preview")}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </Button>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 sm:hidden"
+                  onClick={() =>
+                    setCanvasMode((current) =>
+                      current === "builder" ? "preview" : "builder"
+                    )
+                  }
+                >
+                  {canvasMode === "builder" ? (
+                    <>
+                      <Eye className="h-4 w-4" />
+                      Preview
+                    </>
+                  ) : (
+                    <>
+                      <SquarePen className="h-4 w-4" />
+                      Builder
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-2"
+                onClick={() => navigate("/coderso/custom-screens")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to list
+              </Button>
+              <Button
+                size="sm"
+                className="gap-2"
+                onClick={handleSave}
+                disabled={isLoading || isSaving}
+              >
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving..." : isCreateMode ? "Create screen" : "Save screen"}
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2 lg:hidden">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMobileLibraryOpen(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
                 Components
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setMobileDetailsOpen(true)}
-              >
+              <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
                 Details
               </Button>
             </div>

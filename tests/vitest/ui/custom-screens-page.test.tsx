@@ -85,6 +85,7 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
   expect(html).toContain("Sidebar label");
   expect(html).toContain("Screen name");
   expect(html).toContain("Screen canvas");
+  expect(html).toContain("Back to list");
   expect(html).toContain("Screen Record Header");
   expect(html).toContain("Screen Field Value");
   expect(html).toContain("Build your custom screen");
@@ -108,4 +109,6 @@ test("CustomScreenEditorPage renders builder canvas and save action", () => {
   expect(html).toContain("Create screen");
   expect(html).toContain("Screen canvas");
   expect(html).toContain("Drag dedicated screen widgets");
+  expect(html).toContain("Builder");
+  expect(html).toContain("Preview");
 });

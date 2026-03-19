@@ -1,7 +1,4 @@
-import { ArrowLeft, Save } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import type { CustomScreenStatus } from "@/services/customScreensClient";
 
@@ -14,12 +11,7 @@ export type CustomScreenShellProps = {
   name: string;
   status: CustomScreenStatus;
   hasUnsavedChanges?: boolean;
-  isSaving?: boolean;
   isCreateMode?: boolean;
-  saveDisabled?: boolean;
-  additionalActions?: React.ReactNode;
-  onSave: () => void;
-  onBack: () => void;
   leftPanel?: React.ReactNode;
   rightPanel?: React.ReactNode;
   rightPanelClassName?: string;
@@ -30,12 +22,7 @@ export function CustomScreenShell({
   name,
   status,
   hasUnsavedChanges,
-  isSaving,
   isCreateMode,
-  saveDisabled,
-  additionalActions,
-  onSave,
-  onBack,
   leftPanel,
   rightPanel,
   rightPanelClassName,
@@ -63,24 +50,6 @@ export function CustomScreenShell({
               Unsaved changes
             </span>
           ) : null}
-        </div>
-      }
-      topbarActions={
-        <div className="flex items-center gap-2">
-          {additionalActions}
-          <Button variant="outline" size="sm" className="gap-2" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4" />
-            Back to list
-          </Button>
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={onSave}
-            disabled={Boolean(saveDisabled) || isSaving}
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : isCreateMode ? "Create screen" : "Save screen"}
-          </Button>
         </div>
       }
     >
