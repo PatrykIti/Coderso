@@ -44,7 +44,7 @@ export function WidgetPicker({
     });
   }, [normalizedQuery, widgetRegistry]);
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="border-b p-4">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -56,7 +56,7 @@ export function WidgetPicker({
           />
         </div>
       </div>
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="min-h-0 flex-1 p-4">
         <div className="space-y-3">
           {filteredWidgets.length === 0 ? (
             <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">

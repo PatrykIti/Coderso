@@ -740,7 +740,7 @@ export function WidgetTemplateEditorPage() {
           <div className="flex flex-1 min-h-0">
             <aside
               data-slot="card"
-              className="hidden w-72 min-h-0 flex-col border-r border-border bg-card lg:flex"
+              className="hidden w-72 min-h-0 flex-col overflow-hidden border-r border-border bg-card lg:flex"
             >
               <div className="border-b border-border p-4">
                 <div className="space-y-2">
@@ -769,7 +769,7 @@ export function WidgetTemplateEditorPage() {
                   </Select>
                 </div>
               </div>
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 overflow-hidden">
                 <WidgetPicker
                   widgets={filteredWidgets}
                   onAdd={handleAddBlock}
