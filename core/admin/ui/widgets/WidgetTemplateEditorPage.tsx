@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, Eye, History, Save, Settings2 } from "lucide-react";
+import { ChevronRight, Eye, History, Save, Settings2, X } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -750,7 +749,7 @@ export function WidgetTemplateEditorPage() {
           Reset defaults
         </Button>
       </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Container
@@ -1130,7 +1129,7 @@ export function WidgetTemplateEditorPage() {
 
             <main
             className={
-              "flex-1 overflow-auto p-10 bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)] bg-[size:24px_24px]"
+              "flex-1 overflow-auto bg-[radial-gradient(circle,var(--admin-base-border)_1px,transparent_1px)] bg-[size:24px_24px]"
             }
             onDragOver={(event) => {
               event.preventDefault();
@@ -1141,61 +1140,63 @@ export function WidgetTemplateEditorPage() {
               if (type) handleAddBlock(type);
             }}
           >
-            <div className="sticky top-0 z-10 mx-auto w-full max-w-3xl border-b bg-background/80 px-4 py-3 backdrop-blur">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Template canvas
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Build reusable template layouts and manage template settings from the right panel.
-                    </p>
-                  </div>
+            <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-2 backdrop-blur">
+              <div className="mx-auto flex w-full max-w-3xl items-center gap-1.5">
+                <span className="hidden text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:block">
+                  Template canvas
+                </span>
+                <div className="flex-1" />
+                <div className="flex items-center gap-1.5 lg:hidden">
+                  <Button variant="outline" size="sm" onClick={openSettingsPanel}>
+                    Settings
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled={isNew}
-                    onClick={() => void handlePreviewOpen()}
+                    onClick={openDetailsPanel}
+                    disabled={!selectedBlock || !selectedWidget}
                   >
-                    <Eye className="h-4 w-4" />
-                    Runtime Preview
+                    Details
                   </Button>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Button variant="secondary" size="sm" onClick={handleDiscard}>
-                    Discard
-                  </Button>
-                  <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                    <Save className="h-4 w-4" />
-                    {isSaving ? "Saving..." : "Save Template"}
-                  </Button>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => void handleOpenRevisions()}
-                    disabled={isNew}
-                  >
-                    <History className="h-4 w-4" />
-                    History
-                  </Button>
-                  <div className="ml-auto flex flex-wrap items-center gap-2 lg:hidden">
-                    <Button variant="outline" size="sm" onClick={openSettingsPanel}>
-                      Settings
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={openDetailsPanel}
-                      disabled={!selectedBlock || !selectedWidget}
-                    >
-                      Details
-                    </Button>
-                  </div>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => void handleOpenRevisions()}
+                  disabled={isNew}
+                  title="History"
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                  disabled={isNew}
+                  onClick={() => void handlePreviewOpen()}
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 sm:hidden"
+                  disabled={isNew}
+                  onClick={() => void handlePreviewOpen()}
+                  title="Preview"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button variant="secondary" size="sm" className="hidden sm:inline-flex" onClick={handleDiscard}>
+                  Discard
+                </Button>
+                <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                  <Save className="h-4 w-4" />
+                  <span className="hidden sm:inline">{isSaving ? "Saving..." : "Save Template"}</span>
+                  <span className="sm:hidden">{isSaving ? "..." : "Save"}</span>
+                </Button>
               </div>
             </div>
             <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8">
@@ -1337,38 +1338,44 @@ export function WidgetTemplateEditorPage() {
           </div>
         </div>
       </AdminShell>
-      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-4xl">
-          <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>Template panel</DialogTitle>
-            <DialogDescription>
-              Switch between template settings and active widget details.
-            </DialogDescription>
-          </DialogHeader>
+      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <SheetContent
+          side="right"
+          className="flex h-full min-h-0 w-full flex-col overflow-hidden p-0 sm:max-w-md"
+          showCloseButton={false}
+        >
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <SheetTitle>Template panel</SheetTitle>
+            <SheetClose asChild>
+              <Button variant="ghost" size="icon" aria-label="Close">
+                <X className="h-4 w-4" />
+              </Button>
+            </SheetClose>
+          </div>
           <Tabs
             value={sidebarTab}
             onValueChange={(value) =>
               setSidebarTab(value as "settings" | "details")
             }
-            className="flex h-full min-h-0 flex-col"
+            className="flex min-h-0 flex-1 flex-col"
           >
-            <TabsList variant="line" className="px-6 pt-4">
+            <TabsList variant="line" className="px-6 pt-3">
               <TabsTrigger value="settings">Settings</TabsTrigger>
               <TabsTrigger value="details">Details</TabsTrigger>
             </TabsList>
             <TabsContent value="settings" className="mt-0 min-h-0 flex-1">
-              <ScrollArea className="max-h-[70vh]">
+              <ScrollArea className="h-full">
                 {templateSettingsPanel}
               </ScrollArea>
             </TabsContent>
             <TabsContent value="details" className="mt-0 min-h-0 flex-1">
-              <ScrollArea className="max-h-[70vh]">
+              <ScrollArea className="h-full">
                 {templateDetailsPanel}
               </ScrollArea>
             </TabsContent>
           </Tabs>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
       <WidgetTemplatePreviewDialog
         open={previewOpen}
         onOpenChange={setPreviewOpen}

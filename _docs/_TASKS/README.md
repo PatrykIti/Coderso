@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 662 tasks
+- **Done:** 663 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-29 | Widget Template Builder Toolbar and Mobile Panel UX Fixes | Medium | Small | Done: toolbar consolidated to single full-width row, responsive on mobile, settings grid overflow fixed, Dialog replaced with Sheet for mobile panel |
 | TASK-054-28 | Widget Template Builder Settings, Details, and Canvas Action Parity | Medium | Medium | Done: template metadata moved into right-side `Settings`, block options stayed in `Details`, and actions moved into sticky canvas area |
 | TASK-054-27 | Custom Screen Builder Canvas Action Parity | Medium | Small | Done: primary screen-builder actions moved from shell header into the sticky canvas action bar |
 | TASK-054-26 | Widget Library CTA Clarity and Template-Only Authoring | Medium | Small | Done: removed misleading `Create Widget` CTA and documented template-only authoring in admin UI |
