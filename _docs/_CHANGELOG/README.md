@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 498 | 2026-03-19 | TASK-054-24 widget template builder card parity | Admin/UI |
 | 497 | 2026-03-18 | TASK-054-23 Coderso screens surface split and preview recovery | Admin/UI |
 | 496 | 2026-03-13 | TASK-105 footer sparse empty-state coverage | QA/Platform |
 | 495 | 2026-03-13 | TASK-105 feature grid sparse default coverage | QA/Platform |

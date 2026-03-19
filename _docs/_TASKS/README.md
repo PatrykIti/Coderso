@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 657 tasks
+- **Done:** 658 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-24 | Widget Template Builder Page Builder Card Parity | Medium | Small | Done: template builder now reuses the same widget picker/card pattern as page builder |
 | TASK-054-23-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: lint, types, targeted Bun/Vitest suites, docs, changelog, and board sync |
 | TASK-054-23-04 | Record Workflow Gating and Copy Clarification | High | Medium | Done: collection-only/dashboard/editor routing and workflow copy clarified |
 | TASK-054-23-03 | Screen Preview and Builder Diagnostics | High | Medium | Done: builder preview now diagnoses missing content type, missing screen widgets, and collection-only setups |

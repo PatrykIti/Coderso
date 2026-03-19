@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, History, Search, Settings2 } from "lucide-react";
+import { ChevronRight, History, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +62,7 @@ import {
 } from "@/ui/pages/builder/blockUtils";
 import type { Block } from "@/ui/pages/builder/types";
 import { getWidgetRegistry } from "@/ui/pages/builder/widgetRegistry";
+import { WidgetPicker } from "@/ui/pages/builder/WidgetPicker";
 import {
   resolveAdminBasePath,
   resolveAdminHref,
@@ -79,7 +80,6 @@ import {
 } from "../../../services/widgets/widgetTemplateSettings";
 import { containerTokens, spacingTokens, type ContainerToken, type SpacingToken } from "../../../widgets/types";
 import type { WidgetCategoryId } from "./types";
-import { WidgetCard } from "./WidgetCard";
 import { WidgetTemplatePreviewDialog } from "./WidgetTemplatePreviewDialog";
 import { WidgetTemplateRevisionDrawer } from "./WidgetTemplateRevisionDrawer";
 
@@ -188,7 +188,6 @@ export function WidgetTemplateEditorPage() {
   const [templateSettings, setTemplateSettings] = useState<WidgetTemplateSettings>(
     () => normalizeWidgetTemplateSettings(undefined)
   );
-  const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<
     WidgetCategoryId | "all"
   >("all");
@@ -264,17 +263,12 @@ export function WidgetTemplateEditorPage() {
   }, [selectedBlock]);
 
   const filteredWidgets = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
     return widgets.filter((widget) => {
-      const matchesQuery =
-        normalized.length === 0 ||
-        widget.title.toLowerCase().includes(normalized) ||
-        widget.description?.toLowerCase().includes(normalized);
       const matchesCategory =
         activeCategory === "all" || widget.category === activeCategory;
-      return matchesQuery && matchesCategory;
+      return matchesCategory;
     });
-  }, [widgets, query, activeCategory]);
+  }, [widgets, activeCategory]);
 
   const setTemplateWrapperBackground = useCallback(
     (
@@ -749,66 +743,43 @@ export function WidgetTemplateEditorPage() {
               className="hidden w-72 min-h-0 flex-col border-r border-border bg-card lg:flex"
             >
               <div className="border-b border-border p-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    className="pl-9 text-xs"
-                    placeholder="Search widgets..."
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                  />
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Category
+                  </p>
+                  <Select
+                    value={activeCategory}
+                    onValueChange={(value) =>
+                      setActiveCategory(value as WidgetCategoryId | "all")
+                    }
+                  >
+                    <SelectTrigger className="text-xs">
+                      <SelectValue placeholder="All widgets" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All widgets</SelectItem>
+                      {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map(
+                        (cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {widgetCategoryLabels[cat]}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="p-4">
-                  <div className="space-y-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Category
-                    </p>
-                    <Select
-                      value={activeCategory}
-                      onValueChange={(value) =>
-                        setActiveCategory(value as WidgetCategoryId | "all")
-                      }
-                    >
-                      <SelectTrigger className="text-xs">
-                        <SelectValue placeholder="All widgets" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All widgets</SelectItem>
-                        {(Object.keys(widgetCategoryLabels) as WidgetCategoryId[]).map(
-                          (cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {widgetCategoryLabels[cat]}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="mt-6">
-                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Draggable items
-                    </p>
-                    <div className="space-y-2">
-                      {filteredWidgets.map((widget) => (
-                        <WidgetCard
-                          key={widget.type}
-                          name={widget.title}
-                          categoryLabel={widgetCategoryLabels[widget.category]}
-                          variant="compact"
-                          draggable
-                          onDragStart={(event) => {
-                            event.dataTransfer.setData("widget-type", widget.type);
-                            event.dataTransfer.effectAllowed = "copy";
-                          }}
-                          onSelect={() => handleAddBlock(widget.type)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </ScrollArea>
+              <div className="flex-1 min-h-0">
+                <WidgetPicker
+                  widgets={filteredWidgets}
+                  onAdd={handleAddBlock}
+                  draggable
+                  onDragStart={(event, type) => {
+                    event.dataTransfer.setData("widget-type", type);
+                    event.dataTransfer.effectAllowed = "copy";
+                  }}
+                />
+              </div>
             </aside>
 
             <main
