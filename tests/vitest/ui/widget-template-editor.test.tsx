@@ -208,7 +208,7 @@ test("WidgetTemplateEditorPage renders canvas placeholder", () => {
 
   expect(html).toContain("Build your template");
   expect(html).toContain("Save Template");
-  expect(html).toContain("Runtime Preview");
+  expect(html).toContain("Preview");
   expect(html).toContain("Settings");
   expect(html).toContain("Details");
   expect(html).toContain("Template name");
