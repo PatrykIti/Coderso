@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
-- **In Progress:** 5 tasks
+- **To Do:** 13 tasks
+- **In Progress:** 6 tasks
 - **Done:** 663 tasks
 
 ---
@@ -39,6 +39,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-30-01 | Active Solution Kit Preference and Selection Persistence | High | Medium | Persist selected kit in admin UI and expose shared selection owner |
+| TASK-054-30-02 | Coderso Sidebar Gating from Active Kit Modules | High | Medium | Derive CodersoFeatureFlags from active kit and limit sidebar modules |
+| TASK-054-30-03 | Solution Kit Module Audit and Catalog Corrections | High | Medium | Audit `recommendedModules` and correct obvious mismatches vs resource blueprints |
+| TASK-054-30-04 | Solution Kit Module Visibility UX | Medium | Medium | Show clear required/recommended/optional module scope and selected-kit impact |
+| TASK-054-30-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Final Bun/Vitest validation and docs/changelog/board sync |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -54,6 +59,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-054-30 | Solution Kits Module Audit and Sidebar Gating | High | Medium | In progress: active kit should gate Coderso sidebar and kit module lists need audit against blueprint capabilities |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
