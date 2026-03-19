@@ -209,21 +209,20 @@ test("WidgetTemplateEditorPage renders canvas placeholder", () => {
   expect(html).toContain("Build your template");
   expect(html).toContain("Save Template");
   expect(html).toContain("Runtime Preview");
-  expect(html).toContain("Template Details");
+  expect(html).toContain("Settings");
+  expect(html).toContain("Details");
+  expect(html).toContain("Template name");
+  expect(html).toContain("Template canvas");
+  expect(html).toContain("History");
   expect(html).toContain("Find components...");
   expect(html).toContain("Hero");
-  expect(html).toMatch(
-    /<div(?=[^>]*data-slot="card")(?=[^>]*class="[^"]*border-b border-border bg-card px-6 py-4)[^>]*>/
-  );
   expect(html).toMatch(
     /<aside(?=[^>]*data-slot="card")(?=[^>]*class="[^"]*hidden w-72 min-h-0 flex-col overflow-hidden border-r border-border bg-card lg:flex)[^>]*>/
   );
   expect(html).toMatch(
     /<div(?=[^>]*class="[^"]*flex-1[^"]*min-h-0[^"]*overflow-hidden[^"]*")[^>]*>/
   );
-  expect(html).toMatch(
-    /<aside(?=[^>]*data-slot="card")(?=[^>]*class="[^"]*hidden w-80 min-h-0 flex-col border-l border-border bg-card lg:flex)[^>]*>/
-  );
+  expect(html).toContain("border-b bg-background/80");
 });
 
 test("widget template block settings render navigation visual sections", () => {

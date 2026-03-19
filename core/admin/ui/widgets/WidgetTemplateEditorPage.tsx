@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight, History, Settings2 } from "lucide-react";
+import { ChevronRight, Eye, History, Save, Settings2 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { listMediaCached } from "@/services/mediaClient";
@@ -206,6 +207,7 @@ export function WidgetTemplateEditorPage() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<"settings" | "details">("settings");
   const [backgroundLookupError, setBackgroundLookupError] = useState<string | null>(
     null
   );
@@ -419,12 +421,14 @@ export function WidgetTemplateEditorPage() {
     const next = createBlock(type);
     setBlocks((prev) => [...prev, next]);
     setSelectedId(next.id);
+    setSidebarTab("details");
   };
 
   const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
     const next = createBlock(type);
     setBlocks((prev) => appendSlotBlock(prev, parentId, slotId, next));
     setSelectedId(next.id);
+    setSidebarTab("details");
   };
 
   const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
@@ -437,6 +441,8 @@ export function WidgetTemplateEditorPage() {
     setCategory(template.category);
     setStatus(template.status);
     setBlocks((template.blocks as Block[]) ?? []);
+    setSelectedId(null);
+    setSidebarTab("settings");
     setTemplateSettings(normalizeWidgetTemplateSettings(template.settings));
     setRemoteUpdatePending(false);
   }, []);
@@ -574,6 +580,16 @@ export function WidgetTemplateEditorPage() {
 
   const canPreview = !isNew && Boolean(templateId);
 
+  const openSettingsPanel = () => {
+    setSidebarTab("settings");
+    setDetailsOpen(true);
+  };
+
+  const openDetailsPanel = () => {
+    setSidebarTab("details");
+    setDetailsOpen(true);
+  };
+
   const handlePreviewOpen = async () => {
     setPreviewOpen(true);
     if (!canPreview || !templateId) {
@@ -632,6 +648,419 @@ export function WidgetTemplateEditorPage() {
     }
   };
 
+  const templateDetailsPanel = (
+    <div className="p-6">
+      <BlockSettings
+        block={selectedBlock}
+        widget={selectedWidget}
+        onChange={(next) =>
+          setBlocks((prev) => updateBlockById(prev, next.id, () => next))
+        }
+      />
+    </div>
+  );
+
+  const templateSettingsPanel = (
+    <div className="space-y-4 p-6">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Template settings</p>
+        <p className="text-xs text-muted-foreground">
+          Manage template metadata, category, publish status, and layout defaults.
+        </p>
+      </div>
+      <div className="space-y-4 rounded-xl border p-4">
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Template name
+          </p>
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Template name"
+          />
+        </div>
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Description
+          </p>
+          <Textarea
+            className="min-h-[96px] resize-none text-sm"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="Add description..."
+          />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Category
+            </p>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {templateCategories.length === 0 ? (
+                  <SelectItem value={NO_CATEGORIES_VALUE} disabled>
+                    Add a category first
+                  </SelectItem>
+                ) : (
+                  templateCategories.map((item) => (
+                    <SelectItem key={item.id} value={item.name}>
+                      {item.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Status
+            </p>
+            <Select
+              value={status}
+              onValueChange={(value) => setStatus(value as WidgetTemplateStatus)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="published">Published</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Layout controls
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            backgroundLookupRequestIdRef.current += 1;
+            setBackgroundLookupError(null);
+            setTemplateSettings(normalizeWidgetTemplateSettings(undefined));
+          }}
+        >
+          Reset defaults
+        </Button>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Container
+          </label>
+          <Select
+            value={templateLayout.wrapper.container}
+            onValueChange={(next) =>
+              setTemplateSettings((prev) => ({
+                ...prev,
+                layout: {
+                  ...prev.layout,
+                  wrapper: {
+                    ...prev.layout.wrapper,
+                    container: next as ContainerToken,
+                  },
+                },
+              }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Container" />
+            </SelectTrigger>
+            <SelectContent>
+              {containerTokens.map((token) => (
+                <SelectItem key={token} value={token}>
+                  {token}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Max width
+          </label>
+          <Select
+            value={templateLayout.wrapper.maxWidth ?? MAX_WIDTH_DEFAULT_VALUE}
+            onValueChange={(next) =>
+              setTemplateSettings((prev) => ({
+                ...prev,
+                layout: {
+                  ...prev.layout,
+                  wrapper: {
+                    ...prev.layout.wrapper,
+                    maxWidth:
+                      next === MAX_WIDTH_DEFAULT_VALUE
+                        ? undefined
+                        : (next as PageMaxWidthToken),
+                  },
+                },
+              }))
+            }
+            disabled={templateLayout.wrapper.container === "full"}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Max width" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={MAX_WIDTH_DEFAULT_VALUE}>
+                theme default
+              </SelectItem>
+              {pageLayoutTokens.maxWidth.map((token) => (
+                <SelectItem key={token} value={token}>
+                  {token}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Section gap
+          </label>
+          <Select
+            value={templateLayout.sections.gap}
+            onValueChange={(next) =>
+              setTemplateSettings((prev) => ({
+                ...prev,
+                layout: {
+                  ...prev.layout,
+                  sections: {
+                    ...prev.layout.sections,
+                    gap: next as SpacingToken,
+                  },
+                },
+              }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Section gap" />
+            </SelectTrigger>
+            <SelectContent>
+              {spacingTokens.map((token) => (
+                <SelectItem key={token} value={token}>
+                  {token}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Wrapper padding top
+          </label>
+          <Select
+            value={templateLayout.wrapper.padding.top}
+            onValueChange={(next) =>
+              setTemplateSettings((prev) => ({
+                ...prev,
+                layout: {
+                  ...prev.layout,
+                  wrapper: {
+                    ...prev.layout.wrapper,
+                    padding: {
+                      ...prev.layout.wrapper.padding,
+                      top: next as SpacingToken,
+                    },
+                  },
+                },
+              }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Padding top" />
+            </SelectTrigger>
+            <SelectContent>
+              {spacingTokens.map((token) => (
+                <SelectItem key={token} value={token}>
+                  {token}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Wrapper padding bottom
+          </label>
+          <Select
+            value={templateLayout.wrapper.padding.bottom}
+            onValueChange={(next) =>
+              setTemplateSettings((prev) => ({
+                ...prev,
+                layout: {
+                  ...prev.layout,
+                  wrapper: {
+                    ...prev.layout.wrapper,
+                    padding: {
+                      ...prev.layout.wrapper.padding,
+                      bottom: next as SpacingToken,
+                    },
+                  },
+                },
+              }))
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Padding bottom" />
+            </SelectTrigger>
+            <SelectContent>
+              {spacingTokens.map((token) => (
+                <SelectItem key={token} value={token}>
+                  {token}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Background color
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="color"
+              className="h-10 w-14 p-1"
+              value={
+                isHexColor(templateLayout.wrapper.background.color)
+                  ? templateLayout.wrapper.background.color
+                  : "#ffffff"
+              }
+              onChange={(event) =>
+                setTemplateSettings((prev) => ({
+                  ...prev,
+                  layout: {
+                    ...prev.layout,
+                    wrapper: {
+                      ...prev.layout.wrapper,
+                      background: {
+                        ...prev.layout.wrapper.background,
+                        color: event.target.value,
+                      },
+                    },
+                  },
+                }))
+              }
+            />
+            <Input
+              value={templateLayout.wrapper.background.color}
+              onChange={(event) =>
+                setTemplateSettings((prev) => ({
+                  ...prev,
+                  layout: {
+                    ...prev.layout,
+                    wrapper: {
+                      ...prev.layout.wrapper,
+                      background: {
+                        ...prev.layout.wrapper.background,
+                        color: event.target.value,
+                      },
+                    },
+                  },
+                }))
+              }
+              placeholder="#ffffff or transparent"
+            />
+          </div>
+        </div>
+      </div>
+      <div className="space-y-4 rounded-xl border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium">Background media</p>
+            <p className="text-xs text-muted-foreground">
+              Optional image or video behind the template wrapper.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Media type
+            </label>
+            <Select
+              value={wrapperBackgroundMedia.type}
+              onValueChange={handleBackgroundMediaTypeChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Media type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={PAGE_BACKGROUND_NONE_VALUE}>
+                  {backgroundMediaTypeLabelMap.none}
+                </SelectItem>
+                <SelectItem value="image">{backgroundMediaTypeLabelMap.image}</SelectItem>
+                <SelectItem value="video">{backgroundMediaTypeLabelMap.video}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {wrapperBackgroundMedia.type !== "none" ? (
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Source
+              </label>
+              <Select
+                value={wrapperBackgroundMedia.source}
+                onValueChange={handleBackgroundMediaSourceChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="library">
+                    {backgroundMediaSourceLabelMap.library}
+                  </SelectItem>
+                  <SelectItem value="external">
+                    {backgroundMediaSourceLabelMap.external}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+        </div>
+        {wrapperBackgroundMedia.type !== "none" &&
+        wrapperBackgroundMedia.source === "external" ? (
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Media URL
+            </label>
+            <Input
+              value={wrapperBackgroundMedia.src ?? ""}
+              onChange={(event) => handleBackgroundMediaUrlChange(event.target.value)}
+              placeholder={
+                wrapperBackgroundMedia.type === "video"
+                  ? "https://example.com/background.mp4"
+                  : "https://example.com/background.jpg"
+              }
+            />
+          </div>
+        ) : null}
+        {wrapperBackgroundMedia.type !== "none" &&
+        wrapperBackgroundMedia.source === "library" ? (
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Media library
+            </label>
+            <MediaPicker
+              accept={backgroundMediaAccept}
+              value={wrapperBackgroundMedia.assetId ?? null}
+              onChange={(value) => void handleBackgroundMediaAssetChange(value)}
+            />
+          </div>
+        ) : null}
+        {backgroundLookupError ? (
+          <p className="text-xs text-destructive">{backgroundLookupError}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <AdminShell
@@ -651,92 +1080,9 @@ export function WidgetTemplateEditorPage() {
             </Badge>
           </div>
         }
-        topbarActions={
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={isNew}
-              onClick={() => void handlePreviewOpen()}
-            >
-              Runtime Preview
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setDetailsOpen(true)}>
-              Template Details
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleDiscard}>
-              Discard
-            </Button>
-            <Button size="sm" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Template"}
-            </Button>
-          </div>
-        }
         contentClassName="p-0 overflow-hidden"
       >
         <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col">
-          <div data-slot="card" className="border-b border-border bg-card px-6 py-4">
-            <div className="flex flex-wrap items-start gap-4">
-              <div className="flex min-w-[220px] flex-1 flex-col gap-2">
-                <Input
-                  className="text-lg font-semibold"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Template name"
-                />
-                <Textarea
-                  className="min-h-[0px] resize-none text-xs"
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
-                  placeholder="Add description..."
-                />
-              </div>
-              <div className="min-w-[200px] space-y-2">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Category
-                </p>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templateCategories.length === 0 ? (
-                      <SelectItem value={NO_CATEGORIES_VALUE} disabled>
-                        Add a category first
-                      </SelectItem>
-                    ) : (
-                      templateCategories.map((item) => (
-                        <SelectItem key={item.id} value={item.name}>
-                          {item.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            {displayError ? (
-              <div className="mt-4">
-                <Alert variant="destructive">
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{displayError}</AlertDescription>
-                </Alert>
-              </div>
-            ) : null}
-            {remoteUpdatePending ? (
-              <div className="mt-4">
-                <Alert>
-                  <AlertTitle>Updated in another tab</AlertTitle>
-                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span>New changes are available. Refresh to load the latest version.</span>
-                    <Button variant="outline" size="sm" onClick={() => loadTemplate()}>
-                      Refresh
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              </div>
-            ) : null}
-          </div>
           <div className="flex flex-1 min-h-0">
             <aside
               data-slot="card"
@@ -795,455 +1141,232 @@ export function WidgetTemplateEditorPage() {
               if (type) handleAddBlock(type);
             }}
           >
-            {isLoading ? (
-              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                  <Settings2 className="h-10 w-10" />
+            <div className="sticky top-0 z-10 mx-auto w-full max-w-3xl border-b bg-background/80 px-4 py-3 backdrop-blur">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="space-y-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Template canvas
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Build reusable template layouts and manage template settings from the right panel.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isNew}
+                    onClick={() => void handlePreviewOpen()}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Runtime Preview
+                  </Button>
                 </div>
-                <h2 className="text-2xl font-semibold text-foreground">
-                  Loading template
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Button variant="secondary" size="sm" onClick={handleDiscard}>
+                    Discard
+                  </Button>
+                  <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving..." : "Save Template"}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => void handleOpenRevisions()}
+                    disabled={isNew}
+                  >
+                    <History className="h-4 w-4" />
+                    History
+                  </Button>
+                  <div className="ml-auto flex flex-wrap items-center gap-2 lg:hidden">
+                    <Button variant="outline" size="sm" onClick={openSettingsPanel}>
+                      Settings
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={openDetailsPanel}
+                      disabled={!selectedBlock || !selectedWidget}
+                    >
+                      Details
+                    </Button>
+                  </div>
+                </div>
               </div>
-            ) : blocks.length === 0 ? (
-              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                  <Settings2 className="h-10 w-10" />
+            </div>
+            <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8">
+              {displayError ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{displayError}</AlertDescription>
+                </Alert>
+              ) : null}
+              {remoteUpdatePending ? (
+                <Alert>
+                  <AlertTitle>Updated in another tab</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span>New changes are available. Refresh to load the latest version.</span>
+                    <Button variant="outline" size="sm" onClick={() => loadTemplate()}>
+                      Refresh
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {isLoading ? (
+                <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                    <Settings2 className="h-10 w-10" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    Loading template
+                  </h2>
                 </div>
-                <h2 className="text-2xl font-semibold text-foreground">
-                  Build your template
-                </h2>
-                <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                  Drag widgets from the library to build a reusable template layout.
-                </p>
-                <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <span className="rounded-full border border-border/60 px-3 py-1">
-                    Section 1
-                  </span>
-                  <span className="rounded-full border border-primary/30 px-3 py-1 text-primary">
-                    Drop target
-                  </span>
+              ) : blocks.length === 0 ? (
+                <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                    <Settings2 className="h-10 w-10" />
+                  </div>
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    Build your template
+                  </h2>
+                  <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+                    Drag widgets from the library to build a reusable template layout.
+                  </p>
+                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <span className="rounded-full border border-border/60 px-3 py-1">
+                      Section 1
+                    </span>
+                    <span className="rounded-full border border-primary/30 px-3 py-1 text-primary">
+                      Drop target
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div
-                className={joinClasses(
-                  "relative w-full overflow-hidden rounded-xl border border-border/40",
-                  wrapperPaddingClass
-                )}
-                style={wrapperBackgroundStyle}
-              >
-                {wrapperBackgroundVideo ? (
-                  <video
-                    className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-                    src={wrapperBackgroundVideo}
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    aria-hidden="true"
-                  />
-                ) : null}
+              ) : (
                 <div
                   className={joinClasses(
-                    wrapperContainerClass,
-                    wrapperBackgroundVideo ? "relative z-[1]" : undefined
+                    "relative w-full overflow-hidden rounded-xl border border-border/40",
+                    wrapperPaddingClass
                   )}
+                  style={wrapperBackgroundStyle}
                 >
-                  <BlockList
-                    blocks={blocks}
-                    className={
-                      spacingTokenToListSpaceClassMap[templateLayout.sections.gap]
-                    }
-                    pageDefaults={templateLayout.sections.defaults}
-                    selectedId={selectedId}
-                    onSelect={setSelectedId}
-                    onMove={(path, from, to) =>
-                      setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
-                    }
-                    onDuplicate={(id) =>
-                      setBlocks((prev) => duplicateBlock(prev, id))
-                    }
-                    onDelete={(id) =>
-                      setBlocks((prev) => {
-                        const result = deleteBlockById(prev, id);
-                        if (selectedId && !findBlockById(result.blocks, selectedId)) {
-                          setSelectedId(getFirstBlockId(result.blocks));
-                        }
-                        return result.blocks;
-                      })
-                    }
-                    onInsert={handleInsertIntoSlot}
-                    onMoveToSlot={handleMoveIntoSlot}
-                  />
+                  {wrapperBackgroundVideo ? (
+                    <video
+                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                      src={wrapperBackgroundVideo}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <div
+                    className={joinClasses(
+                      wrapperContainerClass,
+                      wrapperBackgroundVideo ? "relative z-[1]" : undefined
+                    )}
+                  >
+                    <BlockList
+                      blocks={blocks}
+                      className={
+                        spacingTokenToListSpaceClassMap[templateLayout.sections.gap]
+                      }
+                      pageDefaults={templateLayout.sections.defaults}
+                      selectedId={selectedId}
+                      onSelect={(id) => {
+                        setSelectedId(id);
+                        setSidebarTab("details");
+                      }}
+                      onMove={(path, from, to) =>
+                        setBlocks((prev) => reorderBlocksAtPath(prev, path, from, to))
+                      }
+                      onDuplicate={(id) =>
+                        setBlocks((prev) => duplicateBlock(prev, id))
+                      }
+                      onDelete={(id) =>
+                        setBlocks((prev) => {
+                          const result = deleteBlockById(prev, id);
+                          if (selectedId && !findBlockById(result.blocks, selectedId)) {
+                            const nextSelected = getFirstBlockId(result.blocks);
+                            setSelectedId(nextSelected);
+                            if (!nextSelected) setSidebarTab("settings");
+                          }
+                          return result.blocks;
+                        })
+                      }
+                      onInsert={handleInsertIntoSlot}
+                      onMoveToSlot={handleMoveIntoSlot}
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
             </main>
 
             <aside
               data-slot="card"
               className="hidden w-80 min-h-0 flex-col border-l border-border bg-card lg:flex"
             >
-              <div className="border-b border-border px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Details
-              </div>
-              <ScrollArea className="flex-1 min-h-0">
-                <div className="p-6">
-                  <BlockSettings
-                    block={selectedBlock}
-                    widget={selectedWidget}
-                    onChange={(next) =>
-                      setBlocks((prev) => updateBlockById(prev, next.id, () => next))
-                    }
-                  />
-                </div>
-              </ScrollArea>
-              <div className="border-t border-border bg-muted/20 p-4">
-                <Button
-                  variant="secondary"
-                  className="w-full gap-2"
-                  onClick={() => void handleOpenRevisions()}
-                  disabled={isNew}
-                >
-                  <History className="h-4 w-4" />
-                  Revision History
-                </Button>
-              </div>
+              <Tabs
+                value={sidebarTab}
+                onValueChange={(value) =>
+                  setSidebarTab(value as "settings" | "details")
+                }
+                className="flex h-full min-h-0 flex-col"
+              >
+                <TabsList variant="line" className="px-4 pt-3">
+                  <TabsTrigger value="settings">Settings</TabsTrigger>
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                </TabsList>
+                <TabsContent value="settings" className="mt-0 min-h-0 flex-1">
+                  <ScrollArea className="h-full min-h-0 flex-1">
+                    {templateSettingsPanel}
+                  </ScrollArea>
+                </TabsContent>
+                <TabsContent value="details" className="mt-0 min-h-0 flex-1">
+                  <ScrollArea className="h-full min-h-0 flex-1">
+                    {templateDetailsPanel}
+                  </ScrollArea>
+                </TabsContent>
+              </Tabs>
             </aside>
           </div>
         </div>
       </AdminShell>
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-3xl">
+        <DialogContent className="max-h-[90vh] overflow-hidden p-0 sm:max-w-4xl">
           <DialogHeader className="border-b px-6 py-4">
-            <DialogTitle>Template layout and appearance</DialogTitle>
+            <DialogTitle>Template panel</DialogTitle>
             <DialogDescription>
-              Configure wrapper background, spacing, and container behavior for runtime
-              preview and published output.
+              Switch between template settings and active widget details.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[70vh]">
-            <div className="space-y-4 px-6 py-5">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Layout controls
-                </p>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    backgroundLookupRequestIdRef.current += 1;
-                    setBackgroundLookupError(null);
-                    setTemplateSettings(normalizeWidgetTemplateSettings(undefined));
-                  }}
-                >
-                  Reset defaults
-                </Button>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Container
-                  </label>
-                  <Select
-                    value={templateLayout.wrapper.container}
-                    onValueChange={(next) =>
-                      setTemplateSettings((prev) => ({
-                        ...prev,
-                        layout: {
-                          ...prev.layout,
-                          wrapper: {
-                            ...prev.layout.wrapper,
-                            container: next as ContainerToken,
-                          },
-                        },
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Container" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {containerTokens.map((token) => (
-                        <SelectItem key={token} value={token}>
-                          {token}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Max width
-                  </label>
-                  <Select
-                    value={templateLayout.wrapper.maxWidth ?? MAX_WIDTH_DEFAULT_VALUE}
-                    onValueChange={(next) =>
-                      setTemplateSettings((prev) => ({
-                        ...prev,
-                        layout: {
-                          ...prev.layout,
-                          wrapper: {
-                            ...prev.layout.wrapper,
-                            maxWidth:
-                              next === MAX_WIDTH_DEFAULT_VALUE
-                                ? undefined
-                                : (next as PageMaxWidthToken),
-                          },
-                        },
-                      }))
-                    }
-                    disabled={templateLayout.wrapper.container === "full"}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Max width" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={MAX_WIDTH_DEFAULT_VALUE}>
-                        theme default
-                      </SelectItem>
-                      {pageLayoutTokens.maxWidth.map((token) => (
-                        <SelectItem key={token} value={token}>
-                          {token}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Section gap
-                  </label>
-                  <Select
-                    value={templateLayout.sections.gap}
-                    onValueChange={(next) =>
-                      setTemplateSettings((prev) => ({
-                        ...prev,
-                        layout: {
-                          ...prev.layout,
-                          sections: {
-                            ...prev.layout.sections,
-                            gap: next as SpacingToken,
-                          },
-                        },
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Section gap" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {spacingTokens.map((token) => (
-                        <SelectItem key={token} value={token}>
-                          {token}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Wrapper padding top
-                  </label>
-                  <Select
-                    value={templateLayout.wrapper.padding.top}
-                    onValueChange={(next) =>
-                      setTemplateSettings((prev) => ({
-                        ...prev,
-                        layout: {
-                          ...prev.layout,
-                          wrapper: {
-                            ...prev.layout.wrapper,
-                            padding: {
-                              ...prev.layout.wrapper.padding,
-                              top: next as SpacingToken,
-                            },
-                          },
-                        },
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Padding top" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {spacingTokens.map((token) => (
-                        <SelectItem key={token} value={token}>
-                          {token}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Wrapper padding bottom
-                  </label>
-                  <Select
-                    value={templateLayout.wrapper.padding.bottom}
-                    onValueChange={(next) =>
-                      setTemplateSettings((prev) => ({
-                        ...prev,
-                        layout: {
-                          ...prev.layout,
-                          wrapper: {
-                            ...prev.layout.wrapper,
-                            padding: {
-                              ...prev.layout.wrapper.padding,
-                              bottom: next as SpacingToken,
-                            },
-                          },
-                        },
-                      }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Padding bottom" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {spacingTokens.map((token) => (
-                        <SelectItem key={token} value={token}>
-                          {token}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Background color
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="color"
-                      className="h-10 w-14 p-1"
-                      value={
-                        isHexColor(templateLayout.wrapper.background.color)
-                          ? templateLayout.wrapper.background.color
-                          : "#ffffff"
-                      }
-                      onChange={(event) =>
-                        setTemplateSettings((prev) => ({
-                          ...prev,
-                          layout: {
-                            ...prev.layout,
-                            wrapper: {
-                              ...prev.layout.wrapper,
-                              background: {
-                                ...prev.layout.wrapper.background,
-                                color: event.target.value,
-                              },
-                            },
-                          },
-                        }))
-                      }
-                    />
-                    <Input
-                      value={templateLayout.wrapper.background.color}
-                      onChange={(event) =>
-                        setTemplateSettings((prev) => ({
-                          ...prev,
-                          layout: {
-                            ...prev.layout,
-                            wrapper: {
-                              ...prev.layout.wrapper,
-                              background: {
-                                ...prev.layout.wrapper.background,
-                                color: event.target.value,
-                              },
-                            },
-                          },
-                        }))
-                      }
-                      placeholder="#ffffff or transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Background media type
-                  </label>
-                  <Select
-                    value={wrapperBackgroundMedia.type}
-                    onValueChange={handleBackgroundMediaTypeChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select media type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pageLayoutTokens.backgroundMediaTypes.map((token) => (
-                        <SelectItem key={token} value={token}>
-                          {backgroundMediaTypeLabelMap[token]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {wrapperBackgroundMedia.type !== PAGE_BACKGROUND_NONE_VALUE ? (
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Background media source
-                    </label>
-                    <Select
-                      value={wrapperBackgroundMedia.source}
-                      onValueChange={handleBackgroundMediaSourceChange}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select source" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {pageLayoutTokens.backgroundMediaSources.map((token) => (
-                          <SelectItem key={token} value={token}>
-                            {backgroundMediaSourceLabelMap[token]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null}
-              </div>
-              {wrapperBackgroundMedia.type !== PAGE_BACKGROUND_NONE_VALUE ? (
-                <div className="space-y-2">
-                  {wrapperBackgroundMedia.source === "library" ? (
-                    <>
-                      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Background media library
-                      </label>
-                      <MediaPicker
-                        value={wrapperBackgroundMedia.assetId ?? null}
-                        onChange={(value) => void handleBackgroundMediaAssetChange(value)}
-                        multiple={false}
-                        accept={backgroundMediaAccept}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Background media URL
-                      </label>
-                      <Input
-                        value={wrapperBackgroundMedia.src ?? ""}
-                        onChange={(event) =>
-                          handleBackgroundMediaUrlChange(event.target.value)
-                        }
-                        placeholder={
-                          wrapperBackgroundMedia.type === "video"
-                            ? "https://cdn.example.com/background.mp4"
-                            : "https://cdn.example.com/background.jpg"
-                        }
-                      />
-                    </>
-                  )}
-                  {backgroundLookupError ? (
-                    <p className="text-xs text-destructive">{backgroundLookupError}</p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </ScrollArea>
+          <Tabs
+            value={sidebarTab}
+            onValueChange={(value) =>
+              setSidebarTab(value as "settings" | "details")
+            }
+            className="flex h-full min-h-0 flex-col"
+          >
+            <TabsList variant="line" className="px-6 pt-4">
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+              <TabsTrigger value="details">Details</TabsTrigger>
+            </TabsList>
+            <TabsContent value="settings" className="mt-0 min-h-0 flex-1">
+              <ScrollArea className="max-h-[70vh]">
+                {templateSettingsPanel}
+              </ScrollArea>
+            </TabsContent>
+            <TabsContent value="details" className="mt-0 min-h-0 flex-1">
+              <ScrollArea className="max-h-[70vh]">
+                {templateDetailsPanel}
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
       <WidgetTemplatePreviewDialog

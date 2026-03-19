@@ -137,6 +137,10 @@ const sections = buildDefaultNavSections({
   - primary builder actions were moved out of shell header into the sticky canvas area,
   - screen builder now follows the same action placement pattern as page builder,
   - shell header remains focused on breadcrumbs/status instead of mutating actions.
+- 054-28 done: Widget Template Builder layout follow-up delivered:
+  - template-level metadata moved out of the canvas header and into a right-side `Settings` tab,
+  - block-level options remain in `Details`,
+  - primary template builder actions now live in the sticky canvas area instead of shell topbar.
 - 054-15 done: Plugin contract and package manifest delivered:
   - strict `CodersoPluginManifest` contract with target version aliases and normalized provides/dependencies,
   - runtime manifest validator + contribution registrar + dependency fail-fast checks,
