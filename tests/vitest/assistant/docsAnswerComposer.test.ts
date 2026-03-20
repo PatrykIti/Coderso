@@ -27,7 +27,7 @@ const baseHit: DocsSearchHit = {
   score: 2.8,
   matchedTerms: ["hero", "visual", "colors"],
   snippet:
-    "Open the Hero template and use the Visual tab to edit colors, spacing, and background settings.",
+    "…use the Visual tab to edit colors, spacing, and background settings.…",
 };
 
 test("composeDocsAnswer returns location template when query asks where", () => {
@@ -38,6 +38,8 @@ test("composeDocsAnswer returns location template when query asks where", () => 
 
   expect(answer.template).toBe("location_answer");
   expect(answer.answer).toContain("Visual tab");
+  expect(answer.answer).toContain("Hero template");
+  expect(answer.answer).not.toContain("…");
   expect(answer.answer).not.toContain("Most relevant locations in docs");
   expect(answer.sources).toHaveLength(1);
   expect(answer.confidence).toBeGreaterThan(0.2);
@@ -51,7 +53,30 @@ test("composeDocsAnswer returns how-to template for procedural question", () => 
 
   expect(answer.template).toBe("how_to_answer");
   expect(answer.answer).toContain("Visual tab");
+  expect(answer.answer).toContain("Hero template");
   expect(answer.sources[0]?.heading).toContain("Coderso Widgets");
+});
+
+test("composeDocsAnswer uses full chunk content instead of truncated snippet preview", () => {
+  const answer = composeDocsAnswer({
+    question: "Where can I configure hero widget colors?",
+    hits: [
+      {
+        ...baseHit,
+        chunk: {
+          ...baseHit.chunk,
+          content:
+            "1. Open Widgets. 2. Edit the Hero template. 3. Use the Visual tab to change colors and spacing. 4. Save the template.",
+        },
+        snippet: "…Use the Visual tab to change colors and spacing.…",
+      },
+    ],
+  });
+
+  expect(answer.answer).toContain("Open Widgets.");
+  expect(answer.answer).toContain("Edit the Hero template.");
+  expect(answer.answer).toContain("Visual tab");
+  expect(answer.answer).not.toContain("…Use the Visual tab");
 });
 
 test("composeDocsAnswer returns missing template when no hits", () => {

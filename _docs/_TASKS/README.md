@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 13 tasks
 - **In Progress:** 5 tasks
-- **Done:** 706 tasks
+- **Done:** 707 tasks
 
 ---
 
@@ -76,6 +76,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-116 | Assistant Final Answer from Chunk Content, not Preview Snippet | Medium | Small | Done: final answer now uses chunk content with sentence-aware truncation instead of preview snippets |
 | TASK-115-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: targeted composer/ranking/UI validation plus docs, board, and changelog synchronization completed |
 | TASK-115-03 | Assistant UI Answer-First Rendering and Hidden Default Sources | Medium | Small | Done: main answer is primary content and default Sources rendering is hidden |
 | TASK-115-02 | Ranking and Evidence Selection Tuned for Product Support Questions | High | Medium | Done: stronger section/path priors now prefer canonical product docs and instruction-heavy sections |

@@ -254,6 +254,7 @@ Przeplyw runtime:
 3. Official assistant corpus w `docs/` jest uznawany za gotowy dopiero po seedzie do DB.
 4. Gdy DB corpus nie jest gotowy, runtime zwraca stan `not ready`.
 5. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) z tresci top evidence, a nie z listy plikow.
+6. Final answer korzysta z `chunk.content`, a nie z krotszego preview `snippet`, ktory pozostaje warstwa search/evidence.
 
 Przeplyw reindex:
 1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.

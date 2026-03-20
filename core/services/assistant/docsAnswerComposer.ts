@@ -49,10 +49,58 @@ const toSentence = (value: string) => {
   return /[.!?]$/.test(normalized) ? normalized : `${normalized}.`;
 };
 
+const normalizeChunkContent = (value: string) =>
+  value
+    .replace(/\r/g, "")
+    .replace(/\n+/g, "\n")
+    .trim();
+
+const extractNumberedSteps = (value: string) => {
+  const matches = value.match(/\d+\.\s.*?(?=(?:\s\d+\.\s)|$)/gs);
+  if (!matches) return [] as string[];
+  return matches
+    .map((entry) => entry.replace(/\s+/g, " ").trim())
+    .filter((entry) => entry.length > 0);
+};
+
+const extractSentences = (value: string) => {
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (!compact) return [] as string[];
+  return compact
+    .split(/(?<=[.!?])\s+/)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+};
+
+const truncateAtWordBoundary = (value: string, maxLength: number) => {
+  if (value.length <= maxLength) return value;
+  const sliced = value.slice(0, maxLength);
+  const lastSpace = sliced.lastIndexOf(" ");
+  const safe = lastSpace > Math.floor(maxLength / 2) ? sliced.slice(0, lastSpace) : sliced;
+  return `${safe.trimEnd()}…`;
+};
+
+const buildContentAnswer = (content: string) => {
+  const normalized = normalizeChunkContent(content);
+  if (!normalized) return "";
+
+  const numberedSteps = extractNumberedSteps(normalized);
+  if (numberedSteps.length > 0) {
+    return truncateAtWordBoundary(numberedSteps.slice(0, 3).join(" "), 360);
+  }
+
+  const sentences = extractSentences(normalized);
+  if (sentences.length > 0) {
+    return truncateAtWordBoundary(sentences.slice(0, 2).join(" "), 360);
+  }
+
+  return truncateAtWordBoundary(normalized.replace(/\s+/g, " "), 360);
+};
+
 const pickPrimaryInstruction = (hits: DocsSearchHit[]) => {
   for (const hit of hits) {
-    const snippet = toSentence(hit.snippet);
-    if (snippet) return snippet;
+    const contentAnswer = buildContentAnswer(hit.chunk.content);
+    if (contentAnswer) return toSentence(contentAnswer);
   }
   return "";
 };

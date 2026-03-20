@@ -41,6 +41,7 @@ Knowledge source contract:
 Answer contract:
 - assistant returns a product-facing answer built from article content,
 - not a list of document locations,
+- final answer is built from chunk content, not from the shorter preview snippet used for retrieval/evidence,
 - sources are treated as secondary evidence and are not shown by default in the user-facing chat UI.
 
 ## AI Site Wizard (Solution Kits)
