@@ -5,7 +5,7 @@ import { rankAssistantDocsDbRows } from "../../../core/services/assistant/docsDb
 const rows = [
   {
     id: "chunk-hero",
-    docPath: "_docs/_internal/widgets/hero-basics.md",
+    docPath: "docs/coderso/widgets-and-template-editor.md",
     headingPath: ["Hero widget basics", "Step By Step"],
     heading: "Step By Step",
     lineStart: 20,
@@ -18,7 +18,7 @@ const rows = [
   },
   {
     id: "chunk-security",
-    docPath: "_docs/_internal/security/session-limits.md",
+    docPath: "docs/screens/security-settings.md",
     headingPath: ["Session limits", "When To Use"],
     heading: "When To Use",
     lineStart: 10,
@@ -36,7 +36,7 @@ test("rankAssistantDocsDbRows ranks the most relevant hero section first", () =>
   });
 
   expect(hits.length).toBeGreaterThan(0);
-  expect(hits[0]?.chunk.docPath).toContain("hero-basics.md");
+  expect(hits[0]?.chunk.docPath).toContain("widgets-and-template-editor.md");
   expect(hits[0]?.snippet.toLowerCase()).toContain("visual tab");
 });
 
@@ -53,5 +53,7 @@ test("rankAssistantDocsDbRows supports token expansion via docs tokenizer", () =
     topK: 3,
   });
 
-  expect(hits.some((hit) => hit.chunk.docPath.includes("hero-basics.md"))).toBe(true);
+  expect(
+    hits.some((hit) => hit.chunk.docPath.includes("widgets-and-template-editor.md"))
+  ).toBe(true);
 });

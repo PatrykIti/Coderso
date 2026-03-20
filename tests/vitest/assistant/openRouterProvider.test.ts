@@ -38,7 +38,7 @@ test("createOpenRouterProvider maps request and response", async () => {
     userMessage: "Where are hero settings?",
     snippets: [
       {
-        path: "_docs/_internal/widgets/hero-basics.md",
+        path: "docs/coderso/widgets-and-template-editor.md",
         heading: "Step By Step",
         content: "Open Widgets and choose Hero visual tab.",
       },
@@ -68,7 +68,7 @@ test("createOpenRouterProvider maps request and response", async () => {
   expect(requestBody.model).toBe("google/gemma-3n-e2b-it:free");
   expect(requestBody.max_tokens).toBe(512);
   expect(requestBody.messages[1]?.content).toContain("Documentation snippets");
-  expect(requestBody.messages[1]?.content).toContain("_docs/_internal/widgets/hero-basics.md");
+  expect(requestBody.messages[1]?.content).toContain("docs/coderso/widgets-and-template-editor.md");
 });
 
 test("createOpenRouterProvider retries once on retryable HTTP status", async () => {

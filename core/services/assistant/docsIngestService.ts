@@ -5,12 +5,17 @@ import { desc, eq, sql } from "drizzle-orm";
 
 import { expandDocsTokens, normalizeDocsText, tokenizeDocsText } from "./docsIndexService";
 
-const DEFAULT_INTERNAL_DOCS_ROOT = "_docs/_internal";
+const DEFAULT_INTERNAL_DOCS_ROOT = "docs";
 const DEFAULT_MAX_CHUNK_CHARS = 1200;
 const DEFAULT_MAX_DOC_BODY_CHARS = 120_000;
 const DEFAULT_MAX_CHUNKS_PER_DOC = 240;
 const HEADING_REGEX = /^(#{1,6})\s+(.+?)\s*$/;
-const SKIPPED_FILENAMES = new Set(["README.md", "INTERNAL_DOC_TEMPLATE.md"]);
+const SKIPPED_FILENAMES = new Set([
+  "README.md",
+  "INTERNAL_DOC_TEMPLATE.md",
+  "_TEMPLATE.md",
+  "_COVERAGE_MATRIX.md",
+]);
 const REQUIRED_SECTIONS = [
   "what is it",
   "when to use",

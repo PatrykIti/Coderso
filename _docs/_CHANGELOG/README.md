@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 508 | 2026-03-20 | TASK-109 official assistant docs corpus and DB seeding | Docs/Assistant |
 | 507 | 2026-03-20 | TASK-108 anchored assistant window and launcher visual polish | Admin/UI |
 | 506 | 2026-03-20 | TASK-107 floating assistant launcher and minimal chat window | Admin/UI |
 | 505 | 2026-03-20 | TASK-106 assistant drawer runtime UX and configuration separation | Admin/UI |

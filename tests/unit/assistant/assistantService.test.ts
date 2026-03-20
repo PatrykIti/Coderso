@@ -25,7 +25,7 @@ const makeIndex = (): DocsIndex => {
   };
 
   return {
-    configuredPaths: ["_docs"],
+    configuredPaths: ["docs"],
     builtAt: "2026-02-09T21:00:00.000Z",
     buildDurationMs: 12,
     docCount: 1,
@@ -52,7 +52,7 @@ const createDeps = (
       "assistant.enabled": true,
       "assistant.defaultMode": "docs-only",
       "assistant.docs.backend": "filesystem",
-      "assistant.docs.sourceRoot": "_docs/_internal",
+      "assistant.docs.sourceRoot": "docs",
       "assistant.llm.enabled": false,
       "assistant.llm.provider": "none",
       "assistant.llm.model": "google/gemma-3n-e2b-it:free",
@@ -69,7 +69,7 @@ const createDeps = (
     building: false,
     error: null,
     builtAt: "2026-02-09T21:00:00.000Z",
-    configuredPaths: ["_docs"],
+    configuredPaths: ["docs"],
     docCount: 1,
     chunkCount: 1,
   }),
@@ -85,7 +85,7 @@ const createDeps = (
   }),
   ingestInternalDocsToDb: async () => ({
     runId: "run-1",
-    sourceRoot: "_docs/_internal",
+    sourceRoot: "docs",
     status: "success",
     filesScanned: 1,
     docsUpserted: 1,
@@ -157,7 +157,7 @@ test("getAssistantStatus returns DB status when DB backend is configured", async
           "assistant.enabled": true,
           "assistant.defaultMode": "docs-only",
           "assistant.docs.backend": "db",
-          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": false,
           "assistant.llm.provider": "none",
           "assistant.llm.model": "google/gemma-3n-e2b-it:free",
@@ -214,7 +214,7 @@ test("answerAssistantQuestion uses DB backend when DB index is ready", async () 
           "assistant.enabled": true,
           "assistant.defaultMode": "docs-only",
           "assistant.docs.backend": "db",
-          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": false,
           "assistant.llm.provider": "none",
           "assistant.llm.model": "google/gemma-3n-e2b-it:free",
@@ -244,41 +244,40 @@ test("answerAssistantQuestion uses DB backend when DB index is ready", async () 
   expect(fsSearchCalls).toBe(0);
 });
 
-test("answerAssistantQuestion falls back to filesystem when DB backend is not ready", async () => {
-  const result = await answerAssistantQuestion(
-    {
-      message: "Where are hero settings?",
-      mode: "docs-only",
-    },
-    createDeps({
-      getSetting: async (key: string) => {
-        const values: Record<string, unknown> = {
-          "assistant.enabled": true,
-          "assistant.defaultMode": "docs-only",
-          "assistant.docs.backend": "db",
-          "assistant.docs.sourceRoot": "_docs/_internal",
-          "assistant.llm.enabled": false,
-          "assistant.llm.provider": "none",
-          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
-          "assistant.llm.maxInputTokens": 8192,
-          "assistant.llm.maxOutputTokens": 2048,
-          "assistant.llm.timeoutMs": 20000,
-        };
-        return values[key];
+test("answerAssistantQuestion returns not ready when DB corpus is not seeded", async () => {
+  await expect(
+    answerAssistantQuestion(
+      {
+        message: "Where are hero settings?",
+        mode: "docs-only",
       },
-      getAssistantDocsDbStatus: async () => ({
-        ready: false,
-        docCount: 0,
-        chunkCount: 0,
-        lastIngestAt: null,
-        lastIngestStatus: "failed",
-        indexError: "assistant_docs_ingest_failed",
-      }),
-    })
-  );
-
-  expect(result.retrievalBackend).toBe("filesystem");
-  expect(result.fallbackUsed).toBe(true);
+      createDeps({
+        getSetting: async (key: string) => {
+          const values: Record<string, unknown> = {
+            "assistant.enabled": true,
+            "assistant.defaultMode": "docs-only",
+            "assistant.docs.backend": "db",
+            "assistant.docs.sourceRoot": "docs",
+            "assistant.llm.enabled": false,
+            "assistant.llm.provider": "none",
+            "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+            "assistant.llm.maxInputTokens": 8192,
+            "assistant.llm.maxOutputTokens": 2048,
+            "assistant.llm.timeoutMs": 20000,
+          };
+          return values[key];
+        },
+        getAssistantDocsDbStatus: async () => ({
+          ready: false,
+          docCount: 0,
+          chunkCount: 0,
+          lastIngestAt: null,
+          lastIngestStatus: "failed",
+          indexError: "assistant_docs_ingest_failed",
+        }),
+      })
+    )
+  ).rejects.toThrow("assistant_index_missing");
 });
 
 test("answerAssistantQuestion throws when assistant is disabled", async () => {
@@ -307,7 +306,7 @@ test("answerAssistantQuestion uses llm-rag provider when configured", async () =
           "assistant.enabled": true,
           "assistant.defaultMode": "llm-rag",
           "assistant.docs.backend": "filesystem",
-          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
           "assistant.llm.provider": "openrouter",
           "assistant.llm.model": "google/gemma-3n-e2b-it:free",
@@ -359,7 +358,7 @@ test("answerAssistantQuestion falls back when llm provider is not configured", a
           "assistant.enabled": true,
           "assistant.defaultMode": "llm-rag",
           "assistant.docs.backend": "filesystem",
-          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
           "assistant.llm.provider": "openrouter",
           "assistant.llm.model": "google/gemma-3n-e2b-it:free",
@@ -391,7 +390,7 @@ test("answerAssistantQuestion falls back when llm provider fails", async () => {
           "assistant.enabled": true,
           "assistant.defaultMode": "llm-rag",
           "assistant.docs.backend": "filesystem",
-          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
           "assistant.llm.provider": "openrouter",
           "assistant.llm.model": "google/gemma-3n-e2b-it:free",
@@ -452,7 +451,7 @@ test("reindexAssistantDocs runs ingest pipeline for DB backend", async () => {
           "assistant.enabled": true,
           "assistant.defaultMode": "docs-only",
           "assistant.docs.backend": "db",
-          "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": false,
           "assistant.llm.provider": "none",
           "assistant.llm.model": "google/gemma-3n-e2b-it:free",
@@ -464,7 +463,7 @@ test("reindexAssistantDocs runs ingest pipeline for DB backend", async () => {
       },
       ingestInternalDocsToDb: async () => ({
         runId: "run-2",
-        sourceRoot: "_docs/_internal",
+        sourceRoot: "docs",
         status: "success",
         filesScanned: 1,
         docsUpserted: 1,
@@ -499,10 +498,10 @@ test("answerAssistantQuestion enforces assistant request quotas", async () => {
   const deps = createDeps({
     getSetting: async (key: string) => {
       const values: Record<string, unknown> = {
-        "assistant.enabled": true,
-        "assistant.defaultMode": "docs-only",
-        "assistant.docs.backend": "filesystem",
-        "assistant.docs.sourceRoot": "_docs/_internal",
+          "assistant.enabled": true,
+          "assistant.defaultMode": "docs-only",
+          "assistant.docs.backend": "filesystem",
+          "assistant.docs.sourceRoot": "docs",
         "assistant.llm.enabled": false,
         "assistant.llm.provider": "none",
         "assistant.llm.model": "google/gemma-3n-e2b-it:free",

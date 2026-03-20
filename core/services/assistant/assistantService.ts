@@ -41,7 +41,7 @@ const BLOCKED_MARKERS = [
   "prompt injection",
 ] as const;
 
-const DEFAULT_ASSISTANT_SOURCE_ROOT = "_docs/_internal";
+const DEFAULT_ASSISTANT_SOURCE_ROOT = "docs";
 const DEFAULT_ASSISTANT_LLM_MODEL = "google/gemma-3n-e2b-it:free";
 const DEFAULT_ASSISTANT_LLM_MAX_INPUT_TOKENS = 8192;
 const DEFAULT_ASSISTANT_LLM_MAX_OUTPUT_TOKENS = 2048;
@@ -249,7 +249,7 @@ const readRuntimeSettings = async (
   ] = await Promise.all([
     getSettingSafe(deps, "assistant.enabled", false),
     getSettingSafe(deps, "assistant.defaultMode", "docs-only"),
-    getSettingSafe(deps, "assistant.docs.backend", "filesystem"),
+    getSettingSafe(deps, "assistant.docs.backend", "db"),
     getSettingSafe(deps, "assistant.docs.sourceRoot", DEFAULT_ASSISTANT_SOURCE_ROOT),
     getSettingSafe(deps, "assistant.llm.enabled", false),
     getSettingSafe(deps, "assistant.llm.provider", "none"),
@@ -300,7 +300,7 @@ const readRuntimeSettings = async (
   return {
     enabled: normalizeBoolean(enabledRaw, false),
     defaultMode: normalizeMode(defaultModeRaw, "docs-only"),
-    docsBackend: normalizeDocsBackend(docsBackendRaw, "filesystem"),
+    docsBackend: normalizeDocsBackend(docsBackendRaw, "db"),
     docsSourceRoot: normalizeDocsSourceRoot(
       docsSourceRootRaw,
       DEFAULT_ASSISTANT_SOURCE_ROOT
@@ -443,20 +443,10 @@ const retrieveDocsHits = async (
           backendFallbackUsed: false,
         };
       } catch {
-        const hits = await searchFilesystemHits(deps, message);
-        return {
-          hits,
-          retrievalBackend: "filesystem",
-          backendFallbackUsed: true,
-        };
+        throw new Error("assistant_index_missing");
       }
     }
-    const hits = await searchFilesystemHits(deps, message);
-    return {
-      hits,
-      retrievalBackend: "filesystem",
-      backendFallbackUsed: true,
-    };
+    throw new Error("assistant_index_missing");
   }
 
   return {

@@ -180,6 +180,8 @@ Rotacja klucza:
 - `assistant.docs.paths` musi byc niepuste gdy `assistant.enabled=true`.
 - `assistant.docs.sourceRoot` musi byc niepusty.
 - `assistant.docs.backend` (`filesystem`/`db`) steruje backendem retrieval.
+- Official assistant corpus z root `docs/` jest dopuszczony do runtime dopiero po seedzie do DB.
+- Brak gotowego DB corpus dla official docs nie moze fallbackowac do filesystem.
 
 ### Assistant API runtime (TASK-101-03)
 
@@ -218,7 +220,7 @@ Rotacja klucza:
 - Reindex:
   - triggerowany recznie endpointem `POST /assistant/reindex`
   - opcjonalny boot reindex przez `assistant.docs.reindexOnBoot=true`
-  - dla backendu `db` reindex uruchamia ingest `_docs/_internal` do tabel:
+  - dla backendu `db` reindex uruchamia ingest `docs/` do tabel:
     - `assistant_docs`
     - `assistant_doc_chunks`
     - `assistant_doc_ingest_runs`

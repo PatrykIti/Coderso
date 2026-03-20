@@ -3,7 +3,7 @@ import { readdir, readFile, stat } from "node:fs/promises";
 
 import type { DocsChunk, DocsIndex, DocsIndexStatus } from "./docsTypes";
 
-const DEFAULT_DOC_PATHS = ["_docs"];
+const DEFAULT_DOC_PATHS = ["docs"];
 const DEFAULT_MAX_CHUNK_CHARS = 1200;
 const HEADING_REGEX = /^(#{1,6})\s+(.+?)\s*$/;
 
@@ -492,7 +492,7 @@ export const initializeDocsIndexOnBootIfEnabled = async (
         const sourceRoot =
           typeof sourceRootValue === "string" && sourceRootValue.trim().length > 0
             ? sourceRootValue.trim()
-            : "_docs/_internal";
+            : "docs";
         await ingestInternalDocsToDb({ sourceRoot });
         return;
       }

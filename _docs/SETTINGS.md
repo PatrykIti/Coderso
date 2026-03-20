@@ -24,9 +24,9 @@ Admin UI: Settings → Assistant.
 | `assistant.launcher.avatarEnabled` | `boolean` | `false` | Czy floating launcher ma uzywac avatara zamiast domyslnej chmurki wiadomosci |
 | `assistant.launcher.avatarAsset` | `string \| null` | `null` | Asset id/url avatara launchera |
 | `assistant.defaultMode` | `"docs-only" \| "llm-rag"` | `"docs-only"` | Domyslny tryb odpowiedzi |
-| `assistant.docs.backend` | `"filesystem" \| "db"` | `"filesystem"` | Backend retrieval (`db` = KB z ingest, `filesystem` = in-memory index) |
-| `assistant.docs.sourceRoot` | `string` | `"_docs/_internal"` | Root dla ingest do DB backendu |
-| `assistant.docs.paths` | `string[]` | `["_docs"]` | Sciezki dokumentacji indeksowane przez Doc Navigator |
+| `assistant.docs.backend` | `"filesystem" \| "db"` | `"db"` | Official assistant corpus uses DB-backed retrieval |
+| `assistant.docs.sourceRoot` | `string` | `"docs"` | Root official assistant corpus used for DB ingest |
+| `assistant.docs.paths` | `string[]` | `["docs"]` | Legacy filesystem/index paths; official corpus still requires DB seeding |
 | `assistant.docs.reindexOnBoot` | `boolean` | `false` | Czy wykonywac reindex przy starcie |
 | `assistant.llm.enabled` | `boolean` | `false` | Wlacza sciezke LLM |
 | `assistant.llm.provider` | `"openrouter" \| "none"` | `"none"` | Provider LLM |
@@ -78,4 +78,6 @@ Legacy compatibility:
   - `assistant.llm.provider != "none"`
 - `assistant.enabled=true` wymaga niepustego `assistant.docs.paths`.
 - `assistant.docs.sourceRoot` musi byc niepustym stringiem.
+- Official assistant corpus from `docs/` jest gotowy dopiero po seedzie do DB.
+- Official runtime nie moze fallbackowac do filesystem corpus, gdy DB corpus nie jest gotowy.
 - Limity liczbowe (`tokens`, `timeout`, `quotas`) musza byc dodatnimi integerami.

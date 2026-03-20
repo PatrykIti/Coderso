@@ -2359,8 +2359,8 @@ Payloady:
   "assistant.launcher.avatarAsset": null,
   "assistant.defaultMode": "docs-only",
   "assistant.docs.backend": "db",
-  "assistant.docs.sourceRoot": "_docs/_internal",
-  "assistant.docs.paths": ["_docs"],
+  "assistant.docs.sourceRoot": "docs",
+  "assistant.docs.paths": ["docs"],
   "assistant.docs.reindexOnBoot": false,
   "assistant.llm.enabled": false,
   "assistant.llm.provider": "none",
@@ -2390,6 +2390,8 @@ Response:
 - `site.contentRoutes` mapuje content types na trasy (list + detail).
 - `assistant.*` klucze sterują globalną konfiguracją Doc Navigatora i opcjonalnego trybu LLM.
 - `assistant.launcher.avatar*` sterują floating launcher surface w admin UI.
+- Official assistant corpus jest sourced z root `docs/` i seedowany do DB.
+- Official runtime readiness wymaga seeded DB corpus; brak gotowosci nie fallbackuje do filesystem.
 - Alias kompatybilnosciowy: `site.baseUrl` mapuje read/write na `site.publicBaseUrl`.
 - Walidacja: `assistant.defaultMode=llm-rag` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
 - Walidacja: `assistant.enabled=true` wymaga niepustego `assistant.docs.paths`.
@@ -2482,7 +2484,7 @@ Endpoints:
   "confidence": 0.76,
   "sources": [
     {
-      "path": "_docs/_internal/widgets/hero-basics.md",
+      "path": "docs/coderso/widgets-and-template-editor.md",
       "heading": "Hero widget basics > Step By Step",
       "lineStart": 20,
       "lineEnd": 38,
@@ -2639,6 +2641,7 @@ Uwagi:
 - Gdy provider nie odpowie lub nie jest skonfigurowany, runtime zwraca odpowiedz `docs-only` oraz `llm=null`.
 - Dla backendu `db` retrieval idzie najpierw po DB; fallback do filesystem aktywuje sie tylko gdy DB jest puste lub niedostepne.
 - Quota enforcement dziala per user (`assistant.quotas.requestsPerMinute`, `assistant.quotas.requestsPerDay`) przed retrieval/provider call.
+- Official assistant docs from root `docs/` are considered available only after DB seeding/reindex.
 
 ---
 

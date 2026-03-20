@@ -29,6 +29,11 @@ Window behavior:
 Global assistant configuration remains on `Settings -> Assistant`.
 The conversation window does not expose global assistant settings actions.
 
+Knowledge source contract:
+- official assistant docs live in root `docs/`,
+- official docs become available to runtime only after DB reindex/seeding,
+- missing seeded DB corpus means assistant docs are `not ready`, not filesystem fallback.
+
 ## AI Site Wizard (Solution Kits)
 
 Location: `Coderso -> Solution Kits`.

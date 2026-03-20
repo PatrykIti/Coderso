@@ -73,7 +73,7 @@ test("validateInternalDocContract reports missing required sections", () => {
     ].join("\n")
   );
 
-  const errors = validateInternalDocContract("_docs/_internal/widgets/broken.md", parsed);
+  const errors = validateInternalDocContract("docs/coderso/widgets/broken.md", parsed);
   expect(errors.some((error) => error.code === "required_section_missing")).toBe(true);
   expect(errors.some((error) => error.message.includes("when to use"))).toBe(true);
 });
@@ -161,6 +161,6 @@ test("validateInternalDocContract reports body_too_large", () => {
     ].join("\n")
   );
 
-  const errors = validateInternalDocContract("_docs/_internal/widgets/huge.md", parsed);
+  const errors = validateInternalDocContract("docs/coderso/widgets/huge.md", parsed);
   expect(errors.some((error) => error.code === "doc_body_too_large")).toBe(true);
 });

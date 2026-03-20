@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 685 tasks
+- **Done:** 692 tasks
 
 ---
 
@@ -66,6 +66,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-109-06 | QA, Docs Index, Changelog, and Closure | Medium | Medium | Done: ingest/runtime validation, docs corpus structure verification, board, and changelog synchronization completed |
+| TASK-109-05 | Solution Kits, Applied Examples, and Non-Kit Playbooks Corpus | High | Medium | Done: per-kit docs plus applied playbooks for lead gen, booking, commerce, editorial, and manual setup |
+| TASK-109-04 | Official Documentation Corpus for Coderso Modules and Screen Workflows | High | Large | Done: canonical English docs added for Coderso modules, screens, workflows, examples, and pitfalls |
+| TASK-109-03 | Official Documentation Corpus for Core Admin Screens and Settings Surfaces | High | Large | Done: canonical English docs added for core admin screens, settings surfaces, and workflows |
+| TASK-109-02 | Assistant Ingest Runtime Migration from _docs/_internal to root docs and DB Seeding | High | Medium | Done: official assistant source root moved to `docs/` with DB-seeded readiness and no official filesystem fallback |
+| TASK-109-01 | root docs Information Architecture, Authoring Contract, and Coverage Matrix | High | Medium | Done: root `docs/` IA, authoring template, and route coverage matrix created |
+| TASK-109 | Official Assistant Documentation Corpus in root docs and DB Seeding | High | Large | Done: official English `docs/` corpus, DB-seeding contract, and screen/kit/playbook coverage shipped |
 | TASK-108-03 | QA, Docs, Changelog, and Closure | Medium | Small | Done: lint/types/Vitest validation plus docs, board, and changelog synchronization completed |
 | TASK-108-02 | Anchored Conversation Window Replacing Right-Side Modal | High | Small | Done: conversation now opens as an anchored floating panel instead of a full right sheet |
 | TASK-108-01 | Assistant Launcher Idle and Hover Visual Contract Polish | Medium | Small | Done: launcher idle/active affordance was corrected so the primary icon stays visible without hover |

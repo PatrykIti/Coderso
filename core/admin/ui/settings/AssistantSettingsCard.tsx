@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 
 export type AssistantSettingsValues = {
   assistantEnabled: boolean;
@@ -35,9 +34,9 @@ export const ASSISTANT_SETTINGS_DEFAULT_VALUES: AssistantSettingsValues = {
   assistantLauncherAvatarEnabled: false,
   assistantLauncherAvatarAsset: "",
   assistantDefaultMode: "docs-only",
-  assistantDocsBackend: "filesystem",
-  assistantDocsSourceRoot: "_docs/_internal",
-  assistantDocsPaths: ["_docs"],
+  assistantDocsBackend: "db",
+  assistantDocsSourceRoot: "docs",
+  assistantDocsPaths: ["docs"],
   assistantDocsReindexOnBoot: false,
   assistantLlmEnabled: false,
   assistantLlmProvider: "none",
@@ -59,12 +58,6 @@ type AssistantSettingsCardProps = {
 const labelClassName =
   "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
 
-const parseDocsPaths = (value: string) =>
-  value
-    .split(/[\n,]/)
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
-
 const parsePositiveNumber = (value: string, fallback: number) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -77,7 +70,6 @@ export function AssistantSettingsCard({
   onChange,
   disabled = false,
 }: AssistantSettingsCardProps) {
-  const docsPathsText = values.assistantDocsPaths.join("\n");
   const llmConfigDisabled = disabled || !values.assistantLlmEnabled;
 
   return (
@@ -186,56 +178,16 @@ export function AssistantSettingsCard({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <label className={labelClassName}>Docs backend</label>
-            <Select
-              value={values.assistantDocsBackend}
-              onValueChange={(next) =>
-                onChange?.({
-                  assistantDocsBackend: next as AssistantSettingsValues["assistantDocsBackend"],
-                })
-              }
-              disabled={disabled}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose backend" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="filesystem">Filesystem (in-memory index)</SelectItem>
-                <SelectItem value="db">Database KB (ingest)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className={labelClassName}>Docs source root</label>
-            <Input
-              value={values.assistantDocsSourceRoot}
-              onChange={(event) =>
-                onChange?.({ assistantDocsSourceRoot: event.target.value })
-              }
-              placeholder="_docs/_internal"
-              disabled={disabled}
-            />
-            <p className="text-xs text-muted-foreground">
-              Used by DB ingest backend (`assistant.docs.backend=db`).
+          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+            <p className={labelClassName}>Official assistant corpus</p>
+            <p className="text-sm font-medium text-foreground">
+              Root <code>docs/</code> corpus seeded to database knowledge base
             </p>
-          </div>
-
-          <div className="space-y-2 md:col-span-2">
-            <label className={labelClassName}>Docs paths</label>
-            <Textarea
-              value={docsPathsText}
-              onChange={(event) =>
-                onChange?.({ assistantDocsPaths: parseDocsPaths(event.target.value) })
-              }
-              placeholder="_docs"
-              className="min-h-[88px]"
-              disabled={disabled}
-            />
             <p className="text-xs text-muted-foreground">
-              One path per line (or comma separated). Used by filesystem backend and
-              fallback. Example: `_docs`
+              Assistant documentation is sourced from the official English
+              <code> docs/ </code>
+              directory and becomes available to runtime only after DB reindex/seeding.
+              The official corpus does not rely on filesystem fallback.
             </p>
           </div>
 

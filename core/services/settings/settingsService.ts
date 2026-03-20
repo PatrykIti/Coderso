@@ -49,7 +49,7 @@ const DEFAULT_WIDGET_TEMPLATE_CATEGORIES: WidgetTemplateCategorySetting[] = [
 ];
 
 const DEFAULT_CONTENT_ROUTES: ContentRouteSetting[] = [];
-const DEFAULT_ASSISTANT_DOC_PATHS = ["_docs"];
+const DEFAULT_ASSISTANT_DOC_PATHS = ["docs"];
 
 const DEFAULT_SETTINGS = {
   "site.name": "Nextless",
@@ -74,8 +74,8 @@ const DEFAULT_SETTINGS = {
   "assistant.launcher.avatarEnabled": false,
   "assistant.launcher.avatarAsset": null as string | null,
   "assistant.defaultMode": "docs-only" as AssistantMode,
-  "assistant.docs.backend": "filesystem" as AssistantDocsBackend,
-  "assistant.docs.sourceRoot": "_docs/_internal",
+  "assistant.docs.backend": "db" as AssistantDocsBackend,
+  "assistant.docs.sourceRoot": "docs",
   "assistant.docs.paths": DEFAULT_ASSISTANT_DOC_PATHS,
   "assistant.docs.reindexOnBoot": false,
   "assistant.llm.enabled": false,

@@ -245,7 +245,7 @@ przez `setup.completed=true`.
 Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
 - `core/services/assistant/docsIndexService.ts` (filesystem index + fallback)
 - `core/services/assistant/docsRetriever.ts` (filesystem BM25-like retrieval)
-- `core/services/assistant/docsIngestService.ts` (ingest `_docs/_internal` -> DB + ingest runs)
+- `core/services/assistant/docsIngestService.ts` (ingest `docs/` -> DB + ingest runs)
 - `core/services/assistant/docsDbRetriever.ts` (DB-backed ranking/search)
 - `core/services/assistant/docsAnswerComposer.ts` (deterministic answer templates)
 - `core/services/assistant/assistantService.ts` (orchestrator backend selection + fallback)
@@ -253,17 +253,18 @@ Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
 Przeplyw runtime:
 1. `assistantService` czyta `assistant.docs.backend` (`filesystem` lub `db`).
 2. Dla `db`: bierze status z tabel ingest, wykonuje retrieval na `assistant_doc_chunks`.
-3. Gdy DB nie jest gotowe lub niedostepne, asystent fallbackuje do filesystem index.
-4. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) i zawsze zwraca zrodla.
+3. Official assistant corpus w `docs/` jest uznawany za gotowy dopiero po seedzie do DB.
+4. Gdy DB corpus nie jest gotowy, runtime zwraca stan `not ready` zamiast fallbacku do filesystem.
+5. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) i zawsze zwraca zrodla.
 
 Przeplyw reindex:
-1. `POST /assistant/reindex` dla backendu `db` uruchamia ingest z `assistant.docs.sourceRoot` (domyslnie `_docs/_internal`).
+1. `POST /assistant/reindex` dla backendu `db` uruchamia ingest z `assistant.docs.sourceRoot` (domyslnie `docs`).
 2. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
-3. Dla backendu `filesystem` reindex przebudowuje cache in-memory na bazie `assistant.docs.paths`.
 
 Zasady runtime:
 - Boot reindex (`assistant.docs.reindexOnBoot=true`) dziala dla obu backendow.
-- Cache filesystem index trzymany jest w pamieci procesu.
+- Official assistant corpus korzysta z root `docs/` jako source-of-truth.
+- Seed do DB jest warunkiem gotowosci official assistant corpus.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
 
 ## Assistant LLM mode + Admin UI integration (Phase B)
