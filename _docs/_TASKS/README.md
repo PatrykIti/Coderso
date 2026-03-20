@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 13 tasks
 - **In Progress:** 5 tasks
 - **Done:** 674 tasks
 
@@ -39,6 +39,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-107 | Assistant Topbar Icon Gating and Minimal Conversation Drawer | High | Medium | Icon-only trigger, global visibility gate, and strict conversation-only drawer follow-up |
+| TASK-107-04 | QA, Docs, Changelog, and Closure | Medium | Small | Lint/types/targeted UI suites plus docs and board/changelog sync |
+| TASK-107-03 | Assistant Unavailable and Docs-Not-Ready Minimal State Handling | Medium | Small | Minimal non-config status handling for disabled/error/docs-not-ready |
+| TASK-107-02 | Minimal Conversation Drawer Contract and Rendering Cleanup | High | Medium | Remove non-chat controls so the drawer stays prompt/transcript/composer only |
+| TASK-107-01 | Assistant Topbar Icon-Only Entry Point and Global Visibility Gating | High | Medium | Replace text button with message icon and hide it when global assistant is disabled |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
