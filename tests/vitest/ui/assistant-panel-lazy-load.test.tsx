@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 
 import {
   resolveAssistantConversationState,
+  resolveAssistantConversationWindowPosition,
   resolveAssistantPanelViewState,
   shouldLoadAssistantRuntimeState,
 } from "../../../core/admin/ui/assistant/AssistantPanel";
@@ -100,4 +101,26 @@ test("assistant conversation state keeps docs-not-ready separate from empty chat
       indexReady: false,
     })
   ).toBe("messages");
+});
+
+test("assistant conversation window stays anchored near launcher and within viewport bounds", () => {
+  const anchored = resolveAssistantConversationWindowPosition({
+    launcherPosition: { x: 1200, y: 760 },
+    viewportWidth: 1440,
+    viewportHeight: 900,
+  });
+
+  expect(anchored.width).toBeLessThanOrEqual(360);
+  expect(anchored.left).toBeGreaterThanOrEqual(24);
+  expect(anchored.bottom).toBeGreaterThanOrEqual(24);
+
+  const clamped = resolveAssistantConversationWindowPosition({
+    launcherPosition: { x: 20, y: 40 },
+    viewportWidth: 320,
+    viewportHeight: 480,
+  });
+
+  expect(clamped.left).toBeGreaterThanOrEqual(24);
+  expect(clamped.width).toBeLessThanOrEqual(320 - 48);
+  expect(clamped.maxHeight).toBeGreaterThanOrEqual(320);
 });

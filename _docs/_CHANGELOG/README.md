@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 507 | 2026-03-20 | TASK-108 anchored assistant window and launcher visual polish | Admin/UI |
 | 506 | 2026-03-20 | TASK-107 floating assistant launcher and minimal chat window | Admin/UI |
 | 505 | 2026-03-20 | TASK-106 assistant drawer runtime UX and configuration separation | Admin/UI |
 | 504 | 2026-03-19 | TASK-054-30 solution kits module audit and sidebar gating | Admin/UI |

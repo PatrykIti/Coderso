@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 681 tasks
+- **Done:** 685 tasks
 
 ---
 
@@ -66,6 +66,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-108-03 | QA, Docs, Changelog, and Closure | Medium | Small | Done: lint/types/Vitest validation plus docs, board, and changelog synchronization completed |
+| TASK-108-02 | Anchored Conversation Window Replacing Right-Side Modal | High | Small | Done: conversation now opens as an anchored floating panel instead of a full right sheet |
+| TASK-108-01 | Assistant Launcher Idle and Hover Visual Contract Polish | Medium | Small | Done: launcher idle/active affordance was corrected so the primary icon stays visible without hover |
+| TASK-108 | Assistant Launcher Visual Polish and Anchored Conversation Window | High | Small | Done: launcher visual contract and anchored conversation behavior were finalized after the first floating rollout |
 | TASK-107-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: lint/types/Vitest/Bun validation plus docs, board, and changelog synchronization completed |
 | TASK-107-06 | Avatar-Backed Assistant Launcher Surface | Medium | Small | Done: floating launcher now switches from message bubble to avatar surface via global settings |
 | TASK-107-05 | Floating Draggable Assistant Launcher | High | Medium | Done: shell-level floating launcher added with drag, viewport clamp, and persisted position |

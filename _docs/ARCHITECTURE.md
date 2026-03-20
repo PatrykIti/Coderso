@@ -292,8 +292,10 @@ Warstwa Admin UI:
 - Launcher lazy-loaduje runtime dopiero przy otwarciu okna rozmowy i ma jawne stany `loading`, `error`, `disabled`, `ready`.
 - Floating launcher moze byc przesuwany przez usera w obrebie viewportu admina.
 - Launcher domyslnie uzywa ikony wiadomosci; gdy globalny avatar launchera jest skonfigurowany, uzywa surface avatara.
+- Launcher ma czytelny idle state i mocniejszy active state; hover nie moze byc jedynym sposobem ujawnienia affordance.
 - Starter prompts i composer sa renderowane dopiero po `runtime ready`.
 - `docs not ready` jest traktowane jako minimalistyczny runtime status w surface rozmowy, a nie jako ekran konfiguracji.
+- Okno rozmowy jest anchored floating panelem wychodzacym z launchera, a nie pelnym prawym `Sheet`.
 - Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; okno rozmowy nie renderuje globalnych ustawien assistant runtime.
 - `core/admin/services/assistantClient.ts` obsluguje:
   - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,

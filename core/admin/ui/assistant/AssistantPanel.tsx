@@ -1,20 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Loader2,
-  MessageCircle,
+  MessageCircleDashed,
   MessageSquareText,
   Send,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import {
@@ -47,6 +40,12 @@ type LauncherPosition = {
 };
 
 type LauncherAssetKind = "none" | "image" | "video" | "other";
+type ConversationWindowPosition = {
+  left: number;
+  bottom: number;
+  width: number;
+  maxHeight: number;
+};
 
 export type AssistantPanelViewState = "loading" | "error" | "disabled" | "ready";
 
@@ -56,6 +55,8 @@ const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
 const ASSISTANT_LAUNCHER_POSITION_KEY = "nextless.assistant.launcher.position";
 const ASSISTANT_LAUNCHER_SIZE_PX = 56;
 const ASSISTANT_LAUNCHER_MARGIN_PX = 24;
+const ASSISTANT_CONVERSATION_WIDTH_PX = 360;
+const ASSISTANT_CONVERSATION_GAP_PX = 12;
 
 let runtimeStateCache:
   | {
@@ -157,6 +158,44 @@ const resolveLauncherAssetKind = (assetUrl: string | null): LauncherAssetKind =>
   return "other";
 };
 
+const getConversationWindowWidth = (viewportWidth: number) =>
+  Math.min(
+    ASSISTANT_CONVERSATION_WIDTH_PX,
+    Math.max(240, viewportWidth - ASSISTANT_LAUNCHER_MARGIN_PX * 2)
+  );
+
+export const resolveAssistantConversationWindowPosition = (input: {
+  launcherPosition: LauncherPosition;
+  viewportWidth: number;
+  viewportHeight: number;
+}): ConversationWindowPosition => {
+  const width = getConversationWindowWidth(input.viewportWidth);
+  const maxLeft = Math.max(
+    ASSISTANT_LAUNCHER_MARGIN_PX,
+    input.viewportWidth - width - ASSISTANT_LAUNCHER_MARGIN_PX
+  );
+  const left = Math.min(
+    maxLeft,
+    Math.max(
+      ASSISTANT_LAUNCHER_MARGIN_PX,
+      input.launcherPosition.x + ASSISTANT_LAUNCHER_SIZE_PX - width
+    )
+  );
+
+  return {
+    left,
+    bottom: Math.max(
+      ASSISTANT_LAUNCHER_MARGIN_PX,
+      input.viewportHeight - input.launcherPosition.y + ASSISTANT_CONVERSATION_GAP_PX
+    ),
+    width,
+    maxHeight: Math.min(
+      560,
+      Math.max(320, input.viewportHeight - ASSISTANT_LAUNCHER_MARGIN_PX * 2)
+    ),
+  };
+};
+
 const buildRuntimeState = (
   assistantStatus: AssistantStatusResponse
 ): AssistantRuntimeState => ({
@@ -248,6 +287,8 @@ export function AssistantPanel() {
     readLauncherPosition()
   );
   const suppressLauncherToggleRef = useRef(false);
+  const launcherRef = useRef<HTMLButtonElement | null>(null);
+  const conversationRef = useRef<HTMLDivElement | null>(null);
 
   const launcherAsset =
     launcherAvatarEnabled && typeof launcherAvatarAsset === "string"
@@ -308,6 +349,32 @@ export function AssistantPanel() {
   useEffect(() => {
     persistLauncherPosition(launcherPosition);
   }, [launcherPosition]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (conversationRef.current?.contains(target)) return;
+      if (launcherRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
 
   const handleLauncherClick = useCallback(() => {
     if (suppressLauncherToggleRef.current) return;
@@ -439,6 +506,15 @@ export function AssistantPanel() {
     [messages.length, status?.indexReady]
   );
 
+  const conversationWindowPosition = useMemo(() => {
+    const { width, height } = getViewportSize();
+    return resolveAssistantConversationWindowPosition({
+      launcherPosition,
+      viewportWidth: width,
+      viewportHeight: height,
+    });
+  }, [launcherPosition]);
+
   if (!launcherEnabled) {
     return null;
   }
@@ -446,11 +522,13 @@ export function AssistantPanel() {
   return (
     <>
       <Button
+        ref={launcherRef}
         type="button"
-        variant="secondary"
         size="icon"
         className={cn(
-          "fixed z-40 h-14 w-14 rounded-full border border-border/80 bg-background/95 shadow-lg backdrop-blur",
+          "fixed z-40 h-14 w-14 rounded-full border shadow-lg backdrop-blur transition-colors",
+          "border-emerald-700/80 bg-emerald-600 text-white hover:bg-emerald-700 hover:text-white",
+          open && "bg-emerald-700 ring-4 ring-emerald-500/20",
           "cursor-grab active:cursor-grabbing"
         )}
         style={{
@@ -488,22 +566,37 @@ export function AssistantPanel() {
           isLoadingRuntime && !isReady ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <MessageCircle className="h-6 w-6" />
+            <MessageCircleDashed className="h-6 w-6" />
           )
         ) : null}
       </Button>
 
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-md">
-          <SheetHeader className="border-b px-4 py-4">
-            <SheetTitle className="flex items-center gap-2">
-              <MessageSquareText className="h-4 w-4" />
-              Assistant
-            </SheetTitle>
-            <SheetDescription>
+      {open ? (
+        <div
+          ref={conversationRef}
+          className={cn(
+            "fixed z-40 flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
+            "animate-in fade-in-0 zoom-in-95 duration-150"
+          )}
+          style={{
+            left: `${conversationWindowPosition.left}px`,
+            bottom: `${conversationWindowPosition.bottom}px`,
+            width: `${conversationWindowPosition.width}px`,
+            maxHeight: `${conversationWindowPosition.maxHeight}px`,
+            transformOrigin: "bottom right",
+          }}
+          role="dialog"
+          aria-label="Assistant conversation"
+        >
+          <div className="border-b px-4 py-4">
+            <div className="flex items-center gap-2">
+              <MessageSquareText className="h-4 w-4 text-emerald-700" />
+              <p className="font-semibold text-foreground">Assistant</p>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
               Ask where settings, widgets, and flows are documented.
-            </SheetDescription>
-          </SheetHeader>
+            </p>
+          </div>
 
           <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4">
             {viewState === "loading" ? (
@@ -596,8 +689,8 @@ export function AssistantPanel() {
               </>
             ) : null}
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      ) : null}
     </>
   );
 }

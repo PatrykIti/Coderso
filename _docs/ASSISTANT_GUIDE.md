@@ -13,12 +13,18 @@ Launcher contract:
 - floating message-bubble launcher rendered only when global assistant settings enable it,
 - launcher can be repositioned by the user so it does not obscure the current view,
 - when launcher avatar is configured in `Settings -> Assistant`, the launcher uses the avatar surface instead of the default message bubble.
+- launcher has a visible idle state and a stronger highlighted active state; it should not require hover to reveal its primary affordance.
 
 Conversation window states:
 1. `Loading` - runtime shell only, without prompt chips or composer.
 2. `Ready` - transcript, starter prompts, and composer.
 3. `Docs not ready` - minimalist runtime status copy inside the conversation surface.
 4. `Disabled` / `Error` - clear blocking message instead of partial chat UI.
+
+Window behavior:
+- the conversation window is anchored to the launcher and visually emerges from it,
+- it is not a full-height right-side modal/sheet,
+- clicking outside or pressing `Escape` closes the window.
 
 Global assistant configuration remains on `Settings -> Assistant`.
 The conversation window does not expose global assistant settings actions.
