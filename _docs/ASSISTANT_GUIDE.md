@@ -38,6 +38,11 @@ Knowledge source contract:
 - `Settings -> Assistant` exposes the operational `Run reindex` action for seeding the corpus into DB.
 - legacy `_docs/filesystem` assistant docs mode is no longer an active supported runtime path.
 
+Answer contract:
+- assistant returns a product-facing answer built from article content,
+- not a list of document locations,
+- sources are treated as secondary evidence and are not shown by default in the user-facing chat UI.
+
 ## AI Site Wizard (Solution Kits)
 
 Location: `Coderso -> Solution Kits`.

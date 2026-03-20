@@ -16,10 +16,14 @@ const LOCATION_HINTS = new Set([
   "where",
   "whereis",
   "location",
+  "configure",
+  "config",
   "gdzie",
   "znajde",
   "znalezc",
 ]);
+
+const SCREEN_HINTS = new Set(["screen", "page", "tab", "panel", "settings"]);
 
 const toSource = (hit: DocsSearchHit): DocsAnswerSource => ({
   path: hit.chunk.docPath,
@@ -39,6 +43,31 @@ const inferTemplate = (question: string, hitsCount: number): DocsAnswerTemplate 
   return "how_to_answer";
 };
 
+const toSentence = (value: string) => {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  return /[.!?]$/.test(normalized) ? normalized : `${normalized}.`;
+};
+
+const pickPrimaryInstruction = (hits: DocsSearchHit[]) => {
+  for (const hit of hits) {
+    const snippet = toSentence(hit.snippet);
+    if (snippet) return snippet;
+  }
+  return "";
+};
+
+const inferPrimaryScreen = (hit: DocsSearchHit | undefined) => {
+  if (!hit) return null;
+  const heading = hit.chunk.headingPath.join(" > ").trim();
+  const path = hit.chunk.docPath.trim();
+  if (heading.length === 0 && path.length === 0) return null;
+  return {
+    heading,
+    path,
+  };
+};
+
 const resolveConfidence = (hits: DocsSearchHit[]) => {
   if (hits.length === 0) return 0.1;
   const topScore = hits[0]?.score ?? 0;
@@ -50,6 +79,8 @@ export const composeDocsAnswer = (input: ComposeDocsAnswerInput): DocsComposedAn
   const maxSources = Math.min(Math.max(input.maxSources ?? 3, 1), 5);
   const template = inferTemplate(input.question, input.hits.length);
   const sources = input.hits.slice(0, maxSources).map(toSource);
+  const primaryInstruction = pickPrimaryInstruction(input.hits);
+  const primaryScreen = inferPrimaryScreen(input.hits[0]);
 
   if (template === "missing_answer") {
     return {
@@ -63,15 +94,25 @@ export const composeDocsAnswer = (input: ComposeDocsAnswerInput): DocsComposedAn
     };
   }
 
-  const sourceLabels = sources.map((source, index) => {
-    const heading = source.heading || "Top level";
-    return `${index + 1}. ${source.path} -> ${heading}`;
-  });
+  const normalizedQuestion = normalizeDocsText(input.question);
+  const asksForScreen =
+    [...SCREEN_HINTS].some((term) => normalizedQuestion.includes(term)) ||
+    template === "location_answer";
 
   const answer =
     template === "location_answer"
-      ? `Most relevant locations in docs:\n${sourceLabels.join("\n")}`
-      : `Follow these sections in order:\n${sourceLabels.join("\n")}`;
+      ? [
+          primaryInstruction || "Use the matching product screen and follow the documented steps there.",
+          primaryScreen
+            ? asksForScreen
+              ? `Most likely screen or section: ${primaryScreen.heading || primaryScreen.path}.`
+              : null
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : primaryInstruction ||
+        "Follow the documented steps in the most relevant product guide.";
 
   return {
     mode: "docs-only",

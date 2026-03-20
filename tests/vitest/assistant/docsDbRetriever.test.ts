@@ -40,6 +40,32 @@ test("rankAssistantDocsDbRows ranks the most relevant hero section first", () =>
   expect(hits[0]?.snippet.toLowerCase()).toContain("visual tab");
 });
 
+test("rankAssistantDocsDbRows prefers step-by-step over examples for config questions", () => {
+  const hits = rankAssistantDocsDbRows(
+    [
+      ...rows,
+      {
+        id: "chunk-examples",
+        docPath: "docs/coderso/widgets-and-template-editor.md",
+        headingPath: ["Coderso Widgets and Template Editor", "Examples"],
+        heading: "Examples",
+        lineStart: 60,
+        lineEnd: 66,
+        content: "A landing page team reuses a hero structure across multiple pages.",
+        normalizedText:
+          "coderso widgets and template editor examples a landing page team reuses a hero structure across multiple pages",
+        tokenCount: 18,
+      },
+    ],
+    "where can I configure hero colors",
+    {
+      topK: 3,
+    }
+  );
+
+  expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("step by step");
+});
+
 test("rankAssistantDocsDbRows returns empty list for unrelated query", () => {
   const hits = rankAssistantDocsDbRows(rows, "quantum banana neutron", {
     topK: 3,

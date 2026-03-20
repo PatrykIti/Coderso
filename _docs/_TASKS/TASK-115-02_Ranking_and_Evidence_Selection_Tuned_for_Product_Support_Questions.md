@@ -5,7 +5,7 @@
 **Category:** Assistant/Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-115  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -84,3 +84,10 @@ score -= weakEvidencePenalty(chunk, questionIntent);
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Added section/path priors so canonical product docs and `Step By Step` evidence score higher for direct configuration questions.
+- Reduced the chance that weaker `Examples` sections dominate support-style queries.

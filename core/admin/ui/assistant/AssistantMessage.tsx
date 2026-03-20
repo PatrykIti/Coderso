@@ -1,8 +1,5 @@
-import { useCallback } from "react";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AssistantChatResponse } from "@/services/assistantClient";
 
@@ -21,15 +18,6 @@ export function AssistantMessage({
   response,
   error,
 }: AssistantMessageProps) {
-  const copySourceRef = useCallback(async (value: string) => {
-    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) return;
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      // Clipboard failures should not break the chat flow.
-    }
-  }, []);
-
   if (role === "user") {
     return (
       <div className="flex min-w-0 justify-end">
@@ -70,37 +58,6 @@ export function AssistantMessage({
             Requested mode switched to docs-only for this answer.
           </AlertDescription>
         </Alert>
-      ) : null}
-
-      {response?.sources.length ? (
-        <div className="space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Sources
-          </p>
-          <div className="flex flex-col gap-2">
-            {response.sources.map((source, index) => {
-              const sourceRef = `${source.path} -> ${source.heading}`;
-              return (
-                <Button
-                  key={`${source.path}-${source.heading}-${index}`}
-                  type="button"
-                  variant="outline"
-                  className="h-auto justify-start whitespace-normal px-3 py-2 text-left"
-                  onClick={() => copySourceRef(sourceRef)}
-                  title="Click to copy source reference"
-                >
-                  <span className="block text-xs text-muted-foreground">[{index + 1}]</span>
-                  <span className="block break-words text-xs font-medium [overflow-wrap:anywhere]">
-                    {source.path}
-                  </span>
-                  <span className="block break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                    {source.heading} ({source.lineStart}-{source.lineEnd})
-                  </span>
-                </Button>
-              );
-            })}
-          </div>
-        </div>
       ) : null}
     </div>
   );

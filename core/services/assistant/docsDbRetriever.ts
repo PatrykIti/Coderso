@@ -17,6 +17,35 @@ const resolveMinScore = (value: number | undefined) => {
   return Math.max(value, 0);
 };
 
+const LOCATION_HINTS = ["where", "configure", "config", "screen", "tab", "panel"];
+
+const inferLocationIntent = (query: string) => {
+  const normalized = normalizeDocsText(query);
+  return LOCATION_HINTS.some((term) => normalized.includes(term));
+};
+
+const scoreSectionWeight = (headingPath: string[], query: string) => {
+  const normalizedHeading = normalizeDocsText(headingPath.join(" "));
+  const locationIntent = inferLocationIntent(query);
+
+  let score = 0;
+  if (normalizedHeading.includes("step by step")) score += 0.9;
+  if (normalizedHeading.includes("what is it")) score += 0.35;
+  if (normalizedHeading.includes("when to use")) score += 0.25;
+  if (locationIntent && normalizedHeading.includes("examples")) score -= 0.35;
+  return score;
+};
+
+const scorePathWeight = (docPath: string) => {
+  const normalizedPath = normalizeDocsText(docPath);
+  let score = 0;
+  if (normalizedPath.includes("docs screens")) score += 0.7;
+  if (normalizedPath.includes("docs coderso")) score += 0.6;
+  if (normalizedPath.includes("docs solution kits")) score += 0.2;
+  if (normalizedPath.includes("docs playbooks")) score += 0.1;
+  return score;
+};
+
 const buildSnippet = (content: string, queryTerms: string[], maxLength = 220) => {
   const compact = content.replace(/\s+/g, " ").trim();
   if (compact.length <= maxLength) return compact;
@@ -155,6 +184,9 @@ export const rankAssistantDocsDbRows = (
       if (headingNormalized.includes(term)) score += 0.35;
       if (pathNormalized.includes(term)) score += 0.25;
     }
+
+    score += scoreSectionWeight(row.headingPath, normalizedQuery);
+    score += scorePathWeight(row.docPath);
 
     if (score < minScore) continue;
 

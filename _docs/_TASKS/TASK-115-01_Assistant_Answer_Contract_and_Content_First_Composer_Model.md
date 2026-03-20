@@ -5,7 +5,7 @@
 **Category:** Assistant/Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-115  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -89,3 +89,10 @@ return composeHowAnswerFromTopEvidence(hits.slice(0, 2));
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- `docsAnswerComposer` now builds product-facing answer text from top evidence instead of returning file-location lists.
+- `missing_answer` remains conservative when evidence is too weak.

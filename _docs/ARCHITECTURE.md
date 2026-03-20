@@ -245,7 +245,7 @@ przez `setup.completed=true`.
 Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
 - `core/services/assistant/docsIngestService.ts` (ingest `docs/` -> DB + ingest runs)
 - `core/services/assistant/docsDbRetriever.ts` (DB-backed ranking/search)
-- `core/services/assistant/docsAnswerComposer.ts` (deterministic answer templates)
+- `core/services/assistant/docsAnswerComposer.ts` (content-first deterministic answer templates)
 - `core/services/assistant/assistantService.ts` (DB-only assistant runtime)
 
 Przeplyw runtime:
@@ -253,7 +253,7 @@ Przeplyw runtime:
 2. Runtime wykonuje retrieval na `assistant_doc_chunks`.
 3. Official assistant corpus w `docs/` jest uznawany za gotowy dopiero po seedzie do DB.
 4. Gdy DB corpus nie jest gotowy, runtime zwraca stan `not ready`.
-5. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) i zawsze zwraca zrodla.
+5. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) z tresci top evidence, a nie z listy plikow.
 
 Przeplyw reindex:
 1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.
@@ -286,6 +286,7 @@ Warstwa Admin UI:
 - `core/admin/ui/layouts/AdminShell.tsx` montuje floating launcher asystenta poza topbarem.
 - `core/admin/ui/assistant/AssistantPanel.tsx` renderuje launcher + okno rozmowy.
 - `core/admin/ui/assistant/AssistantMessage.tsx` pokazuje fallback badge, confidence i sources.
+- Warstwa UI jest answer-first: glowna odpowiedz jest primary output, a `Sources` nie sa domyslnie pokazywane zwyklemu userowi.
 - Launcher jest widoczny tylko gdy globalne `assistant.enabled=true`.
 - Launcher lazy-loaduje runtime dopiero przy otwarciu okna rozmowy i ma jawne stany `loading`, `error`, `disabled`, `ready`.
 - Floating launcher moze byc przesuwany przez usera w obrebie viewportu admina.

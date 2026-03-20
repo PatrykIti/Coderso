@@ -5,26 +5,29 @@ import type { DocsSearchHit } from "../../../core/services/assistant/docsTypes";
 
 const baseHit: DocsSearchHit = {
   chunk: {
-    id: "_docs/widgets/hero.md:10-20",
-    docPath: "_docs/widgets/hero.md",
-    headingPath: ["Hero Widget", "Visual"],
-    heading: "Visual",
+    id: "docs/coderso/widgets-and-template-editor.md:10-20",
+    docPath: "docs/coderso/widgets-and-template-editor.md",
+    headingPath: ["Coderso Widgets and Template Editor", "Step By Step"],
+    heading: "Step By Step",
     lineStart: 10,
     lineEnd: 20,
-    content: "Use visual tab to edit background and spacing.",
-    normalizedText: "hero widget visual use visual tab to edit background and spacing",
+    content: "Open the Hero template and use the Visual tab to edit colors, spacing, and background settings.",
+    normalizedText:
+      "open the hero template and use the visual tab to edit colors spacing and background settings",
     tokenCounts: {
       hero: 1,
-      widget: 1,
-      visual: 2,
+      template: 1,
+      visual: 1,
+      colors: 1,
       background: 1,
       spacing: 1,
     },
-    tokenCount: 6,
+    tokenCount: 8,
   },
   score: 2.8,
-  matchedTerms: ["hero", "visual", "widget"],
-  snippet: "Use visual tab to edit background and spacing.",
+  matchedTerms: ["hero", "visual", "colors"],
+  snippet:
+    "Open the Hero template and use the Visual tab to edit colors, spacing, and background settings.",
 };
 
 test("composeDocsAnswer returns location template when query asks where", () => {
@@ -34,7 +37,8 @@ test("composeDocsAnswer returns location template when query asks where", () => 
   });
 
   expect(answer.template).toBe("location_answer");
-  expect(answer.answer).toContain("_docs/widgets/hero.md");
+  expect(answer.answer).toContain("Visual tab");
+  expect(answer.answer).not.toContain("Most relevant locations in docs");
   expect(answer.sources).toHaveLength(1);
   expect(answer.confidence).toBeGreaterThan(0.2);
 });
@@ -46,8 +50,8 @@ test("composeDocsAnswer returns how-to template for procedural question", () => 
   });
 
   expect(answer.template).toBe("how_to_answer");
-  expect(answer.answer).toContain("Follow these sections in order");
-  expect(answer.sources[0]?.heading).toContain("Hero Widget");
+  expect(answer.answer).toContain("Visual tab");
+  expect(answer.sources[0]?.heading).toContain("Coderso Widgets");
 });
 
 test("composeDocsAnswer returns missing template when no hits", () => {

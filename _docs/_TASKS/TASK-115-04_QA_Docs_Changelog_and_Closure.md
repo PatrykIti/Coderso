@@ -5,14 +5,14 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-115-01, TASK-115-02, TASK-115-03  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
 ## Overview
 
-Domknac rollout nowego composera i rankingu product-answer-first przez walidacje,
-docs sync i changelog/task board closure.
+Domknac rollout content-first answer composer przez walidacje, docs sync i
+board/changelog update.
 
 ---
 
@@ -28,7 +28,8 @@ docs sync i changelog/task board closure.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- targeted assistant composer/ranking/UI suites
+- `bun run vitest run tests/vitest/assistant/docsAnswerComposer.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/ui/assistant-panel.test.tsx`
+- `bun test tests/unit/assistant/assistantService.test.ts`
 
 ---
 
@@ -39,3 +40,14 @@ docs sync i changelog/task board closure.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Validation completed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run vitest run tests/vitest/assistant/docsAnswerComposer.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/ui/assistant-panel.test.tsx`
+  - `bun test tests/unit/assistant/assistantService.test.ts`
+- Synced task board and changelog for the answer-first assistant rollout.

@@ -5,7 +5,7 @@
 **Category:** Assistant + Product UX + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-109, TASK-114  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -182,3 +182,11 @@ return {
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Replaced the old location-list answer behavior with a content-first assistant answer contract.
+- Added ranking priors for canonical product docs and stronger sections.
+- Hid default `Sources` rendering from the standard chat UI.

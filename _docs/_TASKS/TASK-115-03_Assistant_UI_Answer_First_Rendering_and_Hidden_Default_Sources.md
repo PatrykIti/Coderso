@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-115-01, TASK-115-02  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -56,3 +56,10 @@ Dostosowac render w UI do nowego contractu:
 ## Documentation Updates Required
 
 - `_docs/ASSISTANT_GUIDE.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Assistant UI now renders the answer as the primary content block.
+- Default `Sources` rendering was removed from the user-facing chat flow.

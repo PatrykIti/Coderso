@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 13 tasks
 - **In Progress:** 5 tasks
-- **Done:** 701 tasks
+- **Done:** 706 tasks
 
 ---
 
@@ -76,6 +76,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-115-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: targeted composer/ranking/UI validation plus docs, board, and changelog synchronization completed |
+| TASK-115-03 | Assistant UI Answer-First Rendering and Hidden Default Sources | Medium | Small | Done: main answer is primary content and default Sources rendering is hidden |
+| TASK-115-02 | Ranking and Evidence Selection Tuned for Product Support Questions | High | Medium | Done: stronger section/path priors now prefer canonical product docs and instruction-heavy sections |
+| TASK-115-01 | Assistant Answer Contract and Content-First Composer Model | High | Medium | Done: assistant now composes actual answer text from article content instead of doc-location lists |
+| TASK-115 | Assistant Product Answer Composer and Evidence UX Simplification | High | Large | Done: content-first answers shipped and default evidence UI was simplified |
 | TASK-114-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: runtime/settings/UI validation plus docs, board, and changelog synchronization completed |
 | TASK-114-03 | Admin Settings UX Cleanup Removing Legacy Assistant Docs Mode Choices | Medium | Small | Done: assistant settings now describe only the DB-seeded `docs/` model |
 | TASK-114-02 | Runtime and API Enforcement for DB-Only Assistant Docs | High | Medium | Done: assistant runtime/status/reindex now operate as DB-only official docs flow |
