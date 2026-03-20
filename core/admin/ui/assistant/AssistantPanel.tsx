@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import {
@@ -626,6 +625,7 @@ export function AssistantPanel() {
             left: `${conversationWindowPosition.left}px`,
             bottom: `${conversationWindowPosition.bottom}px`,
             width: `${conversationWindowPosition.width}px`,
+            height: `${conversationWindowPosition.maxHeight}px`,
             maxHeight: `${conversationWindowPosition.maxHeight}px`,
             transformOrigin: "bottom right",
           }}
@@ -677,7 +677,7 @@ export function AssistantPanel() {
 
             {viewState === "ready" ? (
               <>
-                <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain rounded-xl border bg-muted/10 p-3">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/10 p-3">
                   <div className="min-w-0 space-y-3 pr-3">
                     {conversationState === "empty" ? (
                       <AssistantEmptyState
@@ -709,7 +709,7 @@ export function AssistantPanel() {
                         ))
                       : null}
                   </div>
-                </ScrollArea>
+                </div>
 
                 <div className="shrink-0 space-y-2 border-t pt-3">
                   <Textarea
