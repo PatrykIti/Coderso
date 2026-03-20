@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 509 | 2026-03-20 | TASK-110 assistant settings run reindex action | Admin/UI |
 | 508 | 2026-03-20 | TASK-109 official assistant docs corpus and DB seeding | Docs/Assistant |
 | 507 | 2026-03-20 | TASK-108 anchored assistant window and launcher visual polish | Admin/UI |
 | 506 | 2026-03-20 | TASK-107 floating assistant launcher and minimal chat window | Admin/UI |

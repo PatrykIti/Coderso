@@ -80,4 +80,5 @@ Legacy compatibility:
 - `assistant.docs.sourceRoot` musi byc niepustym stringiem.
 - Official assistant corpus from `docs/` jest gotowy dopiero po seedzie do DB.
 - Official runtime nie moze fallbackowac do filesystem corpus, gdy DB corpus nie jest gotowy.
+- Assistant Settings screen exposes `Run reindex` as the manual DB seeding action.
 - Limity liczbowe (`tokens`, `timeout`, `quotas`) musza byc dodatnimi integerami.

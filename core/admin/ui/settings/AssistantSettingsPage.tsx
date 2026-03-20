@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { isApiClientError } from "@/services/apiClient";
+import { reindexAssistantDocs } from "@/services/assistantClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
@@ -80,7 +81,10 @@ export function AssistantSettingsPage({
   const [form, setForm] = useState(() => normalizeValues(values));
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [reindexError, setReindexError] = useState<string | null>(null);
+  const [reindexSuccess, setReindexSuccess] = useState<string | null>(null);
   const [localSaving, setLocalSaving] = useState(false);
+  const [isReindexing, setIsReindexing] = useState(false);
   const { enabled: autoSaveEnabled, setEnabled: setAutoSaveEnabled } =
     useSettingsAutoSave();
 
@@ -113,6 +117,40 @@ export function AssistantSettingsPage({
     }
   }, [form, hasValidationErrors, onSave]);
 
+  const handleReindex = useCallback(async () => {
+    setReindexError(null);
+    setReindexSuccess(null);
+
+    if (hasValidationErrors) return false;
+    if (!form.assistantEnabled) {
+      setReindexError("Enable assistant before running reindex.");
+      return false;
+    }
+
+    if (onSave) {
+      const saved = await handleSave();
+      if (!saved) return false;
+    }
+
+    setIsReindexing(true);
+    try {
+      const result = await reindexAssistantDocs();
+      setReindexSuccess(
+        `Assistant docs reindexed: ${result.docCount} docs, ${result.chunkCount} chunks.`
+      );
+      return true;
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setReindexError(err.message);
+      } else {
+        setReindexError("Failed to run assistant reindex.");
+      }
+      return false;
+    } finally {
+      setIsReindexing(false);
+    }
+  }, [form.assistantEnabled, handleSave, hasValidationErrors, onSave]);
+
   useAutoSaveEffect({
     enabled: autoSaveEnabled,
     isReady: !isLoading,
@@ -121,7 +159,7 @@ export function AssistantSettingsPage({
     onSave: handleSave,
   });
 
-  const busy = isLoading || isSaving || localSaving;
+  const busy = isLoading || isSaving || localSaving || isReindexing;
   const disableSave = busy || hasValidationErrors;
 
   return (
@@ -162,10 +200,22 @@ export function AssistantSettingsPage({
                 <AlertDescription>{validationError}</AlertDescription>
               </Alert>
             ) : null}
+            {reindexError ? (
+              <Alert variant="destructive">
+                <AlertTitle>Reindex failed</AlertTitle>
+                <AlertDescription>{reindexError}</AlertDescription>
+              </Alert>
+            ) : null}
             {saveSuccess ? (
               <Alert>
                 <AlertTitle>Saved</AlertTitle>
                 <AlertDescription>{saveSuccess}</AlertDescription>
+              </Alert>
+            ) : null}
+            {reindexSuccess ? (
+              <Alert>
+                <AlertTitle>Reindex complete</AlertTitle>
+                <AlertDescription>{reindexSuccess}</AlertDescription>
               </Alert>
             ) : null}
 
@@ -192,6 +242,14 @@ export function AssistantSettingsPage({
               <span>Auto-save settings across all screens</span>
             </div>
             <div className="flex items-center gap-3">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void handleReindex()}
+                disabled={disableSave || !form.assistantEnabled}
+              >
+                {isReindexing ? "Reindexing..." : "Run reindex"}
+              </Button>
               <Button
                 size="sm"
                 className="gap-2"
