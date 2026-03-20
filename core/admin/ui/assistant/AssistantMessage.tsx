@@ -32,8 +32,8 @@ export function AssistantMessage({
 
   if (role === "user") {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[90%] rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground">
+      <div className="flex min-w-0 justify-end">
+        <div className="max-w-[90%] min-w-0 whitespace-pre-wrap break-words rounded-xl bg-primary px-3 py-2 text-sm text-primary-foreground [overflow-wrap:anywhere]">
           {text}
         </div>
       </div>
@@ -41,7 +41,7 @@ export function AssistantMessage({
   }
 
   return (
-    <div className="space-y-3 rounded-xl border bg-card px-3 py-3">
+    <div className="min-w-0 space-y-3 overflow-hidden rounded-xl border bg-card px-3 py-3">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">Assistant</Badge>
@@ -55,7 +55,12 @@ export function AssistantMessage({
             </>
           ) : null}
         </div>
-        <p className={cn("text-sm text-card-foreground", error && "text-destructive")}>
+        <p
+          className={cn(
+            "min-w-0 whitespace-pre-wrap break-words text-sm text-card-foreground [overflow-wrap:anywhere]",
+            error && "text-destructive"
+          )}
+        >
           {text}
         </p>
       </div>
@@ -87,8 +92,10 @@ export function AssistantMessage({
                   title="Click to copy source reference"
                 >
                   <span className="block text-xs text-muted-foreground">[{index + 1}]</span>
-                  <span className="block text-xs font-medium">{source.path}</span>
-                  <span className="block text-xs text-muted-foreground">
+                  <span className="block break-words text-xs font-medium [overflow-wrap:anywhere]">
+                    {source.path}
+                  </span>
+                  <span className="block break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
                     {source.heading} ({source.lineStart}-{source.lineEnd})
                   </span>
                 </Button>

@@ -110,4 +110,6 @@ test("AssistantMessage renders assistant metadata and sources", () => {
   expect(html).toContain("Fallback applied");
   expect(html).toContain("Internal Docs");
   expect(html).toContain("_docs/SETTINGS.md");
+  expect(html).toContain("break-words");
+  expect(html).toContain("overflow-wrap:anywhere");
 });

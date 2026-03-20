@@ -55,7 +55,9 @@ const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
 const ASSISTANT_LAUNCHER_POSITION_KEY = "nextless.assistant.launcher.position";
 const ASSISTANT_LAUNCHER_SIZE_PX = 56;
 const ASSISTANT_LAUNCHER_MARGIN_PX = 24;
-const ASSISTANT_CONVERSATION_WIDTH_PX = 360;
+const ASSISTANT_CONVERSATION_DEFAULT_WIDTH_PX = 380;
+const ASSISTANT_CONVERSATION_MIN_WIDTH_PX = 320;
+const ASSISTANT_CONVERSATION_MAX_WIDTH_PX = 520;
 const ASSISTANT_CONVERSATION_GAP_PX = 12;
 
 let runtimeStateCache:
@@ -158,18 +160,24 @@ const resolveLauncherAssetKind = (assetUrl: string | null): LauncherAssetKind =>
   return "other";
 };
 
-const getConversationWindowWidth = (viewportWidth: number) =>
-  Math.min(
-    ASSISTANT_CONVERSATION_WIDTH_PX,
-    Math.max(240, viewportWidth - ASSISTANT_LAUNCHER_MARGIN_PX * 2)
+const clampConversationWidth = (width: number, viewportWidth: number) => {
+  const maxViewportWidth = viewportWidth - ASSISTANT_LAUNCHER_MARGIN_PX * 2;
+  return Math.min(
+    Math.max(ASSISTANT_CONVERSATION_MIN_WIDTH_PX, Math.floor(width)),
+    Math.min(ASSISTANT_CONVERSATION_MAX_WIDTH_PX, maxViewportWidth)
   );
+};
 
 export const resolveAssistantConversationWindowPosition = (input: {
   launcherPosition: LauncherPosition;
   viewportWidth: number;
   viewportHeight: number;
+  preferredWidth?: number;
 }): ConversationWindowPosition => {
-  const width = getConversationWindowWidth(input.viewportWidth);
+  const width = clampConversationWidth(
+    input.preferredWidth ?? ASSISTANT_CONVERSATION_DEFAULT_WIDTH_PX,
+    input.viewportWidth
+  );
   const maxLeft = Math.max(
     ASSISTANT_LAUNCHER_MARGIN_PX,
     input.viewportWidth - width - ASSISTANT_LAUNCHER_MARGIN_PX
@@ -285,6 +293,9 @@ export function AssistantPanel() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [launcherPosition, setLauncherPosition] = useState<LauncherPosition>(() =>
     readLauncherPosition()
+  );
+  const [conversationWidth, setConversationWidth] = useState(
+    ASSISTANT_CONVERSATION_DEFAULT_WIDTH_PX
   );
   const suppressLauncherToggleRef = useRef(false);
   const launcherRef = useRef<HTMLButtonElement | null>(null);
@@ -431,6 +442,38 @@ export function AssistantPanel() {
     [launcherPosition]
   );
 
+  const handleResizePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+
+      const pointerId = event.pointerId;
+      const startX = event.clientX;
+      const originWidth = conversationWidth;
+
+      const handleMove = (moveEvent: PointerEvent) => {
+        if (moveEvent.pointerId !== pointerId) return;
+        const deltaX = startX - moveEvent.clientX;
+        const { width } = getViewportSize();
+        setConversationWidth(
+          clampConversationWidth(originWidth + deltaX, width)
+        );
+      };
+
+      const handleStop = (stopEvent: PointerEvent) => {
+        if (stopEvent.pointerId !== pointerId) return;
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", handleStop);
+        window.removeEventListener("pointercancel", handleStop);
+      };
+
+      window.addEventListener("pointermove", handleMove);
+      window.addEventListener("pointerup", handleStop);
+      window.addEventListener("pointercancel", handleStop);
+    },
+    [conversationWidth]
+  );
+
   const submitMessage = useCallback(async () => {
     const trimmed = message.trim();
     if (!trimmed || isSending || !status) return;
@@ -512,8 +555,9 @@ export function AssistantPanel() {
       launcherPosition,
       viewportWidth: width,
       viewportHeight: height,
+      preferredWidth: conversationWidth,
     });
-  }, [launcherPosition]);
+  }, [conversationWidth, launcherPosition]);
 
   if (!launcherEnabled) {
     return null;
@@ -575,7 +619,7 @@ export function AssistantPanel() {
         <div
           ref={conversationRef}
           className={cn(
-            "fixed z-40 flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
+            "fixed z-40 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
             "animate-in fade-in-0 zoom-in-95 duration-150"
           )}
           style={{
@@ -588,6 +632,11 @@ export function AssistantPanel() {
           role="dialog"
           aria-label="Assistant conversation"
         >
+          <div
+            className="absolute inset-y-0 left-0 z-10 w-2 cursor-ew-resize"
+            onPointerDown={handleResizePointerDown}
+            aria-hidden="true"
+          />
           <div className="border-b px-4 py-4">
             <div className="flex items-center gap-2">
               <MessageSquareText className="h-4 w-4 text-emerald-700" />
@@ -598,7 +647,7 @@ export function AssistantPanel() {
             </p>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-4">
             {viewState === "loading" ? (
               <div className="flex flex-1 items-center justify-center rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
@@ -628,8 +677,8 @@ export function AssistantPanel() {
 
             {viewState === "ready" ? (
               <>
-                <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-muted/10 p-3">
-                  <div className="space-y-3 pr-3">
+                <ScrollArea className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-muted/10 p-3">
+                  <div className="min-w-0 space-y-3 pr-3">
                     {conversationState === "empty" ? (
                       <AssistantEmptyState
                         disabled={isSending}
@@ -662,7 +711,7 @@ export function AssistantPanel() {
                   </div>
                 </ScrollArea>
 
-                <div className="space-y-2">
+                <div className="shrink-0 space-y-2 border-t pt-3">
                   <Textarea
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}

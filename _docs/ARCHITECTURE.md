@@ -297,6 +297,8 @@ Warstwa Admin UI:
 - Starter prompts i composer sa renderowane dopiero po `runtime ready`.
 - `docs not ready` jest traktowane jako minimalistyczny runtime status w surface rozmowy, a nie jako ekran konfiguracji.
 - Okno rozmowy jest anchored floating panelem wychodzacym z launchera, a nie pelnym prawym `Sheet`.
+- Transcript jest scrollowalny pionowo, dlugie wiadomosci sa zawijane wewnatrz panelu, a composer pozostaje oddzielony od overflow treści.
+- User moze delikatnie rozszerzyc szerokosc okna rozmowy, ale tylko w granicach bezpiecznego viewport clamp.
 - Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; okno rozmowy nie renderuje globalnych ustawien assistant runtime.
 - `core/admin/services/assistantClient.ts` obsluguje:
   - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,

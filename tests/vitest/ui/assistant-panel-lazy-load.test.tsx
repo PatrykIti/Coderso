@@ -108,9 +108,10 @@ test("assistant conversation window stays anchored near launcher and within view
     launcherPosition: { x: 1200, y: 760 },
     viewportWidth: 1440,
     viewportHeight: 900,
+    preferredWidth: 640,
   });
 
-  expect(anchored.width).toBeLessThanOrEqual(360);
+  expect(anchored.width).toBeLessThanOrEqual(520);
   expect(anchored.left).toBeGreaterThanOrEqual(24);
   expect(anchored.bottom).toBeGreaterThanOrEqual(24);
 
@@ -118,6 +119,7 @@ test("assistant conversation window stays anchored near launcher and within view
     launcherPosition: { x: 20, y: 40 },
     viewportWidth: 320,
     viewportHeight: 480,
+    preferredWidth: 640,
   });
 
   expect(clamped.left).toBeGreaterThanOrEqual(24);

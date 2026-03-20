@@ -25,6 +25,8 @@ Window behavior:
 - the conversation window is anchored to the launcher and visually emerges from it,
 - it is not a full-height right-side modal/sheet,
 - clicking outside or pressing `Escape` closes the window.
+- long messages stay inside the panel, wrap horizontally, and scroll vertically without covering the composer/send row.
+- the user can slightly widen the conversation window, but only within safe viewport limits.
 
 Global assistant configuration remains on `Settings -> Assistant`.
 The conversation window does not expose global assistant settings actions.
