@@ -4,7 +4,7 @@
 **Priority:** Medium  
 **Category:** QA/Docs  
 **Estimated Effort:** Small  
-**Dependencies:** TASK-107-01, TASK-107-02, TASK-107-03  
+**Dependencies:** TASK-107-01, TASK-107-02, TASK-107-03, TASK-107-05, TASK-107-06  
 **Status:** To Do
 
 ---
@@ -46,7 +46,7 @@ Domknac follow-up UX dla assistant topbar/drawera przez walidacje, docs i board/
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run vitest run tests/vitest/ui/assistant-panel.test.tsx tests/vitest/ui/assistant-panel-lazy-load.test.tsx`
-- Additional targeted admin-shell suite when the topbar entrypoint changes.
+- Additional targeted admin-shell / launcher suite when the floating entrypoint changes.
 
 ---
 

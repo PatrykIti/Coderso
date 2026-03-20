@@ -1,4 +1,4 @@
-# TASK-107-01: Assistant Topbar Icon-Only Entry Point and Global Visibility Gating
+# TASK-107-01: Assistant Topbar Removal and Global Visibility Gating
 # FileName: TASK-107-01_Assistant_Topbar_Icon_Only_Entry_Point_and_Global_Visibility_Gating.md
 
 **Priority:** High  
@@ -11,24 +11,24 @@
 
 ## Overview
 
-Zmienic topbarowy entrypoint asystenta z przycisku tekstowego na icon-only trigger i uzaleznic jego widocznosc od globalnego `assistant.enabled`.
+Usunac topbarowy entrypoint asystenta i uzaleznic widocznosc nowego launchera od globalnego `assistant.enabled`.
 
 ---
 
 ## Scope
 
-1. Zamienic przycisk `Assistant` na ikonke/chmurke wiadomosci.
-2. Podpiac visibility gating pod globalne `assistant.enabled`.
-3. Nie renderowac entrypointu w admin UI, jesli assistant jest globalnie wylaczony.
+1. Usunac przycisk `Assistant` z topbara.
+2. Podpiac visibility gating launchera pod globalne `assistant.enabled`.
+3. Nie renderowac launchera w admin UI, jesli assistant jest globalnie wylaczony.
 4. Zachowac zgodnosc z istniejacym lazy-load/request budget contract.
 
 ---
 
 ## Sub-Tasks
 
-1. Ustalic source-of-truth dla globalnego `assistant.enabled` po stronie topbar shell.
-2. Podmienic text button na compact icon affordance.
-3. Dolozyc testy na visibility gating i brak labelki.
+1. Ustalic source-of-truth dla globalnego `assistant.enabled` po stronie shell/UI.
+2. Usunac topbar button bez dokladania zbednego request overhead.
+3. Dolozyc testy na visibility gating.
 
 ---
 
@@ -42,7 +42,7 @@ Zmienic topbarowy entrypoint asystenta z przycisku tekstowego na icon-only trigg
 
 ## Testing Requirements
 
-- Targeted admin-shell/topbar suite.
+- Targeted admin-shell/launcher visibility suite.
 - Revalidate assistant lazy-load behavior after entrypoint gating change.
 
 ---
