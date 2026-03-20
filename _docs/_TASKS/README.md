@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 695 tasks
+- **Done:** 696 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-113 | Assistant Transcript Scroll Containment | Medium | Small | Done: transcript/window overscroll containment prevents background page scrolling while wheeling over chat |
 | TASK-112 | Assistant Conversation Window Overflow and Width Handling | Medium | Small | Done: message wrapping, vertical transcript scroll, composer separation, and safe width resize added |
 | TASK-111 | Assistant Reindex Action Decoupled from Settings Save | Medium | Small | Done: `Run reindex` now seeds docs without implicit save-first behavior |
 | TASK-110 | Assistant Settings Run Reindex Action | Medium | Small | Done: added `Run reindex` CTA in Assistant Settings with save-first and result states |

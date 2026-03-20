@@ -619,7 +619,7 @@ export function AssistantPanel() {
         <div
           ref={conversationRef}
           className={cn(
-            "fixed z-40 flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl",
+            "fixed z-40 flex min-w-0 flex-col overflow-hidden overscroll-contain rounded-2xl border border-border bg-background shadow-2xl",
             "animate-in fade-in-0 zoom-in-95 duration-150"
           )}
           style={{
@@ -677,7 +677,7 @@ export function AssistantPanel() {
 
             {viewState === "ready" ? (
               <>
-                <ScrollArea className="min-h-0 flex-1 overflow-hidden rounded-xl border bg-muted/10 p-3">
+                <ScrollArea className="min-h-0 flex-1 overflow-hidden overscroll-contain rounded-xl border bg-muted/10 p-3">
                   <div className="min-w-0 space-y-3 pr-3">
                     {conversationState === "empty" ? (
                       <AssistantEmptyState

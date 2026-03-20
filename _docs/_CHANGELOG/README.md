@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 512 | 2026-03-20 | TASK-113 assistant transcript scroll containment | Admin/UI |
 | 511 | 2026-03-20 | TASK-112 assistant conversation window overflow and width handling | Admin/UI |
 | 510 | 2026-03-20 | TASK-111 assistant reindex action decoupled from save | Admin/UI |
 | 509 | 2026-03-20 | TASK-110 assistant settings run reindex action | Admin/UI |
