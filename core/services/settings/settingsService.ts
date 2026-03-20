@@ -243,12 +243,12 @@ const normalizeAssistantDocsSourceRoot = (value: unknown) => {
 };
 
 const normalizeOptionalAssistantAsset = (value: unknown) => {
-  if (value === null) return null;
+  if (value === null) return "";
   if (typeof value !== "string") {
     throw new Error("settings_value_invalid");
   }
   const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
+  return normalized.length > 0 ? normalized : "";
 };
 
 const pickAssistantSettings = (

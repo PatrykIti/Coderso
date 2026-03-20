@@ -49,6 +49,13 @@ export function AssistantSettingsPage({
   isSaving = false,
   error = null,
 }: AssistantSettingsPageProps) {
+  const persistedValues = (() => {
+    return {
+      ...ASSISTANT_SETTINGS_DEFAULT_VALUES,
+      ...values,
+    };
+  })();
+
   const normalizeValues = (input: Partial<AssistantSettingsValues>) => ({
     ...ASSISTANT_SETTINGS_DEFAULT_VALUES,
     ...input,
@@ -121,15 +128,9 @@ export function AssistantSettingsPage({
     setReindexError(null);
     setReindexSuccess(null);
 
-    if (hasValidationErrors) return false;
-    if (!form.assistantEnabled) {
-      setReindexError("Enable assistant before running reindex.");
+    if (!persistedValues.assistantEnabled) {
+      setReindexError("Enable assistant in saved settings before running reindex.");
       return false;
-    }
-
-    if (onSave) {
-      const saved = await handleSave();
-      if (!saved) return false;
     }
 
     setIsReindexing(true);
@@ -149,7 +150,7 @@ export function AssistantSettingsPage({
     } finally {
       setIsReindexing(false);
     }
-  }, [form.assistantEnabled, handleSave, hasValidationErrors, onSave]);
+  }, [persistedValues.assistantEnabled]);
 
   useAutoSaveEffect({
     enabled: autoSaveEnabled,
@@ -246,7 +247,7 @@ export function AssistantSettingsPage({
                 size="sm"
                 variant="outline"
                 onClick={() => void handleReindex()}
-                disabled={disableSave || !form.assistantEnabled}
+                disabled={busy || !persistedValues.assistantEnabled}
               >
                 {isReindexing ? "Reindexing..." : "Run reindex"}
               </Button>

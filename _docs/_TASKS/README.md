@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 693 tasks
+- **Done:** 694 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-111 | Assistant Reindex Action Decoupled from Settings Save | Medium | Small | Done: `Run reindex` now seeds docs without implicit save-first behavior |
 | TASK-110 | Assistant Settings Run Reindex Action | Medium | Small | Done: added `Run reindex` CTA in Assistant Settings with save-first and result states |
 | TASK-109-06 | QA, Docs Index, Changelog, and Closure | Medium | Medium | Done: ingest/runtime validation, docs corpus structure verification, board, and changelog synchronization completed |
 | TASK-109-05 | Solution Kits, Applied Examples, and Non-Kit Playbooks Corpus | High | Medium | Done: per-kit docs plus applied playbooks for lead gen, booking, commerce, editorial, and manual setup |

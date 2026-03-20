@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 510 | 2026-03-20 | TASK-111 assistant reindex action decoupled from save | Admin/UI |
 | 509 | 2026-03-20 | TASK-110 assistant settings run reindex action | Admin/UI |
 | 508 | 2026-03-20 | TASK-109 official assistant docs corpus and DB seeding | Docs/Assistant |
 | 507 | 2026-03-20 | TASK-108 anchored assistant window and launcher visual polish | Admin/UI |
