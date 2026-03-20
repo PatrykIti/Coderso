@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 13 tasks
 - **In Progress:** 5 tasks
 - **Done:** 701 tasks
 
@@ -39,6 +39,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-115 | Assistant Product Answer Composer and Evidence UX Simplification | High | Large | Replace file-location answers with content-first product answers and hide sources in default UI |
+| TASK-115-04 | QA, Docs, Changelog, and Closure | Medium | Small | Final validation plus docs, board, and changelog sync for the new answer composer |
+| TASK-115-03 | Assistant UI Answer-First Rendering and Hidden Default Sources | Medium | Small | Main answer first, sources hidden by default in the user-facing chat UI |
+| TASK-115-02 | Ranking and Evidence Selection Tuned for Product Support Questions | High | Medium | Section/path priors so canonical screen docs beat weak examples or noisy hits |
+| TASK-115-01 | Assistant Answer Contract and Content-First Composer Model | High | Medium | Build real answers from article content instead of returning doc location lists |
 | TASK-114 | Assistant Legacy Docs Runtime Removal and DB-Only Enforcement | High | Medium | Remove `_docs/filesystem` support and enforce only the new `docs -> DB seeded corpus` model |
 | TASK-114-04 | QA, Docs, Changelog, and Closure | Medium | Small | Final validation plus docs, board, and changelog sync for legacy assistant docs removal |
 | TASK-114-03 | Admin Settings UX Cleanup Removing Legacy Assistant Docs Mode Choices | Medium | Small | Settings UI should describe only the DB-seeded `docs/` model |
