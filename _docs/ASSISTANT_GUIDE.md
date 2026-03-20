@@ -1,5 +1,22 @@
 # Assistant Guide
 
+## Topbar Assistant Drawer
+
+Location: admin topbar.
+
+Primary purpose:
+- conversation-first access to documentation lookup,
+- not a full assistant settings screen.
+
+Drawer states:
+1. `Loading` - runtime shell only, without prompt chips or composer.
+2. `Ready` - transcript, starter prompts, and composer.
+3. `Docs not ready` - runtime status banner with settings/reload actions.
+4. `Disabled` / `Error` - clear blocking message instead of partial chat UI.
+
+Preferences are available only after explicit user action inside the drawer.
+Global assistant configuration remains on `Settings -> Assistant`.
+
 ## AI Site Wizard (Solution Kits)
 
 Location: `Coderso -> Solution Kits`.

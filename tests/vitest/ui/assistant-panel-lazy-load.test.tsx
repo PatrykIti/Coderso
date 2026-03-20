@@ -1,7 +1,11 @@
 import React from "react";
 import { expect, test } from "vitest";
 
-import { shouldLoadAssistantRuntimeState } from "../../../core/admin/ui/assistant/AssistantPanel";
+import {
+  resolveAssistantConversationState,
+  resolveAssistantPanelViewState,
+  shouldLoadAssistantRuntimeState,
+} from "../../../core/admin/ui/assistant/AssistantPanel";
 
 test("assistant runtime loads only after panel is opened", () => {
   expect(
@@ -39,4 +43,61 @@ test("assistant runtime loads once when opened and not ready", () => {
       isLoading: false,
     })
   ).toBe(true);
+});
+
+test("assistant panel view state distinguishes loading, error, disabled, and ready", () => {
+  expect(
+    resolveAssistantPanelViewState({
+      isReady: false,
+      loadError: null,
+      isEnabled: true,
+    })
+  ).toBe("loading");
+
+  expect(
+    resolveAssistantPanelViewState({
+      isReady: true,
+      loadError: "boom",
+      isEnabled: true,
+    })
+  ).toBe("error");
+
+  expect(
+    resolveAssistantPanelViewState({
+      isReady: true,
+      loadError: null,
+      isEnabled: false,
+    })
+  ).toBe("disabled");
+
+  expect(
+    resolveAssistantPanelViewState({
+      isReady: true,
+      loadError: null,
+      isEnabled: true,
+    })
+  ).toBe("ready");
+});
+
+test("assistant conversation state keeps docs-not-ready separate from empty chat", () => {
+  expect(
+    resolveAssistantConversationState({
+      messageCount: 0,
+      indexReady: false,
+    })
+  ).toBe("docs-not-ready");
+
+  expect(
+    resolveAssistantConversationState({
+      messageCount: 0,
+      indexReady: true,
+    })
+  ).toBe("empty");
+
+  expect(
+    resolveAssistantConversationState({
+      messageCount: 2,
+      indexReady: false,
+    })
+  ).toBe("messages");
 });

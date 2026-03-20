@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Bot, Loader2, MessageSquareText, RefreshCw, Send } from "lucide-react";
+import {
+  Bot,
+  Loader2,
+  MessageSquareText,
+  RefreshCw,
+  Send,
+  Settings2,
+  SlidersHorizontal,
+} from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -23,6 +31,7 @@ import {
   type AssistantStatusResponse,
 } from "@/services/assistantClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
+import { AdminLink } from "@/ui/shared/AdminLink";
 
 import { AssistantEmptyState } from "./AssistantEmptyState";
 import { AssistantAvatar } from "./AssistantAvatar";
@@ -63,6 +72,10 @@ type AssistantRuntimeState = {
   avatarAsset: string;
 };
 
+export type AssistantPanelViewState = "loading" | "error" | "disabled" | "ready";
+
+export type AssistantConversationState = "empty" | "messages" | "docs-not-ready";
+
 const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
 
 let runtimeStateCache:
@@ -79,6 +92,19 @@ const readRuntimeStateCache = (nowMs: number) => {
     return null;
   }
   return runtimeStateCache.value;
+};
+
+const updateRuntimeStateCache = (
+  patch: Partial<Omit<AssistantRuntimeState, "status">>
+) => {
+  if (!runtimeStateCache) return;
+  runtimeStateCache = {
+    ...runtimeStateCache,
+    value: {
+      ...runtimeStateCache.value,
+      ...patch,
+    },
+  };
 };
 
 const buildRuntimeState = (
@@ -148,6 +174,26 @@ export const shouldLoadAssistantRuntimeState = (input: {
   isLoading: boolean;
 }) => input.open && !input.isReady && !input.isLoading;
 
+export const resolveAssistantPanelViewState = (input: {
+  isReady: boolean;
+  loadError: string | null;
+  isEnabled: boolean;
+}): AssistantPanelViewState => {
+  if (!input.isReady) return "loading";
+  if (input.loadError) return "error";
+  if (!input.isEnabled) return "disabled";
+  return "ready";
+};
+
+export const resolveAssistantConversationState = (input: {
+  messageCount: number;
+  indexReady: boolean;
+}): AssistantConversationState => {
+  if (input.messageCount > 0) return "messages";
+  if (!input.indexReady) return "docs-not-ready";
+  return "empty";
+};
+
 export function AssistantPanel() {
   const cachedRuntimeState = readRuntimeStateCache(Date.now());
   const [open, setOpen] = useState(false);
@@ -173,6 +219,7 @@ export function AssistantPanel() {
     () => cachedRuntimeState?.avatarAsset ?? ""
   );
   const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
 
   const applyRuntimeState = useCallback((nextState: AssistantRuntimeState) => {
     setStatus(nextState.status);
@@ -211,6 +258,12 @@ export function AssistantPanel() {
     }
     loadRuntimeState().catch(() => undefined);
   }, [isLoadingRuntime, isReady, loadRuntimeState, open]);
+
+  useEffect(() => {
+    if (!open) {
+      setShowPreferences(false);
+    }
+  }, [open]);
 
   const submitMessage = useCallback(async () => {
     const trimmed = message.trim();
@@ -268,6 +321,7 @@ export function AssistantPanel() {
       if (!status) return;
       const normalized = normalizeMode(nextMode, status);
       setMode(normalized);
+      updateRuntimeStateCache({ mode: normalized });
       try {
         await setUserSetting("assistant.mode", normalized);
       } catch {
@@ -277,9 +331,20 @@ export function AssistantPanel() {
     [status]
   );
 
+  const handleAssistantEnabledChange = useCallback(async (next: boolean) => {
+    setIsEnabled(next);
+    updateRuntimeStateCache({ isEnabled: next });
+    try {
+      await setUserSetting("assistant.ui.enabled", next);
+    } catch {
+      // Preference persistence failure should not block local drawer state.
+    }
+  }, []);
+
   const handleAvatarEnabledChange = useCallback(
     async (next: boolean) => {
       setAvatarEnabled(next);
+      updateRuntimeStateCache({ avatarEnabled: next });
       setIsSavingAvatar(true);
       try {
         await setUserSetting("assistant.ui.avatarEnabled", next);
@@ -294,6 +359,9 @@ export function AssistantPanel() {
 
   const persistAvatarAsset = useCallback(async () => {
     const normalized = avatarAssetDraft.trim();
+    updateRuntimeStateCache({
+      avatarAsset: normalized.length > 0 ? normalized : "",
+    });
     setIsSavingAvatar(true);
     try {
       await setUserSetting(
@@ -325,6 +393,25 @@ export function AssistantPanel() {
     [isEnabled, isSending, message, status?.indexReady]
   );
 
+  const viewState = useMemo(
+    () =>
+      resolveAssistantPanelViewState({
+        isReady,
+        loadError,
+        isEnabled,
+      }),
+    [isEnabled, isReady, loadError]
+  );
+
+  const conversationState = useMemo(
+    () =>
+      resolveAssistantConversationState({
+        messageCount: messages.length,
+        indexReady: Boolean(status?.indexReady),
+      }),
+    [messages.length, status?.indexReady]
+  );
+
   return (
     <>
       <Button
@@ -353,14 +440,46 @@ export function AssistantPanel() {
           </SheetHeader>
 
           <div className="flex flex-1 min-h-0 flex-col gap-4 px-4 py-4">
-            {!isReady ? (
+            {viewState === "loading" ? (
               <div className="flex items-center gap-2 rounded-xl border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Loading assistant runtime...
               </div>
             ) : null}
 
-            {loadError ? (
+            {viewState !== "loading" ? (
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() => setShowPreferences((previous) => !previous)}
+                  disabled={viewState === "error"}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {showPreferences ? "Hide preferences" : "Preferences"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2"
+                  asChild
+                >
+                  <AdminLink
+                    href="/settings/assistant"
+                    prefetch
+                    onClick={() => setOpen(false)}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Settings
+                  </AdminLink>
+                </Button>
+              </div>
+            ) : null}
+
+            {viewState === "error" ? (
               <Alert variant="destructive" className="py-2">
                 <AlertTitle className="text-xs">Assistant unavailable</AlertTitle>
                 <AlertDescription className="flex items-center justify-between gap-2 text-xs">
@@ -379,24 +498,52 @@ export function AssistantPanel() {
               </Alert>
             ) : null}
 
-            {isReady && !isEnabled && !loadError ? (
+            {viewState === "disabled" ? (
               <Alert className="py-2">
                 <AlertTitle className="text-xs">Assistant is disabled</AlertTitle>
-                <AlertDescription className="text-xs">
-                  Enable it from your assistant preferences to start a conversation.
+                <AlertDescription className="flex items-center justify-between gap-2 text-xs">
+                  <span>Turn it back on to restore the conversation drawer.</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2"
+                    onClick={() => void handleAssistantEnabledChange(true)}
+                  >
+                    Enable
+                  </Button>
                 </AlertDescription>
               </Alert>
             ) : null}
 
-            {status ? (
+            {showPreferences && status && viewState !== "loading" && !loadError ? (
               <>
-                <AssistantModeSwitch
-                  value={mode}
-                  llmAvailable={status.llmAvailable}
-                  onChange={handleModeChange}
-                  disabled={isSending}
-                />
-                <div className="space-y-3 rounded-xl border bg-card p-3">
+                <div className="space-y-4 rounded-xl border bg-card p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Drawer availability
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Controls whether the topbar assistant drawer is enabled for your user.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isEnabled}
+                      onCheckedChange={(checked) =>
+                        void handleAssistantEnabledChange(Boolean(checked))
+                      }
+                      aria-label="Toggle assistant drawer"
+                    />
+                  </div>
+
+                  <AssistantModeSwitch
+                    value={mode}
+                    llmAvailable={status.llmAvailable}
+                    onChange={handleModeChange}
+                    disabled={isSending || !isEnabled}
+                  />
+
                   <div className="flex items-center justify-between gap-2">
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -426,16 +573,22 @@ export function AssistantPanel() {
                     Use media URL or external URL. Leave empty for built-in fallback.
                   </p>
                 </div>
+              </>
+            ) : null}
+
+            {viewState === "ready" ? (
+              <>
                 <AssistantAvatar
                   enabled={avatarEnabled}
                   assetUrl={avatarAssetDraft}
                   state={avatarState}
                 />
-                {!status.indexReady ? (
+
+                {!status?.indexReady ? (
                   <Alert className="py-2">
                     <AlertTitle className="text-xs">Docs index not ready</AlertTitle>
                     <AlertDescription className="flex items-center justify-between gap-2 text-xs">
-                      <span>Run assistant reindex before sending questions.</span>
+                      <span>Open Assistant Settings to reindex docs, then refresh this drawer.</span>
                       <Button
                         type="button"
                         variant="ghost"
@@ -449,45 +602,92 @@ export function AssistantPanel() {
                     </AlertDescription>
                   </Alert>
                 ) : null}
+
+                <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-muted/10 p-3">
+                  <div className="space-y-3 pr-3">
+                    {conversationState === "empty" ? (
+                      <AssistantEmptyState
+                        disabled={isSending}
+                        onPromptSelect={(prompt) => setMessage(prompt)}
+                      />
+                    ) : null}
+
+                    {conversationState === "docs-not-ready" ? (
+                      <div className="flex h-full flex-col justify-center gap-3 rounded-xl border border-dashed bg-muted/20 p-4 text-sm">
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">
+                            Assistant docs are not ready yet
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Reindex the assistant knowledge base in settings, then refresh this drawer before asking questions.
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            asChild
+                          >
+                            <AdminLink
+                              href="/settings/assistant"
+                              prefetch
+                              onClick={() => setOpen(false)}
+                            >
+                              <Settings2 className="h-4 w-4" />
+                              Open settings
+                            </AdminLink>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="gap-2"
+                            onClick={() => void loadRuntimeState({ force: true })}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Refresh
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {conversationState === "messages"
+                      ? messages.map((entry) => (
+                          <AssistantMessage
+                            key={entry.id}
+                            role={entry.role}
+                            text={entry.text}
+                            response={entry.response}
+                            error={entry.error}
+                          />
+                        ))
+                      : null}
+                  </div>
+                </ScrollArea>
+
+                <div className="space-y-2">
+                  <Textarea
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                    placeholder="Ask where to find a feature in documentation..."
+                    rows={4}
+                    disabled={isSending || !status?.indexReady || !isEnabled}
+                  />
+                  <div className="flex justify-end">
+                    <Button type="button" size="sm" onClick={submitMessage} disabled={!canSend}>
+                      {isSending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="mr-2 h-4 w-4" />
+                      )}
+                      Send
+                    </Button>
+                  </div>
+                </div>
               </>
             ) : null}
-
-            <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-muted/10 p-3">
-              <div className="space-y-3 pr-3">
-                {messages.length === 0 ? (
-                  <AssistantEmptyState
-                    disabled={isSending}
-                    onPromptSelect={(prompt) => setMessage(prompt)}
-                  />
-                ) : (
-                  messages.map((entry) => (
-                    <AssistantMessage
-                      key={entry.id}
-                      role={entry.role}
-                      text={entry.text}
-                      response={entry.response}
-                      error={entry.error}
-                    />
-                  ))
-                )}
-              </div>
-            </ScrollArea>
-
-            <div className="space-y-2">
-              <Textarea
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                placeholder="Ask where to find a feature in documentation..."
-                rows={4}
-                disabled={isSending || !status?.indexReady || !isEnabled}
-              />
-              <div className="flex justify-end">
-                <Button type="button" size="sm" onClick={submitMessage} disabled={!canSend}>
-                  {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                  Send
-                </Button>
-              </div>
-            </div>
           </div>
         </SheetContent>
       </Sheet>

@@ -290,6 +290,10 @@ Warstwa Admin UI:
 - `core/admin/ui/assistant/AssistantModeSwitch.tsx` obsluguje `docs-only`/`llm-rag`.
 - `core/admin/ui/assistant/AssistantMessage.tsx` pokazuje fallback badge, confidence i sources.
 - `core/admin/ui/assistant/AssistantAvatar.tsx` renderuje opcjonalna warstwe avatara z fallback 2D.
+- Drawer lazy-loaduje runtime i ma jawne stany `loading`, `error`, `disabled`, `ready`.
+- Starter prompts i composer sa renderowane dopiero po `runtime ready`.
+- `docs not ready` jest traktowane jako runtime banner w surface rozmowy, a nie jako ekran konfiguracji.
+- Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; lokalne preferencje drawera sa ukryte za explicite otwieranym panelem preferences.
 - `core/admin/services/assistantClient.ts` obsluguje:
   - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,
   - `/assistant/site-builder/plan`, `/assistant/site-builder/execute`, `/assistant/site-builder/validate`.

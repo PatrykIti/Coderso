@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 669 tasks
+- **Done:** 674 tasks
 
 ---
 
@@ -66,6 +66,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-106-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: lint/types/targeted UI suites plus docs, board, and changelog synchronization completed |
+| TASK-106-03 | Assistant Configuration Separation and Settings Entry Points | High | Medium | Done: preferences hidden behind explicit action and canonical settings entrypoint added |
+| TASK-106-02 | Assistant Drawer Loading, Empty, Disabled, and Docs-Not-Ready Rendering | High | Medium | Done: prompt/composer gating fixed and docs-not-ready got its own runtime state |
+| TASK-106-01 | Assistant Drawer UX Contract and Render-State Matrix | High | Small | Done: explicit runtime/render-state matrix frozen and reflected in docs/tests |
+| TASK-106 | Assistant Drawer Runtime UX and Configuration Separation | High | Medium | Done: conversation-first drawer contract shipped without post-hydration config takeover |
 | TASK-054-30-05 | QA, Docs, Changelog, and Closure | Medium | Medium | Done: Bun/Vitest validation, docs source-of-truth, board, and changelog synced |
 | TASK-054-30-04 | Solution Kit Module Visibility UX | Medium | Medium | Done: kit details and AI wizard now explain module scope and selected-kit sidebar impact |
 | TASK-054-30-03 | Solution Kit Module Audit and Catalog Corrections | High | Medium | Done: recommended module lists were audited and corrected against actual blueprint capabilities |
