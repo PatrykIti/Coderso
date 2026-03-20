@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-114-02, TASK-114-03  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -42,3 +42,15 @@ board/changelog closure.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Validation completed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run vitest run tests/vitest/admin/assistantClient.test.ts tests/vitest/ui/assistant-settings.test.tsx tests/vitest/ui-integration/admin-shell-request-budget.test.tsx`
+  - `bun run vitest run tests/vitest/assistant/docsIngestService.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/assistant/openRouterProvider.test.ts`
+  - `bun test tests/unit/assistant/assistantService.test.ts tests/unit/settings/settingsService.test.ts tests/integration/routes/assistant.test.ts`
+- Synced docs, task board, and changelog for the DB-only enforcement rollout.

@@ -2358,9 +2358,6 @@ Payloady:
   "assistant.launcher.avatarEnabled": false,
   "assistant.launcher.avatarAsset": null,
   "assistant.defaultMode": "docs-only",
-  "assistant.docs.backend": "db",
-  "assistant.docs.sourceRoot": "docs",
-  "assistant.docs.paths": ["docs"],
   "assistant.docs.reindexOnBoot": false,
   "assistant.llm.enabled": false,
   "assistant.llm.provider": "none",
@@ -2394,8 +2391,6 @@ Response:
 - Official runtime readiness wymaga seeded DB corpus; brak gotowosci nie fallbackuje do filesystem.
 - Alias kompatybilnosciowy: `site.baseUrl` mapuje read/write na `site.publicBaseUrl`.
 - Walidacja: `assistant.defaultMode=llm-rag` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
-- Walidacja: `assistant.enabled=true` wymaga niepustego `assistant.docs.paths`.
-- Walidacja: `assistant.docs.sourceRoot` musi byc niepusty.
 
 ---
 
@@ -2442,7 +2437,7 @@ Endpoints:
 - `POST /assistant/site-builder/execute`
 - `POST /assistant/site-builder/validate`
 
-`retrievalBackend` moze miec wartosc `filesystem` lub `db`.
+`retrievalBackend` ma wartosc `db` dla official assistant corpus.
 
 `GET /assistant/status` response
 
@@ -2639,7 +2634,7 @@ Uwagi:
 - Message sanitization usuwa control chars i blokuje prompt-injection markers.
 - Gdy żądany tryb to `llm-rag`, a LLM jest wyłączony, runtime zwraca `docs-only` z `fallbackUsed=true`.
 - Gdy provider nie odpowie lub nie jest skonfigurowany, runtime zwraca odpowiedz `docs-only` oraz `llm=null`.
-- Dla backendu `db` retrieval idzie najpierw po DB; fallback do filesystem aktywuje sie tylko gdy DB jest puste lub niedostepne.
+- Official assistant retrieval korzysta z DB-seeded corpus tylko w modelu `db`.
 - Quota enforcement dziala per user (`assistant.quotas.requestsPerMinute`, `assistant.quotas.requestsPerDay`) przed retrieval/provider call.
 - Official assistant docs from root `docs/` are considered available only after DB seeding/reindex.
 

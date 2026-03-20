@@ -5,7 +5,7 @@
 **Category:** Core/Settings + Core/DB  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-114  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -54,3 +54,10 @@ Wymusic migracje zapisanych legacy assistant settings tak, aby stare wartosci
 ## Documentation Updates Required
 
 - `_docs/SETTINGS.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Added normalization so legacy assistant settings values are coerced into the official `docs/db` model on read/write.
+- Prevented saved `_docs/filesystem` values from continuing to drive runtime behavior.

@@ -39,9 +39,6 @@ const cleanupKeys = [
   "assistant.launcher.avatarEnabled",
   "assistant.launcher.avatarAsset",
   "assistant.defaultMode",
-  "assistant.docs.backend",
-  "assistant.docs.sourceRoot",
-  "assistant.docs.paths",
   "assistant.docs.reindexOnBoot",
   "assistant.llm.enabled",
   "assistant.llm.provider",
@@ -176,9 +173,6 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
     "assistant.launcher.avatarEnabled": true,
     "assistant.launcher.avatarAsset": "https://cdn.example.com/assistant-avatar.png",
     "assistant.defaultMode": "llm-rag",
-    "assistant.docs.backend": "filesystem",
-    "assistant.docs.sourceRoot": "docs",
-    "assistant.docs.paths": ["docs"],
     "assistant.docs.reindexOnBoot": false,
     "assistant.llm.enabled": true,
     "assistant.llm.provider": "openrouter",
@@ -198,15 +192,6 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
   );
   expect(list["assistant.defaultMode"]).toBe("llm-rag");
   expect(list["assistant.llm.provider"]).toBe("openrouter");
-
-  await expect(setSetting("assistant.docs.paths", [])).rejects.toThrow(
-    "settings_value_invalid"
-  );
-  await expect(setSetting("assistant.docs.sourceRoot", "   ")).rejects.toThrow(
-    "settings_value_invalid"
-  );
-  await setSetting("assistant.docs.backend", "db");
-  expect(await getSetting("assistant.docs.backend")).toBe("db");
   await expect(setSetting("assistant.llm.enabled", false)).rejects.toThrow(
     "settings_value_invalid"
   );
@@ -225,9 +210,6 @@ test("assertAssistantSettingsConsistency accepts docs-only mode without llm", ()
       "assistant.launcher.avatarEnabled": false,
       "assistant.launcher.avatarAsset": null,
       "assistant.defaultMode": "docs-only",
-      "assistant.docs.backend": "filesystem",
-      "assistant.docs.sourceRoot": "docs",
-      "assistant.docs.paths": ["docs"],
       "assistant.docs.reindexOnBoot": false,
       "assistant.llm.enabled": false,
       "assistant.llm.provider": "none",
@@ -248,9 +230,6 @@ test("assertAssistantSettingsConsistency rejects invalid llm-rag combinations", 
       "assistant.launcher.avatarEnabled": false,
       "assistant.launcher.avatarAsset": null,
       "assistant.defaultMode": "llm-rag",
-      "assistant.docs.backend": "filesystem",
-      "assistant.docs.sourceRoot": "docs",
-      "assistant.docs.paths": ["docs"],
       "assistant.docs.reindexOnBoot": false,
       "assistant.llm.enabled": false,
       "assistant.llm.provider": "none",
@@ -262,4 +241,16 @@ test("assertAssistantSettingsConsistency rejects invalid llm-rag combinations", 
       "assistant.quotas.requestsPerDay": 1000,
     })
   ).toThrow("settings_value_invalid");
+});
+
+test("legacy assistant docs settings keys are no longer part of the active settings surface", async () => {
+  await expect(setSetting("assistant.docs.backend", "db")).rejects.toThrow(
+    "settings_key_invalid"
+  );
+  await expect(setSetting("assistant.docs.sourceRoot", "docs")).rejects.toThrow(
+    "settings_key_invalid"
+  );
+  await expect(setSetting("assistant.docs.paths", ["docs"])).rejects.toThrow(
+    "settings_key_invalid"
+  );
 });

@@ -16,9 +16,6 @@ export type AssistantSettingsValues = {
   assistantLauncherAvatarEnabled: boolean;
   assistantLauncherAvatarAsset: string;
   assistantDefaultMode: "docs-only" | "llm-rag";
-  assistantDocsBackend: "filesystem" | "db";
-  assistantDocsSourceRoot: string;
-  assistantDocsPaths: string[];
   assistantDocsReindexOnBoot: boolean;
   assistantLlmEnabled: boolean;
   assistantLlmProvider: "openrouter" | "none";
@@ -34,9 +31,6 @@ export const ASSISTANT_SETTINGS_DEFAULT_VALUES: AssistantSettingsValues = {
   assistantLauncherAvatarEnabled: false,
   assistantLauncherAvatarAsset: "",
   assistantDefaultMode: "docs-only",
-  assistantDocsBackend: "db",
-  assistantDocsSourceRoot: "docs",
-  assistantDocsPaths: ["docs"],
   assistantDocsReindexOnBoot: false,
   assistantLlmEnabled: false,
   assistantLlmProvider: "none",

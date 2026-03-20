@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 13 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 696 tasks
+- **Done:** 701 tasks
 
 ---
 
@@ -71,6 +71,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-114-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: runtime/settings/UI validation plus docs, board, and changelog synchronization completed |
+| TASK-114-03 | Admin Settings UX Cleanup Removing Legacy Assistant Docs Mode Choices | Medium | Small | Done: assistant settings now describe only the DB-seeded `docs/` model |
+| TASK-114-02 | Runtime and API Enforcement for DB-Only Assistant Docs | High | Medium | Done: assistant runtime/status/reindex now operate as DB-only official docs flow |
+| TASK-114-01 | Legacy Assistant Settings and Data Migration to DB-Only docs | High | Medium | Done: saved legacy `_docs/filesystem` assistant settings are normalized into the new `docs/db` model |
+| TASK-114 | Assistant Legacy Docs Runtime Removal and DB-Only Enforcement | High | Medium | Done: legacy `_docs/filesystem` support removed from active official assistant runtime |
 | TASK-113 | Assistant Transcript Scroll Containment | Medium | Small | Done: transcript/window overscroll containment prevents background page scrolling while wheeling over chat |
 | TASK-112 | Assistant Conversation Window Overflow and Width Handling | Medium | Small | Done: message wrapping, vertical transcript scroll, composer separation, and safe width resize added |
 | TASK-111 | Assistant Reindex Action Decoupled from Settings Save | Medium | Small | Done: `Run reindex` now seeds docs without implicit save-first behavior |

@@ -5,7 +5,7 @@
 **Category:** Assistant + Core/DB + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-109  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -92,3 +92,11 @@ nalezy twardo odciac wspieranie starego podejscia.
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Enforced `docs -> DB seeded corpus` as the only active official assistant docs runtime path.
+- Normalized legacy assistant docs settings so saved `_docs/filesystem` values no longer control runtime behavior.
+- Removed active filesystem retrieval/reindex branches from assistant runtime and aligned client/UI expectations to `db`.

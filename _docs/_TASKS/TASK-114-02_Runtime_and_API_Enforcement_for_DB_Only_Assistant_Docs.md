@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Core/API  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-114-01  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -74,3 +74,11 @@ tylko w modelu `docs -> DB seeded corpus`.
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/SECURITY_SPEC.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Removed active filesystem retrieval and reindex branches from assistant runtime.
+- Aligned assistant status/chat/reindex contracts to DB-only retrieval backend semantics.
+- Updated runtime tests and mocked payloads to use `db` as the only supported assistant retrieval backend.

@@ -243,26 +243,23 @@ przez `setup.completed=true`.
 ## Assistant Doc Navigator (Phase A + A2)
 
 Aktualny fundament asystenta (bez LLM) sklada sie z warstw:
-- `core/services/assistant/docsIndexService.ts` (filesystem index + fallback)
-- `core/services/assistant/docsRetriever.ts` (filesystem BM25-like retrieval)
 - `core/services/assistant/docsIngestService.ts` (ingest `docs/` -> DB + ingest runs)
 - `core/services/assistant/docsDbRetriever.ts` (DB-backed ranking/search)
 - `core/services/assistant/docsAnswerComposer.ts` (deterministic answer templates)
-- `core/services/assistant/assistantService.ts` (orchestrator backend selection + fallback)
+- `core/services/assistant/assistantService.ts` (DB-only assistant runtime)
 
 Przeplyw runtime:
-1. `assistantService` czyta `assistant.docs.backend` (`filesystem` lub `db`).
-2. Dla `db`: bierze status z tabel ingest, wykonuje retrieval na `assistant_doc_chunks`.
+1. `assistantService` czyta official assistant corpus status z DB ingest tables.
+2. Runtime wykonuje retrieval na `assistant_doc_chunks`.
 3. Official assistant corpus w `docs/` jest uznawany za gotowy dopiero po seedzie do DB.
-4. Gdy DB corpus nie jest gotowy, runtime zwraca stan `not ready` zamiast fallbacku do filesystem.
+4. Gdy DB corpus nie jest gotowy, runtime zwraca stan `not ready`.
 5. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) i zawsze zwraca zrodla.
 
 Przeplyw reindex:
-1. `POST /assistant/reindex` dla backendu `db` uruchamia ingest z `assistant.docs.sourceRoot` (domyslnie `docs`).
+1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.
 2. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
 
 Zasady runtime:
-- Boot reindex (`assistant.docs.reindexOnBoot=true`) dziala dla obu backendow.
 - Official assistant corpus korzysta z root `docs/` jako source-of-truth.
 - Seed do DB jest warunkiem gotowosci official assistant corpus.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).

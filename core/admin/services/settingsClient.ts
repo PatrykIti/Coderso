@@ -9,15 +9,12 @@ export type SettingResponse = {
 
 export type AssistantMode = "docs-only" | "llm-rag";
 export type AssistantLlmProvider = "openrouter" | "none";
-export type AssistantDocsBackend = "filesystem" | "db";
+export type AssistantDocsBackend = "db";
 export type PostEditorMode = "blocks" | "classic";
 
 export type AssistantSettingsPayload = {
   "assistant.enabled": boolean;
   "assistant.defaultMode": AssistantMode;
-  "assistant.docs.backend": AssistantDocsBackend;
-  "assistant.docs.sourceRoot": string;
-  "assistant.docs.paths": string[];
   "assistant.docs.reindexOnBoot": boolean;
   "assistant.launcher.avatarEnabled": boolean;
   "assistant.launcher.avatarAsset": string | null;

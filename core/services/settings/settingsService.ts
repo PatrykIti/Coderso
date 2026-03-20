@@ -11,7 +11,7 @@ type WidgetTemplateCategorySetting = {
 
 export type AssistantMode = "docs-only" | "llm-rag";
 export type AssistantLlmProvider = "openrouter" | "none";
-export type AssistantDocsBackend = "filesystem" | "db";
+export type AssistantDocsBackend = "db";
 export type PostEditorMode = "blocks" | "classic";
 
 export type AssistantGlobalSettings = {
@@ -19,9 +19,6 @@ export type AssistantGlobalSettings = {
   "assistant.launcher.avatarEnabled": boolean;
   "assistant.launcher.avatarAsset": string | null;
   "assistant.defaultMode": AssistantMode;
-  "assistant.docs.backend": AssistantDocsBackend;
-  "assistant.docs.sourceRoot": string;
-  "assistant.docs.paths": string[];
   "assistant.docs.reindexOnBoot": boolean;
   "assistant.llm.enabled": boolean;
   "assistant.llm.provider": AssistantLlmProvider;
@@ -49,8 +46,6 @@ const DEFAULT_WIDGET_TEMPLATE_CATEGORIES: WidgetTemplateCategorySetting[] = [
 ];
 
 const DEFAULT_CONTENT_ROUTES: ContentRouteSetting[] = [];
-const DEFAULT_ASSISTANT_DOC_PATHS = ["docs"];
-
 const DEFAULT_SETTINGS = {
   "site.name": "Nextless",
   "site.locale": "en",
@@ -74,9 +69,6 @@ const DEFAULT_SETTINGS = {
   "assistant.launcher.avatarEnabled": false,
   "assistant.launcher.avatarAsset": null as string | null,
   "assistant.defaultMode": "docs-only" as AssistantMode,
-  "assistant.docs.backend": "db" as AssistantDocsBackend,
-  "assistant.docs.sourceRoot": "docs",
-  "assistant.docs.paths": DEFAULT_ASSISTANT_DOC_PATHS,
   "assistant.docs.reindexOnBoot": false,
   "assistant.llm.enabled": false,
   "assistant.llm.provider": "none" as AssistantLlmProvider,
@@ -120,9 +112,6 @@ const ASSISTANT_SETTING_KEYS = [
   "assistant.launcher.avatarEnabled",
   "assistant.launcher.avatarAsset",
   "assistant.defaultMode",
-  "assistant.docs.backend",
-  "assistant.docs.sourceRoot",
-  "assistant.docs.paths",
   "assistant.docs.reindexOnBoot",
   "assistant.llm.enabled",
   "assistant.llm.provider",
@@ -138,8 +127,12 @@ type AssistantSettingKey = (typeof ASSISTANT_SETTING_KEYS)[number];
 const assistantSettingKeySet = new Set<string>(ASSISTANT_SETTING_KEYS);
 const assistantModes: AssistantMode[] = ["docs-only", "llm-rag"];
 const assistantProviders: AssistantLlmProvider[] = ["openrouter", "none"];
-const assistantDocsBackends: AssistantDocsBackend[] = ["filesystem", "db"];
 const postEditorModes: PostEditorMode[] = ["blocks", "classic"];
+const LEGACY_ASSISTANT_DOCS_SETTING_KEYS = [
+  "assistant.docs.backend",
+  "assistant.docs.sourceRoot",
+  "assistant.docs.paths",
+] as const;
 
 const isAssistantSettingKey = (key: SettingKey): key is AssistantSettingKey =>
   assistantSettingKeySet.has(key);
@@ -201,47 +194,6 @@ const normalizeAssistantModel = (value: unknown) => {
   return trimmed;
 };
 
-const normalizeAssistantDocsPaths = (value: unknown) => {
-  if (!Array.isArray(value)) {
-    throw new Error("settings_value_invalid");
-  }
-  const normalized: string[] = [];
-  for (const entry of value) {
-    if (typeof entry !== "string") {
-      throw new Error("settings_value_invalid");
-    }
-    const trimmed = entry.trim();
-    if (!trimmed) {
-      throw new Error("settings_value_invalid");
-    }
-    if (!normalized.includes(trimmed)) {
-      normalized.push(trimmed);
-    }
-  }
-  return normalized;
-};
-
-const normalizeAssistantDocsBackend = (value: unknown): AssistantDocsBackend => {
-  if (
-    typeof value !== "string" ||
-    !assistantDocsBackends.includes(value as AssistantDocsBackend)
-  ) {
-    throw new Error("settings_value_invalid");
-  }
-  return value as AssistantDocsBackend;
-};
-
-const normalizeAssistantDocsSourceRoot = (value: unknown) => {
-  if (typeof value !== "string") {
-    throw new Error("settings_value_invalid");
-  }
-  const normalized = value.trim();
-  if (!normalized) {
-    throw new Error("settings_value_invalid");
-  }
-  return normalized;
-};
-
 const normalizeOptionalAssistantAsset = (value: unknown) => {
   if (value === null) return "";
   if (typeof value !== "string") {
@@ -258,9 +210,6 @@ const pickAssistantSettings = (
   "assistant.launcher.avatarEnabled": values["assistant.launcher.avatarEnabled"],
   "assistant.launcher.avatarAsset": values["assistant.launcher.avatarAsset"],
   "assistant.defaultMode": values["assistant.defaultMode"],
-  "assistant.docs.backend": values["assistant.docs.backend"],
-  "assistant.docs.sourceRoot": values["assistant.docs.sourceRoot"],
-  "assistant.docs.paths": values["assistant.docs.paths"],
   "assistant.docs.reindexOnBoot": values["assistant.docs.reindexOnBoot"],
   "assistant.llm.enabled": values["assistant.llm.enabled"],
   "assistant.llm.provider": values["assistant.llm.provider"],
@@ -275,12 +224,6 @@ const pickAssistantSettings = (
 export function assertAssistantSettingsConsistency(
   values: AssistantGlobalSettings
 ): void {
-  if (values["assistant.enabled"] && values["assistant.docs.paths"].length === 0) {
-    throw new Error("settings_value_invalid");
-  }
-  if (!values["assistant.docs.sourceRoot"].trim()) {
-    throw new Error("settings_value_invalid");
-  }
   if (values["assistant.defaultMode"] === "llm-rag") {
     if (!values["assistant.llm.enabled"]) {
       throw new Error("settings_value_invalid");
@@ -539,18 +482,6 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return normalizeAssistantMode(value);
   }
 
-  if (key === "assistant.docs.backend") {
-    return normalizeAssistantDocsBackend(value);
-  }
-
-  if (key === "assistant.docs.sourceRoot") {
-    return normalizeAssistantDocsSourceRoot(value);
-  }
-
-  if (key === "assistant.docs.paths") {
-    return normalizeAssistantDocsPaths(value);
-  }
-
   if (key === "assistant.llm.enabled") {
     return normalizeBooleanValue(value);
   }
@@ -576,7 +507,24 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
   throw new Error("settings_value_invalid");
 }
 
+let legacyAssistantDocsSettingsMigrationPromise: Promise<void> | null = null;
+
+async function ensureLegacyAssistantDocsSettingsRemoved() {
+  if (legacyAssistantDocsSettingsMigrationPromise) {
+    return legacyAssistantDocsSettingsMigrationPromise;
+  }
+
+  legacyAssistantDocsSettingsMigrationPromise = db
+    .delete(settings)
+    .where(inArray(settings.key, [...LEGACY_ASSISTANT_DOCS_SETTING_KEYS]))
+    .then(() => undefined)
+    .catch(() => undefined);
+
+  return legacyAssistantDocsSettingsMigrationPromise;
+}
+
 export async function listSettings(): Promise<SettingValueMap> {
+  await ensureLegacyAssistantDocsSettingsRemoved();
   const keys = Object.keys(DEFAULT_SETTINGS) as SettingKey[];
   const rows = await db
     .select()
@@ -669,6 +617,7 @@ export async function listSettings(): Promise<SettingValueMap> {
 }
 
 export async function getSetting(key: string) {
+  await ensureLegacyAssistantDocsSettingsRemoved();
   const normalizedKey = resolveSettingKey(key);
   const [row] = await db
     .select()
@@ -712,6 +661,7 @@ export async function getSetting(key: string) {
 }
 
 export async function getSettingRecord(key: string) {
+  await ensureLegacyAssistantDocsSettingsRemoved();
   const normalizedKey = resolveSettingKey(key);
   const [row] = await db
     .select()
@@ -721,6 +671,7 @@ export async function getSettingRecord(key: string) {
 }
 
 export async function setSetting(key: string, value: unknown) {
+  await ensureLegacyAssistantDocsSettingsRemoved();
   const normalizedKey = resolveSettingKey(key);
   const typedValue = validateSettingValue(normalizedKey, value);
   if (isAssistantSettingKey(normalizedKey)) {
@@ -746,6 +697,7 @@ export async function setSetting(key: string, value: unknown) {
 }
 
 export async function setSettings(values: Record<string, unknown>) {
+  await ensureLegacyAssistantDocsSettingsRemoved();
   if (!values || typeof values !== "object" || Array.isArray(values)) {
     throw new Error("settings_payload_invalid");
   }
@@ -788,6 +740,7 @@ export async function setSettings(values: Record<string, unknown>) {
 }
 
 export async function deleteSetting(key: string) {
+  await ensureLegacyAssistantDocsSettingsRemoved();
   const normalizedKey = resolveSettingKey(key);
   const [row] = await db
     .delete(settings)

@@ -49,9 +49,7 @@ export function AssistantMessage({
             <>
               <Badge variant="outline">{response.effectiveMode}</Badge>
               <Badge variant="outline">Confidence {formatConfidence(response.confidence)}</Badge>
-              <Badge variant="outline">
-                {response.retrievalBackend === "db" ? "Internal Docs" : "Filesystem Docs"}
-              </Badge>
+              <Badge variant="outline">Internal Docs</Badge>
             </>
           ) : null}
         </div>

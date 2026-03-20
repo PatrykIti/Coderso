@@ -8,37 +8,21 @@ import {
   type AssistantServiceDeps,
 } from "../../../core/services/assistant/assistantService";
 import { resetAssistantQuotaState } from "../../../core/services/assistant/assistantQuota";
-import type { DocsIndex, DocsSearchHit } from "../../../core/services/assistant/docsTypes";
+import type { DocsSearchHit } from "../../../core/services/assistant/docsTypes";
 
-const makeIndex = (): DocsIndex => {
-  const chunk = {
-    id: "_docs/widgets/hero.md:10-20",
-    docPath: "_docs/widgets/hero.md",
-    headingPath: ["Hero", "Visual"],
-    heading: "Visual",
+const makeHit = (): DocsSearchHit => ({
+  chunk: {
+    id: "docs/coderso/widgets-and-template-editor.md:10-20",
+    docPath: "docs/coderso/widgets-and-template-editor.md",
+    headingPath: ["Widgets and Template Editor", "Step By Step"],
+    heading: "Step By Step",
     lineStart: 10,
     lineEnd: 20,
     content: "Use visual tab to configure hero widget.",
     normalizedText: "hero visual use visual tab to configure hero widget",
     tokenCounts: { hero: 2, visual: 2, widget: 1 },
     tokenCount: 5,
-  };
-
-  return {
-    configuredPaths: ["docs"],
-    builtAt: "2026-02-09T21:00:00.000Z",
-    buildDurationMs: 12,
-    docCount: 1,
-    chunkCount: 1,
-    totalTokens: 5,
-    averageChunkTokens: 5,
-    chunks: [chunk],
-    tokenDocumentFrequency: { hero: 1, visual: 1, widget: 1 },
-  };
-};
-
-const makeHit = (): DocsSearchHit => ({
-  chunk: makeIndex().chunks[0]!,
+  },
   score: 2.4,
   matchedTerms: ["hero", "visual"],
   snippet: "Use visual tab to configure hero widget.",
@@ -51,7 +35,7 @@ const createDeps = (
     const values: Record<string, unknown> = {
       "assistant.enabled": true,
       "assistant.defaultMode": "docs-only",
-      "assistant.docs.backend": "filesystem",
+      "assistant.docs.backend": "db",
       "assistant.docs.sourceRoot": "docs",
       "assistant.llm.enabled": false,
       "assistant.llm.provider": "none",
@@ -59,28 +43,16 @@ const createDeps = (
       "assistant.llm.maxInputTokens": 8192,
       "assistant.llm.maxOutputTokens": 2048,
       "assistant.llm.timeoutMs": 20000,
-    };
-    return values[key];
-  },
-  ensureDocsIndex: async () => makeIndex(),
-  reindexDocsIndex: async () => makeIndex(),
-  getDocsIndexStatus: () => ({
-    ready: true,
-    building: false,
-    error: null,
-    builtAt: "2026-02-09T21:00:00.000Z",
-    configuredPaths: ["docs"],
-    docCount: 1,
-    chunkCount: 1,
-  }),
-  searchDocsIndex: () => [makeHit()],
+      };
+      return values[key];
+    },
   searchAssistantDocsDb: async () => [makeHit()],
   getAssistantDocsDbStatus: async () => ({
-    ready: false,
-    docCount: 0,
-    chunkCount: 0,
-    lastIngestAt: null,
-    lastIngestStatus: null,
+    ready: true,
+    docCount: 1,
+    chunkCount: 1,
+    lastIngestAt: "2026-02-09T21:00:00.000Z",
+    lastIngestStatus: "success",
     indexError: null,
   }),
   ingestInternalDocsToDb: async () => ({
@@ -142,7 +114,7 @@ test("getAssistantStatus returns runtime status contract", async () => {
   const status = await getAssistantStatus(createDeps());
 
   expect(status.enabled).toBe(true);
-  expect(status.retrievalBackend).toBe("filesystem");
+  expect(status.retrievalBackend).toBe("db");
   expect(status.indexReady).toBe(true);
   expect(status.docCount).toBe(1);
   expect(status.chunkCount).toBe(1);
@@ -198,7 +170,7 @@ test("answerAssistantQuestion falls back to docs-only when llm is unavailable", 
   expect(result.requestedMode).toBe("llm-rag");
   expect(result.effectiveMode).toBe("docs-only");
   expect(result.fallbackUsed).toBe(true);
-  expect(result.retrievalBackend).toBe("filesystem");
+  expect(result.retrievalBackend).toBe("db");
 });
 
 test("answerAssistantQuestion uses DB backend when DB index is ready", async () => {
@@ -305,7 +277,7 @@ test("answerAssistantQuestion uses llm-rag provider when configured", async () =
         const values: Record<string, unknown> = {
           "assistant.enabled": true,
           "assistant.defaultMode": "llm-rag",
-          "assistant.docs.backend": "filesystem",
+          "assistant.docs.backend": "db",
           "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
           "assistant.llm.provider": "openrouter",
@@ -357,7 +329,7 @@ test("answerAssistantQuestion falls back when llm provider is not configured", a
         const values: Record<string, unknown> = {
           "assistant.enabled": true,
           "assistant.defaultMode": "llm-rag",
-          "assistant.docs.backend": "filesystem",
+          "assistant.docs.backend": "db",
           "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
           "assistant.llm.provider": "openrouter",
@@ -389,7 +361,7 @@ test("answerAssistantQuestion falls back when llm provider fails", async () => {
         const values: Record<string, unknown> = {
           "assistant.enabled": true,
           "assistant.defaultMode": "llm-rag",
-          "assistant.docs.backend": "filesystem",
+          "assistant.docs.backend": "db",
           "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
           "assistant.llm.provider": "openrouter",
@@ -435,7 +407,7 @@ test("reindexAssistantDocs returns stats and writes audit", async () => {
     })
   );
 
-  expect(result.retrievalBackend).toBe("filesystem");
+  expect(result.retrievalBackend).toBe("db");
   expect(result.docCount).toBe(1);
   expect(result.chunkCount).toBe(1);
   expect(result.actorId).toBe("user-1");
@@ -500,7 +472,7 @@ test("answerAssistantQuestion enforces assistant request quotas", async () => {
       const values: Record<string, unknown> = {
           "assistant.enabled": true,
           "assistant.defaultMode": "docs-only",
-          "assistant.docs.backend": "filesystem",
+          "assistant.docs.backend": "db",
           "assistant.docs.sourceRoot": "docs",
         "assistant.llm.enabled": false,
         "assistant.llm.provider": "none",

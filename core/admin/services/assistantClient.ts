@@ -12,7 +12,7 @@ import type {
 
 export type AssistantMode = "docs-only" | "llm-rag";
 
-export type AssistantRetrievalBackend = "filesystem" | "db";
+export type AssistantRetrievalBackend = "db";
 
 export type AssistantStatusResponse = {
   enabled: boolean;

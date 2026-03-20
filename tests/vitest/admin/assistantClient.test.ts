@@ -25,7 +25,7 @@ test("getAssistantStatus hits GET /assistant/status", async () => {
     return jsonResponse({
       enabled: true,
       defaultMode: "docs-only",
-      retrievalBackend: "filesystem",
+      retrievalBackend: "db",
       llmAvailable: false,
       indexReady: true,
       indexBuilding: false,
@@ -65,7 +65,7 @@ test("sendAssistantMessage uses CSRF and POST", async () => {
       fallbackUsed: false,
       requestedMode: "docs-only",
       effectiveMode: "docs-only",
-      retrievalBackend: "filesystem",
+      retrievalBackend: "db",
       llm: null,
     });
   };
@@ -310,7 +310,7 @@ test("getAssistantStatus uses read-through cache", async () => {
     return jsonResponse({
       enabled: true,
       defaultMode: "docs-only",
-      retrievalBackend: "filesystem",
+      retrievalBackend: "db",
       llmAvailable: false,
       indexReady: true,
       indexBuilding: false,
@@ -345,7 +345,7 @@ test("reindexAssistantDocs invalidates assistant status cache", async () => {
       return jsonResponse({
         enabled: true,
         defaultMode: "docs-only",
-        retrievalBackend: "filesystem",
+        retrievalBackend: "db",
         llmAvailable: false,
         indexReady: true,
         indexBuilding: false,

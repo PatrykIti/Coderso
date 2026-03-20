@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-114-01  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -53,3 +53,10 @@ assistant docs ani wspierania `_docs/filesystem`.
 
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/SETTINGS.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Kept Assistant Settings focused on the DB-seeded `docs/` contract only.
+- Synced operator-facing copy so the settings screen no longer implies a supported legacy docs mode.

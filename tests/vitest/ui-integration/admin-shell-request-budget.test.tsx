@@ -64,7 +64,7 @@ test("assistant runtime state cache stays within shell request budget", async ()
       return jsonResponse({
         enabled: true,
         defaultMode: "docs-only",
-        retrievalBackend: "filesystem",
+        retrievalBackend: "db",
         llmAvailable: false,
         indexReady: true,
         indexBuilding: false,

@@ -82,7 +82,7 @@ test("chat route calls service and returns payload", async () => {
         fallbackUsed: false,
         requestedMode: "docs-only",
         effectiveMode: "docs-only",
-        retrievalBackend: "filesystem",
+        retrievalBackend: "db",
         llm: null,
       }),
     },
@@ -101,7 +101,7 @@ test("chat route calls service and returns payload", async () => {
   expect(validateCalls).toBe(1);
   expect(result).toMatchObject({
     mode: "docs-only",
-    retrievalBackend: "filesystem",
+    retrievalBackend: "db",
     requestedMode: "docs-only",
   });
 });

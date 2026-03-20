@@ -1,22 +1,11 @@
 import { logAudit } from "../audit/auditService";
-import {
-  getSetting,
-  type AssistantDocsBackend,
-  type AssistantLlmProvider,
-  type AssistantMode,
-} from "../settings/settingsService";
+import { getSetting, type AssistantLlmProvider, type AssistantMode } from "../settings/settingsService";
 import { composeDocsAnswer } from "./docsAnswerComposer";
-import {
-  ensureDocsIndex,
-  getDocsIndexStatus,
-  reindexDocsIndex,
-} from "./docsIndexService";
 import {
   getAssistantDocsDbStatus,
   ingestInternalDocsToDb,
 } from "./docsIngestService";
 import { searchAssistantDocsDb } from "./docsDbRetriever";
-import { searchDocsIndex } from "./docsRetriever";
 import { recordAssistantMetric } from "./assistantMetrics";
 import { enforceAssistantQuota } from "./assistantQuota";
 import {
@@ -28,7 +17,6 @@ import type { AssistantProviderResponse } from "./providers/providerTypes";
 import type {
   DocsAnswerSource,
   DocsAnswerTemplate,
-  DocsIndex,
   DocsSearchHit,
 } from "./docsTypes";
 
@@ -64,7 +52,6 @@ const ASSISTANT_LLM_SYSTEM_PROMPT = [
 type AssistantRuntimeSettings = {
   enabled: boolean;
   defaultMode: AssistantMode;
-  docsBackend: AssistantDocsBackend;
   docsSourceRoot: string;
   llmEnabled: boolean;
   llmProvider: AssistantLlmProvider;
@@ -80,7 +67,7 @@ type AssistantRuntimeSettings = {
   quotaGlobalLlmTokensPerDay: number;
 };
 
-export type AssistantRetrievalBackend = "filesystem" | "db";
+export type AssistantRetrievalBackend = "db";
 
 export type AssistantChatContext = {
   page?: string;
@@ -143,10 +130,6 @@ export type AssistantReindexResult = {
 
 export type AssistantServiceDeps = {
   getSetting: (key: string) => Promise<unknown>;
-  ensureDocsIndex: () => Promise<DocsIndex>;
-  reindexDocsIndex: () => Promise<DocsIndex>;
-  getDocsIndexStatus: typeof getDocsIndexStatus;
-  searchDocsIndex: typeof searchDocsIndex;
   searchAssistantDocsDb: typeof searchAssistantDocsDb;
   getAssistantDocsDbStatus: typeof getAssistantDocsDbStatus;
   ingestInternalDocsToDb: typeof ingestInternalDocsToDb;
@@ -157,10 +140,6 @@ export type AssistantServiceDeps = {
 
 const defaultDeps: AssistantServiceDeps = {
   getSetting,
-  ensureDocsIndex,
-  reindexDocsIndex,
-  getDocsIndexStatus,
-  searchDocsIndex,
   searchAssistantDocsDb,
   getAssistantDocsDbStatus,
   ingestInternalDocsToDb,
@@ -180,20 +159,6 @@ const normalizeProvider = (
 ): AssistantLlmProvider => {
   if (value === "openrouter" || value === "none") return value;
   return fallback;
-};
-
-const normalizeDocsBackend = (
-  value: unknown,
-  fallback: AssistantDocsBackend
-): AssistantDocsBackend => {
-  if (value === "filesystem" || value === "db") return value;
-  return fallback;
-};
-
-const normalizeDocsSourceRoot = (value: unknown, fallback: string) => {
-  if (typeof value !== "string") return fallback;
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : fallback;
 };
 
 const normalizeBoolean = (value: unknown, fallback: boolean) =>
@@ -232,8 +197,6 @@ const readRuntimeSettings = async (
   const [
     enabledRaw,
     defaultModeRaw,
-    docsBackendRaw,
-    docsSourceRootRaw,
     llmEnabledRaw,
     llmProviderRaw,
     llmModelRaw,
@@ -249,8 +212,6 @@ const readRuntimeSettings = async (
   ] = await Promise.all([
     getSettingSafe(deps, "assistant.enabled", false),
     getSettingSafe(deps, "assistant.defaultMode", "docs-only"),
-    getSettingSafe(deps, "assistant.docs.backend", "db"),
-    getSettingSafe(deps, "assistant.docs.sourceRoot", DEFAULT_ASSISTANT_SOURCE_ROOT),
     getSettingSafe(deps, "assistant.llm.enabled", false),
     getSettingSafe(deps, "assistant.llm.provider", "none"),
     getSettingSafe(deps, "assistant.llm.model", DEFAULT_ASSISTANT_LLM_MODEL),
@@ -300,11 +261,7 @@ const readRuntimeSettings = async (
   return {
     enabled: normalizeBoolean(enabledRaw, false),
     defaultMode: normalizeMode(defaultModeRaw, "docs-only"),
-    docsBackend: normalizeDocsBackend(docsBackendRaw, "db"),
-    docsSourceRoot: normalizeDocsSourceRoot(
-      docsSourceRootRaw,
-      DEFAULT_ASSISTANT_SOURCE_ROOT
-    ),
+    docsSourceRoot: DEFAULT_ASSISTANT_SOURCE_ROOT,
     llmEnabled: normalizeBoolean(llmEnabledRaw, false),
     llmProvider: normalizeProvider(llmProviderRaw, "none"),
     llmModel: normalizeModel(llmModelRaw, DEFAULT_ASSISTANT_LLM_MODEL),
@@ -399,61 +356,33 @@ const resolveDeps = (overrides?: Partial<AssistantServiceDeps>): AssistantServic
   ...(overrides ?? {}),
 });
 
-const searchFilesystemHits = async (
-  deps: AssistantServiceDeps,
-  message: string
-): Promise<DocsSearchHit[]> => {
-  let index: DocsIndex;
-  try {
-    index = await deps.ensureDocsIndex();
-  } catch {
-    throw new Error("assistant_index_missing");
-  }
-
-  if (index.chunkCount === 0) {
-    throw new Error("assistant_index_missing");
-  }
-
-  return deps.searchDocsIndex(index, message, {
-    topK: 5,
-    minScore: 0.01,
-  });
-};
-
 const retrieveDocsHits = async (
   deps: AssistantServiceDeps,
-  settings: AssistantRuntimeSettings,
+  _settings: AssistantRuntimeSettings,
   message: string
 ): Promise<{
   hits: DocsSearchHit[];
   retrievalBackend: AssistantRetrievalBackend;
   backendFallbackUsed: boolean;
 }> => {
-  if (settings.docsBackend === "db") {
-    const dbStatus = await deps.getAssistantDocsDbStatus();
-    if (dbStatus.ready) {
-      try {
-        const hits = await deps.searchAssistantDocsDb(message, {
-          topK: 5,
-          minScore: 0.01,
-        });
-        return {
-          hits,
-          retrievalBackend: "db",
-          backendFallbackUsed: false,
-        };
-      } catch {
-        throw new Error("assistant_index_missing");
-      }
-    }
+  const dbStatus = await deps.getAssistantDocsDbStatus();
+  if (!dbStatus.ready) {
     throw new Error("assistant_index_missing");
   }
 
-  return {
-    hits: await searchFilesystemHits(deps, message),
-    retrievalBackend: "filesystem",
-    backendFallbackUsed: false,
-  };
+  try {
+    const hits = await deps.searchAssistantDocsDb(message, {
+      topK: 5,
+      minScore: 0.01,
+    });
+    return {
+      hits,
+      retrievalBackend: "db",
+      backendFallbackUsed: false,
+    };
+  } catch {
+    throw new Error("assistant_index_missing");
+  }
 };
 
 const toLlmSnippets = (sources: DocsAnswerSource[]) =>
@@ -497,35 +426,18 @@ export const getAssistantStatus = async (
   const deps = resolveDeps(overrides);
   const settings = await readRuntimeSettings(deps);
   const llmAvailable = await resolveLlmAvailability(deps, settings);
-
-  if (settings.docsBackend === "db") {
-    const dbStatus = await deps.getAssistantDocsDbStatus();
-    return {
-      enabled: settings.enabled,
-      defaultMode: settings.defaultMode,
-      retrievalBackend: "db",
-      llmAvailable,
-      indexReady: dbStatus.ready,
-      indexBuilding: false,
-      indexError: dbStatus.indexError,
-      lastReindexAt: dbStatus.lastIngestAt,
-      docCount: dbStatus.docCount,
-      chunkCount: dbStatus.chunkCount,
-    };
-  }
-
-  const indexStatus = deps.getDocsIndexStatus();
+  const dbStatus = await deps.getAssistantDocsDbStatus();
   return {
     enabled: settings.enabled,
     defaultMode: settings.defaultMode,
-    retrievalBackend: "filesystem",
+    retrievalBackend: "db",
     llmAvailable,
-    indexReady: indexStatus.ready,
-    indexBuilding: indexStatus.building,
-    indexError: indexStatus.error,
-    lastReindexAt: indexStatus.builtAt,
-    docCount: indexStatus.docCount,
-    chunkCount: indexStatus.chunkCount,
+    indexReady: dbStatus.ready,
+    indexBuilding: false,
+    indexError: dbStatus.indexError,
+    lastReindexAt: dbStatus.lastIngestAt,
+    docCount: dbStatus.docCount,
+    chunkCount: dbStatus.chunkCount,
   };
 };
 
@@ -538,67 +450,31 @@ export const reindexAssistantDocs = async (
   if (!settings.enabled) {
     throw new Error("assistant_disabled");
   }
-
-  if (settings.docsBackend === "db") {
-    let ingest;
-    try {
-      ingest = await deps.ingestInternalDocsToDb({
-        sourceRoot: settings.docsSourceRoot,
-        triggeredByUserId: input.actorId ?? null,
-      });
-    } catch {
-      throw new Error("assistant_reindex_failed");
-    }
-
-    const dbStatus = await deps.getAssistantDocsDbStatus();
-
-    try {
-      await deps.logAudit({
-        actorId: input.actorId ?? null,
-        action: "assistant.docs.reindex",
-        targetType: "assistant",
-        targetId: "docs-db-kb",
-        metadata: {
-          backend: "db",
-          sourceRoot: settings.docsSourceRoot,
-          status: ingest.status,
-          docCount: dbStatus.docCount,
-          chunkCount: dbStatus.chunkCount,
-          errorsCount: ingest.errorsCount,
-        },
-      });
-    } catch {
-      // Audit is best-effort and must not block reindex success.
-    }
-
-    return {
-      retrievalBackend: "db",
-      builtAt: ingest.finishedAt,
-      buildDurationMs: ingest.buildDurationMs,
-      docCount: dbStatus.docCount,
-      chunkCount: dbStatus.chunkCount,
-      totalTokens: ingest.totalTokens,
-      actorId: input.actorId ?? null,
-    };
-  }
-
-  let index: DocsIndex;
+  let ingest;
   try {
-    index = await deps.reindexDocsIndex();
+    ingest = await deps.ingestInternalDocsToDb({
+      sourceRoot: settings.docsSourceRoot,
+      triggeredByUserId: input.actorId ?? null,
+    });
   } catch {
     throw new Error("assistant_reindex_failed");
   }
+
+  const dbStatus = await deps.getAssistantDocsDbStatus();
 
   try {
     await deps.logAudit({
       actorId: input.actorId ?? null,
       action: "assistant.docs.reindex",
       targetType: "assistant",
-      targetId: "docs-index",
+      targetId: "docs-db-kb",
       metadata: {
-        backend: "filesystem",
-        docCount: index.docCount,
-        chunkCount: index.chunkCount,
+        backend: "db",
+        sourceRoot: settings.docsSourceRoot,
+        status: ingest.status,
+        docCount: dbStatus.docCount,
+        chunkCount: dbStatus.chunkCount,
+        errorsCount: ingest.errorsCount,
       },
     });
   } catch {
@@ -606,12 +482,12 @@ export const reindexAssistantDocs = async (
   }
 
   return {
-    retrievalBackend: "filesystem",
-    builtAt: index.builtAt,
-    buildDurationMs: index.buildDurationMs,
-    docCount: index.docCount,
-    chunkCount: index.chunkCount,
-    totalTokens: index.totalTokens,
+    retrievalBackend: "db",
+    builtAt: ingest.finishedAt,
+    buildDurationMs: ingest.buildDurationMs,
+    docCount: dbStatus.docCount,
+    chunkCount: dbStatus.chunkCount,
+    totalTokens: ingest.totalTokens,
     actorId: input.actorId ?? null,
   };
 };

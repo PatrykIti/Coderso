@@ -347,13 +347,7 @@ const resolveAssistantDocPaths = async (override?: string[]) => {
   if (override && override.length > 0) {
     return normalizeConfiguredPaths(override);
   }
-  try {
-    const { getSetting } = await import("../settings/settingsService");
-    const value = await getSetting("assistant.docs.paths");
-    return normalizeConfiguredPaths(value);
-  } catch {
-    return [...DEFAULT_DOC_PATHS];
-  }
+  return [...DEFAULT_DOC_PATHS];
 };
 
 let cachedDocsIndex: DocsIndex | null = null;
@@ -477,26 +471,15 @@ export const ensureDocsIndex = async (
 };
 
 export const initializeDocsIndexOnBootIfEnabled = async (
-  options: BuildDocsIndexOptions = {}
+  _options: BuildDocsIndexOptions = {}
 ) => {
   try {
     const { getSetting } = await import("../settings/settingsService");
-    const [reindexOnBoot, docsBackend, sourceRootValue] = await Promise.all([
-      getSetting("assistant.docs.reindexOnBoot"),
-      getSetting("assistant.docs.backend"),
-      getSetting("assistant.docs.sourceRoot"),
-    ]);
+    const reindexOnBoot = await getSetting("assistant.docs.reindexOnBoot");
     if (reindexOnBoot === true) {
-      if (docsBackend === "db") {
-        const { ingestInternalDocsToDb } = await import("./docsIngestService");
-        const sourceRoot =
-          typeof sourceRootValue === "string" && sourceRootValue.trim().length > 0
-            ? sourceRootValue.trim()
-            : "docs";
-        await ingestInternalDocsToDb({ sourceRoot });
-        return;
-      }
-      await reindexDocsIndex(options);
+      const { ingestInternalDocsToDb } = await import("./docsIngestService");
+      await ingestInternalDocsToDb({ sourceRoot: "docs" });
+      return;
     }
   } catch {
     // Keep startup resilient; assistant can be indexed later via explicit trigger.

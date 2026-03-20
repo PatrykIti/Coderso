@@ -177,9 +177,7 @@ Rotacja klucza:
   - limity tokenow (`assistant.llm.maxInputTokens`, `assistant.llm.maxOutputTokens`)
   - retry-once tylko dla bledow retryable (HTTP 429/5xx)
   - brak snippets -> brak wywolania provider API i fallback do `docs-only`
-- `assistant.docs.paths` musi byc niepuste gdy `assistant.enabled=true`.
-- `assistant.docs.sourceRoot` musi byc niepusty.
-- `assistant.docs.backend` (`filesystem`/`db`) steruje backendem retrieval.
+- Official assistant runtime korzysta z fixed source root `docs` i DB-seeded corpus.
 - Official assistant corpus z root `docs/` jest dopuszczony do runtime dopiero po seedzie do DB.
 - Brak gotowego DB corpus dla official docs nie moze fallbackowac do filesystem.
 
