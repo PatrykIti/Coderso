@@ -1,4 +1,4 @@
-import { Bot, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bot, CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -319,7 +319,8 @@ export function AiSiteWizard({ kits, selectedKitId, selectedKit, onSelectKit }: 
           </Badge>
         </div>
         <CardDescription>
-          WordPress-like guided flow: plan, review, execute, and validate deterministic setup.
+          {AI_SITE_WIZARD_STEPS.find((s) => s.id === step)?.description ??
+            "Plan, review, execute, and validate deterministic setup."}
         </CardDescription>
 
         <AiSiteWizardProgress step={step} onSelectStep={setStep} />
@@ -342,9 +343,13 @@ export function AiSiteWizard({ kits, selectedKitId, selectedKit, onSelectKit }: 
 
         {lastExecution ? (
           <Alert>
-            <AlertTitle>Last run: {lastExecution.execution.run.status}</AlertTitle>
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertTitle>
+              Run complete — {lastExecution.execution.run.mode.replace("_", " ")}:{" "}
+              <span className="capitalize">{lastExecution.execution.run.status}</span>
+            </AlertTitle>
             <AlertDescription>
-              Mode: {lastExecution.execution.run.mode}. Success: {lastExecution.execution.summary.success} / {lastExecution.execution.summary.total}.
+              {lastExecution.execution.summary.success} of {lastExecution.execution.summary.total} actions succeeded.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -430,8 +435,17 @@ export function AiSiteWizard({ kits, selectedKitId, selectedKit, onSelectKit }: 
               }}
               disabled={isPlanLoading || isExecuting || isMutating}
             >
-              Next
-              <ChevronRight className="ml-2 h-4 w-4" />
+              {isPlanLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  Next
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           ) : (
             <Button

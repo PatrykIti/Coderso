@@ -1,9 +1,12 @@
-import { Copy, Play, RotateCcw, Sparkles } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Copy, Play, RotateCcw, Sparkles, XCircle } from "lucide-react";
+import { Fragment } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import type {
   GuidedSiteBuilderPlanResponse,
   GuidedSiteBuilderValidationResult,
@@ -166,26 +169,55 @@ type AiSiteWizardProgressProps = {
 
 export function AiSiteWizardProgress({ step, onSelectStep }: AiSiteWizardProgressProps) {
   return (
-    <div className="grid gap-2 md:grid-cols-5">
-      {AI_SITE_WIZARD_STEPS.map((entry) => (
-        <button
-          key={entry.id}
-          type="button"
-          onClick={() => {
-            if (entry.id <= step) onSelectStep(entry.id);
-          }}
-          className={`rounded-md border px-2 py-2 text-left text-xs transition ${
-            entry.id === step
-              ? "border-primary/40 bg-primary/10 text-primary"
-              : entry.id < step
-                ? "border-primary/20 text-foreground"
-                : "text-muted-foreground"
-          }`}
-        >
-          <p className="font-semibold">{entry.title}</p>
-          <p className="mt-1 line-clamp-2">{entry.description}</p>
-        </button>
-      ))}
+    <div className="flex items-start">
+      {AI_SITE_WIZARD_STEPS.map((entry, index) => {
+        const isCompleted = entry.id < step;
+        const isActive = entry.id === step;
+        const isClickable = entry.id <= step;
+
+        return (
+          <Fragment key={entry.id}>
+            {index > 0 && (
+              <div
+                className={cn(
+                  "mt-3.5 h-px flex-1 transition-colors",
+                  isCompleted || isActive ? "bg-primary/40" : "bg-border"
+                )}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                if (isClickable) onSelectStep(entry.id);
+              }}
+              disabled={!isClickable}
+              title={entry.title}
+              className="flex flex-col items-center gap-1.5"
+            >
+              <div
+                className={cn(
+                  "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold transition-colors",
+                  isActive && "border-primary bg-primary text-primary-foreground",
+                  isCompleted && "border-primary/60 bg-primary/10 text-primary",
+                  !isActive && !isCompleted && "border-muted-foreground/30 text-muted-foreground"
+                )}
+              >
+                {isCompleted ? <Check className="h-3.5 w-3.5" /> : entry.id}
+              </div>
+              <span
+                className={cn(
+                  "hidden max-w-[56px] text-center text-[10px] leading-tight md:block",
+                  isActive && "font-semibold text-primary",
+                  isCompleted && "text-foreground",
+                  !isActive && !isCompleted && "text-muted-foreground"
+                )}
+              >
+                {entry.title}
+              </span>
+            </button>
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
@@ -261,44 +293,56 @@ export function AiSiteWizardStepContent({
 }: AiSiteWizardStepContentProps) {
   if (step === 1) {
     return (
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2 text-sm">
-          <span className="font-medium text-foreground">Business type</span>
-          <select
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={draft.businessType}
-            onChange={(event) =>
-              onDraftChange((previous) => ({
-                ...previous,
-                businessType: event.target.value as SiteBuilderBusinessType,
-              }))
-            }
-          >
-            {businessTypeOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="business-type">
+              Business type
+            </label>
+            <select
+              id="business-type"
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={draft.businessType}
+              onChange={(event) =>
+                onDraftChange((previous) => ({
+                  ...previous,
+                  businessType: event.target.value as SiteBuilderBusinessType,
+                }))
+              }
+            >
+              {businessTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <label className="space-y-2 text-sm">
-          <span className="font-medium text-foreground">Locale</span>
-          <Input
-            value={draft.locale}
-            onChange={(event) =>
-              onDraftChange((previous) => ({
-                ...previous,
-                locale: event.target.value,
-              }))
-            }
-            placeholder="en"
-          />
-        </label>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="locale">
+              Locale
+            </label>
+            <Input
+              id="locale"
+              value={draft.locale}
+              onChange={(event) =>
+                onDraftChange((previous) => ({
+                  ...previous,
+                  locale: event.target.value,
+                }))
+              }
+              placeholder="en"
+            />
+            <p className="text-xs text-muted-foreground">BCP 47 language tag (e.g. en, pl, de)</p>
+          </div>
+        </div>
 
-        <label className="space-y-2 text-sm md:col-span-2">
-          <span className="font-medium text-foreground">Site name (optional)</span>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="site-name">
+            Site name <span className="font-normal text-muted-foreground">(optional)</span>
+          </label>
           <Input
+            id="site-name"
             value={draft.siteName}
             onChange={(event) =>
               onDraftChange((previous) => ({
@@ -308,28 +352,41 @@ export function AiSiteWizardStepContent({
             }
             placeholder="e.g. AutoFix Warsaw"
           />
-        </label>
+        </div>
       </div>
     );
   }
 
   if (step === 2) {
     return (
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-foreground">Business goals</p>
-        <div className="space-y-2">
-          {goalOptions.map((goal) => (
-            <label key={goal.value} className="flex items-start gap-2 rounded-md border p-2">
-              <Checkbox
-                checked={draft.goals.includes(goal.value)}
-                onCheckedChange={(checked) => onToggleGoal(goal.value, checked)}
-              />
-              <span className="space-y-0.5">
-                <span className="block text-sm font-medium text-foreground">{goal.label}</span>
-                <span className="block text-xs text-muted-foreground">{goal.description}</span>
-              </span>
-            </label>
-          ))}
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-foreground">
+          Business goals
+          <span className="ml-2 text-xs font-normal text-muted-foreground">Select all that apply</span>
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {goalOptions.map((goal) => {
+            const checked = draft.goals.includes(goal.value);
+            return (
+              <label
+                key={goal.value}
+                className={cn(
+                  "flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors",
+                  checked ? "border-primary/50 bg-primary/5" : "hover:border-primary/20 hover:bg-muted/30"
+                )}
+              >
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={(value) => onToggleGoal(goal.value, value)}
+                  className="mt-0.5"
+                />
+                <span className="space-y-0.5">
+                  <span className="block text-sm font-medium text-foreground">{goal.label}</span>
+                  <span className="block text-xs text-muted-foreground">{goal.description}</span>
+                </span>
+              </label>
+            );
+          })}
         </div>
       </div>
     );
@@ -341,60 +398,74 @@ export function AiSiteWizardStepContent({
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onGeneratePlan} disabled={isPlanLoading}>
             <Sparkles className="mr-2 h-4 w-4" />
-            {isPlanLoading ? "Refreshing..." : "Refresh recommendation"}
+            {isPlanLoading ? "Generating..." : "Refresh recommendation"}
           </Button>
-          {plan ? <Badge variant="secondary">Confidence {plan.confidence}%</Badge> : null}
+          {plan ? (
+            <Badge
+              variant={plan.confidence >= 70 ? "default" : "secondary"}
+              className="gap-1"
+            >
+              {plan.confidence}% confidence
+            </Badge>
+          ) : null}
         </div>
 
         {plan ? (
           <div className="space-y-3">
-            <div className="rounded-md border p-3">
-              <p className="text-sm font-medium text-foreground">Recommended kit</p>
-              <p className="text-sm text-muted-foreground">
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-foreground">Recommended kit</p>
+                <Badge variant="default" className="text-[10px] uppercase">Best match</Badge>
+              </div>
+              <p className="mb-3 text-sm text-muted-foreground">
                 {kits.find((item) => item.id === plan.recommendedKitId)?.title ?? plan.recommendedKitId}
               </p>
               <Button
                 type="button"
                 size="sm"
-                variant="secondary"
-                className="mt-2"
                 onClick={() => onSelectKit(plan.recommendedKitId)}
               >
-                Use recommended kit
+                Use this kit
               </Button>
             </div>
 
-            <div className="space-y-2">
-              {plan.recommendations.map((recommendation) => (
-                <button
-                  key={recommendation.kitId}
-                  type="button"
-                  onClick={() => onSelectKit(recommendation.kitId)}
-                  className={`w-full rounded-md border p-3 text-left transition ${
-                    selectedKitId === recommendation.kitId
-                      ? "border-primary/60 bg-primary/5"
-                      : "hover:border-primary/30"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-foreground">
-                      {kits.find((item) => item.id === recommendation.kitId)?.title ?? recommendation.kitId}
-                    </p>
-                    <Badge variant="outline">Score {recommendation.score}</Badge>
-                  </div>
-                  <div className="mt-1 space-y-1">
+            {plan.recommendations.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">All options</p>
+                {plan.recommendations.map((recommendation) => (
+                  <button
+                    key={recommendation.kitId}
+                    type="button"
+                    onClick={() => onSelectKit(recommendation.kitId)}
+                    className={cn(
+                      "w-full rounded-md border p-3 text-left transition",
+                      selectedKitId === recommendation.kitId
+                        ? "border-primary/60 bg-primary/5"
+                        : "hover:border-primary/30 hover:bg-muted/20"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-foreground">
+                        {kits.find((item) => item.id === recommendation.kitId)?.title ?? recommendation.kitId}
+                      </p>
+                      <Badge variant="outline" className="shrink-0">
+                        Score {recommendation.score}
+                      </Badge>
+                    </div>
                     {recommendation.reasons.slice(0, 2).map((reason) => (
-                      <p key={reason} className="text-xs text-muted-foreground">
+                      <p key={reason} className="mt-1 text-xs text-muted-foreground">
                         {reason}
                       </p>
                     ))}
-                  </div>
-                </button>
-              ))}
-            </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Generate a plan to see recommendation details.</p>
+          <p className="text-sm text-muted-foreground">
+            Click <span className="font-medium text-foreground">Refresh recommendation</span> to generate an AI-based kit suggestion.
+          </p>
         )}
       </div>
     );
@@ -403,23 +474,34 @@ export function AiSiteWizardStepContent({
   if (step === 4) {
     return (
       <div className="space-y-4">
-        <div className="rounded-md border p-3">
-          <p className="text-sm font-medium text-foreground">Execution steps</p>
-          <p className="text-xs text-muted-foreground">
-            Disable optional steps before apply. Fixed steps stay enabled for deterministic flow.
+        <div className="rounded-lg border p-4">
+          <p className="text-sm font-semibold text-foreground">Execution steps</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Disable optional steps before apply. Fixed steps cannot be skipped.
           </p>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-3 space-y-1.5">
             {(plan?.steps ?? []).map((planStep) => {
               const checked = enabledStepIds.includes(planStep.id);
               return (
-                <label key={planStep.id} className="flex items-start gap-2 rounded-md border p-2">
+                <label
+                  key={planStep.id}
+                  className={cn(
+                    "flex items-start gap-3 rounded-md border p-2.5 transition-colors",
+                    planStep.editable === false
+                      ? "bg-muted/30"
+                      : checked
+                        ? "hover:bg-muted/20"
+                        : "opacity-60 hover:opacity-80"
+                  )}
+                >
                   <Checkbox
                     checked={checked}
                     disabled={planStep.editable === false}
                     onCheckedChange={(value) => onToggleStep(planStep.id, value)}
+                    className="mt-0.5"
                   />
-                  <span className="space-y-0.5">
+                  <span className="min-w-0 space-y-0.5">
                     <span className="flex items-center gap-2 text-sm font-medium text-foreground">
                       {planStep.title}
                       {planStep.editable === false ? (
@@ -433,27 +515,85 @@ export function AiSiteWizardStepContent({
                 </label>
               );
             })}
+            {!plan && (
+              <p className="text-xs text-muted-foreground">Generate a plan in step 3 to see execution steps.</p>
+            )}
           </div>
         </div>
 
-        <div className="rounded-md border p-3">
-          <p className="text-sm font-medium text-foreground">Action map (explainable)</p>
-          <p className="text-xs text-muted-foreground">
-            Every recommendation maps to explicit actions before execution.
+        <div className="rounded-lg border p-4">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-foreground">Plan impact</p>
+            <p className="text-xs text-muted-foreground">
+              Kit: <span className="font-medium text-foreground">{selectedSummary?.title ?? "Not selected"}</span>
+            </p>
+          </div>
+
+          {selectedKit ? (
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+              {[
+                { label: "Content types", stepId: "content-model" as SiteBuilderPlanStepId },
+                { label: "Pages", stepId: "pages" as SiteBuilderPlanStepId },
+                { label: "Forms", stepId: "forms" as SiteBuilderPlanStepId },
+                { label: "Menus", stepId: "navigation" as SiteBuilderPlanStepId },
+              ].map(({ label, stepId }) => {
+                const count = countForStep(selectedKit, stepId);
+                const skipped = hasStep(plan, stepId) && !enabledStepIds.includes(stepId);
+                return (
+                  <div key={stepId} className={cn("space-y-0.5", skipped && "opacity-50")}>
+                    <p className="text-muted-foreground">{label}</p>
+                    <p className="font-semibold text-foreground">
+                      {count}
+                      {skipped ? <span className="ml-1 font-normal text-muted-foreground">(skipped)</span> : null}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">Select a kit to preview changes.</p>
+          )}
+
+          {plan?.notes.length ? (
+            <>
+              <Separator className="my-3" />
+              <div className="space-y-1">
+                {plan.notes.map((note) => (
+                  <p key={note} className="text-xs text-muted-foreground">
+                    {note}
+                  </p>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          {selectedKit ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Fits: {selectedKit.businessTypes.map(formatBusinessType).join(", ")}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-lg border p-4">
+          <p className="text-sm font-semibold text-foreground">Action map</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Every recommendation maps to explicit actions executed in order.
           </p>
 
           {guidedPlan && guidedPlan.actions.length > 0 ? (
             <div className="mt-3 space-y-2">
               {groupedActions(guidedPlan).map((group) => (
-                <div key={group.stepId} className="rounded-md border p-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-foreground">{group.stepId}</p>
-                  <div className="mt-2 space-y-1">
+                <div key={group.stepId} className="rounded-md border">
+                  <div className="rounded-t-md border-b bg-muted/30 px-3 py-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground">{group.stepId}</p>
+                  </div>
+                  <div className="divide-y">
                     {group.actions.map((action) => (
-                      <div key={action.id} className="rounded-md border bg-muted/20 px-2 py-1.5">
+                      <div key={action.id} className="px-3 py-2">
                         <p className="text-xs font-medium text-foreground">{action.title}</p>
                         <p className="text-[11px] text-muted-foreground">
                           {action.target} / {action.resourceKey}
-                          {action.required ? " (required)" : ""}
+                          {action.required ? <span className="ml-1 font-medium text-foreground">(required)</span> : ""}
                         </p>
                       </div>
                     ))}
@@ -466,70 +606,52 @@ export function AiSiteWizardStepContent({
           )}
         </div>
 
-        <div className="rounded-md border p-3">
-          <p className="text-sm font-medium text-foreground">Plan impact preview</p>
-          <div className="mt-2 space-y-2 text-xs text-muted-foreground">
-            <p>
-              Kit: <span className="font-medium text-foreground">{selectedSummary?.title ?? "Not selected"}</span>
+        {guidedPlan && (
+          <div className="rounded-lg border p-4">
+            <p className="text-sm font-semibold text-foreground">Modules</p>
+            <p className="mt-0.5 mb-3 text-xs text-muted-foreground">
+              The selected kit focuses the Coderso sidebar on these modules.
             </p>
-            {selectedKit ? (
-              <>
-                <p>Business fit: {selectedKit.businessTypes.map(formatBusinessType).join(", ")}</p>
-                <p>
-                  Content types: {countForStep(selectedKit, "content-model")} {hasStep(plan, "content-model") && !enabledStepIds.includes("content-model") ? "(skipped)" : ""}
-                </p>
-                <p>
-                  Pages: {countForStep(selectedKit, "pages")} {hasStep(plan, "pages") && !enabledStepIds.includes("pages") ? "(skipped)" : ""}
-                </p>
-                <p>
-                  Forms: {countForStep(selectedKit, "forms")} {hasStep(plan, "forms") && !enabledStepIds.includes("forms") ? "(skipped)" : ""}
-                </p>
-                <p>
-                  Menus: {countForStep(selectedKit, "navigation")} {hasStep(plan, "navigation") && !enabledStepIds.includes("navigation") ? "(skipped)" : ""}
-                </p>
-              </>
-            ) : (
-              <p>Select a kit to preview changes.</p>
-            )}
-            {plan?.notes.length ? (
-              <div className="space-y-1">
-                {plan.notes.map((note) => (
-                  <p key={note}>{note}</p>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="rounded-md border p-3">
-          <p className="text-sm font-medium text-foreground">Modules</p>
-          {guidedPlan ? (
-            <div className="mt-2 space-y-2">
-              <p className="text-xs text-muted-foreground">
-                The selected kit can focus the `Coderso` sidebar on the modules listed below.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {guidedPlan.modules.required.map((moduleId) => (
-                  <Badge key={`required:${moduleId}`} variant="default" className="text-[11px]">
-                    Required: {moduleId}
-                  </Badge>
-                ))}
-                {guidedPlan.modules.recommended.map((moduleId) => (
-                  <Badge key={`recommended:${moduleId}`} variant="secondary" className="text-[11px]">
-                    Recommended: {moduleId}
-                  </Badge>
-                ))}
-                {guidedPlan.modules.optional.map((moduleId) => (
-                  <Badge key={`optional:${moduleId}`} variant="outline" className="text-[11px]">
-                    Optional: {moduleId}
-                  </Badge>
-                ))}
-              </div>
+            <div className="space-y-2">
+              {guidedPlan.modules.required.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-xs text-muted-foreground w-20 shrink-0 pt-0.5">Required</span>
+                  <div className="flex flex-wrap gap-1">
+                    {guidedPlan.modules.required.map((moduleId) => (
+                      <Badge key={`required:${moduleId}`} variant="default" className="text-[11px]">
+                        {moduleId}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {guidedPlan.modules.recommended.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-xs text-muted-foreground w-20 shrink-0 pt-0.5">Recommended</span>
+                  <div className="flex flex-wrap gap-1">
+                    {guidedPlan.modules.recommended.map((moduleId) => (
+                      <Badge key={`recommended:${moduleId}`} variant="secondary" className="text-[11px]">
+                        {moduleId}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {guidedPlan.modules.optional.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  <span className="text-xs text-muted-foreground w-20 shrink-0 pt-0.5">Optional</span>
+                  <div className="flex flex-wrap gap-1">
+                    {guidedPlan.modules.optional.map((moduleId) => (
+                      <Badge key={`optional:${moduleId}`} variant="outline" className="text-[11px]">
+                        {moduleId}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <p className="mt-2 text-xs text-muted-foreground">Module recommendations appear after plan generation.</p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -541,32 +663,63 @@ export function AiSiteWizardStepContent({
           <Play className="mr-2 h-4 w-4" />
           {isExecuting ? "Running..." : "Apply kit"}
         </Button>
-        <Button type="button" variant="secondary" onClick={() => onApply(true)} disabled={!selectedKitId || isExecuting}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => onApply(true)}
+          disabled={!selectedKitId || isExecuting}
+        >
           Dry run
         </Button>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-3">
-        <Button type="button" variant="outline" onClick={onRerunLatest} disabled={!selectedKitId || isExecuting || !latestApplyRun}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onRerunLatest}
+          disabled={!selectedKitId || isExecuting || !latestApplyRun}
+        >
           <RotateCcw className="mr-2 h-4 w-4" />
           Rerun
         </Button>
-        <Button type="button" variant="outline" onClick={onRollbackLatest} disabled={!selectedKitId || isExecuting || !latestApplyRunId}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onRollbackLatest}
+          disabled={!selectedKitId || isExecuting || !latestApplyRunId}
+        >
           Rollback latest
         </Button>
-        <Button type="button" variant="outline" onClick={onCloneLatest} disabled={!latestApplyRun}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCloneLatest}
+          disabled={!latestApplyRun}
+        >
           <Copy className="mr-2 h-4 w-4" />
           Clone as draft
         </Button>
       </div>
 
-      <div className="rounded-md border p-3">
-        <p className="text-sm font-medium text-foreground">Validation result</p>
+      <div className="rounded-lg border p-4">
+        <p className="mb-2 text-sm font-semibold text-foreground">Validation result</p>
         {validation ? (
-          <div className="mt-2 space-y-2">
-            <Badge variant={statusBadgeVariant(validation.status)}>{validation.status}</Badge>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              {validation.status === "ok" ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              ) : validation.status === "warning" ? (
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+              ) : (
+                <XCircle className="h-4 w-4 text-destructive" />
+              )}
+              <Badge variant={statusBadgeVariant(validation.status)} className="capitalize">
+                {validation.status}
+              </Badge>
+            </div>
             {validation.unresolvedItems.length > 0 ? (
-              <div className="space-y-1">
+              <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 space-y-1">
                 {validation.unresolvedItems.map((item) => (
                   <p key={item} className="text-xs text-destructive">
                     {item}
@@ -576,64 +729,84 @@ export function AiSiteWizardStepContent({
             ) : (
               <p className="text-xs text-muted-foreground">No unresolved items.</p>
             )}
-            <div className="space-y-1">
-              {validation.checks.map((check) => (
-                <div key={check.id} className="rounded-md border bg-muted/20 px-2 py-1.5">
-                  <p className="text-xs font-medium text-foreground">{check.label}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {check.status}: {check.details}
-                  </p>
-                </div>
-              ))}
-            </div>
+            {validation.checks.length > 0 && (
+              <div className="space-y-1">
+                {validation.checks.map((check) => (
+                  <div key={check.id} className="flex items-start gap-2 rounded-md border bg-muted/20 px-2.5 py-2">
+                    {check.status === "ok" ? (
+                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-500" />
+                    ) : (
+                      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-yellow-500" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-foreground">{check.label}</p>
+                      <p className="text-[11px] text-muted-foreground">{check.details}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
-          <p className="mt-2 text-xs text-muted-foreground">Run apply or dry-run to get validation checks.</p>
+          <p className="text-xs text-muted-foreground">Run apply or dry-run to get validation checks.</p>
         )}
       </div>
 
-      <div className="space-y-3 rounded-md border p-3">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-foreground">Run timeline</p>
+      <div className="rounded-lg border p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-foreground">Run history</p>
           <Button type="button" variant="ghost" size="sm" onClick={onRefreshRuns} disabled={runsLoading}>
             Refresh
           </Button>
         </div>
 
         {runsError ? <p className="text-xs text-destructive">{runsError}</p> : null}
-
-        {runs.length === 0 && !runsLoading ? <p className="text-xs text-muted-foreground">No runs yet.</p> : null}
+        {runs.length === 0 && !runsLoading ? (
+          <p className="text-xs text-muted-foreground">No runs yet. Apply or dry-run above to start.</p>
+        ) : null}
 
         {runs.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {runs.map((run) => (
               <button
                 key={run.id}
                 type="button"
                 onClick={() => onSelectRunId(run.id)}
-                className={`w-full rounded-md border p-2 text-left transition ${
-                  selectedRunId === run.id ? "border-primary/60 bg-primary/5" : "hover:border-primary/30"
-                }`}
+                className={cn(
+                  "w-full rounded-md border p-2.5 text-left transition",
+                  selectedRunId === run.id
+                    ? "border-primary/60 bg-primary/5"
+                    : "hover:border-primary/30 hover:bg-muted/20"
+                )}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs font-medium text-foreground">{run.mode}</p>
+                  <p className="text-xs font-medium capitalize text-foreground">
+                    {run.mode.replace("_", " ")}
+                  </p>
                   <Badge variant={runStatusBadgeVariant(run)}>{run.status}</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">{formatRunDate(run.finishedAt)}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{formatRunDate(run.finishedAt)}</p>
               </button>
             ))}
           </div>
         ) : null}
 
-        {isDetailLoading ? <p className="text-xs text-muted-foreground">Loading run details...</p> : null}
-        {detailError ? <p className="text-xs text-destructive">{detailError}</p> : null}
+        {isDetailLoading ? <p className="mt-2 text-xs text-muted-foreground">Loading run details...</p> : null}
+        {detailError ? <p className="mt-2 text-xs text-destructive">{detailError}</p> : null}
 
         {selectedRun ? (
-          <div className="rounded-md border p-2">
-            <p className="text-xs font-medium text-foreground">Run summary ({selectedRun.run.mode})</p>
-            <p className="text-xs text-muted-foreground">
-              success: {selectedRun.run.summary.success}, failed: {selectedRun.run.summary.failed}, planned: {selectedRun.run.summary.planned}, skipped: {selectedRun.run.summary.skipped}
-            </p>
+          <div className="mt-3 grid grid-cols-4 gap-2 rounded-md border bg-muted/20 p-3 text-center text-xs">
+            {[
+              { label: "Success", value: selectedRun.run.summary.success },
+              { label: "Failed", value: selectedRun.run.summary.failed },
+              { label: "Planned", value: selectedRun.run.summary.planned },
+              { label: "Skipped", value: selectedRun.run.summary.skipped },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-lg font-semibold leading-tight text-foreground">{value}</p>
+                <p className="text-muted-foreground">{label}</p>
+              </div>
+            ))}
           </div>
         ) : null}
       </div>

@@ -190,7 +190,7 @@ test("AiSiteWizardStepContent renders explainable action map in plan review", ()
     { path: "/admin/coderso/solution-kits" }
   );
 
-  expect(html).toContain("Action map (explainable)");
+  expect(html).toContain("Action map");
   expect(html).toContain("Upsert page: Home");
   expect(html).toContain("Modules");
 });
