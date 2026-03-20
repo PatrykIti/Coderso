@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Assistant Preferences  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-107-05, TASK-101-06  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -55,3 +55,10 @@ Rozszerzyc floating launcher tak, aby domyslna chmurka wiadomosci mogla byc zast
 
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/ARCHITECTURE.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Added global launcher avatar settings and used them to swap the default message bubble for an avatar-backed launcher surface.
+- Preserved safe fallback behavior when the configured asset cannot be rendered directly by the launcher.

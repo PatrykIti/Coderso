@@ -52,12 +52,12 @@ Uwaga:
 
 ## Assistant avatar assets (TASK-101-06)
 
-- Assistant panel supports optional avatar asset URL (`assistant.ui.avatarAsset`).
+- Assistant floating launcher supports optional avatar asset URL (`assistant.launcher.avatarAsset`).
 - Recommended formats:
   - 3D: `.glb` / `.gltf` (rendered as optional enhanced mode, never required)
   - 2D fallback: `.png`, `.jpg`, `.jpeg`, `.webp`, `.svg`
   - Motion fallback: `.mp4`, `.webm`, `.ogg`
-- If WebGL is unavailable or 3D renderer is not active, UI falls back to 2D placeholder.
+- If the launcher cannot render the configured asset directly, UI falls back to the default launcher surface.
 - Avatar failures must never block assistant chat interaction.
 
 ## Content fields (entry data)

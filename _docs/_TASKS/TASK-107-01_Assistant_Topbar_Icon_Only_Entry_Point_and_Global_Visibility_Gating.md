@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-107  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -51,3 +51,11 @@ Usunac topbarowy entrypoint asystenta i uzaleznic widocznosc nowego launchera od
 
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/ARCHITECTURE.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Removed the textual assistant trigger from `TopBar`.
+- Moved launcher mounting to shell-level floating UI.
+- Bound launcher visibility to global assistant settings instead of per-user drawer preferences.

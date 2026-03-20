@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Assistant Runtime UX  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-107-02  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -48,3 +48,10 @@ Uproscic stany niedostepnosci asystenta tak, aby nie zamienialy drawera w ekran 
 ## Documentation Updates Required
 
 - `_docs/ASSISTANT_GUIDE.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Simplified `loading`, `error`, `disabled`, and `docs-not-ready` states so they no longer resemble a settings surface.
+- Removed settings CTAs from availability states and kept only minimal runtime copy.

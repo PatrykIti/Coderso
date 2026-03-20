@@ -16,6 +16,8 @@ export type PostEditorMode = "blocks" | "classic";
 
 export type AssistantGlobalSettings = {
   "assistant.enabled": boolean;
+  "assistant.launcher.avatarEnabled": boolean;
+  "assistant.launcher.avatarAsset": string | null;
   "assistant.defaultMode": AssistantMode;
   "assistant.docs.backend": AssistantDocsBackend;
   "assistant.docs.sourceRoot": string;
@@ -69,6 +71,8 @@ const DEFAULT_SETTINGS = {
   "search.categoryOverrides": {} as SearchCategoryOverrides,
   "widgets.templateCategories": DEFAULT_WIDGET_TEMPLATE_CATEGORIES,
   "assistant.enabled": false,
+  "assistant.launcher.avatarEnabled": false,
+  "assistant.launcher.avatarAsset": null as string | null,
   "assistant.defaultMode": "docs-only" as AssistantMode,
   "assistant.docs.backend": "filesystem" as AssistantDocsBackend,
   "assistant.docs.sourceRoot": "_docs/_internal",
@@ -113,6 +117,8 @@ export function resolveSettingKey(key: string): SettingKey {
 
 const ASSISTANT_SETTING_KEYS = [
   "assistant.enabled",
+  "assistant.launcher.avatarEnabled",
+  "assistant.launcher.avatarAsset",
   "assistant.defaultMode",
   "assistant.docs.backend",
   "assistant.docs.sourceRoot",
@@ -236,10 +242,21 @@ const normalizeAssistantDocsSourceRoot = (value: unknown) => {
   return normalized;
 };
 
+const normalizeOptionalAssistantAsset = (value: unknown) => {
+  if (value === null) return null;
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : null;
+};
+
 const pickAssistantSettings = (
   values: SettingValueMap
 ): AssistantGlobalSettings => ({
   "assistant.enabled": values["assistant.enabled"],
+  "assistant.launcher.avatarEnabled": values["assistant.launcher.avatarEnabled"],
+  "assistant.launcher.avatarAsset": values["assistant.launcher.avatarAsset"],
   "assistant.defaultMode": values["assistant.defaultMode"],
   "assistant.docs.backend": values["assistant.docs.backend"],
   "assistant.docs.sourceRoot": values["assistant.docs.sourceRoot"],
@@ -506,8 +523,16 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return normalized as WidgetTemplateCategorySetting[];
   }
 
-  if (key === "assistant.enabled" || key === "assistant.docs.reindexOnBoot") {
+  if (
+    key === "assistant.enabled" ||
+    key === "assistant.launcher.avatarEnabled" ||
+    key === "assistant.docs.reindexOnBoot"
+  ) {
     return normalizeBooleanValue(value);
+  }
+
+  if (key === "assistant.launcher.avatarAsset") {
+    return normalizeOptionalAssistantAsset(value);
   }
 
   if (key === "assistant.defaultMode") {

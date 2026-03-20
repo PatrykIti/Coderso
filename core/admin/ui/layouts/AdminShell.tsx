@@ -218,12 +218,7 @@ export function AdminShell({
         <TopBar
           breadcrumbs={breadcrumbs}
           search={showSearch ? (search ?? <SearchBar />) : search}
-          actions={
-            <>
-              {topbarActions}
-              <AssistantPanel />
-            </>
-          }
+          actions={topbarActions}
           user={user}
           navToggle={
             <Button
@@ -268,6 +263,7 @@ export function AdminShell({
           />
         </SheetContent>
       </Sheet>
+      <AssistantPanel />
     </div>
   );
 }

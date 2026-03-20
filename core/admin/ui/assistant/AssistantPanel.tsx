@@ -1,17 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Bot,
   Loader2,
+  MessageCircle,
   MessageSquareText,
-  RefreshCw,
   Send,
-  Settings2,
-  SlidersHorizontal,
 } from "lucide-react";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
@@ -20,24 +15,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import {
   getAssistantStatus,
   sendAssistantMessage,
   type AssistantChatResponse,
-  type AssistantMode,
   type AssistantStatusResponse,
 } from "@/services/assistantClient";
-import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
-import { AdminLink } from "@/ui/shared/AdminLink";
+import { useAdminAssistantConfig } from "@/ui/contexts/AdminAssistantConfigContext";
+import { cn } from "@/lib/utils";
 
 import { AssistantEmptyState } from "./AssistantEmptyState";
-import { AssistantAvatar } from "./AssistantAvatar";
 import { AssistantMessage } from "./AssistantMessage";
-import { AssistantModeSwitch } from "./AssistantModeSwitch";
-import type { AssistantAvatarState } from "./avatarStates";
 
 type AssistantEntry = {
   id: string;
@@ -46,6 +36,34 @@ type AssistantEntry = {
   response?: AssistantChatResponse;
   error?: string;
 };
+
+type AssistantRuntimeState = {
+  status: AssistantStatusResponse;
+};
+
+type LauncherPosition = {
+  x: number;
+  y: number;
+};
+
+type LauncherAssetKind = "none" | "image" | "video" | "other";
+
+export type AssistantPanelViewState = "loading" | "error" | "disabled" | "ready";
+
+export type AssistantConversationState = "empty" | "messages" | "docs-not-ready";
+
+const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
+const ASSISTANT_LAUNCHER_POSITION_KEY = "nextless.assistant.launcher.position";
+const ASSISTANT_LAUNCHER_SIZE_PX = 56;
+const ASSISTANT_LAUNCHER_MARGIN_PX = 24;
+
+let runtimeStateCache:
+  | {
+      value: AssistantRuntimeState;
+      savedAt: number;
+    }
+  | null = null;
+let runtimeStatePromise: Promise<AssistantRuntimeState> | null = null;
 
 const createEntryId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -56,36 +74,6 @@ const resolveApiError = (error: unknown, fallback: string) => {
   return fallback;
 };
 
-const normalizeMode = (
-  preferred: AssistantMode,
-  status: AssistantStatusResponse
-): AssistantMode => {
-  if (preferred === "llm-rag" && !status.llmAvailable) return "docs-only";
-  return preferred;
-};
-
-type AssistantRuntimeState = {
-  status: AssistantStatusResponse;
-  mode: AssistantMode;
-  isEnabled: boolean;
-  avatarEnabled: boolean;
-  avatarAsset: string;
-};
-
-export type AssistantPanelViewState = "loading" | "error" | "disabled" | "ready";
-
-export type AssistantConversationState = "empty" | "messages" | "docs-not-ready";
-
-const ASSISTANT_RUNTIME_CACHE_TTL_MS = 60_000;
-
-let runtimeStateCache:
-  | {
-      value: AssistantRuntimeState;
-      savedAt: number;
-    }
-  | null = null;
-let runtimeStatePromise: Promise<AssistantRuntimeState> | null = null;
-
 const readRuntimeStateCache = (nowMs: number) => {
   if (!runtimeStateCache) return null;
   if (nowMs - runtimeStateCache.savedAt > ASSISTANT_RUNTIME_CACHE_TTL_MS) {
@@ -94,36 +82,86 @@ const readRuntimeStateCache = (nowMs: number) => {
   return runtimeStateCache.value;
 };
 
-const updateRuntimeStateCache = (
-  patch: Partial<Omit<AssistantRuntimeState, "status">>
-) => {
-  if (!runtimeStateCache) return;
-  runtimeStateCache = {
-    ...runtimeStateCache,
-    value: {
-      ...runtimeStateCache.value,
-      ...patch,
-    },
+const getViewportSize = () => {
+  if (typeof window === "undefined") {
+    return { width: 1440, height: 900 };
+  }
+  return {
+    width: window.innerWidth,
+    height: window.innerHeight,
   };
+};
+
+const clampLauncherPosition = (
+  position: LauncherPosition,
+  viewportWidth: number,
+  viewportHeight: number
+): LauncherPosition => {
+  const maxX = Math.max(
+    ASSISTANT_LAUNCHER_MARGIN_PX,
+    viewportWidth - ASSISTANT_LAUNCHER_SIZE_PX - ASSISTANT_LAUNCHER_MARGIN_PX
+  );
+  const maxY = Math.max(
+    ASSISTANT_LAUNCHER_MARGIN_PX,
+    viewportHeight - ASSISTANT_LAUNCHER_SIZE_PX - ASSISTANT_LAUNCHER_MARGIN_PX
+  );
+
+  return {
+    x: Math.min(maxX, Math.max(ASSISTANT_LAUNCHER_MARGIN_PX, position.x)),
+    y: Math.min(maxY, Math.max(ASSISTANT_LAUNCHER_MARGIN_PX, position.y)),
+  };
+};
+
+const getDefaultLauncherPosition = (): LauncherPosition => {
+  const { width, height } = getViewportSize();
+  return clampLauncherPosition(
+    {
+      x: width - ASSISTANT_LAUNCHER_SIZE_PX - ASSISTANT_LAUNCHER_MARGIN_PX,
+      y: height - ASSISTANT_LAUNCHER_SIZE_PX - ASSISTANT_LAUNCHER_MARGIN_PX,
+    },
+    width,
+    height
+  );
+};
+
+const readLauncherPosition = (): LauncherPosition => {
+  const fallback = getDefaultLauncherPosition();
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(ASSISTANT_LAUNCHER_POSITION_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<LauncherPosition>;
+    if (typeof parsed.x !== "number" || typeof parsed.y !== "number") {
+      return fallback;
+    }
+    const { width, height } = getViewportSize();
+    return clampLauncherPosition({ x: parsed.x, y: parsed.y }, width, height);
+  } catch {
+    return fallback;
+  }
+};
+
+const persistLauncherPosition = (position: LauncherPosition) => {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    ASSISTANT_LAUNCHER_POSITION_KEY,
+    JSON.stringify(position)
+  );
+};
+
+const resolveLauncherAssetKind = (assetUrl: string | null): LauncherAssetKind => {
+  if (!assetUrl) return "none";
+  const normalized = assetUrl.toLowerCase();
+  if (/(\.png|\.jpg|\.jpeg|\.gif|\.webp|\.svg)$/.test(normalized)) return "image";
+  if (/(\.mp4|\.webm|\.ogg)$/.test(normalized)) return "video";
+  return "other";
 };
 
 const buildRuntimeState = (
-  assistantStatus: AssistantStatusResponse,
-  userSettings: Awaited<ReturnType<typeof getUserSettings>>
-): AssistantRuntimeState => {
-  const userEnabled = userSettings["assistant.ui.enabled"];
-  const preferredMode = userSettings["assistant.mode"] ?? assistantStatus.defaultMode;
-  const preferredAvatarEnabled = userSettings["assistant.ui.avatarEnabled"] ?? false;
-  const preferredAvatarAsset = userSettings["assistant.ui.avatarAsset"] ?? null;
-
-  return {
-    status: assistantStatus,
-    mode: normalizeMode(preferredMode, assistantStatus),
-    isEnabled: Boolean(assistantStatus.enabled) && Boolean(userEnabled),
-    avatarEnabled: preferredAvatarEnabled,
-    avatarAsset: preferredAvatarAsset ?? "",
-  };
-};
+  assistantStatus: AssistantStatusResponse
+): AssistantRuntimeState => ({
+  status: assistantStatus,
+});
 
 export const clearAssistantRuntimeStateCache = () => {
   runtimeStateCache = null;
@@ -146,13 +184,8 @@ export async function loadAssistantRuntimeStateCached(options?: {
     return runtimeStatePromise;
   }
 
-  const request = Promise.all([
-    getAssistantStatus({ force }),
-    getUserSettings({ force }),
-  ])
-    .then(([assistantStatus, userSettings]) =>
-      buildRuntimeState(assistantStatus, userSettings)
-    )
+  const request = getAssistantStatus({ force })
+    .then((assistantStatus) => buildRuntimeState(assistantStatus))
     .then((nextState) => {
       runtimeStateCache = {
         value: nextState,
@@ -177,11 +210,11 @@ export const shouldLoadAssistantRuntimeState = (input: {
 export const resolveAssistantPanelViewState = (input: {
   isReady: boolean;
   loadError: string | null;
-  isEnabled: boolean;
+  statusEnabled: boolean;
 }): AssistantPanelViewState => {
   if (!input.isReady) return "loading";
   if (input.loadError) return "error";
-  if (!input.isEnabled) return "disabled";
+  if (!input.statusEnabled) return "disabled";
   return "ready";
 };
 
@@ -195,56 +228,56 @@ export const resolveAssistantConversationState = (input: {
 };
 
 export function AssistantPanel() {
+  const {
+    enabled: launcherEnabled,
+    launcherAvatarEnabled,
+    launcherAvatarAsset,
+  } = useAdminAssistantConfig();
   const cachedRuntimeState = readRuntimeStateCache(Date.now());
   const [open, setOpen] = useState(false);
   const [isReady, setIsReady] = useState(() => cachedRuntimeState !== null);
   const [isLoadingRuntime, setIsLoadingRuntime] = useState(false);
-  const [isEnabled, setIsEnabled] = useState(
-    () => cachedRuntimeState?.isEnabled ?? true
-  );
   const [status, setStatus] = useState<AssistantStatusResponse | null>(
     () => cachedRuntimeState?.status ?? null
-  );
-  const [mode, setMode] = useState<AssistantMode>(
-    () => cachedRuntimeState?.mode ?? "docs-only"
   );
   const [messages, setMessages] = useState<AssistantEntry[]>([]);
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [avatarEnabled, setAvatarEnabled] = useState(
-    () => cachedRuntimeState?.avatarEnabled ?? false
+  const [launcherPosition, setLauncherPosition] = useState<LauncherPosition>(() =>
+    readLauncherPosition()
   );
-  const [avatarAssetDraft, setAvatarAssetDraft] = useState(
-    () => cachedRuntimeState?.avatarAsset ?? ""
-  );
-  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
-  const [showPreferences, setShowPreferences] = useState(false);
+  const suppressLauncherToggleRef = useRef(false);
+
+  const launcherAsset =
+    launcherAvatarEnabled && typeof launcherAvatarAsset === "string"
+      ? launcherAvatarAsset.trim() || null
+      : null;
+  const launcherAssetKind = resolveLauncherAssetKind(launcherAsset);
 
   const applyRuntimeState = useCallback((nextState: AssistantRuntimeState) => {
     setStatus(nextState.status);
-    setMode(nextState.mode);
-    setAvatarEnabled(nextState.avatarEnabled);
-    setAvatarAssetDraft(nextState.avatarAsset);
-    setIsEnabled(nextState.isEnabled);
   }, []);
 
-  const loadRuntimeState = useCallback(async (options?: { force?: boolean }) => {
-    setLoadError(null);
-    setIsLoadingRuntime(true);
-    try {
-      const runtimeState = await loadAssistantRuntimeStateCached({
-        force: options?.force,
-      });
-      applyRuntimeState(runtimeState);
-    } catch (error) {
-      setIsEnabled(false);
-      setLoadError(resolveApiError(error, "Failed to load assistant status."));
-    } finally {
-      setIsReady(true);
-      setIsLoadingRuntime(false);
-    }
-  }, [applyRuntimeState]);
+  const loadRuntimeState = useCallback(
+    async (options?: { force?: boolean }) => {
+      setLoadError(null);
+      setIsLoadingRuntime(true);
+      try {
+        const runtimeState = await loadAssistantRuntimeStateCached({
+          force: options?.force,
+        });
+        applyRuntimeState(runtimeState);
+      } catch (error) {
+        setStatus(null);
+        setLoadError(resolveApiError(error, "Failed to load assistant status."));
+      } finally {
+        setIsReady(true);
+        setIsLoadingRuntime(false);
+      }
+    },
+    [applyRuntimeState]
+  );
 
   useEffect(() => {
     if (
@@ -260,10 +293,76 @@ export function AssistantPanel() {
   }, [isLoadingRuntime, isReady, loadRuntimeState, open]);
 
   useEffect(() => {
-    if (!open) {
-      setShowPreferences(false);
-    }
-  }, [open]);
+    const handleResize = () => {
+      const { width, height } = getViewportSize();
+      setLauncherPosition((previous) =>
+        clampLauncherPosition(previous, width, height)
+      );
+    };
+
+    if (typeof window === "undefined") return undefined;
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    persistLauncherPosition(launcherPosition);
+  }, [launcherPosition]);
+
+  const handleLauncherClick = useCallback(() => {
+    if (suppressLauncherToggleRef.current) return;
+    setOpen(true);
+  }, []);
+
+  const handleLauncherPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.button !== 0) return;
+
+      const pointerId = event.pointerId;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const origin = launcherPosition;
+      let moved = false;
+
+      const handleMove = (moveEvent: PointerEvent) => {
+        if (moveEvent.pointerId !== pointerId) return;
+        const deltaX = moveEvent.clientX - startX;
+        const deltaY = moveEvent.clientY - startY;
+        if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) {
+          moved = true;
+        }
+        const { width, height } = getViewportSize();
+        setLauncherPosition(
+          clampLauncherPosition(
+            {
+              x: origin.x + deltaX,
+              y: origin.y + deltaY,
+            },
+            width,
+            height
+          )
+        );
+      };
+
+      const handleStop = (stopEvent: PointerEvent) => {
+        if (stopEvent.pointerId !== pointerId) return;
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", handleStop);
+        window.removeEventListener("pointercancel", handleStop);
+        if (moved) {
+          suppressLauncherToggleRef.current = true;
+          window.setTimeout(() => {
+            suppressLauncherToggleRef.current = false;
+          }, 0);
+        }
+      };
+
+      window.addEventListener("pointermove", handleMove);
+      window.addEventListener("pointerup", handleStop);
+      window.addEventListener("pointercancel", handleStop);
+    },
+    [launcherPosition]
+  );
 
   const submitMessage = useCallback(async () => {
     const trimmed = message.trim();
@@ -275,13 +374,13 @@ export function AssistantPanel() {
       role: "user",
       text: trimmed,
     };
-    setMessages((prev) => [...prev, userEntry]);
+    setMessages((previous) => [...previous, userEntry]);
     setIsSending(true);
 
     try {
       const response = await sendAssistantMessage({
         message: trimmed,
-        mode,
+        mode: status.defaultMode,
         context:
           typeof window === "undefined"
             ? undefined
@@ -292,8 +391,8 @@ export function AssistantPanel() {
               },
       });
 
-      setMessages((prev) => [
-        ...prev,
+      setMessages((previous) => [
+        ...previous,
         {
           id: createEntryId(),
           role: "assistant",
@@ -302,8 +401,8 @@ export function AssistantPanel() {
         },
       ]);
     } catch (error) {
-      setMessages((prev) => [
-        ...prev,
+      setMessages((previous) => [
+        ...previous,
         {
           id: createEntryId(),
           role: "assistant",
@@ -314,83 +413,11 @@ export function AssistantPanel() {
     } finally {
       setIsSending(false);
     }
-  }, [isSending, message, mode, status]);
-
-  const handleModeChange = useCallback(
-    async (nextMode: AssistantMode) => {
-      if (!status) return;
-      const normalized = normalizeMode(nextMode, status);
-      setMode(normalized);
-      updateRuntimeStateCache({ mode: normalized });
-      try {
-        await setUserSetting("assistant.mode", normalized);
-      } catch {
-        // Mode persistence failure should not block local mode change.
-      }
-    },
-    [status]
-  );
-
-  const handleAssistantEnabledChange = useCallback(async (next: boolean) => {
-    setIsEnabled(next);
-    updateRuntimeStateCache({ isEnabled: next });
-    try {
-      await setUserSetting("assistant.ui.enabled", next);
-    } catch {
-      // Preference persistence failure should not block local drawer state.
-    }
-  }, []);
-
-  const handleAvatarEnabledChange = useCallback(
-    async (next: boolean) => {
-      setAvatarEnabled(next);
-      updateRuntimeStateCache({ avatarEnabled: next });
-      setIsSavingAvatar(true);
-      try {
-        await setUserSetting("assistant.ui.avatarEnabled", next);
-      } catch {
-        // Avatar toggle persistence failure should not block chat usage.
-      } finally {
-        setIsSavingAvatar(false);
-      }
-    },
-    []
-  );
-
-  const persistAvatarAsset = useCallback(async () => {
-    const normalized = avatarAssetDraft.trim();
-    updateRuntimeStateCache({
-      avatarAsset: normalized.length > 0 ? normalized : "",
-    });
-    setIsSavingAvatar(true);
-    try {
-      await setUserSetting(
-        "assistant.ui.avatarAsset",
-        normalized.length > 0 ? normalized : null
-      );
-    } catch {
-      // Avatar asset persistence failure should not block chat usage.
-    } finally {
-      setIsSavingAvatar(false);
-    }
-  }, [avatarAssetDraft]);
-
-  const avatarState: AssistantAvatarState = useMemo(() => {
-    if (isSending) return "thinking";
-    const latestAssistantMessage = [...messages]
-      .reverse()
-      .find((entry) => entry.role === "assistant" && !entry.error);
-    if (latestAssistantMessage) return "answer";
-    return "idle";
-  }, [isSending, messages]);
+  }, [isSending, message, status]);
 
   const canSend = useMemo(
-    () =>
-      Boolean(message.trim()) &&
-      !isSending &&
-      Boolean(status?.indexReady) &&
-      isEnabled,
-    [isEnabled, isSending, message, status?.indexReady]
+    () => Boolean(message.trim()) && !isSending && Boolean(status?.indexReady),
+    [isSending, message, status?.indexReady]
   );
 
   const viewState = useMemo(
@@ -398,9 +425,9 @@ export function AssistantPanel() {
       resolveAssistantPanelViewState({
         isReady,
         loadError,
-        isEnabled,
+        statusEnabled: Boolean(status?.enabled),
       }),
-    [isEnabled, isReady, loadError]
+    [isReady, loadError, status?.enabled]
   );
 
   const conversationState = useMemo(
@@ -412,23 +439,62 @@ export function AssistantPanel() {
     [messages.length, status?.indexReady]
   );
 
+  if (!launcherEnabled) {
+    return null;
+  }
+
   return (
     <>
       <Button
-        variant="outline"
-        size="sm"
-        className="gap-2"
-        onClick={() => setOpen(true)}
-      >
-        {isLoadingRuntime && !isReady ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Bot className="h-4 w-4" />
+        type="button"
+        variant="secondary"
+        size="icon"
+        className={cn(
+          "fixed z-40 h-14 w-14 rounded-full border border-border/80 bg-background/95 shadow-lg backdrop-blur",
+          "cursor-grab active:cursor-grabbing"
         )}
-        Assistant
+        style={{
+          left: `${launcherPosition.x}px`,
+          top: `${launcherPosition.y}px`,
+          touchAction: "none",
+        }}
+        onPointerDown={handleLauncherPointerDown}
+        onClick={handleLauncherClick}
+        aria-label="Open assistant conversation"
+      >
+        {launcherAssetKind === "image" && launcherAsset ? (
+          <img
+            src={launcherAsset}
+            alt=""
+            aria-hidden="true"
+            className="h-full w-full rounded-full object-cover"
+            loading="lazy"
+          />
+        ) : null}
+
+        {launcherAssetKind === "video" && launcherAsset ? (
+          <video
+            src={launcherAsset}
+            className="h-full w-full rounded-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            aria-hidden="true"
+          />
+        ) : null}
+
+        {launcherAssetKind === "none" || launcherAssetKind === "other" ? (
+          isLoadingRuntime && !isReady ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <MessageCircle className="h-6 w-6" />
+          )
+        ) : null}
       </Button>
+
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-lg">
+        <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-md">
           <SheetHeader className="border-b px-4 py-4">
             <SheetTitle className="flex items-center gap-2">
               <MessageSquareText className="h-4 w-4" />
@@ -439,170 +505,36 @@ export function AssistantPanel() {
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex flex-1 min-h-0 flex-col gap-4 px-4 py-4">
+          <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4">
             {viewState === "loading" ? (
-              <div className="flex items-center gap-2 rounded-xl border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Loading assistant runtime...
-              </div>
-            ) : null}
-
-            {viewState !== "loading" ? (
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setShowPreferences((previous) => !previous)}
-                  disabled={viewState === "error"}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  {showPreferences ? "Hide preferences" : "Preferences"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2"
-                  asChild
-                >
-                  <AdminLink
-                    href="/settings/assistant"
-                    prefetch
-                    onClick={() => setOpen(false)}
-                  >
-                    <Settings2 className="h-4 w-4" />
-                    Settings
-                  </AdminLink>
-                </Button>
+              <div className="flex flex-1 items-center justify-center rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading assistant runtime...
+                </div>
               </div>
             ) : null}
 
             {viewState === "error" ? (
-              <Alert variant="destructive" className="py-2">
-                <AlertTitle className="text-xs">Assistant unavailable</AlertTitle>
-                <AlertDescription className="flex items-center justify-between gap-2 text-xs">
-                  <span>{loadError}</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2"
-                    onClick={() => void loadRuntimeState({ force: true })}
-                  >
-                    <RefreshCw className="mr-1 h-3 w-3" />
-                    Retry
-                  </Button>
-                </AlertDescription>
-              </Alert>
+              <div className="rounded-xl border bg-muted/20 p-4 text-sm">
+                <p className="font-medium text-foreground">Assistant is unavailable</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {loadError ?? "Assistant runtime could not be loaded."}
+                </p>
+              </div>
             ) : null}
 
             {viewState === "disabled" ? (
-              <Alert className="py-2">
-                <AlertTitle className="text-xs">Assistant is disabled</AlertTitle>
-                <AlertDescription className="flex items-center justify-between gap-2 text-xs">
-                  <span>Turn it back on to restore the conversation drawer.</span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2"
-                    onClick={() => void handleAssistantEnabledChange(true)}
-                  >
-                    Enable
-                  </Button>
-                </AlertDescription>
-              </Alert>
-            ) : null}
-
-            {showPreferences && status && viewState !== "loading" && !loadError ? (
-              <>
-                <div className="space-y-4 rounded-xl border bg-card p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Drawer availability
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Controls whether the topbar assistant drawer is enabled for your user.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={isEnabled}
-                      onCheckedChange={(checked) =>
-                        void handleAssistantEnabledChange(Boolean(checked))
-                      }
-                      aria-label="Toggle assistant drawer"
-                    />
-                  </div>
-
-                  <AssistantModeSwitch
-                    value={mode}
-                    llmAvailable={status.llmAvailable}
-                    onChange={handleModeChange}
-                    disabled={isSending || !isEnabled}
-                  />
-
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Avatar
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Optional visual layer for assistant responses.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={avatarEnabled}
-                      onCheckedChange={(checked) =>
-                        void handleAvatarEnabledChange(Boolean(checked))
-                      }
-                      disabled={isSavingAvatar}
-                      aria-label="Toggle assistant avatar"
-                    />
-                  </div>
-                  <Input
-                    value={avatarAssetDraft}
-                    onChange={(event) => setAvatarAssetDraft(event.target.value)}
-                    onBlur={() => void persistAvatarAsset()}
-                    placeholder="Avatar asset URL (image/video/glb)"
-                    disabled={!avatarEnabled || isSavingAvatar}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Use media URL or external URL. Leave empty for built-in fallback.
-                  </p>
-                </div>
-              </>
+              <div className="rounded-xl border bg-muted/20 p-4 text-sm">
+                <p className="font-medium text-foreground">Assistant is disabled</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Enable the assistant in global settings to restore this conversation window.
+                </p>
+              </div>
             ) : null}
 
             {viewState === "ready" ? (
               <>
-                <AssistantAvatar
-                  enabled={avatarEnabled}
-                  assetUrl={avatarAssetDraft}
-                  state={avatarState}
-                />
-
-                {!status?.indexReady ? (
-                  <Alert className="py-2">
-                    <AlertTitle className="text-xs">Docs index not ready</AlertTitle>
-                    <AlertDescription className="flex items-center justify-between gap-2 text-xs">
-                      <span>Open Assistant Settings to reindex docs, then refresh this drawer.</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2"
-                        onClick={() => void loadRuntimeState({ force: true })}
-                      >
-                        <RefreshCw className="mr-1 h-3 w-3" />
-                        Refresh
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
-
                 <ScrollArea className="min-h-0 flex-1 rounded-xl border bg-muted/10 p-3">
                   <div className="space-y-3 pr-3">
                     {conversationState === "empty" ? (
@@ -613,43 +545,13 @@ export function AssistantPanel() {
                     ) : null}
 
                     {conversationState === "docs-not-ready" ? (
-                      <div className="flex h-full flex-col justify-center gap-3 rounded-xl border border-dashed bg-muted/20 p-4 text-sm">
-                        <div className="space-y-1">
-                          <p className="font-medium text-foreground">
-                            Assistant docs are not ready yet
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Reindex the assistant knowledge base in settings, then refresh this drawer before asking questions.
-                          </p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="gap-2"
-                            asChild
-                          >
-                            <AdminLink
-                              href="/settings/assistant"
-                              prefetch
-                              onClick={() => setOpen(false)}
-                            >
-                              <Settings2 className="h-4 w-4" />
-                              Open settings
-                            </AdminLink>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => void loadRuntimeState({ force: true })}
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                            Refresh
-                          </Button>
-                        </div>
+                      <div className="flex h-full flex-col justify-center gap-2 rounded-xl border border-dashed bg-muted/20 p-4 text-sm">
+                        <p className="font-medium text-foreground">
+                          Assistant docs are not ready yet
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Reindex the assistant knowledge base in global settings before starting a conversation.
+                        </p>
                       </div>
                     ) : null}
 
@@ -673,10 +575,15 @@ export function AssistantPanel() {
                     onChange={(event) => setMessage(event.target.value)}
                     placeholder="Ask where to find a feature in documentation..."
                     rows={4}
-                    disabled={isSending || !status?.indexReady || !isEnabled}
+                    disabled={isSending || !status?.indexReady}
                   />
                   <div className="flex justify-end">
-                    <Button type="button" size="sm" onClick={submitMessage} disabled={!canSend}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={submitMessage}
+                      disabled={!canSend}
+                    >
                       {isSending ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (

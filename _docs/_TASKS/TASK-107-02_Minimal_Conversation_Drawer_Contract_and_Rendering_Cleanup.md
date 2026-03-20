@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-107  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -56,3 +56,11 @@ Sprowadzic `AssistantPanel` do minimalistycznego okna rozmowy, bez konfiguracji 
 ## Documentation Updates Required
 
 - `_docs/ASSISTANT_GUIDE.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Removed inline preferences/settings controls from the primary conversation surface.
+- Kept the conversation window focused on prompts, transcript, and composer only.
+- Simplified runtime loading and empty-state rendering around the new minimal contract.

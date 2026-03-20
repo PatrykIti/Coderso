@@ -2355,6 +2355,8 @@ Payloady:
   ],
   "design.tokens": { "colors": { "primary": "#111111" } },
   "assistant.enabled": true,
+  "assistant.launcher.avatarEnabled": false,
+  "assistant.launcher.avatarAsset": null,
   "assistant.defaultMode": "docs-only",
   "assistant.docs.backend": "db",
   "assistant.docs.sourceRoot": "_docs/_internal",
@@ -2387,6 +2389,7 @@ Response:
 - Setup Wizard zapisuje `site.*`, `auth.*` i finalnie `setup.completed=true` jednym bulk requestem.
 - `site.contentRoutes` mapuje content types na trasy (list + detail).
 - `assistant.*` klucze sterują globalną konfiguracją Doc Navigatora i opcjonalnego trybu LLM.
+- `assistant.launcher.avatar*` sterują floating launcher surface w admin UI.
 - Alias kompatybilnosciowy: `site.baseUrl` mapuje read/write na `site.publicBaseUrl`.
 - Walidacja: `assistant.defaultMode=llm-rag` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
 - Walidacja: `assistant.enabled=true` wymaga niepustego `assistant.docs.paths`.
@@ -2414,10 +2417,10 @@ Przykładowe klucze:
 - `widgets.favorites` (string[])
 - `widgets.hero.presets` (preset[])
 - `posts.editor.preferences` (object; `version=2`, `focusModeOnOpen`, `compactSidePanels`, `showOutlineHints`, `editorDensity`, `showKeyboardHints`, `defaultInspectorTab`, `restoreLastSidebarsState`)
-- `assistant.mode` (`docs-only` | `llm-rag` | null)
-- `assistant.ui.enabled` (bool)
-- `assistant.ui.avatarEnabled` (bool)
-- `assistant.ui.avatarAsset` (string | null)
+- `assistant.mode` (`docs-only` | `llm-rag` | null; legacy compatibility)
+- `assistant.ui.enabled` (bool; legacy compatibility)
+- `assistant.ui.avatarEnabled` (bool; legacy compatibility)
+- `assistant.ui.avatarAsset` (string | null; legacy compatibility)
 
 ---
 

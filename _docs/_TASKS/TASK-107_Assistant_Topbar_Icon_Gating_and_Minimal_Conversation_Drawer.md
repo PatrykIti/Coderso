@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Assistant  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101, TASK-106  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -112,3 +112,12 @@ To jest swiadoma korekta produktu po `TASK-106`: tam drawer zostal uporzadkowany
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` (on completion)
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Replaced the topbar `Assistant` button concept with a floating launcher mounted at the shell level.
+- Gated launcher visibility by global `assistant.enabled` without adding a separate shell fetch path.
+- Reduced the conversation window to starter prompts, transcript, composer, and minimalist runtime status handling.
+- Added avatar-backed launcher support driven by global assistant settings.

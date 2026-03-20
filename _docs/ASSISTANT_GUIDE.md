@@ -1,21 +1,27 @@
 # Assistant Guide
 
-## Topbar Assistant Drawer
+## Floating Assistant Launcher
 
-Location: admin topbar.
+Location: floating launcher inside admin UI.
 
 Primary purpose:
 - conversation-first access to documentation lookup,
 - not a full assistant settings screen.
 
-Drawer states:
+Launcher contract:
+- no textual `Assistant` button in the topbar,
+- floating message-bubble launcher rendered only when global assistant settings enable it,
+- launcher can be repositioned by the user so it does not obscure the current view,
+- when launcher avatar is configured in `Settings -> Assistant`, the launcher uses the avatar surface instead of the default message bubble.
+
+Conversation window states:
 1. `Loading` - runtime shell only, without prompt chips or composer.
 2. `Ready` - transcript, starter prompts, and composer.
-3. `Docs not ready` - runtime status banner with settings/reload actions.
+3. `Docs not ready` - minimalist runtime status copy inside the conversation surface.
 4. `Disabled` / `Error` - clear blocking message instead of partial chat UI.
 
-Preferences are available only after explicit user action inside the drawer.
 Global assistant configuration remains on `Settings -> Assistant`.
+The conversation window does not expose global assistant settings actions.
 
 ## AI Site Wizard (Solution Kits)
 

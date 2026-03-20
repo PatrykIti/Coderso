@@ -50,7 +50,7 @@ test("assistant panel view state distinguishes loading, error, disabled, and rea
     resolveAssistantPanelViewState({
       isReady: false,
       loadError: null,
-      isEnabled: true,
+      statusEnabled: true,
     })
   ).toBe("loading");
 
@@ -58,7 +58,7 @@ test("assistant panel view state distinguishes loading, error, disabled, and rea
     resolveAssistantPanelViewState({
       isReady: true,
       loadError: "boom",
-      isEnabled: true,
+      statusEnabled: true,
     })
   ).toBe("error");
 
@@ -66,7 +66,7 @@ test("assistant panel view state distinguishes loading, error, disabled, and rea
     resolveAssistantPanelViewState({
       isReady: true,
       loadError: null,
-      isEnabled: false,
+      statusEnabled: false,
     })
   ).toBe("disabled");
 
@@ -74,7 +74,7 @@ test("assistant panel view state distinguishes loading, error, disabled, and rea
     resolveAssistantPanelViewState({
       isReady: true,
       loadError: null,
-      isEnabled: true,
+      statusEnabled: true,
     })
   ).toBe("ready");
 });

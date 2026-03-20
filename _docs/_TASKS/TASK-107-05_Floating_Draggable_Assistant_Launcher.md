@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-107-01  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -54,3 +54,11 @@ Zastapic klasyczny topbar entrypoint pływajacym launcherem asystenta w obrebie 
 
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/ARCHITECTURE.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Added a floating launcher positioned over the admin UI instead of the topbar.
+- Implemented draggable positioning with viewport clamping and local persistence.
+- Kept launcher wiring outside the topbar request budget path.

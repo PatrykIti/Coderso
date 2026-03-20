@@ -21,6 +21,8 @@ Admin UI: Settings → Assistant.
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `assistant.enabled` | `boolean` | `false` | Globalny toggle asystenta w Admin UI |
+| `assistant.launcher.avatarEnabled` | `boolean` | `false` | Czy floating launcher ma uzywac avatara zamiast domyslnej chmurki wiadomosci |
+| `assistant.launcher.avatarAsset` | `string \| null` | `null` | Asset id/url avatara launchera |
 | `assistant.defaultMode` | `"docs-only" \| "llm-rag"` | `"docs-only"` | Domyslny tryb odpowiedzi |
 | `assistant.docs.backend` | `"filesystem" \| "db"` | `"filesystem"` | Backend retrieval (`db` = KB z ingest, `filesystem` = in-memory index) |
 | `assistant.docs.sourceRoot` | `string` | `"_docs/_internal"` | Root dla ingest do DB backendu |
@@ -58,12 +60,16 @@ Publiczny payload z API `/settings/security` zwraca:
 
 ## Assistant user settings (`user_settings`)
 
+Legacy compatibility:
+- assistant launcher visibility i launcher avatar sa sterowane globalnie przez `settings`,
+- dawne `assistant.ui.*` klucze per-user nie sa juz source of truth dla floating launchera.
+
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `assistant.mode` | `"docs-only" \| "llm-rag" \| null` | `null` | Per-user override trybu |
-| `assistant.ui.enabled` | `boolean` | `true` | Widocznosc UI asystenta |
-| `assistant.ui.avatarEnabled` | `boolean` | `false` | Toggle avatara |
-| `assistant.ui.avatarAsset` | `string \| null` | `null` | Asset id/url avatara |
+| `assistant.ui.enabled` | `boolean` | `true` | Legacy compatibility key |
+| `assistant.ui.avatarEnabled` | `boolean` | `false` | Legacy compatibility key |
+| `assistant.ui.avatarAsset` | `string \| null` | `null` | Legacy compatibility key |
 
 ## Validation invariants
 

@@ -285,19 +285,21 @@ Zasady:
 - audit events rejestruja fallback mode i provider failures bez wycieku sekretow.
 
 Warstwa Admin UI:
-- `core/admin/ui/layouts/AdminShell.tsx` montuje globalny trigger asystenta.
-- `core/admin/ui/assistant/AssistantPanel.tsx` renderuje drawer czatu.
-- `core/admin/ui/assistant/AssistantModeSwitch.tsx` obsluguje `docs-only`/`llm-rag`.
+- `core/admin/ui/layouts/AdminShell.tsx` montuje floating launcher asystenta poza topbarem.
+- `core/admin/ui/assistant/AssistantPanel.tsx` renderuje launcher + okno rozmowy.
 - `core/admin/ui/assistant/AssistantMessage.tsx` pokazuje fallback badge, confidence i sources.
-- `core/admin/ui/assistant/AssistantAvatar.tsx` renderuje opcjonalna warstwe avatara z fallback 2D.
-- Drawer lazy-loaduje runtime i ma jawne stany `loading`, `error`, `disabled`, `ready`.
+- Launcher jest widoczny tylko gdy globalne `assistant.enabled=true`.
+- Launcher lazy-loaduje runtime dopiero przy otwarciu okna rozmowy i ma jawne stany `loading`, `error`, `disabled`, `ready`.
+- Floating launcher moze byc przesuwany przez usera w obrebie viewportu admina.
+- Launcher domyslnie uzywa ikony wiadomosci; gdy globalny avatar launchera jest skonfigurowany, uzywa surface avatara.
 - Starter prompts i composer sa renderowane dopiero po `runtime ready`.
-- `docs not ready` jest traktowane jako runtime banner w surface rozmowy, a nie jako ekran konfiguracji.
-- Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; lokalne preferencje drawera sa ukryte za explicite otwieranym panelem preferences.
+- `docs not ready` jest traktowane jako minimalistyczny runtime status w surface rozmowy, a nie jako ekran konfiguracji.
+- Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; okno rozmowy nie renderuje globalnych ustawien assistant runtime.
 - `core/admin/services/assistantClient.ts` obsluguje:
   - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,
   - `/assistant/site-builder/plan`, `/assistant/site-builder/execute`, `/assistant/site-builder/validate`.
-- preferencje usera (`assistant.mode`, `assistant.ui.enabled`, `assistant.ui.avatarEnabled`, `assistant.ui.avatarAsset`) sa trzymane w `user_settings`.
+- Globalne ustawienia launchera (`assistant.launcher.avatarEnabled`, `assistant.launcher.avatarAsset`) sa trzymane w `settings`.
+- Legacy per-user klucze assistant UI moga nadal istniec w `user_settings`, ale nie steruja juz widocznoscia floating launchera.
 
 ## Assistant Site Builder (Guided Executor)
 

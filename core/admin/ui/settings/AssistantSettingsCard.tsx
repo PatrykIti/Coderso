@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 export type AssistantSettingsValues = {
   assistantEnabled: boolean;
+  assistantLauncherAvatarEnabled: boolean;
+  assistantLauncherAvatarAsset: string;
   assistantDefaultMode: "docs-only" | "llm-rag";
   assistantDocsBackend: "filesystem" | "db";
   assistantDocsSourceRoot: string;
@@ -30,6 +32,8 @@ export type AssistantSettingsValues = {
 };
 export const ASSISTANT_SETTINGS_DEFAULT_VALUES: AssistantSettingsValues = {
   assistantEnabled: false,
+  assistantLauncherAvatarEnabled: false,
+  assistantLauncherAvatarAsset: "",
   assistantDefaultMode: "docs-only",
   assistantDocsBackend: "filesystem",
   assistantDocsSourceRoot: "_docs/_internal",
@@ -109,6 +113,35 @@ export function AssistantSettingsCard({
                 disabled={disabled}
               />
             </div>
+          </div>
+
+          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Launcher avatar</p>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, the floating assistant launcher uses the configured avatar asset instead of the default message bubble.
+                </p>
+              </div>
+              <Switch
+                checked={values.assistantLauncherAvatarEnabled}
+                onCheckedChange={(checked) =>
+                  onChange?.({ assistantLauncherAvatarEnabled: Boolean(checked) })
+                }
+                disabled={disabled}
+              />
+            </div>
+            <Input
+              value={values.assistantLauncherAvatarAsset}
+              onChange={(event) =>
+                onChange?.({ assistantLauncherAvatarAsset: event.target.value })
+              }
+              placeholder="https://cdn.example.com/assistant-avatar.png"
+              disabled={disabled || !values.assistantLauncherAvatarEnabled}
+            />
+            <p className="text-xs text-muted-foreground">
+              Optional image/video/asset URL used by the floating launcher surface.
+            </p>
           </div>
 
           <div className="space-y-2">

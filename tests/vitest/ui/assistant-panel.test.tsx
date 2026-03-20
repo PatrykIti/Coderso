@@ -6,11 +6,54 @@ import { AssistantEmptyState } from "../../../core/admin/ui/assistant/AssistantE
 import { AssistantMessage } from "../../../core/admin/ui/assistant/AssistantMessage";
 import { AssistantModeSwitch } from "../../../core/admin/ui/assistant/AssistantModeSwitch";
 import { AssistantPanel } from "../../../core/admin/ui/assistant/AssistantPanel";
+import { AdminAssistantConfigProvider } from "../../../core/admin/ui/contexts/AdminAssistantConfigContext";
 
-test("AssistantPanel renders loading trigger in SSR", () => {
-  const html = renderAdminUi(<AssistantPanel />);
+test("AssistantPanel renders floating launcher when assistant is globally enabled", () => {
+  const html = renderAdminUi(
+    <AdminAssistantConfigProvider
+      value={{
+        enabled: true,
+        launcherAvatarEnabled: false,
+        launcherAvatarAsset: null,
+      }}
+    >
+      <AssistantPanel />
+    </AdminAssistantConfigProvider>
+  );
 
-  expect(html).toContain("Assistant");
+  expect(html).toContain('aria-label="Open assistant conversation"');
+});
+
+test("AssistantPanel stays hidden when assistant is globally disabled", () => {
+  const html = renderAdminUi(
+    <AdminAssistantConfigProvider
+      value={{
+        enabled: false,
+        launcherAvatarEnabled: false,
+        launcherAvatarAsset: null,
+      }}
+    >
+      <AssistantPanel />
+    </AdminAssistantConfigProvider>
+  );
+
+  expect(html).toBe("");
+});
+
+test("AssistantPanel launcher uses avatar asset when configured", () => {
+  const html = renderAdminUi(
+    <AdminAssistantConfigProvider
+      value={{
+        enabled: true,
+        launcherAvatarEnabled: true,
+        launcherAvatarAsset: "https://cdn.example.com/avatar.png",
+      }}
+    >
+      <AssistantPanel />
+    </AdminAssistantConfigProvider>
+  );
+
+  expect(html).toContain("avatar.png");
 });
 
 test("AssistantModeSwitch renders mode selector", () => {

@@ -36,6 +36,8 @@ const cleanupKeys = [
   "setup.completed",
   "design.tokens",
   "assistant.enabled",
+  "assistant.launcher.avatarEnabled",
+  "assistant.launcher.avatarAsset",
   "assistant.defaultMode",
   "assistant.docs.backend",
   "assistant.docs.sourceRoot",
@@ -171,6 +173,8 @@ testIfDb("rejects duplicate keys after alias normalization in bulk payload", asy
 testIfDb("assistant settings enforce consistency in persistence layer", async () => {
   await setSettings({
     "assistant.enabled": true,
+    "assistant.launcher.avatarEnabled": true,
+    "assistant.launcher.avatarAsset": "https://cdn.example.com/assistant-avatar.png",
     "assistant.defaultMode": "llm-rag",
     "assistant.docs.backend": "filesystem",
     "assistant.docs.sourceRoot": "_docs/_internal",
@@ -188,6 +192,10 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
 
   const list = await listSettings();
   expect(list["assistant.enabled"]).toBe(true);
+  expect(list["assistant.launcher.avatarEnabled"]).toBe(true);
+  expect(list["assistant.launcher.avatarAsset"]).toBe(
+    "https://cdn.example.com/assistant-avatar.png"
+  );
   expect(list["assistant.defaultMode"]).toBe("llm-rag");
   expect(list["assistant.llm.provider"]).toBe("openrouter");
 
@@ -214,6 +222,8 @@ test("assertAssistantSettingsConsistency accepts docs-only mode without llm", ()
   expect(() =>
     assertAssistantSettingsConsistency({
       "assistant.enabled": true,
+      "assistant.launcher.avatarEnabled": false,
+      "assistant.launcher.avatarAsset": null,
       "assistant.defaultMode": "docs-only",
       "assistant.docs.backend": "filesystem",
       "assistant.docs.sourceRoot": "_docs/_internal",
@@ -235,6 +245,8 @@ test("assertAssistantSettingsConsistency rejects invalid llm-rag combinations", 
   expect(() =>
     assertAssistantSettingsConsistency({
       "assistant.enabled": true,
+      "assistant.launcher.avatarEnabled": false,
+      "assistant.launcher.avatarAsset": null,
       "assistant.defaultMode": "llm-rag",
       "assistant.docs.backend": "filesystem",
       "assistant.docs.sourceRoot": "_docs/_internal",

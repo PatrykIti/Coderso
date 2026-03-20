@@ -7,6 +7,7 @@ import {
   updateSettings,
   type GeneralSettingsPayload,
 } from "@/services/settingsClient";
+import { invalidateAssistantStatusCache } from "@/services/assistantClient";
 import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
@@ -98,7 +99,9 @@ import {
   withAdminBasePath,
 } from "@/utils/adminPaths";
 import { AdminBasePathProvider } from "@/ui/contexts/AdminBasePathContext";
+import { AdminAssistantConfigProvider } from "@/ui/contexts/AdminAssistantConfigContext";
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import { clearAssistantRuntimeStateCache } from "@/ui/assistant/AssistantPanel";
 
 const publicRoutes = new Set([
   "/login",
@@ -256,6 +259,12 @@ const resolveSettingsPayload = (
       .map((entry) => entry.trim())
       .filter((entry) => entry.length > 0);
   };
+  const resolveOptionalString = (value: unknown, fallbackValue: string) => {
+    if (value === null) return "";
+    if (typeof value !== "string") return fallbackValue;
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : "";
+  };
 
   const siteName =
     typeof payload["site.name"] === "string"
@@ -293,6 +302,14 @@ const resolveSettingsPayload = (
       assistantEnabled: resolveBoolean(
         payload["assistant.enabled"],
         fallback.values.assistantEnabled
+      ),
+      assistantLauncherAvatarEnabled: resolveBoolean(
+        payload["assistant.launcher.avatarEnabled"],
+        fallback.values.assistantLauncherAvatarEnabled
+      ),
+      assistantLauncherAvatarAsset: resolveOptionalString(
+        payload["assistant.launcher.avatarAsset"],
+        fallback.values.assistantLauncherAvatarAsset
       ),
       assistantDefaultMode: resolveMode(
         payload["assistant.defaultMode"],
@@ -361,6 +378,11 @@ const buildAssistantSettingsUpdate = (
   values: AssistantSettingsValues
 ): Partial<GeneralSettingsPayload> => ({
   "assistant.enabled": values.assistantEnabled,
+  "assistant.launcher.avatarEnabled": values.assistantLauncherAvatarEnabled,
+  "assistant.launcher.avatarAsset":
+    values.assistantLauncherAvatarAsset.trim().length > 0
+      ? values.assistantLauncherAvatarAsset.trim()
+      : null,
   "assistant.defaultMode": values.assistantDefaultMode,
   "assistant.docs.backend": values.assistantDocsBackend,
   "assistant.docs.sourceRoot": values.assistantDocsSourceRoot.trim(),
@@ -423,6 +445,21 @@ export function AdminApp({ path }: AdminAppProps) {
     () => toAdminThemeCssVariables(adminThemeTokens),
     [adminThemeTokens]
   );
+  const assistantConfig = useMemo(
+    () => ({
+      enabled: settingsState.values.assistantEnabled,
+      launcherAvatarEnabled: settingsState.values.assistantLauncherAvatarEnabled,
+      launcherAvatarAsset:
+        settingsState.values.assistantLauncherAvatarAsset.trim().length > 0
+          ? settingsState.values.assistantLauncherAvatarAsset.trim()
+          : null,
+    }),
+    [
+      settingsState.values.assistantEnabled,
+      settingsState.values.assistantLauncherAvatarAsset,
+      settingsState.values.assistantLauncherAvatarEnabled,
+    ]
+  );
 
   const saveGeneralSettings = useCallback(async (values: GeneralSettingsValues) => {
     setSettingsSaving(true);
@@ -457,6 +494,8 @@ export function AdminApp({ path }: AdminAppProps) {
     setSettingsState((prev) => ({ ...prev, error: null }));
     try {
       const updated = await updateSettings(buildAssistantSettingsUpdate(values));
+      invalidateAssistantStatusCache();
+      clearAssistantRuntimeStateCache();
       setSettingsState((prev) => {
         const resolved = resolveSettingsPayload(updated, prev);
         return {
@@ -810,10 +849,12 @@ export function AdminApp({ path }: AdminAppProps) {
 
   return (
     <AdminBasePathProvider value={adminBasePath}>
-      <>
-        <style id="nextless-theme-tokens">{tokenCss}</style>
-        {match.element}
-      </>
+      <AdminAssistantConfigProvider value={assistantConfig}>
+        <>
+          <style id="nextless-theme-tokens">{tokenCss}</style>
+          {match.element}
+        </>
+      </AdminAssistantConfigProvider>
     </AdminBasePathProvider>
   );
 }

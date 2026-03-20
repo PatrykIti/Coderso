@@ -9,6 +9,7 @@ test("AssistantSettingsPage renders assistant settings", () => {
 
   expect(html).toContain("Assistant Settings");
   expect(html).toContain("Assistant");
+  expect(html).toContain("Launcher avatar");
   expect(html).toContain("Save changes");
   expect(html).toContain("Auto-save settings across all screens");
 });

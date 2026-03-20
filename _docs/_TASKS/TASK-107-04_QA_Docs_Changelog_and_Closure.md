@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-107-01, TASK-107-02, TASK-107-03, TASK-107-05, TASK-107-06  
-**Status:** To Do
+**Status:** Done (2026-03-20)
 
 ---
 
@@ -56,3 +56,14 @@ Domknac follow-up UX dla assistant topbar/drawera przez walidacje, docs i board/
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+---
+
+## Completion Notes (2026-03-20)
+
+- Validation completed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run vitest run tests/vitest/ui/assistant-panel.test.tsx tests/vitest/ui/assistant-panel-lazy-load.test.tsx tests/vitest/ui/assistant-settings.test.tsx tests/vitest/ui-integration/admin-shell-request-budget.test.tsx`
+  - `bun test tests/unit/settings/settingsService.test.ts`
+- Updated source-of-truth docs, task board, and changelog for the floating launcher rollout.

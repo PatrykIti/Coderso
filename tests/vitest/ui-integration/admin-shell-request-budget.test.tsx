@@ -56,7 +56,6 @@ test("admin shell auth bootstrap stays within single-shot request budget", async
 test("assistant runtime state cache stays within shell request budget", async () => {
   const originalFetch = globalThis.fetch;
   let assistantStatusCalls = 0;
-  let userSettingsCalls = 0;
 
   globalThis.fetch = async (input) => {
     const url = String(input);
@@ -75,29 +74,6 @@ test("assistant runtime state cache stays within shell request budget", async ()
         chunkCount: 40,
       });
     }
-    if (url.endsWith("/user-settings")) {
-      userSettingsCalls += 1;
-      return jsonResponse({
-        "pages.openAfterCreate": true,
-        "media.openAfterUpload": true,
-        "widgets.favorites": [],
-        "widgets.hero.presets": [],
-        "posts.editor.preferences": {
-          version: 2,
-          focusModeOnOpen: false,
-          compactSidePanels: false,
-          showOutlineHints: true,
-          editorDensity: "comfortable",
-          showKeyboardHints: true,
-          defaultInspectorTab: "post",
-          restoreLastSidebarsState: true,
-        },
-        "assistant.mode": "docs-only",
-        "assistant.ui.enabled": true,
-        "assistant.ui.avatarEnabled": false,
-        "assistant.ui.avatarAsset": null,
-      });
-    }
     return jsonResponse({});
   };
 
@@ -111,7 +87,6 @@ test("assistant runtime state cache stays within shell request budget", async ()
     await loadAssistantRuntimeStateCached();
 
     expect(assistantStatusCalls).toBeLessThanOrEqual(1);
-    expect(userSettingsCalls).toBeLessThanOrEqual(1);
   } finally {
     clearAssistantRuntimeStateCache();
     globalThis.fetch = originalFetch;

@@ -19,6 +19,8 @@ export type AssistantSettingsPayload = {
   "assistant.docs.sourceRoot": string;
   "assistant.docs.paths": string[];
   "assistant.docs.reindexOnBoot": boolean;
+  "assistant.launcher.avatarEnabled": boolean;
+  "assistant.launcher.avatarAsset": string | null;
   "assistant.llm.enabled": boolean;
   "assistant.llm.provider": AssistantLlmProvider;
   "assistant.llm.model": string;
