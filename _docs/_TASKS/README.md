@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 699 tasks
+- **Done:** 700 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-122 | Menus Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote the Menus assistant doc to match the builder, create dialog, hierarchy workflow, and item settings |
 | TASK-121 | Posts Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Posts assistant doc into route-aligned list/create and editor/revisions/preview docs |
 | TASK-120 | Pages Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Pages assistant doc into route-aligned list/create and editor/settings/history docs |
 | TASK-119-05 | Assistant Multi-Level QA, Docs, Changelog, and Closure | Medium | Small | Done: validation and docs/task board/changelog synchronization completed for the multi-level assistant rollout |
