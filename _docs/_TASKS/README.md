@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 8 tasks
-- **In Progress:** 6 tasks
-- **Done:** 697 tasks
+- **In Progress:** 5 tasks
+- **Done:** 699 tasks
 
 ---
 
@@ -54,7 +54,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-120 | Pages Admin UI Assistant Documentation Refresh | Medium | Small | In progress: authenticated localhost walkthrough completed and the old combined Pages doc is being split into route-aligned assistant docs for review |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -67,6 +66,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-121 | Posts Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Posts assistant doc into route-aligned list/create and editor/revisions/preview docs |
+| TASK-120 | Pages Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Pages assistant doc into route-aligned list/create and editor/settings/history docs |
 | TASK-119-05 | Assistant Multi-Level QA, Docs, Changelog, and Closure | Medium | Small | Done: validation and docs/task board/changelog synchronization completed for the multi-level assistant rollout |
 | TASK-119-04 | Assistant Progressive Follow-Up Flow and Mode Prompts | Medium | Medium | Done: depth/mode fields and follow-up chips now drive deterministic multi-turn assistant flow |
 | TASK-119-03 | Assistant Corpus Enrichment for Multi-Level Answers | High | Large | Done: key high-traffic assistant docs now expose Basic/Medium/Instruction/Advanced plus helper sections |

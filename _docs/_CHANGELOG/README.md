@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 521 | 2026-03-21 | TASK-121 posts admin UI assistant documentation refresh | Docs/Assistant |
+| 520 | 2026-03-21 | TASK-120 pages admin UI assistant documentation refresh | Docs/Assistant |
 | 519 | 2026-03-21 | TASK-119 assistant multi-level docs and progressive follow-up flow | Assistant/Docs |
 | 518 | 2026-03-21 | TASK-118 assistant surface labels procedural guidance and corpus specificity follow-up | Assistant/Product |
 | 517 | 2026-03-21 | TASK-117 assistant clarifying questions and section-aware docs answers | Assistant/Product |

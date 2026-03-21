@@ -5,7 +5,7 @@
 **Category:** Docs  
 **Estimated Effort:** Small  
 **Dependencies:** docs/README.md, `docs/_COVERAGE_MATRIX.md`, `_docs/PAGE_MODEL.md`, `core/admin/ui/pages/*`  
-**Status:** In Progress (2026-03-21)
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -91,4 +91,13 @@ and history surfaces.
   - History,
   - Runtime preview.
 - No automated lint or test commands were run because this is a docs-only draft
-  pass pending user review.
+  pass.
+
+## Completion Notes (2026-03-21)
+
+- Replaced the old combined Pages assistant article with:
+  - `docs/screens/pages-list-and-creation.md`
+  - `docs/screens/page-editor-preview-settings-and-history.md`
+- Updated `docs/_COVERAGE_MATRIX.md` so `/pages` and `/pages/:id` now point to
+  separate canonical docs.
+- User review completed before closure.

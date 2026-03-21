@@ -25,7 +25,8 @@ that the assistant corpus should use.
 | `/coderso/custom-screens`, `/coderso/custom-screens/:id`, `/coderso/custom-screens/:id/entries`, `/coderso/custom-screens/:id/entries/:entryId` | `docs/coderso/custom-screens.md` |
 | `/coderso/widgets`, `/coderso/widgets/templates/:id` | `docs/coderso/widgets-and-template-editor.md` |
 | `/coderso/forms`, `/coderso/forms/:id`, `/coderso/forms/:id/action-runs` | `docs/coderso/forms-and-action-logs.md` |
-| `/coderso/posts`, `/coderso/posts/:id` | `docs/coderso/posts.md` |
+| `/coderso/posts` | `docs/coderso/posts-list-and-creation.md` |
+| `/coderso/posts/:id` | `docs/coderso/post-editor-preview-revisions-and-settings.md` |
 | `/coderso/listings`, `/coderso/listings/:id`, `/coderso/filters`, `/coderso/search` | `docs/coderso/listings-filters-and-search.md` |
 | `/coderso/booking` | `docs/coderso/booking.md` |
 | `/coderso/commerce`, `/coderso/commerce/:id` | `docs/coderso/commerce.md` |
