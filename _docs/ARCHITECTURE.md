@@ -258,10 +258,12 @@ Przeplyw runtime:
 7. `docsAnswerComposer` wykonuje doc-first evidence selection:
    - najpierw wybiera dominant document/surface,
    - potem wybiera najlepsza sekcje (`Step By Step`, `What Is It`, `When To Use`) zalezne od intentu pytania.
+   - user-facing `surface` label jest oparty o canonical doc metadata (`title`), a nie o heading sekcji.
 8. Runtime wspiera conservative `clarifying_question`, gdy top docs pozostaja niejednoznaczne; assistant woli wtedy dopytac niz zwrocic pewna, ale zla odpowiedz.
 9. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `clarifying_question`, `missing_answer`) z tresci top evidence, a nie z listy plikow.
 10. Final answer korzysta z `chunk.content`, a nie z krotszego preview `snippet`, ktory pozostaje warstwa search/evidence.
 11. Docs-only answer zachowuje strukture paragrafow, numerowanych krokow i list wyboru, a UI renderuje je jako czytelne bloki zamiast jednego zlanego tekstu.
+12. Procedural pytania `how/use` preferuja `Step By Step`; `When To Use` i `What Is It` pozostaja tylko wspierajacym kontekstem, jesli poprawiaja jakosc odpowiedzi.
 
 Przeplyw reindex:
 1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.

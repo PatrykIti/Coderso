@@ -252,8 +252,8 @@ const inferSectionKind = (headingPath: string[]): SectionKind => {
 
 const inferDocLabel = (hit: DocsSearchHit | undefined) => {
   if (!hit) return null;
-  const headingRoot = hit.chunk.headingPath[0]?.trim();
-  if (headingRoot) return headingRoot;
+  const docTitle = hit.chunk.docTitle?.trim();
+  if (docTitle) return docTitle;
   return path
     .basename(hit.chunk.docPath)
     .replace(/\.md$/i, "")
@@ -298,11 +298,11 @@ const getSectionBonus = (kind: SectionKind, intent: AnswerIntent["kind"]) => {
 
   switch (kind) {
     case "step_by_step":
-      return 1.05;
+      return 1.45;
     case "when_to_use":
-      return 0.2;
+      return -0.1;
     case "what_is_it":
-      return 0.15;
+      return 0.2;
     case "examples":
       return -0.2;
     case "common_mistakes":
@@ -412,7 +412,7 @@ const selectSupportingHit = (
   const preferredKinds =
     intent === "capability"
       ? (["when_to_use", "step_by_step", "what_is_it"] as SectionKind[])
-      : (["what_is_it", "when_to_use", "step_by_step"] as SectionKind[]);
+      : (["what_is_it", "step_by_step", "when_to_use"] as SectionKind[]);
 
   for (const kind of preferredKinds) {
     const match = group.hits.find((hit) => {
@@ -532,7 +532,15 @@ const buildCapabilityAnswer = (
   return blocks.join("\n\n");
 };
 
-const buildProceduralAnswer = (primaryHit: DocsSearchHit) => {
+const buildProceduralAnswer = (
+  docGroup: DocGroup,
+  primaryHit: DocsSearchHit,
+  supportingHit: DocsSearchHit | null
+) => {
+  const blocks = [
+    ["Most relevant surface:", docGroup.label].join("\n"),
+  ];
+
   const primaryBody = buildContentAnswer(primaryHit.chunk.content, {
     maxSteps: 3,
     maxSentences: 2,
@@ -540,10 +548,36 @@ const buildProceduralAnswer = (primaryHit: DocsSearchHit) => {
   });
 
   if (primaryBody.steps.length > 0) {
-    return ["What to do:", primaryBody.steps.join("\n")].join("\n\n");
+    blocks.push("What to do:");
+    blocks.push(primaryBody.steps.join("\n"));
+  } else {
+    blocks.push(...primaryBody.paragraphs);
   }
 
-  return primaryBody.paragraphs.join("\n\n");
+  if (supportingHit) {
+    const supportingKind = inferSectionKind(supportingHit.chunk.headingPath);
+    if (supportingKind === "what_is_it") {
+      const supportingBody = buildContentAnswer(supportingHit.chunk.content, {
+        maxSentences: 1,
+        maxLength: 220,
+      });
+      if (supportingBody.paragraphs.length > 0) {
+        blocks.push("What it helps with:");
+        blocks.push(...supportingBody.paragraphs);
+      }
+    } else if (supportingKind === "when_to_use") {
+      const supportingBody = buildContentAnswer(supportingHit.chunk.content, {
+        maxSentences: 1,
+        maxLength: 220,
+      });
+      if (supportingBody.paragraphs.length > 0) {
+        blocks.push("Use it when:");
+        blocks.push(...supportingBody.paragraphs);
+      }
+    }
+  }
+
+  return blocks.join("\n\n");
 };
 
 export const composeDocsAnswer = (input: ComposeDocsAnswerInput): DocsComposedAnswer => {
@@ -621,7 +655,11 @@ export const composeDocsAnswer = (input: ComposeDocsAnswerInput): DocsComposedAn
             primaryHit,
             supportingHit
           )
-        : buildProceduralAnswer(primaryHit);
+        : buildProceduralAnswer(
+            primaryDocGroup ?? groupHitsByDoc([primaryHit])[0]!,
+            primaryHit,
+            supportingHit
+          );
 
   return {
     mode: "docs-only",

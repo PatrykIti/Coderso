@@ -12,6 +12,9 @@ const makeHit = (
     id: overrides.chunk?.id ?? "docs/coderso/widgets-and-template-editor.md:10-20",
     docPath:
       overrides.chunk?.docPath ?? "docs/coderso/widgets-and-template-editor.md",
+    docTitle:
+      overrides.chunk?.docTitle ?? "Coderso Widgets and Template Editor",
+    productArea: overrides.chunk?.productArea ?? "coderso-widgets",
     headingPath:
       overrides.chunk?.headingPath ?? [
         "Coderso Widgets and Template Editor",
@@ -86,6 +89,7 @@ test("composeDocsAnswer chooses step-by-step guidance over examples for location
   expect(answer.template).toBe("location_answer");
   expect(answer.answer).toContain("Most likely surface:");
   expect(answer.answer).toContain("Coderso Widgets and Template Editor");
+  expect(answer.answer).not.toContain("Most likely surface:\nExamples");
   expect(answer.answer).toContain("What to do:");
   expect(answer.answer).toContain("1. Open Widgets.");
   expect(answer.answer).not.toContain("A landing page team reuses");
@@ -136,6 +140,7 @@ test("composeDocsAnswer uses what-is-it and workflow support for capability ques
 
   expect(answer.template).toBe("how_to_answer");
   expect(answer.answer).toContain("Most relevant surface:");
+  expect(answer.answer).not.toContain("Most relevant surface:\nWhat Is It");
   expect(answer.answer).toContain("Widgets and Template Editor are the reusable presentation surfaces");
   expect(answer.answer).toContain("Typical workflow:");
   expect(answer.answer).not.toContain("Confusing the widget library");
@@ -164,6 +169,66 @@ test("composeDocsAnswer prefers complete sentences over truncated half-sentences
   expect(answer.answer).not.toContain("record-based workflows.…");
 });
 
+test("composeDocsAnswer prefers step-by-step guidance for procedural engine questions", () => {
+  const answer = composeDocsAnswer({
+    question: "how can i use engine?",
+    hits: [
+      makeHit({
+        score: 2.9,
+        chunk: {
+          id: "engine-step-by-step",
+          docPath: "docs/coderso/engine-and-schema-builder.md",
+          docTitle: "Coderso Engine and Schema Builder",
+          productArea: "coderso-engine",
+          headingPath: ["Coderso Engine and Schema Builder", "Step By Step"],
+          heading: "Step By Step",
+          content:
+            "1. Start by creating or opening a content type in Engine. 2. Define fields, labels, relationships, and schema details in Schema Builder. 3. Validate the model against the downstream workflows you expect to use.",
+          normalizedText:
+            "start by creating or opening a content type in engine define fields labels relationships and schema details in schema builder validate the model against the downstream workflows you expect to use",
+        },
+      }),
+      makeHit({
+        score: 3.1,
+        chunk: {
+          id: "engine-when-to-use",
+          docPath: "docs/coderso/engine-and-schema-builder.md",
+          docTitle: "Coderso Engine and Schema Builder",
+          productArea: "coderso-engine",
+          headingPath: ["Coderso Engine and Schema Builder", "When To Use"],
+          heading: "When To Use",
+          content:
+            "Use Engine before creating real records whenever the site needs repeatable, structured content instead of one-off pages.",
+          normalizedText:
+            "use engine before creating real records whenever the site needs repeatable structured content instead of one off pages",
+        },
+      }),
+      makeHit({
+        score: 2.2,
+        chunk: {
+          id: "engine-what-is-it",
+          docPath: "docs/coderso/engine-and-schema-builder.md",
+          docTitle: "Coderso Engine and Schema Builder",
+          productArea: "coderso-engine",
+          headingPath: ["Coderso Engine and Schema Builder", "What Is It"],
+          heading: "What Is It",
+          content:
+            "Coderso Engine and Schema Builder are the modeling surfaces for custom content types, field structures, and the rules that later drive Entries, Listings, and Custom Screens.",
+          normalizedText:
+            "coderso engine and schema builder are the modeling surfaces for custom content types field structures and the rules that later drive entries listings and custom screens",
+        },
+      }),
+    ],
+  });
+
+  expect(answer.template).toBe("how_to_answer");
+  expect(answer.answer).toContain("Most relevant surface:");
+  expect(answer.answer).toContain("Coderso Engine and Schema Builder");
+  expect(answer.answer).toContain("What to do:");
+  expect(answer.answer).toContain("1. Start by creating or opening a content type in Engine.");
+  expect(answer.answer).not.toContain("Use it when:");
+});
+
 test("composeDocsAnswer returns clarifying question when top docs stay ambiguous", () => {
   const answer = composeDocsAnswer({
     question: "Where can I configure colors?",
@@ -173,6 +238,8 @@ test("composeDocsAnswer returns clarifying question when top docs stay ambiguous
         chunk: {
           id: "themes",
           docPath: "docs/screens/themes.md",
+          docTitle: "Themes",
+          productArea: "themes",
           headingPath: ["Themes", "Step By Step"],
           heading: "Step By Step",
           content: "Adjust theme tokens and preview global changes.",

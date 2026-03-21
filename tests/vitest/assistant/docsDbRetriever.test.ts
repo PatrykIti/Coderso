@@ -148,6 +148,53 @@ test("rankAssistantDocsDbRows prefers what-is-it over common-mistakes for capabi
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("what is it");
 });
 
+test("rankAssistantDocsDbRows prefers step-by-step over when-to-use for procedural use questions", () => {
+  const hits = rankAssistantDocsDbRows(
+    [
+      ...rows,
+      {
+        id: "chunk-engine-step-by-step",
+        docPath: "docs/coderso/engine-and-schema-builder.md",
+        docTitle: "Coderso Engine and Schema Builder",
+        productArea: "coderso-engine",
+        keywords: ["engine", "schema", "content type", "fields"],
+        headingPath: ["Coderso Engine and Schema Builder", "Step By Step"],
+        heading: "Step By Step",
+        lineStart: 20,
+        lineEnd: 32,
+        content:
+          "1. Start by creating or opening a content type in Engine. 2. Define fields, labels, relationships, and schema details in Schema Builder.",
+        normalizedText:
+          "start by creating or opening a content type in engine define fields labels relationships and schema details in schema builder",
+        tokenCount: 18,
+      },
+      {
+        id: "chunk-engine-when-to-use",
+        docPath: "docs/coderso/engine-and-schema-builder.md",
+        docTitle: "Coderso Engine and Schema Builder",
+        productArea: "coderso-engine",
+        keywords: ["engine", "schema", "content type", "fields"],
+        headingPath: ["Coderso Engine and Schema Builder", "When To Use"],
+        heading: "When To Use",
+        lineStart: 12,
+        lineEnd: 18,
+        content:
+          "Use Engine before creating real records whenever the site needs repeatable, structured content instead of one-off pages.",
+        normalizedText:
+          "use engine before creating real records whenever the site needs repeatable structured content instead of one off pages",
+        tokenCount: 15,
+      },
+    ],
+    "how can i use engine",
+    {
+      topK: 3,
+    }
+  );
+
+  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/engine-and-schema-builder.md");
+  expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("step by step");
+});
+
 test("rankAssistantDocsDbRows returns empty list for unrelated query", () => {
   const hits = rankAssistantDocsDbRows(rows, "quantum banana neutron", {
     topK: 3,

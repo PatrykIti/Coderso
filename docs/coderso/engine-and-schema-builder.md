@@ -23,10 +23,12 @@ structured content instead of one-off pages.
 
 # Step By Step
 
-1. Create or open a content type in Engine.
+1. Start by creating or opening a content type in Engine.
 2. Define fields, labels, relationships, and schema details in Schema Builder.
 3. Validate the model against the downstream workflows you expect to use.
 4. Only then move into Entries, Listings, Forms, or Custom Screens.
+5. Revisit Engine when the content model changes instead of patching records
+   ad hoc downstream.
 
 # Examples
 

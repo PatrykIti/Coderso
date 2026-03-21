@@ -2510,6 +2510,11 @@ Endpoints:
 - `clarifying_question`
 - `missing_answer`
 
+Docs-only answers may include:
+- canonical `surface` labels based on the document title,
+- numbered `What to do` steps for procedural/location guidance,
+- conservative clarification choices when multiple surfaces remain plausible.
+
 Example conservative clarification response:
 
 ```json

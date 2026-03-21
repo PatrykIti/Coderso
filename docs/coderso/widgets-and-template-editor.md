@@ -26,8 +26,11 @@ layout, or template-level presentation rather than one-off page editing.
 1. Browse the Widget Library to find a suitable building block.
 2. Create or edit templates when the same composition should be reused in
    multiple places.
-3. Use template revisions and previews to review changes before wider rollout.
-4. Return to pages, screens, or kits to consume the template where needed.
+3. For widget-specific styling such as Hero colors, open the page or template
+   that contains the widget, select the Hero block, and use the Visual tab to
+   change colors, spacing, and background settings.
+4. Use template revisions and previews to review changes before wider rollout.
+5. Return to pages, screens, or kits to consume the template where needed.
 
 # Examples
 

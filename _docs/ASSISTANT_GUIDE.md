@@ -45,6 +45,8 @@ Answer contract:
 - retrieval is intent-aware and prefers exact product/module signals from document metadata (`productArea`, title, keywords) over semantically similar hits from a different area,
 - confidence drops when the top hit lacks a strong aligned domain signal or is only marginally better than the next candidate,
 - assistant first chooses the most likely document/surface and then the most useful section inside it (`Step By Step`, `What Is It`, `When To Use`) instead of blindly echoing the highest-overlap section,
+- the `surface` label shown to the user comes from the canonical document title, not from the chosen section heading,
+- procedural `how/use` questions prefer `Step By Step` guidance, while `What Is It` / `When To Use` act as optional supporting context,
 - when the docs still point to multiple plausible areas, assistant returns a short clarifying question instead of a high-confidence wrong answer,
 - docs-only answers preserve paragraphs and numbered steps so the chat UI can render a readable structure instead of one merged text block,
 - sources are treated as secondary evidence and are not shown by default in the user-facing chat UI.

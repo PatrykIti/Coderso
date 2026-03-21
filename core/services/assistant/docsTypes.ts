@@ -1,6 +1,8 @@
 export type DocsChunk = {
   id: string;
   docPath: string;
+  docTitle?: string;
+  productArea?: string;
   headingPath: string[];
   heading: string;
   lineStart: number;

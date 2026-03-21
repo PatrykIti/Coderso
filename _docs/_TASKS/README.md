@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 687 tasks
+- **Done:** 691 tasks
 
 ---
 
@@ -66,6 +66,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-118-03 | Assistant Widgets and Engine Corpus Enrichment, QA, and Closure | Medium | Small | Done: canonical docs now include Hero visual settings and a clearer Engine usage path, with validation/docs/changelog synced |
+| TASK-118-02 | Assistant Procedural How/Use Ranking and Section Selection | High | Small | Done: procedural questions now bias toward Step By Step and avoid low-signal `When To Use` dominance |
+| TASK-118-01 | Assistant Doc Metadata Propagation and Surface Label Fix | High | Small | Done: docs-only answers now label the canonical document/module instead of the selected section |
+| TASK-118 | Assistant Surface Labels, Procedural Guidance, and Corpus Specificity Follow-Up | High | Medium | Done: fixed surface labels, procedural guidance routing, and weak widgets/engine corpus coverage |
 | TASK-117 | Assistant Clarifying Questions and Section-Aware Docs Answers | High | Medium | Done: docs-only assistant now asks clarifying questions when ambiguous and composes answers from the right doc sections |
 | TASK-116 | Assistant Final Answer from Chunk Content, not Preview Snippet | Medium | Small | Done: final answer now uses chunk content with sentence-aware truncation instead of preview snippets |
 | TASK-115-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: validation and docs/changelog sync were rerun after the ranking regression follow-up |

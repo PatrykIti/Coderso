@@ -54,6 +54,7 @@ type QueryIntent = {
   procedural: boolean;
   capability: boolean;
   asksForScreen: boolean;
+  proceduralUseFlow: boolean;
 };
 
 type RankingContext = {
@@ -137,6 +138,11 @@ const inferQueryIntent = (query: string): QueryIntent => {
     procedural: HOW_HINTS.some((term) => normalized.includes(term)),
     capability: CAPABILITY_HINTS.some((term) => normalized.includes(term)),
     asksForScreen: SCREEN_HINTS.some((term) => normalized.includes(term)),
+    proceduralUseFlow:
+      normalized.includes("how can i use") ||
+      normalized.includes("how do i use") ||
+      normalized.includes("jak uzyc") ||
+      normalized.includes("jak korzystac"),
   };
 };
 
@@ -172,9 +178,9 @@ const scoreSectionWeight = (headingPath: string[], context: RankingContext) => {
     return score;
   }
 
-  if (sectionKind === "step_by_step") score += 1.05;
-  if (sectionKind === "what_is_it") score += 0.15;
-  if (sectionKind === "when_to_use") score += 0.2;
+  if (sectionKind === "step_by_step") score += context.intent.proceduralUseFlow ? 1.45 : 1.15;
+  if (sectionKind === "what_is_it") score += context.intent.proceduralUseFlow ? 0.2 : 0.15;
+  if (sectionKind === "when_to_use") score += context.intent.proceduralUseFlow ? -0.1 : 0.2;
   if (sectionKind === "examples") score -= 0.2;
   if (sectionKind === "common_mistakes") score -= 0.9;
   if ((context.intent.location || context.intent.procedural) && sectionKind === "examples") {
@@ -409,6 +415,9 @@ export const rankAssistantDocsDbRows = (
 
   const intent = inferQueryIntent(normalizedQuery);
   if (intent.tokens.length === 0) return [];
+  const scoringTokens = intent.expandedTokens.filter(
+    (token) => !(intent.proceduralUseFlow && token === "use")
+  );
 
   const topK = resolveTopK(options.topK);
   const minScore = resolveMinScore(options.minScore);
@@ -428,7 +437,7 @@ export const rankAssistantDocsDbRows = (
 
   const tokenDocumentFrequency: Record<string, number> = {};
   for (const row of preparedRows) {
-    for (const token of intent.expandedTokens) {
+    for (const token of scoringTokens) {
       if ((row.tokenCounts[token] ?? 0) > 0) {
         tokenDocumentFrequency[token] = (tokenDocumentFrequency[token] ?? 0) + 1;
       }
@@ -440,7 +449,7 @@ export const rankAssistantDocsDbRows = (
     let textScore = 0;
     const matchedTerms = new Set<string>();
 
-    for (const token of intent.expandedTokens) {
+    for (const token of scoringTokens) {
       const termFrequency = row.tokenCounts[token] ?? 0;
       if (termFrequency <= 0) continue;
       matchedTerms.add(token);
@@ -453,7 +462,7 @@ export const rankAssistantDocsDbRows = (
       });
     }
 
-    const fieldTokenScore = scoreFieldTokenMatches(row, intent.expandedTokens, matchedTerms);
+    const fieldTokenScore = scoreFieldTokenMatches(row, scoringTokens, matchedTerms);
     const metadataPhraseScore = scoreExactMetadataPhraseMatches(row, intent.phrases, matchedTerms);
     const domainScore = fieldTokenScore + metadataPhraseScore;
 
@@ -504,6 +513,8 @@ export const rankAssistantDocsDbRows = (
       chunk: {
         id: row.row.id,
         docPath: row.row.docPath,
+        docTitle: row.row.docTitle,
+        productArea: row.row.productArea,
         headingPath: row.row.headingPath,
         heading: row.row.heading,
         lineStart: row.row.lineStart,
@@ -515,7 +526,7 @@ export const rankAssistantDocsDbRows = (
       },
       score: row.score,
       matchedTerms: row.matchedTerms,
-      snippet: buildSnippet(row.row.content, intent.expandedTokens),
+      snippet: buildSnippet(row.row.content, scoringTokens),
       rankingSignals: {
         textScore: row.textScore,
         domainScore: row.domainScore,
