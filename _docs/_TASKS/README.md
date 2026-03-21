@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 14 tasks
 - **In Progress:** 5 tasks
 - **Done:** 691 tasks
 
@@ -39,6 +39,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-119 | Assistant Multi-Level Docs Contract and Progressive-Depth Answers | High | Large | New layered docs-only answer contract: Basic/Medium/Instruction/Advanced + helper modes |
+| TASK-119-01 | Assistant Docs Authoring Contract for Basic/Medium/Instruction/Advanced | High | Medium | Update `docs` template and ingest contract for multi-level sections |
+| TASK-119-02 | Assistant Depth-Aware Retrieval and Composer Contract | High | Medium | Add depth/mode-aware retrieval and deterministic answer selection |
+| TASK-119-03 | Assistant Corpus Enrichment for Multi-Level Answers | High | Large | Expand `docs/` content across Coderso/screens/playbooks for every answer level |
+| TASK-119-04 | Assistant Progressive Follow-Up Flow and Mode Prompts | Medium | Medium | Add follow-up chips and depth/mode routing in assistant chat flow |
+| TASK-119-05 | Assistant Multi-Level QA, Docs, Changelog, and Closure | Medium | Small | Validation + docs/changelog/board synchronization |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |

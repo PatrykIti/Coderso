@@ -95,6 +95,34 @@ test("composeDocsAnswer chooses step-by-step guidance over examples for location
   expect(answer.answer).not.toContain("A landing page team reuses");
 });
 
+test("composeDocsAnswer keeps widget-specific location step when step-by-step section is long", () => {
+  const answer = composeDocsAnswer({
+    question: "Where can I configure Hero widget colors?",
+    hits: [
+      makeHit({
+        score: 2.9,
+        chunk: {
+          id: "widgets-long-step-by-step",
+          docPath: "docs/coderso/widgets-and-template-editor.md",
+          docTitle: "Coderso Widgets and Template Editor",
+          productArea: "coderso-widgets",
+          headingPath: ["Coderso Widgets and Template Editor", "Step By Step"],
+          heading: "Step By Step",
+          content:
+            "1. Browse the Widget Library to find a suitable building block. 2. Create or edit templates when the same composition should be reused in multiple places. 3. For widget-specific styling such as Hero colors, open the page or template that contains the widget, select the Hero block, and use the Visual tab to change colors, spacing, and background settings. 4. Use template revisions and previews to review changes before wider rollout. 5. Return to pages, screens, or kits to consume the template where needed.",
+          normalizedText:
+            "browse the widget library to find a suitable building block create or edit templates when the same composition should be reused in multiple places for widget specific styling such as hero colors open the page or template that contains the widget select the hero block and use the visual tab to change colors spacing and background settings use template revisions and previews to review changes before wider rollout return to pages screens or kits to consume the template where needed",
+        },
+      }),
+    ],
+  });
+
+  expect(answer.template).toBe("location_answer");
+  expect(answer.answer).toContain("What to do:");
+  expect(answer.answer).toContain("Hero colors");
+  expect(answer.answer).toContain("Visual tab");
+});
+
 test("composeDocsAnswer uses what-is-it and workflow support for capability questions", () => {
   const answer = composeDocsAnswer({
     question: "what features I have in widgets?",

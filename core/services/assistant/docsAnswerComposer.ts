@@ -476,9 +476,9 @@ const buildLocationAnswer = (docGroup: DocGroup, primaryHit: DocsSearchHit) => {
   ];
 
   const primaryBody = buildContentAnswer(primaryHit.chunk.content, {
-    maxSteps: 3,
+    maxSteps: 4,
     maxSentences: 2,
-    maxLength: 320,
+    maxLength: 520,
   });
 
   if (primaryBody.steps.length > 0) {
