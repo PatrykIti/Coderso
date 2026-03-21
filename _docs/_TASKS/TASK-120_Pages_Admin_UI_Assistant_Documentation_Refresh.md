@@ -12,8 +12,8 @@
 ## Overview
 
 Refresh the assistant-facing documentation for the Pages surface based on a real
-authenticated walkthrough of the local admin UI. The goal is to replace the
-legacy short-form article with a current multi-level document that matches the
+authenticated walkthrough of the local admin UI. The goal is to replace the old
+combined article with a split, more guided document set that matches the
 shipped Pages list, create drawer, Page Editor, runtime preview, page settings,
 and history surfaces.
 
@@ -23,9 +23,12 @@ and history surfaces.
    contract.
 2. Walk the local admin UI on `http://localhost:5173/admin/` with an
    authenticated session and record actual behavior.
-3. Rewrite `docs/screens/pages-preview-and-page-editor.md` using the new
-   `Basic / Medium / Instruction / Advanced` structure.
-4. Keep this task in `In Progress` until the user reviews the draft.
+3. Split the old combined Pages article into route-aligned docs for:
+   - `Pages list + creation`
+   - `Page Editor + runtime preview + settings + history`
+4. Rewrite the content using the new `Basic / Medium / Instruction / Advanced`
+   structure with more guided user instructions.
+5. Keep this task in `In Progress` until the user reviews the split draft.
 
 ## Sub-Tasks
 
@@ -43,17 +46,22 @@ and history surfaces.
    - runtime preview,
    - page settings,
    - history / revisions.
-4. Rewrite the doc without documenting instance-specific sample content as if it
-   were product behavior.
+4. Rewrite the docs without documenting instance-specific sample content as if
+   it were product behavior.
+5. Update the coverage matrix so each route family points at one canonical
+   assistant document.
 
 ## Acceptance Criteria
 
-1. The Pages assistant doc describes the current shipped UI rather than the old
+1. The Pages assistant docs describe the current shipped UI rather than the old
    generic workflow summary.
-2. The doc uses the `docs/README.md` contract and is ready for assistant ingest.
+2. The split docs use the `docs/README.md` contract and are ready for assistant
+   ingest.
 3. The draft is explicit about list actions, editor layout, preview behavior,
    settings, and revision/history flow.
-4. The task board reflects that the work is currently under review.
+4. The coverage matrix points `/pages` and `/pages/:id` at the right canonical
+   docs.
+5. The task board reflects that the work is currently under review.
 
 ## Testing Requirements
 
@@ -66,7 +74,9 @@ and history surfaces.
 
 ## Documentation Updates Required
 
-- `docs/screens/pages-preview-and-page-editor.md`
+- `docs/screens/pages-list-and-creation.md`
+- `docs/screens/page-editor-preview-settings-and-history.md`
+- `docs/_COVERAGE_MATRIX.md`
 - `_docs/_TASKS/TASK-120_Pages_Admin_UI_Assistant_Documentation_Refresh.md`
 - `_docs/_TASKS/README.md`
 

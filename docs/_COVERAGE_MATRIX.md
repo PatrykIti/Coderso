@@ -9,7 +9,8 @@ that the assistant corpus should use.
 | `/login`, `/2fa`, `/reset`, `/reset/confirm` | `docs/screens/authentication-and-account-recovery.md` |
 | `/search` | `docs/screens/search.md` |
 | `/media` | `docs/screens/media-library.md` |
-| `/pages`, `/pages/:id`, `/preview` | `docs/screens/pages-preview-and-page-editor.md` |
+| `/pages` | `docs/screens/pages-list-and-creation.md` |
+| `/pages/:id`, `/preview` | `docs/screens/page-editor-preview-settings-and-history.md` |
 | `/menus` | `docs/screens/menus.md` |
 | `/users`, `/roles` | `docs/screens/users-roles-and-permissions.md` |
 | `/themes` | `docs/screens/themes.md` |
