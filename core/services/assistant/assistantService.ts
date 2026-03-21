@@ -541,8 +541,14 @@ export const answerAssistantQuestion = async (
     const normalizedMessage = sanitizeAssistantMessage(input.message);
     const requestedMode = normalizeMode(input.mode, settings.defaultMode);
     const mode = resolveMode(requestedMode, settings);
-    const detailLevel = normalizeDetailLevel(input.detailLevel, "medium");
-    const guideMode = normalizeGuideMode(input.guideMode, "default");
+    const detailLevel =
+      typeof input.detailLevel === "string"
+        ? normalizeDetailLevel(input.detailLevel, "medium")
+        : undefined;
+    const guideMode =
+      typeof input.guideMode === "string"
+        ? normalizeGuideMode(input.guideMode, "default")
+        : undefined;
 
     enforceAssistantQuota(
       {
