@@ -12,6 +12,9 @@ import { isApiClientError } from "@/services/apiClient";
 import {
   getAssistantStatus,
   sendAssistantMessage,
+  type AssistantDetailLevel,
+  type AssistantFollowUpOption,
+  type AssistantGuideMode,
   type AssistantChatResponse,
   type AssistantStatusResponse,
 } from "@/services/assistantClient";
@@ -25,6 +28,7 @@ type AssistantEntry = {
   id: string;
   role: "user" | "assistant";
   text: string;
+  sourceQuestion?: string;
   response?: AssistantChatResponse;
   error?: string;
 };
@@ -69,6 +73,15 @@ let runtimeStatePromise: Promise<AssistantRuntimeState> | null = null;
 
 const createEntryId = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const buildFollowUpQuestion = (
+  baseQuestion: string,
+  option: AssistantFollowUpOption
+) => {
+  const normalizedBase = baseQuestion.trim();
+  if (!normalizedBase) return option.promptHint;
+  return `${normalizedBase}\n\n${option.promptHint}`;
+};
 
 const resolveApiError = (error: unknown, fallback: string) => {
   if (isApiClientError(error)) return error.message;
@@ -473,56 +486,91 @@ export function AssistantPanel() {
     [conversationWidth]
   );
 
-  const submitMessage = useCallback(async () => {
-    const trimmed = message.trim();
-    if (!trimmed || isSending || !status) return;
+  const submitMessage = useCallback(
+    async (input?: {
+      message: string;
+      sourceQuestion?: string;
+      detailLevel?: AssistantDetailLevel;
+      guideMode?: AssistantGuideMode;
+    }) => {
+      const outgoingMessage = (input?.message ?? message).trim();
+      if (!outgoingMessage || isSending || !status) return;
 
-    setMessage("");
-    const userEntry: AssistantEntry = {
-      id: createEntryId(),
-      role: "user",
-      text: trimmed,
-    };
-    setMessages((previous) => [...previous, userEntry]);
-    setIsSending(true);
+      if (!input?.message) {
+        setMessage("");
+      }
+      const sourceQuestion = input?.sourceQuestion ?? outgoingMessage;
+      const userEntry: AssistantEntry = {
+        id: createEntryId(),
+        role: "user",
+        text: outgoingMessage,
+        sourceQuestion,
+      };
+      setMessages((previous) => [...previous, userEntry]);
+      setIsSending(true);
 
-    try {
-      const response = await sendAssistantMessage({
-        message: trimmed,
-        mode: status.defaultMode,
-        context:
-          typeof window === "undefined"
-            ? undefined
-            : {
-                page: window.location.pathname,
-                locale:
-                  typeof navigator !== "undefined" ? navigator.language : undefined,
-              },
-      });
+      try {
+        const response = await sendAssistantMessage({
+          message: outgoingMessage,
+          mode: status.defaultMode,
+          detailLevel: input?.detailLevel,
+          guideMode: input?.guideMode,
+          context:
+            typeof window === "undefined"
+              ? undefined
+              : {
+                  page: window.location.pathname,
+                  locale:
+                    typeof navigator !== "undefined" ? navigator.language : undefined,
+                },
+        });
 
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: createEntryId(),
-          role: "assistant",
-          text: response.answer,
-          response,
-        },
-      ]);
-    } catch (error) {
-      setMessages((previous) => [
-        ...previous,
-        {
-          id: createEntryId(),
-          role: "assistant",
-          text: resolveApiError(error, "Assistant request failed."),
-          error: "request_failed",
-        },
-      ]);
-    } finally {
-      setIsSending(false);
-    }
-  }, [isSending, message, status]);
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: createEntryId(),
+            role: "assistant",
+            text: response.answer,
+            response,
+            sourceQuestion,
+          },
+        ]);
+      } catch (error) {
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: createEntryId(),
+            role: "assistant",
+            text: resolveApiError(error, "Assistant request failed."),
+            sourceQuestion,
+            error: "request_failed",
+          },
+        ]);
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [isSending, message, status]
+  );
+
+  const handleFollowUpSelect = useCallback(
+    (entry: AssistantEntry, option: AssistantFollowUpOption) => {
+      if (isSending || !status) return;
+      const baseQuestion = entry.sourceQuestion ?? "";
+      const followUpMessage = buildFollowUpQuestion(baseQuestion, option);
+      submitMessage({
+        message: followUpMessage,
+        sourceQuestion: baseQuestion || followUpMessage,
+        detailLevel: option.detailLevel,
+        guideMode: option.guideMode,
+      }).catch(() => undefined);
+    },
+    [isSending, status, submitMessage]
+  );
+
+  const handleSendClick = useCallback(() => {
+    submitMessage().catch(() => undefined);
+  }, [submitMessage]);
 
   const canSend = useMemo(
     () => Boolean(message.trim()) && !isSending && Boolean(status?.indexReady),
@@ -705,6 +753,9 @@ export function AssistantPanel() {
                             text={entry.text}
                             response={entry.response}
                             error={entry.error}
+                            onFollowUpSelect={(option) =>
+                              handleFollowUpSelect(entry, option)
+                            }
                           />
                         ))
                       : null}
@@ -723,7 +774,7 @@ export function AssistantPanel() {
                     <Button
                       type="button"
                       size="sm"
-                      onClick={submitMessage}
+                      onClick={handleSendClick}
                       disabled={!canSend}
                     >
                       {isSending ? (

@@ -86,6 +86,8 @@ test("AssistantMessage renders assistant metadata and sources", () => {
       response={{
         mode: "llm-rag",
         template: "location_answer",
+        detailLevel: "instruction",
+        guideMode: "default",
         answer: "Use General Settings > Assistant card.",
         confidence: 0.81,
         sources: [
@@ -98,6 +100,7 @@ test("AssistantMessage renders assistant metadata and sources", () => {
             score: 2.1,
           },
         ],
+        followUpOptions: [],
         fallbackUsed: true,
         requestedMode: "llm-rag",
         effectiveMode: "docs-only",
@@ -132,9 +135,12 @@ test("AssistantMessage renders docs answers as structured paragraphs and lists",
       response={{
         mode: "docs-only",
         template: "location_answer",
+        detailLevel: "instruction",
+        guideMode: "default",
         answer: "",
         confidence: 0.74,
         sources: [],
+        followUpOptions: [],
         fallbackUsed: false,
         requestedMode: "docs-only",
         effectiveMode: "docs-only",
@@ -166,9 +172,12 @@ test("AssistantMessage renders clarifying question choices as bullet list", () =
       response={{
         mode: "docs-only",
         template: "clarifying_question",
+        detailLevel: "medium",
+        guideMode: "default",
         answer: "",
         confidence: 0.22,
         sources: [],
+        followUpOptions: [],
         fallbackUsed: false,
         requestedMode: "docs-only",
         effectiveMode: "docs-only",
@@ -182,4 +191,47 @@ test("AssistantMessage renders clarifying question choices as bullet list", () =
   expect(html).toContain("<ul");
   expect(html).toContain("list-disc");
   expect(html).toContain("Coderso Widgets and Template Editor");
+});
+
+test("AssistantMessage renders follow-up options for progressive depth flow", () => {
+  const html = renderAdminUi(
+    <AssistantMessage
+      role="assistant"
+      text="Basic answer."
+      response={{
+        mode: "docs-only",
+        template: "how_to_answer",
+        detailLevel: "basic",
+        guideMode: "default",
+        answer: "Basic answer.",
+        confidence: 0.61,
+        sources: [],
+        followUpOptions: [
+          {
+            id: "followup-medium",
+            label: "More detail",
+            detailLevel: "medium",
+            guideMode: "default",
+            promptHint: "Give me a medium-detail explanation for this feature.",
+          },
+          {
+            id: "followup-instruction",
+            label: "Step-by-step",
+            detailLevel: "instruction",
+            guideMode: "default",
+            promptHint: "Give me step-by-step instructions for this feature.",
+          },
+        ],
+        fallbackUsed: false,
+        requestedMode: "docs-only",
+        effectiveMode: "docs-only",
+        retrievalBackend: "db",
+        llm: null,
+      }}
+    />
+  );
+
+  expect(html).toContain("Need more?");
+  expect(html).toContain("More detail");
+  expect(html).toContain("Step-by-step");
 });

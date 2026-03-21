@@ -5,7 +5,7 @@
 **Category:** Docs/Assistant  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-119  
-**Status:** To Do
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -56,3 +56,15 @@ aby kazdy dokument mial powtarzalne bloki odpowiedzi:
 - `docs/README.md`
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/_TASKS/README.md`
+
+---
+
+## Completion Notes (2026-03-21)
+
+- Replaced docs template contract with `Basic/Medium/Instruction/Advanced` plus
+  helper sections (`Troubleshooting`, `Decision Guide`, `Checklist`,
+  `Security`).
+- Updated `docs/README.md` with required multi-level section model and
+  query-intent-to-section matrix.
+- Extended ingest validation to accept both legacy and multi-level section packs
+  via heading aliases.

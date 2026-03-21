@@ -257,13 +257,15 @@ Przeplyw runtime:
 6. Confidence nie zalezy juz tylko od `topScore`; uwzglednia tez domain alignment, query coverage i score gap.
 7. `docsAnswerComposer` wykonuje doc-first evidence selection:
    - najpierw wybiera dominant document/surface,
-   - potem wybiera najlepsza sekcje (`Step By Step`, `What Is It`, `When To Use`) zalezne od intentu pytania.
+   - potem wybiera najlepsza sekcje (`Basic`, `Medium`, `Instruction`, `Advanced` + helper sections) zalezne od intentu pytania i zadanego `detailLevel/guideMode`.
    - user-facing `surface` label jest oparty o canonical doc metadata (`title`), a nie o heading sekcji.
 8. Runtime wspiera conservative `clarifying_question`, gdy top docs pozostaja niejednoznaczne; assistant woli wtedy dopytac niz zwrocic pewna, ale zla odpowiedz.
 9. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `clarifying_question`, `missing_answer`) z tresci top evidence, a nie z listy plikow.
 10. Final answer korzysta z `chunk.content`, a nie z krotszego preview `snippet`, ktory pozostaje warstwa search/evidence.
 11. Docs-only answer zachowuje strukture paragrafow, numerowanych krokow i list wyboru, a UI renderuje je jako czytelne bloki zamiast jednego zlanego tekstu.
-12. Procedural pytania `how/use` preferuja `Step By Step`; `When To Use` i `What Is It` pozostaja tylko wspierajacym kontekstem, jesli poprawiaja jakosc odpowiedzi.
+12. Procedural pytania `how/use` preferuja `Instruction/Step By Step`; `Basic/Medium` pozostaja wspierajacym kontekstem.
+13. Runtime przyjmuje optional `detailLevel` (`basic|medium|instruction|advanced`) i `guideMode` (`default|troubleshooting|decision_guide|checklist|security`) dla deterministic section targeting.
+14. Response moze zawierac `followUpOptions[]`, ktore prowadza usera do kolejnego poziomu szczegolowosci lub trybu pomocniczego w tej samej tematyce.
 
 Przeplyw reindex:
 1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.

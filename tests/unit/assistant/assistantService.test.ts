@@ -73,6 +73,8 @@ const createDeps = (
   composeDocsAnswer: () => ({
     mode: "docs-only",
     template: "how_to_answer",
+    detailLevel: "medium",
+    guideMode: "default",
     answer: "Follow docs",
     confidence: 0.8,
     sources: [
@@ -83,6 +85,15 @@ const createDeps = (
         lineEnd: 20,
         snippet: "Use visual tab to configure hero widget.",
         score: 2.4,
+      },
+    ],
+    followUpOptions: [
+      {
+        id: "followup-instruction",
+        label: "Step-by-step",
+        detailLevel: "instruction",
+        guideMode: "default",
+        promptHint: "Give me step-by-step instructions for this feature.",
       },
     ],
     fallbackUsed: false,
@@ -216,6 +227,42 @@ test("answerAssistantQuestion uses DB backend when DB index is ready", async () 
   expect(fsSearchCalls).toBe(0);
 });
 
+test("answerAssistantQuestion forwards detail level and guide mode to composer", async () => {
+  let capturedDetailLevel: string | undefined;
+  let capturedGuideMode: string | undefined;
+
+  const result = await answerAssistantQuestion(
+    {
+      message: "Where are hero settings?",
+      mode: "docs-only",
+      detailLevel: "advanced",
+      guideMode: "security",
+    },
+    createDeps({
+      composeDocsAnswer: (input) => {
+        capturedDetailLevel = input.detailLevel;
+        capturedGuideMode = input.guideMode;
+        return {
+          mode: "docs-only",
+          template: "how_to_answer",
+          detailLevel: "advanced",
+          guideMode: "security",
+          answer: "Security-focused answer.",
+          confidence: 0.74,
+          sources: [],
+          followUpOptions: [],
+          fallbackUsed: false,
+        };
+      },
+    })
+  );
+
+  expect(capturedDetailLevel).toBe("advanced");
+  expect(capturedGuideMode).toBe("security");
+  expect(result.detailLevel).toBe("advanced");
+  expect(result.guideMode).toBe("security");
+});
+
 test("answerAssistantQuestion returns not ready when DB corpus is not seeded", async () => {
   await expect(
     answerAssistantQuestion(
@@ -345,6 +392,8 @@ test("answerAssistantQuestion keeps clarifying questions in docs-only mode even 
       composeDocsAnswer: () => ({
         mode: "docs-only",
         template: "clarifying_question",
+        detailLevel: "medium",
+        guideMode: "default",
         answer: "I am not confident yet.\n\nDo you mean:\n- Themes\n- Coderso Widgets and Template Editor",
         confidence: 0.22,
         sources: [
@@ -357,6 +406,7 @@ test("answerAssistantQuestion keeps clarifying questions in docs-only mode even 
             score: 1.8,
           },
         ],
+        followUpOptions: [],
         fallbackUsed: false,
       }),
       resolveAssistantProvider: async () => {

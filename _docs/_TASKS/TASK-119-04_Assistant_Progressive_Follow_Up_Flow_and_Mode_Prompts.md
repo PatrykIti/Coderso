@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-119-02, TASK-119-03  
-**Status:** To Do
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -49,7 +49,7 @@ oraz tryby pomocnicze:
 
 - `core/services/assistant/docsTypes.ts`
 - `core/services/assistant/assistantService.ts`
-- `core/api/admin/routes/assistant.ts`
+- `core/server/routes/assistantRoutes.ts`
 - `core/admin/services/assistantClient.ts`
 - `core/admin/ui/assistant/AssistantMessage.tsx`
 - `core/admin/ui/assistant/AssistantPanel.tsx`
@@ -75,3 +75,15 @@ oraz tryby pomocnicze:
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/ARCHITECTURE.md`
 - `_docs/_TASKS/README.md`
+
+---
+
+## Completion Notes (2026-03-21)
+
+- Added API-level optional fields `detailLevel` and `guideMode` for
+  `POST /assistant/chat`.
+- Added response-level `followUpOptions[]` contract and admin UI rendering of
+  follow-up chips in assistant messages.
+- Wired follow-up chip selection in `AssistantPanel` to send deterministic
+  depth/mode continuation requests for the same topic.
+- Extended route validation and integration coverage for depth/mode forwarding.

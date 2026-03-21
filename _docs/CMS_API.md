@@ -2462,6 +2462,8 @@ Endpoints:
 {
   "message": "where can I find hero visual settings?",
   "mode": "docs-only",
+  "detailLevel": "instruction",
+  "guideMode": "default",
   "context": {
     "page": "widgets/templates",
     "locale": "pl"
@@ -2475,6 +2477,8 @@ Endpoints:
 {
   "mode": "llm-rag",
   "template": "location_answer",
+  "detailLevel": "instruction",
+  "guideMode": "default",
   "answer": "Use Hero visual settings in Block Settings > Visual tab [1].",
   "confidence": 0.76,
   "sources": [
@@ -2485,6 +2489,22 @@ Endpoints:
       "lineEnd": 38,
       "snippet": "Use visual tab to change colors and spacing.",
       "score": 2.4211
+    }
+  ],
+  "followUpOptions": [
+    {
+      "id": "followup-advanced",
+      "label": "Advanced scenarios",
+      "detailLevel": "advanced",
+      "guideMode": "default",
+      "promptHint": "Give me advanced scenarios, trade-offs, and anti-patterns."
+    },
+    {
+      "id": "followup-troubleshooting",
+      "label": "Troubleshooting",
+      "detailLevel": "instruction",
+      "guideMode": "troubleshooting",
+      "promptHint": "Give me troubleshooting steps and likely root causes."
     }
   ],
   "fallbackUsed": false,
@@ -2510,9 +2530,15 @@ Endpoints:
 - `clarifying_question`
 - `missing_answer`
 
+Optional `POST /assistant/chat` request fields:
+- `detailLevel` (`basic|medium|instruction|advanced`)
+- `guideMode` (`default|troubleshooting|decision_guide|checklist|security`)
+
 Docs-only answers may include:
 - canonical `surface` labels based on the document title,
 - numbered `What to do` steps for procedural/location guidance,
+- explicit `detailLevel` and `guideMode` fields for deterministic section selection,
+- `followUpOptions[]` for progressive depth/mode continuation in multi-turn chat,
 - conservative clarification choices when multiple surfaces remain plausible.
 
 Example conservative clarification response:
@@ -2521,6 +2547,8 @@ Example conservative clarification response:
 {
   "mode": "docs-only",
   "template": "clarifying_question",
+  "detailLevel": "medium",
+  "guideMode": "default",
   "answer": "I am not confident which product area you mean from the docs yet.\n\nDo you mean:\n\n- Themes\n- Coderso Widgets and Template Editor",
   "confidence": 0.22,
   "sources": [
@@ -2533,6 +2561,7 @@ Example conservative clarification response:
       "score": 1.8442
     }
   ],
+  "followUpOptions": [],
   "fallbackUsed": false,
   "requestedMode": "docs-only",
   "effectiveMode": "docs-only",

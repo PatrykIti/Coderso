@@ -17,6 +17,9 @@ import type { AssistantProviderResponse } from "./providers/providerTypes";
 import type {
   DocsAnswerSource,
   DocsAnswerTemplate,
+  DocsDetailLevel,
+  DocsGuideMode,
+  DocsFollowUpOption,
   DocsSearchHit,
 } from "./docsTypes";
 
@@ -77,6 +80,8 @@ export type AssistantChatContext = {
 export type AssistantChatInput = {
   message: string;
   mode?: AssistantMode;
+  detailLevel?: DocsDetailLevel;
+  guideMode?: DocsGuideMode;
   context?: AssistantChatContext;
   actorId?: string | null;
 };
@@ -95,9 +100,12 @@ export type AssistantLlmResult = {
 export type AssistantChatResult = {
   mode: "docs-only" | "llm-rag";
   template: DocsAnswerTemplate;
+  detailLevel: DocsDetailLevel;
+  guideMode: DocsGuideMode;
   answer: string;
   confidence: number;
   sources: DocsAnswerSource[];
+  followUpOptions: DocsFollowUpOption[];
   fallbackUsed: boolean;
   requestedMode: AssistantMode;
   effectiveMode: "docs-only" | "llm-rag";
@@ -174,6 +182,26 @@ const normalizeModel = (value: unknown, fallback: string) => {
   if (typeof value !== "string") return fallback;
   const normalized = value.trim();
   return normalized.length > 0 ? normalized : fallback;
+};
+
+const normalizeDetailLevel = (value: unknown, fallback: DocsDetailLevel): DocsDetailLevel => {
+  if (value === "basic" || value === "medium" || value === "instruction" || value === "advanced") {
+    return value;
+  }
+  return fallback;
+};
+
+const normalizeGuideMode = (value: unknown, fallback: DocsGuideMode): DocsGuideMode => {
+  if (
+    value === "default" ||
+    value === "troubleshooting" ||
+    value === "decision_guide" ||
+    value === "checklist" ||
+    value === "security"
+  ) {
+    return value;
+  }
+  return fallback;
 };
 
 const normalizeConfidence = (value: number) =>
@@ -513,6 +541,8 @@ export const answerAssistantQuestion = async (
     const normalizedMessage = sanitizeAssistantMessage(input.message);
     const requestedMode = normalizeMode(input.mode, settings.defaultMode);
     const mode = resolveMode(requestedMode, settings);
+    const detailLevel = normalizeDetailLevel(input.detailLevel, "medium");
+    const guideMode = normalizeGuideMode(input.guideMode, "default");
 
     enforceAssistantQuota(
       {
@@ -537,6 +567,8 @@ export const answerAssistantQuestion = async (
       question: normalizedMessage,
       hits: retrieval.hits,
       maxSources: 3,
+      detailLevel,
+      guideMode,
     });
 
     metricNoHit = composed.sources.length === 0;
@@ -579,9 +611,12 @@ export const answerAssistantQuestion = async (
             return {
               mode: "llm-rag",
               template: composed.template,
+              detailLevel: composed.detailLevel,
+              guideMode: composed.guideMode,
               answer,
               confidence: normalizeConfidence(Math.max(0.35, composed.confidence)),
               sources: composed.sources,
+              followUpOptions: composed.followUpOptions,
               fallbackUsed,
               requestedMode: mode.requestedMode,
               effectiveMode: "llm-rag",
@@ -651,9 +686,12 @@ export const answerAssistantQuestion = async (
     return {
       mode: "docs-only",
       template: composed.template,
+      detailLevel: composed.detailLevel,
+      guideMode: composed.guideMode,
       answer: composed.answer,
       confidence: composed.confidence,
       sources: composed.sources,
+      followUpOptions: composed.followUpOptions,
       fallbackUsed,
       requestedMode: mode.requestedMode,
       effectiveMode,

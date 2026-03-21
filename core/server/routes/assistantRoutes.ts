@@ -192,6 +192,8 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         service.chat({
           message: body.message,
           mode: body.mode,
+          detailLevel: body.detailLevel,
+          guideMode: body.guideMode,
           context: body.context,
           actorId: ctx.user?.id ?? null,
         })

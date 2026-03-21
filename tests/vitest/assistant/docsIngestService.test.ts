@@ -75,7 +75,38 @@ test("validateInternalDocContract reports missing required sections", () => {
 
   const errors = validateInternalDocContract("docs/coderso/widgets/broken.md", parsed);
   expect(errors.some((error) => error.code === "required_section_missing")).toBe(true);
-  expect(errors.some((error) => error.message.includes("when to use"))).toBe(true);
+  expect(errors.some((error) => error.message.includes("medium"))).toBe(true);
+  expect(errors.some((error) => error.message.includes("instruction"))).toBe(true);
+});
+
+test("validateInternalDocContract accepts multi-level section pack", () => {
+  const parsed = parseInternalDoc(
+    [
+      "---",
+      'title: "Multi-level doc"',
+      'audience: "editor"',
+      'productArea: "widgets"',
+      'language: "en"',
+      "keywords: [hero]",
+      "---",
+      "",
+      "# Basic",
+      "Quick purpose.",
+      "",
+      "# Medium",
+      "More context and usage boundaries.",
+      "",
+      "# Instruction",
+      "1. Open module. 2. Configure settings.",
+      "",
+      "# Advanced",
+      "Trade-offs and scale scenarios.",
+      "",
+    ].join("\n")
+  );
+
+  const errors = validateInternalDocContract("docs/coderso/widgets/multi-level.md", parsed);
+  expect(errors).toEqual([]);
 });
 
 test("buildInternalDocChunks creates deterministic heading-aware chunks", () => {

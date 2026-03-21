@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-119-01, TASK-119-02, TASK-119-03, TASK-119-04  
-**Status:** To Do
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -45,3 +45,14 @@ kontraktu odpowiedzi asystenta.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
 - `_docs/_CHANGELOG/*`
+
+---
+
+## Completion Notes (2026-03-21)
+
+- Validation completed:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun run vitest run tests/vitest/assistant/docsAnswerComposer.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/assistant/docsIngestService.test.ts tests/vitest/ui/assistant-panel.test.tsx tests/vitest/admin/assistantClient.test.ts`
+  - `bun test tests/unit/assistant/assistantService.test.ts tests/integration/routes/assistant.test.ts`
+- Synced task board and changelog for TASK-119 umbrella and subtasks.

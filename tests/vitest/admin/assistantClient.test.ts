@@ -59,9 +59,12 @@ test("sendAssistantMessage uses CSRF and POST", async () => {
     return jsonResponse({
       mode: "docs-only",
       template: "location_answer",
+      detailLevel: "instruction",
+      guideMode: "default",
       answer: "Use assistant settings in General Settings.",
       confidence: 0.8,
       sources: [],
+      followUpOptions: [],
       fallbackUsed: false,
       requestedMode: "docs-only",
       effectiveMode: "docs-only",

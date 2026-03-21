@@ -16,12 +16,18 @@ const SKIPPED_FILENAMES = new Set([
   "_TEMPLATE.md",
   "_COVERAGE_MATRIX.md",
 ]);
-const REQUIRED_SECTIONS = [
+const LEGACY_REQUIRED_SECTIONS = [
   "what is it",
   "when to use",
   "step by step",
   "examples",
   "common mistakes",
+] as const;
+const MULTI_LEVEL_REQUIRED_SECTIONS = [
+  "basic",
+  "medium",
+  "instruction",
+  "advanced",
 ] as const;
 
 export type InternalDocsMeta = {
@@ -237,6 +243,32 @@ export const parseInternalDoc = (input: string): ParsedInternalDoc => {
 const normalizeHeading = (heading: string) =>
   normalizeDocsText(heading).replace(/\s+/g, " ").trim();
 
+const toHeadingAliases = (heading: string) => {
+  const normalized = normalizeHeading(heading);
+  const aliases = new Set<string>([normalized]);
+
+  if (normalized.includes("step by step")) aliases.add("instruction");
+  if (normalized.includes("instruction")) aliases.add("step by step");
+
+  if (normalized.includes("what is it")) aliases.add("basic");
+  if (normalized === "basic") aliases.add("what is it");
+
+  if (normalized.includes("when to use")) aliases.add("medium");
+  if (normalized === "medium") aliases.add("when to use");
+
+  if (normalized.includes("examples")) aliases.add("advanced");
+  if (normalized === "advanced") aliases.add("examples");
+
+  if (normalized.includes("common mistakes")) aliases.add("troubleshooting");
+  if (normalized.includes("troubleshooting")) aliases.add("common mistakes");
+
+  if (normalized.includes("decision guide")) aliases.add("advanced");
+  if (normalized.includes("checklist")) aliases.add("instruction");
+  if (normalized.includes("security")) aliases.add("advanced");
+
+  return [...aliases];
+};
+
 export const validateInternalDocContract = (
   sourcePath: string,
   parsed: ParsedInternalDoc
@@ -284,16 +316,25 @@ export const validateInternalDocContract = (
   for (const line of parsed.body.split(/\r?\n/)) {
     const headingMatch = line.match(HEADING_REGEX);
     if (!headingMatch) continue;
-    headings.add(normalizeHeading(headingMatch[2] ?? ""));
+    for (const alias of toHeadingAliases(headingMatch[2] ?? "")) {
+      headings.add(alias);
+    }
   }
 
-  for (const section of REQUIRED_SECTIONS) {
-    if (headings.has(section)) continue;
-    errors.push({
-      path: sourcePath,
-      code: "required_section_missing",
-      message: `Required section '${section}' is missing.`,
-    });
+  const hasLegacyPack = LEGACY_REQUIRED_SECTIONS.every((section) => headings.has(section));
+  const hasMultiLevelPack = MULTI_LEVEL_REQUIRED_SECTIONS.every((section) =>
+    headings.has(section)
+  );
+
+  if (!hasLegacyPack && !hasMultiLevelPack) {
+    for (const section of MULTI_LEVEL_REQUIRED_SECTIONS) {
+      if (headings.has(section)) continue;
+      errors.push({
+        path: sourcePath,
+        code: "required_section_missing",
+        message: `Required section '${section}' is missing.`,
+      });
+    }
   }
 
   return errors;

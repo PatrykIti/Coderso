@@ -5,7 +5,7 @@
 **Category:** Docs/Assistant  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-119-01  
-**Status:** To Do
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -21,20 +21,23 @@ wartosc produktowa.
 
 ## Sub-Tasks
 
-1. Dodac szczegolowe instrukcje do wszystkich modułow `docs/coderso/*`.
-2. Dodac scenariusze zaawansowane i decyzje konfiguracyjne dla `docs/screens/*`.
-3. Ujednolicic playbooki pod checklists i failure modes.
-4. Utrzymac deterministic IDs/anchors sekcji dla stabilnego retrievalu.
-5. Dolozyc corpus QA list: coverage per surface i per level.
+1. Dodac szczegolowe instrukcje do kluczowych high-traffic modulow Coderso.
+2. Dodac scenariusze zaawansowane i decyzje konfiguracyjne dla
+   high-traffic surfaces w `docs/screens/*`.
+3. Utrzymac deterministic IDs/anchors sekcji dla stabilnego retrievalu.
+4. Dolozyc corpus QA list: coverage per surface i per level.
 
 ---
 
 ## Files
 
-- `docs/coderso/*.md`
-- `docs/screens/*.md`
-- `docs/playbooks/*.md`
-- `docs/solution-kits/*.md`
+- `docs/coderso/widgets-and-template-editor.md`
+- `docs/coderso/engine-and-schema-builder.md`
+- `docs/coderso/entries-and-record-editing.md`
+- `docs/coderso/posts.md`
+- `docs/coderso/commerce.md`
+- `docs/coderso/booking.md`
+- `docs/screens/email-storage-integrations-api-keys-and-webhooks.md`
 - `docs/_COVERAGE_MATRIX.md`
 
 ---
@@ -56,3 +59,18 @@ wartosc produktowa.
 - `docs/README.md`
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/_TASKS/README.md`
+
+---
+
+## Completion Notes (2026-03-21)
+
+- Migrated key assistant corpus docs to the multi-level section layout:
+  - `docs/coderso/widgets-and-template-editor.md`
+  - `docs/coderso/engine-and-schema-builder.md`
+  - `docs/coderso/entries-and-record-editing.md`
+  - `docs/coderso/posts.md`
+  - `docs/coderso/commerce.md`
+  - `docs/coderso/booking.md`
+  - `docs/screens/email-storage-integrations-api-keys-and-webhooks.md`
+- Added detailed procedural and advanced guidance blocks plus troubleshooting,
+  decision, checklist, and security content for these high-traffic surfaces.

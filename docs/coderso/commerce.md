@@ -10,33 +10,62 @@ keywords:
   - catalog
 ---
 
-# What Is It
+# Basic
 
-Commerce is the product and collection management surface for catalog-style and
-sales-oriented experiences.
+Commerce is the module for product and collection management in catalog-oriented
+experiences.
 
-# When To Use
+# Medium
 
-Use Commerce when the site needs product records, collection groupings, or
-commerce-specific presentation workflows rather than generic content entries.
+Use Commerce when you need product entities, collection grouping, and
+commerce-specific presentation flow. It should own product data instead of
+generic entries when catalog behavior is required.
 
-# Step By Step
+Use this surface when:
+- products need structured catalog metadata,
+- collections and product grouping drive navigation,
+- product data must be connected to pages/widgets consistently.
 
-1. Create or review products and their supporting data.
-2. Organize collections and catalog structure.
-3. Connect products to pages, widgets, or kit-based experiences where needed.
-4. Recheck supporting forms, media, and public presentation before launch.
+# Instruction
 
-# Examples
+1. Create or review product records with required product metadata.
+2. Build collections and category/grouping structure.
+3. Attach products to pages, templates, and relevant widgets.
+4. Validate media, forms, and presentation flow before launch.
+5. Recheck catalog filters/sorting after major product updates.
 
-- A small e-commerce launch uses Commerce for products plus collections.
-- A services business uses a light catalog to package offers, even without full
-  transactional depth.
-- A marketing team connects products to landing pages and reusable templates.
+# Advanced
 
-# Common Mistakes
+- Separate operational product fields (inventory, fulfillment metadata) from
+  presentation copy to keep integrations stable.
+- Use deterministic naming/category conventions before scaling collections.
+- Version major catalog structure changes to avoid broken downstream filters.
 
-- Treating generic content entries as a substitute for commerce structure.
-- Building collections before product naming and categorization are stable.
-- Forgetting that media, forms, and page presentation still matter around the
-  catalog itself.
+# Troubleshooting
+
+- If products do not appear where expected, verify collection assignment and
+  downstream widget/page binding.
+- If filters behave inconsistently, review product attribute normalization and
+  category taxonomy.
+- If catalog updates cause regressions, compare recent collection edits and
+  template bindings.
+
+# Decision Guide
+
+- Choose Commerce for product-centric workflows.
+- Choose Entries when records are structured but not catalog products.
+- Choose Posts/Pages when the content is editorial or campaign-first.
+
+# Checklist
+
+1. Product records complete and validated.
+2. Collection structure aligned to navigation intent.
+3. Catalog presentation connected to pages/templates.
+4. Media and form dependencies verified.
+5. Launch/readiness checks passed for public product flows.
+
+# Security
+
+- Keep payment/provider credentials outside Commerce content fields.
+- Restrict write operations to authorized roles with explicit RBAC.
+- Validate external integration writes and webhooks with strict schema checks.

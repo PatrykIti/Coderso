@@ -5,7 +5,7 @@
 **Category:** Assistant/Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-119-01  
-**Status:** To Do
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -67,3 +67,15 @@ intent (`location/capability/procedural`), ale tez po poziomie szczegolowosci:
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
+
+---
+
+## Completion Notes (2026-03-21)
+
+- Added typed assistant depth/mode contract:
+  - `detailLevel`: `basic|medium|instruction|advanced`
+  - `guideMode`: `default|troubleshooting|decision_guide|checklist|security`
+- Extended retriever and composer section scoring for multi-level and
+  mode-specific section targeting.
+- Added deterministic `followUpOptions[]` generation in composed docs answers.
+- Updated assistant runtime/service result contract to propagate new fields.

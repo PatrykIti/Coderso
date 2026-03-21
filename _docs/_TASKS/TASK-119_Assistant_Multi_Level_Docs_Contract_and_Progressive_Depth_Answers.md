@@ -5,7 +5,7 @@
 **Category:** Assistant + Docs + UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-118  
-**Status:** To Do
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -93,3 +93,16 @@ Dodatkowo assistant ma umiec zaproponowac tryby pomocnicze:
 - `_docs/CMS_API.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*` (on completion)
+
+---
+
+## Completion Notes (2026-03-21)
+
+- Delivered multi-level docs-only answer contract with `detailLevel` and
+  `guideMode` routing.
+- Added progressive follow-up options in assistant response payload and admin UI
+  rendering flow.
+- Updated corpus authoring contract and enriched key high-traffic docs surfaces
+  (`widgets`, `engine`, `entries`, `posts`, `commerce`, `booking`,
+  `email/storage/integrations`).
+- Synced architecture/API/assistant guide docs, task board, and changelog.

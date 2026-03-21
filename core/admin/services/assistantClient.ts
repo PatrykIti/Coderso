@@ -11,6 +11,13 @@ import type {
 } from "./solutionKitsClient";
 
 export type AssistantMode = "docs-only" | "llm-rag";
+export type AssistantDetailLevel = "basic" | "medium" | "instruction" | "advanced";
+export type AssistantGuideMode =
+  | "default"
+  | "troubleshooting"
+  | "decision_guide"
+  | "checklist"
+  | "security";
 
 export type AssistantRetrievalBackend = "db";
 
@@ -57,15 +64,28 @@ export type AssistantChatLlm = {
 export type AssistantChatRequest = {
   message: string;
   mode?: AssistantMode;
+  detailLevel?: AssistantDetailLevel;
+  guideMode?: AssistantGuideMode;
   context?: AssistantChatContext;
+};
+
+export type AssistantFollowUpOption = {
+  id: string;
+  label: string;
+  detailLevel: AssistantDetailLevel;
+  guideMode: AssistantGuideMode;
+  promptHint: string;
 };
 
 export type AssistantChatResponse = {
   mode: AssistantMode;
   template: string;
+  detailLevel: AssistantDetailLevel;
+  guideMode: AssistantGuideMode;
   answer: string;
   confidence: number;
   sources: AssistantChatSource[];
+  followUpOptions: AssistantFollowUpOption[];
   fallbackUsed: boolean;
   requestedMode: AssistantMode;
   effectiveMode: AssistantMode;

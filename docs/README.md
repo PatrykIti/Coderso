@@ -32,13 +32,38 @@ Every ingestable document in `docs/` must include:
    - `language`
    - `keywords`
 2. Required sections:
-   - `What Is It`
-   - `When To Use`
-   - `Step By Step`
-   - `Examples`
-   - `Common Mistakes`
+   - `Basic`
+   - `Medium`
+   - `Instruction`
+   - `Advanced`
+
+Optional but strongly recommended sections:
+- `Troubleshooting`
+- `Decision Guide`
+- `Checklist`
+- `Security`
+
+Backward compatibility:
+- legacy section pack (`What Is It`, `When To Use`, `Step By Step`, `Examples`,
+  `Common Mistakes`) is still accepted by ingest,
+- new docs should prefer the multi-level pack.
 
 See [the template](./_TEMPLATE.md) before creating or editing content.
+
+## Query Intent -> Preferred Section
+
+Use this mapping to keep assistant answers deterministic:
+
+| Query intent | Preferred section |
+| --- | --- |
+| quick overview / "what is this" | `Basic` |
+| "more details" / "when should I use it" | `Medium` |
+| "how do I configure/use..." | `Instruction` |
+| "advanced setup/scenarios/trade-offs" | `Advanced` |
+| error/fix/debug | `Troubleshooting` |
+| "which option should I choose" | `Decision Guide` |
+| "give me launch/readiness checks" | `Checklist` |
+| security/auth/hardening concerns | `Security` |
 
 ## Directory Map
 

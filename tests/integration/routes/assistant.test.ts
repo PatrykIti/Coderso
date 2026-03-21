@@ -76,9 +76,12 @@ test("chat route calls service and returns payload", async () => {
       chat: async () => ({
         mode: "docs-only",
         template: "location_answer",
+        detailLevel: "instruction",
+        guideMode: "default",
         answer: "Most relevant locations in docs",
         confidence: 0.9,
         sources: [],
+        followUpOptions: [],
         fallbackUsed: false,
         requestedMode: "docs-only",
         effectiveMode: "docs-only",
@@ -116,10 +119,13 @@ test("chat route returns clarifying question payload without remapping template"
       chat: async () => ({
         mode: "docs-only",
         template: "clarifying_question",
+        detailLevel: "medium",
+        guideMode: "default",
         answer:
           "I am not confident which product area you mean from the docs yet.\n\nDo you mean:\n- Themes\n- Coderso Widgets and Template Editor",
         confidence: 0.22,
         sources: [],
+        followUpOptions: [],
         fallbackUsed: false,
         requestedMode: "docs-only",
         effectiveMode: "docs-only",
@@ -143,6 +149,55 @@ test("chat route returns clarifying question payload without remapping template"
     template: "clarifying_question",
     retrievalBackend: "db",
   });
+});
+
+test("chat route forwards detail level and guide mode", async () => {
+  const { router, routes } = makeRouter();
+  let receivedDetailLevel: string | undefined;
+  let receivedGuideMode: string | undefined;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      chat: async (input) => {
+        receivedDetailLevel = input.detailLevel;
+        receivedGuideMode = input.guideMode;
+        return {
+          mode: "docs-only",
+          template: "how_to_answer",
+          detailLevel: "advanced",
+          guideMode: "security",
+          answer: "Security answer",
+          confidence: 0.72,
+          sources: [],
+          followUpOptions: [],
+          fallbackUsed: false,
+          requestedMode: "docs-only",
+          effectiveMode: "docs-only",
+          retrievalBackend: "db",
+          llm: null,
+        };
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/chat");
+  const handler = route?.handlers[route.handlers.length - 1];
+  await handler?.({
+    params: {},
+    query: {},
+    body: {
+      message: "how to secure assistant integrations",
+      detailLevel: "advanced",
+      guideMode: "security",
+    },
+    requestId: "req-detail-mode",
+    user: { id: "user-10" },
+  });
+
+  expect(receivedDetailLevel).toBe("advanced");
+  expect(receivedGuideMode).toBe("security");
 });
 
 test("chat route maps assistant errors to ApiError with requestId", async () => {

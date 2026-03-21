@@ -61,6 +61,15 @@ export type DocsAnswerTemplate =
   | "clarifying_question"
   | "missing_answer";
 
+export type DocsDetailLevel = "basic" | "medium" | "instruction" | "advanced";
+
+export type DocsGuideMode =
+  | "default"
+  | "troubleshooting"
+  | "decision_guide"
+  | "checklist"
+  | "security";
+
 export type DocsAnswerSource = {
   path: string;
   heading: string;
@@ -70,11 +79,22 @@ export type DocsAnswerSource = {
   score: number;
 };
 
+export type DocsFollowUpOption = {
+  id: string;
+  label: string;
+  detailLevel: DocsDetailLevel;
+  guideMode: DocsGuideMode;
+  promptHint: string;
+};
+
 export type DocsComposedAnswer = {
   mode: "docs-only";
   template: DocsAnswerTemplate;
+  detailLevel: DocsDetailLevel;
+  guideMode: DocsGuideMode;
   answer: string;
   confidence: number;
   sources: DocsAnswerSource[];
+  followUpOptions: DocsFollowUpOption[];
   fallbackUsed: boolean;
 };

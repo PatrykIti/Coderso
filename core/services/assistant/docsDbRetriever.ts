@@ -36,11 +36,71 @@ const CAPABILITY_HINTS = [
   "mozliwosci",
 ];
 const SCREEN_HINTS = ["screen", "page", "tab", "panel", "editor", "settings", "module"];
+const DETAIL_BASIC_HINTS = ["basic", "quick", "short answer", "brief"];
+const DETAIL_MEDIUM_HINTS = ["medium", "more detail", "explain more", "more context"];
+const DETAIL_INSTRUCTION_HINTS = [
+  "instruction",
+  "step by step",
+  "how to",
+  "krok po kroku",
+  "instrukcja",
+];
+const DETAIL_ADVANCED_HINTS = [
+  "advanced",
+  "scenario",
+  "tradeoff",
+  "best practice",
+  "zaawans",
+  "scenariusz",
+];
+const TROUBLESHOOTING_HINTS = [
+  "troubleshooting",
+  "troubleshoot",
+  "fix",
+  "error",
+  "issue",
+  "problem",
+  "debug",
+];
+const DECISION_GUIDE_HINTS = [
+  "decision",
+  "which should i choose",
+  "which one",
+  "compare",
+  "comparison",
+  "wybrac",
+  "porown",
+];
+const CHECKLIST_HINTS = [
+  "checklist",
+  "ready to launch",
+  "go live",
+  "readiness",
+  "lista kontrolna",
+  "check list",
+];
+const SECURITY_HINTS = ["security", "secure", "csrf", "rbac", "auth", "hardening"];
+
+type DocsDetailLevel = "basic" | "medium" | "instruction" | "advanced";
+type DocsGuideMode =
+  | "default"
+  | "troubleshooting"
+  | "decision_guide"
+  | "checklist"
+  | "security";
 
 type SectionKind =
   | "step_by_step"
   | "what_is_it"
   | "when_to_use"
+  | "basic"
+  | "medium"
+  | "instruction"
+  | "advanced"
+  | "troubleshooting"
+  | "decision_guide"
+  | "checklist"
+  | "security"
   | "examples"
   | "common_mistakes"
   | "other";
@@ -55,6 +115,8 @@ type QueryIntent = {
   capability: boolean;
   asksForScreen: boolean;
   proceduralUseFlow: boolean;
+  detailLevel: DocsDetailLevel;
+  guideMode: DocsGuideMode;
 };
 
 type RankingContext = {
@@ -129,6 +191,36 @@ const inferQueryIntent = (query: string): QueryIntent => {
   const tokens = tokenizeDocsText(query);
   const uniqueTokens = [...new Set(tokens)];
 
+  let detailLevel: DocsDetailLevel = "medium";
+  if (DETAIL_BASIC_HINTS.some((term) => normalized.includes(term))) {
+    detailLevel = "basic";
+  } else if (DETAIL_INSTRUCTION_HINTS.some((term) => normalized.includes(term))) {
+    detailLevel = "instruction";
+  } else if (DETAIL_ADVANCED_HINTS.some((term) => normalized.includes(term))) {
+    detailLevel = "advanced";
+  } else if (DETAIL_MEDIUM_HINTS.some((term) => normalized.includes(term))) {
+    detailLevel = "medium";
+  } else if (
+    normalized.includes("where") ||
+    normalized.includes("configure") ||
+    normalized.includes("how")
+  ) {
+    detailLevel = "instruction";
+  } else if (CAPABILITY_HINTS.some((term) => normalized.includes(term))) {
+    detailLevel = "basic";
+  }
+
+  let guideMode: DocsGuideMode = "default";
+  if (TROUBLESHOOTING_HINTS.some((term) => normalized.includes(term))) {
+    guideMode = "troubleshooting";
+  } else if (DECISION_GUIDE_HINTS.some((term) => normalized.includes(term))) {
+    guideMode = "decision_guide";
+  } else if (CHECKLIST_HINTS.some((term) => normalized.includes(term))) {
+    guideMode = "checklist";
+  } else if (SECURITY_HINTS.some((term) => normalized.includes(term))) {
+    guideMode = "security";
+  }
+
   return {
     normalized,
     tokens: uniqueTokens,
@@ -143,12 +235,22 @@ const inferQueryIntent = (query: string): QueryIntent => {
       normalized.includes("how do i use") ||
       normalized.includes("jak uzyc") ||
       normalized.includes("jak korzystac"),
+    detailLevel,
+    guideMode,
   };
 };
 
 const inferSectionKind = (headingPath: string[]): SectionKind => {
   const normalizedHeading = normalizeDocsText(headingPath[headingPath.length - 1] ?? "");
   if (normalizedHeading.includes("step by step")) return "step_by_step";
+  if (normalizedHeading === "basic") return "basic";
+  if (normalizedHeading === "medium") return "medium";
+  if (normalizedHeading.includes("instruction")) return "instruction";
+  if (normalizedHeading === "advanced") return "advanced";
+  if (normalizedHeading.includes("troubleshooting")) return "troubleshooting";
+  if (normalizedHeading.includes("decision guide")) return "decision_guide";
+  if (normalizedHeading.includes("checklist")) return "checklist";
+  if (normalizedHeading.includes("security")) return "security";
   if (normalizedHeading.includes("what is it")) return "what_is_it";
   if (normalizedHeading.includes("when to use")) return "when_to_use";
   if (normalizedHeading.includes("examples")) return "examples";
@@ -156,22 +258,106 @@ const inferSectionKind = (headingPath: string[]): SectionKind => {
   return "other";
 };
 
+const scoreDetailLevelSectionWeight = (
+  sectionKind: SectionKind,
+  detailLevel: DocsDetailLevel
+) => {
+  if (detailLevel === "basic") {
+    if (sectionKind === "basic") return 1.4;
+    if (sectionKind === "what_is_it") return 1.15;
+    if (sectionKind === "medium") return 0.45;
+    if (sectionKind === "instruction") return 0.2;
+    if (sectionKind === "step_by_step") return 0.15;
+    if (sectionKind === "advanced") return -0.25;
+    return 0;
+  }
+
+  if (detailLevel === "instruction") {
+    if (sectionKind === "instruction") return 1.55;
+    if (sectionKind === "step_by_step") return 1.45;
+    if (sectionKind === "medium") return 0.35;
+    if (sectionKind === "what_is_it") return 0.2;
+    if (sectionKind === "advanced") return -0.1;
+    return 0;
+  }
+
+  if (detailLevel === "advanced") {
+    if (sectionKind === "advanced") return 1.45;
+    if (sectionKind === "decision_guide") return 0.95;
+    if (sectionKind === "security") return 0.7;
+    if (sectionKind === "examples") return 0.6;
+    if (sectionKind === "common_mistakes") return 0.55;
+    if (sectionKind === "basic") return -0.15;
+    return 0;
+  }
+
+  if (sectionKind === "medium") return 1.3;
+  if (sectionKind === "what_is_it") return 0.85;
+  if (sectionKind === "when_to_use") return 0.7;
+  if (sectionKind === "instruction") return 0.35;
+  if (sectionKind === "step_by_step") return 0.25;
+  return 0;
+};
+
+const scoreGuideModeSectionWeight = (
+  sectionKind: SectionKind,
+  guideMode: DocsGuideMode
+) => {
+  if (guideMode === "troubleshooting") {
+    if (sectionKind === "troubleshooting") return 8;
+    if (sectionKind === "common_mistakes") return 2;
+    if (sectionKind === "instruction" || sectionKind === "step_by_step") return -0.8;
+    return 0;
+  }
+
+  if (guideMode === "decision_guide") {
+    if (sectionKind === "decision_guide") return 7;
+    if (sectionKind === "advanced") return 2;
+    if (sectionKind === "when_to_use") return 1.25;
+    return 0;
+  }
+
+  if (guideMode === "checklist") {
+    if (sectionKind === "checklist") return 7;
+    if (sectionKind === "instruction") return 2;
+    if (sectionKind === "step_by_step") return 1.5;
+    return 0;
+  }
+
+  if (guideMode === "security") {
+    if (sectionKind === "security") return 7;
+    if (sectionKind === "advanced") return 2;
+    if (sectionKind === "common_mistakes") return 1.25;
+    return 0;
+  }
+
+  return 0;
+};
+
 const scoreSectionWeight = (headingPath: string[], context: RankingContext) => {
   const sectionKind = inferSectionKind(headingPath);
-  let score = 0;
+  let score =
+    scoreDetailLevelSectionWeight(sectionKind, context.intent.detailLevel) +
+    scoreGuideModeSectionWeight(sectionKind, context.intent.guideMode);
 
   if (context.intent.location) {
     if (sectionKind === "step_by_step") score += 1.2;
+    if (sectionKind === "instruction") score += 1.25;
     if (sectionKind === "what_is_it") score += 0.35;
     if (sectionKind === "when_to_use") score += 0.15;
+    if (sectionKind === "basic") score += 0.45;
+    if (sectionKind === "medium") score += 0.3;
     if (sectionKind === "examples") score -= 0.75;
     if (sectionKind === "common_mistakes") score -= 1.1;
     return score;
   }
 
   if (context.intent.capability) {
+    if (sectionKind === "basic") score += 1.15;
+    if (sectionKind === "medium") score += 0.75;
     if (sectionKind === "what_is_it") score += 1.1;
     if (sectionKind === "step_by_step") score += 0.55;
+    if (sectionKind === "instruction") score += 0.45;
     if (sectionKind === "when_to_use") score += 0.35;
     if (sectionKind === "examples") score -= 0.25;
     if (sectionKind === "common_mistakes") score -= 1.15;
@@ -179,7 +365,10 @@ const scoreSectionWeight = (headingPath: string[], context: RankingContext) => {
   }
 
   if (sectionKind === "step_by_step") score += context.intent.proceduralUseFlow ? 1.45 : 1.15;
+  if (sectionKind === "instruction") score += context.intent.proceduralUseFlow ? 1.5 : 1.2;
   if (sectionKind === "what_is_it") score += context.intent.proceduralUseFlow ? 0.2 : 0.15;
+  if (sectionKind === "basic") score += 0.25;
+  if (sectionKind === "medium") score += 0.45;
   if (sectionKind === "when_to_use") score += context.intent.proceduralUseFlow ? -0.1 : 0.2;
   if (sectionKind === "examples") score -= 0.2;
   if (sectionKind === "common_mistakes") score -= 0.9;

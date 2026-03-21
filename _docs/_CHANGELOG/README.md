@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 519 | 2026-03-21 | TASK-119 assistant multi-level docs and progressive follow-up flow | Assistant/Docs |
 | 518 | 2026-03-21 | TASK-118 assistant surface labels procedural guidance and corpus specificity follow-up | Assistant/Product |
 | 517 | 2026-03-21 | TASK-117 assistant clarifying questions and section-aware docs answers | Assistant/Product |
 | 516 | 2026-03-21 | TASK-115 ranking hardening and docs-only answer formatting | Assistant/Product |

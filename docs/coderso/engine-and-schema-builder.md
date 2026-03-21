@@ -10,38 +10,66 @@ keywords:
   - fields
 ---
 
-# What Is It
+# Basic
 
-Coderso Engine and Schema Builder are the modeling surfaces for custom content
-types, field structures, and the rules that later drive Entries, Listings,
-Custom Screens, and other record-based workflows.
+Engine and Schema Builder define structured content models. Use them to design
+content types, fields, and relationships before teams start creating records.
 
-# When To Use
+# Medium
 
-Use Engine before creating real records whenever the site needs repeatable,
-structured content instead of one-off pages.
+Engine is the source of truth for record structure. Entries, Listings, Forms,
+and Custom Screens consume the schema you define here. Strong schema decisions
+reduce downstream rework, migration noise, and UI inconsistency.
 
-# Step By Step
+Use this surface when:
+- you need repeatable structured records,
+- multiple modules depend on the same data model,
+- validation and relationship rules must stay deterministic.
 
-1. Start by creating or opening a content type in Engine.
-2. Define fields, labels, relationships, and schema details in Schema Builder.
-3. Validate the model against the downstream workflows you expect to use.
-4. Only then move into Entries, Listings, Forms, or Custom Screens.
-5. Revisit Engine when the content model changes instead of patching records
-   ad hoc downstream.
+# Instruction
 
-# Examples
+1. Create or open a content type in Engine.
+2. Define fields, labels, validations, and relationships in Schema Builder.
+3. Validate required/optional boundaries and relation cardinality.
+4. Confirm the model against expected downstream use (Entries, Listings, Forms,
+   Custom Screens).
+5. Only then create real records.
 
-- A clinic defines doctors, services, and locations as content types before
-  building listings and booking flows.
-- A directory project models providers and categories before creating public
-  search/filter experiences.
-- A small commerce setup models structured product-supporting records outside
-  the core product catalog.
+# Advanced
 
-# Common Mistakes
+- Model for queryability first: stable slugs, explicit enums, and predictable
+  relation keys.
+- Avoid schema churn by versioning changes and migrating incrementally when
+  records already exist.
+- Prefer explicit defaults and bounded field constraints to reduce runtime
+  branching in downstream modules.
 
-- Creating records first and trying to invent the model later.
-- Treating the content type label as enough without validating field structure.
-- Forgetting that downstream screens inherit the strengths and weaknesses of the
-  schema you create here.
+# Troubleshooting
+
+- If records fail validation, re-check required fields and enum values in schema
+  definitions.
+- If downstream screens render inconsistent data, verify relation field names
+  and type compatibility.
+- If teams frequently patch records manually, review missing defaults and weak
+  model constraints in Engine.
+
+# Decision Guide
+
+- Choose Engine when content must be structured and reused by workflows.
+- Choose page/post authoring when content is narrative and not record-centric.
+- Choose schema refactor before UI refactor if display problems originate from
+  inconsistent data shape.
+
+# Checklist
+
+1. Content type and field structure finalized.
+2. Validation rules and defaults defined.
+3. Relationship model reviewed for downstream screens.
+4. Record lifecycle expectations documented.
+5. Team ready to create records in Entries only after schema sign-off.
+
+# Security
+
+- Do not encode secrets or privileged operational tokens as content fields.
+- Keep admin-only operational data behind RBAC-protected internal surfaces.
+- Validate unknown fields strictly at API boundaries to prevent schema abuse.

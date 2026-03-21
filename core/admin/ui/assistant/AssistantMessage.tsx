@@ -1,13 +1,17 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import type { AssistantChatResponse } from "@/services/assistantClient";
+import {
+  type AssistantChatResponse,
+  type AssistantFollowUpOption,
+} from "@/services/assistantClient";
 
 type AssistantMessageProps = {
   role: "user" | "assistant";
   text: string;
   response?: AssistantChatResponse;
   error?: string;
+  onFollowUpSelect?: (option: AssistantFollowUpOption) => void;
 };
 
 type MessageBlock =
@@ -110,6 +114,7 @@ export function AssistantMessage({
   text,
   response,
   error,
+  onFollowUpSelect,
 }: AssistantMessageProps) {
   if (role === "user") {
     return (
@@ -144,6 +149,26 @@ export function AssistantMessage({
             Requested mode switched to docs-only for this answer.
           </AlertDescription>
         </Alert>
+      ) : null}
+
+      {response && response.followUpOptions.length > 0 && !error ? (
+        <div className="space-y-2 border-t pt-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Need more?
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {response.followUpOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className="rounded-full border px-2.5 py-1 text-xs text-foreground transition-colors hover:bg-muted"
+                onClick={() => onFollowUpSelect?.(option)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
       ) : null}
     </div>
   );

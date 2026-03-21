@@ -15,6 +15,14 @@ export const assistantChatSchema = {
   properties: {
     message: { type: "string", minLength: 1, maxLength: 2000 },
     mode: { type: "string", enum: ["docs-only", "llm-rag"] },
+    detailLevel: {
+      type: "string",
+      enum: ["basic", "medium", "instruction", "advanced"],
+    },
+    guideMode: {
+      type: "string",
+      enum: ["default", "troubleshooting", "decision_guide", "checklist", "security"],
+    },
     context: {
       type: "object",
       additionalProperties: false,

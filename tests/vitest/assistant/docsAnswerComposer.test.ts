@@ -257,6 +257,92 @@ test("composeDocsAnswer prefers step-by-step guidance for procedural engine ques
   expect(answer.answer).not.toContain("Use it when:");
 });
 
+test("composeDocsAnswer respects explicit basic detail level", () => {
+  const answer = composeDocsAnswer({
+    question: "engine overview",
+    detailLevel: "basic",
+    hits: [
+      makeHit({
+        score: 3,
+        chunk: {
+          id: "engine-instruction",
+          docPath: "docs/coderso/engine-and-schema-builder.md",
+          docTitle: "Coderso Engine and Schema Builder",
+          productArea: "coderso-engine",
+          headingPath: ["Coderso Engine and Schema Builder", "Instruction"],
+          heading: "Instruction",
+          content:
+            "1. Start by creating a content type. 2. Add fields and validation. 3. Connect downstream modules.",
+          normalizedText:
+            "start by creating a content type add fields and validation connect downstream modules",
+        },
+      }),
+      makeHit({
+        score: 2.2,
+        chunk: {
+          id: "engine-basic",
+          docPath: "docs/coderso/engine-and-schema-builder.md",
+          docTitle: "Coderso Engine and Schema Builder",
+          productArea: "coderso-engine",
+          headingPath: ["Coderso Engine and Schema Builder", "Basic"],
+          heading: "Basic",
+          content: "Engine defines structured content models used by records and workflows.",
+          normalizedText: "engine defines structured content models used by records and workflows",
+        },
+      }),
+    ],
+  });
+
+  expect(answer.detailLevel).toBe("basic");
+  expect(answer.answer).toContain("Engine defines structured content models");
+  expect(answer.answer).not.toContain("1. Start by creating a content type.");
+});
+
+test("composeDocsAnswer builds troubleshooting block and follow-up options", () => {
+  const answer = composeDocsAnswer({
+    question: "entries save error",
+    guideMode: "troubleshooting",
+    hits: [
+      makeHit({
+        score: 2.8,
+        chunk: {
+          id: "entries-instruction",
+          docPath: "docs/coderso/entries-and-record-editing.md",
+          docTitle: "Coderso Entries and Record Editing",
+          productArea: "coderso-entries",
+          headingPath: ["Coderso Entries and Record Editing", "Instruction"],
+          heading: "Instruction",
+          content:
+            "1. Open Entries. 2. Edit the record. 3. Save and verify validation.",
+          normalizedText: "open entries edit the record save and verify validation",
+        },
+      }),
+      makeHit({
+        score: 2.4,
+        chunk: {
+          id: "entries-troubleshooting",
+          docPath: "docs/coderso/entries-and-record-editing.md",
+          docTitle: "Coderso Entries and Record Editing",
+          productArea: "coderso-entries",
+          headingPath: ["Coderso Entries and Record Editing", "Troubleshooting"],
+          heading: "Troubleshooting",
+          content:
+            "If save fails, verify required fields, relation integrity, and current schema version.",
+          normalizedText:
+            "if save fails verify required fields relation integrity and current schema version",
+        },
+      }),
+    ],
+  });
+
+  expect(answer.guideMode).toBe("troubleshooting");
+  expect(answer.answer).toContain("Troubleshooting:");
+  expect(answer.answer).toContain("If save fails");
+  expect(answer.followUpOptions.some((option) => option.id === "followup-back-default")).toBe(
+    true
+  );
+});
+
 test("composeDocsAnswer returns clarifying question when top docs stay ambiguous", () => {
   const answer = composeDocsAnswer({
     question: "Where can I configure colors?",

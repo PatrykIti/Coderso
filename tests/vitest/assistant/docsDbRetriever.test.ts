@@ -195,6 +195,51 @@ test("rankAssistantDocsDbRows prefers step-by-step over when-to-use for procedur
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("step by step");
 });
 
+test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troubleshooting queries", () => {
+  const hits = rankAssistantDocsDbRows(
+    [
+      ...rows,
+      {
+        id: "chunk-entries-instruction",
+        docPath: "docs/coderso/entries-and-record-editing.md",
+        docTitle: "Coderso Entries and Record Editing",
+        productArea: "coderso-entries",
+        keywords: ["entries", "records", "validation"],
+        headingPath: ["Coderso Entries and Record Editing", "Instruction"],
+        heading: "Instruction",
+        lineStart: 30,
+        lineEnd: 44,
+        content: "1. Open Entries. 2. Edit and save the record.",
+        normalizedText: "open entries edit and save the record",
+        tokenCount: 10,
+      },
+      {
+        id: "chunk-entries-troubleshooting",
+        docPath: "docs/coderso/entries-and-record-editing.md",
+        docTitle: "Coderso Entries and Record Editing",
+        productArea: "coderso-entries",
+        keywords: ["entries", "records", "validation"],
+        headingPath: ["Coderso Entries and Record Editing", "Troubleshooting"],
+        heading: "Troubleshooting",
+        lineStart: 46,
+        lineEnd: 58,
+        content:
+          "If save fails, verify required fields and schema constraints before retrying.",
+        normalizedText:
+          "if save fails verify required fields and schema constraints before retrying",
+        tokenCount: 13,
+      },
+    ],
+    "entries save error troubleshooting",
+    {
+      topK: 3,
+    }
+  );
+
+  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/entries-and-record-editing.md");
+  expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("troubleshooting");
+});
+
 test("rankAssistantDocsDbRows returns empty list for unrelated query", () => {
   const hits = rankAssistantDocsDbRows(rows, "quantum banana neutron", {
     topK: 3,
