@@ -253,8 +253,11 @@ Przeplyw runtime:
 2. Runtime wykonuje retrieval na `assistant_doc_chunks`.
 3. Official assistant corpus w `docs/` jest uznawany za gotowy dopiero po seedzie do DB.
 4. Gdy DB corpus nie jest gotowy, runtime zwraca stan `not ready`.
-5. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) z tresci top evidence, a nie z listy plikow.
-6. Final answer korzysta z `chunk.content`, a nie z krotszego preview `snippet`, ktory pozostaje warstwa search/evidence.
+5. `docsDbRetriever` stosuje ranking intent-aware: BM25 + section/path priors + metadata docs (`productArea`, `title`, `keywords`) + exact module/screen phrase boosts + cross-area penalties dla obcych domen.
+6. Confidence nie zalezy juz tylko od `topScore`; uwzglednia tez domain alignment, query coverage i score gap.
+7. `docsAnswerComposer` sklada odpowiedz (`location_answer`, `how_to_answer`, `missing_answer`) z tresci top evidence, a nie z listy plikow.
+8. Final answer korzysta z `chunk.content`, a nie z krotszego preview `snippet`, ktory pozostaje warstwa search/evidence.
+9. Docs-only answer zachowuje strukture paragrafow i numerowanych krokow, a UI renderuje je jako czytelne bloki zamiast jednego zlanego tekstu.
 
 Przeplyw reindex:
 1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.

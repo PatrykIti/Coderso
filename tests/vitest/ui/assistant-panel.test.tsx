@@ -114,3 +114,39 @@ test("AssistantMessage renders assistant metadata and sources", () => {
   expect(html).toContain("break-words");
   expect(html).toContain("overflow-wrap:anywhere");
 });
+
+test("AssistantMessage renders docs answers as structured paragraphs and lists", () => {
+  const html = renderAdminUi(
+    <AssistantMessage
+      role="assistant"
+      text={[
+        "Most likely screen or section:",
+        "Coderso Widgets and Template Editor > Step By Step",
+        "",
+        "What to do:",
+        "",
+        "1. Open Widgets.",
+        "2. Edit the Hero template.",
+        "3. Use the Visual tab to change colors.",
+      ].join("\n")}
+      response={{
+        mode: "docs-only",
+        template: "location_answer",
+        answer: "",
+        confidence: 0.74,
+        sources: [],
+        fallbackUsed: false,
+        requestedMode: "docs-only",
+        effectiveMode: "docs-only",
+        retrievalBackend: "db",
+        llm: null,
+      }}
+    />
+  );
+
+  expect(html).toContain("Most likely screen or section:");
+  expect(html).toContain("What to do:");
+  expect(html).toContain("<ol");
+  expect(html).toContain("list-decimal");
+  expect(html).toContain("Edit the Hero template.");
+});

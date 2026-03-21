@@ -5,7 +5,7 @@
 **Category:** Assistant/Core  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-115  
-**Status:** Done (2026-03-20)
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -30,6 +30,10 @@ produktowych dokumentow i sekcji, zamiast trafien tylko tekstowo podobnych.
    - `which screen`
 4. Upewnic sie, ze selected evidence jest sensowne dla composera, a nie tylko
    najwyzsze czysto tekstowo.
+5. Dolozyc mocny signal za zgodny `productArea`, `title`, `keywords`, exact
+   module/screen phrase match i query coverage.
+6. Obnizyc confidence, gdy top hit nie ma mocnego zgodnego sygnalu domenowego
+   albo jest tylko minimalnie lepszy od kolejnego trafienia.
 
 ---
 
@@ -56,7 +60,11 @@ produktowych dokumentow i sekcji, zamiast trafien tylko tekstowo podobnych.
 
 - `core/services/assistant/docsDbRetriever.ts`
 - `core/services/assistant/docsRetriever.ts` (if heuristics are shared)
+- `core/services/assistant/docsAnswerComposer.ts`
+- `core/admin/ui/assistant/AssistantMessage.tsx`
 - `tests/vitest/assistant/docsDbRetriever.test.ts`
+- `tests/vitest/assistant/docsAnswerComposer.test.ts`
+- `tests/vitest/ui/assistant-panel.test.tsx`
 
 ---
 
@@ -84,10 +92,38 @@ score -= weakEvidencePenalty(chunk, questionIntent);
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
+- `_docs/ASSISTANT_GUIDE.md`
 
 ---
 
-## Completion Notes (2026-03-20)
+## Regression Follow-up (2026-03-21)
 
-- Added section/path priors so canonical product docs and `Step By Step` evidence score higher for direct configuration questions.
-- Reduced the chance that weaker `Examples` sections dominate support-style queries.
+Pierwsze zamkniecie taska poprawilo section/path priors, ale pozostawilo zbyt
+slaby signal domenowy na etapie wyboru primary evidence.
+
+Zaobserwowane regresje:
+- pytanie o `Hero widget colors` potrafilo wybrac `Booking` albo `Themes`,
+- pytanie o `widgets` potrafilo promowac `Themes`,
+- confidence pozostawalo zbyt wysokie, bo bylo oparte glownie o `topScore`,
+- docs-only answer byl poprawniejszy tresciowo, ale nadal renderowal sie jako
+  jeden zlany blok tekstu.
+
+Forma naprawy:
+1. Oprzec ranking o metadata docs z DB: `productArea`, `title`, `keywords`.
+2. Dodac boost za exact module/screen phrase match i query coverage.
+3. Dolozyc cross-area penalty, gdy inny produktowy obszar ma wyraznie
+   silniejszy signal domenowy.
+4. Skalowac confidence nie tylko `topScore`, ale tez domain alignment, score
+   gap i coverage.
+5. Formatowac docs-only answer do paragrafow i list numerowanych, zeby wynik
+   byl czytelny bez zewnetrznego LLM.
+
+## Completion Notes (2026-03-21)
+
+- Added metadata-aware ranking based on `productArea`, doc title, keywords, and
+  exact product phrase matches so widget/screen questions stop drifting into
+  semantically similar but wrong areas like `Themes` or `Booking`.
+- Added cross-area penalties and confidence calibration so weakly aligned hits
+  no longer look highly trustworthy just because their raw text score is high.
+- Docs-only answers now render as readable paragraphs and numbered steps instead
+  of one merged text block.

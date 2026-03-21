@@ -11,7 +11,8 @@ const baseHit: DocsSearchHit = {
     heading: "Step By Step",
     lineStart: 10,
     lineEnd: 20,
-    content: "Open the Hero template and use the Visual tab to edit colors, spacing, and background settings.",
+    content:
+      "Open the Hero template and use the Visual tab to edit colors, spacing, and background settings.",
     normalizedText:
       "open the hero template and use the visual tab to edit colors spacing and background settings",
     tokenCounts: {
@@ -28,6 +29,14 @@ const baseHit: DocsSearchHit = {
   matchedTerms: ["hero", "visual", "colors"],
   snippet:
     "…use the Visual tab to edit colors, spacing, and background settings.…",
+  rankingSignals: {
+    textScore: 1.9,
+    domainScore: 1.8,
+    intentScore: 0.8,
+    phraseScore: 0.6,
+    domainPenalty: 0,
+    matchedQueryCoverage: 1,
+  },
 };
 
 test("composeDocsAnswer returns location template when query asks where", () => {
@@ -37,12 +46,13 @@ test("composeDocsAnswer returns location template when query asks where", () => 
   });
 
   expect(answer.template).toBe("location_answer");
+  expect(answer.answer).toContain("Most likely screen or section:");
   expect(answer.answer).toContain("Visual tab");
   expect(answer.answer).toContain("Hero template");
   expect(answer.answer).not.toContain("…");
   expect(answer.answer).not.toContain("Most relevant locations in docs");
   expect(answer.sources).toHaveLength(1);
-  expect(answer.confidence).toBeGreaterThan(0.2);
+  expect(answer.confidence).toBeGreaterThan(0.5);
 });
 
 test("composeDocsAnswer returns how-to template for procedural question", () => {
@@ -54,6 +64,7 @@ test("composeDocsAnswer returns how-to template for procedural question", () => 
   expect(answer.template).toBe("how_to_answer");
   expect(answer.answer).toContain("Visual tab");
   expect(answer.answer).toContain("Hero template");
+  expect(answer.answer).not.toContain("Most likely screen or section:");
   expect(answer.sources[0]?.heading).toContain("Coderso Widgets");
 });
 
@@ -73,10 +84,33 @@ test("composeDocsAnswer uses full chunk content instead of truncated snippet pre
     ],
   });
 
-  expect(answer.answer).toContain("Open Widgets.");
-  expect(answer.answer).toContain("Edit the Hero template.");
-  expect(answer.answer).toContain("Visual tab");
+  expect(answer.answer).toContain("What to do:");
+  expect(answer.answer).toContain("1. Open Widgets.");
+  expect(answer.answer).toContain("2. Edit the Hero template.");
+  expect(answer.answer).toContain("3. Use the Visual tab to change colors and spacing.");
   expect(answer.answer).not.toContain("…Use the Visual tab");
+});
+
+test("composeDocsAnswer lowers confidence when the top hit lacks domain alignment", () => {
+  const answer = composeDocsAnswer({
+    question: "Where can I configure hero widget colors?",
+    hits: [
+      {
+        ...baseHit,
+        score: 3.2,
+        rankingSignals: {
+          textScore: 2.6,
+          domainScore: 0,
+          intentScore: 0.5,
+          phraseScore: 0.4,
+          domainPenalty: 0.8,
+          matchedQueryCoverage: 0.33,
+        },
+      },
+    ],
+  });
+
+  expect(answer.confidence).toBeLessThan(0.45);
 });
 
 test("composeDocsAnswer returns missing template when no hits", () => {

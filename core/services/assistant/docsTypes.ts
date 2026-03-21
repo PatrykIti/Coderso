@@ -38,6 +38,14 @@ export type DocsSearchHit = {
   score: number;
   matchedTerms: string[];
   snippet: string;
+  rankingSignals?: {
+    textScore: number;
+    domainScore: number;
+    intentScore: number;
+    phraseScore: number;
+    domainPenalty: number;
+    matchedQueryCoverage: number;
+  };
 };
 
 export type DocsSearchOptions = {

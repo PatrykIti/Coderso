@@ -12,6 +12,11 @@ type ComposeDocsAnswerInput = {
   maxSources?: number;
 };
 
+type ExtractedAnswerBody = {
+  steps: string[];
+  paragraphs: string[];
+};
+
 const LOCATION_HINTS = new Set([
   "where",
   "whereis",
@@ -49,6 +54,9 @@ const toSentence = (value: string) => {
   return /[.!?]$/.test(normalized) ? normalized : `${normalized}.`;
 };
 
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
 const normalizeChunkContent = (value: string) =>
   value
     .replace(/\r/g, "")
@@ -80,29 +88,58 @@ const truncateAtWordBoundary = (value: string, maxLength: number) => {
   return `${safe.trimEnd()}…`;
 };
 
-const buildContentAnswer = (content: string) => {
+const normalizeNumberedStep = (value: string) => {
+  const match = value.match(/^(\d+)\.\s*(.*)$/);
+  if (!match) return toSentence(value);
+  const label = match[1];
+  const body = toSentence(match[2] ?? "");
+  return `${label}. ${body.replace(/^[0-9]+\.\s*/, "")}`;
+};
+
+const buildContentAnswer = (content: string): ExtractedAnswerBody => {
   const normalized = normalizeChunkContent(content);
-  if (!normalized) return "";
+  if (!normalized) {
+    return {
+      steps: [],
+      paragraphs: [],
+    };
+  }
 
   const numberedSteps = extractNumberedSteps(normalized);
   if (numberedSteps.length > 0) {
-    return truncateAtWordBoundary(numberedSteps.slice(0, 3).join(" "), 360);
+    return {
+      steps: numberedSteps.slice(0, 3).map(normalizeNumberedStep),
+      paragraphs: [],
+    };
   }
 
   const sentences = extractSentences(normalized);
   if (sentences.length > 0) {
-    return truncateAtWordBoundary(sentences.slice(0, 2).join(" "), 360);
+    return {
+      steps: [],
+      paragraphs: sentences
+        .slice(0, 2)
+        .map((entry) => truncateAtWordBoundary(toSentence(entry), 180)),
+    };
   }
 
-  return truncateAtWordBoundary(normalized.replace(/\s+/g, " "), 360);
+  return {
+    steps: [],
+    paragraphs: [truncateAtWordBoundary(normalized.replace(/\s+/g, " "), 360)],
+  };
 };
 
 const pickPrimaryInstruction = (hits: DocsSearchHit[]) => {
   for (const hit of hits) {
     const contentAnswer = buildContentAnswer(hit.chunk.content);
-    if (contentAnswer) return toSentence(contentAnswer);
+    if (contentAnswer.steps.length > 0 || contentAnswer.paragraphs.length > 0) {
+      return contentAnswer;
+    }
   }
-  return "";
+  return {
+    steps: [],
+    paragraphs: [],
+  };
 };
 
 const inferPrimaryScreen = (hit: DocsSearchHit | undefined) => {
@@ -118,9 +155,54 @@ const inferPrimaryScreen = (hit: DocsSearchHit | undefined) => {
 
 const resolveConfidence = (hits: DocsSearchHit[]) => {
   if (hits.length === 0) return 0.1;
-  const topScore = hits[0]?.score ?? 0;
+  const topHit = hits[0];
+  const topScore = topHit?.score ?? 0;
   if (topScore <= 0) return 0.1;
-  return Math.min(0.97, Math.max(0.2, topScore / 4));
+
+  const secondScore = hits[1]?.score ?? 0;
+  const base = clamp(topScore / 3.75, 0.18, 0.94);
+  const domainScore = topHit?.rankingSignals?.domainScore ?? 0;
+  const domainPenalty = topHit?.rankingSignals?.domainPenalty ?? 0;
+  const coverage = topHit?.rankingSignals?.matchedQueryCoverage ?? 0.35;
+  const gap = Math.max(0, topScore - secondScore);
+
+  const domainFactor = 0.42 + (Math.min(domainScore, 2.5) / 2.5) * 0.58;
+  const coverageFactor = 0.75 + coverage * 0.25;
+  const gapFactor = 0.8 + (Math.min(gap, 1.5) / 1.5) * 0.2;
+  const penaltyFactor = Math.max(0.7, 1 - domainPenalty * 0.12);
+
+  return clamp(base * domainFactor * coverageFactor * gapFactor * penaltyFactor, 0.1, 0.97);
+};
+
+const buildFormattedAnswer = (input: {
+  template: DocsAnswerTemplate;
+  primaryInstruction: ReturnType<typeof pickPrimaryInstruction>;
+  primaryScreen: ReturnType<typeof inferPrimaryScreen>;
+  asksForScreen: boolean;
+}) => {
+  const blocks: string[] = [];
+
+  if (input.template === "location_answer" && input.primaryScreen) {
+    blocks.push(
+      [
+        "Most likely screen or section:",
+        input.asksForScreen
+          ? input.primaryScreen.heading || input.primaryScreen.path
+          : input.primaryScreen.path,
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
+  }
+
+  if (input.primaryInstruction.steps.length > 0) {
+    blocks.push("What to do:");
+    blocks.push(input.primaryInstruction.steps.join("\n"));
+  } else if (input.primaryInstruction.paragraphs.length > 0) {
+    blocks.push(...input.primaryInstruction.paragraphs);
+  }
+
+  return blocks.filter((entry) => entry.trim().length > 0).join("\n\n");
 };
 
 export const composeDocsAnswer = (input: ComposeDocsAnswerInput): DocsComposedAnswer => {
@@ -148,19 +230,12 @@ export const composeDocsAnswer = (input: ComposeDocsAnswerInput): DocsComposedAn
     template === "location_answer";
 
   const answer =
-    template === "location_answer"
-      ? [
-          primaryInstruction || "Use the matching product screen and follow the documented steps there.",
-          primaryScreen
-            ? asksForScreen
-              ? `Most likely screen or section: ${primaryScreen.heading || primaryScreen.path}.`
-              : null
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" ")
-      : primaryInstruction ||
-        "Follow the documented steps in the most relevant product guide.";
+    buildFormattedAnswer({
+      template,
+      primaryInstruction,
+      primaryScreen,
+      asksForScreen,
+    }) || "Follow the documented steps in the most relevant product guide.";
 
   return {
     mode: "docs-only",

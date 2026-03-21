@@ -5,7 +5,7 @@
 **Category:** QA/Docs  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-115-01, TASK-115-02, TASK-115-03  
-**Status:** Done (2026-03-20)
+**Status:** Done (2026-03-21)
 
 ---
 
@@ -43,11 +43,12 @@ board/changelog update.
 
 ---
 
-## Completion Notes (2026-03-20)
+## Completion Notes (2026-03-21)
 
 - Validation completed:
   - `bun --cwd core lint`
   - `bun --cwd core lint:types`
   - `bun run vitest run tests/vitest/assistant/docsAnswerComposer.test.ts tests/vitest/assistant/docsDbRetriever.test.ts tests/vitest/ui/assistant-panel.test.tsx`
   - `bun test tests/unit/assistant/assistantService.test.ts`
-- Synced task board and changelog for the answer-first assistant rollout.
+- Re-ran the targeted assistant validation after the ranking/evidence regression
+  follow-up and synced the task board, docs, and changelog again.

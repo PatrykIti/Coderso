@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 13 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 707 tasks
+- **Done:** 686 tasks
 
 ---
 
@@ -39,16 +39,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-115 | Assistant Product Answer Composer and Evidence UX Simplification | High | Large | Replace file-location answers with content-first product answers and hide sources in default UI |
-| TASK-115-04 | QA, Docs, Changelog, and Closure | Medium | Small | Final validation plus docs, board, and changelog sync for the new answer composer |
-| TASK-115-03 | Assistant UI Answer-First Rendering and Hidden Default Sources | Medium | Small | Main answer first, sources hidden by default in the user-facing chat UI |
-| TASK-115-02 | Ranking and Evidence Selection Tuned for Product Support Questions | High | Medium | Section/path priors so canonical screen docs beat weak examples or noisy hits |
-| TASK-115-01 | Assistant Answer Contract and Content-First Composer Model | High | Medium | Build real answers from article content instead of returning doc location lists |
-| TASK-114 | Assistant Legacy Docs Runtime Removal and DB-Only Enforcement | High | Medium | Remove `_docs/filesystem` support and enforce only the new `docs -> DB seeded corpus` model |
-| TASK-114-04 | QA, Docs, Changelog, and Closure | Medium | Small | Final validation plus docs, board, and changelog sync for legacy assistant docs removal |
-| TASK-114-03 | Admin Settings UX Cleanup Removing Legacy Assistant Docs Mode Choices | Medium | Small | Settings UI should describe only the DB-seeded `docs/` model |
-| TASK-114-02 | Runtime and API Enforcement for DB-Only Assistant Docs | High | Medium | Remove remaining official runtime fallback semantics and enforce DB-only readiness |
-| TASK-114-01 | Legacy Assistant Settings and Data Migration to DB-Only docs | High | Medium | Migrate saved legacy `_docs/filesystem` assistant settings into the new `docs/db` model |
 | TASK-054-20 | Coderso Membership and Client Portal Suite | High | Large | Authenticated client portal and per-content access rules |
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -77,9 +67,9 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-116 | Assistant Final Answer from Chunk Content, not Preview Snippet | Medium | Small | Done: final answer now uses chunk content with sentence-aware truncation instead of preview snippets |
-| TASK-115-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: targeted composer/ranking/UI validation plus docs, board, and changelog synchronization completed |
+| TASK-115-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: validation and docs/changelog sync were rerun after the ranking regression follow-up |
 | TASK-115-03 | Assistant UI Answer-First Rendering and Hidden Default Sources | Medium | Small | Done: main answer is primary content and default Sources rendering is hidden |
-| TASK-115-02 | Ranking and Evidence Selection Tuned for Product Support Questions | High | Medium | Done: stronger section/path priors now prefer canonical product docs and instruction-heavy sections |
+| TASK-115-02 | Ranking and Evidence Selection Tuned for Product Support Questions | High | Medium | Done: metadata-aware ranking, cross-area penalties, and confidence calibration now keep product questions on the right docs |
 | TASK-115-01 | Assistant Answer Contract and Content-First Composer Model | High | Medium | Done: assistant now composes actual answer text from article content instead of doc-location lists |
 | TASK-115 | Assistant Product Answer Composer and Evidence UX Simplification | High | Large | Done: content-first answers shipped and default evidence UI was simplified |
 | TASK-114-04 | QA, Docs, Changelog, and Closure | Medium | Small | Done: runtime/settings/UI validation plus docs, board, and changelog synchronization completed |

@@ -6,27 +6,50 @@ const rows = [
   {
     id: "chunk-hero",
     docPath: "docs/coderso/widgets-and-template-editor.md",
-    headingPath: ["Hero widget basics", "Step By Step"],
+    docTitle: "Coderso Widgets and Template Editor",
+    productArea: "coderso-widgets",
+    keywords: ["widgets", "templates", "widget library", "template editor"],
+    headingPath: ["Coderso Widgets and Template Editor", "Step By Step"],
     heading: "Step By Step",
     lineStart: 20,
     lineEnd: 38,
     content:
       "Open Widgets, choose Hero, then go to Visual tab to change colors and spacing.",
     normalizedText:
-      "hero widget basics step by step open widgets choose hero then go to visual tab to change colors and spacing",
+      "coderso widgets and template editor step by step open widgets choose hero then go to visual tab to change colors and spacing",
+    tokenCount: 22,
+  },
+  {
+    id: "chunk-themes",
+    docPath: "docs/screens/themes.md",
+    docTitle: "Themes",
+    productArea: "themes",
+    keywords: ["themes", "tokens", "templates", "presentation"],
+    headingPath: ["Themes", "Step By Step"],
+    heading: "Step By Step",
+    lineStart: 15,
+    lineEnd: 28,
+    content:
+      "Adjust global color, spacing, and typography tokens from Themes when the issue belongs to the site-wide design layer.",
+    normalizedText:
+      "themes step by step adjust global color spacing and typography tokens from themes when the issue belongs to the site wide design layer",
     tokenCount: 20,
   },
   {
-    id: "chunk-security",
-    docPath: "docs/screens/security-settings.md",
-    headingPath: ["Session limits", "When To Use"],
-    heading: "When To Use",
-    lineStart: 10,
-    lineEnd: 18,
-    content: "Configure session TTL and reset limits for admin access policy.",
+    id: "chunk-booking",
+    docPath: "docs/coderso/booking.md",
+    docTitle: "Coderso Booking",
+    productArea: "coderso-booking",
+    keywords: ["booking", "reservations", "availability", "services"],
+    headingPath: ["Coderso Booking", "Step By Step"],
+    heading: "Step By Step",
+    lineStart: 18,
+    lineEnd: 30,
+    content:
+      "Configure availability, blackout periods, services, and slot behavior for appointment workflows.",
     normalizedText:
-      "session limits when to use configure session ttl and reset limits for admin access policy",
-    tokenCount: 14,
+      "coderso booking step by step configure availability blackout periods services and slot behavior for appointment workflows",
+    tokenCount: 16,
   },
 ];
 
@@ -40,6 +63,16 @@ test("rankAssistantDocsDbRows ranks the most relevant hero section first", () =>
   expect(hits[0]?.snippet.toLowerCase()).toContain("visual tab");
 });
 
+test("rankAssistantDocsDbRows prefers widgets product area over themes for hero widget color questions", () => {
+  const hits = rankAssistantDocsDbRows(rows, "where can I configure hero widget colors", {
+    topK: 3,
+  });
+
+  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/widgets-and-template-editor.md");
+  expect(hits[0]?.rankingSignals?.domainScore ?? 0).toBeGreaterThan(0);
+  expect(hits.some((hit) => hit.chunk.docPath === "docs/screens/themes.md")).toBe(false);
+});
+
 test("rankAssistantDocsDbRows prefers step-by-step over examples for config questions", () => {
   const hits = rankAssistantDocsDbRows(
     [
@@ -47,6 +80,9 @@ test("rankAssistantDocsDbRows prefers step-by-step over examples for config ques
       {
         id: "chunk-examples",
         docPath: "docs/coderso/widgets-and-template-editor.md",
+        docTitle: "Coderso Widgets and Template Editor",
+        productArea: "coderso-widgets",
+        keywords: ["widgets", "templates", "widget library", "template editor"],
         headingPath: ["Coderso Widgets and Template Editor", "Examples"],
         heading: "Examples",
         lineStart: 60,

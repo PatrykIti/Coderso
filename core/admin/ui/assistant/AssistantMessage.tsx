@@ -10,7 +10,100 @@ type AssistantMessageProps = {
   error?: string;
 };
 
+type MessageBlock =
+  | { type: "paragraph"; lines: string[] }
+  | { type: "ordered"; items: string[] }
+  | { type: "unordered"; items: string[] };
+
 const formatConfidence = (value: number) => `${Math.round(value * 100)}%`;
+
+const parseAssistantMessageBlocks = (value: string): MessageBlock[] => {
+  const blocks = value
+    .split(/\n{2,}/)
+    .map((entry) =>
+      entry
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+    )
+    .filter((entry) => entry.length > 0);
+
+  return blocks.map((lines) => {
+    if (lines.every((line) => /^\d+\.\s+/.test(line))) {
+      return {
+        type: "ordered",
+        items: lines.map((line) => line.replace(/^\d+\.\s+/, "").trim()),
+      };
+    }
+
+    if (lines.every((line) => /^[-*]\s+/.test(line))) {
+      return {
+        type: "unordered",
+        items: lines.map((line) => line.replace(/^[-*]\s+/, "").trim()),
+      };
+    }
+
+    return {
+      type: "paragraph",
+      lines,
+    };
+  });
+};
+
+function AssistantMessageBody({
+  text,
+  error,
+}: {
+  text: string;
+  error?: string;
+}) {
+  const blocks = parseAssistantMessageBlocks(text);
+  const blockClassName = cn(
+    "min-w-0 break-words text-sm text-card-foreground [overflow-wrap:anywhere]",
+    error && "text-destructive"
+  );
+
+  return (
+    <div className="space-y-2">
+      {blocks.map((block, index) => {
+        if (block.type === "ordered") {
+          return (
+            <ol
+              key={`ordered-${index}`}
+              className={cn(blockClassName, "ml-5 list-decimal space-y-1 pl-1")}
+            >
+              {block.items.map((item, itemIndex) => (
+                <li key={`ordered-item-${itemIndex}`}>{item}</li>
+              ))}
+            </ol>
+          );
+        }
+
+        if (block.type === "unordered") {
+          return (
+            <ul
+              key={`unordered-${index}`}
+              className={cn(blockClassName, "ml-5 list-disc space-y-1 pl-1")}
+            >
+              {block.items.map((item, itemIndex) => (
+                <li key={`unordered-item-${itemIndex}`}>{item}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <p
+            key={`paragraph-${index}`}
+            className={cn(blockClassName, "whitespace-pre-wrap")}
+          >
+            {block.lines.join("\n")}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 export function AssistantMessage({
   role,
@@ -41,14 +134,7 @@ export function AssistantMessage({
             </>
           ) : null}
         </div>
-        <p
-          className={cn(
-            "min-w-0 whitespace-pre-wrap break-words text-sm text-card-foreground [overflow-wrap:anywhere]",
-            error && "text-destructive"
-          )}
-        >
-          {text}
-        </p>
+        <AssistantMessageBody text={text} error={error} />
       </div>
 
       {response?.fallbackUsed ? (

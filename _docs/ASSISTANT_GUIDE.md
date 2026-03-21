@@ -42,6 +42,9 @@ Answer contract:
 - assistant returns a product-facing answer built from article content,
 - not a list of document locations,
 - final answer is built from chunk content, not from the shorter preview snippet used for retrieval/evidence,
+- retrieval is intent-aware and prefers exact product/module signals from document metadata (`productArea`, title, keywords) over semantically similar hits from a different area,
+- confidence drops when the top hit lacks a strong aligned domain signal or is only marginally better than the next candidate,
+- docs-only answers preserve paragraphs and numbered steps so the chat UI can render a readable structure instead of one merged text block,
 - sources are treated as secondary evidence and are not shown by default in the user-facing chat UI.
 
 ## AI Site Wizard (Solution Kits)
