@@ -102,6 +102,52 @@ test("rankAssistantDocsDbRows prefers step-by-step over examples for config ques
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("step by step");
 });
 
+test("rankAssistantDocsDbRows prefers what-is-it over common-mistakes for capability questions", () => {
+  const hits = rankAssistantDocsDbRows(
+    [
+      ...rows,
+      {
+        id: "chunk-what-is-it",
+        docPath: "docs/coderso/widgets-and-template-editor.md",
+        docTitle: "Coderso Widgets and Template Editor",
+        productArea: "coderso-widgets",
+        keywords: ["widgets", "templates", "widget library", "template editor"],
+        headingPath: ["Coderso Widgets and Template Editor", "What Is It"],
+        heading: "What Is It",
+        lineStart: 6,
+        lineEnd: 14,
+        content:
+          "Widgets and Template Editor are reusable presentation surfaces for building sections, templates, and composable UI blocks.",
+        normalizedText:
+          "widgets and template editor are reusable presentation surfaces for building sections templates and composable ui blocks",
+        tokenCount: 16,
+      },
+      {
+        id: "chunk-common-mistakes",
+        docPath: "docs/coderso/widgets-and-template-editor.md",
+        docTitle: "Coderso Widgets and Template Editor",
+        productArea: "coderso-widgets",
+        keywords: ["widgets", "templates", "widget library", "template editor"],
+        headingPath: ["Coderso Widgets and Template Editor", "Common Mistakes"],
+        heading: "Common Mistakes",
+        lineStart: 42,
+        lineEnd: 46,
+        content:
+          "Confusing the widget library with page-level publishing. Editing many pages manually when a reusable template would reduce drift.",
+        normalizedText:
+          "confusing the widget library with page level publishing editing many pages manually when a reusable template would reduce drift",
+        tokenCount: 18,
+      },
+    ],
+    "what features I have in widgets",
+    {
+      topK: 3,
+    }
+  );
+
+  expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("what is it");
+});
+
 test("rankAssistantDocsDbRows returns empty list for unrelated query", () => {
   const hits = rankAssistantDocsDbRows(rows, "quantum banana neutron", {
     topK: 3,

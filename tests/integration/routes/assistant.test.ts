@@ -106,6 +106,45 @@ test("chat route calls service and returns payload", async () => {
   });
 });
 
+test("chat route returns clarifying question payload without remapping template", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      chat: async () => ({
+        mode: "docs-only",
+        template: "clarifying_question",
+        answer:
+          "I am not confident which product area you mean from the docs yet.\n\nDo you mean:\n- Themes\n- Coderso Widgets and Template Editor",
+        confidence: 0.22,
+        sources: [],
+        fallbackUsed: false,
+        requestedMode: "docs-only",
+        effectiveMode: "docs-only",
+        retrievalBackend: "db",
+        llm: null,
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/chat");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: { message: "where can I configure colors", mode: "docs-only" },
+    requestId: "req-clarify",
+    user: { id: "user-3" },
+  });
+
+  expect(result).toMatchObject({
+    template: "clarifying_question",
+    retrievalBackend: "db",
+  });
+});
+
 test("chat route maps assistant errors to ApiError with requestId", async () => {
   const { router, routes } = makeRouter();
 

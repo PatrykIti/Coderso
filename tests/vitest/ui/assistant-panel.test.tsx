@@ -120,8 +120,8 @@ test("AssistantMessage renders docs answers as structured paragraphs and lists",
     <AssistantMessage
       role="assistant"
       text={[
-        "Most likely screen or section:",
-        "Coderso Widgets and Template Editor > Step By Step",
+        "Most likely surface:",
+        "Coderso Widgets and Template Editor",
         "",
         "What to do:",
         "",
@@ -144,9 +144,42 @@ test("AssistantMessage renders docs answers as structured paragraphs and lists",
     />
   );
 
-  expect(html).toContain("Most likely screen or section:");
+  expect(html).toContain("Most likely surface:");
   expect(html).toContain("What to do:");
   expect(html).toContain("<ol");
   expect(html).toContain("list-decimal");
   expect(html).toContain("Edit the Hero template.");
+});
+
+test("AssistantMessage renders clarifying question choices as bullet list", () => {
+  const html = renderAdminUi(
+    <AssistantMessage
+      role="assistant"
+      text={[
+        "I am not confident which product area you mean from the docs yet.",
+        "",
+        "Do you mean:",
+        "",
+        "- Themes",
+        "- Coderso Widgets and Template Editor",
+      ].join("\n")}
+      response={{
+        mode: "docs-only",
+        template: "clarifying_question",
+        answer: "",
+        confidence: 0.22,
+        sources: [],
+        fallbackUsed: false,
+        requestedMode: "docs-only",
+        effectiveMode: "docs-only",
+        retrievalBackend: "db",
+        llm: null,
+      }}
+    />
+  );
+
+  expect(html).toContain("Do you mean:");
+  expect(html).toContain("<ul");
+  expect(html).toContain("list-disc");
+  expect(html).toContain("Coderso Widgets and Template Editor");
 });

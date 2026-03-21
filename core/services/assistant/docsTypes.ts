@@ -53,7 +53,11 @@ export type DocsSearchOptions = {
   minScore?: number;
 };
 
-export type DocsAnswerTemplate = "location_answer" | "how_to_answer" | "missing_answer";
+export type DocsAnswerTemplate =
+  | "location_answer"
+  | "how_to_answer"
+  | "clarifying_question"
+  | "missing_answer";
 
 export type DocsAnswerSource = {
   path: string;

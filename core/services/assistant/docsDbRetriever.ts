@@ -22,7 +22,28 @@ const LOCATION_HINTS = [
   "znalezc",
 ];
 const HOW_HINTS = ["how", "change", "edit", "update", "jak", "zmien", "edyt"];
+const CAPABILITY_HINTS = [
+  "what can",
+  "features",
+  "feature",
+  "capabilities",
+  "capability",
+  "options",
+  "available",
+  "co moge",
+  "jakie funkcje",
+  "funkcje",
+  "mozliwosci",
+];
 const SCREEN_HINTS = ["screen", "page", "tab", "panel", "editor", "settings", "module"];
+
+type SectionKind =
+  | "step_by_step"
+  | "what_is_it"
+  | "when_to_use"
+  | "examples"
+  | "common_mistakes"
+  | "other";
 
 type QueryIntent = {
   normalized: string;
@@ -31,6 +52,7 @@ type QueryIntent = {
   phrases: string[];
   location: boolean;
   procedural: boolean;
+  capability: boolean;
   asksForScreen: boolean;
 };
 
@@ -113,21 +135,49 @@ const inferQueryIntent = (query: string): QueryIntent => {
     phrases: buildQueryPhrases(uniqueTokens),
     location: LOCATION_HINTS.some((term) => normalized.includes(term)),
     procedural: HOW_HINTS.some((term) => normalized.includes(term)),
+    capability: CAPABILITY_HINTS.some((term) => normalized.includes(term)),
     asksForScreen: SCREEN_HINTS.some((term) => normalized.includes(term)),
   };
 };
 
+const inferSectionKind = (headingPath: string[]): SectionKind => {
+  const normalizedHeading = normalizeDocsText(headingPath[headingPath.length - 1] ?? "");
+  if (normalizedHeading.includes("step by step")) return "step_by_step";
+  if (normalizedHeading.includes("what is it")) return "what_is_it";
+  if (normalizedHeading.includes("when to use")) return "when_to_use";
+  if (normalizedHeading.includes("examples")) return "examples";
+  if (normalizedHeading.includes("common mistakes")) return "common_mistakes";
+  return "other";
+};
+
 const scoreSectionWeight = (headingPath: string[], context: RankingContext) => {
-  const normalizedHeading = normalizeDocsText(headingPath.join(" "));
+  const sectionKind = inferSectionKind(headingPath);
   let score = 0;
 
-  if (normalizedHeading.includes("step by step")) score += 0.9;
-  if (normalizedHeading.includes("what is it")) score += 0.35;
-  if (normalizedHeading.includes("when to use")) score += 0.25;
-  if ((context.intent.location || context.intent.procedural) && normalizedHeading.includes("examples")) {
-    score -= 0.45;
+  if (context.intent.location) {
+    if (sectionKind === "step_by_step") score += 1.2;
+    if (sectionKind === "what_is_it") score += 0.35;
+    if (sectionKind === "when_to_use") score += 0.15;
+    if (sectionKind === "examples") score -= 0.75;
+    if (sectionKind === "common_mistakes") score -= 1.1;
+    return score;
   }
-  if (context.intent.location && normalizedHeading.includes("common mistakes")) {
+
+  if (context.intent.capability) {
+    if (sectionKind === "what_is_it") score += 1.1;
+    if (sectionKind === "step_by_step") score += 0.55;
+    if (sectionKind === "when_to_use") score += 0.35;
+    if (sectionKind === "examples") score -= 0.25;
+    if (sectionKind === "common_mistakes") score -= 1.15;
+    return score;
+  }
+
+  if (sectionKind === "step_by_step") score += 1.05;
+  if (sectionKind === "what_is_it") score += 0.15;
+  if (sectionKind === "when_to_use") score += 0.2;
+  if (sectionKind === "examples") score -= 0.2;
+  if (sectionKind === "common_mistakes") score -= 0.9;
+  if ((context.intent.location || context.intent.procedural) && sectionKind === "examples") {
     score -= 0.15;
   }
 

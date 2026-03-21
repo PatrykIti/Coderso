@@ -318,6 +318,68 @@ test("answerAssistantQuestion uses llm-rag provider when configured", async () =
   });
 });
 
+test("answerAssistantQuestion keeps clarifying questions in docs-only mode even when llm is requested", async () => {
+  let providerCalls = 0;
+
+  const result = await answerAssistantQuestion(
+    {
+      message: "Where can I configure colors?",
+      mode: "llm-rag",
+    },
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "llm-rag",
+          "assistant.docs.backend": "db",
+          "assistant.docs.sourceRoot": "docs",
+          "assistant.llm.enabled": true,
+          "assistant.llm.provider": "openrouter",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
+        };
+        return values[key];
+      },
+      composeDocsAnswer: () => ({
+        mode: "docs-only",
+        template: "clarifying_question",
+        answer: "I am not confident yet.\n\nDo you mean:\n- Themes\n- Coderso Widgets and Template Editor",
+        confidence: 0.22,
+        sources: [
+          {
+            path: "docs/screens/themes.md",
+            heading: "Themes > Step By Step",
+            lineStart: 1,
+            lineEnd: 10,
+            snippet: "Adjust global tokens.",
+            score: 1.8,
+          },
+        ],
+        fallbackUsed: false,
+      }),
+      resolveAssistantProvider: async () => {
+        providerCalls += 1;
+        return {
+          id: "openrouter",
+          complete: async () => ({
+            text: "provider should not run",
+            providerRequestId: "or-req-clarify",
+          }),
+        };
+      },
+    })
+  );
+
+  expect(result.mode).toBe("docs-only");
+  expect(result.template).toBe("clarifying_question");
+  expect(result.effectiveMode).toBe("docs-only");
+  expect(result.fallbackUsed).toBe(true);
+  expect(result.llm).toBeNull();
+  expect(providerCalls).toBe(0);
+});
+
 test("answerAssistantQuestion falls back when llm provider is not configured", async () => {
   const result = await answerAssistantQuestion(
     {

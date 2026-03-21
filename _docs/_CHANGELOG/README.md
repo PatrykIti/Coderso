@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 517 | 2026-03-21 | TASK-117 assistant clarifying questions and section-aware docs answers | Assistant/Product |
 | 516 | 2026-03-21 | TASK-115 ranking hardening and docs-only answer formatting | Assistant/Product |
 | 515 | 2026-03-20 | TASK-116 assistant answer from chunk content | Assistant/Core |
 | 514 | 2026-03-20 | TASK-115 assistant content-first answer composer | Assistant/Product |

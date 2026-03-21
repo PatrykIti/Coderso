@@ -2504,6 +2504,38 @@ Endpoints:
 }
 ```
 
+`template` in `POST /assistant/chat` can be:
+- `location_answer`
+- `how_to_answer`
+- `clarifying_question`
+- `missing_answer`
+
+Example conservative clarification response:
+
+```json
+{
+  "mode": "docs-only",
+  "template": "clarifying_question",
+  "answer": "I am not confident which product area you mean from the docs yet.\n\nDo you mean:\n\n- Themes\n- Coderso Widgets and Template Editor",
+  "confidence": 0.22,
+  "sources": [
+    {
+      "path": "docs/screens/themes.md",
+      "heading": "Themes > Step By Step",
+      "lineStart": 15,
+      "lineEnd": 28,
+      "snippet": "Adjust global color, spacing, and typography tokens from Themes.",
+      "score": 1.8442
+    }
+  ],
+  "fallbackUsed": false,
+  "requestedMode": "docs-only",
+  "effectiveMode": "docs-only",
+  "retrievalBackend": "db",
+  "llm": null
+}
+```
+
 `POST /assistant/reindex` request
 
 ```json

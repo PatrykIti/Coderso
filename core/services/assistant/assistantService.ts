@@ -545,7 +545,12 @@ export const answerAssistantQuestion = async (
     let llm: AssistantLlmResult | null = null;
     let llmFallbackUsed = false;
 
-    if (mode.effectiveMode === "llm-rag" && composed.sources.length > 0) {
+    const canUseLlmForAnswer =
+      composed.template !== "clarifying_question" &&
+      composed.template !== "missing_answer" &&
+      composed.sources.length > 0;
+
+    if (mode.effectiveMode === "llm-rag" && canUseLlmForAnswer) {
       try {
         const provider = await deps.resolveAssistantProvider({
           provider: settings.llmProvider,
