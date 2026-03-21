@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 523 | 2026-03-21 | TASK-123 media admin UI assistant documentation refresh | Docs/Assistant |
 | 522 | 2026-03-21 | TASK-122 menus admin UI assistant documentation refresh | Docs/Assistant |
 | 521 | 2026-03-21 | TASK-121 posts admin UI assistant documentation refresh | Docs/Assistant |
 | 520 | 2026-03-21 | TASK-120 pages admin UI assistant documentation refresh | Docs/Assistant |
