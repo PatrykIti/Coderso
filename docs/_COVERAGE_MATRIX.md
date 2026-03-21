@@ -20,7 +20,8 @@ that the assistant corpus should use.
 | `/settings/api-keys`, `/settings/webhooks`, `/settings/email`, `/settings/storage`, `/settings/integrations` | `docs/screens/email-storage-integrations-api-keys-and-webhooks.md` |
 | `/analytics`, `/audit`, `/access-logs`, `/backups`, `/tools/import-export` | `docs/screens/analytics-audit-access-logs-backups-and-import-export.md` |
 | `/store`, `/store/plugins/:id` | `docs/screens/plugin-store.md` |
-| `/coderso/engine`, `/coderso/engine/:id`, `/coderso/engine/:id/schema` | `docs/coderso/engine-and-schema-builder.md` |
+| `/coderso/engine` | `docs/coderso/engine-list-and-content-type-creation.md` |
+| `/coderso/engine/:id`, `/coderso/engine/:id/schema` | `docs/coderso/content-type-editor-and-schema-builder.md` |
 | `/coderso/entries`, `/coderso/entries/:type/:id` | `docs/coderso/entries-and-record-editing.md` |
 | `/coderso/custom-screens`, `/coderso/custom-screens/:id`, `/coderso/custom-screens/:id/entries`, `/coderso/custom-screens/:id/entries/:entryId` | `docs/coderso/custom-screens.md` |
 | `/coderso/widgets`, `/coderso/widgets/templates/:id` | `docs/coderso/widgets-and-template-editor.md` |
