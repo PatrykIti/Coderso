@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 551 | 2026-03-22 | TASK-151 sessions admin UI assistant documentation refresh | Docs/Assistant |
 | 550 | 2026-03-22 | TASK-150 ip allowlist admin UI assistant documentation refresh | Docs/Assistant |
 | 549 | 2026-03-22 | TASK-149 security settings admin UI assistant documentation refresh | Docs/Assistant |
 | 548 | 2026-03-22 | TASK-148 assistant settings admin UI assistant documentation refresh | Docs/Assistant |

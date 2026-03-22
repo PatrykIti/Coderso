@@ -19,8 +19,9 @@ that the assistant corpus should use.
 | `/settings`, `/settings/general` | `docs/screens/general-settings.md` |
 | `/settings/site` | `docs/screens/site-settings.md` |
 | `/settings/assistant` | `docs/screens/assistant-settings.md` |
-| `/settings/security`, `/settings/security/sessions`, `/settings/security/login-alerts` | `docs/screens/security-settings.md` |
+| `/settings/security`, `/settings/security/login-alerts` | `docs/screens/security-settings.md` |
 | `/settings/security/ip-allowlist` | `docs/screens/ip-allowlist.md` |
+| `/settings/security/sessions` | `docs/screens/sessions.md` |
 | `/settings/api-keys`, `/settings/webhooks`, `/settings/email`, `/settings/storage`, `/settings/integrations` | `docs/screens/email-storage-integrations-api-keys-and-webhooks.md` |
 | `/analytics` | `docs/screens/analytics.md` |
 | `/audit` | `docs/screens/audit-logs.md` |

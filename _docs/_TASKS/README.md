@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 728 tasks
+- **Done:** 729 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-151 | Sessions Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Sessions out of the broader Security Settings doc and rewrote it against the live active-session workflow |
 | TASK-150 | IP Allowlist Admin UI Assistant Documentation Refresh | Medium | Small | Done: split IP Allowlist out of the broader Security Settings doc and rewrote it against the live restrictions/drawer workflow |
 | TASK-149 | Security Settings Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote Security Settings against the live section-based hardening workflow and kept related subroutes for later dedicated refreshes |
 | TASK-148 | Assistant Settings Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Assistant Settings out of the old combined settings doc and rewrote it against the live runtime/reindex workflow |
