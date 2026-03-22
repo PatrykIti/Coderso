@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 555 | 2026-03-22 | TASK-155 email settings admin UI assistant documentation refresh | Docs/Assistant |
 | 554 | 2026-03-22 | TASK-154 webhooks admin UI assistant documentation refresh | Docs/Assistant |
 | 553 | 2026-03-22 | TASK-153 api keys admin UI assistant documentation refresh | Docs/Assistant |
 | 552 | 2026-03-22 | TASK-152 login alerts admin UI assistant documentation refresh | Docs/Assistant |

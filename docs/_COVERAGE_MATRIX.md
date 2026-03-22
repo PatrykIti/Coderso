@@ -25,7 +25,8 @@ that the assistant corpus should use.
 | `/settings/security/login-alerts` | `docs/screens/login-alerts.md` |
 | `/settings/api-keys` | `docs/screens/api-keys.md` |
 | `/settings/webhooks` | `docs/screens/webhooks.md` |
-| `/settings/email`, `/settings/storage`, `/settings/integrations` | `docs/screens/email-storage-integrations-api-keys-and-webhooks.md` |
+| `/settings/email` | `docs/screens/email-settings.md` |
+| `/settings/storage`, `/settings/integrations` | `docs/screens/email-storage-integrations-api-keys-and-webhooks.md` |
 | `/analytics` | `docs/screens/analytics.md` |
 | `/audit` | `docs/screens/audit-logs.md` |
 | `/access-logs` | `docs/screens/access-logs.md` |
