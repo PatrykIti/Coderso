@@ -37,7 +37,11 @@ wartosc produktowa.
 - `docs/coderso/posts.md`
 - `docs/coderso/commerce.md`
 - `docs/coderso/booking.md`
-- `docs/screens/email-storage-integrations-api-keys-and-webhooks.md`
+- `docs/screens/email-settings.md`
+- `docs/screens/storage-settings.md`
+- `docs/screens/integrations.md`
+- `docs/screens/api-keys.md`
+- `docs/screens/webhooks.md`
 - `docs/_COVERAGE_MATRIX.md`
 
 ---
@@ -71,6 +75,10 @@ wartosc produktowa.
   - `docs/coderso/posts.md`
   - `docs/coderso/commerce.md`
   - `docs/coderso/booking.md`
-  - `docs/screens/email-storage-integrations-api-keys-and-webhooks.md`
+  - `docs/screens/email-settings.md`
+  - `docs/screens/storage-settings.md`
+  - `docs/screens/integrations.md`
+  - `docs/screens/api-keys.md`
+  - `docs/screens/webhooks.md`
 - Added detailed procedural and advanced guidance blocks plus troubleshooting,
   decision, checklist, and security content for these high-traffic surfaces.

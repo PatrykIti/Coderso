@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 563 | 2026-03-22 | TASK-163 historical assistant task reference cleanup | Docs/Assistant |
 | 562 | 2026-03-22 | TASK-162 obsolete combined assistant screen docs cleanup | Docs/Assistant |
 | 561 | 2026-03-22 | TASK-161 authentication and account recovery admin UI assistant documentation refresh | Docs/Assistant |
 | 560 | 2026-03-22 | TASK-160 dashboard admin UI assistant documentation refresh | Docs/Assistant |
