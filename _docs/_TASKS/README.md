@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 746 tasks
+- **Done:** 747 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-169 | Assistant Widget Template Medium and Decision Guide Polish | Medium | Small | Done: medium and decision-guide widget-template follow-ups now read as Hero-specific guidance instead of flattened workflow/fallback text |
 | TASK-168 | Assistant Widget Template Medium-Detail Polish | Medium | Small | Done: medium-detail widget-template guidance now explains the practical Hero-details path more concretely |
 | TASK-167 | Assistant Guide-Mode Follow-Up Specificity | High | Small | Done: dedicated helper-mode sections now render without redundant fallback mixing and Hero follow-ups stay more specific |
 | TASK-166 | Assistant Widgets Hero Color Guidance Recovery | High | Small | Done: canonical widget template docs now carry explicit Hero color guidance and retrieval coverage against competing Widget Library hits |

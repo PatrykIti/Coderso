@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 569 | 2026-03-22 | TASK-169 assistant widget template medium and decision guide polish | Docs/Assistant |
 | 568 | 2026-03-22 | TASK-168 assistant widget template medium-detail polish | Docs/Assistant |
 | 567 | 2026-03-22 | TASK-167 assistant guide-mode follow-up specificity | Assistant/Product |
 | 566 | 2026-03-22 | TASK-166 assistant widgets hero color guidance recovery | Docs/Assistant |

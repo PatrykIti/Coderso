@@ -35,42 +35,21 @@ multiple pages or other surfaces instead of rebuilding the same structure by
 hand. This is a composition workflow, not just a single-widget configuration
 screen.
 
-For Hero color work, the important distinction is:
-- use `Details > Block Settings > Visual` for Hero-specific colors, borders,
-  button styling, and background choices,
-- use template `Settings` only for wrapper-level layout, spacing, metadata, and
-  template-wide background behavior.
+For Hero color work, the important distinction is between selected block
+details and template-wide settings. Use `Details > Block Settings > Visual` for
+Hero-specific colors, borders, button styling, and background choices. Use
+template `Settings` only for wrapper-level layout, spacing, metadata, and
+template-wide background behavior.
 
-In practice, Hero color work usually means you are already past discovery:
-- you are not choosing whether Hero exists in the library,
-- you are not changing the overall template metadata first,
-- you are editing one selected Hero instance inside the template canvas.
+In practice, Hero color work usually means you are already past discovery and
+composition. You are not deciding whether Hero exists in the library first.
+You are editing one selected Hero instance that is already placed in the
+template canvas.
 
-That is why the normal path for this task is:
-1. open the template that already contains Hero,
-2. select that Hero block,
-3. adjust its visual settings in `Details`,
-4. use template `Settings` only if the change should affect the wrapper around
-   the whole template rather than the Hero block itself.
-
-The current template workflow breaks down into four parts:
-- widget selection:
-  choose reusable building blocks from the left rail
-- composition:
-  place widgets into the template canvas
-- selected block details:
-  configure widget-level visuals such as Hero colors, borders, and background
-- template settings:
-  name, description, category, status, wrapper layout, and background
-- preview/review:
-  inspect the template before saving
-
-The local `new` route currently shows:
-- category filter at the top of the library,
-- dedicated reusable widgets in the rail,
-- empty template canvas with drag/drop guidance,
-- `Settings` and `Details` tabs,
-- template metadata plus layout controls.
+That is why the normal path for this task is simple. Open the template that
+already contains Hero. Select that Hero block in the canvas. Adjust its visual
+settings in `Details`. Move to template `Settings` only when the change should
+affect the wrapper around the whole template rather than the Hero block itself.
 
 # Instruction
 
@@ -163,18 +142,16 @@ Use this safe authoring order when you want fewer reuse mistakes:
 
 # Decision Guide
 
-- Choose template vs one-off page edit:
-  use a template when the composition should be reused; use one-off editing when
-  the layout is genuinely unique.
-- Choose `Settings` vs `Details`:
-  use `Settings` for global template metadata/layout; use `Details` for one
-  selected block.
-- Choose template settings vs Hero visual settings:
-  use template settings for wrapper/container behavior; use `Details > Block
-  Settings > Visual` for Hero colors, borders, and background.
-- Choose preview vs immediate save:
-  preview when layout or wrapper behavior still feels uncertain; save only when
-  reuse intent is clear.
+1. Use template editing when the Hero composition should stay reusable across
+   multiple pages or other template consumers.
+2. Use one-off page editing when the color change is truly local to one page
+   and should not affect the reusable template.
+3. Use `Details > Block Settings > Visual` when the change belongs to Hero
+   colors, borders, buttons, or Hero background styling.
+4. Use template `Settings` when the change belongs to wrapper layout, metadata,
+   section spacing, or template-wide background behavior.
+5. Use `Preview` before saving when you are unsure whether the visual change is
+   really block-specific or if it affects the template wrapper more broadly.
 
 # Checklist
 
