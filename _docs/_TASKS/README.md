@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 707 tasks
+- **Done:** 708 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-130 | Filters and Search Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined discovery assistant doc into dedicated Filters and Search preview guides |
 | TASK-129 | Listings Admin UI Assistant Documentation Refresh | Medium | Small | Done: carved Listings out of the old shared doc and moved `/coderso/listings*` to its own canonical assistant guide |
 | TASK-128 | Forms Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Forms assistant doc into route-aligned builder and action logs guides |
 | TASK-127 | Widgets Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Widgets assistant doc into route-aligned library and template editor guides |
