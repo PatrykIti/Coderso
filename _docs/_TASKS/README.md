@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 737 tasks
+- **Done:** 738 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-160 | Dashboard Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote Dashboard against the live stat-card/recent-edits/health workflow |
 | TASK-159 | Roles Matrix Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Roles Matrix out of the old users/roles doc and rewrote it against the live permissions workflow |
 | TASK-158 | Users Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Users out of the old users/roles doc and rewrote it against the live list/details/invite workflow |
 | TASK-157 | Integrations Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Integrations out of the old integrations doc and rewrote it against the live catalog/drawer workflow |
