@@ -87,6 +87,11 @@ export type AssistantDocsDbStatus = {
   indexError: string | null;
 };
 
+type AssistantDocRecord = {
+  id: string;
+  sourcePath: string;
+};
+
 const stripQuotes = (value: string) => {
   const trimmed = value.trim();
   if (
@@ -112,6 +117,9 @@ const parseKeywordsValue = (value: string) => {
 };
 
 const toUnixPath = (value: string) => value.replace(/\\/g, "/");
+
+const normalizeSourcePath = (value: string) =>
+  toUnixPath(value).replace(/^\.\//, "").replace(/\/+$/, "");
 
 const resolveDisplayPath = (absolutePath: string, cwd: string) => {
   const fromCwd = path.relative(cwd, absolutePath);
@@ -172,6 +180,58 @@ const collectMarkdownFiles = async (targetPath: string): Promise<string[]> => {
     result.push(entryPath);
   }
   return result;
+};
+
+export const listStaleAssistantDocs = (
+  existingDocs: AssistantDocRecord[],
+  activeSourcePaths: Iterable<string>,
+  sourceRootPath: string,
+  sourceRootIsDirectory: boolean
+) => {
+  const normalizedActiveSourcePaths = new Set(
+    [...activeSourcePaths].map((entry) => normalizeSourcePath(entry))
+  );
+  const normalizedRootPath = normalizeSourcePath(sourceRootPath);
+
+  const isWithinScope = (sourcePath: string) => {
+    const normalizedSourcePath = normalizeSourcePath(sourcePath);
+    if (!normalizedRootPath) return true;
+    if (sourceRootIsDirectory) {
+      return normalizedSourcePath.startsWith(`${normalizedRootPath}/`);
+    }
+    return normalizedSourcePath === normalizedRootPath;
+  };
+
+  return existingDocs
+    .filter((doc) => {
+      const normalizedSourcePath = normalizeSourcePath(doc.sourcePath);
+      return (
+        isWithinScope(normalizedSourcePath) &&
+        !normalizedActiveSourcePaths.has(normalizedSourcePath)
+      );
+    })
+    .sort((left, right) => left.sourcePath.localeCompare(right.sourcePath));
+};
+
+export const pruneStaleAssistantDocs = async (input: {
+  listDocs: () => Promise<AssistantDocRecord[]>;
+  deleteDoc: (id: string) => Promise<void>;
+  activeSourcePaths: Iterable<string>;
+  sourceRootPath: string;
+  sourceRootIsDirectory: boolean;
+}) => {
+  const staleDocs = listStaleAssistantDocs(
+    await input.listDocs(),
+    input.activeSourcePaths,
+    input.sourceRootPath,
+    input.sourceRootIsDirectory
+  );
+
+  for (const doc of staleDocs) {
+    await input.deleteDoc(doc.id);
+  }
+
+  return staleDocs;
 };
 
 export const parseInternalDoc = (input: string): ParsedInternalDoc => {
@@ -572,8 +632,13 @@ export const ingestInternalDocsToDb = async (
       throw new Error("assistant_docs_source_root_missing");
     }
 
+    const resolvedRootStat = await stat(resolvedRoot);
+    const sourceRootPath = resolveDisplayPath(resolvedRoot, cwd);
     const files = await collectMarkdownFiles(resolvedRoot);
     const uniqueFiles = [...new Set(files)].sort((a, b) => a.localeCompare(b));
+    const activeSourcePaths = new Set(
+      uniqueFiles.map((filePath) => resolveDisplayPath(filePath, cwd))
+    );
     filesScanned = uniqueFiles.length;
 
     for (const filePath of uniqueFiles) {
@@ -682,6 +747,22 @@ export const ingestInternalDocsToDb = async (
       chunksUpserted += chunks.length;
       totalTokens += chunks.reduce((sum, chunk) => sum + chunk.tokenCount, 0);
     }
+
+    await pruneStaleAssistantDocs({
+      listDocs: () =>
+        db
+          .select({
+            id: assistantDocs.id,
+            sourcePath: assistantDocs.sourcePath,
+          })
+          .from(assistantDocs),
+      deleteDoc: async (id) => {
+        await db.delete(assistantDocs).where(eq(assistantDocs.id, id));
+      },
+      activeSourcePaths,
+      sourceRootPath,
+      sourceRootIsDirectory: resolvedRootStat.isDirectory(),
+    });
   } catch (error) {
     const finishedAtDate = new Date();
     errors.push({

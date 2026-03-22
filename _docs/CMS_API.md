@@ -2590,6 +2590,10 @@ Example conservative clarification response:
 }
 ```
 
+Reindex refreshes the DB-backed official corpus from the current root `docs/`
+tree and removes official assistant docs that no longer exist in the source
+corpus.
+
 `POST /assistant/site-builder/plan` request
 
 ```json

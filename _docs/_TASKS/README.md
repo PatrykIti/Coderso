@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 742 tasks
+- **Done:** 744 tasks
 
 ---
 
@@ -66,6 +66,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-166 | Assistant Widgets Hero Color Guidance Recovery | High | Small | Done: canonical widget template docs now carry explicit Hero color guidance and retrieval coverage against competing Widget Library hits |
+| TASK-165 | Assistant Reindex Deletes Removed DB Docs | High | Small | Done: assistant DB ingest now prunes removed official docs so stale combined articles do not survive reindex |
 | TASK-164 | Assistant Coderso Split Reference Cleanup | Medium | Small | Done: aligned stale pre-split `docs/coderso/*` references in assistant tests and `_docs` with the current canonical docs |
 | TASK-163 | Historical Assistant Task Reference Cleanup | Low | Small | Done: replaced dead historical task references to deleted combined screen docs with the current canonical split docs |
 | TASK-162 | Obsolete Combined Assistant Screen Docs Cleanup | Medium | Small | Done: removed old combined screen docs that were no longer referenced by the coverage matrix after the route-by-route split |

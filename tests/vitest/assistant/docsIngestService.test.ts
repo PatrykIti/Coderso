@@ -3,6 +3,8 @@ import { expect, test } from "vitest";
 import {
   buildInternalDocChunks,
   parseInternalDoc,
+  listStaleAssistantDocs,
+  pruneStaleAssistantDocs,
   validateInternalDocContract,
 } from "../../../core/services/assistant/docsIngestService";
 
@@ -194,4 +196,78 @@ test("validateInternalDocContract reports body_too_large", () => {
 
   const errors = validateInternalDocContract("docs/coderso/widgets/huge.md", parsed);
   expect(errors.some((error) => error.code === "doc_body_too_large")).toBe(true);
+});
+
+test("listStaleAssistantDocs only returns deleted docs inside the current source root", () => {
+  const staleDocs = listStaleAssistantDocs(
+    [
+      {
+        id: "stale-widgets",
+        sourcePath: "docs/coderso/widgets-and-template-editor.md",
+      },
+      {
+        id: "widget-library",
+        sourcePath: "docs/coderso/widget-library.md",
+      },
+      {
+        id: "theme-doc",
+        sourcePath: "docs/screens/themes.md",
+      },
+    ],
+    [
+      "docs/coderso/widget-library.md",
+      "docs/coderso/widget-template-editor.md",
+    ],
+    "docs",
+    true
+  );
+
+  expect(staleDocs).toEqual([
+    {
+      id: "stale-widgets",
+      sourcePath: "docs/coderso/widgets-and-template-editor.md",
+    },
+    {
+      id: "theme-doc",
+      sourcePath: "docs/screens/themes.md",
+    },
+  ]);
+});
+
+test("pruneStaleAssistantDocs deletes stale docs and leaves active docs untouched", async () => {
+  const deletedIds: string[] = [];
+
+  const staleDocs = await pruneStaleAssistantDocs({
+    listDocs: async () => [
+      {
+        id: "stale-widgets",
+        sourcePath: "docs/coderso/widgets-and-template-editor.md",
+      },
+      {
+        id: "widget-library",
+        sourcePath: "docs/coderso/widget-library.md",
+      },
+      {
+        id: "widget-template",
+        sourcePath: "docs/coderso/widget-template-editor.md",
+      },
+    ],
+    deleteDoc: async (id) => {
+      deletedIds.push(id);
+    },
+    activeSourcePaths: [
+      "docs/coderso/widget-library.md",
+      "docs/coderso/widget-template-editor.md",
+    ],
+    sourceRootPath: "docs/coderso",
+    sourceRootIsDirectory: true,
+  });
+
+  expect(staleDocs).toEqual([
+    {
+      id: "stale-widgets",
+      sourcePath: "docs/coderso/widgets-and-template-editor.md",
+    },
+  ]);
+  expect(deletedIds).toEqual(["stale-widgets"]);
 });

@@ -9,6 +9,10 @@ keywords:
   - reusable layout
   - template settings
   - template canvas
+  - hero
+  - block settings
+  - visual settings
+  - details panel
 ---
 
 # Basic
@@ -36,6 +40,8 @@ The current template workflow breaks down into four parts:
   choose reusable building blocks from the left rail
 - composition:
   place widgets into the template canvas
+- selected block details:
+  configure widget-level visuals such as Hero colors, borders, and background
 - template settings:
   name, description, category, status, wrapper layout, and background
 - preview/review:
@@ -50,40 +56,42 @@ The local `new` route currently shows:
 
 # Instruction
 
+You can configure Hero widget colors from block-level details rather than from
+the library or template-wide settings.
+
 1. Open a template editor route, such as `new`.
-2. Start in the left-side widget library.
-   Review the available widgets and keep the category filter aligned with the
-   kind of composition you are building.
-3. Move to the center `Template Canvas`.
-4. Add the smallest useful set of widgets first instead of trying to build the
-   entire template in one pass.
-5. Switch to `Settings` when the template needs metadata or wrapper layout
+2. Select the `Hero` block in `Template Canvas`.
+3. Open `Details`.
+4. In `Block Settings`, stay in `Visual`.
+5. Use `Colors and Borders` for Hero text, button, and frame colors.
+6. Use `Background` for Hero background color, gradient, or media.
+7. Switch to `Settings` only when the template needs metadata or wrapper layout
    decisions.
-6. In template settings, work top to bottom:
+8. In template settings, work top to bottom:
    - `Template name`
    - `Description`
    - `Category`
    - `Status`
    - layout controls
    - background media
-7. Review layout controls carefully:
+9. Review layout controls carefully:
    - container
    - max width
    - section gap
    - wrapper padding top
    - wrapper padding bottom
    - background color
-8. Use background media only when the wrapper truly needs image/video treatment.
-9. Use `Preview` when you want to inspect the current template state rather than
+10. Use background media only when the wrapper truly needs image/video treatment.
+11. Use `Preview` when you want to inspect the current template state rather than
    continuing to compose.
-10. Use `Discard` only when you intentionally want to throw away unsaved work.
-11. Use `Save Template` when the composition and settings are ready for reuse.
+12. Use `Discard` only when you intentionally want to throw away unsaved work.
+13. Use `Save Template` when the composition and settings are ready for reuse.
 
 Use this safe authoring order when you want fewer reuse mistakes:
-1. Choose the right widgets.
-2. Build the template canvas.
-3. Fill metadata and category.
-4. Set layout and background rules.
+1. Build the template canvas.
+2. Select the correct block.
+3. Finish block-level visuals in `Details`.
+4. Fill metadata and template-wide layout in `Settings`.
 5. Preview.
 6. Save template.
 
@@ -93,6 +101,9 @@ Use this safe authoring order when you want fewer reuse mistakes:
   repeatable pattern, not every possible scenario.
 - Category choice matters because it shapes discoverability in the library later
   on.
+- Template-wide settings and selected block details are different layers.
+  Use `Settings` for wrapper behavior and use `Details` when you need to
+  configure Hero widget colors or other block-specific visuals.
 - Layout controls belong to the template contract, not just its current visual
   appearance. Treat wrapper spacing, max width, and background as reuse
   decisions.
@@ -110,6 +121,9 @@ Use this safe authoring order when you want fewer reuse mistakes:
   template shell.
 - The template looks wrong even though widgets are present:
   review wrapper layout controls and background settings in `Settings`.
+- Hero colors are not changing:
+  confirm the `Hero` block is selected and you are editing `Details > Block
+  Settings > Visual`, not only template-wide `Settings`.
 - Reuse feels awkward:
   the template may be too specialized and should be split into smaller reusable
   compositions.
@@ -127,6 +141,9 @@ Use this safe authoring order when you want fewer reuse mistakes:
 - Choose `Settings` vs `Details`:
   use `Settings` for global template metadata/layout; use `Details` for one
   selected block.
+- Choose template settings vs Hero visual settings:
+  use template settings for wrapper/container behavior; use `Details > Block
+  Settings > Visual` for Hero colors, borders, and background.
 - Choose preview vs immediate save:
   preview when layout or wrapper behavior still feels uncertain; save only when
   reuse intent is clear.
@@ -134,11 +151,14 @@ Use this safe authoring order when you want fewer reuse mistakes:
 # Checklist
 
 1. Confirm the widget composition is reusable.
-2. Confirm template name and category are clear.
-3. Confirm layout controls reflect the intended reuse behavior.
-4. Confirm background choices are intentional.
-5. Preview before saving.
-6. Save template only when it is actually ready for reuse.
+2. Confirm the correct block is selected before changing widget-level styling.
+3. Confirm Hero visual settings were edited in `Details > Block Settings >
+   Visual`.
+4. Confirm template name and category are clear.
+5. Confirm layout controls reflect the intended reuse behavior.
+6. Confirm background choices are intentional.
+7. Preview before saving.
+8. Save template only when it is actually ready for reuse.
 
 # Security
 

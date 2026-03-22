@@ -62,6 +62,8 @@ should be.
    intended.
 9. Use `Run reindex` when the saved assistant state is ready and the official
    corpus needs to be rebuilt now.
+   The rebuild refreshes DB records from the current root `docs/` tree and
+   removes official docs that no longer exist in the source corpus.
 10. If LLM mode is in scope, review:
     - enable LLM mode,
     - provider,
@@ -93,6 +95,9 @@ Use this safe Assistant Settings order when you want fewer runtime mistakes:
   not a filesystem fallback.
 - `Run reindex` is an operational action, not a cosmetic button. It should be
   used only when the saved assistant configuration and corpus state are ready.
+- Reindex is also the cleanup path for removed assistant docs. Deleting a
+  canonical article from root `docs/` does not change runtime answers until the
+  DB corpus is rebuilt.
 - `Docs only` vs `LLM + RAG` is a policy decision as much as a feature toggle.
   It changes cost, behavior, and operational expectations.
 - Token/time limits and request quotas are part of runtime governance, not only

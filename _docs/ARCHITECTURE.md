@@ -270,6 +270,8 @@ Przeplyw runtime:
 Przeplyw reindex:
 1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.
 2. Wyniki ingest trafiaja do `assistant_docs`, `assistant_doc_chunks`, `assistant_doc_ingest_runs`.
+3. Reindex wykonuje tez cleanup osieroconych rekordow `assistant_docs`, gdy plik
+   zostal usuniety z aktualnego source root i nie powinien juz pozostawac w DB-only corpus.
 
 Zasady runtime:
 - Official assistant corpus korzysta z root `docs/` jako source-of-truth.

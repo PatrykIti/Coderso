@@ -36,6 +36,7 @@ Knowledge source contract:
 - official docs become available to runtime only after DB reindex/seeding,
 - missing seeded DB corpus means assistant docs are `not ready`, not filesystem fallback.
 - `Settings -> Assistant` exposes the operational `Run reindex` action for seeding the corpus into DB.
+- reindex also prunes official assistant docs that were removed from the current `docs/` source tree, so stale DB-only records do not keep surfacing in answers.
 - legacy `_docs/filesystem` assistant docs mode is no longer an active supported runtime path.
 
 Answer contract:

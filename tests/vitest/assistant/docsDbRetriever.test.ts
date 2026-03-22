@@ -8,15 +8,39 @@ const rows = [
     docPath: "docs/coderso/widget-template-editor.md",
     docTitle: "Widget Template Editor",
     productArea: "coderso-widgets",
-    keywords: ["widgets", "templates", "widget library", "template editor"],
+    keywords: [
+      "widgets",
+      "templates",
+      "widget library",
+      "template editor",
+      "hero",
+      "block settings",
+      "visual settings",
+    ],
     headingPath: ["Widget Template Editor", "Step By Step"],
     heading: "Step By Step",
     lineStart: 20,
     lineEnd: 38,
     content:
-      "Open Widgets, choose Hero, then go to Visual tab to change colors and spacing.",
+      "You can configure Hero widget colors from block-level details. Select the Hero block, open Details, then use Block Settings > Visual to change colors and background.",
     normalizedText:
-      "widget template editor step by step open widgets choose hero then go to visual tab to change colors and spacing",
+      "widget template editor step by step you can configure hero widget colors from block level details select the hero block open details then use block settings visual to change colors and background",
+    tokenCount: 29,
+  },
+  {
+    id: "chunk-library",
+    docPath: "docs/coderso/widget-library.md",
+    docTitle: "Widget Library",
+    productArea: "coderso-widgets",
+    keywords: ["widgets", "widget library", "reusable blocks", "favorites"],
+    headingPath: ["Widget Library", "Medium"],
+    heading: "Medium",
+    lineStart: 24,
+    lineEnd: 41,
+    content:
+      "Use Widget Library to discover reusable components, search by name, narrow the catalog, and decide whether to inspect or edit a reusable item.",
+    normalizedText:
+      "widget library medium use widget library to discover reusable components search by name narrow the catalog and decide whether to inspect or edit a reusable item",
     tokenCount: 22,
   },
   {
@@ -60,7 +84,7 @@ test("rankAssistantDocsDbRows ranks the most relevant hero section first", () =>
 
   expect(hits.length).toBeGreaterThan(0);
   expect(hits[0]?.chunk.docPath).toContain("widget-template-editor.md");
-  expect(hits[0]?.snippet.toLowerCase()).toContain("visual tab");
+  expect(hits[0]?.snippet.toLowerCase()).toContain("block settings > visual");
 });
 
 test("rankAssistantDocsDbRows prefers widgets product area over themes for hero widget color questions", () => {
@@ -69,7 +93,9 @@ test("rankAssistantDocsDbRows prefers widgets product area over themes for hero 
   });
 
   expect(hits[0]?.chunk.docPath).toBe("docs/coderso/widget-template-editor.md");
+  expect(hits[0]?.rankingSignals?.matchedQueryCoverage ?? 0).toBeGreaterThanOrEqual(0.8);
   expect(hits[0]?.rankingSignals?.domainScore ?? 0).toBeGreaterThan(0);
+  expect(hits[1]?.chunk.docPath).toBe("docs/coderso/widget-library.md");
   expect(hits.some((hit) => hit.chunk.docPath === "docs/screens/themes.md")).toBe(false);
 });
 

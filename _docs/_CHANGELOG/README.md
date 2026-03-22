@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 566 | 2026-03-22 | TASK-166 assistant widgets hero color guidance recovery | Docs/Assistant |
+| 565 | 2026-03-22 | TASK-165 assistant reindex deletes removed DB docs | Assistant/Core |
 | 564 | 2026-03-22 | TASK-164 assistant coderso split reference cleanup | Docs/Assistant |
 | 563 | 2026-03-22 | TASK-163 historical assistant task reference cleanup | Docs/Assistant |
 | 562 | 2026-03-22 | TASK-162 obsolete combined assistant screen docs cleanup | Docs/Assistant |
