@@ -22,7 +22,8 @@ that the assistant corpus should use.
 | `/store`, `/store/plugins/:id` | `docs/screens/plugin-store.md` |
 | `/coderso/engine` | `docs/coderso/engine-list-and-content-type-creation.md` |
 | `/coderso/engine/:id`, `/coderso/engine/:id/schema` | `docs/coderso/content-type-editor-and-schema-builder.md` |
-| `/coderso/entries`, `/coderso/entries/:type/:id` | `docs/coderso/entries-and-record-editing.md` |
+| `/coderso/entries` | `docs/coderso/entries-list-type-selection-and-creation.md` |
+| `/coderso/entries/:type/:id` | `docs/coderso/entry-editor-and-metadata.md` |
 | `/coderso/custom-screens`, `/coderso/custom-screens/:id`, `/coderso/custom-screens/:id/entries`, `/coderso/custom-screens/:id/entries/:entryId` | `docs/coderso/custom-screens.md` |
 | `/coderso/widgets`, `/coderso/widgets/templates/:id` | `docs/coderso/widgets-and-template-editor.md` |
 | `/coderso/forms`, `/coderso/forms/:id`, `/coderso/forms/:id/action-runs` | `docs/coderso/forms-and-action-logs.md` |
