@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 708 tasks
+- **Done:** 709 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-131 | Booking Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote the Booking assistant doc against the tabbed resources/services/availability/reservations/slot-preview workflow |
 | TASK-130 | Filters and Search Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined discovery assistant doc into dedicated Filters and Search preview guides |
 | TASK-129 | Listings Admin UI Assistant Documentation Refresh | Medium | Small | Done: carved Listings out of the old shared doc and moved `/coderso/listings*` to its own canonical assistant guide |
 | TASK-128 | Forms Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Forms assistant doc into route-aligned builder and action logs guides |
