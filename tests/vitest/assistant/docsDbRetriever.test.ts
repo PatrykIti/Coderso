@@ -266,6 +266,44 @@ test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troublesh
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("troubleshooting");
 });
 
+test("rankAssistantDocsDbRows prioritizes widget security section for hero security questions", () => {
+  const hits = rankAssistantDocsDbRows(
+    [
+      ...rows,
+      {
+        id: "chunk-widget-security",
+        docPath: "docs/coderso/widget-template-editor.md",
+        docTitle: "Widget Template Editor",
+        productArea: "coderso-widgets",
+        keywords: [
+          "widgets",
+          "template editor",
+          "hero",
+          "security",
+          "hardening",
+          "button urls",
+        ],
+        headingPath: ["Widget Template Editor", "Security"],
+        heading: "Security",
+        lineStart: 140,
+        lineEnd: 150,
+        content:
+          "Hero color configuration is presentation-only. Do not place secrets, API keys, internal tokens, or privileged operational data in Hero copy, button URLs, or media metadata.",
+        normalizedText:
+          "widget template editor security hero color configuration is presentation only do not place secrets api keys internal tokens or privileged operational data in hero copy button urls or media metadata",
+        tokenCount: 26,
+      },
+    ],
+    "hero widget color security hardening",
+    {
+      topK: 3,
+    }
+  );
+
+  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/widget-template-editor.md");
+  expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("security");
+});
+
 test("rankAssistantDocsDbRows returns empty list for unrelated query", () => {
   const hits = rankAssistantDocsDbRows(rows, "quantum banana neutron", {
     topK: 3,

@@ -265,7 +265,8 @@ Przeplyw runtime:
 11. Docs-only answer zachowuje strukture paragrafow, numerowanych krokow i list wyboru, a UI renderuje je jako czytelne bloki zamiast jednego zlanego tekstu.
 12. Procedural pytania `how/use` preferuja `Instruction/Step By Step`; `Basic/Medium` pozostaja wspierajacym kontekstem.
 13. Runtime przyjmuje optional `detailLevel` (`basic|medium|instruction|advanced`) i `guideMode` (`default|troubleshooting|decision_guide|checklist|security`) dla deterministic section targeting.
-14. Response moze zawierac `followUpOptions[]`, ktore prowadza usera do kolejnego poziomu szczegolowosci lub trybu pomocniczego w tej samej tematyce.
+14. Gdy canonical doc ma juz dedykowana sekcje helper-mode (`Troubleshooting`, `Decision Guide`, `Checklist`, `Security`), to ona staje sie primary body dla follow-up answer zamiast byc mieszana z redundant default guidance.
+15. Response moze zawierac `followUpOptions[]`, ktore prowadza usera do kolejnego poziomu szczegolowosci lub trybu pomocniczego w tej samej tematyce.
 
 Przeplyw reindex:
 1. `POST /assistant/reindex` uruchamia ingest z fixed source root `docs`.

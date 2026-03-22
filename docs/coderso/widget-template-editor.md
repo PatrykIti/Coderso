@@ -35,6 +35,12 @@ multiple pages or other surfaces instead of rebuilding the same structure by
 hand. This is a composition workflow, not just a single-widget configuration
 screen.
 
+For Hero color work, the important distinction is:
+- use `Details > Block Settings > Visual` for Hero-specific colors, borders,
+  button styling, and background choices,
+- use template `Settings` only for wrapper-level layout, spacing, metadata, and
+  template-wide background behavior.
+
 The current template workflow breaks down into four parts:
 - widget selection:
   choose reusable building blocks from the left rail
@@ -99,6 +105,10 @@ Use this safe authoring order when you want fewer reuse mistakes:
 
 - A reusable template should be narrower than a full one-off page. Build for a
   repeatable pattern, not every possible scenario.
+- Hero styling should stay block-specific when the visual change belongs only to
+  one Hero instance. Moving every color choice into template-wide wrapper
+  settings is an anti-pattern because it blurs block visuals with layout
+  contract.
 - Category choice matters because it shapes discoverability in the library later
   on.
 - Template-wide settings and selected block details are different layers.
@@ -107,8 +117,14 @@ Use this safe authoring order when you want fewer reuse mistakes:
 - Layout controls belong to the template contract, not just its current visual
   appearance. Treat wrapper spacing, max width, and background as reuse
   decisions.
+- If Hero colors vary by campaign or locale, prefer separate presets or
+  purpose-driven template variants over one overloaded template that tries to
+  cover every palette combination.
 - Background media can easily make templates harder to reuse. Only add it when
   the template’s identity genuinely depends on it.
+- Avoid hiding a weak Hero configuration behind global wrapper polish. If the
+  Hero still needs per-block fixes in typography, buttons, or background
+  contrast, solve those in `Details` first.
 - The `Details` tab should be used when a selected block needs focused
   configuration beyond global template settings.
 - A template should feel more reusable after editing, not more specialized. If
@@ -164,6 +180,12 @@ Use this safe authoring order when you want fewer reuse mistakes:
 
 - Template Editor is an authenticated admin surface and should only be used by
   users with the appropriate editor permissions.
+- Hero color configuration is presentation-only and should stay that way. Do not
+  place secrets, API keys, internal tokens, or privileged operational data in
+  Hero copy, button URLs, or media metadata while styling the block.
+- Review external background media and CTA targets carefully. A visual change in
+  Hero can still expose unsafe URLs, untrusted assets, or internal-only routes
+  if the block content is edited carelessly.
 - Reusable templates should not embed secrets, provider keys, or internal-only
   operational data.
 - A bad reusable template can spread mistakes across many surfaces quickly, so

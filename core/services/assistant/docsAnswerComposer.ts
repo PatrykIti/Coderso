@@ -786,12 +786,32 @@ const buildGuideModeHeading = (guideMode: DocsGuideMode) => {
   return null;
 };
 
+const resolveGuideModeSectionKind = (
+  guideMode: DocsGuideMode
+): SectionKind | null => {
+  if (guideMode === "troubleshooting") return "troubleshooting";
+  if (guideMode === "decision_guide") return "decision_guide";
+  if (guideMode === "checklist") return "checklist";
+  if (guideMode === "security") return "security";
+  return null;
+};
+
+const isGuideModePrimarySection = (
+  guideMode: DocsGuideMode,
+  primaryHit: DocsSearchHit
+) => {
+  const expectedKind = resolveGuideModeSectionKind(guideMode);
+  if (!expectedKind) return false;
+  return inferSectionKind(primaryHit.chunk.headingPath) === expectedKind;
+};
+
 const buildGuideModeBlock = (
   guideMode: DocsGuideMode,
   primaryHit: DocsSearchHit,
   supportingHit: DocsSearchHit | null
 ) => {
   if (guideMode === "default") return [] as string[];
+  if (isGuideModePrimarySection(guideMode, primaryHit)) return [] as string[];
   const heading = buildGuideModeHeading(guideMode);
   if (!heading) return [] as string[];
 
@@ -833,8 +853,19 @@ const buildLocationAnswer = (
   const primaryBody = buildContentAnswer(primaryHit.chunk.content, {
     ...locationOptions,
   });
+  const guideModePrimary = isGuideModePrimarySection(intent.guideMode, primaryHit);
+  const guideModeHeading = guideModePrimary
+    ? buildGuideModeHeading(intent.guideMode)
+    : null;
 
-  if (primaryBody.steps.length > 0) {
+  if (guideModeHeading) {
+    blocks.push(guideModeHeading);
+    if (primaryBody.steps.length > 0) {
+      blocks.push(primaryBody.steps.join("\n"));
+    } else {
+      blocks.push(...primaryBody.paragraphs);
+    }
+  } else if (primaryBody.steps.length > 0) {
     blocks.push("What to do:");
     blocks.push(primaryBody.steps.join("\n"));
   } else {
@@ -867,9 +898,17 @@ const buildCapabilityAnswer = (
   const primaryBody = buildContentAnswer(primaryHit.chunk.content, {
     ...capabilityOptions,
   });
+  const guideModePrimary = isGuideModePrimarySection(intent.guideMode, primaryHit);
+  const guideModeHeading = guideModePrimary
+    ? buildGuideModeHeading(intent.guideMode)
+    : null;
+
+  if (guideModeHeading) {
+    blocks.push(guideModeHeading);
+  }
   blocks.push(...primaryBody.paragraphs);
 
-  if (supportingHit) {
+  if (!guideModePrimary && supportingHit) {
     const supportingKind = inferSectionKind(supportingHit.chunk.headingPath);
     if (supportingKind === "step_by_step") {
       const stepsBody = buildContentAnswer(supportingHit.chunk.content, {
@@ -920,15 +959,26 @@ const buildProceduralAnswer = (
   const primaryBody = buildContentAnswer(primaryHit.chunk.content, {
     ...proceduralOptions,
   });
+  const guideModePrimary = isGuideModePrimarySection(intent.guideMode, primaryHit);
+  const guideModeHeading = guideModePrimary
+    ? buildGuideModeHeading(intent.guideMode)
+    : null;
 
-  if (primaryBody.steps.length > 0) {
+  if (guideModeHeading) {
+    blocks.push(guideModeHeading);
+    if (primaryBody.steps.length > 0) {
+      blocks.push(primaryBody.steps.join("\n"));
+    } else {
+      blocks.push(...primaryBody.paragraphs);
+    }
+  } else if (primaryBody.steps.length > 0) {
     blocks.push("What to do:");
     blocks.push(primaryBody.steps.join("\n"));
   } else {
     blocks.push(...primaryBody.paragraphs);
   }
 
-  if (supportingHit) {
+  if (!guideModePrimary && supportingHit) {
     const supportingKind = inferSectionKind(supportingHit.chunk.headingPath);
     if (supportingKind === "what_is_it") {
       const supportingBody = buildContentAnswer(supportingHit.chunk.content, {

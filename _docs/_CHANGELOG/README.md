@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 567 | 2026-03-22 | TASK-167 assistant guide-mode follow-up specificity | Assistant/Product |
 | 566 | 2026-03-22 | TASK-166 assistant widgets hero color guidance recovery | Docs/Assistant |
 | 565 | 2026-03-22 | TASK-165 assistant reindex deletes removed DB docs | Assistant/Core |
 | 564 | 2026-03-22 | TASK-164 assistant coderso split reference cleanup | Docs/Assistant |

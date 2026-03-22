@@ -343,6 +343,60 @@ test("composeDocsAnswer builds troubleshooting block and follow-up options", () 
   );
 });
 
+test("composeDocsAnswer uses dedicated security section as primary follow-up without fallback duplication", () => {
+  const answer = composeDocsAnswer({
+    question: "List security requirements and hardening notes for this topic.",
+    guideMode: "security",
+    detailLevel: "advanced",
+    hits: [
+      makeHit({
+        score: 2.9,
+        chunk: {
+          id: "widget-template-security",
+          docPath: "docs/coderso/widget-template-editor.md",
+          docTitle: "Widget Template Editor",
+          productArea: "coderso-widgets",
+          headingPath: ["Widget Template Editor", "Security"],
+          heading: "Security",
+          content:
+            "Hero color configuration is presentation-only. Do not place secrets, API keys, internal tokens, or privileged operational data in Hero copy, button URLs, or media metadata.",
+          normalizedText:
+            "hero color configuration is presentation only do not place secrets api keys internal tokens or privileged operational data in hero copy button urls or media metadata",
+        },
+        rankingSignals: {
+          textScore: 1.8,
+          domainScore: 1.9,
+          intentScore: 1.4,
+          phraseScore: 0.6,
+          domainPenalty: 0,
+          matchedQueryCoverage: 0.92,
+        },
+      }),
+      makeHit({
+        score: 2.4,
+        chunk: {
+          id: "widget-template-instruction",
+          docPath: "docs/coderso/widget-template-editor.md",
+          docTitle: "Widget Template Editor",
+          productArea: "coderso-widgets",
+          headingPath: ["Widget Template Editor", "Instruction"],
+          heading: "Instruction",
+          content:
+            "1. Select the Hero block. 2. Open Details. 3. Use Block Settings > Visual for colors and background.",
+          normalizedText:
+            "select the hero block open details use block settings visual for colors and background",
+        },
+      }),
+    ],
+  });
+
+  expect(answer.guideMode).toBe("security");
+  expect(answer.answer).toContain("Security notes:");
+  expect(answer.answer).toContain("Hero color configuration is presentation-only.");
+  expect(answer.answer).not.toContain("What to do:");
+  expect(answer.answer).not.toContain("Select the Hero block.");
+});
+
 test("composeDocsAnswer returns clarifying question when top docs stay ambiguous", () => {
   const answer = composeDocsAnswer({
     question: "Where can I configure colors?",
