@@ -1,0 +1,138 @@
+---
+title: "Integrations"
+audience: "admin"
+productArea: "integrations"
+language: "en"
+keywords:
+  - integrations
+  - third party services
+  - connect service
+  - integration scopes
+  - request integration
+---
+
+# Basic
+
+Integrations is the service-catalog surface for connecting the product to
+third-party providers. It is where you browse available integrations, filter by
+category, open a configuration drawer, and request a new integration that does
+not yet exist in the catalog.
+
+In the current UI, this route includes:
+- category chips:
+  `All Services`, `Analytics`, `Communication`, `Automation`,
+  `Developer Tools`
+- integration cards,
+- a right-side integration drawer,
+- `Request new` and a request dialog.
+
+# Medium
+
+Use Integrations when the product needs a provider connection that is broader
+than a single API key or webhook. The current route is designed for:
+- browsing the available service catalog,
+- narrowing the list by category,
+- opening a provider-specific configuration drawer,
+- reviewing required fields and security scopes,
+- requesting a missing provider from the team.
+
+This is not only a settings list. It is a service-discovery and connection
+workspace that balances catalog review with configuration and procurement.
+
+# Instruction
+
+1. Open `Settings > Integrations`.
+2. Start with the category chips when the catalog is larger than one screen.
+3. Use:
+   - `All Services`
+   - `Analytics`
+   - `Communication`
+   - `Automation`
+   - `Developer Tools`
+4. Review each integration card for:
+   - connection status,
+   - service name,
+   - service description,
+   - `Connect` or `Configure` action.
+5. Open the integration you actually need rather than configuring multiple
+   services at once.
+6. In the drawer, review:
+   - connection status,
+   - required fields,
+   - secret-field behavior,
+   - security scopes.
+7. Treat required fields as the minimum viable contract for that provider.
+8. Treat secret updates carefully; the drawer explicitly distinguishes regular
+   fields from secret fields that may already be configured.
+9. Review `Security scopes` before saving so the provider’s access model is
+   understood.
+10. Use `Save Changes` only when the provider configuration is coherent.
+11. Use `Request new` when the catalog does not contain the integration you need.
+12. In the request dialog, provide:
+    - service name,
+    - website URL,
+    - notes.
+13. Use the request flow when a real product need exists, not as a substitute
+    for choosing from the existing catalog.
+
+Use this safe integrations workflow when you want fewer misconfigurations:
+1. Filter the catalog.
+2. Open the right provider.
+3. Review required fields and scopes.
+4. Save only after the config is coherent.
+5. Use request-new only for a genuinely missing service.
+
+# Advanced
+
+- Category chips are a decision aid, not decoration. They reduce noise when the
+  catalog grows.
+- Connection status should be treated as an operational signal, not just a UI
+  badge.
+- Security scopes in the drawer matter because they clarify what the provider
+  will be allowed to do or read.
+- Secret fields should be handled differently from plain text fields; the drawer
+  already models that distinction explicitly.
+- `Request new` is part of governance. It keeps the product from turning into a
+  one-off unmanaged integration layer.
+
+# Troubleshooting
+
+- The service is not in the list:
+  use `Request new` instead of trying to force another integration to fit.
+- The drawer feels incomplete:
+  check whether the provider is disconnected and still needs all required
+  values.
+- A field is already configured but should change:
+  update the field intentionally instead of assuming the stored value will be
+  shown plainly.
+- Too many services look relevant:
+  filter by category first, then compare description and scope expectations.
+
+# Decision Guide
+
+- Choose connect vs configure:
+  connect when the service is not yet set up; configure when an existing
+  connection needs changes.
+- Choose existing service vs request new:
+  use the catalog when a suitable service already exists; request new only when
+  the required provider is truly missing.
+- Choose broad vs narrow provider use:
+  prefer the service whose stated purpose and scopes most closely match the real
+  workflow.
+
+# Checklist
+
+1. Confirm the correct integration card is selected.
+2. Confirm required fields are filled intentionally.
+3. Confirm secret handling is understood.
+4. Confirm the listed security scopes are acceptable.
+5. Save changes deliberately or submit a request for a missing service.
+
+# Security
+
+- Integrations is an authenticated admin surface and should only be used by
+  high-trust administrators responsible for third-party connectivity.
+- Provider configuration and secret fields are sensitive integration material and
+  should be treated as operational secrets.
+- Scope review matters because integrations can widen system access in ways that
+  are easy to overlook if the card is treated as just another settings row.

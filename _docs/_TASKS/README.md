@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 734 tasks
+- **Done:** 735 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-157 | Integrations Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Integrations out of the old integrations doc and rewrote it against the live catalog/drawer workflow |
 | TASK-156 | Storage Settings Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Storage Settings out of the old integrations doc and rewrote it against the live provider/upload workflow |
 | TASK-155 | Email Settings Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Email Settings out of the old integrations doc and rewrote it against the live SMTP/test-email workflow |
 | TASK-154 | Webhooks Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Webhooks out of the old integrations doc and rewrote it against the live delivery/drawer workflow |
