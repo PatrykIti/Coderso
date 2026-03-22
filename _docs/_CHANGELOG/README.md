@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 526 | 2026-03-22 | TASK-126 custom screens admin UI assistant documentation refresh | Docs/Assistant |
 | 525 | 2026-03-22 | TASK-125 entries admin UI assistant documentation refresh | Docs/Assistant |
 | 524 | 2026-03-21 | TASK-124 engine admin UI assistant documentation refresh | Docs/Assistant |
 | 523 | 2026-03-21 | TASK-123 media admin UI assistant documentation refresh | Docs/Assistant |

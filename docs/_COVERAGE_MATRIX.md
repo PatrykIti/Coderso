@@ -24,7 +24,8 @@ that the assistant corpus should use.
 | `/coderso/engine/:id`, `/coderso/engine/:id/schema` | `docs/coderso/content-type-editor-and-schema-builder.md` |
 | `/coderso/entries` | `docs/coderso/entries-list-type-selection-and-creation.md` |
 | `/coderso/entries/:type/:id` | `docs/coderso/entry-editor-and-metadata.md` |
-| `/coderso/custom-screens`, `/coderso/custom-screens/:id`, `/coderso/custom-screens/:id/entries`, `/coderso/custom-screens/:id/entries/:entryId` | `docs/coderso/custom-screens.md` |
+| `/coderso/custom-screens`, `/coderso/custom-screens/:id` | `docs/coderso/custom-screens-list-and-builder.md` |
+| `/coderso/custom-screens/:id/entries`, `/coderso/custom-screens/:id/entries/:entryId` | `docs/coderso/custom-screen-records-and-entry-workflow.md` |
 | `/coderso/widgets`, `/coderso/widgets/templates/:id` | `docs/coderso/widgets-and-template-editor.md` |
 | `/coderso/forms`, `/coderso/forms/:id`, `/coderso/forms/:id/action-runs` | `docs/coderso/forms-and-action-logs.md` |
 | `/coderso/posts` | `docs/coderso/posts-list-and-creation.md` |
