@@ -5,7 +5,7 @@
 **Category:** Docs  
 **Estimated Effort:** Small  
 **Dependencies:** `docs/README.md`, `docs/_COVERAGE_MATRIX.md`, `core/admin/ui/reviews/*`  
-**Status:** In Progress (2026-03-22)
+**Status:** Done (2026-03-22)
 
 ---
 
@@ -77,4 +77,14 @@ the shipped moderation workflow.
   - review detail panel,
   - empty-state table.
 - No automated lint or test commands were run because this is a docs-only draft
-  pass pending user review.
+  pass.
+
+## Completion Notes (2026-03-22)
+
+- Added a dedicated reviews assistant doc:
+  - `docs/coderso/reviews-moderation.md`
+- Updated `docs/_COVERAGE_MATRIX.md` so `/coderso/reviews` now points to the
+  new canonical doc.
+- Left `/coderso/popups*` on the older combined engagement doc until Popups is
+  reviewed separately.
+- User review completed before closure.
