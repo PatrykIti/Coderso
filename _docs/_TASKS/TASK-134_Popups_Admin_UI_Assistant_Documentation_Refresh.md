@@ -5,7 +5,7 @@
 **Category:** Docs  
 **Estimated Effort:** Small  
 **Dependencies:** `docs/README.md`, `docs/_COVERAGE_MATRIX.md`, `core/admin/ui/popups/*`  
-**Status:** In Progress (2026-03-22)
+**Status:** Done (2026-03-22)
 
 ---
 
@@ -27,7 +27,7 @@ workflow.
 4. Update the coverage matrix so `/coderso/popups*` points to the new canonical
    doc.
 5. Remove the now-obsolete combined Reviews/Popups doc.
-6. Keep this task in `In Progress` until the user reviews the draft.
+6. Close the task after the docs, board, and changelog are synchronized.
 
 ## Sub-Tasks
 
@@ -57,7 +57,7 @@ workflow.
    setup.
 4. The coverage matrix points `/coderso/popups` and `/coderso/popups/:id` to
    the new canonical doc.
-5. The task board reflects that the work is currently under review.
+5. The task board and changelog reflect that the work is closed.
 
 ## Testing Requirements
 
@@ -76,8 +76,8 @@ workflow.
 
 ## Validation Executed (2026-03-22)
 
-- Real browser walkthrough completed against local Popups UI:
+- Authenticated browser walkthrough completed against local Popups UI:
   - popup list,
   - popup editor.
-- No automated lint or test commands were run because this is a docs-only draft
-  pass pending user review.
+- No automated lint or test commands were run because this was a docs-only
+  change.

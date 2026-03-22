@@ -5,7 +5,7 @@
 **Category:** Docs  
 **Estimated Effort:** Small  
 **Dependencies:** `docs/README.md`, `docs/_COVERAGE_MATRIX.md`, `core/admin/ui/commerce/*`  
-**Status:** In Progress (2026-03-22)
+**Status:** Done (2026-03-22)
 
 ---
 
@@ -29,7 +29,7 @@ the shipped commerce catalog list and product editor workflows.
    - `commerce product editor`
 4. Rewrite the content using the `Basic / Medium / Instruction / Advanced`
    structure with more guided user instructions.
-5. Keep this task in `In Progress` until the user reviews the split draft.
+5. Close the task after the docs, board, and changelog are synchronized.
 
 ## Sub-Tasks
 
@@ -61,7 +61,7 @@ the shipped commerce catalog list and product editor workflows.
 3. The draft is explicit about catalog review and product editor workflow.
 4. The coverage matrix points `/coderso/commerce` and
    `/coderso/commerce/:id` at the right canonical docs.
-5. The task board reflects that the work is currently under review.
+5. The task board and changelog reflect that the work is closed.
 
 ## Testing Requirements
 
@@ -81,11 +81,11 @@ the shipped commerce catalog list and product editor workflows.
 
 ## Validation Executed (2026-03-22)
 
-- Real browser walkthrough completed against local Commerce UI:
+- Authenticated browser walkthrough completed against local Commerce UI:
   - commerce list shell,
   - commerce product editor in `new` mode.
 - List/table contract additionally verified against:
   - `core/admin/ui/commerce/CommerceListPage.tsx`
   - `core/admin/ui/commerce/CommerceTable.tsx`
-- No automated lint or test commands were run because this is a docs-only draft
-  pass pending user review.
+- No automated lint or test commands were run because this was a docs-only
+  change.
