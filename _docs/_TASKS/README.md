@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 7 tasks
-- **Done:** 713 tasks
+- **Done:** 714 tasks
 
 ---
 
@@ -68,6 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-138 | Search Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote the global Admin Search assistant doc against the live search shell, recent searches, filters, and grouped-results contract |
 | TASK-137 | Admin UI Theme Assistant Documentation Refresh | Medium | Small | Done: rewrote the Admin UI Theme assistant doc against the live templates/profiles workflow and synced the task board/changelog |
 | TASK-136 | Plugin Store Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Plugin Store into catalog and plugin-details assistant docs and synced the coverage matrix/task board/changelog |
 | TASK-135 | Solution Kits Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote the Solution Kits assistant doc against the live kit cards, wizard, and selected-kit details flow |
