@@ -41,6 +41,18 @@ For Hero color work, the important distinction is:
 - use template `Settings` only for wrapper-level layout, spacing, metadata, and
   template-wide background behavior.
 
+In practice, Hero color work usually means you are already past discovery:
+- you are not choosing whether Hero exists in the library,
+- you are not changing the overall template metadata first,
+- you are editing one selected Hero instance inside the template canvas.
+
+That is why the normal path for this task is:
+1. open the template that already contains Hero,
+2. select that Hero block,
+3. adjust its visual settings in `Details`,
+4. use template `Settings` only if the change should affect the wrapper around
+   the whole template rather than the Hero block itself.
+
 The current template workflow breaks down into four parts:
 - widget selection:
   choose reusable building blocks from the left rail
