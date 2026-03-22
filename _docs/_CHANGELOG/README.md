@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 540 | 2026-03-22 | TASK-142 audit logs admin UI assistant documentation refresh | Docs/Assistant |
 | 539 | 2026-03-22 | TASK-141 analytics admin UI assistant documentation refresh | Docs/Assistant |
 | 538 | 2026-03-22 | TASK-140 redirects admin UI assistant documentation refresh | Docs/Assistant |
 | 537 | 2026-03-22 | TASK-139 seo manager admin UI assistant documentation refresh | Docs/Assistant |
