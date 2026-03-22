@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 542 | 2026-03-22 | TASK-144 import export admin UI assistant documentation refresh | Docs/Assistant |
 | 541 | 2026-03-22 | TASK-143 backups admin UI assistant documentation refresh | Docs/Assistant |
 | 540 | 2026-03-22 | TASK-142 audit logs admin UI assistant documentation refresh | Docs/Assistant |
 | 539 | 2026-03-22 | TASK-141 analytics admin UI assistant documentation refresh | Docs/Assistant |
