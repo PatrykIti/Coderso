@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 546 | 2026-03-22 | TASK-146 general settings admin UI assistant documentation refresh | Docs/Assistant |
 | 545 | 2026-03-22 | TASK-134 popups admin UI assistant documentation refresh | Docs/Assistant |
 | 544 | 2026-03-22 | TASK-133 commerce admin UI assistant documentation refresh | Docs/Assistant |
 | 543 | 2026-03-22 | TASK-145 access logs admin UI assistant documentation refresh | Docs/Assistant |

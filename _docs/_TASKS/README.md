@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 723 tasks
+- **Done:** 724 tasks
 
 ---
 
@@ -68,6 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-134 | Popups Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote the Popups assistant doc against the live popup list/editor workflow and synced the route coverage |
 | TASK-133 | Commerce Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Commerce into catalog and product-editor assistant docs and synced the route coverage |
+| TASK-146 | General Settings Admin UI Assistant Documentation Refresh | Medium | Small | Done: split General Settings out of the old combined settings doc and rewrote it against the live identity/branding workflow |
 | TASK-145 | Access Logs Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Access Logs out of the old combined operations doc and rewrote it against the live filter/table/details/export workflow |
 | TASK-144 | Import Export Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Import / Export out of the old combined operations doc and rewrote it against the live export/import workspace |
 | TASK-143 | Backups Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Backups out of the old combined operations doc and rewrote it against the live schedule/table/dialog workflow |
