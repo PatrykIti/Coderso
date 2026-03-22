@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 559 | 2026-03-22 | TASK-159 roles matrix admin UI assistant documentation refresh | Docs/Assistant |
 | 558 | 2026-03-22 | TASK-158 users admin UI assistant documentation refresh | Docs/Assistant |
 | 557 | 2026-03-22 | TASK-157 integrations admin UI assistant documentation refresh | Docs/Assistant |
 | 556 | 2026-03-22 | TASK-156 storage settings admin UI assistant documentation refresh | Docs/Assistant |

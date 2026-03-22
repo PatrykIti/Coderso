@@ -13,7 +13,7 @@ that the assistant corpus should use.
 | `/pages/:id`, `/preview` | `docs/screens/page-editor-preview-settings-and-history.md` |
 | `/menus` | `docs/screens/menus.md` |
 | `/users` | `docs/screens/users.md` |
-| `/roles` | `docs/screens/users-roles-and-permissions.md` |
+| `/roles` | `docs/screens/roles-matrix.md` |
 | `/themes` | `docs/screens/themes.md` |
 | `/seo` | `docs/screens/seo-manager.md` |
 | `/redirects` | `docs/screens/redirects.md` |
