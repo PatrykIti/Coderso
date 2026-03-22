@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 528 | 2026-03-22 | TASK-128 forms admin UI assistant documentation refresh | Docs/Assistant |
 | 527 | 2026-03-22 | TASK-127 widgets admin UI assistant documentation refresh | Docs/Assistant |
 | 526 | 2026-03-22 | TASK-126 custom screens admin UI assistant documentation refresh | Docs/Assistant |
 | 525 | 2026-03-22 | TASK-125 entries admin UI assistant documentation refresh | Docs/Assistant |

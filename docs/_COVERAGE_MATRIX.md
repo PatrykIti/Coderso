@@ -28,7 +28,8 @@ that the assistant corpus should use.
 | `/coderso/custom-screens/:id/entries`, `/coderso/custom-screens/:id/entries/:entryId` | `docs/coderso/custom-screen-records-and-entry-workflow.md` |
 | `/coderso/widgets` | `docs/coderso/widget-library.md` |
 | `/coderso/widgets/templates/:id` | `docs/coderso/widget-template-editor.md` |
-| `/coderso/forms`, `/coderso/forms/:id`, `/coderso/forms/:id/action-runs` | `docs/coderso/forms-and-action-logs.md` |
+| `/coderso/forms`, `/coderso/forms/:id` | `docs/coderso/forms-list-and-builder.md` |
+| `/coderso/forms/:id/action-runs` | `docs/coderso/form-action-logs.md` |
 | `/coderso/posts` | `docs/coderso/posts-list-and-creation.md` |
 | `/coderso/posts/:id` | `docs/coderso/post-editor-preview-revisions-and-settings.md` |
 | `/coderso/listings`, `/coderso/listings/:id`, `/coderso/filters`, `/coderso/search` | `docs/coderso/listings-filters-and-search.md` |
