@@ -12,7 +12,8 @@ that the assistant corpus should use.
 | `/pages` | `docs/screens/pages-list-and-creation.md` |
 | `/pages/:id`, `/preview` | `docs/screens/page-editor-preview-settings-and-history.md` |
 | `/menus` | `docs/screens/menus.md` |
-| `/users`, `/roles` | `docs/screens/users-roles-and-permissions.md` |
+| `/users` | `docs/screens/users.md` |
+| `/roles` | `docs/screens/users-roles-and-permissions.md` |
 | `/themes` | `docs/screens/themes.md` |
 | `/seo` | `docs/screens/seo-manager.md` |
 | `/redirects` | `docs/screens/redirects.md` |
