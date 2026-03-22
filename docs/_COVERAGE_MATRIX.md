@@ -32,7 +32,8 @@ that the assistant corpus should use.
 | `/coderso/forms/:id/action-runs` | `docs/coderso/form-action-logs.md` |
 | `/coderso/posts` | `docs/coderso/posts-list-and-creation.md` |
 | `/coderso/posts/:id` | `docs/coderso/post-editor-preview-revisions-and-settings.md` |
-| `/coderso/listings`, `/coderso/listings/:id`, `/coderso/filters`, `/coderso/search` | `docs/coderso/listings-filters-and-search.md` |
+| `/coderso/listings`, `/coderso/listings/:id` | `docs/coderso/listings-list-and-editor.md` |
+| `/coderso/filters`, `/coderso/search` | `docs/coderso/listings-filters-and-search.md` |
 | `/coderso/booking` | `docs/coderso/booking.md` |
 | `/coderso/commerce`, `/coderso/commerce/:id` | `docs/coderso/commerce.md` |
 | `/coderso/reviews`, `/coderso/popups`, `/coderso/popups/:id` | `docs/coderso/reviews-popups-and-engagement.md` |
