@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 8 tasks
-- **In Progress:** 6 tasks
+- **In Progress:** 7 tasks
 - **Done:** 710 tasks
 
 ---
@@ -54,6 +54,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-134 | Popups Admin UI Assistant Documentation Refresh | Medium | Small | In progress: real UI walkthrough completed for the popup list and popup editor; popups is being separated from the old combined engagement doc |
 | TASK-133 | Commerce Admin UI Assistant Documentation Refresh | Medium | Small | In progress: real UI walkthrough completed for the commerce list shell and product editor; docs are being split into catalog and product editor guides |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |

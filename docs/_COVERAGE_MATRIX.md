@@ -36,9 +36,10 @@ that the assistant corpus should use.
 | `/coderso/filters` | `docs/coderso/listing-filters.md` |
 | `/coderso/search` | `docs/coderso/public-search-preview.md` |
 | `/coderso/booking` | `docs/coderso/booking.md` |
-| `/coderso/commerce`, `/coderso/commerce/:id` | `docs/coderso/commerce.md` |
+| `/coderso/commerce` | `docs/coderso/commerce-catalog.md` |
+| `/coderso/commerce/:id` | `docs/coderso/commerce-product-editor.md` |
 | `/coderso/reviews` | `docs/coderso/reviews-moderation.md` |
-| `/coderso/popups`, `/coderso/popups/:id` | `docs/coderso/reviews-popups-and-engagement.md` |
+| `/coderso/popups`, `/coderso/popups/:id` | `docs/coderso/popups.md` |
 | `/coderso/solution-kits` | `docs/coderso/solution-kits.md` |
 | Solution kit selection guidance | `docs/playbooks/solution-kit-selection-guide.md` |
 | Automotive workshop applied example | `docs/solution-kits/automotive-workshop.md` |
