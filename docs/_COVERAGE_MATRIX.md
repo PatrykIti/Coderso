@@ -17,7 +17,8 @@ that the assistant corpus should use.
 | `/seo` | `docs/screens/seo-manager.md` |
 | `/redirects` | `docs/screens/redirects.md` |
 | `/settings`, `/settings/general` | `docs/screens/general-settings.md` |
-| `/settings/site`, `/settings/assistant` | `docs/screens/general-site-and-assistant-settings.md` |
+| `/settings/site` | `docs/screens/site-settings.md` |
+| `/settings/assistant` | `docs/screens/general-site-and-assistant-settings.md` |
 | `/settings/security`, `/settings/security/ip-allowlist`, `/settings/security/sessions`, `/settings/security/login-alerts` | `docs/screens/security-settings.md` |
 | `/settings/api-keys`, `/settings/webhooks`, `/settings/email`, `/settings/storage`, `/settings/integrations` | `docs/screens/email-storage-integrations-api-keys-and-webhooks.md` |
 | `/analytics` | `docs/screens/analytics.md` |
