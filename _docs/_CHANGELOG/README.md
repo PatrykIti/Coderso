@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 553 | 2026-03-22 | TASK-153 api keys admin UI assistant documentation refresh | Docs/Assistant |
 | 552 | 2026-03-22 | TASK-152 login alerts admin UI assistant documentation refresh | Docs/Assistant |
 | 551 | 2026-03-22 | TASK-151 sessions admin UI assistant documentation refresh | Docs/Assistant |
 | 550 | 2026-03-22 | TASK-150 ip allowlist admin UI assistant documentation refresh | Docs/Assistant |
