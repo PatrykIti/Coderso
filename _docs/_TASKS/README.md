@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 739 tasks
+- **Done:** 740 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-162 | Obsolete Combined Assistant Screen Docs Cleanup | Medium | Small | Done: removed old combined screen docs that were no longer referenced by the coverage matrix after the route-by-route split |
 | TASK-161 | Authentication and Account Recovery Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote the auth flow doc against the live login, 2FA, reset, and reset-confirm screens |
 | TASK-160 | Dashboard Admin UI Assistant Documentation Refresh | Medium | Small | Done: rewrote Dashboard against the live stat-card/recent-edits/health workflow |
 | TASK-159 | Roles Matrix Admin UI Assistant Documentation Refresh | Medium | Small | Done: split Roles Matrix out of the old users/roles doc and rewrote it against the live permissions workflow |
