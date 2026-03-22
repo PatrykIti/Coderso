@@ -12,9 +12,9 @@ import type { DocsSearchHit } from "../../../core/services/assistant/docsTypes";
 
 const makeHit = (): DocsSearchHit => ({
   chunk: {
-    id: "docs/coderso/widgets-and-template-editor.md:10-20",
-    docPath: "docs/coderso/widgets-and-template-editor.md",
-    headingPath: ["Widgets and Template Editor", "Step By Step"],
+    id: "docs/coderso/widget-template-editor.md:10-20",
+    docPath: "docs/coderso/widget-template-editor.md",
+    headingPath: ["Widget Template Editor", "Step By Step"],
     heading: "Step By Step",
     lineStart: 10,
     lineEnd: 20,

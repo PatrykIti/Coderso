@@ -2483,8 +2483,8 @@ Endpoints:
   "confidence": 0.76,
   "sources": [
     {
-      "path": "docs/coderso/widgets-and-template-editor.md",
-      "heading": "Hero widget basics > Step By Step",
+      "path": "docs/coderso/widget-template-editor.md",
+      "heading": "Widget Template Editor > Instruction",
       "lineStart": 20,
       "lineEnd": 38,
       "snippet": "Use visual tab to change colors and spacing.",

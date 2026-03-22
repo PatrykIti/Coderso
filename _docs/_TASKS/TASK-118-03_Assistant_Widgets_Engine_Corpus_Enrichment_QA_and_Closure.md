@@ -40,8 +40,8 @@ szczegolnie dla:
 
 ## Documentation Updates Required
 
-- `docs/coderso/widgets-and-template-editor.md`
-- `docs/coderso/engine-and-schema-builder.md`
+- `docs/coderso/widget-template-editor.md`
+- `docs/coderso/content-type-editor-and-schema-builder.md`
 - `_docs/ARCHITECTURE.md`
 - `_docs/ASSISTANT_GUIDE.md`
 - `_docs/CMS_API.md`

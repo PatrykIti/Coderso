@@ -5,18 +5,18 @@ import { rankAssistantDocsDbRows } from "../../../core/services/assistant/docsDb
 const rows = [
   {
     id: "chunk-hero",
-    docPath: "docs/coderso/widgets-and-template-editor.md",
-    docTitle: "Coderso Widgets and Template Editor",
+    docPath: "docs/coderso/widget-template-editor.md",
+    docTitle: "Widget Template Editor",
     productArea: "coderso-widgets",
     keywords: ["widgets", "templates", "widget library", "template editor"],
-    headingPath: ["Coderso Widgets and Template Editor", "Step By Step"],
+    headingPath: ["Widget Template Editor", "Step By Step"],
     heading: "Step By Step",
     lineStart: 20,
     lineEnd: 38,
     content:
       "Open Widgets, choose Hero, then go to Visual tab to change colors and spacing.",
     normalizedText:
-      "coderso widgets and template editor step by step open widgets choose hero then go to visual tab to change colors and spacing",
+      "widget template editor step by step open widgets choose hero then go to visual tab to change colors and spacing",
     tokenCount: 22,
   },
   {
@@ -59,7 +59,7 @@ test("rankAssistantDocsDbRows ranks the most relevant hero section first", () =>
   });
 
   expect(hits.length).toBeGreaterThan(0);
-  expect(hits[0]?.chunk.docPath).toContain("widgets-and-template-editor.md");
+  expect(hits[0]?.chunk.docPath).toContain("widget-template-editor.md");
   expect(hits[0]?.snippet.toLowerCase()).toContain("visual tab");
 });
 
@@ -68,7 +68,7 @@ test("rankAssistantDocsDbRows prefers widgets product area over themes for hero 
     topK: 3,
   });
 
-  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/widgets-and-template-editor.md");
+  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/widget-template-editor.md");
   expect(hits[0]?.rankingSignals?.domainScore ?? 0).toBeGreaterThan(0);
   expect(hits.some((hit) => hit.chunk.docPath === "docs/screens/themes.md")).toBe(false);
 });
@@ -79,17 +79,17 @@ test("rankAssistantDocsDbRows prefers step-by-step over examples for config ques
       ...rows,
       {
         id: "chunk-examples",
-        docPath: "docs/coderso/widgets-and-template-editor.md",
-        docTitle: "Coderso Widgets and Template Editor",
+        docPath: "docs/coderso/widget-template-editor.md",
+        docTitle: "Widget Template Editor",
         productArea: "coderso-widgets",
         keywords: ["widgets", "templates", "widget library", "template editor"],
-        headingPath: ["Coderso Widgets and Template Editor", "Examples"],
+        headingPath: ["Widget Template Editor", "Examples"],
         heading: "Examples",
         lineStart: 60,
         lineEnd: 66,
         content: "A landing page team reuses a hero structure across multiple pages.",
         normalizedText:
-          "coderso widgets and template editor examples a landing page team reuses a hero structure across multiple pages",
+          "widget template editor examples a landing page team reuses a hero structure across multiple pages",
         tokenCount: 18,
       },
     ],
@@ -108,11 +108,11 @@ test("rankAssistantDocsDbRows prefers what-is-it over common-mistakes for capabi
       ...rows,
       {
         id: "chunk-what-is-it",
-        docPath: "docs/coderso/widgets-and-template-editor.md",
-        docTitle: "Coderso Widgets and Template Editor",
+        docPath: "docs/coderso/widget-template-editor.md",
+        docTitle: "Widget Template Editor",
         productArea: "coderso-widgets",
         keywords: ["widgets", "templates", "widget library", "template editor"],
-        headingPath: ["Coderso Widgets and Template Editor", "What Is It"],
+        headingPath: ["Widget Template Editor", "What Is It"],
         heading: "What Is It",
         lineStart: 6,
         lineEnd: 14,
@@ -124,11 +124,11 @@ test("rankAssistantDocsDbRows prefers what-is-it over common-mistakes for capabi
       },
       {
         id: "chunk-common-mistakes",
-        docPath: "docs/coderso/widgets-and-template-editor.md",
-        docTitle: "Coderso Widgets and Template Editor",
+        docPath: "docs/coderso/widget-template-editor.md",
+        docTitle: "Widget Template Editor",
         productArea: "coderso-widgets",
         keywords: ["widgets", "templates", "widget library", "template editor"],
-        headingPath: ["Coderso Widgets and Template Editor", "Common Mistakes"],
+        headingPath: ["Widget Template Editor", "Common Mistakes"],
         heading: "Common Mistakes",
         lineStart: 42,
         lineEnd: 46,
@@ -154,11 +154,11 @@ test("rankAssistantDocsDbRows prefers step-by-step over when-to-use for procedur
       ...rows,
       {
         id: "chunk-engine-step-by-step",
-        docPath: "docs/coderso/engine-and-schema-builder.md",
-        docTitle: "Coderso Engine and Schema Builder",
+        docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+        docTitle: "Content Type Editor and Schema Builder",
         productArea: "coderso-engine",
         keywords: ["engine", "schema", "content type", "fields"],
-        headingPath: ["Coderso Engine and Schema Builder", "Step By Step"],
+        headingPath: ["Content Type Editor and Schema Builder", "Step By Step"],
         heading: "Step By Step",
         lineStart: 20,
         lineEnd: 32,
@@ -170,11 +170,11 @@ test("rankAssistantDocsDbRows prefers step-by-step over when-to-use for procedur
       },
       {
         id: "chunk-engine-when-to-use",
-        docPath: "docs/coderso/engine-and-schema-builder.md",
-        docTitle: "Coderso Engine and Schema Builder",
+        docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+        docTitle: "Content Type Editor and Schema Builder",
         productArea: "coderso-engine",
         keywords: ["engine", "schema", "content type", "fields"],
-        headingPath: ["Coderso Engine and Schema Builder", "When To Use"],
+        headingPath: ["Content Type Editor and Schema Builder", "When To Use"],
         heading: "When To Use",
         lineStart: 12,
         lineEnd: 18,
@@ -191,7 +191,7 @@ test("rankAssistantDocsDbRows prefers step-by-step over when-to-use for procedur
     }
   );
 
-  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/engine-and-schema-builder.md");
+  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/content-type-editor-and-schema-builder.md");
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("step by step");
 });
 
@@ -201,11 +201,11 @@ test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troublesh
       ...rows,
       {
         id: "chunk-entries-instruction",
-        docPath: "docs/coderso/entries-and-record-editing.md",
-        docTitle: "Coderso Entries and Record Editing",
+        docPath: "docs/coderso/entry-editor-and-metadata.md",
+        docTitle: "Entry Editor and Metadata Workflow",
         productArea: "coderso-entries",
         keywords: ["entries", "records", "validation"],
-        headingPath: ["Coderso Entries and Record Editing", "Instruction"],
+        headingPath: ["Entry Editor and Metadata Workflow", "Instruction"],
         heading: "Instruction",
         lineStart: 30,
         lineEnd: 44,
@@ -215,11 +215,11 @@ test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troublesh
       },
       {
         id: "chunk-entries-troubleshooting",
-        docPath: "docs/coderso/entries-and-record-editing.md",
-        docTitle: "Coderso Entries and Record Editing",
+        docPath: "docs/coderso/entry-editor-and-metadata.md",
+        docTitle: "Entry Editor and Metadata Workflow",
         productArea: "coderso-entries",
         keywords: ["entries", "records", "validation"],
-        headingPath: ["Coderso Entries and Record Editing", "Troubleshooting"],
+        headingPath: ["Entry Editor and Metadata Workflow", "Troubleshooting"],
         heading: "Troubleshooting",
         lineStart: 46,
         lineEnd: 58,
@@ -236,7 +236,7 @@ test("rankAssistantDocsDbRows prioritizes troubleshooting sections for troublesh
     }
   );
 
-  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/entries-and-record-editing.md");
+  expect(hits[0]?.chunk.docPath).toBe("docs/coderso/entry-editor-and-metadata.md");
   expect(hits[0]?.chunk.headingPath.join(" > ").toLowerCase()).toContain("troubleshooting");
 });
 
@@ -254,6 +254,6 @@ test("rankAssistantDocsDbRows supports token expansion via docs tokenizer", () =
   });
 
   expect(
-    hits.some((hit) => hit.chunk.docPath.includes("widgets-and-template-editor.md"))
+    hits.some((hit) => hit.chunk.docPath.includes("widget-template-editor.md"))
   ).toBe(true);
 });

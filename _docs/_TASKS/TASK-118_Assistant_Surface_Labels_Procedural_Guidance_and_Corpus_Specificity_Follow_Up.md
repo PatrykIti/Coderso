@@ -52,8 +52,8 @@ problemy produktowe:
 - `core/services/assistant/docsDbRetriever.ts`
 - `core/services/assistant/docsAnswerComposer.ts`
 - `core/services/assistant/assistantService.ts`
-- `docs/coderso/widgets-and-template-editor.md`
-- `docs/coderso/engine-and-schema-builder.md`
+- `docs/coderso/widget-template-editor.md`
+- `docs/coderso/content-type-editor-and-schema-builder.md`
 - `tests/vitest/assistant/docsDbRetriever.test.ts`
 - `tests/vitest/assistant/docsAnswerComposer.test.ts`
 - `tests/unit/assistant/assistantService.test.ts`

@@ -31,11 +31,13 @@ wartosc produktowa.
 
 ## Files
 
-- `docs/coderso/widgets-and-template-editor.md`
-- `docs/coderso/engine-and-schema-builder.md`
-- `docs/coderso/entries-and-record-editing.md`
-- `docs/coderso/posts.md`
-- `docs/coderso/commerce.md`
+- `docs/coderso/widget-template-editor.md`
+- `docs/coderso/content-type-editor-and-schema-builder.md`
+- `docs/coderso/entry-editor-and-metadata.md`
+- `docs/coderso/posts-list-and-creation.md`
+- `docs/coderso/post-editor-preview-revisions-and-settings.md`
+- `docs/coderso/commerce-catalog.md`
+- `docs/coderso/commerce-product-editor.md`
 - `docs/coderso/booking.md`
 - `docs/screens/email-settings.md`
 - `docs/screens/storage-settings.md`
@@ -69,11 +71,13 @@ wartosc produktowa.
 ## Completion Notes (2026-03-21)
 
 - Migrated key assistant corpus docs to the multi-level section layout:
-  - `docs/coderso/widgets-and-template-editor.md`
-  - `docs/coderso/engine-and-schema-builder.md`
-  - `docs/coderso/entries-and-record-editing.md`
-  - `docs/coderso/posts.md`
-  - `docs/coderso/commerce.md`
+  - `docs/coderso/widget-template-editor.md`
+  - `docs/coderso/content-type-editor-and-schema-builder.md`
+  - `docs/coderso/entry-editor-and-metadata.md`
+  - `docs/coderso/posts-list-and-creation.md`
+  - `docs/coderso/post-editor-preview-revisions-and-settings.md`
+  - `docs/coderso/commerce-catalog.md`
+  - `docs/coderso/commerce-product-editor.md`
   - `docs/coderso/booking.md`
   - `docs/screens/email-settings.md`
   - `docs/screens/storage-settings.md`

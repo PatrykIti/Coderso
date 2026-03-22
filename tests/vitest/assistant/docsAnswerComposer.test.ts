@@ -9,15 +9,15 @@ const makeHit = (
   }
 ): DocsSearchHit => ({
   chunk: {
-    id: overrides.chunk?.id ?? "docs/coderso/widgets-and-template-editor.md:10-20",
+    id: overrides.chunk?.id ?? "docs/coderso/widget-template-editor.md:10-20",
     docPath:
-      overrides.chunk?.docPath ?? "docs/coderso/widgets-and-template-editor.md",
+      overrides.chunk?.docPath ?? "docs/coderso/widget-template-editor.md",
     docTitle:
-      overrides.chunk?.docTitle ?? "Coderso Widgets and Template Editor",
+      overrides.chunk?.docTitle ?? "Widget Template Editor",
     productArea: overrides.chunk?.productArea ?? "coderso-widgets",
     headingPath:
       overrides.chunk?.headingPath ?? [
-        "Coderso Widgets and Template Editor",
+        "Widget Template Editor",
         "Step By Step",
       ],
     heading: overrides.chunk?.heading ?? "Step By Step",
@@ -63,7 +63,7 @@ test("composeDocsAnswer chooses step-by-step guidance over examples for location
         score: 3,
         chunk: {
           id: "examples",
-          headingPath: ["Coderso Widgets and Template Editor", "Examples"],
+          headingPath: ["Widget Template Editor", "Examples"],
           heading: "Examples",
           content:
             "A landing page team reuses a hero, feature grid, and CTA structure across multiple pages.",
@@ -75,7 +75,7 @@ test("composeDocsAnswer chooses step-by-step guidance over examples for location
         score: 2.7,
         chunk: {
           id: "steps",
-          headingPath: ["Coderso Widgets and Template Editor", "Step By Step"],
+          headingPath: ["Widget Template Editor", "Step By Step"],
           heading: "Step By Step",
           content:
             "1. Open Widgets. 2. Edit the Hero template. 3. Use the Visual tab to change colors and spacing.",
@@ -88,7 +88,7 @@ test("composeDocsAnswer chooses step-by-step guidance over examples for location
 
   expect(answer.template).toBe("location_answer");
   expect(answer.answer).toContain("Most likely surface:");
-  expect(answer.answer).toContain("Coderso Widgets and Template Editor");
+  expect(answer.answer).toContain("Widget Template Editor");
   expect(answer.answer).not.toContain("Most likely surface:\nExamples");
   expect(answer.answer).toContain("What to do:");
   expect(answer.answer).toContain("1. Open Widgets.");
@@ -103,10 +103,10 @@ test("composeDocsAnswer keeps widget-specific location step when step-by-step se
         score: 2.9,
         chunk: {
           id: "widgets-long-step-by-step",
-          docPath: "docs/coderso/widgets-and-template-editor.md",
-          docTitle: "Coderso Widgets and Template Editor",
+          docPath: "docs/coderso/widget-template-editor.md",
+          docTitle: "Widget Template Editor",
           productArea: "coderso-widgets",
-          headingPath: ["Coderso Widgets and Template Editor", "Step By Step"],
+          headingPath: ["Widget Template Editor", "Step By Step"],
           heading: "Step By Step",
           content:
             "1. Browse the Widget Library to find a suitable building block. 2. Create or edit templates when the same composition should be reused in multiple places. 3. For widget-specific styling such as Hero colors, open the page or template that contains the widget, select the Hero block, and use the Visual tab to change colors, spacing, and background settings. 4. Use template revisions and previews to review changes before wider rollout. 5. Return to pages, screens, or kits to consume the template where needed.",
@@ -131,7 +131,7 @@ test("composeDocsAnswer uses what-is-it and workflow support for capability ques
         score: 2.9,
         chunk: {
           id: "common-mistakes",
-          headingPath: ["Coderso Widgets and Template Editor", "Common Mistakes"],
+          headingPath: ["Widget Template Editor", "Common Mistakes"],
           heading: "Common Mistakes",
           content:
             "Confusing the widget library with page-level publishing. Editing many pages manually when a reusable template would reduce drift.",
@@ -143,7 +143,7 @@ test("composeDocsAnswer uses what-is-it and workflow support for capability ques
         score: 2.6,
         chunk: {
           id: "what-is-it",
-          headingPath: ["Coderso Widgets and Template Editor", "What Is It"],
+          headingPath: ["Widget Template Editor", "What Is It"],
           heading: "What Is It",
           content:
             "Widgets and Template Editor are the reusable presentation surfaces for building sections, templates, and composable UI blocks used by pages, custom screens, and kit-driven starter assets.",
@@ -155,7 +155,7 @@ test("composeDocsAnswer uses what-is-it and workflow support for capability ques
         score: 2.3,
         chunk: {
           id: "steps",
-          headingPath: ["Coderso Widgets and Template Editor", "Step By Step"],
+          headingPath: ["Widget Template Editor", "Step By Step"],
           heading: "Step By Step",
           content:
             "1. Browse the Widget Library to find a suitable building block. 2. Create or edit templates when the same composition should be reused in multiple places.",
@@ -181,8 +181,8 @@ test("composeDocsAnswer prefers complete sentences over truncated half-sentences
       makeHit({
         chunk: {
           id: "engine-what-is-it",
-          docPath: "docs/coderso/engine-and-schema-builder.md",
-          headingPath: ["Coderso Engine and Schema Builder", "What Is It"],
+          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          headingPath: ["Content Type Editor and Schema Builder", "What Is It"],
           heading: "What Is It",
           content:
             "Coderso Engine and Schema Builder are the modeling surfaces for custom content types, field structures, and the rules that later drive Entries, Listings, Custom Screens, and other record-based workflows.",
@@ -205,10 +205,10 @@ test("composeDocsAnswer prefers step-by-step guidance for procedural engine ques
         score: 2.9,
         chunk: {
           id: "engine-step-by-step",
-          docPath: "docs/coderso/engine-and-schema-builder.md",
-          docTitle: "Coderso Engine and Schema Builder",
+          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
-          headingPath: ["Coderso Engine and Schema Builder", "Step By Step"],
+          headingPath: ["Content Type Editor and Schema Builder", "Step By Step"],
           heading: "Step By Step",
           content:
             "1. Start by creating or opening a content type in Engine. 2. Define fields, labels, relationships, and schema details in Schema Builder. 3. Validate the model against the downstream workflows you expect to use.",
@@ -220,10 +220,10 @@ test("composeDocsAnswer prefers step-by-step guidance for procedural engine ques
         score: 3.1,
         chunk: {
           id: "engine-when-to-use",
-          docPath: "docs/coderso/engine-and-schema-builder.md",
-          docTitle: "Coderso Engine and Schema Builder",
+          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
-          headingPath: ["Coderso Engine and Schema Builder", "When To Use"],
+          headingPath: ["Content Type Editor and Schema Builder", "When To Use"],
           heading: "When To Use",
           content:
             "Use Engine before creating real records whenever the site needs repeatable, structured content instead of one-off pages.",
@@ -235,10 +235,10 @@ test("composeDocsAnswer prefers step-by-step guidance for procedural engine ques
         score: 2.2,
         chunk: {
           id: "engine-what-is-it",
-          docPath: "docs/coderso/engine-and-schema-builder.md",
-          docTitle: "Coderso Engine and Schema Builder",
+          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
-          headingPath: ["Coderso Engine and Schema Builder", "What Is It"],
+          headingPath: ["Content Type Editor and Schema Builder", "What Is It"],
           heading: "What Is It",
           content:
             "Coderso Engine and Schema Builder are the modeling surfaces for custom content types, field structures, and the rules that later drive Entries, Listings, and Custom Screens.",
@@ -251,7 +251,7 @@ test("composeDocsAnswer prefers step-by-step guidance for procedural engine ques
 
   expect(answer.template).toBe("how_to_answer");
   expect(answer.answer).toContain("Most relevant surface:");
-  expect(answer.answer).toContain("Coderso Engine and Schema Builder");
+  expect(answer.answer).toContain("Content Type Editor and Schema Builder");
   expect(answer.answer).toContain("What to do:");
   expect(answer.answer).toContain("1. Start by creating or opening a content type in Engine.");
   expect(answer.answer).not.toContain("Use it when:");
@@ -266,10 +266,10 @@ test("composeDocsAnswer respects explicit basic detail level", () => {
         score: 3,
         chunk: {
           id: "engine-instruction",
-          docPath: "docs/coderso/engine-and-schema-builder.md",
-          docTitle: "Coderso Engine and Schema Builder",
+          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
-          headingPath: ["Coderso Engine and Schema Builder", "Instruction"],
+          headingPath: ["Content Type Editor and Schema Builder", "Instruction"],
           heading: "Instruction",
           content:
             "1. Start by creating a content type. 2. Add fields and validation. 3. Connect downstream modules.",
@@ -281,10 +281,10 @@ test("composeDocsAnswer respects explicit basic detail level", () => {
         score: 2.2,
         chunk: {
           id: "engine-basic",
-          docPath: "docs/coderso/engine-and-schema-builder.md",
-          docTitle: "Coderso Engine and Schema Builder",
+          docPath: "docs/coderso/content-type-editor-and-schema-builder.md",
+          docTitle: "Content Type Editor and Schema Builder",
           productArea: "coderso-engine",
-          headingPath: ["Coderso Engine and Schema Builder", "Basic"],
+          headingPath: ["Content Type Editor and Schema Builder", "Basic"],
           heading: "Basic",
           content: "Engine defines structured content models used by records and workflows.",
           normalizedText: "engine defines structured content models used by records and workflows",
@@ -307,10 +307,10 @@ test("composeDocsAnswer builds troubleshooting block and follow-up options", () 
         score: 2.8,
         chunk: {
           id: "entries-instruction",
-          docPath: "docs/coderso/entries-and-record-editing.md",
-          docTitle: "Coderso Entries and Record Editing",
+          docPath: "docs/coderso/entry-editor-and-metadata.md",
+          docTitle: "Entry Editor and Metadata Workflow",
           productArea: "coderso-entries",
-          headingPath: ["Coderso Entries and Record Editing", "Instruction"],
+          headingPath: ["Entry Editor and Metadata Workflow", "Instruction"],
           heading: "Instruction",
           content:
             "1. Open Entries. 2. Edit the record. 3. Save and verify validation.",
@@ -321,10 +321,10 @@ test("composeDocsAnswer builds troubleshooting block and follow-up options", () 
         score: 2.4,
         chunk: {
           id: "entries-troubleshooting",
-          docPath: "docs/coderso/entries-and-record-editing.md",
-          docTitle: "Coderso Entries and Record Editing",
+          docPath: "docs/coderso/entry-editor-and-metadata.md",
+          docTitle: "Entry Editor and Metadata Workflow",
           productArea: "coderso-entries",
-          headingPath: ["Coderso Entries and Record Editing", "Troubleshooting"],
+          headingPath: ["Entry Editor and Metadata Workflow", "Troubleshooting"],
           heading: "Troubleshooting",
           content:
             "If save fails, verify required fields, relation integrity, and current schema version.",
@@ -372,8 +372,8 @@ test("composeDocsAnswer returns clarifying question when top docs stay ambiguous
         score: 1.95,
         chunk: {
           id: "widgets",
-          docPath: "docs/coderso/widgets-and-template-editor.md",
-          headingPath: ["Coderso Widgets and Template Editor", "Step By Step"],
+          docPath: "docs/coderso/widget-template-editor.md",
+          headingPath: ["Widget Template Editor", "Step By Step"],
           heading: "Step By Step",
           content: "Edit template visual settings from Widgets.",
           normalizedText: "edit template visual settings from widgets",
@@ -394,7 +394,7 @@ test("composeDocsAnswer returns clarifying question when top docs stay ambiguous
   expect(answer.answer).toContain("I am not confident");
   expect(answer.answer).toContain("Do you mean:");
   expect(answer.answer).toContain("- Themes");
-  expect(answer.answer).toContain("- Coderso Widgets and Template Editor");
+  expect(answer.answer).toContain("- Widget Template Editor");
   expect(answer.confidence).toBeLessThan(0.3);
 });
 
