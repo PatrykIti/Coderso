@@ -25,6 +25,9 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 535 | 2026-03-22 | TASK-137 admin UI theme assistant documentation refresh | Docs/Assistant |
+| 534 | 2026-03-22 | TASK-136 plugin store admin UI assistant documentation refresh | Docs/Assistant |
+| 533 | 2026-03-22 | TASK-135 solution kits admin UI assistant documentation refresh | Docs/Assistant |
 | 532 | 2026-03-22 | TASK-132 reviews admin UI assistant documentation refresh | Docs/Assistant |
 | 531 | 2026-03-22 | TASK-131 booking admin UI assistant documentation refresh | Docs/Assistant |
 | 530 | 2026-03-22 | TASK-130 filters and search admin UI assistant documentation refresh | Docs/Assistant |

@@ -19,7 +19,8 @@ that the assistant corpus should use.
 | `/settings/security`, `/settings/security/ip-allowlist`, `/settings/security/sessions`, `/settings/security/login-alerts` | `docs/screens/security-settings.md` |
 | `/settings/api-keys`, `/settings/webhooks`, `/settings/email`, `/settings/storage`, `/settings/integrations` | `docs/screens/email-storage-integrations-api-keys-and-webhooks.md` |
 | `/analytics`, `/audit`, `/access-logs`, `/backups`, `/tools/import-export` | `docs/screens/analytics-audit-access-logs-backups-and-import-export.md` |
-| `/store`, `/store/plugins/:id` | `docs/screens/plugin-store.md` |
+| `/store` | `docs/screens/plugin-store.md` |
+| `/store/plugins/:id` | `docs/screens/plugin-details.md` |
 | `/coderso/engine` | `docs/coderso/engine-list-and-content-type-creation.md` |
 | `/coderso/engine/:id`, `/coderso/engine/:id/schema` | `docs/coderso/content-type-editor-and-schema-builder.md` |
 | `/coderso/entries` | `docs/coderso/entries-list-type-selection-and-creation.md` |
