@@ -31,7 +31,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Statistics
 - **To Do:** 8 tasks
 - **In Progress:** 5 tasks
-- **Done:** 704 tasks
+- **Done:** 705 tasks
 
 ---
 
@@ -66,6 +66,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-127 | Widgets Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Widgets assistant doc into route-aligned library and template editor guides |
 | TASK-126 | Custom Screens Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Custom Screens assistant doc into route-aligned builder and records workflow docs |
 | TASK-125 | Entries Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Entries assistant doc into route-aligned list/create and editor/metadata docs |
 | TASK-124 | Engine Admin UI Assistant Documentation Refresh | Medium | Small | Done: split the old combined Engine assistant doc into route-aligned list/create and editor/schema docs |
