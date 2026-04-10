@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 34 tasks
-- **In Progress:** 6 tasks
-- **Done:** 748 tasks
+- **To Do:** 32 tasks
+- **In Progress:** 7 tasks
+- **Done:** 749 tasks
 
 ---
 
@@ -65,8 +65,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-09-06-01 | Review, Confirm UX, and Partial Success States | High | Medium | Render plan review, dry-run diff, execute progress, and partial success feedback |
 | TASK-101-09-06-02 | Action Routes, Security Contract, and Error Mapping | High | Medium | Add internal action endpoints with strict validation and machine-readable errors |
 | TASK-101-09-06-03 | Unit, Integration, UI Test Matrix, and Docs Closure | Medium | Medium | Cover all lanes and sync docs/board/changelog at the end |
-| TASK-101-09-07 | Generic LLM Guide Intent Families and State-Aware Planning | High | Large | Generalize the planner beyond the single house-projects blueprint |
-| TASK-101-09-07-01 | Intent Family Classification and Prompt-to-Blueprint Routing | High | Medium | Route setup prompts into reusable guide families instead of one hardcoded case |
 | TASK-101-09-07-02 | Generic Catalog Family Blueprint Engine | High | Large | Turn the house-projects blueprint into a generic catalog family generator |
 | TASK-101-09-07-03 | Service Directory, Portfolio, and Product Family Presets | High | Large | Add additional business-ready guide presets beyond house projects |
 | TASK-101-09-07-04 | State-Aware Follow-Up Refinement and No-Duplicate Setups | High | Large | Let follow-up prompts refine existing setups instead of creating duplicates |
@@ -80,6 +78,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-07 | Generic LLM Guide Intent Families and State-Aware Planning | High | Large | In progress: 07-01 landed generic prompt classification and routing, while generic blueprint families and state-aware refinement are still open |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: floating assistant now supports typed planning, dry-run, and execute for the house-projects catalog business flow through existing content/listing/page/custom-screen services |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -93,6 +92,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-07-01 | Intent Family Classification and Prompt-to-Blueprint Routing | High | Medium | Done: planner now classifies docs/setup/refinement prompts and routes them into explicit intent families while keeping the house-projects preset backward-compatible |
 | TASK-101-09-06-04 | Deep Interaction, DB Parity, and Runtime Acceptance Test Wave | High | Large | Done: the shipped house-projects slice now has interactive UI flow coverage, DB-backed parity checks, and public runtime acceptance coverage |
 | TASK-169 | Assistant Widget Template Medium and Decision Guide Polish | Medium | Small | Done: medium and decision-guide widget-template follow-ups now read as Hero-specific guidance instead of flattened workflow/fallback text |
 | TASK-168 | Assistant Widget Template Medium-Detail Polish | Medium | Small | Done: medium-detail widget-template guidance now explains the practical Hero-details path more concretely |

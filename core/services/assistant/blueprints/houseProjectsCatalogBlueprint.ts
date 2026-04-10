@@ -1,6 +1,8 @@
 import type { WidgetBlock } from "../../../widgets/types";
 import type {
   AssistantActionPlan,
+  AssistantIntentFamily,
+  AssistantPromptKind,
   AssistantPlannedAction,
 } from "../actionPlanTypes";
 
@@ -394,7 +396,10 @@ const listingTemplateConfig = {
   },
 };
 
-export const buildHouseProjectsCatalogPlan = (): AssistantActionPlan => {
+export const buildHouseProjectsCatalogPlan = (options?: {
+  promptKind?: AssistantPromptKind;
+  intentFamily?: AssistantIntentFamily;
+}): AssistantActionPlan => {
   const actions: AssistantPlannedAction[] = [
     {
       id: "content-route-house-projects",
@@ -504,6 +509,8 @@ export const buildHouseProjectsCatalogPlan = (): AssistantActionPlan => {
     id: "plan-house-projects-catalog",
     status: "ready",
     intentId: "house-projects-catalog",
+    promptKind: options?.promptKind ?? "setup_request",
+    intentFamily: options?.intentFamily ?? "catalog_showcase",
     title: "House Projects Catalog",
     answer: [
       "I can set up a complete catalog flow for house projects in Coderso.",

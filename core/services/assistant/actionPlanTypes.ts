@@ -1,4 +1,16 @@
 export type AssistantActionPlanStatus = "ready" | "needs_input";
+export type AssistantPromptKind =
+  | "docs_question"
+  | "setup_request"
+  | "refinement_request"
+  | "unknown";
+export type AssistantIntentFamily =
+  | "catalog_showcase"
+  | "product_catalog"
+  | "portfolio_projects"
+  | "services_directory"
+  | "lead_capture_site"
+  | "unknown";
 
 export type AssistantActionContext = {
   page?: string;
@@ -128,7 +140,9 @@ export type AssistantPlannedAction =
 export type AssistantActionPlan = {
   id: string;
   status: AssistantActionPlanStatus;
-  intentId: "house-projects-catalog";
+  intentId: string;
+  promptKind?: AssistantPromptKind;
+  intentFamily?: AssistantIntentFamily;
   title: string;
   answer: string;
   summary: string;
@@ -204,8 +218,28 @@ export const isAssistantActionPlan = (
 ): value is AssistantActionPlan => {
   if (!isRecord(value)) return false;
   if (typeof value.id !== "string") return false;
-  if (value.intentId !== "house-projects-catalog") return false;
+  if (typeof value.intentId !== "string") return false;
   if (value.status !== "ready" && value.status !== "needs_input") return false;
+  if (
+    value.promptKind !== undefined &&
+    value.promptKind !== "docs_question" &&
+    value.promptKind !== "setup_request" &&
+    value.promptKind !== "refinement_request" &&
+    value.promptKind !== "unknown"
+  ) {
+    return false;
+  }
+  if (
+    value.intentFamily !== undefined &&
+    value.intentFamily !== "catalog_showcase" &&
+    value.intentFamily !== "product_catalog" &&
+    value.intentFamily !== "portfolio_projects" &&
+    value.intentFamily !== "services_directory" &&
+    value.intentFamily !== "lead_capture_site" &&
+    value.intentFamily !== "unknown"
+  ) {
+    return false;
+  }
   if (typeof value.title !== "string") return false;
   if (typeof value.answer !== "string") return false;
   if (typeof value.summary !== "string") return false;

@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Product UX + Planning  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09 current vertical slice, TASK-101-09-06-04  
-**Status:** To Do
+**Status:** In Progress (2026-04-10)
 
 ---
 
@@ -83,6 +83,17 @@ Rules:
 2. At least 3 business prompt families route into explicit blueprint families.
 3. The current house-projects preset remains backward-compatible.
 4. Follow-up prompts are classified separately from initial setup prompts.
+
+## Progress Notes
+
+- `TASK-101-09-07-01` is complete:
+  - generic prompt classification is now implemented,
+  - planner routing recognizes docs vs setup vs refinement intent,
+  - current house-projects flow remains the routed ready-plan case.
+- Remaining work:
+  - generic blueprint generation,
+  - additional preset families,
+  - state-aware refinement without duplicate setups.
 
 ## Documentation Updates Required
 

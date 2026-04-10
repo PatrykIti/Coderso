@@ -1,6 +1,8 @@
 import type {
   AssistantActionContext,
   AssistantActionPlan,
+  AssistantIntentFamily,
+  AssistantPromptKind,
   AssistantPlanQuestion,
 } from "./actionPlanTypes";
 import { buildAssistantAdminContext } from "./adminContextService";
@@ -37,6 +39,7 @@ const catalogKeywords = [
 const setupKeywords = [
   "potrzebuje",
   "chce",
+  "potrzebuję",
   "stworz",
   "stwórz",
   "zrob",
@@ -46,6 +49,86 @@ const setupKeywords = [
   "build",
   "create",
   "set up",
+];
+
+const refinementKeywords = [
+  "dodaj",
+  "dorzuc",
+  "dołóż",
+  "zmien",
+  "zmień",
+  "update",
+  "adjust",
+  "refine",
+  "expand",
+  "extend",
+  "filtr",
+  "filter",
+  "formularz",
+  "form",
+  "layout",
+  "uklad",
+  "układ",
+  "status",
+  "price",
+  "cene",
+  "cenę",
+];
+
+const docsQuestionKeywords = [
+  "gdzie",
+  "where",
+  "jak",
+  "how",
+  "which screen",
+  "where can i find",
+  "ustawienia",
+  "settings",
+  "kolory",
+  "colors",
+  "configure",
+];
+
+const productCatalogKeywords = [
+  "produkt",
+  "produkty",
+  "product",
+  "products",
+  "shop",
+  "sklep",
+];
+
+const portfolioKeywords = [
+  "portfolio",
+  "projekt",
+  "projekty",
+  "project",
+  "projects",
+  "case study",
+  "case studies",
+];
+
+const serviceDirectoryKeywords = [
+  "uslugi",
+  "usługi",
+  "services",
+  "service",
+  "directory",
+  "katalog uslug",
+  "katalog usług",
+  "provider",
+  "providers",
+];
+
+const leadCaptureKeywords = [
+  "lead",
+  "leady",
+  "kontakt",
+  "contact",
+  "formularz kontaktowy",
+  "contact form",
+  "wycena",
+  "quote",
 ];
 
 const includesAny = (value: string, candidates: string[]) =>
@@ -59,18 +142,55 @@ export const isLikelyHouseProjectsCatalogPrompt = (prompt: string) => {
   );
 };
 
-export const isLikelyGuidePlanningPrompt = (prompt: string) => {
+const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
   const normalized = normalizePrompt(prompt);
+  if (isLikelyHouseProjectsCatalogPrompt(normalized)) return "catalog_showcase";
+  if (includesAny(normalized, productCatalogKeywords)) return "product_catalog";
+  if (includesAny(normalized, serviceDirectoryKeywords)) return "services_directory";
+  if (includesAny(normalized, portfolioKeywords)) return "portfolio_projects";
+  if (includesAny(normalized, leadCaptureKeywords)) return "lead_capture_site";
+  if (includesAny(normalized, catalogKeywords)) return "catalog_showcase";
+  return "unknown";
+};
+
+export const classifyAssistantPrompt = (prompt: string) => {
+  const normalized = normalizePrompt(prompt);
+  const intentFamily = resolveIntentFamily(normalized);
+  const hasSetupSignal = includesAny(normalized, setupKeywords);
+  const hasRefinementSignal = includesAny(normalized, refinementKeywords);
+  const hasDocsSignal = includesAny(normalized, docsQuestionKeywords);
+
+  let promptKind: AssistantPromptKind = "unknown";
+  if (hasDocsSignal && !hasSetupSignal) {
+    promptKind = "docs_question";
+  } else if (hasRefinementSignal) {
+    promptKind = "refinement_request";
+  } else if (hasSetupSignal || intentFamily !== "unknown") {
+    promptKind = "setup_request";
+  }
+
+  return {
+    normalizedPrompt: normalized,
+    promptKind,
+    intentFamily,
+  };
+};
+
+export const isLikelyGuidePlanningPrompt = (prompt: string) => {
+  const classification = classifyAssistantPrompt(prompt);
   return (
-    includesAny(normalized, setupKeywords) &&
-    (includesAny(normalized, catalogKeywords) ||
-      includesAny(normalized, houseProjectKeywords))
+    classification.promptKind === "setup_request" ||
+    classification.promptKind === "refinement_request"
   );
 };
 
 const buildClarifyingPlan = (
   prompt: string,
-  context: ReturnType<typeof buildAssistantAdminContext>
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  classification: {
+    promptKind: AssistantPromptKind;
+    intentFamily: AssistantIntentFamily;
+  }
 ): AssistantActionPlan => {
   const questions: AssistantPlanQuestion[] = [
     {
@@ -96,7 +216,12 @@ const buildClarifyingPlan = (
   return {
     id: "plan-needs-input",
     status: "needs_input",
-    intentId: "house-projects-catalog",
+    intentId:
+      classification.intentFamily === "unknown"
+        ? "generic-guide-needs-input"
+        : `${classification.intentFamily}-needs-input`,
+    promptKind: classification.promptKind,
+    intentFamily: classification.intentFamily,
     title: "Need more guidance before planning",
     answer: [
       "I can generate a structured Coderso setup, but this prompt is still too open for safe execution.",
@@ -124,14 +249,21 @@ export const planAssistantActions = (
   input: AssistantActionPlanInput
 ): AssistantActionPlan => {
   const context = buildAssistantAdminContext(input.context);
-  const normalizedPrompt = input.prompt.trim();
-  if (!normalizedPrompt) {
-    return buildClarifyingPlan(input.prompt, context);
+  const classification = classifyAssistantPrompt(input.prompt);
+  if (!classification.normalizedPrompt) {
+    return buildClarifyingPlan(input.prompt, context, classification);
   }
 
-  if (isLikelyHouseProjectsCatalogPrompt(normalizedPrompt)) {
-    return buildHouseProjectsCatalogPlan();
+  if (
+    classification.promptKind === "setup_request" &&
+    classification.intentFamily === "catalog_showcase" &&
+    isLikelyHouseProjectsCatalogPrompt(classification.normalizedPrompt)
+  ) {
+    return buildHouseProjectsCatalogPlan({
+      promptKind: classification.promptKind,
+      intentFamily: classification.intentFamily,
+    });
   }
 
-  return buildClarifyingPlan(normalizedPrompt, context);
+  return buildClarifyingPlan(input.prompt, context, classification);
 };

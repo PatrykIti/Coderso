@@ -5,7 +5,7 @@
 **Category:** Core/Assistant  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-07  
-**Status:** To Do
+**Status:** Done (2026-04-10)
 
 ---
 
@@ -49,3 +49,19 @@ Replace the current single-case prompt detection with a generic intent-family cl
   - fallback to `needs_input`,
   - non-regression for the current house-projects prompt,
   - separation of docs questions vs setup requests vs follow-up refinement.
+
+## Completion Notes (2026-04-10)
+
+- Added generic planner classification over:
+  - `docs_question`
+  - `setup_request`
+  - `refinement_request`
+- Added intent-family routing for:
+  - `catalog_showcase`
+  - `product_catalog`
+  - `portfolio_projects`
+  - `services_directory`
+  - `lead_capture_site`
+- Kept the existing `house-projects-catalog` preset as the current routed ready-plan case.
+- Preserved backward-compatible `needs_input` behavior for prompts that are still broader than the currently shipped blueprints.
+- Widened the floating assistant prompt heuristic so more setup/refinement prompts reach the planner path.
