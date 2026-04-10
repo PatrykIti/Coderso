@@ -106,6 +106,131 @@ typed action engine
   -> audit + revision + idempotency
 ```
 
+## Existing Runtime Contracts to Reuse
+
+This task must be grounded in the current repo implementation. The first delivery must reuse existing
+domain/services and current assistant flows instead of inventing a parallel assistant-only backend.
+
+Primary existing contracts to reuse:
+- assistant runtime:
+  - `core/services/assistant/assistantService.ts`
+  - `core/server/validation/assistantSchemas.ts`
+  - `core/server/routes/assistantRoutes.ts`
+  - `core/admin/services/assistantClient.ts`
+- current typed guided workflow foundation:
+  - `core/services/assistant/siteBuilderPlanner.ts`
+  - `core/services/assistant/siteBuilderExecutor.ts`
+  - `core/admin/ui/setup/AiSiteWizard.tsx`
+  - `core/admin/ui/setup/AiSiteWizardSteps.tsx`
+  - `_docs/ASSISTANT_SITE_BUILDER.md`
+- content modeling and entry management:
+  - `core/services/content/typeService.ts`
+  - `core/services/content/entryService.ts`
+  - `core/server/routes/contentTypeRoutes.ts`
+  - `core/server/routes/contentEntryRoutes.ts`
+- custom screens:
+  - `core/services/customScreens/customScreenService.ts`
+  - `core/server/routes/customScreenRoutes.ts`
+- listings:
+  - `core/services/content/listingQueriesService.ts`
+  - `core/services/content/listingTemplatesService.ts`
+  - `core/server/routes/listingsRoutes.ts`
+- pages:
+  - `core/services/pages/pageService.ts`
+  - `core/server/routes/pageRoutes.ts`
+- forms:
+  - `core/services/forms/formsService.ts`
+- kit/install and typed review patterns:
+  - `core/services/kits/solutionKitsService.ts`
+  - `core/services/kits/solutionKitsInstallService.ts`
+  - `core/services/kits/kitInstaller.ts`
+
+Rule:
+- new assistant action handlers should call existing services where those contracts already exist,
+- if some current install flow only exists as direct DB logic, extract reusable helper(s) from that flow,
+  then make both site-builder and llm-guide depend on the same helper,
+- do not introduce a third write path for the same resource.
+
+## Legacy Contracts to Replace, Converge, or Retire
+
+This task is intentionally not "add one more assistant layer". It must simplify the runtime contract.
+
+Legacy that should be converged or retired:
+- `llm-rag` naming:
+  - keep read compatibility temporarily,
+  - but canonical product/runtime naming becomes `llm-guide`.
+- standalone assistant site-builder contract:
+  - current planner/review/execute shape is valuable,
+  - but the long-term owner should be the generic `llm-guide` action engine,
+  - specialized `/assistant/site-builder/*` routes should become either:
+    - thin aliases to the generic action engine, or
+    - deprecated and removed after parity lands.
+- duplicate write logic:
+  - no new assistant-only direct DB mutators for content types, pages, custom screens, listings, or forms,
+  - if current kit installer contains resource-specific direct DB logic that blocks reuse,
+    extract shared domain upsert helpers and stop growing the legacy direct-only path.
+
+## Business Requirement Coverage
+
+Final implementation must cover this business flow end-to-end:
+
+Prompt:
+- "potrzebuje strony na ktore bede mogl prezentowac swoje produkty czyli projekty domow, caly katalog"
+
+Expected `llm-guide` outcome:
+1. understand this is a `catalog_showcase` / structured-catalog intent,
+2. propose or directly draft a `house_projects`-like content model,
+3. define explicit fields for the business case:
+   - title
+   - slug
+   - gallery
+   - hero image
+   - area / size
+   - rooms
+   - bathrooms
+   - floors
+   - price / price-from or request-for-quote mode
+   - location / delivery region
+   - project status
+   - short summary
+   - long description
+   - downloadable assets / attachments when needed
+4. create the admin management surface through existing product modules:
+   - `Engine` content type,
+   - `Entries` resource,
+   - optional `Custom Screen` for friendlier data entry,
+   - `Listings` query + template for catalog rendering,
+   - `Page` for catalog landing page,
+   - optional `Form` for lead capture / project inquiry,
+5. show the full dry-run plan and generated resources before execution,
+6. execute through typed actions,
+7. leave the site owner with a working admin workflow and runtime catalog surface,
+8. support further follow-up prompts like:
+   - "dodaj filtr po metrazu i liczbie pokoi"
+   - "na liscie pokaz cene od i status projektu"
+   - "dodaj formularz zapytania do strony szczegolowej"
+
+The business acceptance is not satisfied by "assistant answered with advice".
+It is satisfied only when `llm-guide` can produce and execute a real structured setup through existing modules.
+
+## Implementation Order
+
+1. Normalize assistant modes and retire `llm-rag` as the canonical user-facing contract.
+2. Introduce budgeted admin context snapshot from existing admin screens.
+3. Converge site-builder planner/review/execute patterns into the generic guide flow.
+4. Add typed action adapters that call current domain services:
+   - content type
+   - entry
+   - custom screen
+   - listing query
+   - listing template
+   - page
+   - form
+5. Extract reusable install/upsert helpers from current kit installer where current write logic is direct-DB and blocks reuse.
+6. Ship the `house projects catalog` blueprint as the first business-complete guide flow.
+7. Reuse or absorb current `AiSiteWizard` review/execute UX patterns instead of shipping a second competing assistant execution UI.
+8. Deprecate redundant standalone site-builder contracts once generic guide parity is proven.
+
 ## Files to Change (Target)
 
 - `core/services/assistant/assistantService.ts` (update, ~120-220 LOC)
@@ -237,6 +362,9 @@ if (confirmed) {
   - `/assistant/actions/plan`,
   - `/assistant/actions/dry-run`,
   - `/assistant/actions/execute`.
+- Acceptance integration:
+  - `house projects catalog` prompt -> typed plan -> dry-run -> execute -> validation,
+  - assert created content type, optional custom screen, listing query/template, page, and optional form surfaces.
 - Vitest UI:
   - review + confirm flow,
   - follow-up question states,

@@ -18,6 +18,12 @@ Domknac warstwe user-facing i route contracts:
 - test matrix,
 - docs i board sync.
 
+This closure task must also ensure the final UX does not fork into two competing assistant execution surfaces.
+
+Preferred approach:
+- reuse or absorb the current explainable review/execute patterns from `AiSiteWizard`,
+- do not ship one review UX for site builder and another unrelated one for generic guide actions unless there is a proven product reason.
+
 ## Files to Change
 
 - `core/server/routes/assistantRoutes.ts` (update, ~120-220 LOC)
@@ -37,6 +43,7 @@ Domknac warstwe user-facing i route contracts:
 
 - Vitest UI for review/confirm states.
 - Bun integration for assistant action routes.
+- acceptance coverage for the `house projects catalog` business scenario.
 - Full targeted assistant lint/type/test pass.
 
 ## Documentation Updates Required

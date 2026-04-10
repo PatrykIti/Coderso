@@ -23,6 +23,23 @@ nie mieszac prostego Q&A po docsach z reasoning/planning pod mutacje.
    - guide planning,
    - typed action execution.
 4. Uporzadkowac nazwy w settings, user settings, client contracts i UI labels.
+5. Zdefiniowac plan wygaszenia starych nazw i uniknac stalego dual-maintenance `llm-rag` vs `llm-guide`.
+
+## Existing Code to Reuse
+
+- `core/services/settings/settingsService.ts`
+- `core/services/settings/userSettingsService.ts`
+- `core/services/assistant/assistantService.ts`
+- `core/server/validation/assistantSchemas.ts`
+- `core/admin/services/assistantClient.ts`
+- `core/admin/ui/assistant/AssistantModeSwitch.tsx`
+- `core/admin/ui/settings/AssistantSettingsCard.tsx`
+
+## Legacy to Replace or Retire
+
+- `llm-rag` remains only as transitional alias on read/migration paths.
+- Product copy, UI labels, and new contracts must move to `llm-guide`.
+- New work must not add more `llm-rag`-named branches or files.
 
 ## Files to Change
 
@@ -51,6 +68,7 @@ function normalizeAssistantMode(raw: unknown): AssistantMode {
 
 - `TASK-101-09-01-01_Docs_Assistant_Mode_Guardrails_and_Backward_Compatibility.md`
 - `TASK-101-09-01-02_LLM_Guide_Mode_Settings_and_Mode_Switch_UX.md`
+- `TASK-101-09-01-03_Site_Builder_Contract_Convergence_and_Legacy_Route_Retirement.md`
 
 ## Testing Requirements
 

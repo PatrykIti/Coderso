@@ -23,6 +23,20 @@ gdy brakuje krytycznych danych.
    - missing required inputs.
 2. Strict JSON schema dla typed plan.
 3. Local validation i repair heuristics przed przejsciem do dry-run.
+4. Reuse current typed guided-planning patterns from site builder where possible instead of introducing a second unrelated planner stack.
+
+## Existing Code to Reuse
+
+- `core/services/assistant/siteBuilderPlanner.ts`
+- `core/services/kits/solutionKitsCatalog.ts`
+- `core/services/assistant/assistantService.ts`
+- `core/server/validation/assistantSchemas.ts`
+- existing `SiteBuilderPlan*` types where they provide reusable explainable-plan patterns
+
+## Legacy to Replace or Retire
+
+- ad-hoc or wizard-only planner contracts that cannot represent generic actions should be folded into shared action-plan types,
+- avoid parallel planner response shapes for "site-builder" vs "llm-guide general actions".
 
 ## Files to Change
 

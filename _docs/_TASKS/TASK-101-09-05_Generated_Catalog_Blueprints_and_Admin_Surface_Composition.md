@@ -23,6 +23,34 @@ Przyklad:
 1. Dodac blueprint presets dla powtarzalnych intents.
 2. Utrzymac beginner-safe defaults i product-first naming.
 3. Generowac surfaces przez `Engine`, `Entries`, `Custom Screens`, `Listings`, `Pages`, `Forms`.
+4. Pierwszy business-complete flow ma byc zrobiony dla promptu katalogu projektow domow.
+
+## Existing Product Surfaces to Reuse
+
+- `Engine` / content types:
+  - `core/services/content/typeService.ts`
+  - `core/server/routes/contentTypeRoutes.ts`
+- `Entries`:
+  - `core/services/content/entryService.ts`
+  - `core/server/routes/contentEntryRoutes.ts`
+- `Custom Screens`:
+  - `core/services/customScreens/customScreenService.ts`
+  - `core/server/routes/customScreenRoutes.ts`
+- `Listings`:
+  - `core/services/content/listingQueriesService.ts`
+  - `core/services/content/listingTemplatesService.ts`
+  - `core/server/routes/listingsRoutes.ts`
+- `Pages`:
+  - `core/services/pages/pageService.ts`
+  - `core/server/routes/pageRoutes.ts`
+- `Forms`:
+  - `core/services/forms/formsService.ts`
+
+## Legacy or Wrong Approach to Avoid
+
+- do not generate a bespoke assistant-only admin panel when `Entries` or `Custom Screens` already solves the problem,
+- do not answer the prompt only with recommendations if the product requirement is actual setup execution,
+- do not create a catalog flow that skips listing query/template composition and leaves the user without a working runtime surface.
 
 ## Files to Change
 
@@ -43,6 +71,7 @@ if (intent.type === "catalog" && intent.domain === "house-projects") {
 
 - `TASK-101-09-05-01_Projects_Catalog_Blueprint_and_Default_Content_Model.md`
 - `TASK-101-09-05-02_Generated_Admin_Surfaces_Listings_and_Beginner_Safe_Followups.md`
+- `TASK-101-09-05-03_House_Projects_Catalog_End_to_End_Acceptance_Flow.md`
 
 ## Testing Requirements
 

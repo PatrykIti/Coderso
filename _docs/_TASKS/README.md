@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 27 tasks
+- **To Do:** 30 tasks
 - **In Progress:** 5 tasks
 - **Done:** 747 tasks
 
@@ -47,6 +47,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Canonicalize `docs-only` vs `llm-guide` with backward compatibility for `llm-rag` |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Freeze docs assistant as read-only and preserve legacy mode values |
 | TASK-101-09-01-02 | LLM Guide Mode Settings and Mode Switch UX | Medium | Small | Rename UI/settings toward `LLM Guide` without breaking transport compatibility |
+| TASK-101-09-01-03 | Site Builder Contract Convergence and Legacy Route Retirement | High | Medium | Converge current site-builder workflow into the generic guide engine and retire duplicate contracts |
 | TASK-101-09-02 | Admin Context Snapshot and Safe Surface Observers | High | Large | Build budgeted live admin context instead of relying on raw DOM/screenshots |
 | TASK-101-09-02-01 | Admin Runtime Context Snapshot and Permission Affordances | High | Medium | Capture active route, selected entity, visible actions, and permission envelope |
 | TASK-101-09-02-02 | Resource Schema, Widget, and Surface Catalog Context | High | Medium | Expose compact summaries for content types, screens, listings, forms, and widgets |
@@ -56,9 +57,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-09-04 | Typed Action Registry, Dry-Run, and Execution Pipeline | High | Large | Registry + diff preview + execute path through existing services |
 | TASK-101-09-04-01 | Action Registry, Dry-Run Diff, and Conflict Model | High | Medium | Emit stable preview diffs, warnings, and conflict codes for every action family |
 | TASK-101-09-04-02 | Execution, Idempotency, Revisions, and Audit Hooks | High | Medium | Add replay-safe execute path with audit and revision integration |
+| TASK-101-09-04-03 | Existing Service Adapters and Installer Extraction | High | Medium | Reuse current mutators or extract shared helpers instead of adding assistant-only write paths |
 | TASK-101-09-05 | Generated Catalog Blueprints and Admin Surface Composition | High | Large | Map product intents like house-project catalogs to existing Coderso surfaces |
 | TASK-101-09-05-01 | Projects Catalog Blueprint and Default Content Model | High | Medium | Create canonical content model defaults for project catalogs |
 | TASK-101-09-05-02 | Generated Admin Surfaces, Listings, and Beginner-Safe Follow-Ups | High | Medium | Compose entries/screens/listings/runtime surfaces and ask safe follow-up questions |
+| TASK-101-09-05-03 | House Projects Catalog End-to-End Acceptance Flow | High | Medium | Make the sample business prompt pass as a real plan/dry-run/execute acceptance flow |
 | TASK-101-09-06 | Assistant UI, API, Security, Tests, and Closure | High | Large | Finish review UX, action routes, security contract, tests, and closure work |
 | TASK-101-09-06-01 | Review, Confirm UX, and Partial Success States | High | Medium | Render plan review, dry-run diff, execute progress, and partial success feedback |
 | TASK-101-09-06-02 | Action Routes, Security Contract, and Error Mapping | High | Medium | Add internal action endpoints with strict validation and machine-readable errors |
