@@ -21,6 +21,19 @@ Replace the current single-case prompt detection with a generic intent-family cl
    - setup request,
    - follow-up refinement request.
 3. Route setup requests into the correct blueprint generator.
+4. Keep `house-projects-catalog` as the current fallback preset inside the new routing layer.
+5. Preserve the current `/assistant/actions/plan` response shape while widening planner internals.
+
+## Integration Notes
+
+- This task should mostly stay inside:
+  - `core/services/assistant/actionPlannerService.ts`
+  - `core/services/assistant/actionPlanTypes.ts`
+- It should not require route or UI contract changes if done correctly.
+- The runtime must continue to return:
+  - `ready` plan for the current house-projects prompt,
+  - `needs_input` for underspecified setup requests,
+  - docs assistant behavior unchanged for pure docs questions.
 
 ## Files to Change
 
@@ -33,4 +46,6 @@ Replace the current single-case prompt detection with a generic intent-family cl
 - `Vitest` unit for:
   - prompt classification,
   - routing to blueprint families,
-  - fallback to `needs_input`.
+  - fallback to `needs_input`,
+  - non-regression for the current house-projects prompt,
+  - separation of docs questions vs setup requests vs follow-up refinement.

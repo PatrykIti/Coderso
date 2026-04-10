@@ -29,6 +29,22 @@ to:
 - a generic `LLM Guide` planner that routes prompts into reusable intent families
   and can refine existing setups through follow-up prompts.
 
+## Integration with Current Code
+
+This wave must extend the already shipped action-engine slice, not replace it.
+
+Current owner modules:
+- `core/services/assistant/actionPlannerService.ts`
+- `core/services/assistant/actionPlanTypes.ts`
+- `core/services/assistant/blueprints/houseProjectsCatalogBlueprint.ts`
+- `core/services/assistant/actionExecutorService.ts`
+
+Rules:
+- keep the current `house-projects-catalog` flow working as the first preset,
+- add generic routing above it,
+- do not break the existing `/assistant/actions/*` contract,
+- do not widen the executor surface before planner families and state-awareness are explicit.
+
 ## Target Capabilities
 
 1. Intent-family classification:
@@ -60,6 +76,13 @@ to:
 - `Vitest` for planner classification and blueprint routing.
 - `Bun` for persisted refinement/update/noop behavior.
 - scenario coverage for at least 3 distinct business prompts beyond house projects.
+
+## Acceptance Criteria
+
+1. The planner no longer relies on a single hardcoded prompt detector.
+2. At least 3 business prompt families route into explicit blueprint families.
+3. The current house-projects preset remains backward-compatible.
+4. Follow-up prompts are classified separately from initial setup prompts.
 
 ## Documentation Updates Required
 

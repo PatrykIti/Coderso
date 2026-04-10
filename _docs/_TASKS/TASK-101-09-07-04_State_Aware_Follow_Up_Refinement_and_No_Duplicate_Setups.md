@@ -27,6 +27,19 @@ creating a parallel second setup.
    - "zmien uklad kart i pokaz status projektu"
 4. Guarantee update/noop over duplicate creation when matching setup already exists.
 
+## Integration Notes
+
+- This task depends on current persisted-resource seams already used by:
+  - `actionExecutorService`
+  - `settingsService`
+  - content/listing/page/custom-screen services
+- Planner state-awareness should prefer querying existing resources over inventing synthetic memory.
+- Tests must prove that follow-up prompts update the current setup instead of creating:
+  - a second content type,
+  - a second custom screen,
+  - a second listing template,
+  - a second public catalog page.
+
 ## Testing Requirements
 
 - `Vitest` planner tests for follow-up interpretation.

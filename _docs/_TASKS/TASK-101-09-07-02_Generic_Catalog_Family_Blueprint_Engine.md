@@ -22,6 +22,19 @@ catalog intent instead of one hardcoded house-projects preset.
    - product catalog
    - portfolio/projects
 3. Keep current `house-projects-catalog` as one preset of the generic engine.
+4. Reuse current typed action families:
+   - content route
+   - content type
+   - custom screen
+   - listing query
+   - listing template
+   - page
+
+## Integration Notes
+
+- This task should generalize blueprint generation, not invent new executor action types.
+- If a new business family needs extra resources, first check whether the current action families
+  and existing domain services already cover that need.
 
 ## Files to Change
 

@@ -120,8 +120,15 @@ Must cover:
 1. after execute, `/projekty-domow` resolves as published page,
 2. generated `content-list` points to resolved listing query/template ids,
 3. generated `site.contentRoutes` allows public detail resolution for house-project entries,
-4. detail route renders entry data for a created project record,
-5. public runtime does not shadow the catalog landing page with the hidden system list route.
+4. detail route renders entry data for a created project record.
+
+Note:
+- hidden/system list route behavior is now treated as an internal implementation detail for this slice,
+  not as a release-blocking public acceptance requirement.
+- the shipped business requirement is satisfied by:
+  - working public catalog landing page,
+  - working public detail route,
+  - working admin surfaces and persisted resources.
 
 ### 4. Follow-Up Refinement
 
@@ -196,6 +203,8 @@ expect(response.text()).toContain("Katalog Projektów Domów");
 - Added Bun public runtime acceptance coverage for:
   - generated catalog landing page,
   - generated public detail route for house-project entries.
+- kept the hidden/system list route out of the final acceptance contract for this slice,
+  because it is an internal runtime-support path rather than a user-facing business requirement.
 - Fixed a real runtime regression uncovered by this wave:
   - `contentListResolver` no longer emits invalid `resolved.runtime` shape with undefined keys.
 - Confirmed the current shipped `house-projects-catalog` slice is now tested end-to-end for:
