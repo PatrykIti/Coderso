@@ -30,6 +30,14 @@ export const screenFieldValueDefaults: ScreenFieldValueData = {
   tone: "default",
 };
 
+const stringifyPrimitive = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return null;
+};
+
 const toneClassMap: Record<ScreenFieldValueTone, string> = {
   default: "text-foreground",
   strong: "text-foreground font-semibold",
@@ -47,18 +55,9 @@ export function normalizeScreenFieldValueData(
   value: ScreenFieldValueData
 ): ScreenFieldValueData {
   return {
-    label:
-      typeof value.label === "string"
-        ? value.label
-        : (screenFieldValueDefaults.label ?? ""),
-    value:
-      typeof value.value === "string"
-        ? value.value
-        : (screenFieldValueDefaults.value ?? ""),
-    helper:
-      typeof value.helper === "string"
-        ? value.helper
-        : (screenFieldValueDefaults.helper ?? ""),
+    label: stringifyPrimitive(value.label) ?? (screenFieldValueDefaults.label ?? ""),
+    value: stringifyPrimitive(value.value) ?? (screenFieldValueDefaults.value ?? ""),
+    helper: stringifyPrimitive(value.helper) ?? (screenFieldValueDefaults.helper ?? ""),
     tone:
       value.tone === "strong" || value.tone === "muted" ? value.tone : "default",
   };

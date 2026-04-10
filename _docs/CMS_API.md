@@ -2426,6 +2426,8 @@ Przykładowe klucze:
 Permissions:
 - `settings:read` dla `GET /assistant/status` i `POST /assistant/chat`
 - `settings:write` dla `POST /assistant/reindex`
+- `settings:read` + `content:read` dla `POST /assistant/actions/plan` i `POST /assistant/actions/dry-run`
+- `settings:write` + `content:write` + `content:publish` dla `POST /assistant/actions/execute`
 - `solution-kits:read` dla `POST /assistant/site-builder/plan` i `POST /assistant/site-builder/validate`
 - `solution-kits:write` dla `POST /assistant/site-builder/execute`
 
@@ -2433,6 +2435,9 @@ Endpoints:
 - `GET /assistant/status`
 - `POST /assistant/chat`
 - `POST /assistant/reindex`
+- `POST /assistant/actions/plan`
+- `POST /assistant/actions/dry-run`
+- `POST /assistant/actions/execute`
 - `POST /assistant/site-builder/plan`
 - `POST /assistant/site-builder/execute`
 - `POST /assistant/site-builder/validate`
@@ -2593,6 +2598,123 @@ Example conservative clarification response:
 Reindex refreshes the DB-backed official corpus from the current root `docs/`
 tree and removes official assistant docs that no longer exist in the source
 corpus.
+
+`POST /assistant/actions/plan` request
+
+```json
+{
+  "prompt": "potrzebuje strony na ktore bede mogl prezentowac swoje produkty czyli projekty domow, caly katalog",
+  "context": {
+    "page": "/admin/coderso/widgets",
+    "locale": "pl-PL"
+  }
+}
+```
+
+`POST /assistant/actions/plan` response (fragment)
+
+```json
+{
+  "id": "plan-house-projects-catalog",
+  "status": "ready",
+  "intentId": "house-projects-catalog",
+  "title": "House Projects Catalog",
+  "answer": "I can set up a complete catalog flow for house projects in Coderso.",
+  "summary": "Create a structured house-projects catalog with content model, dedicated admin surface, listing query/template, public catalog page, and detail routes.",
+  "confidence": 0.91,
+  "assumptions": [
+    "The first release focuses on catalog setup without inquiry form automation."
+  ],
+  "questions": [],
+  "actions": [
+    {
+      "id": "content-type-house-projects",
+      "type": "content-type.upsert",
+      "title": "Create the house projects content model",
+      "description": "Provision structured fields for summaries, media, specs, pricing, and project status.",
+      "input": {
+        "slug": "house-projects",
+        "name": "House Projects",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {}
+        }
+      }
+    }
+  ]
+}
+```
+
+`POST /assistant/actions/dry-run` request
+
+```json
+{
+  "plan": {
+    "id": "plan-house-projects-catalog",
+    "status": "ready",
+    "intentId": "house-projects-catalog",
+    "title": "House Projects Catalog",
+    "answer": "Plan ready",
+    "summary": "Plan summary",
+    "confidence": 0.91,
+    "assumptions": [],
+    "questions": [],
+    "actions": []
+  }
+}
+```
+
+`POST /assistant/actions/dry-run` response adds:
+- `changes[]` with:
+  - `actionId`
+  - `type`
+  - `targetType`
+  - `targetKey`
+  - `operation` (`create|update|noop`)
+  - `summary`
+  - `warnings[]`
+- `warnings[]`
+- `readyToExecute`
+
+`POST /assistant/actions/execute` request
+
+```json
+{
+  "plan": {
+    "id": "plan-house-projects-catalog",
+    "status": "ready",
+    "intentId": "house-projects-catalog",
+    "title": "House Projects Catalog",
+    "answer": "Plan ready",
+    "summary": "Plan summary",
+    "confidence": 0.91,
+    "assumptions": [],
+    "questions": [],
+    "actions": []
+  },
+  "idempotencyKey": "assistant-house-projects-1"
+}
+```
+
+`POST /assistant/actions/execute` response adds:
+- `preview` (same shape as dry-run result)
+- `results[]` with:
+  - `actionId`
+  - `type`
+  - `targetType`
+  - `targetKey`
+  - `operation`
+  - `status` (`success|failed`)
+  - `resourceId`
+  - `adminHref`
+  - `publicHref`
+  - `message`
+- `summary`:
+  - `create`
+  - `update`
+  - `noop`
+  - `failed`
 
 `POST /assistant/site-builder/plan` request
 

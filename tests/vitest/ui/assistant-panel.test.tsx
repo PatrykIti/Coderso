@@ -6,6 +6,8 @@ import { AssistantEmptyState } from "../../../core/admin/ui/assistant/AssistantE
 import { AssistantMessage } from "../../../core/admin/ui/assistant/AssistantMessage";
 import { AssistantModeSwitch } from "../../../core/admin/ui/assistant/AssistantModeSwitch";
 import { AssistantPanel } from "../../../core/admin/ui/assistant/AssistantPanel";
+import { ActionExecutionResult } from "../../../core/admin/ui/assistant/components/ActionExecutionResult";
+import { ActionPlanReview } from "../../../core/admin/ui/assistant/components/ActionPlanReview";
 import { AdminAssistantConfigProvider } from "../../../core/admin/ui/contexts/AdminAssistantConfigContext";
 
 test("AssistantPanel renders floating launcher when assistant is globally enabled", () => {
@@ -234,4 +236,131 @@ test("AssistantMessage renders follow-up options for progressive depth flow", ()
   expect(html).toContain("Need more?");
   expect(html).toContain("More detail");
   expect(html).toContain("Step-by-step");
+});
+
+test("ActionPlanReview renders planned guide actions", () => {
+  const html = renderAdminUi(
+    <ActionPlanReview
+      plan={{
+        id: "plan-house-projects-catalog",
+        status: "ready",
+        intentId: "house-projects-catalog",
+        title: "House Projects Catalog",
+        answer: "Plan ready",
+        summary: "Create structured catalog surfaces for house projects.",
+        confidence: 0.91,
+        assumptions: ["Use existing Coderso surfaces."],
+        questions: [],
+        actions: [
+          {
+            id: "content-type-house-projects",
+            type: "content-type.upsert",
+            title: "Create the house projects content model",
+            description: "Structured fields for project data.",
+            input: {
+              slug: "house-projects",
+              name: "House Projects",
+              schema: { type: "object" },
+            },
+          },
+        ],
+      }}
+      preview={{
+        plan: {
+          id: "plan-house-projects-catalog",
+          status: "ready",
+          intentId: "house-projects-catalog",
+          title: "House Projects Catalog",
+          answer: "Plan ready",
+          summary: "Create structured catalog surfaces for house projects.",
+          confidence: 0.91,
+          assumptions: [],
+          questions: [],
+          actions: [],
+        },
+        changes: [
+          {
+            actionId: "content-type-house-projects",
+            type: "content-type.upsert",
+            targetType: "content-type",
+            targetKey: "house-projects",
+            operation: "create",
+            summary: "Create content type",
+            warnings: [],
+          },
+        ],
+        warnings: [],
+        readyToExecute: true,
+      }}
+      onPreview={() => undefined}
+      onExecute={() => undefined}
+    />
+  );
+
+  expect(html).toContain("LLM Guide Plan");
+  expect(html).toContain("House Projects Catalog");
+  expect(html).toContain("Create the house projects content model");
+  expect(html).toContain("Execute setup");
+});
+
+test("ActionExecutionResult renders resource links and summary", () => {
+  const html = renderAdminUi(
+    <ActionExecutionResult
+      result={{
+        plan: {
+          id: "plan-house-projects-catalog",
+          status: "ready",
+          intentId: "house-projects-catalog",
+          title: "House Projects Catalog",
+          answer: "Plan ready",
+          summary: "Plan summary",
+          confidence: 0.9,
+          assumptions: [],
+          questions: [],
+          actions: [],
+        },
+        preview: {
+          plan: {
+            id: "plan-house-projects-catalog",
+            status: "ready",
+            intentId: "house-projects-catalog",
+            title: "House Projects Catalog",
+            answer: "Plan ready",
+            summary: "Plan summary",
+            confidence: 0.9,
+            assumptions: [],
+            questions: [],
+            actions: [],
+          },
+          changes: [],
+          warnings: [],
+          readyToExecute: true,
+        },
+        results: [
+          {
+            actionId: "page-house-projects-catalog",
+            type: "page.upsert",
+            targetType: "page",
+            targetKey: "/projekty-domow",
+            operation: "create",
+            status: "success",
+            resourceId: "page-1",
+            adminHref: "/admin/pages/page-1",
+            publicHref: "/projekty-domow",
+            message: "Public catalog page is ready.",
+          },
+        ],
+        summary: {
+          create: 1,
+          update: 0,
+          noop: 0,
+          failed: 0,
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("Setup results");
+  expect(html).toContain("Open in admin");
+  expect(html).toContain("Open public page");
 });

@@ -315,9 +315,41 @@ Warstwa Admin UI:
 - Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; okno rozmowy nie renderuje globalnych ustawien assistant runtime.
 - `core/admin/services/assistantClient.ts` obsluguje:
   - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,
+  - `/assistant/actions/plan`, `/assistant/actions/dry-run`, `/assistant/actions/execute`,
   - `/assistant/site-builder/plan`, `/assistant/site-builder/execute`, `/assistant/site-builder/validate`.
 - Globalne ustawienia launchera (`assistant.launcher.avatarEnabled`, `assistant.launcher.avatarAsset`) sa trzymane w `settings`.
 - Legacy per-user klucze assistant UI moga nadal istniec w `user_settings`, ale nie steruja juz widocznoscia floating launchera.
+- `AssistantPanel` wspiera teraz dwa user-facing flow:
+  - `Docs Assistant` dla docs-only navigation/Q&A,
+  - `LLM Guide` dla setup-planning prompts prowadzacych do typed plan + dry-run + execute review.
+
+## Assistant Action Engine (Initial LLM Guide Slice)
+
+Pierwszy runtime slice `TASK-101-09` nie buduje osobnego toru zapisu.
+Zamiast tego:
+- `core/services/assistant/actionPlannerService.ts` mapuje prompt do typed planu,
+- `core/services/assistant/actionExecutorService.ts` reuse’uje obecne serwisy domenowe,
+- `core/server/routes/assistantRoutes.ts` wystawia internal action endpoints,
+- `core/admin/ui/assistant/components/ActionPlanReview.tsx` i `ActionExecutionResult.tsx`
+  domykaja review/confirm UX w panelu asystenta.
+
+Aktualnie zaimplementowany biznesowy flow:
+- prompt o katalog projektow domow,
+- planner tworzy plan dla:
+  - content type,
+  - custom screen,
+  - listing query,
+  - listing template,
+  - public catalog page,
+  - public detail routes,
+- execute wykorzystuje:
+  - `typeService`,
+  - `customScreenService`,
+  - `listingQueriesService`,
+  - `listingTemplatesService`,
+  - `pageService`,
+  - `settingsService`,
+- bez dodawania assistant-only direct DB write paths.
 
 ## Assistant Site Builder (Guided Executor)
 

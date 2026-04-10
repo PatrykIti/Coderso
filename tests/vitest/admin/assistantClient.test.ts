@@ -1,8 +1,11 @@
 import { expect, test } from "vitest";
 
 import {
+  dryRunAssistantActions,
+  executeAssistantActions,
   executeAssistantSiteBuilder,
   getAssistantStatus,
+  planAssistantActions,
   previewAssistantSiteBuilderPlan,
   reindexAssistantDocs,
   sendAssistantMessage,
@@ -41,6 +44,175 @@ test("getAssistantStatus hits GET /assistant/status", async () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]?.input).toBe("/admin/api/assistant/status");
     expect(calls[0]?.init?.method).toBe("GET");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("planAssistantActions uses CSRF and POST", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      id: "plan-house-projects-catalog",
+      status: "ready",
+      intentId: "house-projects-catalog",
+      title: "House Projects Catalog",
+      answer: "Plan ready",
+      summary: "Plan summary",
+      confidence: 0.9,
+      assumptions: [],
+      questions: [],
+      actions: [],
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await planAssistantActions({
+      prompt: "potrzebuje katalogu projektow domow",
+      context: { page: "/admin/coderso/widgets" },
+    });
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/assistant/actions/plan");
+    expect(calls[1]?.init?.method).toBe("POST");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("dryRunAssistantActions uses CSRF and POST", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      plan: {
+        id: "plan-house-projects-catalog",
+        status: "ready",
+        intentId: "house-projects-catalog",
+        title: "House Projects Catalog",
+        answer: "Plan ready",
+        summary: "Plan summary",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [],
+      },
+      changes: [],
+      warnings: [],
+      readyToExecute: true,
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await dryRunAssistantActions({
+      plan: {
+        id: "plan-house-projects-catalog",
+        status: "ready",
+        intentId: "house-projects-catalog",
+        title: "House Projects Catalog",
+        answer: "Plan ready",
+        summary: "Plan summary",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [],
+      },
+    });
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/assistant/actions/dry-run");
+    expect(calls[1]?.init?.method).toBe("POST");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("executeAssistantActions uses CSRF and POST", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      plan: {
+        id: "plan-house-projects-catalog",
+        status: "ready",
+        intentId: "house-projects-catalog",
+        title: "House Projects Catalog",
+        answer: "Plan ready",
+        summary: "Plan summary",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [],
+      },
+      preview: {
+        plan: {
+          id: "plan-house-projects-catalog",
+          status: "ready",
+          intentId: "house-projects-catalog",
+          title: "House Projects Catalog",
+          answer: "Plan ready",
+          summary: "Plan summary",
+          confidence: 0.9,
+          assumptions: [],
+          questions: [],
+          actions: [],
+        },
+        changes: [],
+        warnings: [],
+        readyToExecute: true,
+      },
+      results: [],
+      summary: {
+        create: 0,
+        update: 0,
+        noop: 0,
+        failed: 0,
+      },
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    await executeAssistantActions({
+      plan: {
+        id: "plan-house-projects-catalog",
+        status: "ready",
+        intentId: "house-projects-catalog",
+        title: "House Projects Catalog",
+        answer: "Plan ready",
+        summary: "Plan summary",
+        confidence: 0.9,
+        assumptions: [],
+        questions: [],
+        actions: [],
+      },
+      idempotencyKey: "assistant-action-1",
+    });
+
+    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
+    expect(calls[1]?.input).toBe("/admin/api/assistant/actions/execute");
+    expect(calls[1]?.init?.method).toBe("POST");
   } finally {
     globalThis.fetch = originalFetch;
   }

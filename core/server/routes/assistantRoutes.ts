@@ -13,6 +13,11 @@ import {
   assistantSiteBuilderValidateSchema,
 } from "../validation/assistantSchemas";
 import {
+  assistantActionDryRunRequestSchema,
+  assistantActionExecuteRequestSchema,
+  assistantActionPlanRequestSchema,
+} from "../validation/assistantActionSchemas";
+import {
   executeGuidedSiteBuilder,
   previewGuidedSiteBuilderPlan,
   validateGuidedSiteBuilderRun,
@@ -20,6 +25,12 @@ import {
   type GuidedSiteBuilderPlanInput,
   type GuidedSiteBuilderValidateRunInput,
 } from "../../services/assistant/siteBuilderExecutor";
+import { planAssistantActions } from "../../services/assistant/actionPlannerService";
+import {
+  dryRunAssistantActionPlan,
+  executeAssistantActionPlan,
+} from "../../services/assistant/actionExecutorService";
+import type { AssistantActionPlan } from "../../services/assistant/actionPlanTypes";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -43,6 +54,9 @@ type AssistantRouteService = {
   previewSiteBuilderPlan: typeof previewGuidedSiteBuilderPlan;
   executeSiteBuilder: typeof executeGuidedSiteBuilder;
   validateSiteBuilderRun: typeof validateGuidedSiteBuilderRun;
+  planActions: typeof planAssistantActions;
+  dryRunActions: typeof dryRunAssistantActionPlan;
+  executeActions: typeof executeAssistantActionPlan;
 };
 
 const defaultService: AssistantRouteService = {
@@ -52,6 +66,9 @@ const defaultService: AssistantRouteService = {
   previewSiteBuilderPlan: previewGuidedSiteBuilderPlan,
   executeSiteBuilder: executeGuidedSiteBuilder,
   validateSiteBuilderRun: validateGuidedSiteBuilderRun,
+  planActions: planAssistantActions,
+  dryRunActions: dryRunAssistantActionPlan,
+  executeActions: executeAssistantActionPlan,
 };
 
 export type AssistantRouteDeps = {
@@ -94,6 +111,36 @@ const mapAssistantError = (error: unknown) => {
         code: "assistant_budget_exceeded",
         message: "Assistant token budget exceeded",
         status: 429,
+      };
+    case "assistant_action_plan_invalid":
+      return {
+        code: "assistant_action_plan_invalid",
+        message: "Assistant action plan payload is invalid",
+        status: 400,
+      };
+    case "assistant_action_plan_not_ready":
+      return {
+        code: "assistant_action_plan_not_ready",
+        message: "Assistant action plan is not ready for execution",
+        status: 400,
+      };
+    case "assistant_action_idempotency_required":
+      return {
+        code: "assistant_action_idempotency_required",
+        message: "Assistant action execution requires idempotency key",
+        status: 400,
+      };
+    case "assistant_action_actor_required":
+      return {
+        code: "assistant_action_actor_required",
+        message: "Assistant action execution requires authenticated actor",
+        status: 403,
+      };
+    case "assistant_action_dependency_missing":
+      return {
+        code: "assistant_action_dependency_missing",
+        message: "Assistant action dependency could not be resolved",
+        status: 409,
       };
     case "site_builder_kit_not_found":
       return {
@@ -196,6 +243,61 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
           guideMode: body.guideMode,
           context: body.context,
           actorId: ctx.user?.id ?? null,
+        })
+      );
+    }
+  );
+
+  router.post(
+    "/assistant/actions/plan",
+    requirePermission("settings:read"),
+    requirePermission("content:read"),
+    async (ctx) => {
+      validate(assistantActionPlanRequestSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as {
+        prompt: string;
+        context?: { page?: string; locale?: string };
+      };
+      return withAssistantErrors(ctx.requestId, async () =>
+        service.planActions({
+          prompt: body.prompt,
+          context: body.context,
+        })
+      );
+    }
+  );
+
+  router.post(
+    "/assistant/actions/dry-run",
+    requirePermission("settings:read"),
+    requirePermission("content:read"),
+    async (ctx) => {
+      validate(assistantActionDryRunRequestSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as { plan: AssistantActionPlan };
+      return withAssistantErrors(ctx.requestId, async () =>
+        service.dryRunActions({
+          plan: body.plan,
+        })
+      );
+    }
+  );
+
+  router.post(
+    "/assistant/actions/execute",
+    requirePermission("settings:write"),
+    requirePermission("content:write"),
+    requirePermission("content:publish"),
+    async (ctx) => {
+      validate(assistantActionExecuteRequestSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as {
+        plan: AssistantActionPlan;
+        idempotencyKey: string;
+      };
+      return withAssistantErrors(ctx.requestId, async () =>
+        service.executeActions({
+          plan: body.plan,
+          idempotencyKey: body.idempotencyKey,
+          actorId: ctx.user?.id ?? "",
         })
       );
     }

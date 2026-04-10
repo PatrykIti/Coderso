@@ -31,7 +31,7 @@ const resolveAssistantValidationError = (
     input.assistantDefaultMode === "llm-rag" &&
     (!input.assistantLlmEnabled || input.assistantLlmProvider === "none")
   ) {
-    return "LLM mode requires enabled LLM and a provider different than 'none'.";
+    return "LLM Guide requires enabled LLM and a provider different than 'none'.";
   }
   return null;
 };
@@ -156,7 +156,7 @@ export function AssistantSettingsPage({
             Assistant Settings
           </span>
           <span className="text-xs text-muted-foreground">
-            Control Doc Navigator defaults and LLM behavior
+            Control Docs Assistant defaults and LLM Guide behavior
           </span>
         </div>
       }

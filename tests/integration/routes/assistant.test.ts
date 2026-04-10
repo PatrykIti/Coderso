@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import { ApiError } from "../../../core/server/errorHandler";
 import { registerAssistantRoutes } from "../../../core/server/routes/assistantRoutes";
+import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 
 type RouteContext = {
   params: Record<string, string>;
@@ -47,6 +48,9 @@ test("registerAssistantRoutes wires endpoints", () => {
       "GET /assistant/status",
       "POST /assistant/reindex",
       "POST /assistant/chat",
+      "POST /assistant/actions/plan",
+      "POST /assistant/actions/dry-run",
+      "POST /assistant/actions/execute",
       "POST /assistant/site-builder/plan",
       "POST /assistant/site-builder/execute",
       "POST /assistant/site-builder/validate",
@@ -57,6 +61,13 @@ test("registerAssistantRoutes wires endpoints", () => {
     "settings:read",
     "settings:write",
     "settings:read",
+    "settings:read",
+    "content:read",
+    "settings:read",
+    "content:read",
+    "settings:write",
+    "content:write",
+    "content:publish",
     "solution-kits:read",
     "solution-kits:write",
     "solution-kits:read",
@@ -232,6 +243,129 @@ test("chat route maps assistant errors to ApiError with requestId", async () => 
     expect(apiError.status).toBe(403);
     expect(apiError.details).toEqual({ requestId: "req-42" });
   }
+});
+
+test("assistant action plan route returns typed plan payload", async () => {
+  const { router, routes } = makeRouter();
+  let validateCalls = 0;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => {
+      validateCalls += 1;
+    },
+    service: {
+      planActions: async () => buildHouseProjectsCatalogPlan(),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: {
+      prompt:
+        "potrzebuje strony na ktore bede mogl prezentowac swoje produkty czyli projekty domow, caly katalog",
+    },
+    requestId: "req-plan",
+    user: { id: "user-1" },
+  });
+
+  expect(validateCalls).toBe(1);
+  expect(result).toMatchObject({
+    status: "ready",
+    intentId: "house-projects-catalog",
+  });
+});
+
+test("assistant action dry-run route forwards plan payload", async () => {
+  const { router, routes } = makeRouter();
+  const plan = buildHouseProjectsCatalogPlan();
+  let receivedPlanId: string | null = null;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      dryRunActions: async (payload) => {
+        receivedPlanId = payload.plan.id;
+        return {
+          plan: payload.plan,
+          changes: [],
+          warnings: [],
+          readyToExecute: true,
+        };
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/dry-run");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: { plan },
+    requestId: "req-dry-run",
+    user: { id: "user-1" },
+  });
+
+  expect(receivedPlanId).toBe(plan.id);
+  expect(result).toMatchObject({
+    readyToExecute: true,
+  });
+});
+
+test("assistant action execute route injects actorId and idempotency key", async () => {
+  const { router, routes } = makeRouter();
+  const plan = buildHouseProjectsCatalogPlan();
+  let receivedActorId: string | null = null;
+  let receivedIdempotencyKey: string | null = null;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      executeActions: async (payload) => {
+        receivedActorId = payload.actorId;
+        receivedIdempotencyKey = payload.idempotencyKey;
+        return {
+          plan: payload.plan,
+          preview: {
+            plan: payload.plan,
+            changes: [],
+            warnings: [],
+            readyToExecute: true,
+          },
+          results: [],
+          summary: {
+            create: 0,
+            update: 0,
+            noop: 0,
+            failed: 0,
+          },
+        };
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: { plan, idempotencyKey: "assistant-action-1" },
+    requestId: "req-execute",
+    user: { id: "user-55" },
+  });
+
+  expect(receivedActorId).toBe("user-55");
+  expect(receivedIdempotencyKey).toBe("assistant-action-1");
+  expect(result).toMatchObject({
+    summary: {
+      create: 0,
+    },
+  });
 });
 
 test("site-builder execute route injects actorId and returns service payload", async () => {

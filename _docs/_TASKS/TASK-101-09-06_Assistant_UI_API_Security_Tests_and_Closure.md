@@ -38,6 +38,7 @@ Preferred approach:
 - `TASK-101-09-06-01_Review_Confirm_UX_and_Partial_Success_States.md`
 - `TASK-101-09-06-02_Action_Routes_Security_Contract_and_Error_Mapping.md`
 - `TASK-101-09-06-03_Unit_Integration_UI_Test_Matrix_and_Docs_Closure.md`
+- `TASK-101-09-06-04_Deep_Interaction_DB_Parity_and_Runtime_Acceptance_Test_Wave.md`
 
 ## Testing Requirements
 

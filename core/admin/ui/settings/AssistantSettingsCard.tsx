@@ -145,8 +145,8 @@ export function AssistantSettingsCard({
                 <SelectValue placeholder="Choose mode" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="docs-only">Docs only</SelectItem>
-                <SelectItem value="llm-rag">LLM + RAG</SelectItem>
+                <SelectItem value="docs-only">Docs Assistant</SelectItem>
+                <SelectItem value="llm-rag">LLM Guide</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -208,7 +208,7 @@ export function AssistantSettingsCard({
               <div className="space-y-1">
                 <p className="text-sm font-medium">Enable LLM mode</p>
                 <p className="text-xs text-muted-foreground">
-                  Allows `llm-rag` responses when provider and model are configured.
+                  Allows guide planning and LLM-backed assistant responses when provider and model are configured.
                 </p>
               </div>
               <Switch

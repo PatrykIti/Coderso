@@ -9,6 +9,12 @@ import type {
   SolutionKitInstallRunRecord,
   SolutionKitInstallSummary,
 } from "./solutionKitsClient";
+import type {
+  AssistantActionContext,
+  AssistantActionDryRunResult,
+  AssistantActionExecuteResult,
+  AssistantActionPlan,
+} from "../../services/assistant/actionPlanTypes";
 
 export type AssistantMode = "docs-only" | "llm-rag";
 export type AssistantDetailLevel = "basic" | "medium" | "instruction" | "advanced";
@@ -102,6 +108,22 @@ export type AssistantReindexResponse = {
   totalTokens: number;
   actorId: string | null;
 };
+
+export type AssistantActionPlanRequest = {
+  prompt: string;
+  context?: AssistantActionContext;
+};
+
+export type AssistantActionPlanResponse = AssistantActionPlan;
+export type AssistantActionDryRunRequest = {
+  plan: AssistantActionPlan;
+};
+export type AssistantActionDryRunResponse = AssistantActionDryRunResult;
+export type AssistantActionExecuteRequest = {
+  plan: AssistantActionPlan;
+  idempotencyKey: string;
+};
+export type AssistantActionExecuteResponse = AssistantActionExecuteResult;
 
 export type GuidedSiteBuilderActionTarget =
   | "settings"
@@ -218,6 +240,42 @@ export async function reindexAssistantDocs() {
   );
   assistantStatusReadCache.invalidate();
   return result;
+}
+
+export async function planAssistantActions(payload: AssistantActionPlanRequest) {
+  return apiRequest<AssistantActionPlanResponse>(
+    "/assistant/actions/plan",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+}
+
+export async function dryRunAssistantActions(payload: AssistantActionDryRunRequest) {
+  return apiRequest<AssistantActionDryRunResponse>(
+    "/assistant/actions/dry-run",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
+}
+
+export async function executeAssistantActions(payload: AssistantActionExecuteRequest) {
+  return apiRequest<AssistantActionExecuteResponse>(
+    "/assistant/actions/execute",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    { withCsrf: true }
+  );
 }
 
 export async function previewAssistantSiteBuilderPlan(payload: GuidedSiteBuilderPlanRequest) {

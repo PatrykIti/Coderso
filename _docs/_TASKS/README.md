@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 30 tasks
-- **In Progress:** 5 tasks
+- **In Progress:** 6 tasks
 - **Done:** 747 tasks
 
 ---
@@ -43,7 +43,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
-| TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Split docs assistant from llm-guide and execute only through typed actions |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Canonicalize `docs-only` vs `llm-guide` with backward compatibility for `llm-rag` |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Freeze docs assistant as read-only and preserve legacy mode values |
 | TASK-101-09-01-02 | LLM Guide Mode Settings and Mode Switch UX | Medium | Small | Rename UI/settings toward `LLM Guide` without breaking transport compatibility |
@@ -66,6 +65,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-09-06-01 | Review, Confirm UX, and Partial Success States | High | Medium | Render plan review, dry-run diff, execute progress, and partial success feedback |
 | TASK-101-09-06-02 | Action Routes, Security Contract, and Error Mapping | High | Medium | Add internal action endpoints with strict validation and machine-readable errors |
 | TASK-101-09-06-03 | Unit, Integration, UI Test Matrix, and Docs Closure | Medium | Medium | Cover all lanes and sync docs/board/changelog at the end |
+| TASK-101-09-06-04 | Deep Interaction, DB Parity, and Runtime Acceptance Test Wave | High | Large | Prove the shipped house-projects slice through real panel interaction, DB-backed parity, and public runtime acceptance |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -76,6 +76,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: floating assistant now supports typed planning, dry-run, and execute for the house-projects catalog business flow through existing content/listing/page/custom-screen services |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |

@@ -10,19 +10,30 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import {
+  dryRunAssistantActions,
+  executeAssistantActions,
   getAssistantStatus,
+  planAssistantActions,
   sendAssistantMessage,
+  type AssistantActionDryRunResponse,
+  type AssistantActionExecuteResponse,
+  type AssistantActionPlanResponse,
   type AssistantDetailLevel,
   type AssistantFollowUpOption,
   type AssistantGuideMode,
+  type AssistantMode,
   type AssistantChatResponse,
   type AssistantStatusResponse,
 } from "@/services/assistantClient";
+import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { useAdminAssistantConfig } from "@/ui/contexts/AdminAssistantConfigContext";
 import { cn } from "@/lib/utils";
 
 import { AssistantEmptyState } from "./AssistantEmptyState";
 import { AssistantMessage } from "./AssistantMessage";
+import { AssistantModeSwitch } from "./AssistantModeSwitch";
+import { ActionExecutionResult } from "./components/ActionExecutionResult";
+import { ActionPlanReview } from "./components/ActionPlanReview";
 
 type AssistantEntry = {
   id: string;
@@ -87,6 +98,31 @@ const resolveApiError = (error: unknown, fallback: string) => {
   if (isApiClientError(error)) return error.message;
   if (error instanceof Error && error.message) return error.message;
   return fallback;
+};
+
+const guidePromptSignals = [
+  "potrzebuje",
+  "chce",
+  "utworz",
+  "utwórz",
+  "stworz",
+  "stwórz",
+  "zrob",
+  "zrób",
+  "catalog",
+  "katalog",
+  "projekt",
+  "projekty",
+  "dom",
+  "house",
+  "build",
+  "create",
+  "set up",
+];
+
+const isLikelyGuidePlanningPrompt = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  return guidePromptSignals.some((signal) => normalized.includes(signal));
 };
 
 const readRuntimeStateCache = (nowMs: number) => {
@@ -303,6 +339,16 @@ export function AssistantPanel() {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [assistantMode, setAssistantMode] = useState<AssistantMode | null>(null);
+  const [activePlan, setActivePlan] = useState<AssistantActionPlanResponse | null>(null);
+  const [activePreview, setActivePreview] = useState<AssistantActionDryRunResponse | null>(
+    null
+  );
+  const [activeExecution, setActiveExecution] =
+    useState<AssistantActionExecuteResponse | null>(null);
+  const [isPreviewingPlan, setIsPreviewingPlan] = useState(false);
+  const [isExecutingPlan, setIsExecutingPlan] = useState(false);
   const [launcherPosition, setLauncherPosition] = useState<LauncherPosition>(() =>
     readLauncherPosition()
   );
@@ -355,6 +401,26 @@ export function AssistantPanel() {
     }
     loadRuntimeState().catch(() => undefined);
   }, [isLoadingRuntime, isReady, loadRuntimeState, open]);
+
+  useEffect(() => {
+    if (!open || !status) return;
+    let active = true;
+    getUserSettings()
+      .then((settings) => {
+        if (!active) return;
+        setAssistantMode(
+          settings["assistant.mode"] ?? status.defaultMode ?? "docs-only"
+        );
+      })
+      .catch(() => {
+        if (!active) return;
+        setAssistantMode(status.defaultMode ?? "docs-only");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open, status]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -495,10 +561,15 @@ export function AssistantPanel() {
     }) => {
       const outgoingMessage = (input?.message ?? message).trim();
       if (!outgoingMessage || isSending || !status) return;
+      const currentMode = assistantMode ?? status.defaultMode;
 
       if (!input?.message) {
         setMessage("");
       }
+      setActionError(null);
+      setActivePlan(null);
+      setActivePreview(null);
+      setActiveExecution(null);
       const sourceQuestion = input?.sourceQuestion ?? outgoingMessage;
       const userEntry: AssistantEntry = {
         id: createEntryId(),
@@ -510,31 +581,56 @@ export function AssistantPanel() {
       setIsSending(true);
 
       try {
-        const response = await sendAssistantMessage({
-          message: outgoingMessage,
-          mode: status.defaultMode,
-          detailLevel: input?.detailLevel,
-          guideMode: input?.guideMode,
-          context:
-            typeof window === "undefined"
-              ? undefined
-              : {
-                  page: window.location.pathname,
-                  locale:
-                    typeof navigator !== "undefined" ? navigator.language : undefined,
-                },
-        });
+        if (currentMode === "llm-rag" && isLikelyGuidePlanningPrompt(outgoingMessage)) {
+          const plan = await planAssistantActions({
+            prompt: outgoingMessage,
+            context:
+              typeof window === "undefined"
+                ? undefined
+                : {
+                    page: window.location.pathname,
+                    locale:
+                      typeof navigator !== "undefined" ? navigator.language : undefined,
+                  },
+          });
 
-        setMessages((previous) => [
-          ...previous,
-          {
-            id: createEntryId(),
-            role: "assistant",
-            text: response.answer,
-            response,
-            sourceQuestion,
-          },
-        ]);
+          setActivePlan(plan);
+          setMessages((previous) => [
+            ...previous,
+            {
+              id: createEntryId(),
+              role: "assistant",
+              text: plan.answer,
+              sourceQuestion,
+            },
+          ]);
+        } else {
+          const response = await sendAssistantMessage({
+            message: outgoingMessage,
+            mode: currentMode,
+            detailLevel: input?.detailLevel,
+            guideMode: input?.guideMode,
+            context:
+              typeof window === "undefined"
+                ? undefined
+                : {
+                    page: window.location.pathname,
+                    locale:
+                      typeof navigator !== "undefined" ? navigator.language : undefined,
+                  },
+          });
+
+          setMessages((previous) => [
+            ...previous,
+            {
+              id: createEntryId(),
+              role: "assistant",
+              text: response.answer,
+              response,
+              sourceQuestion,
+            },
+          ]);
+        }
       } catch (error) {
         setMessages((previous) => [
           ...previous,
@@ -550,7 +646,7 @@ export function AssistantPanel() {
         setIsSending(false);
       }
     },
-    [isSending, message, status]
+    [assistantMode, isSending, message, status]
   );
 
   const handleFollowUpSelect = useCallback(
@@ -571,6 +667,54 @@ export function AssistantPanel() {
   const handleSendClick = useCallback(() => {
     submitMessage().catch(() => undefined);
   }, [submitMessage]);
+
+  const handleDryRunPlan = useCallback(async () => {
+    if (!activePlan || isPreviewingPlan || isExecutingPlan) return;
+    setActionError(null);
+    setIsPreviewingPlan(true);
+    try {
+      const preview = await dryRunAssistantActions({ plan: activePlan });
+      setActivePreview(preview);
+    } catch (error) {
+      setActionError(resolveApiError(error, "Failed to preview assistant actions."));
+    } finally {
+      setIsPreviewingPlan(false);
+    }
+  }, [activePlan, isExecutingPlan, isPreviewingPlan]);
+
+  const handleExecutePlan = useCallback(async () => {
+    if (!activePlan || isExecutingPlan || isPreviewingPlan) return;
+    setActionError(null);
+    setIsExecutingPlan(true);
+    try {
+      const execution = await executeAssistantActions({
+        plan: activePlan,
+        idempotencyKey: crypto.randomUUID(),
+      });
+      setActivePreview(execution.preview);
+      setActiveExecution(execution);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: createEntryId(),
+          role: "assistant",
+          text: `Guide setup executed. Created ${execution.summary.create}, updated ${execution.summary.update}, and left ${execution.summary.noop} item(s) unchanged.`,
+        },
+      ]);
+    } catch (error) {
+      setActionError(resolveApiError(error, "Failed to execute assistant actions."));
+    } finally {
+      setIsExecutingPlan(false);
+    }
+  }, [activePlan, isExecutingPlan, isPreviewingPlan]);
+
+  const handleModeChange = useCallback(
+    (nextMode: AssistantMode) => {
+      setAssistantMode(nextMode);
+      setUserSetting("assistant.mode", nextMode).catch(() => undefined);
+    },
+    []
+  );
 
   const canSend = useMemo(
     () => Boolean(message.trim()) && !isSending && Boolean(status?.indexReady),
@@ -605,6 +749,8 @@ export function AssistantPanel() {
       preferredWidth: conversationWidth,
     });
   }, [conversationWidth, launcherPosition]);
+
+  const currentMode = assistantMode ?? status?.defaultMode ?? "docs-only";
 
   if (!launcherEnabled) {
     return null;
@@ -691,7 +837,7 @@ export function AssistantPanel() {
               <p className="font-semibold text-foreground">Assistant</p>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Ask where settings, widgets, and flows are documented.
+              Ask where settings live in docs or describe the setup you want `LLM Guide` to create.
             </p>
           </div>
 
@@ -727,6 +873,13 @@ export function AssistantPanel() {
               <>
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain rounded-xl border bg-muted/10 p-3">
                   <div className="min-w-0 space-y-3 pr-3">
+                    <AssistantModeSwitch
+                      value={currentMode}
+                      llmAvailable={Boolean(status?.llmAvailable)}
+                      disabled={isSending || isPreviewingPlan || isExecutingPlan}
+                      onChange={handleModeChange}
+                    />
+
                     {conversationState === "empty" ? (
                       <AssistantEmptyState
                         disabled={isSending}
@@ -759,6 +912,22 @@ export function AssistantPanel() {
                           />
                         ))
                       : null}
+
+                    {activePlan ? (
+                      <ActionPlanReview
+                        plan={activePlan}
+                        preview={activePreview}
+                        error={actionError}
+                        isPreviewing={isPreviewingPlan}
+                        isExecuting={isExecutingPlan}
+                        onPreview={handleDryRunPlan}
+                        onExecute={handleExecutePlan}
+                      />
+                    ) : null}
+
+                    {activeExecution ? (
+                      <ActionExecutionResult result={activeExecution} />
+                    ) : null}
                   </div>
                 </div>
 
@@ -766,7 +935,11 @@ export function AssistantPanel() {
                   <Textarea
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
-                    placeholder="Ask where to find a feature in documentation..."
+                    placeholder={
+                      currentMode === "llm-rag"
+                        ? "Describe the setup or admin surface you want LLM Guide to create..."
+                        : "Ask where to find a feature in documentation..."
+                    }
                     rows={4}
                     disabled={isSending || !status?.indexReady}
                   />

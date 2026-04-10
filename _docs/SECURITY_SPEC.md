@@ -187,6 +187,9 @@ Rotacja klucza:
   - `GET /admin/api/assistant/status`
   - `POST /admin/api/assistant/chat`
   - `POST /admin/api/assistant/reindex`
+  - `POST /admin/api/assistant/actions/plan`
+  - `POST /admin/api/assistant/actions/dry-run`
+  - `POST /admin/api/assistant/actions/execute`
 - RBAC:
   - `settings:read` dla `status` i `chat`
   - `settings:write` dla `reindex`
@@ -206,6 +209,11 @@ Rotacja klucza:
   - `assistant_message_invalid`
   - `assistant_rate_limited`
   - `assistant_budget_exceeded`
+  - `assistant_action_plan_invalid`
+  - `assistant_action_plan_not_ready`
+  - `assistant_action_idempotency_required`
+  - `assistant_action_actor_required`
+  - `assistant_action_dependency_missing`
   - mapped errors zawieraja `requestId` w payload `error.details.requestId`
 - Chat response telemetry:
   - przy sukcesie `llm-rag` odpowiedz zawiera `llm.provider`, `llm.model`, `llm.providerRequestId`, `llm.usage`
@@ -223,6 +231,29 @@ Rotacja klucza:
     - `assistant_doc_chunks`
     - `assistant_doc_ingest_runs`
   - sukces reindex logowany jako audit event `assistant.docs.reindex`
+
+### Assistant action engine runtime (TASK-101-09)
+
+- Endpointy sa internal-only:
+  - `POST /admin/api/assistant/actions/plan`
+  - `POST /admin/api/assistant/actions/dry-run`
+  - `POST /admin/api/assistant/actions/execute`
+- RBAC:
+  - `plan` / `dry-run`: `settings:read` + `content:read`
+  - `execute`: `settings:write` + `content:write` + `content:publish`
+- CSRF:
+  - wszystkie action endpoints wymagaja `X-CSRF-Token`
+- Rate-limit:
+  - action endpoints uzywaja bucketa `assistant`
+- Hardening:
+  - brak public write surface,
+  - brak arbitralnego kodu,
+  - plan payload przechodzi strict top-level validation i wewnetrzna walidacje typed planu,
+  - `execute` wymaga `idempotencyKey`,
+  - metadata akcji trafia do audit log przez `assistant.actions.execute`
+- Current first shipped business flow:
+  - `house projects catalog`
+  - executor reuse’uje obecne serwisy domenowe zamiast direct DB writes.
 
 ## API Keys (v1)
 

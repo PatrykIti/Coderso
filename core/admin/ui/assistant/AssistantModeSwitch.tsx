@@ -40,9 +40,9 @@ export function AssistantModeSwitch({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="docs-only">Docs only</SelectItem>
+          <SelectItem value="docs-only">Docs Assistant</SelectItem>
           <SelectItem value="llm-rag" disabled={!llmAvailable}>
-            LLM + RAG
+            LLM Guide
           </SelectItem>
         </SelectContent>
       </Select>

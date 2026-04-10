@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Admin/UI + CMS Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-04, TASK-101-05, TASK-101-07, TASK-101-08  
-**Status:** To Do
+**Status:** In Progress (2026-04-10)
 
 ---
 
@@ -343,6 +343,8 @@ if (confirmed) {
 6. Kazda akcja mutujaca ma audit trail i wspiera bezpieczny retry (idempotency).
 7. Product-level intents, np. "katalog projektow domow", sa mapowane na beginner-safe
    blueprint wykorzystujacy aktualne surfaces Coderso.
+8. Full "tested end-to-end" claim for the shipped slice additionally requires the second-wave
+   coverage tracked in `TASK-101-09-06-04` (deep UI interaction, DB-backed parity, runtime/public acceptance).
 
 ---
 

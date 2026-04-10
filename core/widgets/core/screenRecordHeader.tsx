@@ -37,6 +37,14 @@ export const screenRecordHeaderDefaults: ScreenRecordHeaderData = {
   align: "start",
 };
 
+const stringifyPrimitive = (value: unknown) => {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return null;
+};
+
 const alignClassMap: Record<ScreenRecordHeaderAlign, string> = {
   start: "items-start text-left",
   center: "items-center text-center",
@@ -53,26 +61,14 @@ export function normalizeScreenRecordHeaderData(
   value: ScreenRecordHeaderData
 ): ScreenRecordHeaderData {
   return {
-    eyebrow:
-      typeof value.eyebrow === "string"
-        ? value.eyebrow
-        : (screenRecordHeaderDefaults.eyebrow ?? ""),
-    title:
-      typeof value.title === "string"
-        ? value.title
-        : (screenRecordHeaderDefaults.title ?? ""),
+    eyebrow: stringifyPrimitive(value.eyebrow) ?? (screenRecordHeaderDefaults.eyebrow ?? ""),
+    title: stringifyPrimitive(value.title) ?? (screenRecordHeaderDefaults.title ?? ""),
     subtitle:
-      typeof value.subtitle === "string"
-        ? value.subtitle
-        : (screenRecordHeaderDefaults.subtitle ?? ""),
+      stringifyPrimitive(value.subtitle) ?? (screenRecordHeaderDefaults.subtitle ?? ""),
     description:
-      typeof value.description === "string"
-        ? value.description
-        : (screenRecordHeaderDefaults.description ?? ""),
-    badge:
-      typeof value.badge === "string"
-        ? value.badge
-        : (screenRecordHeaderDefaults.badge ?? ""),
+      stringifyPrimitive(value.description) ??
+      (screenRecordHeaderDefaults.description ?? ""),
+    badge: stringifyPrimitive(value.badge) ?? (screenRecordHeaderDefaults.badge ?? ""),
     align: value.align === "center" ? "center" : "start",
   };
 }

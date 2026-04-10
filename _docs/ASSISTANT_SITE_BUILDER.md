@@ -8,10 +8,27 @@ Assistant Site Builder is a typed guided workflow for Coderso setup:
 
 It is designed for non-technical users: every recommendation is mapped to explicit system actions before execution.
 
+The newer `LLM Guide` action engine follows the same explainable pattern inside the floating assistant panel:
+
+`prompt -> typed plan -> dry-run -> execute`
+
+Current implemented guide blueprint:
+- `house-projects-catalog`
+- creates:
+  - content type
+  - custom screen
+  - listing query
+  - listing template
+  - public catalog page
+  - public detail routes
+
 ## Runtime Contract
 
 Core domain service:
 - `core/services/assistant/siteBuilderExecutor.ts`
+- generic guide runtime:
+  - `core/services/assistant/actionPlannerService.ts`
+  - `core/services/assistant/actionExecutorService.ts`
 
 Public functions:
 - `previewGuidedSiteBuilderPlan(input)`
@@ -46,6 +63,9 @@ All endpoints are internal (`/admin/api/*`) and session-protected:
 - `POST /assistant/site-builder/plan`
 - `POST /assistant/site-builder/execute`
 - `POST /assistant/site-builder/validate`
+- `POST /assistant/actions/plan`
+- `POST /assistant/actions/dry-run`
+- `POST /assistant/actions/execute`
 
 RBAC:
 - `solution-kits:read`: `plan`, `validate`
@@ -56,6 +76,7 @@ Security:
 - Rate limit:
   - `admin_read`: `plan`, `validate`
   - `admin_write`: `execute`
+  - `assistant`: action-plan / dry-run / execute endpoints
 
 ## Admin UI
 

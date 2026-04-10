@@ -50,6 +50,7 @@ expect(plan.actions).toContainAction("page.upsert");
 2. Verify dry-run contains all expected resource groups.
 3. Verify execute creates a working admin/runtime setup.
 4. Verify follow-up prompts can refine the setup instead of rebuilding from scratch.
+5. Deep interaction + DB/runtime parity coverage is tracked in `TASK-101-09-06-04`.
 
 ## Testing Requirements
 
