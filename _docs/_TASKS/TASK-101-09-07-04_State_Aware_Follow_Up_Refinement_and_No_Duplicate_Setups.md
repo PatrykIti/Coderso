@@ -60,7 +60,20 @@ Completed first slice (2026-04-10):
   - DB-backed update/no-duplicate behavior,
   - public runtime render showing the listing filters after refinement.
 
+Completed second slice (2026-04-10):
+- `LLM Guide` now recognizes an inquiry form follow-up prompt:
+  - "dodaj formularz zapytania do strony szczegolowej"
+- Planner returns a refinement plan with:
+  - `form.upsert`,
+  - `page.upsert` with a `form-embed` block.
+- Executor reuses existing forms service methods:
+  - `listForms`,
+  - `createForm`,
+  - `updateForm`,
+  - `setFormFields`.
+- Stubbed executor tests confirm the inquiry form is created and embedded on the existing catalog page without creating a second page.
+- Existing DB-backed and public runtime acceptance tests remain green after adding `form.upsert`.
+
 Remaining:
 - generic persisted-state resolution for renamed/customized setups,
-- follow-up prompt for adding inquiry forms,
 - broader no-duplicate acceptance across product, portfolio, and services presets.

@@ -328,6 +328,7 @@ type CatalogFamilyRefinementOptions = {
   answer: string;
   summary: string;
   assumptions?: string[];
+  extraActions?: AssistantPlannedAction[];
   pageOverrides?: Partial<{
     title: string;
     slug: string;
@@ -350,6 +351,13 @@ type CatalogFamilyRefinementOptions = {
       searchLabel: string;
       applyLabel: string;
       facets: Array<Record<string, unknown>>;
+    } | null;
+    formEmbed: {
+      formName: string;
+      title: string;
+      description: string;
+      submitLabel: string;
+      successMessage: string;
     } | null;
   }>;
 };
@@ -389,7 +397,7 @@ export const buildCatalogFamilyRefinementPlan = (
     confidence: 0.84,
     assumptions: [...(options.assumptions ?? [])],
     questions: [],
-    actions: [pageAction],
+    actions: [...(options.extraActions ?? []), pageAction],
   };
 };
 

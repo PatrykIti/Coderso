@@ -144,3 +144,23 @@ test("planAssistantActions builds ready refinement plan for house-project filter
   }
   expect(plan.actions[0].input.listingFilters?.facets.length).toBeGreaterThan(1);
 });
+
+test("planAssistantActions builds inquiry form refinement plan for house projects", () => {
+  const plan = planAssistantActions({
+    prompt: "dodaj formularz zapytania do strony szczegolowej",
+    context: {
+      page: "/admin/pages/projekty-domow",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.promptKind).toBe("refinement_request");
+  expect(plan.intentFamily).toBe("catalog_showcase");
+  expect(plan.intentId).toBe("house-projects-catalog-inquiry-form");
+  expect(plan.actions.map((action) => action.type)).toEqual(["form.upsert", "page.upsert"]);
+  const formAction = plan.actions.find((action) => action.type === "form.upsert");
+  expect(formAction?.input.slug).toBe("house-projects-catalog-inquiry");
+  const pageAction = plan.actions.find((action) => action.type === "page.upsert");
+  expect(pageAction?.input.formEmbed?.formName).toBe("House Projects Catalog Inquiry");
+});

@@ -112,6 +112,22 @@ export type AssistantListingTemplateUpsertAction = {
   };
 };
 
+export type AssistantFormUpsertAction = {
+  id: string;
+  type: "form.upsert";
+  title: string;
+  description: string;
+  input: {
+    name: string;
+    slug: string;
+    status: "draft" | "published" | "archived";
+    description: string | null;
+    successMessage: string | null;
+    submissionAccess: "public" | "internal";
+    fields: Array<Record<string, unknown>>;
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -140,6 +156,13 @@ export type AssistantPageUpsertAction = {
       applyLabel: string;
       facets: Array<Record<string, unknown>>;
     } | null;
+    formEmbed?: {
+      formName: string;
+      title: string;
+      description: string;
+      submitLabel: string;
+      successMessage: string;
+    } | null;
   };
 };
 
@@ -149,6 +172,7 @@ export type AssistantPlannedAction =
   | AssistantCustomScreenUpsertAction
   | AssistantListingQueryUpsertAction
   | AssistantListingTemplateUpsertAction
+  | AssistantFormUpsertAction
   | AssistantPageUpsertAction;
 
 export type AssistantActionPlan = {
@@ -225,6 +249,7 @@ const isActionType = (value: unknown): value is AssistantPlannedAction["type"] =
   value === "custom-screen.upsert" ||
   value === "listing-query.upsert" ||
   value === "listing-template.upsert" ||
+  value === "form.upsert" ||
   value === "page.upsert";
 
 export const isAssistantActionPlan = (

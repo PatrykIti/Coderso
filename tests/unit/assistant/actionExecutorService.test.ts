@@ -52,6 +52,16 @@ const createDeps = () => {
     status: string;
     currentData: Record<string, unknown>;
   }> = [];
+  const forms: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    status: string;
+    description: string | null;
+    successMessage: string | null;
+    submissionAccess: string;
+  }> = [];
+  const formFields = new Map<string, Array<Record<string, unknown>>>();
   const deps = {
     getSetting: async (key: string) => {
       if (key === "site.contentRoutes") return contentRoutes;
@@ -245,6 +255,52 @@ const createDeps = () => {
         ReturnType<(typeof import("../../../core/services/pages/pageService"))["publishPage"]>
       >;
     },
+    listForms: async () => forms,
+    createForm: async (input: {
+      name: string;
+      slug?: string | null;
+      status?: "draft" | "published" | "archived";
+      description?: string | null;
+      successMessage?: string | null;
+      submissionAccess?: "public" | "internal";
+    }) => {
+      const record = {
+        id: `form-${forms.length + 1}`,
+        name: input.name,
+        slug: input.slug ?? input.name.toLowerCase().replace(/\s+/g, "-"),
+        status: input.status ?? "draft",
+        description: input.description ?? null,
+        successMessage: input.successMessage ?? null,
+        submissionAccess: input.submissionAccess ?? "public",
+      };
+      forms.push(record);
+      return record;
+    },
+    updateForm: async (
+      id: string,
+      input: {
+        name?: string;
+        slug?: string | null;
+        status?: "draft" | "published" | "archived";
+        description?: string | null;
+        successMessage?: string | null;
+        submissionAccess?: "public" | "internal";
+      }
+    ) => {
+      const existing = forms.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      if (input.name !== undefined) existing.name = input.name;
+      if (input.slug !== undefined && input.slug !== null) existing.slug = input.slug;
+      if (input.status !== undefined) existing.status = input.status;
+      if (input.description !== undefined) existing.description = input.description;
+      if (input.successMessage !== undefined) existing.successMessage = input.successMessage;
+      if (input.submissionAccess !== undefined) existing.submissionAccess = input.submissionAccess;
+      return existing;
+    },
+    setFormFields: async (formId: string, fields: Array<Record<string, unknown>>) => {
+      formFields.set(formId, fields);
+      return fields;
+    },
     logAudit: async () => ({
       id: "audit-1",
       actorId: "user-1",
@@ -264,6 +320,8 @@ const createDeps = () => {
       listingQueries,
       listingTemplates,
       pages,
+      forms,
+      formFields,
     },
   });
 };
@@ -356,4 +414,46 @@ test("executeAssistantActionPlan refines existing house-project catalog without 
   expect(deps.__state.pages).toHaveLength(1);
   const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
   expect(pageBlocks.some((block) => block.type === "listing-filters")).toBe(true);
+});
+
+test("executeAssistantActionPlan adds inquiry form without creating duplicate page", async () => {
+  const deps = createDeps();
+  const initialPlan = buildHouseProjectsCatalogPlan();
+
+  await executeAssistantActionPlan(
+    {
+      plan: initialPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-house-projects-form-initial",
+    },
+    deps
+  );
+
+  const refinementPlan = planAssistantActions({
+    prompt: "dodaj formularz zapytania do strony szczegolowej",
+    context: {
+      page: "/admin/pages/projekty-domow",
+      locale: "pl-PL",
+    },
+  });
+
+  const refinementResult = await executeAssistantActionPlan(
+    {
+      plan: refinementPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-house-projects-form-refinement",
+    },
+    deps
+  );
+
+  expect(refinementResult.summary.failed).toBe(0);
+  expect(refinementResult.summary.create).toBe(1);
+  expect(refinementResult.summary.update).toBeGreaterThan(0);
+  expect(deps.__state.pages).toHaveLength(1);
+  expect(deps.__state.forms).toHaveLength(1);
+  const form = deps.__state.forms[0];
+  if (!form) throw new Error("missing_form");
+  expect(deps.__state.formFields.get(form.id)?.length).toBeGreaterThan(0);
+  const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
+  expect(pageBlocks.some((block) => block.type === "form-embed")).toBe(true);
 });

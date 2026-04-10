@@ -325,7 +325,79 @@ const buildRefinementPlanForIntentFamily = (
     includesAny(normalizedPrompt, priceKeywords);
 
   if (!includeFilters && !includeLayoutUpdate && !includeStatusOrPrice) {
-    return null;
+    const includeForm =
+      includesAny(normalizedPrompt, ["formularz", "form", "zapytania", "inquiry", "quote"]);
+    if (!includeForm) return null;
+
+    return buildCatalogFamilyRefinementPlan(preset, {
+      promptKind: options.promptKind,
+      intentFamily: options.intentFamily,
+      refinementId: "inquiry-form",
+      title: `Add Inquiry Form to ${preset.title}`,
+      answer: `I can add an inquiry form to the existing ${preset.title.toLowerCase()} setup without creating duplicate catalog resources.`,
+      summary:
+        "Create an inquiry form and embed it on the existing catalog page while reusing the current listing/query resources.",
+      assumptions: [
+        "The inquiry form is public and captures contact details plus message.",
+        "The form is embedded on the existing catalog page through the current page action family.",
+      ],
+      extraActions: [
+        {
+          id: `form-${preset.key}-inquiry`,
+          type: "form.upsert",
+          title: `Create ${preset.title} inquiry form`,
+          description:
+            "Create or update a public inquiry form that can be embedded on the catalog page.",
+          input: {
+            name: `${preset.title} Inquiry`,
+            slug: `${preset.key}-inquiry`,
+            status: "published",
+            description: `Inquiry form for ${preset.title.toLowerCase()}.`,
+            successMessage: "Thanks. We will contact you shortly.",
+            submissionAccess: "public",
+            fields: [
+              {
+                type: "text",
+                label: "Full name",
+                name: "full_name",
+                required: true,
+                orderIndex: 0,
+              },
+              {
+                type: "email",
+                label: "Email",
+                name: "email",
+                required: true,
+                orderIndex: 1,
+              },
+              {
+                type: "phone",
+                label: "Phone",
+                name: "phone",
+                required: false,
+                orderIndex: 2,
+              },
+              {
+                type: "textarea",
+                label: "Message",
+                name: "message",
+                required: true,
+                orderIndex: 3,
+              },
+            ],
+          },
+        },
+      ],
+      pageOverrides: {
+        formEmbed: {
+          formName: `${preset.title} Inquiry`,
+          title: `Ask about ${preset.title.toLowerCase()}`,
+          description: "Send a question and we will follow up with details.",
+          submitLabel: "Send inquiry",
+          successMessage: "Thanks. We will contact you shortly.",
+        },
+      },
+    });
   }
 
   const facets = [
@@ -392,6 +464,27 @@ const buildRefinementPlanForIntentFamily = (
         : {}),
     },
   });
+};
+
+const resolveContextualRefinementFamily = (
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  fallback: AssistantIntentFamily
+): AssistantIntentFamily => {
+  const route = normalizePrompt(context.route ?? "");
+  if (!route) return fallback;
+  if (route.includes("projekty-domow") || route.includes("house-projects")) {
+    return "catalog_showcase";
+  }
+  if (route.includes("produkty") || route.includes("products")) {
+    return "product_catalog";
+  }
+  if (route.includes("portfolio")) {
+    return "portfolio_projects";
+  }
+  if (route.includes("uslugi") || route.includes("services")) {
+    return "services_directory";
+  }
+  return fallback;
 };
 
 export const classifyAssistantPrompt = (prompt: string) => {
@@ -491,35 +584,40 @@ export const planAssistantActions = (
 ): AssistantActionPlan => {
   const context = buildAssistantAdminContext(input.context);
   const classification = classifyAssistantPrompt(input.prompt);
+  const intentFamily =
+    classification.promptKind === "refinement_request"
+      ? resolveContextualRefinementFamily(context, classification.intentFamily)
+      : classification.intentFamily;
+  const routedClassification = { ...classification, intentFamily };
   if (!classification.normalizedPrompt) {
-    return buildClarifyingPlan(input.prompt, context, classification);
+    return buildClarifyingPlan(input.prompt, context, routedClassification);
   }
 
   if (
     classification.promptKind === "setup_request" &&
-    classification.intentFamily !== "unknown"
+    intentFamily !== "unknown"
   ) {
-    const readyPlan = buildReadyPlanForIntentFamily(classification.intentFamily, {
+    const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
       promptKind: classification.promptKind,
-      intentFamily: classification.intentFamily,
+      intentFamily,
     });
     if (readyPlan) return readyPlan;
   }
 
   if (
     classification.promptKind === "refinement_request" &&
-    classification.intentFamily !== "unknown"
+    intentFamily !== "unknown"
   ) {
     const refinementPlan = buildRefinementPlanForIntentFamily(
       input.prompt,
-      classification.intentFamily,
+      intentFamily,
       {
         promptKind: classification.promptKind,
-        intentFamily: classification.intentFamily,
+        intentFamily,
       }
     );
     if (refinementPlan) return refinementPlan;
   }
 
-  return buildClarifyingPlan(input.prompt, context, classification);
+  return buildClarifyingPlan(input.prompt, context, routedClassification);
 };

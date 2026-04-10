@@ -26,6 +26,13 @@ import {
   publishPage,
   updatePage,
 } from "../pages/pageService";
+import {
+  createForm,
+  listForms,
+  setFormFields,
+  updateForm,
+} from "../forms/formsService";
+import type { FormFieldInput } from "../forms/validation";
 import { normalizeSitePath } from "../../site/cache/siteCache";
 import { logAudit } from "../audit/auditService";
 import type { WidgetBlock } from "../../widgets/types";
@@ -38,6 +45,7 @@ import type {
   AssistantContentRouteUpsertAction,
   AssistantContentTypeUpsertAction,
   AssistantCustomScreenUpsertAction,
+  AssistantFormUpsertAction,
   AssistantListingQueryUpsertAction,
   AssistantListingTemplateUpsertAction,
   AssistantPageUpsertAction,
@@ -101,6 +109,13 @@ const buildCatalogPageData = (input: {
     searchLabel: string;
     applyLabel: string;
     facets: Array<Record<string, unknown>>;
+  } | null;
+  formEmbed?: {
+    formId: string;
+    title: string;
+    description: string;
+    submitLabel: string;
+    successMessage: string;
   } | null;
 }) => ({
   blocks: [
@@ -178,6 +193,40 @@ const buildCatalogPageData = (input: {
         },
       },
     },
+    ...(input.formEmbed
+      ? [
+          {
+            id: "catalog-inquiry-form",
+            type: "form-embed",
+            variant: "standard",
+            data: {
+              formId: input.formEmbed.formId,
+              title: input.formEmbed.title,
+              description: input.formEmbed.description,
+              submitLabel: input.formEmbed.submitLabel,
+              successMessage: input.formEmbed.successMessage,
+              layout: {
+                alignment: "start",
+                width: "lg",
+                spacing: "md",
+                buttonAlignment: "start",
+              },
+              style: {
+                background: "transparent",
+                surface: "var(--color-bg)",
+                borderColor: "var(--color-border)",
+                borderWidth: "1",
+                radius: "md",
+                inputSize: "md",
+              },
+              fields: {
+                showLabels: true,
+                showRequiredIndicator: true,
+              },
+            },
+          },
+        ]
+      : []),
   ],
   settings: {
     showInNav: true,
@@ -207,6 +256,10 @@ type ActionExecutorDeps = {
   createPage: typeof createPage;
   updatePage: typeof updatePage;
   publishPage: typeof publishPage;
+  listForms: typeof listForms;
+  createForm: typeof createForm;
+  updateForm: typeof updateForm;
+  setFormFields: typeof setFormFields;
   logAudit: typeof logAudit;
 };
 
@@ -229,6 +282,10 @@ const defaultDeps: ActionExecutorDeps = {
   createPage,
   updatePage,
   publishPage,
+  listForms,
+  createForm,
+  updateForm,
+  setFormFields,
   logAudit,
 };
 
@@ -348,6 +405,22 @@ const buildListingTemplatePreview = async (
   });
 };
 
+const buildFormPreview = async (
+  action: AssistantFormUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listForms()).find((entry) => entry.slug === action.input.slug) ?? null;
+  return createPreviewChange({
+    action,
+    targetType: "form",
+    targetKey: action.input.slug,
+    summary: `${existing ? "Update" : "Create"} form "${action.input.name}"`,
+    beforeValue: existing,
+    nextValue: action.input,
+  });
+};
+
 const buildPagePreview = async (
   action: AssistantPageUpsertAction,
   deps: ActionExecutorDeps
@@ -389,6 +462,8 @@ const buildPreviewForAction = async (
       return buildListingQueryPreview(action, deps);
     case "listing-template.upsert":
       return buildListingTemplatePreview(action, deps);
+    case "form.upsert":
+      return buildFormPreview(action, deps);
     case "page.upsert":
       return buildPagePreview(action, deps);
   }
@@ -638,6 +713,53 @@ const executeListingTemplateAction = async (
   };
 };
 
+const executeFormAction = async (
+  action: AssistantFormUpsertAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listForms()).find((entry) => entry.slug === action.input.slug) ?? null;
+  const payload = {
+    name: action.input.name,
+    slug: action.input.slug,
+    status: action.input.status,
+    description: action.input.description,
+    successMessage: action.input.successMessage,
+    submissionAccess: action.input.submissionAccess,
+  };
+  const form =
+    preview.operation === "create"
+      ? await deps.createForm(payload)
+      : preview.operation === "update" && existing
+        ? await deps.updateForm(existing.id, payload)
+        : existing;
+
+  if (!form) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  if (preview.operation !== "noop") {
+    await deps.setFormFields(form.id, action.input.fields as unknown as FormFieldInput[]);
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "form",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: form.id,
+    adminHref: `/admin/coderso/forms/${encodeURIComponent(form.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Inquiry form already matched the plan."
+        : "Inquiry form is ready for catalog pages.",
+  };
+};
+
 const executePageAction = async (
   action: AssistantPageUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -651,8 +773,12 @@ const executePageAction = async (
     (await deps.listListingTemplates()).find(
       (entry) => entry.slug === action.input.listingTemplateSlug
     ) ?? null;
+  const form = action.input.formEmbed
+    ? (await deps.listForms()).find((entry) => entry.name === action.input.formEmbed?.formName) ??
+      null
+    : null;
 
-  if (!listingQuery || !listingTemplate) {
+  if (!listingQuery || !listingTemplate || (action.input.formEmbed && !form)) {
     throw new Error("assistant_action_dependency_missing");
   }
 
@@ -664,6 +790,15 @@ const executePageAction = async (
     ctaLabel: action.input.ctaLabel,
     contentListStyle: action.input.contentListStyle,
     listingFilters: action.input.listingFilters,
+    formEmbed: form && action.input.formEmbed
+      ? {
+          formId: form.id,
+          title: action.input.formEmbed.title,
+          description: action.input.formEmbed.description,
+          submitLabel: action.input.formEmbed.submitLabel,
+          successMessage: action.input.formEmbed.successMessage,
+        }
+      : null,
   });
 
   const existing = await deps.getPageBySlug(action.input.slug);
@@ -726,6 +861,8 @@ const executeAction = async (
       return executeListingQueryAction(action, preview, deps);
     case "listing-template.upsert":
       return executeListingTemplateAction(action, preview, deps);
+    case "form.upsert":
+      return executeFormAction(action, preview, deps);
     case "page.upsert":
       return executePageAction(action, preview, actorId, deps);
   }
