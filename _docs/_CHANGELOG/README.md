@@ -25,6 +25,8 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 574 | 2026-04-10 | TASK-101-09-07-03 multi-family llm-guide presets | Assistant/Product |
+| 573 | 2026-04-10 | TASK-101-09-07-02 generic catalog blueprint engine | Assistant/Core |
 | 572 | 2026-04-10 | TASK-101-09-07-01 intent family classification and routing | Assistant/Core |
 | 571 | 2026-04-10 | TASK-101-09 second-wave tests and generic planning follow-up | QA/Assistant |
 | 570 | 2026-04-10 | TASK-101-09 llm-guide house projects catalog flow | Assistant/Product |

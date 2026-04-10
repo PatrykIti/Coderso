@@ -5,7 +5,7 @@
 **Category:** Product UX + Assistant  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-07-02  
-**Status:** To Do
+**Status:** Done (2026-04-10)
 
 ---
 
@@ -32,3 +32,14 @@ For each preset:
 
 - scenario tests for at least 3 distinct business prompts.
 - route/execute acceptance for at least 1 non-house-project flow.
+
+## Completion Notes (2026-04-10)
+
+- Added business-ready routed presets for:
+  - `product_catalog`
+  - `portfolio_projects`
+  - `services_directory`
+- Planner now returns ready plans for these families instead of falling back to `needs_input`.
+- Presets reuse the generic catalog family builder and current typed action families.
+- Added planner scenario tests across multiple business prompt families.
+- Added non-house execute regression through the shared executor contract.

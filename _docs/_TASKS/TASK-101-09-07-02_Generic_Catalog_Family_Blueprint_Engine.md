@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Coderso  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-07-01  
-**Status:** To Do
+**Status:** Done (2026-04-10)
 
 ---
 
@@ -47,3 +47,17 @@ catalog intent instead of one hardcoded house-projects preset.
 
 - `Vitest` for deterministic blueprint output across multiple catalog domains.
 - `Bun` parity checks for resulting persisted resources where needed.
+
+## Completion Notes (2026-04-10)
+
+- Extracted a shared catalog family blueprint builder:
+  - `core/services/assistant/blueprints/catalogFamilyBlueprint.ts`
+- Added reusable catalog family presets:
+  - house projects
+  - product catalog
+  - portfolio projects
+- Rewired `houseProjectsCatalogBlueprint.ts` to act as a backward-compatible preset wrapper over the new generic builder.
+- Preserved the current action-engine contract:
+  - no new executor action types were introduced,
+  - existing house-projects execute flow remained green.
+- Added deterministic blueprint tests across multiple catalog domains.

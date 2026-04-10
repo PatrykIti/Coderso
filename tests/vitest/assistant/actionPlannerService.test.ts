@@ -84,7 +84,7 @@ test("planAssistantActions returns clarification plan for non-actionable prompt"
 });
 
 test("planAssistantActions routes non-house-project setup prompts into generic needs-input family", () => {
-  const plan = planAssistantActions({
+  const docsQuestionPlan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",
     context: {
       page: "/admin/coderso/widgets",
@@ -92,8 +92,34 @@ test("planAssistantActions routes non-house-project setup prompts into generic n
     },
   });
 
-  expect(plan.status).toBe("needs_input");
-  expect(plan.promptKind).toBe("setup_request");
-  expect(plan.intentFamily).toBe("product_catalog");
-  expect(plan.intentId).toBe("product_catalog-needs-input");
+  expect(docsQuestionPlan.status).toBe("ready");
+  expect(docsQuestionPlan.promptKind).toBe("setup_request");
+  expect(docsQuestionPlan.intentFamily).toBe("product_catalog");
+  expect(docsQuestionPlan.intentId).toBe("product-catalog");
+});
+
+test("planAssistantActions builds ready portfolio and services plans for routed families", () => {
+  const portfolioPlan = planAssistantActions({
+    prompt: "stworz portfolio projektow dla agencji architektonicznej",
+    context: {
+      page: "/admin/coderso/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(portfolioPlan.status).toBe("ready");
+  expect(portfolioPlan.intentFamily).toBe("portfolio_projects");
+  expect(portfolioPlan.intentId).toBe("portfolio-projects");
+
+  const servicesPlan = planAssistantActions({
+    prompt: "potrzebuje katalogu uslug dla firmy sprzatajacej",
+    context: {
+      page: "/admin/coderso/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(servicesPlan.status).toBe("ready");
+  expect(servicesPlan.intentFamily).toBe("services_directory");
+  expect(servicesPlan.intentId).toBe("services-directory");
 });

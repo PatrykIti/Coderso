@@ -90,9 +90,14 @@ Rules:
   - generic prompt classification is now implemented,
   - planner routing recognizes docs vs setup vs refinement intent,
   - current house-projects flow remains the routed ready-plan case.
+- `TASK-101-09-07-02` is complete:
+  - generic catalog family blueprint builder is now implemented,
+  - house-projects became a backward-compatible preset wrapper,
+  - product and portfolio catalog presets now exist as generic builder outputs.
+- `TASK-101-09-07-03` is complete:
+  - product, portfolio, and services-directory prompts now route to ready plans,
+  - these families reuse the shared catalog-family blueprint engine.
 - Remaining work:
-  - generic blueprint generation,
-  - additional preset families,
   - state-aware refinement without duplicate setups.
 
 ## Documentation Updates Required

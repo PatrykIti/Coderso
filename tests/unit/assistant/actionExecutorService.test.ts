@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 
+import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
+import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import {
   dryRunAssistantActionPlan,
@@ -291,4 +293,18 @@ test("executeAssistantActionPlan creates resources and reuses idempotency key", 
   expect(first.results.some((item) => item.publicHref === "/projekty-domow")).toBeTrue();
   expect(second.summary).toEqual(first.summary);
   expect(second.results).toEqual(first.results);
+});
+
+test("dryRunAssistantActionPlan supports product catalog preset through the same executor contract", async () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const preview = await dryRunAssistantActionPlan({ plan }, createDeps());
+
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes).toHaveLength(6);
+  expect(preview.changes.some((change) => change.targetKey === "products")).toBe(true);
+  expect(preview.changes.some((change) => change.targetKey === "/produkty")).toBe(true);
 });

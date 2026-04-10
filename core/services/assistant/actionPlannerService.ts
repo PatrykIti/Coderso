@@ -7,6 +7,12 @@ import type {
 } from "./actionPlanTypes";
 import { buildAssistantAdminContext } from "./adminContextService";
 import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
+import { buildCatalogFamilyPlan } from "./blueprints/catalogFamilyBlueprint";
+import {
+  PORTFOLIO_PROJECTS_PRESET,
+  PRODUCT_CATALOG_PRESET,
+  SERVICES_DIRECTORY_PRESET,
+} from "./blueprints/catalogFamilyPresets";
 
 const normalizePrompt = (value: string) =>
   value
@@ -32,7 +38,6 @@ const catalogKeywords = [
   "showcase",
   "prezentowac",
   "present",
-  "portfolio",
   "listing",
 ];
 
@@ -92,6 +97,8 @@ const docsQuestionKeywords = [
 const productCatalogKeywords = [
   "produkt",
   "produkty",
+  "produktow",
+  "produktów",
   "product",
   "products",
   "shop",
@@ -100,22 +107,25 @@ const productCatalogKeywords = [
 
 const portfolioKeywords = [
   "portfolio",
-  "projekt",
-  "projekty",
-  "project",
-  "projects",
   "case study",
   "case studies",
+  "realizacja",
+  "realizacje",
+  "showreel",
 ];
 
 const serviceDirectoryKeywords = [
   "uslugi",
   "usługi",
+  "uslug",
+  "usług",
   "services",
   "service",
   "directory",
   "katalog uslug",
   "katalog usług",
+  "katalogu uslug",
+  "katalogu usług",
   "provider",
   "providers",
 ];
@@ -142,15 +152,56 @@ export const isLikelyHouseProjectsCatalogPrompt = (prompt: string) => {
   );
 };
 
+const isLikelyProductCatalogPrompt = (prompt: string) => {
+  const normalized = normalizePrompt(prompt);
+  if (isLikelyHouseProjectsCatalogPrompt(normalized)) return false;
+  return (
+    includesAny(normalized, productCatalogKeywords) &&
+    includesAny(normalized, catalogKeywords)
+  );
+};
+
+const isLikelyPortfolioProjectsPrompt = (prompt: string) => {
+  const normalized = normalizePrompt(prompt);
+  if (isLikelyHouseProjectsCatalogPrompt(normalized)) return false;
+  return includesAny(normalized, portfolioKeywords);
+};
+
+const isLikelyServicesDirectoryPrompt = (prompt: string) => {
+  const normalized = normalizePrompt(prompt);
+  return includesAny(normalized, serviceDirectoryKeywords);
+};
+
 const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
   const normalized = normalizePrompt(prompt);
   if (isLikelyHouseProjectsCatalogPrompt(normalized)) return "catalog_showcase";
-  if (includesAny(normalized, productCatalogKeywords)) return "product_catalog";
-  if (includesAny(normalized, serviceDirectoryKeywords)) return "services_directory";
-  if (includesAny(normalized, portfolioKeywords)) return "portfolio_projects";
+  if (isLikelyProductCatalogPrompt(normalized)) return "product_catalog";
+  if (isLikelyServicesDirectoryPrompt(normalized)) return "services_directory";
+  if (isLikelyPortfolioProjectsPrompt(normalized)) return "portfolio_projects";
   if (includesAny(normalized, leadCaptureKeywords)) return "lead_capture_site";
   if (includesAny(normalized, catalogKeywords)) return "catalog_showcase";
   return "unknown";
+};
+
+const buildReadyPlanForIntentFamily = (
+  intentFamily: AssistantIntentFamily,
+  options: {
+    promptKind: AssistantPromptKind;
+    intentFamily: AssistantIntentFamily;
+  }
+) => {
+  switch (intentFamily) {
+    case "catalog_showcase":
+      return buildHouseProjectsCatalogPlan(options);
+    case "product_catalog":
+      return buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, options);
+    case "portfolio_projects":
+      return buildCatalogFamilyPlan(PORTFOLIO_PROJECTS_PRESET, options);
+    case "services_directory":
+      return buildCatalogFamilyPlan(SERVICES_DIRECTORY_PRESET, options);
+    default:
+      return null;
+  }
 };
 
 export const classifyAssistantPrompt = (prompt: string) => {
@@ -256,13 +307,13 @@ export const planAssistantActions = (
 
   if (
     classification.promptKind === "setup_request" &&
-    classification.intentFamily === "catalog_showcase" &&
-    isLikelyHouseProjectsCatalogPrompt(classification.normalizedPrompt)
+    classification.intentFamily !== "unknown"
   ) {
-    return buildHouseProjectsCatalogPlan({
+    const readyPlan = buildReadyPlanForIntentFamily(classification.intentFamily, {
       promptKind: classification.promptKind,
       intentFamily: classification.intentFamily,
     });
+    if (readyPlan) return readyPlan;
   }
 
   return buildClarifyingPlan(input.prompt, context, classification);
