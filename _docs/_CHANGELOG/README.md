@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 571 | 2026-04-10 | TASK-101-09 second-wave tests and generic planning follow-up | QA/Assistant |
 | 570 | 2026-04-10 | TASK-101-09 llm-guide house projects catalog flow | Assistant/Product |
 | 569 | 2026-03-22 | TASK-169 assistant widget template medium and decision guide polish | Docs/Assistant |
 | 568 | 2026-03-22 | TASK-168 assistant widget template medium-detail polish | Docs/Assistant |

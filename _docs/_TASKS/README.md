@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 30 tasks
+- **To Do:** 34 tasks
 - **In Progress:** 6 tasks
-- **Done:** 747 tasks
+- **Done:** 748 tasks
 
 ---
 
@@ -65,7 +65,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-09-06-01 | Review, Confirm UX, and Partial Success States | High | Medium | Render plan review, dry-run diff, execute progress, and partial success feedback |
 | TASK-101-09-06-02 | Action Routes, Security Contract, and Error Mapping | High | Medium | Add internal action endpoints with strict validation and machine-readable errors |
 | TASK-101-09-06-03 | Unit, Integration, UI Test Matrix, and Docs Closure | Medium | Medium | Cover all lanes and sync docs/board/changelog at the end |
-| TASK-101-09-06-04 | Deep Interaction, DB Parity, and Runtime Acceptance Test Wave | High | Large | Prove the shipped house-projects slice through real panel interaction, DB-backed parity, and public runtime acceptance |
+| TASK-101-09-07 | Generic LLM Guide Intent Families and State-Aware Planning | High | Large | Generalize the planner beyond the single house-projects blueprint |
+| TASK-101-09-07-01 | Intent Family Classification and Prompt-to-Blueprint Routing | High | Medium | Route setup prompts into reusable guide families instead of one hardcoded case |
+| TASK-101-09-07-02 | Generic Catalog Family Blueprint Engine | High | Large | Turn the house-projects blueprint into a generic catalog family generator |
+| TASK-101-09-07-03 | Service Directory, Portfolio, and Product Family Presets | High | Large | Add additional business-ready guide presets beyond house projects |
+| TASK-101-09-07-04 | State-Aware Follow-Up Refinement and No-Duplicate Setups | High | Large | Let follow-up prompts refine existing setups instead of creating duplicates |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -89,6 +93,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-06-04 | Deep Interaction, DB Parity, and Runtime Acceptance Test Wave | High | Large | Done: the shipped house-projects slice now has interactive UI flow coverage, DB-backed parity checks, and public runtime acceptance coverage |
 | TASK-169 | Assistant Widget Template Medium and Decision Guide Polish | Medium | Small | Done: medium and decision-guide widget-template follow-ups now read as Hero-specific guidance instead of flattened workflow/fallback text |
 | TASK-168 | Assistant Widget Template Medium-Detail Polish | Medium | Small | Done: medium-detail widget-template guidance now explains the practical Hero-details path more concretely |
 | TASK-167 | Assistant Guide-Mode Follow-Up Specificity | High | Small | Done: dedicated helper-mode sections now render without redundant fallback mixing and Hero follow-ups stay more specific |

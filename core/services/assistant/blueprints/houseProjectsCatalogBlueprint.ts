@@ -6,7 +6,7 @@ import type {
 
 const contentTypeSlug = "house-projects";
 const catalogPageSlug = "/projekty-domow";
-const catalogHiddenListPath = "/projekty-domow/lista-systemowa";
+const catalogHiddenListPath = "/_catalog/house-projects";
 const detailPath = "/projekty-domow/:slug";
 const listingQueryName = "House Projects Catalog Query";
 const listingTemplateSlug = "house-projects-catalog-grid";

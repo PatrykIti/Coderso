@@ -346,6 +346,30 @@ if (confirmed) {
 8. Full "tested end-to-end" claim for the shipped slice additionally requires the second-wave
    coverage tracked in `TASK-101-09-06-04` (deep UI interaction, DB-backed parity, runtime/public acceptance).
 
+## Current Implementation Notes (2026-04-10)
+
+- The current shipped slice is business-complete for `house-projects-catalog`:
+  - typed plan,
+  - dry-run,
+  - execute,
+  - review UI,
+  - public catalog page,
+  - public detail route.
+- `TASK-101-09-06-04` is now complete, so this first vertical slice is tested end-to-end.
+- The main remaining gap is no longer "does the shipped slice work?";
+  it is "how to generalize the planner beyond the single house-projects blueprint".
+
+## Next Generic Wave
+
+The next product step is tracked under:
+- `TASK-101-09-07_Generic_LLM_Guide_Intent_Families_and_State_Aware_Planning.md`
+
+That wave covers:
+- intent-family routing,
+- generic blueprint generation,
+- multi-domain presets,
+- state-aware follow-up refinement without duplicate setups.
+
 ---
 
 ## Testing Requirements

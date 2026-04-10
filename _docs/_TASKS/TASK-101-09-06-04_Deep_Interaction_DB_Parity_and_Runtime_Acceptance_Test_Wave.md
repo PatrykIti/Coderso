@@ -5,7 +5,7 @@
 **Category:** QA + Runtime + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09 implementation slice, TASK-101-09-06-03  
-**Status:** To Do
+**Status:** Done (2026-04-10)
 
 ---
 
@@ -181,3 +181,24 @@ expect(response.text()).toContain("Katalog Projektów Domów");
 - `_docs/_TASKS/TASK-101-09-06_Assistant_UI_API_Security_Tests_and_Closure.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*.md` when completed
+
+## Completion Notes (2026-04-10)
+
+- Added interactive `Vitest` coverage for the floating assistant `LLM Guide` flow:
+  - prompt -> plan,
+  - dry-run,
+  - execute,
+  - `needs_input` branch.
+- Added Bun DB-backed parity coverage for:
+  - create,
+  - rerun update/noop behavior,
+  - idempotency replay.
+- Added Bun public runtime acceptance coverage for:
+  - generated catalog landing page,
+  - generated public detail route for house-project entries.
+- Fixed a real runtime regression uncovered by this wave:
+  - `contentListResolver` no longer emits invalid `resolved.runtime` shape with undefined keys.
+- Confirmed the current shipped `house-projects-catalog` slice is now tested end-to-end for:
+  - assistant UI interaction,
+  - persisted mutation behavior,
+  - public runtime rendering.

@@ -131,6 +131,11 @@ const buildCatalogPageData = (input: {
           listingQueryId: input.listingQueryId,
           listingTemplateId: input.listingTemplateId,
           resolvedAt: "",
+          runtime: {
+            rejectedTokens: [],
+            searchQuery: "",
+            page: 1,
+          },
         },
       },
     },

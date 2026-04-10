@@ -792,6 +792,14 @@ export async function resolveListingContentListRuntimeData(
     }
   );
 
+  const runtimeMeta = {
+    rejectedTokens: runtime.rejectedTokens,
+    ...(typeof runtime.searchQuery === "string"
+      ? { searchQuery: runtime.searchQuery }
+      : {}),
+    ...(typeof runtime.page === "number" ? { page: runtime.page } : {}),
+  };
+
   return {
     items,
     total: execution.total,
@@ -800,11 +808,7 @@ export async function resolveListingContentListRuntimeData(
     listingQueryId,
     listingTemplateId,
     resolvedAt: new Date().toISOString(),
-    runtime: {
-      rejectedTokens: runtime.rejectedTokens,
-      searchQuery: runtime.searchQuery,
-      page: runtime.page,
-    },
+    runtime: runtimeMeta,
   };
 }
 
