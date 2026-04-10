@@ -85,7 +85,8 @@ Rule:
 - `core/services/assistant/actions/*` (new, ~400-700 LOC)
 - `tests/vitest/assistant/action-registry.test.ts` (new, ~140-220 LOC)
 - `tests/vitest/assistant/action-diff-service.test.ts` (new, ~140-220 LOC)
-- `tests/vitest/assistant/action-executor-service.test.ts` (new, ~180-280 LOC)
+- `tests/vitest/assistant/action-executor-service.test.ts` (new, only if executor becomes Bun-free after extraction, ~180-280 LOC)
+- `tests/unit/assistant/actionExecutorService.test.ts` (Bun-owned fallback if executor still imports DB/runtime at module load)
 
 ## Pseudocode
 
@@ -107,6 +108,8 @@ for (const action of plan.actions) {
 
 - Vitest unit for registry ownership and action validation.
 - Vitest unit for diff/conflict detection.
+- Executor unit tests belong to Vitest only after extraction-first cleanup makes the module Bun-free.
+- Until then keep executor verification in Bun-owned service/route tests.
 - Bun integration for execute flow against real route/service boundaries where needed.
 
 ## Documentation Updates Required

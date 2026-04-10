@@ -64,7 +64,7 @@ if (request.kind === "site-builder") {
 
 ## Testing Requirements
 
-- Vitest unit for route alias behavior.
+- Vitest unit only for alias normalization helpers that stay Bun-free.
 - Bun integration for old and new endpoints hitting the same underlying executor contract.
 - UI smoke coverage for reused review/execute flow.
 

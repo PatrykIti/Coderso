@@ -37,6 +37,10 @@ Domknac testy wszystkich warstw i zsynchronizowac docs/board/changelog po wdroze
 - `bun --cwd core lint:types`
 - `bun run test:vitest`
 - targeted Bun route suites for assistant action endpoints
+- ownership rule:
+  - `tests/vitest/*` only for Bun-free planner/context/schema/UI helpers,
+  - executor/adapter suites stay in Bun until extraction removes import-time DB/runtime coupling,
+  - do not choose lane by folder name alone.
 
 ## Documentation Updates Required
 

@@ -350,14 +350,15 @@ if (confirmed) {
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- Vitest unit:
+- Vitest unit for Bun-free modules only:
   - mode normalization and backward compatibility,
   - admin context builders and redaction budgets,
   - planner output sanitization,
   - action schema validation,
-  - executor permission checks,
-  - idempotency guards,
   - generated catalog blueprints.
+- Execution-layer unit ownership:
+  - use Vitest only after extraction removes import-time DB/settings/runtime coupling,
+  - otherwise keep executor/adapters in Bun-owned unit or integration suites until the seam is pure.
 - Bun integration:
   - `/assistant/actions/plan`,
   - `/assistant/actions/dry-run`,

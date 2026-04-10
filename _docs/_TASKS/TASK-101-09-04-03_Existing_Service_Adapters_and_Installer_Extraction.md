@@ -54,7 +54,8 @@ const upsertPageFromBlueprint = sharedPageUpsertHelper(seed, deps);
 
 ## Testing Requirements
 
-- Vitest unit for shared helpers.
+- Vitest unit for extracted shared helpers only when the extracted helper is Bun-free and import-safe.
+- If the helper still imports DB/settings/runtime modules at module load, keep the suite in Bun until refactor lands.
 - Bun integration proving assistant and site-builder use equivalent mutation behavior.
 
 ## Documentation Updates Required

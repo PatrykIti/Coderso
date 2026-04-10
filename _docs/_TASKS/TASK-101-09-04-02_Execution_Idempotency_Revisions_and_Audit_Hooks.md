@@ -18,7 +18,8 @@ Execute path ma byc bezpieczny dla retry i zgodny z produktowymi kontraktami rew
 - `core/services/assistant/actionExecutorService.ts` (new, ~220-320 LOC)
 - `core/services/assistant/actions/*` (update, ~200-340 LOC)
 - `core/services/audit/auditService.ts` (update, ~20-40 LOC)
-- `tests/vitest/assistant/action-executor-service.test.ts` (new, ~180-260 LOC)
+- `tests/vitest/assistant/action-executor-service.test.ts` (new only if executor becomes Bun-free, ~180-260 LOC)
+- `tests/unit/assistant/actionExecutorService.test.ts` (Bun-owned fallback if module remains runtime-coupled)
 
 ## Pseudocode
 
@@ -40,8 +41,8 @@ await saveIdempotencyResult(key, result);
 
 ## Testing Requirements
 
-- Vitest unit for idempotency replay.
-- Vitest unit for audit/revision hook orchestration.
+- Vitest unit for idempotency/audit orchestration only after extraction removes import-time runtime coupling.
+- If the module still imports DB/settings/runtime services on load, keep the suite in Bun.
 - Bun integration for mutation flow where service boundaries are runtime-owned.
 
 ## Documentation Updates Required
