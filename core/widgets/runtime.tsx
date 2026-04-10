@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 
 import { registerCoreWidgets } from "./core";
+import { getWidget } from "./registry";
 import type { WidgetEditorProps } from "./types";
 
 const NullEditor: ComponentType<WidgetEditorProps<any>> = () => null;
@@ -14,7 +15,15 @@ const noopEditors = {
 let registered = false;
 
 export function ensureRuntimeWidgetsRegistered() {
-  if (registered) return;
+  if (
+    registered &&
+    getWidget("content-list") &&
+    getWidget("screen-record-header") &&
+    getWidget("screen-two-column")
+  ) {
+    return;
+  }
+
   registerCoreWidgets({
     section: noopEditors,
     templateSection: noopEditors,
