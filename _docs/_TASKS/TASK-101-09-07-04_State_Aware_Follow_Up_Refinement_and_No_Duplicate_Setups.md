@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Runtime State  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-07-03  
-**Status:** To Do
+**Status:** In Progress (2026-04-10)
 
 ---
 
@@ -45,3 +45,22 @@ creating a parallel second setup.
 - `Vitest` planner tests for follow-up interpretation.
 - `Bun` DB-backed refinement tests for update/noop behavior.
 - acceptance scenarios proving no duplicate content type / screen / listing template is created.
+
+## Progress Notes
+
+Completed first slice (2026-04-10):
+- `LLM Guide` now recognizes a house-projects follow-up prompt:
+  - "dodaj filtr po metrazu i liczbie pokoi"
+- Planner returns a refinement plan instead of a second setup plan.
+- The refinement plan reuses canonical catalog resources and updates the existing catalog page via `page.upsert`.
+- The catalog page can now receive a `listing-filters` widget through the existing page action family.
+- Added tests for:
+  - planner follow-up interpretation,
+  - stubbed executor no-duplicate behavior,
+  - DB-backed update/no-duplicate behavior,
+  - public runtime render showing the listing filters after refinement.
+
+Remaining:
+- generic persisted-state resolution for renamed/customized setups,
+- follow-up prompt for adding inquiry forms,
+- broader no-duplicate acceptance across product, portfolio, and services presets.

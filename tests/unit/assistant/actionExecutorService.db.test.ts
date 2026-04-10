@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import { users } from "../../../core/db/schema";
+import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
 import { deleteContentType, getContentTypeBySlug } from "../../../core/services/content/typeService";
@@ -274,6 +275,47 @@ testIfDb(
 
     expect(replay.summary).toEqual(second.summary);
     expect(replay.results).toEqual(second.results);
+
+    const refinementPlan = planAssistantActions({
+      prompt: "dodaj filtr po metrazu i liczbie pokoi",
+      context: {
+        page: `/admin/pages${pageSlug}`,
+        locale: "pl-PL",
+      },
+    });
+
+    const refinement = await executeAssistantActionPlan({
+      plan: {
+        ...refinementPlan,
+        actions: refinementPlan.actions.map((action) =>
+          action.type === "page.upsert"
+            ? {
+                ...action,
+                input: {
+                  ...action.input,
+                  slug: pageSlug,
+                  title: `Katalog Projektów Domów ${token}`,
+                  introTitle: `Katalog Projektów Domów ${token}`,
+                  listingQueryName,
+                  listingTemplateSlug,
+                },
+              }
+            : action
+        ),
+      },
+      actorId: actor.id,
+      idempotencyKey: `assistant-action-${token}-3`,
+    });
+
+    expect(refinement.summary.failed).toBe(0);
+    expect(refinement.summary.create).toBe(0);
+    expect(refinement.summary.update).toBeGreaterThan(0);
+
+    const refinedPage = await getPageBySlug(pageSlug);
+    const blocks = Array.isArray(refinedPage?.currentData?.blocks)
+      ? (refinedPage?.currentData?.blocks as Array<{ type?: string }>)
+      : [];
+    expect(blocks.some((block) => block.type === "listing-filters")).toBe(true);
   },
   { timeout: 20_000 }
 );

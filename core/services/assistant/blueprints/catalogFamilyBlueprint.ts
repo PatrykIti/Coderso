@@ -1,4 +1,5 @@
 import type { WidgetBlock } from "../../../widgets/types";
+import type { ListingFacetConfig } from "../../search/filterContract";
 import type {
   AssistantActionPlan,
   AssistantIntentFamily,
@@ -49,6 +50,12 @@ type CatalogFamilyPreset = {
     rightFields: CatalogScreenFieldValue[];
   };
   assumptions: string[];
+  refinement: {
+    defaultFilterTitle: string;
+    defaultFilterDescription: string;
+    defaultSearchPlaceholder: string;
+    availableFacets: ListingFacetConfig[];
+  };
 };
 
 const createBlock = (
@@ -310,6 +317,79 @@ export const buildCatalogFamilyPlan = (
     assumptions: [...preset.assumptions],
     questions: [],
     actions,
+  };
+};
+
+type CatalogFamilyRefinementOptions = {
+  promptKind?: AssistantPromptKind;
+  intentFamily?: AssistantIntentFamily;
+  refinementId: string;
+  title: string;
+  answer: string;
+  summary: string;
+  assumptions?: string[];
+  pageOverrides?: Partial<{
+    title: string;
+    slug: string;
+    status: "draft" | "published";
+    listingQueryName: string;
+    listingTemplateSlug: string;
+    introTitle: string;
+    introBody: string;
+    ctaLabel: string;
+    contentListStyle: {
+      columns?: "1" | "2" | "3";
+      cardStyle?: "outlined" | "elevated" | "minimal";
+    };
+    listingFilters: {
+      title: string;
+      description: string;
+      autoApply: boolean;
+      showSearch: boolean;
+      searchPlaceholder: string;
+      searchLabel: string;
+      applyLabel: string;
+      facets: Array<Record<string, unknown>>;
+    } | null;
+  }>;
+};
+
+export const buildCatalogFamilyRefinementPlan = (
+  preset: CatalogFamilyPreset,
+  options: CatalogFamilyRefinementOptions
+): AssistantActionPlan => {
+  const pageAction: AssistantPlannedAction = {
+    id: `page-${preset.key}-${options.refinementId}`,
+    type: "page.upsert",
+    title: options.title,
+    description:
+      "Refine the existing catalog page and reuse the current listing query/template instead of creating duplicates.",
+    input: {
+      title: preset.introTitle,
+      slug: preset.catalogPageSlug,
+      status: "published",
+      listingQueryName: preset.listingQueryName,
+      listingTemplateSlug: preset.listingTemplateSlug,
+      introTitle: preset.introTitle,
+      introBody: preset.introBody,
+      ctaLabel: preset.ctaLabel,
+      ...(options.pageOverrides ?? {}),
+    },
+  };
+
+  return {
+    id: `plan-${preset.key}-${options.refinementId}`,
+    status: "ready",
+    intentId: `${preset.intentId}-${options.refinementId}`,
+    promptKind: options.promptKind ?? "refinement_request",
+    intentFamily: options.intentFamily ?? "catalog_showcase",
+    title: options.title,
+    answer: options.answer,
+    summary: options.summary,
+    confidence: 0.84,
+    assumptions: [...(options.assumptions ?? [])],
+    questions: [],
+    actions: [pageAction],
   };
 };
 

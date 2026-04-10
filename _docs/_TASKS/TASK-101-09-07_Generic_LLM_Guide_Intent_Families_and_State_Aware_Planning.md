@@ -98,7 +98,9 @@ Rules:
   - product, portfolio, and services-directory prompts now route to ready plans,
   - these families reuse the shared catalog-family blueprint engine.
 - Remaining work:
-  - state-aware refinement without duplicate setups.
+- `TASK-101-09-07-04` is now in progress:
+  - first house-projects filter-refinement slice landed,
+  - remaining work is broader persisted-state resolution plus form/detail-page refinements.
 
 ## Documentation Updates Required
 

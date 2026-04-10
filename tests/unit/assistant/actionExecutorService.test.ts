@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 
+import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
@@ -51,8 +52,7 @@ const createDeps = () => {
     status: string;
     currentData: Record<string, unknown>;
   }> = [];
-
-  return {
+  const deps = {
     getSetting: async (key: string) => {
       if (key === "site.contentRoutes") return contentRoutes;
       return null;
@@ -255,6 +255,17 @@ const createDeps = () => {
       createdAt: new Date("2026-04-10T12:00:00.000Z"),
     }),
   };
+
+  return Object.assign(deps, {
+    __state: {
+      contentRoutes,
+      contentTypes,
+      customScreens,
+      listingQueries,
+      listingTemplates,
+      pages,
+    },
+  });
 };
 
 test("dryRunAssistantActionPlan previews create operations for house projects catalog", async () => {
@@ -307,4 +318,42 @@ test("dryRunAssistantActionPlan supports product catalog preset through the same
   expect(preview.changes).toHaveLength(6);
   expect(preview.changes.some((change) => change.targetKey === "products")).toBe(true);
   expect(preview.changes.some((change) => change.targetKey === "/produkty")).toBe(true);
+});
+
+test("executeAssistantActionPlan refines existing house-project catalog without creating duplicate page", async () => {
+  const deps = createDeps();
+  const initialPlan = buildHouseProjectsCatalogPlan();
+
+  await executeAssistantActionPlan(
+    {
+      plan: initialPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-house-projects-initial",
+    },
+    deps
+  );
+
+  const refinementPlan = planAssistantActions({
+    prompt: "dodaj filtr po metrazu i liczbie pokoi",
+    context: {
+      page: "/admin/coderso/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  const refinementResult = await executeAssistantActionPlan(
+    {
+      plan: refinementPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-house-projects-refinement",
+    },
+    deps
+  );
+
+  expect(refinementResult.summary.failed).toBe(0);
+  expect(refinementResult.summary.create).toBe(0);
+  expect(refinementResult.summary.update).toBeGreaterThan(0);
+  expect(deps.__state.pages).toHaveLength(1);
+  const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
+  expect(pageBlocks.some((block) => block.type === "listing-filters")).toBe(true);
 });

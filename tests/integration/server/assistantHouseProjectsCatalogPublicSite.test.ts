@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
 import { users } from "../../../core/db/schema";
+import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
 import { createEntry, deleteEntry, getEntryBySlug, publishEntry } from "../../../core/services/content/entryService";
@@ -140,6 +141,8 @@ const clonePlanWithToken = (token: string) => {
     pageSlug,
     listPath,
     detailPath,
+    listingQueryName,
+    listingTemplateSlug,
   };
 };
 
@@ -215,7 +218,14 @@ testIfDb(
 
     const token = randomUUID().slice(0, 8);
     const actor = await createActor();
-  const { plan, contentTypeSlug, pageSlug, detailPath } = clonePlanWithToken(token);
+    const {
+      plan,
+      contentTypeSlug,
+      pageSlug,
+      detailPath,
+      listingQueryName,
+      listingTemplateSlug,
+    } = clonePlanWithToken(token);
 
     await executeAssistantActionPlan({
       plan,
@@ -256,6 +266,44 @@ testIfDb(
     expect(catalogHtml).toContain('data-listing-widget="content-list"');
     expect(catalogHtml).toContain(`Projekt Domu ${token}`);
     expect(catalogHtml).not.toContain('data-template="content-list"');
+
+    const refinementPlan = planAssistantActions({
+      prompt: "dodaj filtr po metrazu i liczbie pokoi",
+      context: {
+        page: pageSlug,
+        locale: "pl-PL",
+      },
+    });
+
+    const refinementResult = await executeAssistantActionPlan({
+      plan: {
+        ...refinementPlan,
+        actions: refinementPlan.actions.map((action) =>
+          action.type === "page.upsert"
+            ? {
+                ...action,
+                input: {
+                  ...action.input,
+                  slug: pageSlug,
+                  title: `Katalog Projektów Domów ${token}`,
+                  introTitle: `Katalog Projektów Domów ${token}`,
+                  listingQueryName,
+                  listingTemplateSlug,
+                },
+              }
+            : action
+        ),
+      },
+      actorId: actor.id,
+      idempotencyKey: `assistant-public-${token}-2`,
+    });
+    expect(refinementResult.summary.failed).toBe(0);
+    expect(refinementResult.summary.update).toBeGreaterThan(0);
+
+    const refinedCatalogResponse = await fetch(`${baseUrl}${pageSlug}?preview_refinement=1`);
+    expect(refinedCatalogResponse.status).toBe(200);
+    const refinedCatalogHtml = await refinedCatalogResponse.text();
+    expect(refinedCatalogHtml).toContain('data-listing-widget="listing-filters"');
 
     const detailUrl = detailPath.replace(":slug", `projekt-domu-${token}`);
     const detailResponse = await fetch(`${baseUrl}${detailUrl}`);

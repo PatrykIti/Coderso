@@ -6,9 +6,11 @@ import type {
   AssistantPlanQuestion,
 } from "./actionPlanTypes";
 import { buildAssistantAdminContext } from "./adminContextService";
+import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
 import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
 import { buildCatalogFamilyPlan } from "./blueprints/catalogFamilyBlueprint";
 import {
+  CATALOG_FAMILY_PRESETS,
   PORTFOLIO_PROJECTS_PRESET,
   PRODUCT_CATALOG_PRESET,
   SERVICES_DIRECTORY_PRESET,
@@ -141,6 +143,60 @@ const leadCaptureKeywords = [
   "quote",
 ];
 
+const filterKeywords = [
+  "filtr",
+  "filter",
+  "filters",
+  "facets",
+  "filtrowanie",
+];
+
+const layoutKeywords = [
+  "layout",
+  "uklad",
+  "układ",
+  "cards",
+  "karty",
+  "kart",
+  "grid",
+  "siatka",
+  "compact",
+  "minimal",
+];
+
+const priceKeywords = ["cena", "cene", "cenę", "price", "pricing"];
+const statusKeywords = ["status", "statuses"];
+const houseProjectsRefinementKeywords = [
+  "metraz",
+  "metraż",
+  "pokoi",
+  "rooms",
+  "bathrooms",
+  "floors",
+];
+const productRefinementKeywords = [
+  "sku",
+  "stock",
+  "magazyn",
+  "inventory",
+  "category",
+  "kategoria",
+];
+const servicesRefinementKeywords = [
+  "response time",
+  "czas odpowiedzi",
+  "service type",
+  "typ uslugi",
+  "typ usługi",
+];
+const portfolioRefinementKeywords = [
+  "client",
+  "klient",
+  "delivery year",
+  "rok realizacji",
+  "realizacja",
+];
+
 const includesAny = (value: string, candidates: string[]) =>
   candidates.some((candidate) => value.includes(candidate));
 
@@ -175,9 +231,13 @@ const isLikelyServicesDirectoryPrompt = (prompt: string) => {
 const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
   const normalized = normalizePrompt(prompt);
   if (isLikelyHouseProjectsCatalogPrompt(normalized)) return "catalog_showcase";
+  if (includesAny(normalized, houseProjectsRefinementKeywords)) return "catalog_showcase";
   if (isLikelyProductCatalogPrompt(normalized)) return "product_catalog";
+  if (includesAny(normalized, productRefinementKeywords)) return "product_catalog";
   if (isLikelyServicesDirectoryPrompt(normalized)) return "services_directory";
+  if (includesAny(normalized, servicesRefinementKeywords)) return "services_directory";
   if (isLikelyPortfolioProjectsPrompt(normalized)) return "portfolio_projects";
+  if (includesAny(normalized, portfolioRefinementKeywords)) return "portfolio_projects";
   if (includesAny(normalized, leadCaptureKeywords)) return "lead_capture_site";
   if (includesAny(normalized, catalogKeywords)) return "catalog_showcase";
   return "unknown";
@@ -202,6 +262,136 @@ const buildReadyPlanForIntentFamily = (
     default:
       return null;
   }
+};
+
+const buildRefinementPlanForIntentFamily = (
+  prompt: string,
+  intentFamily: AssistantIntentFamily,
+  options: {
+    promptKind: AssistantPromptKind;
+    intentFamily: AssistantIntentFamily;
+  }
+) => {
+  const preset = CATALOG_FAMILY_PRESETS[intentFamily as keyof typeof CATALOG_FAMILY_PRESETS];
+  if (!preset) return null;
+
+  const normalizedPrompt = normalizePrompt(prompt);
+  const selectedFacets = preset.refinement.availableFacets.filter((facet) => {
+    const label = facet.label.toLowerCase();
+    const field = facet.field?.toLowerCase() ?? "";
+    if (intentFamily === "catalog_showcase") {
+      if (label.includes("area") || field.includes("aream2")) {
+        return includesAny(normalizedPrompt, ["metraz", "metraż", "area"]);
+      }
+      if (label.includes("rooms") || field.includes("rooms")) {
+        return includesAny(normalizedPrompt, ["pokoi", "rooms"]);
+      }
+    }
+    if (intentFamily === "product_catalog") {
+      if (field.includes("category")) {
+        return includesAny(normalizedPrompt, ["category", "kategoria"]);
+      }
+      if (field.includes("price")) {
+        return includesAny(normalizedPrompt, priceKeywords);
+      }
+    }
+    if (intentFamily === "services_directory") {
+      if (field.includes("responsetimehours")) {
+        return includesAny(normalizedPrompt, ["response time", "czas odpowiedzi"]);
+      }
+      if (field.includes("servicetype")) {
+        return includesAny(normalizedPrompt, ["service type", "typ uslugi", "typ usługi"]);
+      }
+    }
+    if (intentFamily === "portfolio_projects") {
+      if (field.includes("deliveryyear")) {
+        return includesAny(normalizedPrompt, ["delivery year", "rok realizacji"]);
+      }
+      if (field.includes("clientname")) {
+        return includesAny(normalizedPrompt, ["client", "klient"]);
+      }
+    }
+    if (field.includes("projectstatus")) {
+      return includesAny(normalizedPrompt, statusKeywords);
+    }
+    return false;
+  });
+
+  const includeFilters =
+    includesAny(normalizedPrompt, filterKeywords) || selectedFacets.length > 0;
+  const includeLayoutUpdate = includesAny(normalizedPrompt, layoutKeywords);
+  const includeStatusOrPrice =
+    includesAny(normalizedPrompt, statusKeywords) ||
+    includesAny(normalizedPrompt, priceKeywords);
+
+  if (!includeFilters && !includeLayoutUpdate && !includeStatusOrPrice) {
+    return null;
+  }
+
+  const facets = [
+    {
+      id: "sort",
+      kind: "sort",
+      label: "Sort",
+      sortOptions: [
+        {
+          value: "title:asc",
+          label: "Title A-Z",
+          field: "title",
+          dir: "asc",
+        },
+        {
+          value: "updatedAt:desc",
+          label: "Newest first",
+          field: "updatedAt",
+          dir: "desc",
+        },
+      ],
+    },
+    ...(selectedFacets.length > 0
+      ? selectedFacets
+      : includeFilters
+        ? preset.refinement.availableFacets
+        : []),
+  ];
+
+  return buildCatalogFamilyRefinementPlan(preset, {
+    promptKind: options.promptKind,
+    intentFamily: options.intentFamily,
+    refinementId: "refinement",
+    title: `Refine ${preset.title}`,
+    answer: `I can refine the existing ${preset.title.toLowerCase()} setup without creating duplicate resources.`,
+    summary:
+      "Update the existing catalog page and keep the current listing/query resources instead of provisioning a second setup.",
+    assumptions: [
+      "The refinement flow reuses the canonical preset resource keys for this catalog family.",
+      "Missing refinement facets fall back to the family defaults when the prompt only asks for generic filtering.",
+    ],
+    pageOverrides: {
+      ...(includeLayoutUpdate
+        ? {
+            contentListStyle: {
+              columns: "2",
+              cardStyle: "minimal",
+            },
+          }
+        : {}),
+      ...(includeFilters
+        ? {
+            listingFilters: {
+              title: preset.refinement.defaultFilterTitle,
+              description: preset.refinement.defaultFilterDescription,
+              autoApply: true,
+              showSearch: true,
+              searchPlaceholder: preset.refinement.defaultSearchPlaceholder,
+              searchLabel: "Search",
+              applyLabel: "Apply filters",
+              facets: facets as Array<Record<string, unknown>>,
+            },
+          }
+        : {}),
+    },
+  });
 };
 
 export const classifyAssistantPrompt = (prompt: string) => {
@@ -314,6 +504,21 @@ export const planAssistantActions = (
       intentFamily: classification.intentFamily,
     });
     if (readyPlan) return readyPlan;
+  }
+
+  if (
+    classification.promptKind === "refinement_request" &&
+    classification.intentFamily !== "unknown"
+  ) {
+    const refinementPlan = buildRefinementPlanForIntentFamily(
+      input.prompt,
+      classification.intentFamily,
+      {
+        promptKind: classification.promptKind,
+        intentFamily: classification.intentFamily,
+      }
+    );
+    if (refinementPlan) return refinementPlan;
   }
 
   return buildClarifyingPlan(input.prompt, context, classification);

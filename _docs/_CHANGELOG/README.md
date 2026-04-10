@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 575 | 2026-04-10 | TASK-101-09-07-04 house-projects filter refinement slice | Assistant/Product |
 | 574 | 2026-04-10 | TASK-101-09-07-03 multi-family llm-guide presets | Assistant/Product |
 | 573 | 2026-04-10 | TASK-101-09-07-02 generic catalog blueprint engine | Assistant/Core |
 | 572 | 2026-04-10 | TASK-101-09-07-01 intent family classification and routing | Assistant/Core |

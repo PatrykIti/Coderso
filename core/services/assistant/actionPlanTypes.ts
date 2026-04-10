@@ -126,6 +126,20 @@ export type AssistantPageUpsertAction = {
     introTitle: string;
     introBody: string;
     ctaLabel: string;
+    contentListStyle?: {
+      columns?: "1" | "2" | "3";
+      cardStyle?: "outlined" | "elevated" | "minimal";
+    };
+    listingFilters?: {
+      title: string;
+      description: string;
+      autoApply: boolean;
+      showSearch: boolean;
+      searchPlaceholder: string;
+      searchLabel: string;
+      applyLabel: string;
+      facets: Array<Record<string, unknown>>;
+    } | null;
   };
 };
 

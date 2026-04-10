@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 30 tasks
-- **In Progress:** 7 tasks
+- **To Do:** 29 tasks
+- **In Progress:** 8 tasks
 - **Done:** 751 tasks
 
 ---
@@ -65,7 +65,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-09-06-01 | Review, Confirm UX, and Partial Success States | High | Medium | Render plan review, dry-run diff, execute progress, and partial success feedback |
 | TASK-101-09-06-02 | Action Routes, Security Contract, and Error Mapping | High | Medium | Add internal action endpoints with strict validation and machine-readable errors |
 | TASK-101-09-06-03 | Unit, Integration, UI Test Matrix, and Docs Closure | Medium | Medium | Cover all lanes and sync docs/board/changelog at the end |
-| TASK-101-09-07-04 | State-Aware Follow-Up Refinement and No-Duplicate Setups | High | Large | Let follow-up prompts refine existing setups instead of creating duplicates |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -76,6 +75,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-07-04 | State-Aware Follow-Up Refinement and No-Duplicate Setups | High | Large | In progress: house-projects filter refinement now updates the existing catalog page without duplicate setup creation; broader persisted-state and form/detail-page follow-ups remain open |
 | TASK-101-09-07 | Generic LLM Guide Intent Families and State-Aware Planning | High | Large | In progress: 07-01 landed classification, 07-02 landed the generic catalog engine, 07-03 landed routed product/portfolio/services presets, and the remaining work is state-aware refinement |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: floating assistant now supports typed planning, dry-run, and execute for the house-projects catalog business flow through existing content/listing/page/custom-screen services |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |

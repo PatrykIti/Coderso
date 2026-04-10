@@ -607,6 +607,42 @@ export const HOUSE_PROJECTS_CATALOG_PRESET: CatalogFamilyPreset = {
     "A hidden system list route is registered for cache invalidation, while the public landing page stays at /projekty-domow.",
     "The dedicated admin screen starts as a review-focused records surface and keeps the classic editor available when deeper edits are needed.",
   ],
+  refinement: {
+    defaultFilterTitle: "Filter house projects",
+    defaultFilterDescription: "Narrow down house projects by specs and status.",
+    defaultSearchPlaceholder: "Search house projects...",
+    availableFacets: [
+      {
+        id: "area",
+        kind: "range",
+        label: "Area (m2)",
+        field: "data.areaM2",
+        op: "between",
+      },
+      {
+        id: "rooms",
+        kind: "checkbox",
+        label: "Rooms",
+        field: "data.rooms",
+        op: "in",
+        options: ["2", "3", "4", "5", "6"].map((value) => ({
+          value,
+          label: `${value} rooms`,
+        })),
+      },
+      {
+        id: "status",
+        kind: "checkbox",
+        label: "Status",
+        field: "data.projectStatus",
+        op: "in",
+        options: ["available", "reserved", "sold"].map((value) => ({
+          value,
+          label: value,
+        })),
+      },
+    ],
+  },
 };
 
 export const PRODUCT_CATALOG_PRESET: CatalogFamilyPreset = {
@@ -697,6 +733,38 @@ export const PRODUCT_CATALOG_PRESET: CatalogFamilyPreset = {
     "The first generic product preset does not yet model advanced variants or inventory rules.",
     "Catalog cards focus on summary, price, SKU, and status first.",
   ],
+  refinement: {
+    defaultFilterTitle: "Filter products",
+    defaultFilterDescription: "Narrow down products by category, stock, and status.",
+    defaultSearchPlaceholder: "Search products...",
+    availableFacets: [
+      {
+        id: "category",
+        kind: "checkbox",
+        label: "Category",
+        field: "data.category",
+        op: "in",
+      },
+      {
+        id: "price",
+        kind: "range",
+        label: "Price from",
+        field: "data.priceFrom",
+        op: "between",
+      },
+      {
+        id: "status",
+        kind: "checkbox",
+        label: "Status",
+        field: "data.projectStatus",
+        op: "in",
+        options: ["active", "coming-soon", "archived"].map((value) => ({
+          value,
+          label: value,
+        })),
+      },
+    ],
+  },
 };
 
 export const PORTFOLIO_PROJECTS_PRESET: CatalogFamilyPreset = {
@@ -787,6 +855,38 @@ export const PORTFOLIO_PROJECTS_PRESET: CatalogFamilyPreset = {
     "The first portfolio preset focuses on project showcase fields rather than complex case-study sections.",
     "Portfolio cards prioritize client, delivery year, and status metadata.",
   ],
+  refinement: {
+    defaultFilterTitle: "Filter portfolio projects",
+    defaultFilterDescription: "Narrow down projects by service type, delivery year, and location.",
+    defaultSearchPlaceholder: "Search projects...",
+    availableFacets: [
+      {
+        id: "service-type",
+        kind: "checkbox",
+        label: "Service type",
+        field: "data.serviceType",
+        op: "in",
+      },
+      {
+        id: "delivery-year",
+        kind: "range",
+        label: "Delivery year",
+        field: "data.deliveryYear",
+        op: "between",
+      },
+      {
+        id: "status",
+        kind: "checkbox",
+        label: "Status",
+        field: "data.projectStatus",
+        op: "in",
+        options: ["published", "draft", "featured"].map((value) => ({
+          value,
+          label: value,
+        })),
+      },
+    ],
+  },
 };
 
 export const SERVICES_DIRECTORY_PRESET: CatalogFamilyPreset = {
@@ -877,4 +977,43 @@ export const SERVICES_DIRECTORY_PRESET: CatalogFamilyPreset = {
     "The first services-directory preset focuses on structured service cards rather than booking or calendar integration.",
     "Services directory cards prioritize service type, response time, price, and location.",
   ],
+  refinement: {
+    defaultFilterTitle: "Filter services",
+    defaultFilterDescription: "Narrow down services by type, response time, and status.",
+    defaultSearchPlaceholder: "Search services...",
+    availableFacets: [
+      {
+        id: "service-type",
+        kind: "checkbox",
+        label: "Service type",
+        field: "data.serviceType",
+        op: "in",
+      },
+      {
+        id: "response-time",
+        kind: "range",
+        label: "Response time (hours)",
+        field: "data.responseTimeHours",
+        op: "between",
+      },
+      {
+        id: "status",
+        kind: "checkbox",
+        label: "Status",
+        field: "data.projectStatus",
+        op: "in",
+        options: ["available", "featured", "hidden"].map((value) => ({
+          value,
+          label: value,
+        })),
+      },
+    ],
+  },
 };
+
+export const CATALOG_FAMILY_PRESETS = {
+  catalog_showcase: HOUSE_PROJECTS_CATALOG_PRESET,
+  product_catalog: PRODUCT_CATALOG_PRESET,
+  portfolio_projects: PORTFOLIO_PROJECTS_PRESET,
+  services_directory: SERVICES_DIRECTORY_PRESET,
+} as const;

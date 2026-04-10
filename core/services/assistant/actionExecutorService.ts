@@ -88,10 +88,50 @@ const buildCatalogPageData = (input: {
   listingQueryId: string;
   listingTemplateId: string;
   ctaLabel: string;
+  contentListStyle?: {
+    columns?: "1" | "2" | "3";
+    cardStyle?: "outlined" | "elevated" | "minimal";
+  };
+  listingFilters?: {
+    title: string;
+    description: string;
+    autoApply: boolean;
+    showSearch: boolean;
+    searchPlaceholder: string;
+    searchLabel: string;
+    applyLabel: string;
+    facets: Array<Record<string, unknown>>;
+  } | null;
 }) => ({
   blocks: [
+    ...(input.listingFilters
+      ? [
+          {
+            id: "catalog-listing-filters",
+            type: "listing-filters",
+            variant: "default",
+            data: {
+              listingQueryId: input.listingQueryId,
+              title: input.listingFilters.title,
+              description: input.listingFilters.description,
+              autoApply: input.listingFilters.autoApply,
+              showSearch: input.listingFilters.showSearch,
+              searchPlaceholder: input.listingFilters.searchPlaceholder,
+              searchLabel: input.listingFilters.searchLabel,
+              applyLabel: input.listingFilters.applyLabel,
+              facets: input.listingFilters.facets,
+              resolved: {
+                listingQueryId: input.listingQueryId,
+                metrics: [],
+                searchQuery: "",
+                rejectedTokens: [],
+              },
+            },
+          },
+        ]
+      : []),
     {
-      id: "house-projects-catalog-list",
+      id: "catalog-content-list",
       type: "content-list",
       variant: "cards",
       data: {
@@ -110,14 +150,13 @@ const buildCatalogPageData = (input: {
           showCta: true,
         },
         emptyState: {
-          title: "No house projects yet",
-          description:
-            "Add your first house project entry in Coderso > House Projects to populate the catalog.",
+          title: "No catalog items yet",
+          description: "Add your first catalog entry in Coderso to populate this page.",
         },
         style: {
-          columns: "3",
+          columns: input.contentListStyle?.columns ?? "3",
           gap: "md",
-          cardStyle: "outlined",
+          cardStyle: input.contentListStyle?.cardStyle ?? "outlined",
           ctaLabel: input.ctaLabel,
           backgroundColor: "var(--color-bg)",
           borderColor: "var(--color-border)",
@@ -623,6 +662,8 @@ const executePageAction = async (
     listingQueryId: listingQuery.id,
     listingTemplateId: listingTemplate.id,
     ctaLabel: action.input.ctaLabel,
+    contentListStyle: action.input.contentListStyle,
+    listingFilters: action.input.listingFilters,
   });
 
   const existing = await deps.getPageBySlug(action.input.slug);

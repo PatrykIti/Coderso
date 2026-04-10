@@ -123,3 +123,24 @@ test("planAssistantActions builds ready portfolio and services plans for routed 
   expect(servicesPlan.intentFamily).toBe("services_directory");
   expect(servicesPlan.intentId).toBe("services-directory");
 });
+
+test("planAssistantActions builds ready refinement plan for house-project filters", () => {
+  const plan = planAssistantActions({
+    prompt: "dodaj filtr po metrazu i liczbie pokoi",
+    context: {
+      page: "/admin/coderso/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.promptKind).toBe("refinement_request");
+  expect(plan.intentFamily).toBe("catalog_showcase");
+  expect(plan.intentId).toBe("house-projects-catalog-refinement");
+  expect(plan.actions).toHaveLength(1);
+  expect(plan.actions[0]?.type).toBe("page.upsert");
+  if (plan.actions[0]?.type !== "page.upsert") {
+    throw new Error("expected_page_upsert_action");
+  }
+  expect(plan.actions[0].input.listingFilters?.facets.length).toBeGreaterThan(1);
+});
