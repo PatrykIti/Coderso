@@ -43,7 +43,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
-| TASK-101-09-01-03 | Site Builder Contract Convergence and Legacy Route Retirement | High | Medium | Converge current site-builder workflow into the generic guide engine and retire duplicate contracts |
+| TASK-101-09-01-03 | Site Builder Contract Convergence and Legacy Route Retirement | High | Medium | Converge current site-builder workflow into the generic guide engine and remove `/assistant/site-builder/*` as a separate supported flow |
 | TASK-101-09-02-02 | Resource Schema, Widget, and Surface Catalog Context | High | Medium | Expose compact summaries for content types, screens, listings, forms, and widgets |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
@@ -55,7 +55,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling and action gating shipped; canonical `llm-rag` -> `llm-guide` transport migration and site-builder convergence remain open |
+| TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling and action gating shipped; canonical `llm-rag` -> `llm-guide` transport migration and single-flow site-builder convergence remain open |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | In progress: docs-only action guard shipped; full legacy transport alias/migration remains open |
 | TASK-101-09-02 | Admin Context Snapshot and Safe Surface Observers | High | Large | In progress: route/module context and executor page-state lookup shipped; full UI snapshot/resource catalog context remains open |
 | TASK-101-09-02-01 | Admin Runtime Context Snapshot and Permission Affordances | High | Medium | In progress: minimal route/module context shipped; visible affordance and permission envelope remain open |
