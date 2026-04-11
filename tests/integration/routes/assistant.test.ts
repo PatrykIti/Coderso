@@ -51,11 +51,11 @@ test("registerAssistantRoutes wires endpoints", () => {
       "POST /assistant/actions/plan",
       "POST /assistant/actions/dry-run",
       "POST /assistant/actions/execute",
-      "POST /assistant/site-builder/plan",
-      "POST /assistant/site-builder/execute",
-      "POST /assistant/site-builder/validate",
     ])
   );
+  expect(paths).not.toContain("POST /assistant/site-builder/plan");
+  expect(paths).not.toContain("POST /assistant/site-builder/execute");
+  expect(paths).not.toContain("POST /assistant/site-builder/validate");
 
   expect(requestedPermissions).toEqual([
     "settings:read",
@@ -68,9 +68,6 @@ test("registerAssistantRoutes wires endpoints", () => {
     "settings:write",
     "content:write",
     "content:publish",
-    "solution-kits:read",
-    "solution-kits:write",
-    "solution-kits:read",
   ]);
 });
 
@@ -279,6 +276,59 @@ test("assistant action plan route returns typed plan payload", async () => {
   });
 });
 
+test("assistant action plan route blocks site-kit planning when LLM Guide is unavailable", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "docs-only",
+        retrievalBackend: "db",
+        llmAvailable: false,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: {
+        prompt: "prepare a starter site kit",
+        context: {
+          locale: "en",
+          siteKit: {
+            businessType: "automotive_workshop",
+            goals: ["lead_generation"],
+            locale: "en",
+          },
+        },
+      },
+      requestId: "req-site-kit-unavailable",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_llm_unavailable");
+    expect(apiError.status).toBe(409);
+    expect(apiError.details).toEqual({ requestId: "req-site-kit-unavailable" });
+  }
+});
+
 test("assistant action dry-run route forwards plan payload", async () => {
   const { router, routes } = makeRouter();
   const plan = buildHouseProjectsCatalogPlan();
@@ -368,157 +418,170 @@ test("assistant action execute route injects actorId and idempotency key", async
   });
 });
 
-test("site-builder execute route injects actorId and returns service payload", async () => {
+test("assistant action execute route enforces kit permission for site-kit plans", async () => {
   const { router, routes } = makeRouter();
   let validateCalls = 0;
+  const requestedPermissions: string[] = [];
 
   registerAssistantRoutes(router, {
-    requirePermission: () => async () => undefined,
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
     validate: () => {
       validateCalls += 1;
     },
     service: {
-      executeSiteBuilder: async (payload) => ({
-        plan: {
-          recommendedKitId: "automotive-workshop",
-          confidence: 90,
-          recommendations: [],
-          steps: [],
-          settingsPatch: {},
-          notes: [],
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "llm-rag",
+        retrievalBackend: "db",
+        llmAvailable: true,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+      executeActions: async (payload) => ({
+        plan: payload.plan,
+        preview: {
+          plan: payload.plan,
+          changes: [],
+          warnings: [],
+          readyToExecute: true,
         },
-        selectedKitId: "automotive-workshop",
-        selectedKitTitle: "Automotive Workshop",
-        enabledStepIds: ["settings", "pages", "qa"],
-        actions: [],
-        modules: {
-          required: [],
-          optional: [],
-          recommended: [],
-        },
-        execution: {
-          run: {
-            id: "run-1",
-            kitId: "automotive-workshop",
-            mode: "apply",
+        results: [
+          {
+            actionId: "site-kit-install-automotive-workshop",
+            type: "site-kit.install",
+            targetType: "site-kit",
+            targetKey: "automotive-workshop",
+            operation: "create",
             status: "success",
-            actorId: payload.actorId ?? null,
-            rollbackOfRunId: null,
-            options: {},
-            summary: {
-              total: 0,
-              success: 0,
-              failed: 0,
-              planned: 0,
-              skipped: 0,
-              operations: {
-                create: 0,
-                update: 0,
-                noop: 0,
-                delete: 0,
-                restore: 0,
+            resourceId: "run-1",
+            adminHref: "/admin/coderso/solution-kits",
+            publicHref: null,
+            message: `Actor ${payload.actorId} executed site kit.`,
+            details: {
+              siteKit: {
+                validation: {
+                  runId: "run-1",
+                  status: "ok",
+                  unresolvedItems: [],
+                  checks: [],
+                },
               },
             },
-            error: null,
-            createdAt: new Date("2026-02-20T10:00:00.000Z"),
-            updatedAt: new Date("2026-02-20T10:00:00.000Z"),
-            finishedAt: new Date("2026-02-20T10:00:01.000Z"),
           },
-          items: [],
-          summary: {
-            total: 0,
-            success: 0,
-            failed: 0,
-            planned: 0,
-            skipped: 0,
-            operations: {
-              create: 0,
-              update: 0,
-              noop: 0,
-              delete: 0,
-              restore: 0,
-            },
-          },
-          manifest: {
-            id: "automotive-workshop",
-            title: "Automotive Workshop",
-            vertical: "automotive",
-            includes: {
-              contentTypes: [],
-              entries: [],
-              widgets: [],
-              templates: [],
-              forms: [],
-              menus: [],
-            },
-            requiredModules: [],
-          },
-          templateInstall: null,
-        },
-        validation: {
-          runId: "run-1",
-          status: "ok",
-          unresolvedItems: [],
-          checks: [],
+        ],
+        summary: {
+          create: 1,
+          update: 0,
+          noop: 0,
+          failed: 0,
         },
       }),
     },
   });
 
-  const route = routes.find((item) => item.path === "/assistant/site-builder/execute");
+  const plan = {
+    id: "plan-site-kit-automotive-workshop",
+    status: "ready",
+    intentId: "site-kit-install",
+    title: "Automotive Workshop Site Kit",
+    answer: "Plan ready",
+    summary: "Install site kit",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-install-automotive-workshop",
+        type: "site-kit.install",
+        title: "Install Automotive Workshop",
+        description: "Install selected site kit steps.",
+        input: {},
+      },
+    ],
+  };
+
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
   const handler = route?.handlers[route.handlers.length - 1];
   const result = await handler?.({
     params: {},
     query: {},
-    body: {
-      businessType: "automotive_workshop",
-      goals: ["lead_generation"],
-      locale: "en",
-      selectedKitId: "automotive-workshop",
-      enabledStepIds: ["settings", "pages", "qa"],
-    },
+    body: { plan, idempotencyKey: "assistant-site-kit-1" },
     user: { id: "user-99" },
-    requestId: "req-site-builder-1",
+    requestId: "req-site-kit-1",
   });
 
   expect(validateCalls).toBe(1);
+  expect(requestedPermissions).toContain("solution-kits:write");
   expect(result).toMatchObject({
-    selectedKitId: "automotive-workshop",
-    validation: {
-      status: "ok",
-    },
-    execution: {
-      run: {
-        actorId: "user-99",
-      },
+    summary: {
+      create: 1,
     },
   });
 });
 
-test("site-builder validate route maps known run-not-found errors", async () => {
+test("assistant action execute maps site-kit validate errors through generic route", async () => {
   const { router, routes } = makeRouter();
 
   registerAssistantRoutes(router, {
     requirePermission: () => async () => undefined,
     validate: () => undefined,
     service: {
-      validateSiteBuilderRun: async () => {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "llm-rag",
+        retrievalBackend: "db",
+        llmAvailable: true,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+      executeActions: async () => {
         throw new Error("site_builder_run_not_found");
       },
     },
   });
 
-  const route = routes.find((item) => item.path === "/assistant/site-builder/validate");
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
   const handler = route?.handlers[route.handlers.length - 1];
+  const plan = {
+    id: "plan-site-kit-validate",
+    status: "ready",
+    intentId: "site-kit-validate",
+    title: "Validate site kit run",
+    answer: "Validate run",
+    summary: "Validate run",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-validate-run",
+        type: "site-kit.validate",
+        title: "Validate run",
+        description: "Validate site kit run.",
+        input: {
+          runId: "0f7573a3-9ac9-4bc7-a492-fb11da09c37e",
+        },
+      },
+    ],
+  };
 
   try {
     await handler?.({
       params: {},
       query: {},
-      body: {
-        runId: "0f7573a3-9ac9-4bc7-a492-fb11da09c37e",
-      },
-      requestId: "req-site-builder-2",
+      body: { plan, idempotencyKey: "assistant-site-kit-validate-1" },
+      requestId: "req-site-kit-2",
       user: { id: "user-2" },
     });
     throw new Error("expected_error");
@@ -527,6 +590,6 @@ test("site-builder validate route maps known run-not-found errors", async () => 
     const apiError = error as ApiError;
     expect(apiError.code).toBe("site_builder_run_not_found");
     expect(apiError.status).toBe(404);
-    expect(apiError.details).toEqual({ requestId: "req-site-builder-2" });
+    expect(apiError.details).toEqual({ requestId: "req-site-kit-2" });
   }
 });

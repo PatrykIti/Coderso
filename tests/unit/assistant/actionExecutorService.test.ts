@@ -8,6 +8,11 @@ import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
 } from "../../../core/services/assistant/actionExecutorService";
+import {
+  executeGuidedSiteBuilder,
+  previewGuidedSiteBuilderPlan,
+  validateGuidedSiteBuilderRun,
+} from "../../../core/services/assistant/siteBuilderExecutor";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 
 const createDeps = () => {
@@ -310,6 +315,84 @@ const createDeps = () => {
       metadata: {},
       createdAt: new Date("2026-04-10T12:00:00.000Z"),
     }),
+    previewSiteKitPlan: previewGuidedSiteBuilderPlan,
+    executeSiteKit: (async (input) => {
+      const preview = previewGuidedSiteBuilderPlan(input);
+      return {
+        ...preview,
+        execution: {
+          run: {
+            id: "run-site-kit-1",
+            kitId: preview.selectedKitId,
+            mode: input.dryRun ? "dry_run" : "apply",
+            status: "success",
+            actorId: input.actorId ?? null,
+            rollbackOfRunId: null,
+            options: {},
+            summary: {
+              total: 1,
+              success: 1,
+              failed: 0,
+              planned: 0,
+              skipped: 0,
+              operations: {
+                create: 1,
+                update: 0,
+                noop: 0,
+                delete: 0,
+                restore: 0,
+              },
+            },
+            error: null,
+            createdAt: new Date("2026-04-10T12:00:00.000Z"),
+            updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+            finishedAt: new Date("2026-04-10T12:00:01.000Z"),
+          },
+          items: [],
+          summary: {
+            total: 1,
+            success: 1,
+            failed: 0,
+            planned: 0,
+            skipped: 0,
+            operations: {
+              create: 1,
+              update: 0,
+              noop: 0,
+              delete: 0,
+              restore: 0,
+            },
+          },
+          manifest: {
+            id: preview.selectedKitId,
+            title: preview.selectedKitTitle,
+            vertical: "test",
+            includes: {
+              contentTypes: [],
+              entries: [],
+              widgets: [],
+              templates: [],
+              forms: [],
+              menus: [],
+            },
+            requiredModules: [],
+          },
+          templateInstall: null,
+        },
+        validation: {
+          runId: "run-site-kit-1",
+          status: "ok",
+          unresolvedItems: [],
+          checks: [],
+        },
+      };
+    }) as typeof executeGuidedSiteBuilder,
+    validateSiteKitRun: (async (input) => ({
+      runId: input.runId,
+      status: "ok",
+      unresolvedItems: [],
+      checks: [],
+    })) as typeof validateGuidedSiteBuilderRun,
   };
 
   return Object.assign(deps, {
@@ -376,6 +459,67 @@ test("dryRunAssistantActionPlan supports product catalog preset through the same
   expect(preview.changes).toHaveLength(6);
   expect(preview.changes.some((change) => change.targetKey === "products")).toBe(true);
   expect(preview.changes.some((change) => change.targetKey === "/produkty")).toBe(true);
+});
+
+test("dryRunAssistantActionPlan previews site-kit recommend and install actions", async () => {
+  const plan = planAssistantActions({
+    prompt: "prepare a starter site kit",
+    context: {
+      locale: "en",
+      siteKit: {
+        businessType: "automotive_workshop",
+        goals: ["lead_generation"],
+        locale: "en",
+        selectedKitId: "automotive-workshop",
+        enabledStepIds: ["settings", "pages", "qa"],
+      },
+    },
+  });
+
+  const preview = await dryRunAssistantActionPlan({ plan }, createDeps());
+
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes.map((change) => change.type)).toEqual([
+    "site-kit.recommend",
+    "site-kit.install",
+  ]);
+  expect(preview.changes[0]?.operation).toBe("noop");
+  expect(preview.changes[1]?.operation).toBe("create");
+  expect(preview.changes[1]?.details?.siteKit?.plan?.selectedKitId).toBe(
+    "automotive-workshop"
+  );
+});
+
+test("executeAssistantActionPlan delegates site-kit install to guided site-builder executor", async () => {
+  const plan = planAssistantActions({
+    prompt: "prepare a starter site kit",
+    context: {
+      locale: "en",
+      siteKit: {
+        businessType: "automotive_workshop",
+        goals: ["lead_generation"],
+        locale: "en",
+        selectedKitId: "automotive-workshop",
+        enabledStepIds: ["settings", "pages", "qa"],
+      },
+    },
+  });
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-site-kit-install-1",
+    },
+    createDeps()
+  );
+
+  const installResult = result.results.find((item) => item.type === "site-kit.install");
+  expect(result.summary.failed).toBe(0);
+  expect(result.summary.create).toBe(1);
+  expect(result.summary.noop).toBe(1);
+  expect(installResult?.resourceId).toBe("run-site-kit-1");
+  expect(installResult?.details?.siteKit?.execution?.validation.status).toBe("ok");
 });
 
 test("executeAssistantActionPlan refines existing house-project catalog without creating duplicate page", async () => {

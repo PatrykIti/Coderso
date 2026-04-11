@@ -164,3 +164,29 @@ test("planAssistantActions builds inquiry form refinement plan for house project
   const pageAction = plan.actions.find((action) => action.type === "page.upsert");
   expect(pageAction?.input.formEmbed?.formName).toBe("House Projects Catalog Inquiry");
 });
+
+test("planAssistantActions builds site-kit actions from guided site-kit context", () => {
+  const plan = planAssistantActions({
+    prompt: "prepare a starter site kit",
+    context: {
+      locale: "en",
+      siteKit: {
+        businessType: "automotive_workshop",
+        goals: ["lead_generation", "online_booking"],
+        locale: "en",
+        selectedKitId: "automotive-workshop",
+        enabledStepIds: ["settings", "pages", "qa"],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("site_kit");
+  expect(plan.actions.map((action) => action.type)).toEqual([
+    "site-kit.recommend",
+    "site-kit.install",
+  ]);
+  const install = plan.actions.find((action) => action.type === "site-kit.install");
+  expect(install?.input.preview.selectedKitId).toBe("automotive-workshop");
+  expect(install?.input.preview.enabledStepIds).toEqual(["settings", "pages", "qa"]);
+});

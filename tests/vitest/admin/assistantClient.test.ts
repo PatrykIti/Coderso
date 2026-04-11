@@ -3,13 +3,12 @@ import { expect, test } from "vitest";
 import {
   dryRunAssistantActions,
   executeAssistantActions,
-  executeAssistantSiteBuilder,
+  executeAssistantSiteKitActions,
   getAssistantStatus,
   planAssistantActions,
-  previewAssistantSiteBuilderPlan,
+  planAssistantSiteKitActions,
   reindexAssistantDocs,
   sendAssistantMessage,
-  validateAssistantSiteBuilderRun,
 } from "../../../core/admin/services/assistantClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 
@@ -294,9 +293,28 @@ test("reindexAssistantDocs uses CSRF and POST", async () => {
   }
 });
 
-test("previewAssistantSiteBuilderPlan uses CSRF and POST", async () => {
+test("planAssistantSiteKitActions uses generic assistant action plan route", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const siteKitPreview = {
+    plan: {
+      recommendedKitId: "automotive-workshop",
+      confidence: 90,
+      recommendations: [],
+      steps: [],
+      settingsPatch: {},
+      notes: [],
+    },
+    selectedKitId: "automotive-workshop",
+    selectedKitTitle: "Automotive Workshop",
+    enabledStepIds: ["settings", "pages", "qa"],
+    actions: [],
+    modules: {
+      required: [],
+      optional: [],
+      recommended: [],
+    },
+  };
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
@@ -305,36 +323,45 @@ test("previewAssistantSiteBuilderPlan uses CSRF and POST", async () => {
       return jsonResponse({ token: "csrf-token" });
     }
     return jsonResponse({
-      plan: {
-        recommendedKitId: "automotive-workshop",
-        confidence: 90,
-        recommendations: [],
-        steps: [],
-        settingsPatch: {},
-        notes: [],
-      },
-      selectedKitId: "automotive-workshop",
-      selectedKitTitle: "Automotive Workshop",
-      enabledStepIds: ["settings", "pages", "qa"],
-      actions: [],
-      modules: {
-        required: [],
-        optional: [],
-        recommended: [],
-      },
+      id: "plan-site-kit-automotive-workshop",
+      status: "ready",
+      intentId: "site-kit-install",
+      title: "Automotive Workshop Site Kit",
+      answer: "Plan ready",
+      summary: "Install site kit",
+      confidence: 0.9,
+      assumptions: [],
+      questions: [],
+      actions: [
+        {
+          id: "site-kit-install-automotive-workshop",
+          type: "site-kit.install",
+          title: "Install Automotive Workshop",
+          description: "Install selected site kit steps.",
+          input: {
+            businessType: "automotive_workshop",
+            goals: ["lead_generation"],
+            locale: "en",
+            selectedKitId: "automotive-workshop",
+            enabledStepIds: ["settings", "pages", "qa"],
+            preview: siteKitPreview,
+          },
+        },
+      ],
     });
   };
 
   try {
     resetCsrfToken();
-    await previewAssistantSiteBuilderPlan({
+    const result = await planAssistantSiteKitActions({
       businessType: "automotive_workshop",
       goals: ["lead_generation"],
       locale: "en",
     });
 
+    expect(result.selectedKitId).toBe("automotive-workshop");
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
-    expect(calls[1]?.input).toBe("/admin/api/assistant/site-builder/plan");
+    expect(calls[1]?.input).toBe("/admin/api/assistant/actions/plan");
     expect(calls[1]?.init?.method).toBe("POST");
     const headers = new Headers(calls[1]?.init?.headers);
     expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
@@ -343,63 +370,39 @@ test("previewAssistantSiteBuilderPlan uses CSRF and POST", async () => {
   }
 });
 
-test("executeAssistantSiteBuilder uses CSRF and POST", async () => {
+test("executeAssistantSiteKitActions plans then executes through generic action route", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
-
-  globalThis.fetch = async (input, init) => {
-    calls.push({ input, init });
-    const url = String(input);
-    if (url.endsWith("/auth/csrf")) {
-      return jsonResponse({ token: "csrf-token" });
-    }
-    return jsonResponse({
-      plan: {
-        recommendedKitId: "automotive-workshop",
-        confidence: 90,
-        recommendations: [],
-        steps: [],
-        settingsPatch: {},
-        notes: [],
-      },
-      selectedKitId: "automotive-workshop",
-      selectedKitTitle: "Automotive Workshop",
-      enabledStepIds: ["settings", "pages", "qa"],
-      actions: [],
-      modules: {
-        required: [],
-        optional: [],
-        recommended: [],
-      },
-      execution: {
-        run: {
-          id: "run-1",
-          kitId: "automotive-workshop",
-          mode: "apply",
-          status: "success",
-          actorId: "user-1",
-          rollbackOfRunId: null,
-          options: {},
-          summary: {
-            total: 1,
-            success: 1,
-            failed: 0,
-            planned: 0,
-            skipped: 0,
-            operations: {
-              create: 1,
-              update: 0,
-              noop: 0,
-              delete: 0,
-              restore: 0,
-            },
-          },
-          error: null,
-          createdAt: "2026-02-20T10:00:00.000Z",
-          updatedAt: "2026-02-20T10:00:00.000Z",
-          finishedAt: "2026-02-20T10:00:01.000Z",
-        },
-        items: [],
+  const siteKitPreview = {
+    plan: {
+      recommendedKitId: "automotive-workshop",
+      confidence: 90,
+      recommendations: [],
+      steps: [],
+      settingsPatch: {},
+      notes: [],
+    },
+    selectedKitId: "automotive-workshop",
+    selectedKitTitle: "Automotive Workshop",
+    enabledStepIds: ["settings", "pages", "qa"],
+    actions: [],
+    modules: {
+      required: [],
+      optional: [],
+      recommended: [],
+    },
+  };
+  const siteKitExecution = {
+    ...siteKitPreview,
+    execution: {
+      run: {
+        id: "run-1",
+        kitId: "automotive-workshop",
+        mode: "apply",
+        status: "success",
+        actorId: "user-1",
+        rollbackOfRunId: null,
+        options: {},
         summary: {
           total: 1,
           success: 1,
@@ -414,39 +417,61 @@ test("executeAssistantSiteBuilder uses CSRF and POST", async () => {
             restore: 0,
           },
         },
+        error: null,
+        createdAt: "2026-02-20T10:00:00.000Z",
+        updatedAt: "2026-02-20T10:00:00.000Z",
+        finishedAt: "2026-02-20T10:00:01.000Z",
       },
-      validation: {
-        runId: "run-1",
-        status: "ok",
-        unresolvedItems: [],
-        checks: [],
+      items: [],
+      summary: {
+        total: 1,
+        success: 1,
+        failed: 0,
+        planned: 0,
+        skipped: 0,
+        operations: {
+          create: 1,
+          update: 0,
+          noop: 0,
+          delete: 0,
+          restore: 0,
+        },
       },
-    });
+    },
+    validation: {
+      runId: "run-1",
+      status: "ok",
+      unresolvedItems: [],
+      checks: [],
+    },
   };
-
-  try {
-    resetCsrfToken();
-    await executeAssistantSiteBuilder({
-      businessType: "automotive_workshop",
-      goals: ["lead_generation"],
-      locale: "en",
-      selectedKitId: "automotive-workshop",
-      enabledStepIds: ["settings", "pages", "qa"],
-    });
-
-    expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
-    expect(calls[1]?.input).toBe("/admin/api/assistant/site-builder/execute");
-    expect(calls[1]?.init?.method).toBe("POST");
-    const headers = new Headers(calls[1]?.init?.headers);
-    expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test("validateAssistantSiteBuilderRun uses CSRF and POST", async () => {
-  const originalFetch = globalThis.fetch;
-  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const actionPlan = {
+    id: "plan-site-kit-automotive-workshop",
+    status: "ready",
+    intentId: "site-kit-install",
+    title: "Automotive Workshop Site Kit",
+    answer: "Plan ready",
+    summary: "Install site kit",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "site-kit-install-automotive-workshop",
+        type: "site-kit.install",
+        title: "Install Automotive Workshop",
+        description: "Install selected site kit steps.",
+        input: {
+          businessType: "automotive_workshop",
+          goals: ["lead_generation"],
+          locale: "en",
+          selectedKitId: "automotive-workshop",
+          enabledStepIds: ["settings", "pages", "qa"],
+          preview: siteKitPreview,
+        },
+      },
+    ],
+  };
 
   globalThis.fetch = async (input, init) => {
     calls.push({ input, init });
@@ -454,22 +479,63 @@ test("validateAssistantSiteBuilderRun uses CSRF and POST", async () => {
     if (url.endsWith("/auth/csrf")) {
       return jsonResponse({ token: "csrf-token" });
     }
+    if (url.endsWith("/assistant/actions/plan")) {
+      return jsonResponse(actionPlan);
+    }
     return jsonResponse({
-      runId: "run-1",
-      status: "ok",
-      unresolvedItems: [],
-      checks: [],
+      plan: actionPlan,
+      preview: {
+        plan: actionPlan,
+        changes: [],
+        warnings: [],
+        readyToExecute: true,
+      },
+      results: [
+        {
+          actionId: "site-kit-install-automotive-workshop",
+          type: "site-kit.install",
+          targetType: "site-kit",
+          targetKey: "automotive-workshop",
+          operation: "create",
+          status: "success",
+          resourceId: "run-1",
+          adminHref: "/admin/coderso/solution-kits",
+          publicHref: null,
+          message: "Site kit installed.",
+          details: {
+            siteKit: {
+              execution: siteKitExecution,
+              validation: siteKitExecution.validation,
+            },
+          },
+        },
+      ],
+      summary: {
+        create: 1,
+        update: 0,
+        noop: 0,
+        failed: 0,
+      },
     });
   };
 
   try {
     resetCsrfToken();
-    await validateAssistantSiteBuilderRun({ runId: "0f7573a3-9ac9-4bc7-a492-fb11da09c37e" });
+    const result = await executeAssistantSiteKitActions({
+      businessType: "automotive_workshop",
+      goals: ["lead_generation"],
+      locale: "en",
+      selectedKitId: "automotive-workshop",
+      enabledStepIds: ["settings", "pages", "qa"],
+      idempotencyKey: "site-kit-test-key",
+    });
 
+    expect(result.execution.run.id).toBe("run-1");
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
-    expect(calls[1]?.input).toBe("/admin/api/assistant/site-builder/validate");
-    expect(calls[1]?.init?.method).toBe("POST");
-    const headers = new Headers(calls[1]?.init?.headers);
+    expect(calls[1]?.input).toBe("/admin/api/assistant/actions/plan");
+    expect(calls[2]?.input).toBe("/admin/api/assistant/actions/execute");
+    expect(calls[2]?.init?.method).toBe("POST");
+    const headers = new Headers(calls[2]?.init?.headers);
     expect(headers.get("X-CSRF-Token")).toBe("csrf-token");
   } finally {
     globalThis.fetch = originalFetch;

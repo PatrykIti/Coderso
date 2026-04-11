@@ -23,6 +23,7 @@ export const createPreviewChange = (input: {
   warnings?: string[];
   beforeValue?: unknown;
   nextValue?: unknown;
+  details?: AssistantActionPreviewChange["details"];
 }): AssistantActionPreviewChange => ({
   actionId: input.action.id,
   type: input.action.type,
@@ -31,4 +32,5 @@ export const createPreviewChange = (input: {
   operation: buildOperation(input.beforeValue, input.nextValue),
   summary: input.summary,
   warnings: [...(input.warnings ?? [])],
+  details: input.details,
 });

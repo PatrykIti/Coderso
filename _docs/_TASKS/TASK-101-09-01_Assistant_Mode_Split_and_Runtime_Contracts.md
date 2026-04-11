@@ -87,6 +87,7 @@ function normalizeAssistantMode(raw: unknown): AssistantMode {
 - User-facing `LLM Guide` labeling is shipped in assistant/settings UI.
 - `docs-only` remains read-only and action execution is routed through separate `/assistant/actions/*` endpoints.
 - The transport/settings value is still `llm-rag`; full canonical value migration to `llm-guide` remains open.
-- `TASK-101-09-01-03` site-builder convergence remains open and must end with `/assistant/actions/*` as the only supported assistant mutation flow.
+- `TASK-101-09-01-03` site-builder convergence is done: `/assistant/actions/*` is now the only supported assistant mutation flow for site-kit work.
 - Site-kit recommendation/execution should be treated as `LLM Guide` only; docs-only mode may explain site-kit documentation but must not choose or execute kits.
-- `/assistant/site-builder/*` is not an accepted final compatibility surface; old route registration/client methods must be removed or fully migrated before closure.
+- `/assistant/site-builder/*` is retired from route registration and admin client methods.
+- Remaining open scope in this parent task is canonical `llm-rag` -> `llm-guide` transport/settings migration.

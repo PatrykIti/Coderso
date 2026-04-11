@@ -8,29 +8,21 @@ import {
 import {
   assistantChatSchema,
   assistantReindexSchema,
-  assistantSiteBuilderExecuteSchema,
-  assistantSiteBuilderPlanSchema,
-  assistantSiteBuilderValidateSchema,
 } from "../validation/assistantSchemas";
 import {
   assistantActionDryRunRequestSchema,
   assistantActionExecuteRequestSchema,
   assistantActionPlanRequestSchema,
 } from "../validation/assistantActionSchemas";
-import {
-  executeGuidedSiteBuilder,
-  previewGuidedSiteBuilderPlan,
-  validateGuidedSiteBuilderRun,
-  type GuidedSiteBuilderExecuteInput,
-  type GuidedSiteBuilderPlanInput,
-  type GuidedSiteBuilderValidateRunInput,
-} from "../../services/assistant/siteBuilderExecutor";
 import { planAssistantActions } from "../../services/assistant/actionPlannerService";
 import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
 } from "../../services/assistant/actionExecutorService";
-import type { AssistantActionPlan } from "../../services/assistant/actionPlanTypes";
+import type {
+  AssistantActionContext,
+  AssistantActionPlan,
+} from "../../services/assistant/actionPlanTypes";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -51,9 +43,6 @@ type AssistantRouteService = {
   getStatus: typeof getAssistantStatus;
   reindex: typeof reindexAssistantDocs;
   chat: typeof answerAssistantQuestion;
-  previewSiteBuilderPlan: typeof previewGuidedSiteBuilderPlan;
-  executeSiteBuilder: typeof executeGuidedSiteBuilder;
-  validateSiteBuilderRun: typeof validateGuidedSiteBuilderRun;
   planActions: typeof planAssistantActions;
   dryRunActions: typeof dryRunAssistantActionPlan;
   executeActions: typeof executeAssistantActionPlan;
@@ -63,9 +52,6 @@ const defaultService: AssistantRouteService = {
   getStatus: getAssistantStatus,
   reindex: reindexAssistantDocs,
   chat: answerAssistantQuestion,
-  previewSiteBuilderPlan: previewGuidedSiteBuilderPlan,
-  executeSiteBuilder: executeGuidedSiteBuilder,
-  validateSiteBuilderRun: validateGuidedSiteBuilderRun,
   planActions: planAssistantActions,
   dryRunActions: dryRunAssistantActionPlan,
   executeActions: executeAssistantActionPlan,
@@ -111,6 +97,12 @@ const mapAssistantError = (error: unknown) => {
         code: "assistant_budget_exceeded",
         message: "Assistant token budget exceeded",
         status: 429,
+      };
+    case "assistant_llm_unavailable":
+      return {
+        code: "assistant_llm_unavailable",
+        message: "LLM Guide must be configured before site-kit planning or execution",
+        status: 409,
       };
     case "assistant_action_plan_invalid":
       return {
@@ -200,11 +192,31 @@ const withAssistantErrors = async <T>(
   }
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const hasSiteKitContext = (value: unknown) =>
+  isRecord(value) && isRecord(value.siteKit);
+
+const hasSiteKitActions = (plan: unknown) => {
+  if (!isRecord(plan) || !Array.isArray(plan.actions)) return false;
+  return plan.actions.some(
+    (action) => isRecord(action) && typeof action.type === "string" && action.type.startsWith("site-kit.")
+  );
+};
+
 export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps) {
   const { requirePermission, validate } = deps;
   const service: AssistantRouteService = {
     ...defaultService,
     ...(deps.service ?? {}),
+  };
+
+  const ensureLlmGuideAvailable = async () => {
+    const status = await service.getStatus();
+    if (!status.llmAvailable) {
+      throw new Error("assistant_llm_unavailable");
+    }
   };
 
   router.get(
@@ -256,14 +268,20 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
       validate(assistantActionPlanRequestSchema, ctx.body ?? {});
       const body = (ctx.body ?? {}) as {
         prompt: string;
-        context?: { page?: string; locale?: string };
+        context?: AssistantActionContext;
       };
-      return withAssistantErrors(ctx.requestId, async () =>
-        service.planActions({
+      if (hasSiteKitContext(body.context)) {
+        await requirePermission("solution-kits:read")(ctx);
+      }
+      return withAssistantErrors(ctx.requestId, async () => {
+        if (hasSiteKitContext(body.context)) {
+          await ensureLlmGuideAvailable();
+        }
+        return service.planActions({
           prompt: body.prompt,
           context: body.context,
-        })
-      );
+        });
+      });
     }
   );
 
@@ -274,11 +292,17 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
     async (ctx) => {
       validate(assistantActionDryRunRequestSchema, ctx.body ?? {});
       const body = (ctx.body ?? {}) as { plan: AssistantActionPlan };
-      return withAssistantErrors(ctx.requestId, async () =>
-        service.dryRunActions({
+      if (hasSiteKitActions(body.plan)) {
+        await requirePermission("solution-kits:read")(ctx);
+      }
+      return withAssistantErrors(ctx.requestId, async () => {
+        if (hasSiteKitActions(body.plan)) {
+          await ensureLlmGuideAvailable();
+        }
+        return service.dryRunActions({
           plan: body.plan,
-        })
-      );
+        });
+      });
     }
   );
 
@@ -293,52 +317,19 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         plan: AssistantActionPlan;
         idempotencyKey: string;
       };
-      return withAssistantErrors(ctx.requestId, async () =>
-        service.executeActions({
+      if (hasSiteKitActions(body.plan)) {
+        await requirePermission("solution-kits:write")(ctx);
+      }
+      return withAssistantErrors(ctx.requestId, async () => {
+        if (hasSiteKitActions(body.plan)) {
+          await ensureLlmGuideAvailable();
+        }
+        return service.executeActions({
           plan: body.plan,
           idempotencyKey: body.idempotencyKey,
           actorId: ctx.user?.id ?? "",
-        })
-      );
-    }
-  );
-
-  router.post(
-    "/assistant/site-builder/plan",
-    requirePermission("solution-kits:read"),
-    async (ctx) => {
-      validate(assistantSiteBuilderPlanSchema, ctx.body ?? {});
-      const body = (ctx.body ?? {}) as GuidedSiteBuilderPlanInput;
-      return withAssistantErrors(ctx.requestId, async () =>
-        service.previewSiteBuilderPlan(body)
-      );
-    }
-  );
-
-  router.post(
-    "/assistant/site-builder/execute",
-    requirePermission("solution-kits:write"),
-    async (ctx) => {
-      validate(assistantSiteBuilderExecuteSchema, ctx.body ?? {});
-      const body = (ctx.body ?? {}) as GuidedSiteBuilderExecuteInput;
-      return withAssistantErrors(ctx.requestId, async () =>
-        service.executeSiteBuilder({
-          ...body,
-          actorId: ctx.user?.id ?? null,
-        })
-      );
-    }
-  );
-
-  router.post(
-    "/assistant/site-builder/validate",
-    requirePermission("solution-kits:read"),
-    async (ctx) => {
-      validate(assistantSiteBuilderValidateSchema, ctx.body ?? {});
-      const body = (ctx.body ?? {}) as GuidedSiteBuilderValidateRunInput;
-      return withAssistantErrors(ctx.requestId, async () =>
-        service.validateSiteBuilderRun(body)
-      );
+        });
+      });
     }
   );
 }

@@ -315,8 +315,7 @@ Warstwa Admin UI:
 - Konfiguracja globalna pozostaje w `core/admin/ui/settings/AssistantSettingsPage.tsx`; okno rozmowy nie renderuje globalnych ustawien assistant runtime.
 - `core/admin/services/assistantClient.ts` obsluguje:
   - `/assistant/status`, `/assistant/chat`, `/assistant/reindex`,
-  - `/assistant/actions/plan`, `/assistant/actions/dry-run`, `/assistant/actions/execute`,
-  - `/assistant/site-builder/plan`, `/assistant/site-builder/execute`, `/assistant/site-builder/validate`.
+  - `/assistant/actions/plan`, `/assistant/actions/dry-run`, `/assistant/actions/execute`.
 - Globalne ustawienia launchera (`assistant.launcher.avatarEnabled`, `assistant.launcher.avatarAsset`) sa trzymane w `settings`.
 - Legacy per-user klucze assistant UI moga nadal istniec w `user_settings`, ale nie steruja juz widocznoscia floating launchera.
 - `AssistantPanel` wspiera teraz dwa user-facing flow:
@@ -351,19 +350,23 @@ Aktualnie zaimplementowany biznesowy flow:
   - `settingsService`,
 - bez dodawania assistant-only direct DB write paths.
 
-## Assistant Site Builder (Guided Executor)
+## Assistant Site Builder (LLM Guide Site-Kit Entry Point)
 
 Warstwa domain:
 - `core/services/assistant/siteBuilderExecutor.ts` odpowiada za kontrakt:
   - `previewGuidedSiteBuilderPlan` (`plan + actions + modules`),
   - `executeGuidedSiteBuilder` (`execute + validation`),
   - `validateGuidedSiteBuilderRun` (post-run checks i unresolved items).
+- `core/services/assistant/siteBuilderPlanAdapter.ts` trzyma czysty adapter planu site-kit, aby `actionPlannerService` mogl budowac `site-kit.*` akcje bez import-time coupling do DB/runtime installera.
 
 Warstwa API:
-- `POST /assistant/site-builder/plan` (`solution-kits:read`, rate-limit `admin_read`)
-- `POST /assistant/site-builder/execute` (`solution-kits:write`, rate-limit `admin_write`)
-- `POST /assistant/site-builder/validate` (`solution-kits:read`, rate-limit `admin_read`)
-- wszystkie endpointy sa internal i CSRF-protected.
+- Site-kit flow uzywa tylko `/assistant/actions/*`.
+- `POST /assistant/actions/plan` z `context.siteKit` zwraca typed plan z `site-kit.recommend` + `site-kit.install`.
+- `POST /assistant/actions/dry-run` previewuje `site-kit.*` akcje.
+- `POST /assistant/actions/execute` uruchamia `site-kit.install` przez istniejacy solution kit installer i moze wykonac `site-kit.validate`.
+- `site-kit.*` akcje wymagaja `llmAvailable=true`; nie moga przejsc jako docs-only/RAG fallback.
+- Stare `/assistant/site-builder/*` endpointy nie sa rejestrowane jako osobna surface.
+- Wszystkie endpointy sa internal i CSRF-protected.
 
 Warstwa UI:
 - `core/admin/ui/setup/AiSiteWizard.tsx` jako orchestrator stanu/wykonania.

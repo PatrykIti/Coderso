@@ -241,6 +241,8 @@ Rotacja klucza:
 - RBAC:
   - `plan` / `dry-run`: `settings:read` + `content:read`
   - `execute`: `settings:write` + `content:write` + `content:publish`
+  - `site-kit.*` actions additionally require `solution-kits:read` for planning/dry-run and `solution-kits:write` for execution
+  - `site-kit.*` actions require `llmAvailable=true`; they must not run as docs-only/RAG fallback
 - CSRF:
   - wszystkie action endpoints wymagaja `X-CSRF-Token`
 - Rate-limit:
@@ -253,6 +255,7 @@ Rotacja klucza:
   - metadata akcji trafia do audit log przez `assistant.actions.execute`
 - Current first shipped business flow:
   - `house projects catalog`
+  - `site-kit.recommend` / `site-kit.install` / `site-kit.validate`
   - executor reuse’uje obecne serwisy domenowe zamiast direct DB writes.
 
 ## API Keys (v1)

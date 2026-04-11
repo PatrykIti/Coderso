@@ -1,3 +1,15 @@
+import type {
+  SiteBuilderBusinessType,
+  SiteBuilderGoal,
+  SiteBuilderPlanStepId,
+  SolutionKitId,
+} from "../kits/solutionKitTypes";
+import type {
+  GuidedSiteBuilderExecuteResult,
+  GuidedSiteBuilderPlanResult,
+  GuidedSiteBuilderValidationResult,
+} from "./siteBuilderExecutor";
+
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
   | "docs_question"
@@ -10,11 +22,46 @@ export type AssistantIntentFamily =
   | "portfolio_projects"
   | "services_directory"
   | "lead_capture_site"
+  | "site_kit"
   | "unknown";
+
+export type AssistantSiteKitPlanInput = {
+  businessType: SiteBuilderBusinessType;
+  goals: SiteBuilderGoal[];
+  locale: string;
+  region?: string | null;
+  siteName?: string | null;
+  preferredKitId?: SolutionKitId | null;
+  selectedKitId?: SolutionKitId | null;
+  enabledStepIds?: SiteBuilderPlanStepId[];
+};
+
+export type AssistantSiteKitInstallInput = AssistantSiteKitPlanInput & {
+  dryRun?: boolean;
+  continueOnError?: boolean;
+  settingsPatch?: Record<string, unknown>;
+  notes?: string[];
+  preview: GuidedSiteBuilderPlanResult;
+};
+
+export type AssistantSiteKitPreviewDetails = {
+  siteKit?: {
+    plan?: GuidedSiteBuilderPlanResult;
+  };
+};
+
+export type AssistantSiteKitExecutionDetails = {
+  siteKit?: {
+    plan?: GuidedSiteBuilderPlanResult;
+    execution?: GuidedSiteBuilderExecuteResult;
+    validation?: GuidedSiteBuilderValidationResult;
+  };
+};
 
 export type AssistantActionContext = {
   page?: string;
   locale?: string;
+  siteKit?: AssistantSiteKitPlanInput;
 };
 
 export type AssistantAdminContext = {
@@ -166,6 +213,34 @@ export type AssistantPageUpsertAction = {
   };
 };
 
+export type AssistantSiteKitRecommendAction = {
+  id: string;
+  type: "site-kit.recommend";
+  title: string;
+  description: string;
+  input: AssistantSiteKitPlanInput & {
+    preview: GuidedSiteBuilderPlanResult;
+  };
+};
+
+export type AssistantSiteKitInstallAction = {
+  id: string;
+  type: "site-kit.install";
+  title: string;
+  description: string;
+  input: AssistantSiteKitInstallInput;
+};
+
+export type AssistantSiteKitValidateAction = {
+  id: string;
+  type: "site-kit.validate";
+  title: string;
+  description: string;
+  input: {
+    runId: string;
+  };
+};
+
 export type AssistantPlannedAction =
   | AssistantContentRouteUpsertAction
   | AssistantContentTypeUpsertAction
@@ -173,7 +248,10 @@ export type AssistantPlannedAction =
   | AssistantListingQueryUpsertAction
   | AssistantListingTemplateUpsertAction
   | AssistantFormUpsertAction
-  | AssistantPageUpsertAction;
+  | AssistantPageUpsertAction
+  | AssistantSiteKitRecommendAction
+  | AssistantSiteKitInstallAction
+  | AssistantSiteKitValidateAction;
 
 export type AssistantActionPlan = {
   id: string;
@@ -200,6 +278,7 @@ export type AssistantActionPreviewChange = {
   operation: AssistantActionOperation;
   summary: string;
   warnings: string[];
+  details?: AssistantSiteKitPreviewDetails;
 };
 
 export type AssistantActionDryRunResult = {
@@ -223,6 +302,7 @@ export type AssistantActionExecutionItem = {
   publicHref: string | null;
   message: string;
   errorCode?: string;
+  details?: AssistantSiteKitExecutionDetails;
 };
 
 export type AssistantActionExecuteResult = {
@@ -250,7 +330,10 @@ const isActionType = (value: unknown): value is AssistantPlannedAction["type"] =
   value === "listing-query.upsert" ||
   value === "listing-template.upsert" ||
   value === "form.upsert" ||
-  value === "page.upsert";
+  value === "page.upsert" ||
+  value === "site-kit.recommend" ||
+  value === "site-kit.install" ||
+  value === "site-kit.validate";
 
 export const isAssistantActionPlan = (
   value: unknown
@@ -275,6 +358,7 @@ export const isAssistantActionPlan = (
     value.intentFamily !== "portfolio_projects" &&
     value.intentFamily !== "services_directory" &&
     value.intentFamily !== "lead_capture_site" &&
+    value.intentFamily !== "site_kit" &&
     value.intentFamily !== "unknown"
   ) {
     return false;

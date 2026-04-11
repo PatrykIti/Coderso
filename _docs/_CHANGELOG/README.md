@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 580 | 2026-04-11 | TASK-101-09-01-03 single LLM Guide site-kit flow | Assistant/Core |
 | 579 | 2026-04-11 | TASK-101-09 site-builder convergence plan | Docs/Planning |
 | 578 | 2026-04-11 | TASK-101-09 board audit and status cleanup | Docs/Planning |
 | 577 | 2026-04-11 | TASK-101-09-07-04 state-aware refinement closure | Assistant/Product |

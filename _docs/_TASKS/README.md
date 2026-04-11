@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 9 tasks
+- **To Do:** 8 tasks
 - **In Progress:** 17 tasks
-- **Done:** 762 tasks
+- **Done:** 763 tasks
 
 ---
 
@@ -43,7 +43,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
-| TASK-101-09-01-03 | Site Builder Contract Convergence and Legacy Route Retirement | High | Medium | Converge current site-builder workflow into the generic guide engine and remove `/assistant/site-builder/*` as a separate supported flow |
 | TASK-101-09-02-02 | Resource Schema, Widget, and Surface Catalog Context | High | Medium | Expose compact summaries for content types, screens, listings, forms, and widgets |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
@@ -55,7 +54,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling and action gating shipped; canonical `llm-rag` -> `llm-guide` transport migration and single-flow site-builder convergence remain open |
+| TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling, action gating, and single-flow site-kit convergence shipped; canonical `llm-rag` -> `llm-guide` transport migration remains open |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | In progress: docs-only action guard shipped; full legacy transport alias/migration remains open |
 | TASK-101-09-02 | Admin Context Snapshot and Safe Surface Observers | High | Large | In progress: route/module context and executor page-state lookup shipped; full UI snapshot/resource catalog context remains open |
 | TASK-101-09-02-01 | Admin Runtime Context Snapshot and Permission Affordances | High | Medium | In progress: minimal route/module context shipped; visible affordance and permission envelope remain open |
@@ -65,7 +64,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-101-09-04 | Typed Action Registry, Dry-Run, and Execution Pipeline | High | Large | In progress: dry-run/execute pipeline shipped through centralized executor switch; formal action registry and broader conflict model remain open |
 | TASK-101-09-04-01 | Action Registry, Dry-Run Diff, and Conflict Model | High | Medium | In progress: diff objects shipped through `actionDiffService`; formal registry and conflict-code model remain open |
 | TASK-101-09-04-02 | Execution, Idempotency, Revisions, and Audit Hooks | High | Medium | In progress: execute path, audit event, and process-local idempotency shipped; persisted idempotency and broader revision hooks remain open |
-| TASK-101-09-04-03 | Existing Service Adapters and Installer Extraction | High | Medium | In progress: executor reuses existing services for shipped actions; site-builder/kit-installer convergence remains open |
+| TASK-101-09-04-03 | Existing Service Adapters and Installer Extraction | High | Medium | In progress: executor reuses existing services and site-kit installer adapter; broader formal adapter extraction remains open |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: floating assistant now supports typed planning, dry-run, and execute for the house-projects catalog business flow through existing content/listing/page/custom-screen services |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -79,6 +78,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-01-03 | Site Builder Contract Convergence and Legacy Route Retirement | High | Medium | Done: AI Site Wizard/site-kit work now uses `/assistant/actions/*`; `/assistant/site-builder/*` route/client surface is retired |
 | TASK-101-09-06 | Assistant UI, API, Security, Tests, and Closure | High | Large | Done: action endpoints, review/confirm UI, security docs, and targeted test matrix are shipped for the current guide action engine |
 | TASK-101-09-06-03 | Unit, Integration, UI Test Matrix, and Docs Closure | Medium | Medium | Done: planner/UI/client coverage lives in Vitest, while executor/routes/DB/public runtime coverage lives in Bun |
 | TASK-101-09-06-02 | Action Routes, Security Contract, and Error Mapping | High | Medium | Done: `/assistant/actions/*` endpoints, validation, RBAC/CSRF route wiring, and action error mapping are shipped |

@@ -14,6 +14,7 @@ import type {
   AssistantActionDryRunResult,
   AssistantActionExecuteResult,
   AssistantActionPlan,
+  AssistantSiteKitInstallAction,
 } from "../../services/assistant/actionPlanTypes";
 
 export type AssistantMode = "docs-only" | "llm-rag";
@@ -183,6 +184,7 @@ export type GuidedSiteBuilderExecuteRequest = GuidedSiteBuilderPlanRequest & {
   continueOnError?: boolean;
   notes?: string[];
   settingsPatch?: Record<string, unknown>;
+  idempotencyKey?: string;
 };
 
 export type GuidedSiteBuilderExecuteResponse = GuidedSiteBuilderPlanResponse & {
@@ -192,10 +194,6 @@ export type GuidedSiteBuilderExecuteResponse = GuidedSiteBuilderPlanResponse & {
     summary: SolutionKitInstallSummary;
   };
   validation: GuidedSiteBuilderValidationResult;
-};
-
-export type GuidedSiteBuilderValidateRequest = {
-  runId: string;
 };
 
 const ASSISTANT_STATUS_TTL_MS = 10_000;
@@ -278,38 +276,89 @@ export async function executeAssistantActions(payload: AssistantActionExecuteReq
   );
 }
 
-export async function previewAssistantSiteBuilderPlan(payload: GuidedSiteBuilderPlanRequest) {
-  return apiRequest<GuidedSiteBuilderPlanResponse>(
-    "/assistant/site-builder/plan",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-    { withCsrf: true }
-  );
+const buildSiteKitPrompt = (payload: GuidedSiteBuilderPlanRequest) => {
+  const goals = payload.goals.join(", ");
+  return [
+    "Prepare a site kit plan through LLM Guide.",
+    `Business type: ${payload.businessType}.`,
+    `Goals: ${goals}.`,
+    `Locale: ${payload.locale}.`,
+    payload.siteName ? `Site name: ${payload.siteName}.` : null,
+    payload.selectedKitId ? `Selected kit: ${payload.selectedKitId}.` : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+const createSiteKitPlanPayload = (payload: GuidedSiteBuilderPlanRequest) => ({
+  prompt: buildSiteKitPrompt(payload),
+  context: {
+    locale: payload.locale,
+    siteKit: payload,
+  },
+});
+
+const findSiteKitInstallAction = (
+  plan: AssistantActionPlan
+): AssistantSiteKitInstallAction | null =>
+  plan.actions.find(
+    (action): action is AssistantSiteKitInstallAction => action.type === "site-kit.install"
+  ) ?? null;
+
+const readSiteKitPlan = (plan: AssistantActionPlan): GuidedSiteBuilderPlanResponse => {
+  const action = findSiteKitInstallAction(plan);
+  if (!action) {
+    throw new Error("assistant_site_kit_plan_missing");
+  }
+  return action.input.preview;
+};
+
+const createSiteKitExecutionPlan = (
+  plan: AssistantActionPlan,
+  payload: GuidedSiteBuilderExecuteRequest
+): AssistantActionPlan => ({
+  ...plan,
+  actions: plan.actions.map((action) => {
+    if (action.type !== "site-kit.install") return action;
+    return {
+      ...action,
+      input: {
+        ...action.input,
+        dryRun: payload.dryRun,
+        continueOnError: payload.continueOnError,
+        settingsPatch: payload.settingsPatch,
+        notes: payload.notes,
+      },
+    };
+  }),
+});
+
+const createSiteKitIdempotencyKey = () => {
+  const random =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `site-kit-${random}`;
+};
+
+export async function planAssistantSiteKitActions(payload: GuidedSiteBuilderPlanRequest) {
+  const plan = await planAssistantActions(createSiteKitPlanPayload(payload));
+  return readSiteKitPlan(plan);
 }
 
-export async function executeAssistantSiteBuilder(payload: GuidedSiteBuilderExecuteRequest) {
-  return apiRequest<GuidedSiteBuilderExecuteResponse>(
-    "/assistant/site-builder/execute",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-    { withCsrf: true }
-  );
-}
-
-export async function validateAssistantSiteBuilderRun(payload: GuidedSiteBuilderValidateRequest) {
-  return apiRequest<GuidedSiteBuilderValidationResult>(
-    "/assistant/site-builder/validate",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-    { withCsrf: true }
-  );
+export async function executeAssistantSiteKitActions(
+  payload: GuidedSiteBuilderExecuteRequest
+): Promise<GuidedSiteBuilderExecuteResponse> {
+  const plan = await planAssistantActions(createSiteKitPlanPayload(payload));
+  const executionPlan = createSiteKitExecutionPlan(plan, payload);
+  const result = await executeAssistantActions({
+    plan: executionPlan,
+    idempotencyKey: payload.idempotencyKey ?? createSiteKitIdempotencyKey(),
+  });
+  const execution = result.results.find((item) => item.type === "site-kit.install")
+    ?.details?.siteKit?.execution;
+  if (!execution) {
+    throw new Error("assistant_site_kit_execution_missing");
+  }
+  return execution as unknown as GuidedSiteBuilderExecuteResponse;
 }

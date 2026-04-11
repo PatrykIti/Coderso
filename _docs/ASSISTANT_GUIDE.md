@@ -69,12 +69,13 @@ Wizard flow:
 
 ## Execution model
 
-- Planner endpoint (`POST /admin/api/assistant/site-builder/plan`) returns:
+- Planner endpoint (`POST /admin/api/assistant/actions/plan`) with `context.siteKit` returns:
   - typed plan output,
   - explicit action map (`step -> target -> resource`),
   - selected module sets (`required/recommended/optional`).
-- Execute endpoint (`POST /admin/api/assistant/site-builder/execute`) runs deterministic apply/dry-run.
-- Validate endpoint (`POST /admin/api/assistant/site-builder/validate`) returns post-run checks and unresolved items.
+- Dry-run endpoint (`POST /admin/api/assistant/actions/dry-run`) previews `site-kit.*` changes.
+- Execute endpoint (`POST /admin/api/assistant/actions/execute`) runs deterministic apply/dry-run through `site-kit.install`.
+- Validation is returned in `results[].details.siteKit.validation`; explicit run validation is represented by `site-kit.validate`.
 - Backend filters kit resource blueprint by `enabledStepIds` before install run.
 - Run metadata stores wizard snapshot in `run.options.assistantSiteBuilder`:
   - `selectedKitId`
@@ -88,9 +89,8 @@ This metadata is used by UI actions:
 ## Security contract
 
 - Visibility: internal (`/admin/api/*` only)
-- Auth: admin session + RBAC (`solution-kits:read|write`)
+- Auth: admin session + RBAC (`settings:*`, `content:*`, and `solution-kits:read|write` when `site-kit.*` actions are present)
 - Mutations: CSRF protected
 - Rate limits:
-  - `admin_read` for `plan` and `validate`
-  - `admin_write` for `execute`
+  - `assistant` for `plan`, `dry-run`, and `execute`
 - Safety: no raw prompt execution; typed `plan -> review -> execute` only

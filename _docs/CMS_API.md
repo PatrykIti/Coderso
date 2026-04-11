@@ -2428,8 +2428,8 @@ Permissions:
 - `settings:write` dla `POST /assistant/reindex`
 - `settings:read` + `content:read` dla `POST /assistant/actions/plan` i `POST /assistant/actions/dry-run`
 - `settings:write` + `content:write` + `content:publish` dla `POST /assistant/actions/execute`
-- `solution-kits:read` dla `POST /assistant/site-builder/plan` i `POST /assistant/site-builder/validate`
-- `solution-kits:write` dla `POST /assistant/site-builder/execute`
+- dodatkowo `solution-kits:read` dla `POST /assistant/actions/plan` i `POST /assistant/actions/dry-run`, gdy payload dotyczy `context.siteKit` albo `site-kit.*`
+- dodatkowo `solution-kits:write` dla `POST /assistant/actions/execute`, gdy plan zawiera `site-kit.*`
 
 Endpoints:
 - `GET /assistant/status`
@@ -2438,9 +2438,9 @@ Endpoints:
 - `POST /assistant/actions/plan`
 - `POST /assistant/actions/dry-run`
 - `POST /assistant/actions/execute`
-- `POST /assistant/site-builder/plan`
-- `POST /assistant/site-builder/execute`
-- `POST /assistant/site-builder/validate`
+
+Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execution idzie przez `site-kit.*` actions w `/assistant/actions/*`.
+`site-kit.*` wymaga skonfigurowanego `LLM Guide` (`llmAvailable=true`); endpoint zwraca `assistant_llm_unavailable`, gdy provider/API key nie jest gotowy.
 
 `retrievalBackend` ma wartosc `db` dla official assistant corpus.
 
@@ -2611,6 +2611,24 @@ corpus.
 }
 ```
 
+`context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
+
+```json
+{
+  "prompt": "Prepare a site kit plan through LLM Guide.",
+  "context": {
+    "locale": "en",
+    "siteKit": {
+      "businessType": "automotive_workshop",
+      "goals": ["lead_generation", "online_booking"],
+      "locale": "en",
+      "selectedKitId": "automotive-workshop",
+      "enabledStepIds": ["settings", "pages", "qa"]
+    }
+  }
+}
+```
+
 `POST /assistant/actions/plan` response (fragment)
 
 ```json
@@ -2716,100 +2734,42 @@ corpus.
   - `noop`
   - `failed`
 
-`POST /assistant/site-builder/plan` request
+Site-kit action plan fragment:
 
 ```json
 {
-  "businessType": "automotive_workshop",
-  "goals": ["lead_generation", "online_booking"],
-  "locale": "en",
-  "siteName": "AutoFix",
-  "selectedKitId": "automotive-workshop",
-  "enabledStepIds": ["settings", "pages", "qa"]
-}
-```
-
-`POST /assistant/site-builder/plan` response (fragment)
-
-```json
-{
-  "selectedKitId": "automotive-workshop",
-  "selectedKitTitle": "Automotive Workshop",
-  "enabledStepIds": ["settings", "pages", "qa"],
+  "id": "plan-site-kit-automotive-workshop",
+  "status": "ready",
+  "intentId": "site-kit-install",
   "actions": [
     {
-      "id": "pages:page:home",
-      "stepId": "pages",
-      "target": "page",
-      "resourceKey": "home",
-      "title": "Upsert page: Home",
-      "description": "Sync page data, publish state, and SEO defaults.",
-      "required": true
-    }
-  ],
-  "modules": {
-    "required": ["forms"],
-    "optional": [],
-    "recommended": ["booking"]
-  },
-  "plan": {
-    "recommendedKitId": "automotive-workshop",
-    "confidence": 90,
-    "recommendations": [],
-    "steps": [],
-    "settingsPatch": {},
-    "notes": []
-  }
-}
-```
-
-`POST /assistant/site-builder/execute` request (fragment)
-
-```json
-{
-  "businessType": "automotive_workshop",
-  "goals": ["lead_generation", "online_booking"],
-  "locale": "en",
-  "selectedKitId": "automotive-workshop",
-  "enabledStepIds": ["settings", "pages", "qa"],
-  "dryRun": false,
-  "continueOnError": true
-}
-```
-
-`POST /assistant/site-builder/execute` response adds:
-- `execution` (solution kit install payload)
-- `validation`:
-  - `runId`
-  - `status` (`ok|warning|failed`)
-  - `checks[]`
-  - `unresolvedItems[]`
-
-`POST /assistant/site-builder/validate` request
-
-```json
-{
-  "runId": "0f7573a3-9ac9-4bc7-a492-fb11da09c37e"
-}
-```
-
-`POST /assistant/site-builder/validate` response
-
-```json
-{
-  "runId": "0f7573a3-9ac9-4bc7-a492-fb11da09c37e",
-  "status": "warning",
-  "unresolvedItems": ["No form operations were applied."],
-  "checks": [
+      "id": "site-kit-recommend-automotive-workshop",
+      "type": "site-kit.recommend",
+      "title": "Recommend Automotive Workshop",
+      "input": {
+        "businessType": "automotive_workshop",
+        "goals": ["lead_generation", "online_booking"],
+        "locale": "en",
+        "selectedKitId": "automotive-workshop"
+      }
+    },
     {
-      "id": "step.forms",
-      "label": "Forms step",
-      "status": "warning",
-      "details": "No form operations were applied."
+      "id": "site-kit-install-automotive-workshop",
+      "type": "site-kit.install",
+      "title": "Install Automotive Workshop",
+      "input": {
+        "businessType": "automotive_workshop",
+        "goals": ["lead_generation", "online_booking"],
+        "locale": "en",
+        "selectedKitId": "automotive-workshop",
+        "enabledStepIds": ["settings", "pages", "qa"]
+      }
     }
   ]
 }
 ```
+
+`site-kit.install` execution result embeds solution-kit execution and validation under `results[].details.siteKit`.
 
 Error codes:
 - `assistant_disabled`

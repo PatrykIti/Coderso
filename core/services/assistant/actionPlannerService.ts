@@ -4,8 +4,10 @@ import type {
   AssistantIntentFamily,
   AssistantPromptKind,
   AssistantPlanQuestion,
+  AssistantSiteKitPlanInput,
 } from "./actionPlanTypes";
 import { buildAssistantAdminContext } from "./adminContextService";
+import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
 import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
 import { buildCatalogFamilyPlan } from "./blueprints/catalogFamilyBlueprint";
@@ -574,6 +576,74 @@ const buildClarifyingPlan = (
   };
 };
 
+const cloneSiteKitPlanInput = (
+  input: AssistantSiteKitPlanInput
+): AssistantSiteKitPlanInput => ({
+  businessType: input.businessType,
+  goals: [...input.goals],
+  locale: input.locale,
+  region: input.region ?? null,
+  siteName: input.siteName ?? null,
+  preferredKitId: input.preferredKitId ?? null,
+  selectedKitId: input.selectedKitId ?? null,
+  enabledStepIds: input.enabledStepIds ? [...input.enabledStepIds] : undefined,
+});
+
+const buildSiteKitActionPlan = (
+  siteKit: AssistantSiteKitPlanInput
+): AssistantActionPlan => {
+  const requested = cloneSiteKitPlanInput(siteKit);
+  const preview = buildGuidedSiteBuilderPlanResult(requested);
+  const resolvedInput: AssistantSiteKitPlanInput = {
+    ...requested,
+    selectedKitId: preview.selectedKitId,
+    enabledStepIds: [...preview.enabledStepIds],
+  };
+
+  return {
+    id: `plan-site-kit-${preview.selectedKitId}`,
+    status: "ready",
+    intentId: "site-kit-install",
+    promptKind: "setup_request",
+    intentFamily: "site_kit",
+    title: `${preview.selectedKitTitle} Site Kit`,
+    answer: `I can prepare the ${preview.selectedKitTitle} site kit through the shared LLM Guide action flow.`,
+    summary:
+      "Recommend the matching site kit, dry-run the selected steps, then execute the kit installer through typed assistant actions.",
+    confidence: preview.plan.confidence / 100,
+    assumptions: [
+      "The AI Site Wizard is a guided entry point into the same LLM Guide action engine.",
+      "Selected kit steps stay editable before execution and are applied through the solution kit installer.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `site-kit-recommend-${preview.selectedKitId}`,
+        type: "site-kit.recommend",
+        title: `Recommend ${preview.selectedKitTitle}`,
+        description:
+          "Select the most relevant site kit from the business type, goals, locale, and optional preferred kit.",
+        input: {
+          ...resolvedInput,
+          preview,
+        },
+      },
+      {
+        id: `site-kit-install-${preview.selectedKitId}`,
+        type: "site-kit.install",
+        title: `Install ${preview.selectedKitTitle}`,
+        description:
+          "Apply the selected site kit steps through the shared solution kit installer.",
+        input: {
+          ...resolvedInput,
+          continueOnError: true,
+          preview,
+        },
+      },
+    ],
+  };
+};
+
 export type AssistantActionPlanInput = {
   prompt: string;
   context?: AssistantActionContext;
@@ -583,6 +653,10 @@ export const planAssistantActions = (
   input: AssistantActionPlanInput
 ): AssistantActionPlan => {
   const context = buildAssistantAdminContext(input.context);
+  if (input.context?.siteKit) {
+    return buildSiteKitActionPlan(input.context.siteKit);
+  }
+
   const classification = classifyAssistantPrompt(input.prompt);
   const intentFamily =
     classification.promptKind === "refinement_request"

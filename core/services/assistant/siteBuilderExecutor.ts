@@ -1,10 +1,6 @@
 import {
-  type SiteBuilderPlanInput,
-  type SiteBuilderPlanOutput,
   type SiteBuilderPlanStepId,
   type SolutionKitDefinition,
-  type SolutionKitId,
-  solutionKitIds,
   siteBuilderPlanStepIds,
   type SiteBuilderPlanApplyInput,
 } from "../kits/solutionKitTypes";
@@ -13,52 +9,28 @@ import {
   getSolutionKitInstallRun,
   listSolutionKitInstallItems,
 } from "../kits/solutionKitsService";
-import {
-  buildSiteBuilderPlan,
-  filterKitDefinitionByPlan,
-} from "./siteBuilderPlanner";
-import { getSolutionKitFromCatalog } from "../kits/solutionKitsCatalog";
+import { filterKitDefinitionByPlan } from "./siteBuilderPlanner";
 import type {
   SolutionKitInstallItemRecord,
   SolutionKitInstallRunRecord,
 } from "../kits/solutionKitsInstallService";
+import {
+  buildGuidedSiteBuilderPlanResult,
+  collectGuidedSiteBuilderTemplateKeys,
+  defaultSiteBuilderPlanAdapterDeps,
+  isSolutionKitId,
+  normalizeGuidedSiteBuilderList,
+  type GuidedSiteBuilderPlanInput,
+  type GuidedSiteBuilderPlanResult,
+  type SiteBuilderPlanAdapterDeps,
+} from "./siteBuilderPlanAdapter";
 
-export type GuidedSiteBuilderPlanInput = SiteBuilderPlanInput & {
-  selectedKitId?: SolutionKitId | null;
-  enabledStepIds?: SiteBuilderPlanStepId[];
-};
-
-export type GuidedSiteBuilderActionTarget =
-  | "settings"
-  | "content_type"
-  | "form"
-  | "page"
-  | "menu"
-  | "template"
-  | "qa";
-
-export type GuidedSiteBuilderAction = {
-  id: string;
-  stepId: SiteBuilderPlanStepId;
-  title: string;
-  description: string;
-  target: GuidedSiteBuilderActionTarget;
-  resourceKey: string;
-  required: boolean;
-};
-
-export type GuidedSiteBuilderPlanResult = {
-  plan: SiteBuilderPlanOutput;
-  selectedKitId: SolutionKitId;
-  selectedKitTitle: string;
-  enabledStepIds: SiteBuilderPlanStepId[];
-  actions: GuidedSiteBuilderAction[];
-  modules: {
-    required: string[];
-    optional: string[];
-    recommended: string[];
-  };
-};
+export type {
+  GuidedSiteBuilderAction,
+  GuidedSiteBuilderActionTarget,
+  GuidedSiteBuilderPlanInput,
+  GuidedSiteBuilderPlanResult,
+} from "./siteBuilderPlanAdapter";
 
 export type GuidedSiteBuilderValidationCheckStatus = "ok" | "warning" | "failed";
 
@@ -93,25 +65,18 @@ export type GuidedSiteBuilderValidateRunInput = {
   runId: string;
 };
 
-type SiteBuilderExecutorDeps = {
-  buildPlan: typeof buildSiteBuilderPlan;
-  getKitById: (id: SolutionKitId) => SolutionKitDefinition | null;
+type SiteBuilderExecutorDeps = SiteBuilderPlanAdapterDeps & {
   apply: typeof applySolutionKitInstall;
   getRun: typeof getSolutionKitInstallRun;
   listItems: typeof listSolutionKitInstallItems;
 };
 
 const defaultDeps: SiteBuilderExecutorDeps = {
-  buildPlan: buildSiteBuilderPlan,
-  getKitById: getSolutionKitFromCatalog,
+  ...defaultSiteBuilderPlanAdapterDeps,
   apply: applySolutionKitInstall,
   getRun: getSolutionKitInstallRun,
   listItems: listSolutionKitInstallItems,
 };
-
-const stepOrder = new Map<SiteBuilderPlanStepId, number>(
-  siteBuilderPlanStepIds.map((id, index) => [id, index])
-);
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -119,240 +84,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isStepId = (value: unknown): value is SiteBuilderPlanStepId =>
   typeof value === "string" && siteBuilderPlanStepIds.includes(value as SiteBuilderPlanStepId);
 
-const isSolutionKitId = (value: unknown): value is SolutionKitId =>
-  typeof value === "string" && solutionKitIds.includes(value as SolutionKitId);
-
-const normalizeList = (values: Array<string | null | undefined>) => {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const value of values) {
-    if (typeof value !== "string") continue;
-    const trimmed = value.trim();
-    if (!trimmed) continue;
-    const key = trimmed.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(trimmed);
-  }
-  return result.sort((left, right) => left.localeCompare(right));
-};
-
-const normalizeStepIds = (
-  plan: SiteBuilderPlanOutput,
-  input: SiteBuilderPlanStepId[] | undefined
-) => {
-  const allowed = new Set(plan.steps.map((step) => step.id).filter(isStepId));
-  const preferred = Array.isArray(input) ? input.filter((step) => allowed.has(step)) : [];
-  const fixed = plan.steps
-    .filter((step) => step.editable === false)
-    .map((step) => step.id)
-    .filter(isStepId);
-  const merged = [...new Set([...fixed, ...preferred])];
-  if (merged.length > 0) {
-    return merged.sort((left, right) => (stepOrder.get(left) ?? 999) - (stepOrder.get(right) ?? 999));
-  }
-
-  const defaultSteps = plan.steps.map((step) => step.id).filter(isStepId);
-  if (defaultSteps.length > 0) return defaultSteps;
-  return [...siteBuilderPlanStepIds];
-};
-
-const slugToDisplay = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed || trimmed === "/") return "home";
-  return trimmed.replace(/^\/+/, "").replace(/\/+$/, "") || "home";
-};
-
-const collectTemplateKeys = (kit: SolutionKitDefinition) => {
-  const fromPages = kit.resourceBlueprint.pages.map((page) => page.template ?? null);
-  const fromBlueprint = (kit.resourceBlueprint.templates ?? []).map((template) => template.key ?? null);
-  return normalizeList([...fromPages, ...fromBlueprint]);
-};
-
-const buildActionId = (
-  stepId: SiteBuilderPlanStepId,
-  target: GuidedSiteBuilderActionTarget,
-  resourceKey: string
-) => `${stepId}:${target}:${resourceKey}`;
-
-const createAction = (
-  stepId: SiteBuilderPlanStepId,
-  target: GuidedSiteBuilderActionTarget,
-  resourceKey: string,
-  title: string,
-  description: string,
-  required: boolean
-): GuidedSiteBuilderAction => ({
-  id: buildActionId(stepId, target, resourceKey),
-  stepId,
-  target,
-  resourceKey,
-  title,
-  description,
-  required,
-});
-
-const buildActions = (
-  plan: SiteBuilderPlanOutput,
-  kit: SolutionKitDefinition,
-  enabledStepIds: SiteBuilderPlanStepId[]
-): GuidedSiteBuilderAction[] => {
-  const enabled = new Set(enabledStepIds);
-  const byStep = new Map(
-    plan.steps.map((step) => [step.id, step])
-  );
-  const actions: GuidedSiteBuilderAction[] = [];
-
-  if (enabled.has("settings")) {
-    const step = byStep.get("settings");
-    const required = step?.editable === false;
-    const keys = Object.keys(plan.settingsPatch).sort((left, right) => left.localeCompare(right));
-    if (keys.length === 0) {
-      actions.push(
-        createAction(
-          "settings",
-          "settings",
-          "site.defaults",
-          "Apply default site settings",
-          "No explicit settings patch keys were generated for this input.",
-          required
-        )
-      );
-    } else {
-      for (const key of keys) {
-        actions.push(
-          createAction(
-            "settings",
-            "settings",
-            key,
-            `Patch setting: ${key}`,
-            "Apply planner-recommended setting override.",
-            required
-          )
-        );
-      }
-    }
-  }
-
-  if (enabled.has("content-model")) {
-    const step = byStep.get("content-model");
-    const required = step?.editable === false;
-    for (const item of kit.resourceBlueprint.contentTypes) {
-      actions.push(
-        createAction(
-          "content-model",
-          "content_type",
-          item.slug,
-          `Upsert content type: ${item.name}`,
-          "Create or update schema and taxonomy defaults.",
-          required
-        )
-      );
-    }
-  }
-
-  if (enabled.has("forms")) {
-    const step = byStep.get("forms");
-    const required = step?.editable === false;
-    for (const form of kit.resourceBlueprint.forms) {
-      actions.push(
-        createAction(
-          "forms",
-          "form",
-          form.slug,
-          `Upsert form: ${form.name}`,
-          "Sync form settings and fields.",
-          required
-        )
-      );
-    }
-  }
-
-  if (enabled.has("pages")) {
-    const step = byStep.get("pages");
-    const required = step?.editable === false;
-    for (const page of kit.resourceBlueprint.pages) {
-      actions.push(
-        createAction(
-          "pages",
-          "page",
-          slugToDisplay(page.slug),
-          `Upsert page: ${page.title}`,
-          "Sync page data, publish state, and SEO defaults.",
-          required
-        )
-      );
-    }
-    for (const templateKey of collectTemplateKeys(kit)) {
-      actions.push(
-        createAction(
-          "pages",
-          "template",
-          templateKey,
-          `Upsert template seed: ${templateKey}`,
-          "Sync reusable widget template seed for this kit.",
-          required
-        )
-      );
-    }
-  }
-
-  if (enabled.has("navigation")) {
-    const step = byStep.get("navigation");
-    const required = step?.editable === false;
-    for (const menu of kit.resourceBlueprint.menus) {
-      const key = menu.location ?? menu.name;
-      actions.push(
-        createAction(
-          "navigation",
-          "menu",
-          key,
-          `Upsert menu: ${menu.name}`,
-          "Sync menu items and hierarchy.",
-          required
-        )
-      );
-    }
-  }
-
-  if (enabled.has("qa")) {
-    const step = byStep.get("qa");
-    const required = step?.editable === false;
-    actions.push(
-      createAction(
-        "qa",
-        "qa",
-        "post-install-checks",
-        "Run post-install checks",
-        "Verify install summary and unresolved issues before publish.",
-        required
-      )
-    );
-  }
-
-  return actions.sort((left, right) => {
-    const leftStep = stepOrder.get(left.stepId) ?? 999;
-    const rightStep = stepOrder.get(right.stepId) ?? 999;
-    if (leftStep !== rightStep) return leftStep - rightStep;
-    return left.id.localeCompare(right.id);
-  });
-};
-
-const resolveKit = (
-  deps: SiteBuilderExecutorDeps,
-  plan: SiteBuilderPlanOutput,
-  selectedKitId?: SolutionKitId | null
-): SolutionKitDefinition => {
-  const requestedId = selectedKitId ?? plan.recommendedKitId;
-  const selected = deps.getKitById(requestedId);
-  if (!selected) {
-    throw new Error("site_builder_kit_not_found");
-  }
-  return selected;
-};
-
 const mergeNotes = (base: string[], extra: string[] | undefined) =>
-  normalizeList([...(base ?? []), ...(extra ?? [])]);
+  normalizeGuidedSiteBuilderList([...(base ?? []), ...(extra ?? [])]);
 
 const isTemplateSummary = (
   value: unknown
@@ -484,7 +217,7 @@ const buildValidation = (input: {
       });
     }
 
-    const expectedTemplates = collectTemplateKeys(kit).length;
+    const expectedTemplates = collectGuidedSiteBuilderTemplateKeys(kit).length;
     if (expectedTemplates > 0) {
       if (input.templateSummary && input.templateSummary.failed > 0) {
         const detail = `${input.templateSummary.failed} template operation(s) failed.`;
@@ -577,39 +310,16 @@ const readTemplateSummaryFromRunOptions = (
   return isTemplateSummary(summary) ? summary : null;
 };
 
-const buildPlanResult = (
-  deps: SiteBuilderExecutorDeps,
-  input: GuidedSiteBuilderPlanInput
-): GuidedSiteBuilderPlanResult => {
-  const plan = deps.buildPlan(input);
-  const selectedKit = resolveKit(deps, plan, input.selectedKitId);
-  const enabledStepIds = normalizeStepIds(plan, input.enabledStepIds);
-  const actions = buildActions(plan, selectedKit, enabledStepIds);
-
-  return {
-    plan,
-    selectedKitId: selectedKit.id,
-    selectedKitTitle: selectedKit.title,
-    enabledStepIds,
-    actions,
-    modules: {
-      required: normalizeList(selectedKit.manifest?.requiredModules ?? []),
-      optional: normalizeList(selectedKit.manifest?.optionalModules ?? []),
-      recommended: normalizeList(selectedKit.recommendedModules ?? []),
-    },
-  };
-};
-
 export const previewGuidedSiteBuilderPlan = (
   input: GuidedSiteBuilderPlanInput,
   deps: SiteBuilderExecutorDeps = defaultDeps
-): GuidedSiteBuilderPlanResult => buildPlanResult(deps, input);
+): GuidedSiteBuilderPlanResult => buildGuidedSiteBuilderPlanResult(input, deps);
 
 export const executeGuidedSiteBuilder = async (
   input: GuidedSiteBuilderExecuteInput,
   deps: SiteBuilderExecutorDeps = defaultDeps
 ): Promise<GuidedSiteBuilderExecuteResult> => {
-  const preview = buildPlanResult(deps, input);
+  const preview = buildGuidedSiteBuilderPlanResult(input, deps);
   const selectedKit = deps.getKitById(preview.selectedKitId);
   if (!selectedKit) throw new Error("site_builder_kit_not_found");
 

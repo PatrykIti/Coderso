@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  executeAssistantSiteBuilder,
-  previewAssistantSiteBuilderPlan,
+  executeAssistantSiteKitActions,
+  planAssistantSiteKitActions,
   type GuidedSiteBuilderExecuteResponse,
   type GuidedSiteBuilderPlanResponse,
   type GuidedSiteBuilderValidationResult,
@@ -157,7 +157,7 @@ export function AiSiteWizard({ kits, selectedKitId, selectedKit, onSelectKit }: 
     setPlanError(null);
     try {
       const payload = createPlanPayload(draft, selectedKitId, inputEnabledStepIds);
-      const nextPlan = await previewAssistantSiteBuilderPlan(payload);
+      const nextPlan = await planAssistantSiteKitActions(payload);
       setGuidedPlan(nextPlan);
       setEnabledStepIds(nextPlan.enabledStepIds);
       if (selectedKitId !== nextPlan.selectedKitId) {
@@ -223,7 +223,7 @@ export function AiSiteWizard({ kits, selectedKitId, selectedKit, onSelectKit }: 
     setExecutionError(null);
     setIsExecuting(true);
     try {
-      const response = await executeAssistantSiteBuilder(
+      const response = await executeAssistantSiteKitActions(
         createExecutePayload(draft, selectedKitId, enabledStepIds, plan, {
           dryRun,
           continueOnError: true,
@@ -261,7 +261,7 @@ export function AiSiteWizard({ kits, selectedKitId, selectedKit, onSelectKit }: 
     setExecutionError(null);
     setIsExecuting(true);
     try {
-      const response = await executeAssistantSiteBuilder(
+      const response = await executeAssistantSiteKitActions(
         createExecutePayload(draft, selectedKitId, runEnabled, plan, {
           dryRun: false,
           continueOnError: true,

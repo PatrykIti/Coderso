@@ -2,18 +2,22 @@
 
 ## Purpose
 
-Assistant Site Builder is a typed guided workflow for Coderso setup:
+Assistant Site Builder is a typed guided entry point for Coderso setup:
 
 `intake -> plan -> actions -> execute -> validate`
 
 It is designed for non-technical users: every recommendation is mapped to explicit system actions before execution.
 
-The newer `LLM Guide` action engine follows the same explainable pattern inside the floating assistant panel:
+It now runs through the same `LLM Guide` action engine as the floating assistant panel:
 
 `prompt -> typed plan -> dry-run -> execute`
 
 Current implemented guide blueprint:
 - `house-projects-catalog`
+- site-kit guide actions:
+  - `site-kit.recommend`
+  - `site-kit.install`
+  - `site-kit.validate`
 - creates:
   - content type
   - custom screen
@@ -26,6 +30,7 @@ Current implemented guide blueprint:
 
 Core domain service:
 - `core/services/assistant/siteBuilderExecutor.ts`
+- `core/services/assistant/siteBuilderPlanAdapter.ts`
 - generic guide runtime:
   - `core/services/assistant/actionPlannerService.ts`
   - `core/services/assistant/actionExecutorService.ts`
@@ -60,22 +65,24 @@ Execute result extends plan result with:
 
 All endpoints are internal (`/admin/api/*`) and session-protected:
 
-- `POST /assistant/site-builder/plan`
-- `POST /assistant/site-builder/execute`
-- `POST /assistant/site-builder/validate`
 - `POST /assistant/actions/plan`
 - `POST /assistant/actions/dry-run`
 - `POST /assistant/actions/execute`
 
+The old `/assistant/site-builder/*` route family is retired. Site-kit work is expressed as typed actions under `/assistant/actions/*`.
+
 RBAC:
-- `solution-kits:read`: `plan`, `validate`
-- `solution-kits:write`: `execute`
+- base assistant action permissions:
+  - `settings:read` + `content:read`: `plan`, `dry-run`
+  - `settings:write` + `content:write` + `content:publish`: `execute`
+- additional site-kit permissions:
+  - `solution-kits:read` when planning or dry-running `site-kit.*` actions
+  - `solution-kits:write` when executing `site-kit.*` actions
+- site-kit actions require `LLM Guide` availability (`llmAvailable=true`) and must not run as docs-only fallback
 
 Security:
 - CSRF required on all POST endpoints
 - Rate limit:
-  - `admin_read`: `plan`, `validate`
-  - `admin_write`: `execute`
   - `assistant`: action-plan / dry-run / execute endpoints
 
 ## Admin UI
