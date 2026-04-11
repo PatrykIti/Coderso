@@ -5,7 +5,7 @@
 **Category:** Product UX + QA + Assistant  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-05-02  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -63,3 +63,10 @@ expect(plan.actions).toContainAction("page.upsert");
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
+
+## Completion Notes (2026-04-11)
+
+- House-projects prompt produces a ready typed plan.
+- Dry-run and execute flows are implemented through `/assistant/actions/*`.
+- DB-backed and public runtime acceptance tests cover generated catalog page and detail route.
+- Follow-up filters and inquiry form refinements are covered in `TASK-101-09-07-04`.

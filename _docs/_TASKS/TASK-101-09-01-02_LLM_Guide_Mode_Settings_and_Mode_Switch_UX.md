@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-101-09-01-01  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -43,3 +43,9 @@ Przemianowac UI i settings z `LLM + RAG` na `LLM Guide`, tak aby user widzial ro
 
 - `_docs/CMS_API.md`
 - `_docs/ARCHITECTURE.md`
+
+## Completion Notes (2026-04-11)
+
+- Assistant UI and settings copy now use `LLM Guide` user-facing language.
+- Transport value remains backward-compatible as `llm-rag`.
+- Covered through assistant panel/settings UI tests.

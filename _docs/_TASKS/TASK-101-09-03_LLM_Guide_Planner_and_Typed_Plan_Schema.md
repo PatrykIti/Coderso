@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Validation  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-01, TASK-101-09-02  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -76,3 +76,9 @@ return validateStrictPlanSchema(repaired);
 
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
+
+## Audit Notes (2026-04-11)
+
+- `actionPlanTypes` and `actionPlannerService` now own the typed plan contract used by `/assistant/actions/*`.
+- Planner supports setup/refinement/docs classification, generic catalog families, and needs-input fallback.
+- Full LLM-provider-generated planning and strict JSON schema validation for every nested plan field remain open.

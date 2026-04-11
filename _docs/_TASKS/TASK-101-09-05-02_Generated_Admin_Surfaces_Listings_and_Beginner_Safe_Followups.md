@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Coderso UX  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-05-01, TASK-054-22, TASK-055, TASK-059  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -51,3 +51,14 @@ return {
 
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/WIDGET_PACK_MATRIX.md`
+
+## Completion Notes (2026-04-11)
+
+- Blueprint outputs map to existing Coderso surfaces:
+  - content type,
+  - custom screen,
+  - listing query,
+  - listing template,
+  - public page,
+  - optional inquiry form on follow-up.
+- Follow-up refinement now supports filters and inquiry forms for the house-projects catalog flow.

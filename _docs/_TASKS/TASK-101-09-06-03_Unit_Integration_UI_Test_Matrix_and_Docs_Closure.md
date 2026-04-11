@@ -5,7 +5,7 @@
 **Category:** QA + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-06-02  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -49,3 +49,9 @@ Domknac testy wszystkich warstw i zsynchronizowac docs/board/changelog po wdroze
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md`
+
+## Completion Notes (2026-04-11)
+
+- Planner/UI/client tests are covered in Vitest.
+- Executor/route/DB/public runtime tests are covered in Bun.
+- Docs, task board, and changelog were synchronized for the shipped action-engine slices.

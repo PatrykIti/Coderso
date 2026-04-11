@@ -5,7 +5,7 @@
 **Category:** Admin/UI + API + Security + QA  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-01, TASK-101-09-02, TASK-101-09-03, TASK-101-09-04, TASK-101-09-05  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -54,3 +54,10 @@ Preferred approach:
 - `_docs/SECURITY_SPEC.md`
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/*.md`
+
+## Completion Notes (2026-04-11)
+
+- Floating assistant panel supports plan, dry-run, execute, and result rendering.
+- Internal assistant action endpoints are implemented and tested.
+- Security contract is documented in API/security docs.
+- Unit, UI, route, DB-backed, and public runtime acceptance coverage exists for the shipped guide slice.

@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Validation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-04  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -52,3 +52,9 @@ return {
 ## Documentation Updates Required
 
 - `_docs/CMS_API.md`
+
+## Audit Notes (2026-04-11)
+
+- Dry-run diff objects are implemented through `actionDiffService`.
+- Unsupported-action handling is covered by typed discriminated unions.
+- Dedicated registry module and broader conflict-code model remain open.

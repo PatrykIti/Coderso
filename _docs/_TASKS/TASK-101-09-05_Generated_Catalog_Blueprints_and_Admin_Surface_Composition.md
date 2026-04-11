@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Coderso + Product UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-03, TASK-101-09-04, TASK-054-22, TASK-055, TASK-059  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -84,3 +84,9 @@ if (intent.type === "catalog" && intent.domain === "house-projects") {
 - `_docs/ARCHITECTURE.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
 - `_docs/WIDGET_PACK_MATRIX.md`
+
+## Completion Notes (2026-04-11)
+
+- Generic catalog family blueprint engine is implemented.
+- House projects, product catalog, portfolio projects, and services directory presets now generate typed plans.
+- Generated plans compose existing Coderso surfaces: content type, custom screen, listing query/template, page, and forms when needed by refinement.

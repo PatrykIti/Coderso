@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-04, TASK-101-05, TASK-101-07, TASK-101-08  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -81,3 +81,10 @@ function normalizeAssistantMode(raw: unknown): AssistantMode {
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/SECURITY_SPEC.md`
+
+## Audit Notes (2026-04-11)
+
+- User-facing `LLM Guide` labeling is shipped in assistant/settings UI.
+- `docs-only` remains read-only and action execution is routed through separate `/assistant/actions/*` endpoints.
+- The transport/settings value is still `llm-rag`; full canonical value migration to `llm-guide` remains open.
+- `TASK-101-09-01-03` site-builder convergence remains open.

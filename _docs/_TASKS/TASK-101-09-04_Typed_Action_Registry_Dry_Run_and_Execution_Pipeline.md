@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Core/Services + Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-03  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -117,3 +117,9 @@ for (const action of plan.actions) {
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/SECURITY_SPEC.md`
+
+## Audit Notes (2026-04-11)
+
+- `actionExecutorService` and `actionDiffService` implement the shipped dry-run/execute pipeline.
+- Typed actions currently use a centralized executor switch rather than a separate `actionRegistry.ts`.
+- Broader conflict model and formal registry module remain open.

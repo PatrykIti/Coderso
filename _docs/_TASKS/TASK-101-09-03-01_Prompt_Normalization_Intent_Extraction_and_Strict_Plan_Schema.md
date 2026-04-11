@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Validation  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-03  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -46,3 +46,8 @@ type AssistantActionPlan =
 
 - `_docs/CMS_API.md`
 - `_docs/ARCHITECTURE.md`
+
+## Audit Notes (2026-04-11)
+
+- Prompt classification and typed plan types are implemented.
+- Plan validation currently uses TypeScript type guards and route-level schemas; full nested JSON schema ownership remains open.

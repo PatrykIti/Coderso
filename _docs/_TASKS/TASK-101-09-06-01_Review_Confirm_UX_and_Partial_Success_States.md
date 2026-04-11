@@ -5,7 +5,7 @@
 **Category:** Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-06  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -51,3 +51,8 @@ Assistant UI musi pozwalac userowi:
 
 - `_docs/CMS_API.md`
 - `_docs/ARCHITECTURE.md`
+
+## Completion Notes (2026-04-11)
+
+- `ActionPlanReview` and `ActionExecutionResult` are implemented.
+- Assistant panel interaction tests cover plan, dry-run, execute, and needs-input rendering.

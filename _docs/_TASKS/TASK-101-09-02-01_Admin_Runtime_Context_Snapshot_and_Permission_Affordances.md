@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-02  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -51,3 +51,8 @@ return {
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
+
+## Audit Notes (2026-04-11)
+
+- Basic route/module context exists in `adminContextService`.
+- Visible action affordances and permission envelope are not yet implemented as a full snapshot contract.

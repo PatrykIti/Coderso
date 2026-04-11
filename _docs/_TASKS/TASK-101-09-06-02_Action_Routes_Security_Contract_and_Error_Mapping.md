@@ -5,7 +5,7 @@
 **Category:** API + Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-04, TASK-101-09-06-01  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -69,3 +69,9 @@ router.post("/assistant/actions/execute", requirePermission("settings:write"), a
 
 - `_docs/CMS_API.md`
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes (2026-04-11)
+
+- `/assistant/actions/plan`, `/assistant/actions/dry-run`, and `/assistant/actions/execute` are implemented.
+- Routes enforce internal admin auth/RBAC/CSRF through the shared route pipeline.
+- Error mapping covers action-plan invalid/not-ready, idempotency, actor, and dependency failures.

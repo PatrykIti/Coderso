@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Domain Services  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-04-02  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -62,3 +62,9 @@ const upsertPageFromBlueprint = sharedPageUpsertHelper(seed, deps);
 
 - `_docs/ARCHITECTURE.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md`
+
+## Audit Notes (2026-04-11)
+
+- The action executor reuses existing services for content types, custom screens, listings, pages, forms, settings, and audit.
+- No assistant-only direct DB write path was introduced for the shipped actions.
+- Site-builder/kit-installer convergence and shared helper extraction remain open.

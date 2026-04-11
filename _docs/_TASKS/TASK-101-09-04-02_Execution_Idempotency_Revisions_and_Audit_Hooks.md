@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Security + Runtime  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-04-01  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -49,3 +49,9 @@ await saveIdempotencyResult(key, result);
 
 - `_docs/SECURITY_SPEC.md`
 - `_docs/ARCHITECTURE.md`
+
+## Audit Notes (2026-04-11)
+
+- Execute path, audit event, and retry-safe idempotency cache are implemented.
+- Idempotency is currently process-local memory, not persisted storage.
+- Broader revision integration remains open where individual domain resources need richer revision hooks.

@@ -5,7 +5,7 @@
 **Category:** Core/Assistant  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-03-01  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -46,3 +46,8 @@ return withSafeDefaults(draft, { visibility: "draft", createCustomScreen: true }
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
+
+## Audit Notes (2026-04-11)
+
+- Local deterministic routing, needs-input fallback, and refinement heuristics are implemented in `actionPlannerService`.
+- A separate `actionPlanHeuristics.ts` module and broader repair/recovery matrix remain open.

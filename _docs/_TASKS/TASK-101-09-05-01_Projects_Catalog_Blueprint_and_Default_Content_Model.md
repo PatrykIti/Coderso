@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Content Modeling  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-101-09-05  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -47,3 +47,8 @@ return {
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
+
+## Completion Notes (2026-04-11)
+
+- House-projects catalog content model is implemented as a preset in the generic catalog family blueprint engine.
+- The schema includes title, slug, summary, description, media, specs, pricing/location, and project status fields.

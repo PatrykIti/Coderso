@@ -5,7 +5,7 @@
 **Category:** Core/Assistant  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-101-09-01  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -45,3 +45,9 @@ if (mode === "docs-only") {
 
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
+
+## Audit Notes (2026-04-11)
+
+- `docs-only` path remains read-only in current assistant flow.
+- Action planning/execution is only triggered from the LLM guide path in the floating assistant panel.
+- Full `llm-rag -> llm-guide` canonical alias/migration remains open.

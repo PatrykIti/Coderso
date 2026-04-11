@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Admin/UI + CMS Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-01, TASK-054, TASK-059, TASK-061, TASK-063  
-**Status:** To Do
+**Status:** In Progress (2026-04-11)
 
 ---
 
@@ -65,3 +65,9 @@ return clampAndRedactContext(context, MAX_ASSISTANT_CONTEXT_BYTES);
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md`
 - `_docs/SECURITY_SPEC.md`
+
+## Audit Notes (2026-04-11)
+
+- Minimal route/locale/module context exists through `adminContextService`.
+- Executor can inspect current page state for listing query/template ids during refinement.
+- Full client-side UI snapshot, permission envelope, and resource catalog snapshot remain open.
