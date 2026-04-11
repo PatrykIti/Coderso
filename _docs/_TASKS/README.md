@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 12 tasks
+- **To Do:** 7 tasks
 - **In Progress:** 17 tasks
-- **Done:** 763 tasks
+- **Done:** 768 tasks
 
 ---
 
@@ -43,11 +43,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
-| TASK-101-09-02-02 | Resource Schema, Widget, and Surface Catalog Context | High | Large | Expose bounded, redacted admin resource catalogs for LLM Guide planning |
-| TASK-101-09-02-02-01 | Resource Catalog Types and Pure Normalizers | High | Medium | Define Bun-free catalog snapshot types, redaction, clamping, and deterministic normalization |
-| TASK-101-09-02-02-02 | Resource Catalog Builder and Lazy Default Deps | High | Medium | Build injected-deps catalog aggregation with lazy DB/runtime default deps |
-| TASK-101-09-02-02-03 | Action Plan Context Enrichment and Route Contract | High | Medium | Attach resource catalogs to the existing `/assistant/actions/plan` flow without adding a second mutation path |
-| TASK-101-09-02-02-04 | Resource Catalog Test, Docs, and Closure | Medium | Small | Run lane-specific validation and close docs/changelog/board for the resource catalog context slice |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -60,8 +55,8 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling, action gating, and single-flow site-kit convergence shipped; canonical `llm-rag` -> `llm-guide` transport migration remains open |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | In progress: docs-only action guard shipped; full legacy transport alias/migration remains open |
-| TASK-101-09-02 | Admin Context Snapshot and Safe Surface Observers | High | Large | In progress: route/module context and executor page-state lookup shipped; full UI snapshot/resource catalog context remains open |
-| TASK-101-09-02-01 | Admin Runtime Context Snapshot and Permission Affordances | High | Medium | In progress: minimal route/module context shipped; visible affordance and permission envelope remain open |
+| TASK-101-09-02 | Admin Context Snapshot and Safe Surface Observers | High | Large | In progress: route/module context, executor page-state lookup, and resource catalog snapshot shipped; full UI snapshot/permission envelope remains open |
+| TASK-101-09-02-01 | Admin Runtime Context Snapshot and Permission Affordances | High | Medium | In progress: minimal route/module and resource catalog context shipped; visible affordance and permission envelope remain open |
 | TASK-101-09-03 | LLM Guide Planner and Typed Plan Schema | High | Large | In progress: typed plans, classification, presets, and needs-input fallback shipped; LLM-provider generated planning and strict nested JSON schema remain open |
 | TASK-101-09-03-01 | Prompt Normalization, Intent Extraction, and Strict Plan Schema | High | Medium | In progress: typed plan model and prompt classification shipped; full nested JSON schema validation remains open |
 | TASK-101-09-03-02 | Local Heuristics, Plan Repair, and Missing Context Questions | Medium | Medium | In progress: deterministic local routing/refinement heuristics shipped; separate repair module and broader recovery matrix remain open |
@@ -82,6 +77,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-02-02 | Resource Schema, Widget, and Surface Catalog Context | High | Large | Done: `/assistant/actions/plan` can attach bounded, redacted admin resource catalogs for LLM Guide planning |
+| TASK-101-09-02-02-04 | Resource Catalog Test, Docs, and Closure | Medium | Small | Done: validation, docs, changelog, and board sync for resource catalog context |
+| TASK-101-09-02-02-03 | Action Plan Context Enrichment and Route Contract | High | Medium | Done: `includeResourceCatalog` enriches the existing action planning route without accepting client-supplied catalogs |
+| TASK-101-09-02-02-02 | Resource Catalog Builder and Lazy Default Deps | High | Medium | Done: injected-deps builder and lazy default deps aggregate content, screen, listing, form, and widget summaries |
+| TASK-101-09-02-02-01 | Resource Catalog Types and Pure Normalizers | High | Medium | Done: pure snapshot types, redaction, clamping, and deterministic normalization are covered in Vitest |
 | TASK-101-09-01-03 | Site Builder Contract Convergence and Legacy Route Retirement | High | Medium | Done: AI Site Wizard/site-kit work now uses `/assistant/actions/*`; `/assistant/site-builder/*` route/client surface is retired |
 | TASK-101-09-06 | Assistant UI, API, Security, Tests, and Closure | High | Large | Done: action endpoints, review/confirm UI, security docs, and targeted test matrix are shipped for the current guide action engine |
 | TASK-101-09-06-03 | Unit, Integration, UI Test Matrix, and Docs Closure | Medium | Medium | Done: planner/UI/client coverage lives in Vitest, while executor/routes/DB/public runtime coverage lives in Bun |

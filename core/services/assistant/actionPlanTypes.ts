@@ -9,6 +9,7 @@ import type {
   GuidedSiteBuilderPlanResult,
   GuidedSiteBuilderValidationResult,
 } from "./siteBuilderExecutor";
+import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
@@ -62,11 +63,14 @@ export type AssistantActionContext = {
   page?: string;
   locale?: string;
   siteKit?: AssistantSiteKitPlanInput;
+  includeResourceCatalog?: boolean;
+  resourceCatalog?: AssistantResourceCatalogSnapshot;
 };
 
 export type AssistantAdminContext = {
   route: string | null;
   locale: string | null;
+  resourceCatalog: AssistantResourceCatalogSnapshot | null;
   area: "dashboard" | "pages" | "posts" | "coderso" | "settings" | "other";
   codersoModule:
     | "engine"

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import { ApiError } from "../../../core/server/errorHandler";
 import { registerAssistantRoutes } from "../../../core/server/routes/assistantRoutes";
+import { validate as validateSchema } from "../../../core/server/validation/schemaValidator";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 
 type RouteContext = {
@@ -274,6 +275,117 @@ test("assistant action plan route returns typed plan payload", async () => {
     status: "ready",
     intentId: "house-projects-catalog",
   });
+});
+
+test("assistant action plan route attaches resource catalog context when requested", async () => {
+  const { router, routes } = makeRouter();
+  let receivedContext: unknown = null;
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      getStatus: async () => ({
+        enabled: true,
+        defaultMode: "llm-rag",
+        retrievalBackend: "db",
+        llmAvailable: true,
+        indexReady: true,
+        indexBuilding: false,
+        indexError: null,
+        lastReindexAt: null,
+        docCount: 12,
+        chunkCount: 44,
+      }),
+      buildResourceCatalog: async () => ({
+        schemaVersion: 1,
+        generatedAt: "2026-04-11T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 0,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        widgets: [],
+        warnings: [],
+      }),
+      planActions: async (payload) => {
+        receivedContext = payload.context;
+        return buildHouseProjectsCatalogPlan();
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const result = await handler?.({
+    params: {},
+    query: {},
+    body: {
+      prompt: "potrzebuje katalogu produktow",
+      context: {
+        page: "/admin/coderso/widgets",
+        locale: "pl-PL",
+        includeResourceCatalog: true,
+      },
+    },
+    requestId: "req-plan-catalog",
+    user: { id: "user-1" },
+  });
+
+  expect(result).toMatchObject({ status: "ready" });
+  expect(receivedContext).toMatchObject({
+    includeResourceCatalog: true,
+    resourceCatalog: {
+      schemaVersion: 1,
+      contentTypes: [{ slug: "products" }],
+    },
+  });
+});
+
+test("assistant action plan route rejects unknown context fields", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: validateSchema,
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/plan");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: {
+        prompt: "potrzebuje katalogu produktow",
+        context: {
+          page: "/admin/coderso/widgets",
+          resourceCatalog: {},
+        },
+      },
+      requestId: "req-plan-invalid-context",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("validation_error");
+    expect(apiError.status).toBe(400);
+  }
 });
 
 test("assistant action plan route blocks site-kit planning when LLM Guide is unavailable", async () => {

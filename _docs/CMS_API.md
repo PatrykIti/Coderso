@@ -2606,10 +2606,15 @@ corpus.
   "prompt": "potrzebuje strony na ktore bede mogl prezentowac swoje produkty czyli projekty domow, caly katalog",
   "context": {
     "page": "/admin/coderso/widgets",
-    "locale": "pl-PL"
+    "locale": "pl-PL",
+    "includeResourceCatalog": true
   }
 }
 ```
+
+`includeResourceCatalog=true` enrichuje server-side planning context o bounded/redacted snapshot admin resources dla `LLM Guide`.
+Snapshot obejmuje content types, custom screens, listings, forms i widgets/templates.
+Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fields sa odrzucane.
 
 `context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
 

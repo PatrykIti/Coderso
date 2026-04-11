@@ -605,14 +605,16 @@ export function AssistantPanel() {
         if (currentMode === "llm-rag" && isLikelyGuidePlanningPrompt(outgoingMessage)) {
           const plan = await planAssistantActions({
             prompt: outgoingMessage,
-            context:
-              typeof window === "undefined"
-                ? undefined
+            context: {
+              ...(typeof window === "undefined"
+                ? {}
                 : {
                     page: window.location.pathname,
                     locale:
                       typeof navigator !== "undefined" ? navigator.language : undefined,
-                  },
+                  }),
+              includeResourceCatalog: true,
+            },
           });
 
           setActivePlan(plan);

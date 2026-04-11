@@ -331,6 +331,19 @@ Zamiast tego:
 - `core/server/routes/assistantRoutes.ts` wystawia internal action endpoints,
 - `core/admin/ui/assistant/components/ActionPlanReview.tsx` i `ActionExecutionResult.tsx`
   domykaja review/confirm UX w panelu asystenta.
+- `core/services/assistant/adminContextCatalogNormalizer.ts` i `adminContextCatalogs.ts`
+  buduja bounded/redacted resource catalog snapshot dla `LLM Guide` bez dodawania osobnego flow.
+
+Resource catalog context:
+- `POST /assistant/actions/plan` moze otrzymac `context.includeResourceCatalog=true`.
+- Route enrichuje wtedy context o `resourceCatalog` z:
+  - content types,
+  - custom screens,
+  - listing queries/templates,
+  - forms + fields,
+  - widgets/templates.
+- Snapshot jest schema-versioned, deterministic, limitowany budzetem i redaguje secret-like keys.
+- Docs-only chat nie hydratuje resource catalogu i pozostaje docs-corpus driven.
 
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,

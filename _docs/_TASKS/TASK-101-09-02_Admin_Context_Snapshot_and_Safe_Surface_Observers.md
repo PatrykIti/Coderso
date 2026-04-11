@@ -70,4 +70,5 @@ return clampAndRedactContext(context, MAX_ASSISTANT_CONTEXT_BYTES);
 
 - Minimal route/locale/module context exists through `adminContextService`.
 - Executor can inspect current page state for listing query/template ids during refinement.
-- Full client-side UI snapshot, permission envelope, and resource catalog snapshot remain open.
+- Resource catalog snapshot exists for LLM Guide action planning through `/assistant/actions/plan`.
+- Full client-side UI snapshot and permission envelope remain open.

@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Coderso  
 **Estimated Effort:** Large
 **Dependencies:** TASK-101-09-02-01, TASK-054-22, TASK-054-16, TASK-055, TASK-059  
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -267,3 +267,22 @@ Must cover manually in review:
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md` if the action plan context payload changes
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes (2026-04-11)
+
+- Added pure resource catalog snapshot types and normalizer with redaction, deterministic sorting, and budget truncation.
+- Added async injected-deps catalog builder plus lazy default deps for DB/runtime-backed services.
+- Added `context.includeResourceCatalog` to `/assistant/actions/plan`; server-side route enrichment attaches `resourceCatalog` before planner execution.
+- Kept docs-only chat separate; resource catalog hydration only happens through the LLM Guide action planning endpoint.
+- Added strict route validation coverage proving client-supplied `context.resourceCatalog` is rejected.
+- Updated docs/security notes for no-secret/no-entry-values behavior.
+
+## Validation (2026-04-11)
+
+- `bunx vitest run tests/vitest/assistant/admin-context-catalog-normalizer.test.ts tests/vitest/assistant/admin-context-catalogs.test.ts --config vitest.config.ts`
+- `bun test tests/integration/routes/assistant.test.ts`
+- `bunx vitest run tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/ui/assistant-panel-interaction.test.tsx tests/vitest/assistant/admin-context-catalog-normalizer.test.ts tests/vitest/assistant/admin-context-catalogs.test.ts --config vitest.config.ts`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/unit/assistant/siteBuilderExecutor.test.ts`
+- `bunx vitest run tests/vitest/admin/assistantClient.test.ts tests/vitest/ui/ai-site-wizard.test.tsx --config vitest.config.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

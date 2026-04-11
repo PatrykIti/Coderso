@@ -5,7 +5,7 @@
 **Category:** QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-101-09-02-02-01, TASK-101-09-02-02-02, TASK-101-09-02-02-03
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -46,3 +46,14 @@ Domknac TASK-101-09-02-02 po implementacji katalogow zasobow: uruchomic wlasciwe
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md` if request context contract changed
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes (2026-04-11)
+
+- Updated architecture, CMS API, security spec, task board, parent audit notes, and changelog.
+- DB-backed default-deps smoke was not run separately because targeted implementation uses injected deps and existing route/planner suites; default deps remain lazy and require live DB/runtime data for meaningful smoke.
+
+## Validation (2026-04-11)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- targeted Bun/Vitest suites listed in parent TASK-101-09-02-02 validation notes

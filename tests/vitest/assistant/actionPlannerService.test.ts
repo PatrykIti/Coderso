@@ -190,3 +190,49 @@ test("planAssistantActions builds site-kit actions from guided site-kit context"
   expect(install?.input.preview.selectedKitId).toBe("automotive-workshop");
   expect(install?.input.preview.enabledStepIds).toEqual(["settings", "pages", "qa"]);
 });
+
+test("planAssistantActions accepts enriched resource catalog context without DB imports", () => {
+  const plan = planAssistantActions({
+    prompt: "potrzebuje katalogu produktow dla sklepu z meblami",
+    context: {
+      page: "/admin/coderso/engine",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-11T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 3,
+            fields: [
+              {
+                name: "title",
+                type: "string",
+                required: true,
+                label: "Title",
+                orderIndex: null,
+              },
+            ],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("product_catalog");
+  expect(plan.intentId).toBe("product-catalog");
+});

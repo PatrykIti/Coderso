@@ -43,6 +43,7 @@ export const buildAssistantAdminContext = (
   return {
     route,
     locale,
+    resourceCatalog: input?.resourceCatalog ?? null,
     area: resolveArea(route),
     codersoModule: resolveCodersoModule(route),
   };

@@ -268,6 +268,13 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
 
     expect(view.container.textContent).toContain("House Projects Catalog");
     expect(assistantClient.planAssistantActions).toHaveBeenCalledTimes(1);
+    expect(assistantClient.planAssistantActions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          includeResourceCatalog: true,
+        }),
+      })
+    );
 
     const dryRunButton = findButton(view.container, "Dry-run changes");
     if (!dryRunButton) throw new Error("missing_dry_run_button");

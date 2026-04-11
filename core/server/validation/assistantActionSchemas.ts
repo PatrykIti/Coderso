@@ -76,6 +76,7 @@ export const assistantActionPlanRequestSchema = {
         page: { type: "string", minLength: 1, maxLength: 200 },
         locale: { type: "string", minLength: 2, maxLength: 16 },
         siteKit: siteKitPlanContextSchema,
+        includeResourceCatalog: { type: "boolean" },
       },
     },
   },

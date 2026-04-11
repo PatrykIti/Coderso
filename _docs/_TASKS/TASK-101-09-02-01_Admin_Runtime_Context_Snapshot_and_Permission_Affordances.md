@@ -55,4 +55,5 @@ return {
 ## Audit Notes (2026-04-11)
 
 - Basic route/module context exists in `adminContextService`.
+- Resource catalog context is covered by completed TASK-101-09-02-02.
 - Visible action affordances and permission envelope are not yet implemented as a full snapshot contract.

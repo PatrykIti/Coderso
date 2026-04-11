@@ -5,7 +5,7 @@
 **Category:** API + Core/Assistant
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-02-02-02, TASK-101-09-01-03
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -80,3 +80,15 @@ router.post("/assistant/actions/plan", ..., async (ctx) => {
 
 - `_docs/CMS_API.md` if request context contract changes.
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes (2026-04-11)
+
+- Added `context.includeResourceCatalog` to the assistant action plan request schema.
+- `/assistant/actions/plan` now hydrates resource catalog context server-side when requested and LLM Guide is available.
+- Client-supplied `context.resourceCatalog` remains rejected by strict validation.
+- Floating assistant `LLM Guide` planning prompts request resource catalog enrichment; docs-only chat remains unchanged.
+
+## Validation (2026-04-11)
+
+- `bun test tests/integration/routes/assistant.test.ts`
+- `bunx vitest run tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/ui/assistant-panel-interaction.test.tsx --config vitest.config.ts`

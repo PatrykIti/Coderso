@@ -5,7 +5,7 @@
 **Category:** Core/Assistant
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-02-02
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -81,3 +81,12 @@ export function normalizeAssistantResourceCatalog(raw, options) {
 ## Documentation Updates Required
 
 - Covered by parent TASK-101-09-02-02 closure docs.
+
+## Completion Notes (2026-04-11)
+
+- Added `adminContextTypes.ts` and `adminContextCatalogNormalizer.ts`.
+- Covered deterministic sorting, clamping, redaction, content type/form/listing/widget summaries, and omission of React editor/render implementation details.
+
+## Validation (2026-04-11)
+
+- `bunx vitest run tests/vitest/assistant/admin-context-catalog-normalizer.test.ts --config vitest.config.ts`

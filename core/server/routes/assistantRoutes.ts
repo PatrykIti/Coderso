@@ -19,6 +19,7 @@ import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
 } from "../../services/assistant/actionExecutorService";
+import { buildAssistantResourceCatalogSnapshotWithDefaultDeps } from "../../services/assistant/adminContextCatalogs";
 import type {
   AssistantActionContext,
   AssistantActionPlan,
@@ -46,6 +47,7 @@ type AssistantRouteService = {
   planActions: typeof planAssistantActions;
   dryRunActions: typeof dryRunAssistantActionPlan;
   executeActions: typeof executeAssistantActionPlan;
+  buildResourceCatalog: typeof buildAssistantResourceCatalogSnapshotWithDefaultDeps;
 };
 
 const defaultService: AssistantRouteService = {
@@ -55,6 +57,7 @@ const defaultService: AssistantRouteService = {
   planActions: planAssistantActions,
   dryRunActions: dryRunAssistantActionPlan,
   executeActions: executeAssistantActionPlan,
+  buildResourceCatalog: buildAssistantResourceCatalogSnapshotWithDefaultDeps,
 };
 
 export type AssistantRouteDeps = {
@@ -270,16 +273,23 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         prompt: string;
         context?: AssistantActionContext;
       };
+      const includeResourceCatalog = body.context?.includeResourceCatalog === true;
       if (hasSiteKitContext(body.context)) {
         await requirePermission("solution-kits:read")(ctx);
       }
       return withAssistantErrors(ctx.requestId, async () => {
-        if (hasSiteKitContext(body.context)) {
+        if (hasSiteKitContext(body.context) || includeResourceCatalog) {
           await ensureLlmGuideAvailable();
         }
+        const context: AssistantActionContext | undefined = includeResourceCatalog
+          ? {
+              ...(body.context ?? {}),
+              resourceCatalog: await service.buildResourceCatalog({}),
+            }
+          : body.context;
         return service.planActions({
           prompt: body.prompt,
-          context: body.context,
+          context,
         });
       });
     }

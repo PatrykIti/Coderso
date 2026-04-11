@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Coderso Services
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-02-02-01
-**Status:** To Do
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -67,3 +67,12 @@ export async function buildAssistantResourceCatalogSnapshot(input, deps) {
 ## Documentation Updates Required
 
 - Covered by parent TASK-101-09-02-02 closure docs.
+
+## Completion Notes (2026-04-11)
+
+- Added `adminContextCatalogs.ts` with injected deps and lazy default deps.
+- Builder joins forms with fields, reuses existing domain services through lazy imports, and returns machine-readable unavailable-group warnings on partial failures.
+
+## Validation (2026-04-11)
+
+- `bunx vitest run tests/vitest/assistant/admin-context-catalogs.test.ts --config vitest.config.ts`

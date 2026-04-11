@@ -251,6 +251,9 @@ Rotacja klucza:
   - brak public write surface,
   - brak arbitralnego kodu,
   - plan payload przechodzi strict top-level validation i wewnetrzna walidacje typed planu,
+  - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
+  - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
+  - resource catalog nie zawiera form submissions, entry values, provider credentials, API key material ani secret-like config keys,
   - `execute` wymaga `idempotencyKey`,
   - metadata akcji trafia do audit log przez `assistant.actions.execute`
 - Current first shipped business flow:
