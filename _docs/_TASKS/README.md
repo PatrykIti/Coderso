@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 8 tasks
+- **To Do:** 12 tasks
 - **In Progress:** 17 tasks
 - **Done:** 763 tasks
 
@@ -43,7 +43,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
-| TASK-101-09-02-02 | Resource Schema, Widget, and Surface Catalog Context | High | Medium | Expose compact summaries for content types, screens, listings, forms, and widgets |
+| TASK-101-09-02-02 | Resource Schema, Widget, and Surface Catalog Context | High | Large | Expose bounded, redacted admin resource catalogs for LLM Guide planning |
+| TASK-101-09-02-02-01 | Resource Catalog Types and Pure Normalizers | High | Medium | Define Bun-free catalog snapshot types, redaction, clamping, and deterministic normalization |
+| TASK-101-09-02-02-02 | Resource Catalog Builder and Lazy Default Deps | High | Medium | Build injected-deps catalog aggregation with lazy DB/runtime default deps |
+| TASK-101-09-02-02-03 | Action Plan Context Enrichment and Route Contract | High | Medium | Attach resource catalogs to the existing `/assistant/actions/plan` flow without adding a second mutation path |
+| TASK-101-09-02-02-04 | Resource Catalog Test, Docs, and Closure | Medium | Small | Run lane-specific validation and close docs/changelog/board for the resource catalog context slice |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
