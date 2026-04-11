@@ -90,6 +90,57 @@ const countExecutionOperations = (items: AssistantActionExecutionItem[]) =>
     }
   );
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const readString = (value: unknown) =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+
+const readCatalogBlockSource = (page: unknown) => {
+  if (!isRecord(page)) return null;
+  const sourceData = isRecord(page.currentData)
+    ? page.currentData
+    : isRecord(page.publishedData)
+      ? page.publishedData
+      : null;
+  if (!sourceData) return null;
+  const blocks = Array.isArray(sourceData.blocks) ? sourceData.blocks : [];
+
+  for (const block of blocks) {
+    if (!isRecord(block)) continue;
+    if (block.type !== "content-list") continue;
+    const data = isRecord(block.data) ? block.data : {};
+    const source = isRecord(data.source) ? data.source : {};
+    const listingQueryId = readString(source.listingQueryId);
+    const listingTemplateId = readString(source.listingTemplateId);
+    if (!listingQueryId && !listingTemplateId) continue;
+    return { listingQueryId, listingTemplateId };
+  }
+
+  return null;
+};
+
+const readFormEmbedSource = (page: unknown) => {
+  if (!isRecord(page)) return null;
+  const sourceData = isRecord(page.currentData)
+    ? page.currentData
+    : isRecord(page.publishedData)
+      ? page.publishedData
+      : null;
+  if (!sourceData) return null;
+  const blocks = Array.isArray(sourceData.blocks) ? sourceData.blocks : [];
+
+  for (const block of blocks) {
+    if (!isRecord(block)) continue;
+    if (block.type !== "form-embed") continue;
+    const data = isRecord(block.data) ? block.data : {};
+    const formId = readString(data.formId);
+    if (formId) return { formId };
+  }
+
+  return null;
+};
+
 const buildCatalogPageData = (input: {
   introTitle: string;
   introBody: string;
@@ -766,15 +817,28 @@ const executePageAction = async (
   actorId: string,
   deps: ActionExecutorDeps
 ) => {
+  const existing = await deps.getPageBySlug(action.input.slug);
+  const currentCatalogSource = readCatalogBlockSource(existing);
+  const currentFormSource = readFormEmbedSource(existing);
+  const listingQueries = await deps.listListingQueries();
+  const listingTemplates = await deps.listListingTemplates();
+  const forms = action.input.formEmbed ? await deps.listForms() : [];
+
   const listingQuery =
-    (await deps.listListingQueries()).find((entry) => entry.name === action.input.listingQueryName) ??
+    listingQueries.find((entry) => entry.name === action.input.listingQueryName) ??
+    (currentCatalogSource?.listingQueryId
+      ? listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId)
+      : null) ??
     null;
   const listingTemplate =
-    (await deps.listListingTemplates()).find(
-      (entry) => entry.slug === action.input.listingTemplateSlug
-    ) ?? null;
+    listingTemplates.find((entry) => entry.slug === action.input.listingTemplateSlug) ??
+    (currentCatalogSource?.listingTemplateId
+      ? listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId)
+      : null) ??
+    null;
   const form = action.input.formEmbed
-    ? (await deps.listForms()).find((entry) => entry.name === action.input.formEmbed?.formName) ??
+    ? forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
+      (currentFormSource?.formId ? forms.find((entry) => entry.id === currentFormSource.formId) : null) ??
       null
     : null;
 
@@ -801,7 +865,6 @@ const executePageAction = async (
       : null,
   });
 
-  const existing = await deps.getPageBySlug(action.input.slug);
   const page =
     preview.operation === "create"
       ? await deps.createPage({

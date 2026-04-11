@@ -457,3 +457,48 @@ test("executeAssistantActionPlan adds inquiry form without creating duplicate pa
   const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
   expect(pageBlocks.some((block) => block.type === "form-embed")).toBe(true);
 });
+
+test("executeAssistantActionPlan resolves renamed listing resources from existing page state", async () => {
+  const deps = createDeps();
+  const initialPlan = buildHouseProjectsCatalogPlan();
+
+  await executeAssistantActionPlan(
+    {
+      plan: initialPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-house-projects-renamed-initial",
+    },
+    deps
+  );
+
+  const query = deps.__state.listingQueries[0];
+  const template = deps.__state.listingTemplates[0];
+  if (!query || !template) throw new Error("missing_listing_resources");
+  query.name = "Renamed editorial query";
+  template.slug = "renamed-editorial-template";
+
+  const refinementPlan = planAssistantActions({
+    prompt: "dodaj filtr po metrazu i liczbie pokoi",
+    context: {
+      page: "/admin/pages/projekty-domow",
+      locale: "pl-PL",
+    },
+  });
+
+  const refinementResult = await executeAssistantActionPlan(
+    {
+      plan: refinementPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-house-projects-renamed-refinement",
+    },
+    deps
+  );
+
+  expect(refinementResult.summary.failed).toBe(0);
+  expect(refinementResult.summary.update).toBeGreaterThan(0);
+  expect(deps.__state.pages).toHaveLength(1);
+  expect(deps.__state.listingQueries).toHaveLength(1);
+  expect(deps.__state.listingTemplates).toHaveLength(1);
+  const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
+  expect(pageBlocks.some((block) => block.type === "listing-filters")).toBe(true);
+});

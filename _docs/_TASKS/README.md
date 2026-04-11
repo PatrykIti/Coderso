@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 29 tasks
-- **In Progress:** 8 tasks
-- **Done:** 751 tasks
+- **In Progress:** 6 tasks
+- **Done:** 753 tasks
 
 ---
 
@@ -75,8 +75,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-101-09-07-04 | State-Aware Follow-Up Refinement and No-Duplicate Setups | High | Large | In progress: house-projects filter refinement now updates the existing catalog page without duplicate setup creation; broader persisted-state and form/detail-page follow-ups remain open |
-| TASK-101-09-07 | Generic LLM Guide Intent Families and State-Aware Planning | High | Large | In progress: 07-01 landed classification, 07-02 landed the generic catalog engine, 07-03 landed routed product/portfolio/services presets, and the remaining work is state-aware refinement |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: floating assistant now supports typed planning, dry-run, and execute for the house-projects catalog business flow through existing content/listing/page/custom-screen services |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -90,6 +88,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-07 | Generic LLM Guide Intent Families and State-Aware Planning | High | Large | Done: generic prompt families, catalog blueprint engine, multi-family presets, and state-aware house-projects refinements are now implemented and tested |
+| TASK-101-09-07-04 | State-Aware Follow-Up Refinement and No-Duplicate Setups | High | Large | Done: house-projects follow-ups now add filters and inquiry forms, and refinements can reuse listing resources from existing page state to avoid duplicate setup creation |
 | TASK-101-09-07-03 | Service Directory, Portfolio, and Product Family Presets | High | Large | Done: planner now returns ready plans for product, portfolio, and services-directory business prompts through the shared catalog-family builder |
 | TASK-101-09-07-02 | Generic Catalog Family Blueprint Engine | High | Large | Done: shared catalog blueprint builder now powers the house-projects flow and produces generic product/portfolio presets without changing the executor contract |
 | TASK-101-09-07-01 | Intent Family Classification and Prompt-to-Blueprint Routing | High | Medium | Done: planner now classifies docs/setup/refinement prompts and routes them into explicit intent families while keeping the house-projects preset backward-compatible |

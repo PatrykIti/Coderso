@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Runtime State  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-07-03  
-**Status:** In Progress (2026-04-10)
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -74,6 +74,12 @@ Completed second slice (2026-04-10):
 - Stubbed executor tests confirm the inquiry form is created and embedded on the existing catalog page without creating a second page.
 - Existing DB-backed and public runtime acceptance tests remain green after adding `form.upsert`.
 
-Remaining:
-- generic persisted-state resolution for renamed/customized setups,
-- broader no-duplicate acceptance across product, portfolio, and services presets.
+Completed final slice (2026-04-11):
+- Executor now resolves renamed/customized listing resources from existing page state when canonical query/template names no longer match.
+- Added regression coverage proving:
+  - refinement can reuse listing query/template ids from the current content-list block,
+  - refinement still updates the existing page,
+  - refinement does not create duplicate pages, queries, or templates.
+
+Remaining follow-up outside this task:
+- broader product/portfolio/services DB-backed acceptance can be expanded later as those families get richer domain-specific refinement rules.

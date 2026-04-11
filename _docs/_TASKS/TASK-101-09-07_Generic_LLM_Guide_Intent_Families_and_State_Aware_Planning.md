@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Product UX + Planning  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09 current vertical slice, TASK-101-09-06-04  
-**Status:** In Progress (2026-04-10)
+**Status:** Done (2026-04-11)
 
 ---
 
@@ -100,7 +100,19 @@ Rules:
 - Remaining work:
 - `TASK-101-09-07-04` is now in progress:
   - first house-projects filter-refinement slice landed,
-  - remaining work is broader persisted-state resolution plus form/detail-page refinements.
+  - inquiry form refinement landed,
+  - renamed/customized listing resource lookup from current page state landed.
+
+## Completion Notes (2026-04-11)
+
+- Generic intent-family routing is in place.
+- Generic catalog blueprint engine is in place.
+- Product, portfolio, services, and house-projects presets route to ready plans.
+- House-projects follow-up refinement supports:
+  - listing filters,
+  - inquiry form embed,
+  - existing page-state lookup to avoid duplicate setups when listing query/template names are customized.
+- Remaining future work is broader preset-specific refinement depth, not the core generic routing foundation.
 
 ## Documentation Updates Required
 
