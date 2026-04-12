@@ -338,6 +338,28 @@ test("assistant action plan route attaches resource catalog context when request
         page: "/admin/coderso/widgets",
         locale: "pl-PL",
         includeResourceCatalog: true,
+        runtimeSnapshot: {
+          schemaVersion: 1,
+          route: "/admin/coderso/widgets",
+          activeHref: "/admin/coderso/widgets",
+          area: "coderso",
+          codersoModule: "widgets",
+          selectedResource: null,
+          visibleActions: [
+            {
+              id: "widget-template.create",
+              label: "Create widget template",
+              kind: "create",
+              href: "/admin/coderso/widgets",
+              requiredPermission: "widgets:write",
+            },
+          ],
+          permissionHints: {
+            known: false,
+            reason: "frontend_user_has_no_permissions",
+            requiredForVisibleActions: ["widgets:write"],
+          },
+        },
       },
     },
     requestId: "req-plan-catalog",
@@ -350,6 +372,18 @@ test("assistant action plan route attaches resource catalog context when request
     resourceCatalog: {
       schemaVersion: 1,
       contentTypes: [{ slug: "products" }],
+    },
+    runtimeSnapshot: {
+      route: "/admin/coderso/widgets",
+      visibleActions: [
+        {
+          id: "widget-template.create",
+          label: "Create widget template",
+          kind: "create",
+          href: "/admin/coderso/widgets",
+          requiredPermission: "widgets:write",
+        },
+      ],
     },
   });
 });

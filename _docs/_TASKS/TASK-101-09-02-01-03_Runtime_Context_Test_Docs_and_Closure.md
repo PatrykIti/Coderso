@@ -5,7 +5,7 @@
 **Category:** QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-101-09-02-01-01, TASK-101-09-02-01-02
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -36,3 +36,15 @@ Domknac runtime context snapshot: testy wlasciwych lane’ow, docs, changelog i 
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md` if request context shape changed
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes (2026-04-12)
+
+- Updated architecture, CMS API, security spec, changelog, task board, and parent assistant context notes.
+- Kept runtime snapshot advisory-only; no new public endpoint or mutation flow was introduced.
+
+## Validation (2026-04-12)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bunx vitest run tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/assistant/admin-context-service.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/ui/assistant-panel-interaction.test.tsx --config vitest.config.ts`
+- `bun test tests/integration/routes/assistant.test.ts`

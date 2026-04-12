@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Admin/UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-101-09-02
-**Status:** In Progress (2026-04-11)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -194,3 +194,17 @@ Must cover:
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md` if request context changes
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes (2026-04-12)
+
+- Added UI runtime snapshot hook based on `AdminRouterContext` with safe browser fallback.
+- `AssistantPanel` now sends route-derived runtime snapshot together with `includeResourceCatalog` for `LLM Guide` planning prompts.
+- `AdminShell` passes resolved `activeHref` into `AssistantPanel`.
+- `buildAssistantAdminContext` now normalizes advisory runtime snapshot data server-side.
+- `runtimeSnapshot` is schema-owned in assistant action route validation and remains advisory-only.
+- Permission hints are deduped/sorted and unsafe/secret-like hints are dropped.
+
+## Validation (2026-04-12)
+
+- `bunx vitest run tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/assistant/admin-context-service.test.ts tests/vitest/ui/assistant-panel-interaction.test.tsx --config vitest.config.ts`
+- `bun test tests/integration/routes/assistant.test.ts`

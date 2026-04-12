@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Admin/UI + CMS Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09-01, TASK-054, TASK-059, TASK-061, TASK-063  
-**Status:** In Progress (2026-04-11)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -71,4 +71,5 @@ return clampAndRedactContext(context, MAX_ASSISTANT_CONTEXT_BYTES);
 - Minimal route/locale/module context exists through `adminContextService`.
 - Executor can inspect current page state for listing query/template ids during refinement.
 - Resource catalog snapshot exists for LLM Guide action planning through `/assistant/actions/plan`.
-- Full client-side UI snapshot and permission envelope remain open.
+- Runtime UI snapshot and advisory permission affordance hints are covered by completed TASK-101-09-02-01.
+- Admin context snapshot scope is complete for the current LLM Guide action planning contract; future richer authorization envelopes should be tracked separately if user/role permission data is exposed to the frontend.

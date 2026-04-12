@@ -2607,7 +2607,29 @@ corpus.
   "context": {
     "page": "/admin/coderso/widgets",
     "locale": "pl-PL",
-    "includeResourceCatalog": true
+    "includeResourceCatalog": true,
+    "runtimeSnapshot": {
+      "schemaVersion": 1,
+      "route": "/admin/coderso/widgets",
+      "activeHref": "/admin/coderso/widgets",
+      "area": "coderso",
+      "codersoModule": "widgets",
+      "selectedResource": null,
+      "visibleActions": [
+        {
+          "id": "widget-template.create",
+          "label": "Create widget template",
+          "kind": "create",
+          "href": "/admin/coderso/widgets",
+          "requiredPermission": "widgets:write"
+        }
+      ],
+      "permissionHints": {
+        "known": false,
+        "requiredForVisibleActions": ["widgets:write"],
+        "reason": "frontend_user_has_no_permissions"
+      }
+    }
   }
 }
 ```
@@ -2615,6 +2637,7 @@ corpus.
 `includeResourceCatalog=true` enrichuje server-side planning context o bounded/redacted snapshot admin resources dla `LLM Guide`.
 Snapshot obejmuje content types, custom screens, listings, forms i widgets/templates.
 Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fields sa odrzucane.
+`runtimeSnapshot` jest advisory planning context; nie zastepuje route/domain RBAC.
 
 `context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
 

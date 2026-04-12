@@ -263,7 +263,7 @@ export function AdminShell({
           />
         </SheetContent>
       </Sheet>
-      <AssistantPanel />
+      <AssistantPanel activeHref={resolvedActiveHref ?? null} />
     </div>
   );
 }

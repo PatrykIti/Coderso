@@ -59,6 +59,112 @@ const siteKitPlanContextSchema = {
   },
 } as const;
 
+const runtimeSnapshotSelectedResourceSchema = {
+  anyOf: [
+    {
+      type: "object",
+      required: ["kind", "id"],
+      additionalProperties: false,
+      properties: {
+        kind: { type: "string", minLength: 1, maxLength: 80 },
+        id: { type: "string", minLength: 1, maxLength: 200 },
+      },
+    },
+    { type: "null" },
+  ],
+} as const;
+
+const runtimeSnapshotVisibleActionSchema = {
+  type: "object",
+  required: ["id", "label", "kind", "href", "requiredPermission"],
+  additionalProperties: false,
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 120 },
+    label: { type: "string", minLength: 1, maxLength: 160 },
+    kind: {
+      type: "string",
+      enum: ["navigate", "create", "edit", "publish", "delete", "execute", "configure"],
+    },
+    href: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 240 }, { type: "null" }],
+    },
+    requiredPermission: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
+    },
+  },
+} as const;
+
+const runtimeSnapshotSchema = {
+  type: "object",
+  required: [
+    "schemaVersion",
+    "route",
+    "activeHref",
+    "area",
+    "codersoModule",
+    "selectedResource",
+    "visibleActions",
+    "permissionHints",
+  ],
+  additionalProperties: false,
+  properties: {
+    schemaVersion: { enum: [1] },
+    route: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 240 }, { type: "null" }],
+    },
+    activeHref: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 240 }, { type: "null" }],
+    },
+    area: {
+      type: "string",
+      enum: ["dashboard", "pages", "posts", "coderso", "settings", "other"],
+    },
+    codersoModule: {
+      anyOf: [
+        {
+          type: "string",
+          enum: [
+            "engine",
+            "entries",
+            "custom-screens",
+            "widgets",
+            "forms",
+            "listings",
+            "booking",
+            "commerce",
+            "other",
+          ],
+        },
+        { type: "null" },
+      ],
+    },
+    selectedResource: runtimeSnapshotSelectedResourceSchema,
+    visibleActions: {
+      type: "array",
+      maxItems: 40,
+      items: runtimeSnapshotVisibleActionSchema,
+    },
+    permissionHints: {
+      type: "object",
+      required: ["known", "requiredForVisibleActions", "reason"],
+      additionalProperties: false,
+      properties: {
+        known: { type: "boolean" },
+        requiredForVisibleActions: {
+          type: "array",
+          maxItems: 80,
+          items: { type: "string", minLength: 1, maxLength: 120 },
+          uniqueItems: true,
+        },
+        reason: {
+          type: "string",
+          enum: ["frontend_user_has_no_permissions", "server_enriched", "not_available"],
+        },
+      },
+    },
+  },
+} as const;
+
 export const assistantActionPlanRequestSchema = {
   type: "object",
   required: ["prompt"],
@@ -77,6 +183,7 @@ export const assistantActionPlanRequestSchema = {
         locale: { type: "string", minLength: 2, maxLength: 16 },
         siteKit: siteKitPlanContextSchema,
         includeResourceCatalog: { type: "boolean" },
+        runtimeSnapshot: runtimeSnapshotSchema,
       },
     },
   },

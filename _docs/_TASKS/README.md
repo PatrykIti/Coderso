@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 10 tasks
-- **In Progress:** 17 tasks
-- **Done:** 768 tasks
+- **To Do:** 7 tasks
+- **In Progress:** 16 tasks
+- **Done:** 772 tasks
 
 ---
 
@@ -43,9 +43,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
-| TASK-101-09-02-01-01 | Admin UI Runtime Snapshot Hook | High | Medium | Reuse AdminRouter/AdminShell to feed route, selected entity, and visible action hints into LLM Guide context |
-| TASK-101-09-02-01-02 | Server Context Permission Affordance Normalization | High | Medium | Normalize advisory permission/action hints server-side without treating them as authorization |
-| TASK-101-09-02-01-03 | Runtime Context Test, Docs, and Closure | Medium | Small | Run lane-specific runtime context tests and close docs/changelog/board |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -58,8 +55,6 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling, action gating, and single-flow site-kit convergence shipped; canonical `llm-rag` -> `llm-guide` transport migration remains open |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | In progress: docs-only action guard shipped; full legacy transport alias/migration remains open |
-| TASK-101-09-02 | Admin Context Snapshot and Safe Surface Observers | High | Large | In progress: route/module context, executor page-state lookup, and resource catalog snapshot shipped; full UI snapshot/permission envelope remains open |
-| TASK-101-09-02-01 | Admin Runtime Context Snapshot and Permission Affordances | High | Large | In progress: task now split into UI snapshot, server normalization, and closure leaves; visible affordance and permission envelope remain open |
 | TASK-101-09-03 | LLM Guide Planner and Typed Plan Schema | High | Large | In progress: typed plans, classification, presets, and needs-input fallback shipped; LLM-provider generated planning and strict nested JSON schema remain open |
 | TASK-101-09-03-01 | Prompt Normalization, Intent Extraction, and Strict Plan Schema | High | Medium | In progress: typed plan model and prompt classification shipped; full nested JSON schema validation remains open |
 | TASK-101-09-03-02 | Local Heuristics, Plan Repair, and Missing Context Questions | Medium | Medium | In progress: deterministic local routing/refinement heuristics shipped; separate repair module and broader recovery matrix remain open |
@@ -80,6 +75,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-02 | Admin Context Snapshot and Safe Surface Observers | High | Large | Done: route/module, resource catalog, runtime snapshot, selected resource, and advisory permission/action hints are available to LLM Guide planning |
+| TASK-101-09-02-01 | Admin Runtime Context Snapshot and Permission Affordances | High | Large | Done: AssistantPanel now sends route-derived runtime snapshot and server normalization keeps it advisory-only |
+| TASK-101-09-02-01-03 | Runtime Context Test, Docs, and Closure | Medium | Small | Done: runtime context validation, docs, changelog, and board sync are complete |
+| TASK-101-09-02-01-02 | Server Context Permission Affordance Normalization | High | Medium | Done: advisory action/permission hints are normalized and unsafe hints are dropped server-side |
+| TASK-101-09-02-01-01 | Admin UI Runtime Snapshot Hook | High | Medium | Done: AdminRouter/AdminShell feed route, selected entity, and visible action hints into LLM Guide context |
 | TASK-101-09-02-02 | Resource Schema, Widget, and Surface Catalog Context | High | Large | Done: `/assistant/actions/plan` can attach bounded, redacted admin resource catalogs for LLM Guide planning |
 | TASK-101-09-02-02-04 | Resource Catalog Test, Docs, and Closure | Medium | Small | Done: validation, docs, changelog, and board sync for resource catalog context |
 | TASK-101-09-02-02-03 | Action Plan Context Enrichment and Route Contract | High | Medium | Done: `includeResourceCatalog` enriches the existing action planning route without accepting client-supplied catalogs |

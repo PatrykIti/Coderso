@@ -254,6 +254,8 @@ Rotacja klucza:
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
   - resource catalog nie zawiera form submissions, entry values, provider credentials, API key material ani secret-like config keys,
+  - `context.runtimeSnapshot` jest advisory-only i nie moze zastapic RBAC w route/domain services,
+  - runtime snapshot nie zawiera user email/name, role names, raw permissions, session ids, cookies, CSRF tokens ani access logs,
   - `execute` wymaga `idempotencyKey`,
   - metadata akcji trafia do audit log przez `assistant.actions.execute`
 - Current first shipped business flow:

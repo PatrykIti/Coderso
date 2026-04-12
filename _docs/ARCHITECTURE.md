@@ -345,6 +345,17 @@ Resource catalog context:
 - Snapshot jest schema-versioned, deterministic, limitowany budzetem i redaguje secret-like keys.
 - Docs-only chat nie hydratuje resource catalogu i pozostaje docs-corpus driven.
 
+Runtime admin context:
+- `core/admin/ui/assistant/useAssistantAdminContext.ts` buduje advisory runtime snapshot z `AdminRouterContext` / `AdminShell`.
+- Snapshot zawiera:
+  - route i active href,
+  - area/module,
+  - selected resource hint,
+  - route-derived visible action hints,
+  - advisory permission hints wymagane dla widocznych akcji.
+- Snapshot nie jest autoryzacja; execute/dry-run dalej polegaja na route/domain permission checks.
+- Snapshot nie zawiera user PII, roli, sesji, raw permissions ani tokenow.
+
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,
 - planner tworzy plan dla:

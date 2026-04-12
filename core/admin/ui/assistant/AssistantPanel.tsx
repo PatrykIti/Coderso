@@ -34,6 +34,7 @@ import { AssistantMessage } from "./AssistantMessage";
 import { AssistantModeSwitch } from "./AssistantModeSwitch";
 import { ActionExecutionResult } from "./components/ActionExecutionResult";
 import { ActionPlanReview } from "./components/ActionPlanReview";
+import { useAssistantAdminContext } from "./useAssistantAdminContext";
 
 type AssistantEntry = {
   id: string;
@@ -343,7 +344,11 @@ export const resolveAssistantConversationState = (input: {
   return "empty";
 };
 
-export function AssistantPanel() {
+type AssistantPanelProps = {
+  activeHref?: string | null;
+};
+
+export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) {
   const {
     enabled: launcherEnabled,
     launcherAvatarEnabled,
@@ -379,6 +384,7 @@ export function AssistantPanel() {
   const suppressLauncherToggleRef = useRef(false);
   const launcherRef = useRef<HTMLButtonElement | null>(null);
   const conversationRef = useRef<HTMLDivElement | null>(null);
+  const assistantAdminContext = useAssistantAdminContext({ activeHref });
 
   const launcherAsset =
     launcherAvatarEnabled && typeof launcherAvatarAsset === "string"
@@ -606,13 +612,7 @@ export function AssistantPanel() {
           const plan = await planAssistantActions({
             prompt: outgoingMessage,
             context: {
-              ...(typeof window === "undefined"
-                ? {}
-                : {
-                    page: window.location.pathname,
-                    locale:
-                      typeof navigator !== "undefined" ? navigator.language : undefined,
-                  }),
+              ...assistantAdminContext,
               includeResourceCatalog: true,
             },
           });
@@ -637,9 +637,8 @@ export function AssistantPanel() {
               typeof window === "undefined"
                 ? undefined
                 : {
-                    page: window.location.pathname,
-                    locale:
-                      typeof navigator !== "undefined" ? navigator.language : undefined,
+                    page: assistantAdminContext.page,
+                    locale: assistantAdminContext.locale,
                   },
           });
 
@@ -669,7 +668,7 @@ export function AssistantPanel() {
         setIsSending(false);
       }
     },
-    [assistantMode, isSending, message, status]
+    [assistantAdminContext, assistantMode, isSending, message, status]
   );
 
   const handleFollowUpSelect = useCallback(

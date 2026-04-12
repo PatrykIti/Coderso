@@ -272,6 +272,10 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
       expect.objectContaining({
         context: expect.objectContaining({
           includeResourceCatalog: true,
+          runtimeSnapshot: expect.objectContaining({
+            route: "/admin/coderso/widgets",
+            codersoModule: "widgets",
+          }),
         }),
       })
     );

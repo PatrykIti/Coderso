@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + API
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-02-01-01
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -48,3 +48,15 @@ Rozszerzyc server-side `buildAssistantAdminContext` o runtime snapshot i permiss
 ## Documentation Updates Required
 
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes (2026-04-12)
+
+- Added runtime snapshot normalization in `adminContextService`.
+- Added strict schema for `context.runtimeSnapshot`.
+- Advisory permission hints are normalized, deduped, sorted, and never used as authorization.
+- Unsafe external hrefs and secret-like permission/resource hints are dropped.
+
+## Validation (2026-04-12)
+
+- `bunx vitest run tests/vitest/assistant/admin-context-service.test.ts --config vitest.config.ts`
+- `bun test tests/integration/routes/assistant.test.ts`

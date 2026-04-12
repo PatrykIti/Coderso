@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 582 | 2026-04-12 | TASK-101-09-02-01 runtime context snapshot | Assistant/Core |
 | 581 | 2026-04-11 | TASK-101-09-02-02 resource catalog context | Assistant/Core |
 | 580 | 2026-04-11 | TASK-101-09-01-03 single LLM Guide site-kit flow | Assistant/Core |
 | 579 | 2026-04-11 | TASK-101-09 site-builder convergence plan | Docs/Planning |

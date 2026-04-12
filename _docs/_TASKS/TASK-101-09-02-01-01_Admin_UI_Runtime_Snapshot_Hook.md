@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Assistant
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-02-01
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -44,3 +44,13 @@ Dodac UI hook/provider, ktory zbiera route/active surface/selected entity/visibl
 ## Documentation Updates Required
 
 - Covered by parent closure.
+
+## Completion Notes (2026-04-12)
+
+- Added `useAssistantAdminContext` with pure snapshot builder.
+- Reused `AdminRouterContext` and browser fallback instead of raw `window.location` in `AssistantPanel`.
+- Added selected resource and visible action hints from stable route patterns.
+
+## Validation (2026-04-12)
+
+- `bunx vitest run tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/ui/assistant-panel-interaction.test.tsx tests/vitest/ui/assistant-panel.test.tsx tests/vitest/ui/admin-shell.test.tsx --config vitest.config.ts`

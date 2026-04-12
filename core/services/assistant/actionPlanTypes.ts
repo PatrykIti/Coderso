@@ -65,12 +65,53 @@ export type AssistantActionContext = {
   siteKit?: AssistantSiteKitPlanInput;
   includeResourceCatalog?: boolean;
   resourceCatalog?: AssistantResourceCatalogSnapshot;
+  runtimeSnapshot?: AssistantAdminRuntimeSnapshot;
+};
+
+export type AssistantAdminRuntimeActionKind =
+  | "navigate"
+  | "create"
+  | "edit"
+  | "publish"
+  | "delete"
+  | "execute"
+  | "configure";
+
+export type AssistantAdminRuntimeSelectedResource = {
+  kind: string;
+  id: string;
+};
+
+export type AssistantAdminRuntimeVisibleAction = {
+  id: string;
+  label: string;
+  kind: AssistantAdminRuntimeActionKind;
+  href: string | null;
+  requiredPermission: string | null;
+};
+
+export type AssistantAdminRuntimePermissionHints = {
+  known: boolean;
+  requiredForVisibleActions: string[];
+  reason: "frontend_user_has_no_permissions" | "server_enriched" | "not_available";
+};
+
+export type AssistantAdminRuntimeSnapshot = {
+  schemaVersion: 1;
+  route: string | null;
+  activeHref: string | null;
+  area: AssistantAdminContext["area"];
+  codersoModule: AssistantAdminContext["codersoModule"];
+  selectedResource: AssistantAdminRuntimeSelectedResource | null;
+  visibleActions: AssistantAdminRuntimeVisibleAction[];
+  permissionHints: AssistantAdminRuntimePermissionHints;
 };
 
 export type AssistantAdminContext = {
   route: string | null;
   locale: string | null;
   resourceCatalog: AssistantResourceCatalogSnapshot | null;
+  runtimeSnapshot: AssistantAdminRuntimeSnapshot | null;
   area: "dashboard" | "pages" | "posts" | "coderso" | "settings" | "other";
   codersoModule:
     | "engine"
