@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Assistant Recovery  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-173-01, TASK-170-04  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -65,3 +65,10 @@ return <SuccessLinks results={successfulResults} />;
 1. Partial success state is clear to non-technical users.
 2. Failed actions are not silently hidden.
 3. Retry paths remain explicit and idempotency-safe.
+
+## Completion Notes (2026-04-12)
+
+- Added a partial-failure recovery alert to `ActionExecutionResult`.
+- The alert summarizes succeeded/failed actions, lists failed action labels/error codes/messages, and instructs users to run a fresh dry-run before retrying.
+- No automatic retry button was added; retry remains explicit and goes through the existing dry-run/confirm/execute flow.
+- Added Vitest coverage for mixed success/failure rendering and recovery guidance.

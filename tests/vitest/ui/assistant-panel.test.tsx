@@ -396,3 +396,82 @@ test("ActionExecutionResult renders resource links and summary", () => {
   expect(html).toContain("Open in admin");
   expect(html).toContain("Open public page");
 });
+
+test("ActionExecutionResult renders partial failure recovery guidance", () => {
+  const html = renderAdminUi(
+    <ActionExecutionResult
+      result={{
+        plan: {
+          id: "plan-partial",
+          status: "ready",
+          intentId: "partial",
+          title: "Partial",
+          answer: "Plan ready",
+          summary: "Plan summary",
+          confidence: 0.9,
+          assumptions: [],
+          questions: [],
+          actions: [],
+        },
+        preview: {
+          plan: {
+            id: "plan-partial",
+            status: "ready",
+            intentId: "partial",
+            title: "Partial",
+            answer: "Plan ready",
+            summary: "Plan summary",
+            confidence: 0.9,
+            assumptions: [],
+            questions: [],
+            actions: [],
+          },
+          changes: [],
+          warnings: [],
+          readyToExecute: true,
+        },
+        results: [
+          {
+            actionId: "entry-ok",
+            type: "entry.upsert-draft",
+            targetType: "entry",
+            targetKey: "products/sample",
+            operation: "create",
+            status: "success",
+            resourceId: "entry-1",
+            adminHref: "/admin/coderso/entries/products/entry-1",
+            publicHref: null,
+            message: "Draft entry is ready.",
+          },
+          {
+            actionId: "form-failed",
+            type: "form.automation.upsert",
+            targetType: "form-action",
+            targetKey: "form-1/action-1",
+            operation: "update",
+            status: "failed",
+            resourceId: null,
+            adminHref: null,
+            publicHref: null,
+            message: "Form action could not be updated.",
+            errorCode: "form_action_invalid",
+          },
+        ],
+        summary: {
+          create: 1,
+          update: 0,
+          noop: 0,
+          failed: 1,
+        },
+      }}
+    />
+  );
+
+  expect(html).toContain("Some actions need attention");
+  expect(html).toContain("action(s) succeeded");
+  expect(html).toContain("action(s) failed");
+  expect(html).toContain("run a fresh dry-run");
+  expect(html).toContain("Form automation");
+  expect(html).toContain("form_action_invalid");
+  expect(html).toContain("Form action could not be updated.");
+});

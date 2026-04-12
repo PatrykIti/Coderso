@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 616 | 2026-04-12 | TASK-173-02 partial success recovery UI | Admin/UI |
 | 615 | 2026-04-12 | TASK-173-01 LLM Guide acceptance matrix | QA/Assistant |
 | 614 | 2026-04-12 | TASK-172 business blueprint packs closure | Assistant/Product |
 | 613 | 2026-04-12 | TASK-172-07 gated solution-kit refinements | Assistant/Product |

@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, ExternalLink } from "lucide-react";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AssistantActionExecuteResponse } from "@/services/assistantClient";
@@ -33,7 +34,16 @@ const actionTypeLabels: Record<string, string> = {
 const resolveActionTypeLabel = (type: string) =>
   actionTypeLabels[type] ?? type.replaceAll(".", " ");
 
+const failureItems = (result: AssistantActionExecuteResponse) =>
+  result.results.filter((item) => item.status === "failed");
+
+const successCount = (result: AssistantActionExecuteResponse) =>
+  result.results.filter((item) => item.status === "success").length;
+
 export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
+  const failed = failureItems(result);
+  const hasFailures = failed.length > 0;
+
   return (
     <Card className="border-border/80">
       <CardHeader className="space-y-2 pb-3">
@@ -49,6 +59,28 @@ export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
         <CardTitle className="text-base">Setup results</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {hasFailures ? (
+          <Alert variant="destructive">
+            <AlertTitle>Some actions need attention</AlertTitle>
+            <AlertDescription>
+              <p>
+                {successCount(result)} action(s) succeeded and {failed.length} action(s)
+                failed. Review the failed steps, run a fresh dry-run, then execute again
+                with a new confirmation.
+              </p>
+              <ul className="ml-5 mt-2 list-disc space-y-1">
+                {failed.map((item) => (
+                  <li key={item.actionId}>
+                    <span className="font-medium">{resolveActionTypeLabel(item.type)}</span>
+                    {item.errorCode ? <span>{` (${item.errorCode})`}</span> : null}
+                    <span>{`: ${item.message}`}</span>
+                  </li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {result.results.map((item) => (
           <div
             key={item.actionId}
