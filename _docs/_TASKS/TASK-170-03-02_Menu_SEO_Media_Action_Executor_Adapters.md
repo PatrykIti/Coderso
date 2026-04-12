@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Menus + SEO + Media  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-03, TASK-170-01-02, TASK-170-03-01  
-**Status:** To Do
+**Status:** In Progress (2026-04-12)
 
 ---
 
@@ -15,7 +15,10 @@ Implement executor adapters for navigation, SEO, and existing media reference ac
 
 ## Sub-Tasks
 
-No child task files yet. Split again if menu, SEO, and media adapters diverge in implementation risk.
+- `TASK-170-03-02-01_Menu_Item_Upsert_Executor_Adapter.md`
+- `TASK-170-03-02-02_SEO_Document_Upsert_Executor_Adapter.md`
+- `TASK-170-03-02-03_Media_Reference_Attach_Executor_Adapter.md`
+- `TASK-170-03-02-04_Menu_SEO_Media_Adapters_Docs_Tests_and_Closure.md`
 
 ## Pseudocode
 
@@ -82,3 +85,7 @@ if (action.type === "media.reference.attach") {
 1. Menu/SEO/media writes reuse existing domain services.
 2. Unsafe hrefs and raw media upload payloads are rejected.
 3. Preview/execute results remain redacted and idempotent.
+
+## Progress Notes
+
+- 2026-04-12: Split menu, SEO, and media adapters into separate implementation leaves because media reference attachment needs target-specific patch semantics.

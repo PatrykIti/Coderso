@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 38 tasks
-- **In Progress:** 7 tasks
+- **To Do:** 41 tasks
+- **In Progress:** 8 tasks
 - **Done:** 791 tasks
 
 ---
@@ -49,7 +49,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | Provider-backed draft planning through strict local schema and recovery |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | More concrete business outcomes beyond the current catalog/site-kit slice |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-170-03-02 | Menu, SEO, and Media Action Executor Adapters | High | Large | Navigation, SEO, and media reference adapters after entry pattern lands |
+| TASK-170-03-02-01 | Menu Item Upsert Executor Adapter | High | Medium | Executable `menu.item.upsert` through existing menu services |
+| TASK-170-03-02-02 | SEO Document Upsert Executor Adapter | High | Medium | Executable `seo.document.upsert` through existing SEO service |
+| TASK-170-03-02-03 | Media Reference Attach Executor Adapter | High | Large | Existing-media reference attachment with target-specific patching |
+| TASK-170-03-02-04 | Menu, SEO, and Media Adapters Docs, Tests, and Closure | High | Small | Closure for menu/SEO/media adapter wave |
 | TASK-170-03-03 | Form, Page, and Listing Patch Executor Adapters | High | Large | Non-destructive form/page/listing patch adapters |
 | TASK-170-03-04 | Executor Adapter Docs, Tests, and Closure | High | Medium | Final route/security/docs/test closure for executor adapter wave |
 | TASK-170-04 | Admin Review UI for Expanded Actions | Medium | Medium | Review/result UI for new action families |
@@ -91,6 +94,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 | TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: first entry draft executor adapter is complete; menu/SEO/media adapters are next |
 | TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | In progress: `entry.upsert-draft` adapter complete; remaining adapter leaves are next |
+| TASK-170-03-02 | Menu, SEO, and Media Action Executor Adapters | High | Large | In progress: split into menu, SEO, media, and closure leaves |
 
 ---
 
