@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Coderso Blueprints + Runtime UX  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09, TASK-170, TASK-171  
-**Status:** To Do
+**Status:** In Progress (2026-04-12)
 
 ---
 
@@ -148,3 +148,7 @@ return normalizeAssistantActionPlan(pack.buildActions({ prompt, context }));
 - relevant `docs/` assistant corpus pages for new guide outcomes
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and a changelog entry when each implementation task is completed
+
+## Progress Notes
+
+- 2026-04-12: Completed `TASK-172-01`; shared business blueprint pack contract now wraps existing catalog-family presets without changing generated plan output.

@@ -338,6 +338,7 @@ Zamiast tego:
   domykaja review/confirm UX w panelu asystenta.
 - `core/services/assistant/adminContextCatalogNormalizer.ts` i `adminContextCatalogs.ts`
   buduja bounded/redacted resource catalog snapshot dla `LLM Guide` bez dodawania osobnego flow.
+- `core/services/assistant/blueprints/businessBlueprintTypes.ts` defines the shared business blueprint pack contract used to wrap current catalog-family presets without changing their generated action plan output.
 
 Resource catalog context:
 - `POST /assistant/actions/plan` moze otrzymac `context.includeResourceCatalog=true`.

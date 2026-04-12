@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Blueprint Contracts  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-172, TASK-170  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -75,3 +75,10 @@ buildBlueprintPlan(pack, context) {
 1. Packs share a typed builder contract.
 2. Pack outputs are strict action plans, not bespoke write flows.
 3. Pack leaves can add business scenarios without duplicating planner plumbing.
+
+## Completion Notes (2026-04-12)
+
+- Added `businessBlueprintTypes.ts` with shared `AssistantBusinessBlueprintPack` contract.
+- Wrapped existing catalog-family presets as ready business blueprint packs.
+- Kept generated catalog plans backward-compatible with direct `buildCatalogFamilyPlan` output.
+- Added Vitest coverage for pack listing, lookup, strict plan output, and unknown pack fallback.

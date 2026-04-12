@@ -7,6 +7,10 @@ import {
   PRODUCT_CATALOG_PRESET,
 } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
+import {
+  getBusinessBlueprintPack,
+  listBusinessBlueprintPacks,
+} from "../../../core/services/assistant/blueprints/businessBlueprintTypes";
 
 test("buildCatalogFamilyPlan keeps house-projects preset backward-compatible", () => {
   const genericPlan = buildCatalogFamilyPlan(HOUSE_PROJECTS_CATALOG_PRESET, {
@@ -72,4 +76,51 @@ test("buildCatalogFamilyPlan produces portfolio projects plan from preset", () =
     name: "Portfolio Projects",
     contentTypeSlug: "portfolio-projects",
   });
+});
+
+test("business blueprint packs expose shared catalog contract", () => {
+  const packs = listBusinessBlueprintPacks();
+  const productPack = getBusinessBlueprintPack("product_catalog");
+
+  expect(packs.map((pack) => pack.id)).toEqual([
+    "house-projects-catalog",
+    "product-catalog",
+    "portfolio-projects",
+    "services-directory",
+  ]);
+  expect(productPack).toMatchObject({
+    id: "product-catalog",
+    intentFamily: "product_catalog",
+    status: "ready",
+    surfaces: [
+      "content-type",
+      "custom-screen",
+      "listing-query",
+      "listing-template",
+      "page",
+    ],
+    actionTypes: [
+      "setting.content-route.upsert",
+      "content-type.upsert",
+      "custom-screen.upsert",
+      "listing-query.upsert",
+      "listing-template.upsert",
+      "page.upsert",
+    ],
+  });
+  expect(getBusinessBlueprintPack("unknown")).toBeNull();
+});
+
+test("business blueprint pack builds strict plans without changing catalog output", () => {
+  const productPack = getBusinessBlueprintPack("product_catalog");
+  const packPlan = productPack?.buildPlan({
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+  const directPlan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(packPlan).toEqual(directPlan);
 });

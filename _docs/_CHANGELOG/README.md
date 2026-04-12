@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 607 | 2026-04-12 | TASK-172-01 shared business blueprint pack contract | Assistant/Product |
 | 606 | 2026-04-12 | TASK-171 provider planner intelligence closure | Assistant/Core |
 | 605 | 2026-04-12 | TASK-171-04 provider planner explanation metadata | Assistant/UI |
 | 604 | 2026-04-12 | TASK-171-03 provider draft schema repair | Assistant/Core |

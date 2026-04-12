@@ -14,6 +14,11 @@ It now runs through the same `LLM Guide` action engine as the floating assistant
 
 Current implemented guide blueprint:
 - `house-projects-catalog`
+- shared catalog-family business blueprint packs for:
+  - house projects
+  - product catalog
+  - portfolio projects
+  - services directory
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`

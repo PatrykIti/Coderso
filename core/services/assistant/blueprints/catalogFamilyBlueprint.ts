@@ -15,7 +15,7 @@ type CatalogScreenFieldValue = {
   field: string;
 };
 
-type CatalogFamilyPreset = {
+export type CatalogFamilyPreset = {
   key: string;
   intentId: string;
   title: string;
@@ -400,5 +400,3 @@ export const buildCatalogFamilyRefinementPlan = (
     actions: [...(options.extraActions ?? []), pageAction],
   };
 };
-
-export type { CatalogFamilyPreset };
