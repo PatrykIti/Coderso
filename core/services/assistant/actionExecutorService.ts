@@ -6,6 +6,8 @@ import {
 } from "../content/typeService";
 import {
   createCustomScreen,
+  deleteCustomScreen,
+  getCustomScreen,
   listCustomScreens,
   updateCustomScreen,
 } from "../customScreens/customScreenService";
@@ -69,6 +71,7 @@ import type {
   AssistantContentRouteUpsertAction,
   AssistantContentTypeUpsertAction,
   AssistantCustomScreenUpsertAction,
+  AssistantCustomScreenDeleteAction,
   AssistantEntryUpsertDraftAction,
   AssistantFormUpsertAction,
   AssistantFormAutomationUpsertAction,
@@ -131,12 +134,14 @@ const countExecutionOperations = (items: AssistantActionExecutionItem[]) =>
       }
       if (item.operation === "create") summary.create += 1;
       if (item.operation === "update") summary.update += 1;
+      if (item.operation === "delete") summary.delete += 1;
       if (item.operation === "noop") summary.noop += 1;
       return summary;
     },
     {
       create: 0,
       update: 0,
+      delete: 0,
       noop: 0,
       failed: 0,
     }
@@ -406,6 +411,8 @@ type ActionExecutorDeps = {
   listCustomScreens: typeof listCustomScreens;
   createCustomScreen: typeof createCustomScreen;
   updateCustomScreen: typeof updateCustomScreen;
+  getCustomScreen: typeof getCustomScreen;
+  deleteCustomScreen: typeof deleteCustomScreen;
   listListingQueries: typeof listListingQueries;
   createListingQuery: typeof createListingQuery;
   updateListingQuery: typeof updateListingQuery;
@@ -449,6 +456,8 @@ const defaultDeps: ActionExecutorDeps = {
   listCustomScreens,
   createCustomScreen,
   updateCustomScreen,
+  getCustomScreen,
+  deleteCustomScreen,
   listListingQueries,
   createListingQuery,
   updateListingQuery,
@@ -564,6 +573,44 @@ const buildCustomScreenPreview = async (
       : ["The content type does not exist yet and will be created earlier in the plan."],
     beforeValue: existing,
     nextValue: action.input,
+  });
+};
+
+const buildCustomScreenDeletePreview = async (
+  action: AssistantCustomScreenDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getCustomScreen(action.input.id);
+  const nameMatches = existing?.name === action.input.name;
+  const prefix = action.input.expectedNamePrefix?.trim() ?? "";
+  const prefixMatches =
+    !prefix || existing?.name.toLowerCase().startsWith(prefix.toLowerCase()) === true;
+  const conflicts =
+    existing && nameMatches && prefixMatches
+      ? []
+      : [
+          {
+            code: "assistant_action_dependency_missing",
+            severity: "error" as const,
+            message: existing
+              ? "Custom screen no longer matches the planned delete target."
+              : "Custom screen was not found.",
+          },
+        ];
+
+  return createPreviewChange({
+    action,
+    targetType: "custom-screen",
+    targetKey: action.input.name,
+    operation: "delete",
+    summary: `Delete custom screen "${action.input.name}"`,
+    warnings:
+      existing?.showInSidebar === true
+        ? ["This active custom screen is shown in the Coderso sidebar."]
+        : [],
+    conflicts,
+    beforeValue: existing,
+    nextValue: null,
   });
 };
 
@@ -1349,6 +1396,40 @@ const executeCustomScreenAction = async (
   };
 };
 
+const executeCustomScreenDeleteAction = async (
+  action: AssistantCustomScreenDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getCustomScreen(action.input.id);
+  const prefix = action.input.expectedNamePrefix?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    (prefix && !existing.name.toLowerCase().startsWith(prefix.toLowerCase()))
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const deleted = await deps.deleteCustomScreen(existing.id);
+  if (!deleted) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "custom-screen",
+    targetKey: action.input.name,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: "/admin/coderso/custom-screens",
+    publicHref: null,
+    message: `Deleted custom screen "${deleted.name}".`,
+  };
+};
+
 const executeListingQueryAction = async (
   action: AssistantListingQueryUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -2041,6 +2122,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "custom-screen.upsert"
         ? executeCustomScreenAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.delete": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.delete"
+        ? buildCustomScreenDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.delete"
+        ? executeCustomScreenDeleteAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "listing-query.upsert": {

@@ -24,7 +24,11 @@ This leaf focuses on resources whose primary undo strategy is `delete` or `archi
 
 ## Sub-Tasks
 
-No child task files.
+- `TASK-174-03-01_Custom_Screen_Delete_Action.md`
+
+## Progress Notes
+
+- 2026-04-12: Completed `TASK-174-03-01`; `custom-screen.delete` is executable through the normal LLM Guide plan/dry-run/execute flow.
 
 ## Architecture
 

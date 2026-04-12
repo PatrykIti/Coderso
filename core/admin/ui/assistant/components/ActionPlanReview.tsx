@@ -22,6 +22,7 @@ type ActionPlanReviewProps = {
 const labelByOperation = {
   create: "Create",
   update: "Update",
+  delete: "Delete",
   noop: "No change",
 } as const;
 
@@ -29,6 +30,7 @@ const actionTypeLabels: Record<string, string> = {
   "setting.content-route.upsert": "Content route",
   "content-type.upsert": "Content model",
   "custom-screen.upsert": "Custom screen",
+  "custom-screen.delete": "Custom screen",
   "listing-query.upsert": "Listing query",
   "listing-template.upsert": "Listing template",
   "form.upsert": "Form",

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 623 | 2026-04-12 | TASK-174-03-01 custom screen delete action | Assistant/Core |
 | 622 | 2026-04-12 | TASK-175 solution kit screens and module focus convergence | Admin/IA |
 | 621 | 2026-04-12 | TASK-174-01 assistant undo manifest persistence | Assistant/Core |
 | 620 | 2026-04-12 | TASK-173 LLM Guide production readiness closure | Docs/Assistant |

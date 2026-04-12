@@ -180,3 +180,4 @@ await executeUndoPlan({
 ## Progress Notes
 
 - 2026-04-12: Completed `TASK-174-01`; fresh assistant action executions now persist sanitized undo manifest items for later cleanup planning.
+- 2026-04-12: Completed `TASK-174-03-01`; custom screen delete requests can now produce executable reviewed `custom-screen.delete` plans when targets are resolved from server-side resource catalog context.

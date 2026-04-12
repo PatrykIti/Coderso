@@ -30,7 +30,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 13 tasks
 - **In Progress:** 6 tasks
-- **Done:** 835 tasks
+- **Done:** 836 tasks
 
 ---
 
@@ -120,6 +120,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-173-06 | Docs Corpus Capability Limits and Closure | High | Medium | Done: docs/corpus now state LLM Guide supported capabilities, gated gaps, and read-only docs-only behavior |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Done: readiness matrix, recovery UX, idempotency diagnostics, gates, metrics, and docs closure completed for the declared capability set |
 | TASK-174-01 | Provenance Undo Manifest and Persistence | High | Large | Done: assistant executions persist sanitized undo manifest items with DB migration artifacts |
+| TASK-174-03-01 | Custom Screen Delete Action | High | Medium | Done: `custom-screen.delete` supports reviewed deletion of server-catalog resolved screens |
 | TASK-175 | Solution Kit Module Focus and Screens Convergence | High | Medium | Done: active kit focus keeps Screens visible and expands module dependencies from the registry |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |

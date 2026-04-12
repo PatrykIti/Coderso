@@ -90,6 +90,74 @@ test("planAssistantActions returns clarification plan for non-actionable prompt"
   expect(plan.actions).toHaveLength(0);
 });
 
+test("planAssistantActions builds custom screen delete plan from resource catalog prefix", () => {
+  const plan = planAssistantActions({
+    prompt: "usun dwa ekrany w screens o prefixie 'House Projects' w tytule ekranu",
+    context: {
+      page: "/admin/coderso/custom-screens/screen-1/entries",
+      locale: "pl-PL",
+      includeResourceCatalog: true,
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-12T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [
+          {
+            id: "screen-1",
+            name: "House Projects",
+            contentTypeId: "type-1",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "House Projects",
+            writableBindingFields: [],
+            bindings: [],
+          },
+          {
+            id: "screen-2",
+            name: "House Projects Archive",
+            contentTypeId: "type-1",
+            status: "draft",
+            showInSidebar: false,
+            sidebarLabel: null,
+            writableBindingFields: [],
+            bindings: [],
+          },
+          {
+            id: "screen-3",
+            name: "Products",
+            contentTypeId: "type-2",
+            status: "active",
+            showInSidebar: true,
+            sidebarLabel: "Products",
+            writableBindingFields: [],
+            bindings: [],
+          },
+        ],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("custom-screen-delete");
+  expect(plan.actions.map((action) => action.type)).toEqual([
+    "custom-screen.delete",
+    "custom-screen.delete",
+  ]);
+  expect(plan.actions.map((action) => action.input.name)).toEqual([
+    "House Projects",
+    "House Projects Archive",
+  ]);
+});
+
 test("planAssistantActions routes non-house-project setup prompts into generic needs-input family", () => {
   const docsQuestionPlan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",

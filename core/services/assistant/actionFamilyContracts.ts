@@ -156,6 +156,22 @@ export const assistantActionFamilyContracts = [
     ["name", "contentTypeSlug", "status", "showInSidebar", "blocks", "bindings"]
   ),
   executableContract(
+    "custom-screen.delete",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: [
+        "Deletes one existing custom screen by id after matching the expected name from server-side planning context.",
+      ],
+    }
+  ),
+  executableContract(
     "listing-query.upsert",
     "listing",
     "core/services/content/listingQueriesService.ts",

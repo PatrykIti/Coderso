@@ -179,6 +179,18 @@ export type AssistantCustomScreenUpsertAction = {
   };
 };
 
+export type AssistantCustomScreenDeleteAction = {
+  id: string;
+  type: "custom-screen.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedNamePrefix?: string | null;
+  };
+};
+
 export type AssistantListingQueryUpsertAction = {
   id: string;
   type: "listing-query.upsert";
@@ -400,6 +412,7 @@ export type AssistantPlannedAction =
   | AssistantContentRouteUpsertAction
   | AssistantContentTypeUpsertAction
   | AssistantCustomScreenUpsertAction
+  | AssistantCustomScreenDeleteAction
   | AssistantListingQueryUpsertAction
   | AssistantListingTemplateUpsertAction
   | AssistantFormUpsertAction
@@ -480,7 +493,7 @@ export type AssistantActionPlan = {
   actions: AssistantPlannedAction[];
 };
 
-export type AssistantActionOperation = "create" | "update" | "noop";
+export type AssistantActionOperation = "create" | "update" | "delete" | "noop";
 
 export type AssistantActionPreviewChange = {
   actionId: string;
@@ -539,6 +552,7 @@ export type AssistantActionExecuteResult = {
   summary: {
     create: number;
     update: number;
+    delete?: number;
     noop: number;
     failed: number;
   };

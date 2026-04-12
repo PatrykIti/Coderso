@@ -13,6 +13,7 @@ import { adaptProviderDraftPlan } from "./actionPlanProviderAdapter";
 import {
   classifyAssistantPrompt,
   includesAny,
+  isLikelyDeletePrompt,
   normalizeAssistantPlannerPrompt,
   resolveContextualRefinementFamily,
 } from "./actionPlanHeuristics";
@@ -37,6 +38,7 @@ import {
   PRODUCT_CATALOG_PRESET,
   SERVICES_DIRECTORY_PRESET,
 } from "./blueprints/catalogFamilyPresets";
+import type { AssistantCustomScreenSummary } from "./adminContextTypes";
 
 export {
   classifyAssistantPrompt,
@@ -80,6 +82,166 @@ const checkoutKeywords = [
   "platnosci",
   "płatności",
 ];
+
+const screenDeleteKeywords = [
+  "screen",
+  "screens",
+  "ekran",
+  "ekrany",
+  "ekranow",
+  "ekranów",
+  "custom screen",
+  "custom screens",
+];
+
+const countWords = new Map<string, number>([
+  ["jeden", 1],
+  ["jedna", 1],
+  ["one", 1],
+  ["dwa", 2],
+  ["dwie", 2],
+  ["two", 2],
+  ["trzy", 3],
+  ["three", 3],
+]);
+
+const extractRequestedDeleteCount = (normalizedPrompt: string) => {
+  const digitMatch = normalizedPrompt.match(/\b(\d{1,2})\b/);
+  if (digitMatch?.[1]) return Number(digitMatch[1]);
+  for (const [word, count] of countWords) {
+    if (normalizedPrompt.includes(` ${word} `) || normalizedPrompt.startsWith(`${word} `)) {
+      return count;
+    }
+  }
+  return null;
+};
+
+const extractQuotedPrefix = (prompt: string) => {
+  const match = prompt.match(/['"“”]([^'"“”]+)['"“”]/);
+  return match?.[1]?.trim() || null;
+};
+
+const extractNamedPrefix = (prompt: string) => {
+  const quoted = extractQuotedPrefix(prompt);
+  if (quoted) return quoted;
+  const normalized = prompt.replace(/\s+/g, " ").trim();
+  const match = normalized.match(/prefix(?:ie|em)?\s+(.+)$/i);
+  return match?.[1]?.trim() || null;
+};
+
+const buildCustomScreenDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-custom-screen-delete-needs-input",
+  status: "needs_input",
+  intentId: "custom-screen-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Custom screen delete needs review context",
+  answer: [
+    "I can delete custom screens only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Use a specific screen name prefix or select the exact screens to remove.",
+  ].join("\n"),
+  summary: "Custom screen deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "custom-screen-delete-target",
+      label: "Which exact custom screens should I delete?",
+      description:
+        "Provide an exact prefix or names so I can build a dry-run plan for specific screens.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const sortScreensByName = (screens: AssistantCustomScreenSummary[]) =>
+  [...screens].sort((left, right) => left.name.localeCompare(right.name));
+
+const buildCustomScreenDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!isLikelyDeletePrompt(normalizedPrompt) || !includesAny(normalizedPrompt, screenDeleteKeywords)) {
+    return null;
+  }
+
+  const prefix = extractNamedPrefix(prompt);
+  const screens = context.resourceCatalog?.customScreens ?? [];
+  if (!prefix) {
+    return buildCustomScreenDeleteNeedsInputPlan(
+      prompt,
+      "The prompt did not include a clear custom screen name prefix."
+    );
+  }
+  if (screens.length === 0) {
+    return buildCustomScreenDeleteNeedsInputPlan(
+      prompt,
+      "I do not have the server-side custom screen catalog in this planning context."
+    );
+  }
+
+  const normalizedPrefix = normalizeAssistantPlannerPrompt(prefix);
+  const matches = sortScreensByName(screens).filter((screen) =>
+    normalizeAssistantPlannerPrompt(screen.name).startsWith(normalizedPrefix)
+  );
+  const requestedCount = extractRequestedDeleteCount(` ${normalizedPrompt} `);
+  if (matches.length === 0) {
+    return buildCustomScreenDeleteNeedsInputPlan(
+      prompt,
+      `No custom screens matched the prefix "${prefix}".`
+    );
+  }
+  if (requestedCount !== null && matches.length !== requestedCount) {
+    return buildCustomScreenDeleteNeedsInputPlan(
+      prompt,
+      `The prefix "${prefix}" matched ${matches.length} custom screen(s), but the prompt requested ${requestedCount}.`
+    );
+  }
+  if (requestedCount === null && matches.length > 1) {
+    return buildCustomScreenDeleteNeedsInputPlan(
+      prompt,
+      `The prefix "${prefix}" matched ${matches.length} custom screen(s). Add an exact count or exact names before deletion.`
+    );
+  }
+
+  return {
+    id: `plan-custom-screen-delete-${normalizedPrefix.replace(/[^a-z0-9]+/g, "-")}`,
+    status: "ready",
+    intentId: "custom-screen-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Delete ${matches.length} custom screen${matches.length === 1 ? "" : "s"}`,
+    answer:
+      "I can delete the matching custom screens through the reviewed LLM Guide action flow.",
+    summary: `Delete ${matches.length} custom screen${matches.length === 1 ? "" : "s"} matching prefix "${prefix}".`,
+    confidence: 0.86,
+    assumptions: [
+      "Deletion is limited to custom screens resolved from the server-side resource catalog.",
+      "Dry-run must be reviewed before execution.",
+    ],
+    questions: [],
+    actions: matches.map((screen) => ({
+      id: `custom-screen-delete-${screen.id}`,
+      type: "custom-screen.delete" as const,
+      title: `Delete ${screen.name}`,
+      description:
+        "Delete a custom screen selected from the server-side resource catalog.",
+      input: {
+        id: screen.id,
+        name: screen.name,
+        expectedNamePrefix: prefix,
+      },
+    })),
+  };
+};
 
 const buildReadyPlanForIntentFamily = (
   intentFamily: AssistantIntentFamily,
@@ -494,6 +656,13 @@ export const planAssistantActions = (
       buildClarifyingPlan(input.prompt, context, routedClassification)
     );
   }
+
+  const deletePlan = buildCustomScreenDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (deletePlan) return normalizeAssistantActionPlan(deletePlan);
 
   if (
     classification.promptKind === "setup_request" &&

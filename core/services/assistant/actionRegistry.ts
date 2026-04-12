@@ -7,6 +7,7 @@ export const assistantActionTypes = [
   "setting.content-route.upsert",
   "content-type.upsert",
   "custom-screen.upsert",
+  "custom-screen.delete",
   "listing-query.upsert",
   "listing-template.upsert",
   "form.upsert",

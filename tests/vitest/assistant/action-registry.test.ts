@@ -13,6 +13,7 @@ test("assistantActionTypes lists every supported action type once", () => {
     "setting.content-route.upsert",
     "content-type.upsert",
     "custom-screen.upsert",
+    "custom-screen.delete",
     "listing-query.upsert",
     "listing-template.upsert",
     "form.upsert",
@@ -61,6 +62,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
 
   expect(isAssistantActionType("site-kit.install")).toBe(true);
   expect(isAssistantActionType("entry.upsert-draft")).toBe(true);
+  expect(isAssistantActionType("custom-screen.delete")).toBe(true);
   expect(isAssistantActionType("menu.item.upsert")).toBe(true);
   expect(isAssistantActionType("seo.document.upsert")).toBe(true);
   expect(isAssistantActionType("media.reference.attach")).toBe(true);

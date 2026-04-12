@@ -53,6 +53,13 @@ const refinementKeywords = [
   "dodaj",
   "dorzuc",
   "dołóż",
+  "usun",
+  "usuń",
+  "usuw",
+  "skasuj",
+  "kasuj",
+  "delete",
+  "remove",
   "zmien",
   "zmień",
   "update",
@@ -72,6 +79,19 @@ const refinementKeywords = [
   "cene",
   "cenę",
 ];
+
+const destructiveKeywords = [
+  "usun",
+  "usuń",
+  "usuw",
+  "skasuj",
+  "kasuj",
+  "delete",
+  "remove",
+];
+
+export const isLikelyDeletePrompt = (prompt: string) =>
+  includesAny(normalizeAssistantPlannerPrompt(prompt), destructiveKeywords);
 
 const docsQuestionKeywords = [
   "gdzie",

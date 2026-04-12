@@ -14,6 +14,7 @@ const actionTypeLabels: Record<string, string> = {
   "setting.content-route.upsert": "Content route",
   "content-type.upsert": "Content model",
   "custom-screen.upsert": "Custom screen",
+  "custom-screen.delete": "Custom screen",
   "listing-query.upsert": "Listing query",
   "listing-template.upsert": "Listing template",
   "form.upsert": "Form",
@@ -51,6 +52,9 @@ export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
           <Badge variant="default">Executed</Badge>
           <Badge variant="outline">Create {result.summary.create}</Badge>
           <Badge variant="outline">Update {result.summary.update}</Badge>
+          {(result.summary.delete ?? 0) > 0 ? (
+            <Badge variant="outline">Delete {result.summary.delete}</Badge>
+          ) : null}
           <Badge variant="outline">No-op {result.summary.noop}</Badge>
           {result.summary.failed > 0 ? (
             <Badge variant="destructive">Failed {result.summary.failed}</Badge>

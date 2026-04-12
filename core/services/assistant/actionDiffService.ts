@@ -50,6 +50,7 @@ export const createPreviewChange = (input: {
   action: AssistantPlannedAction;
   targetType: string;
   targetKey: string;
+  operation?: AssistantActionOperation;
   summary: string;
   warnings?: string[];
   conflicts?: AssistantActionPreviewChange["conflicts"];
@@ -62,7 +63,7 @@ export const createPreviewChange = (input: {
   type: input.action.type,
   targetType: input.targetType,
   targetKey: redactAssistantPreviewText(input.targetKey),
-  operation: buildOperation(input.beforeValue, input.nextValue),
+  operation: input.operation ?? buildOperation(input.beforeValue, input.nextValue),
   summary: redactAssistantPreviewText(input.summary),
   warnings: normalizePreviewWarnings(input.warnings),
   conflicts: normalizePreviewConflicts(input.conflicts),

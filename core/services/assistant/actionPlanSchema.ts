@@ -209,6 +209,17 @@ const normalizeCustomScreenInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeCustomScreenDeleteInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "expectedNamePrefix"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    ...(input.expectedNamePrefix !== undefined
+      ? { expectedNamePrefix: readOptionalText(input.expectedNamePrefix) }
+      : {}),
+  };
+};
+
 const normalizeListingQueryInput = (input: JsonRecord) => {
   assertKeys(
     input,
@@ -593,6 +604,8 @@ const normalizeActionInput = (
       return normalizeContentTypeInput(record);
     case "custom-screen.upsert":
       return normalizeCustomScreenInput(record);
+    case "custom-screen.delete":
+      return normalizeCustomScreenDeleteInput(record);
     case "listing-query.upsert":
       return normalizeListingQueryInput(record);
     case "listing-template.upsert":

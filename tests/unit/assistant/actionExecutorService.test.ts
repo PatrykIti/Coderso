@@ -170,6 +170,8 @@ const createDeps = () => {
       return existing;
     },
     listCustomScreens: async () => customScreens,
+    getCustomScreen: async (id: string) =>
+      customScreens.find((entry) => entry.id === id) ?? null,
     createCustomScreen: async (input: {
       name: string;
       contentTypeId: string;
@@ -220,6 +222,12 @@ const createDeps = () => {
       if (input.bindings !== undefined) existing.bindings = input.bindings;
       existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
       return existing;
+    },
+    deleteCustomScreen: async (id: string) => {
+      const index = customScreens.findIndex((entry) => entry.id === id);
+      if (index < 0) return null;
+      const [deleted] = customScreens.splice(index, 1);
+      return deleted ?? null;
     },
     listListingQueries: async () => listingQueries,
     createListingQuery: async (input: {
@@ -722,6 +730,73 @@ test("executeAssistantActionPlan creates and reuses draft entry actions", async 
 
   const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(replayPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan deletes custom screens through explicit delete actions", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "House Projects",
+    slug: "house-projects",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const screen = await deps.createCustomScreen({
+    name: "House Projects Archive",
+    contentTypeId: contentType.id,
+    status: "active",
+    showInSidebar: true,
+    sidebarLabel: "House Projects Archive",
+    blocks: [],
+    bindings: [],
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-delete-house-project-screen",
+    status: "ready",
+    intentId: "custom-screen-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete custom screen",
+    answer: "I can delete the selected custom screen.",
+    summary: "Delete one custom screen matching prefix.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "custom-screen-delete-1",
+        type: "custom-screen.delete",
+        title: "Delete House Projects Archive",
+        description: "Delete selected custom screen.",
+        input: {
+          id: screen.id,
+          name: screen.name,
+          expectedNamePrefix: "House Projects",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("delete");
+  expect(preview.changes[0]?.warnings).toContain(
+    "This active custom screen is shown in the Coderso sidebar."
+  );
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-custom-screen-delete-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.delete).toBe(1);
+  expect(executed.results[0]?.message).toBe('Deleted custom screen "House Projects Archive".');
+  expect(await deps.getCustomScreen(screen.id)).toBeNull();
 });
 
 test("executeAssistantActionPlan upserts menu items without duplicates", async () => {
