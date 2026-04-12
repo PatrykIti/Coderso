@@ -150,3 +150,4 @@ for (const capability of declaredGuideCapabilities) {
 - 2026-04-12: Completed `TASK-173-01`; acceptance matrix now maps declared capabilities to Vitest/Bun ownership and negative contracts.
 - 2026-04-12: Completed `TASK-173-02`; partial-success execution results now show recovery guidance without adding automatic retry behavior.
 - 2026-04-12: Completed `TASK-173-03`; execute results now expose replay-safe idempotency diagnostics without schema migration.
+- 2026-04-12: Completed `TASK-173-04`; existing security/performance gates and assistant rate-limit checks were revalidated without gate config changes.

@@ -5,7 +5,7 @@
 **Category:** Security + Performance + Assistant  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-173-01, TASK-170, TASK-171, TASK-172  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -69,3 +69,10 @@ await expectProviderPromptRedacted();
 1. Expanded action endpoints keep security gate coverage.
 2. Performance budgets are explicit when action planning cost grows.
 3. Scanner allowlist/config changes include owner, reason, expiry, and ticket.
+
+## Completion Notes (2026-04-12)
+
+- Revalidated existing security/performance gate coverage for assistant-related contracts.
+- Ran assistant rate-limit route checks alongside security/performance gates.
+- No scanner allowlist/config changes were required.
+- No `scripts/coderso-release-gates.ts` or workflow changes were required.
