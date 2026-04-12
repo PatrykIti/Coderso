@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 41 tasks
+- **To Do:** 40 tasks
 - **In Progress:** 8 tasks
-- **Done:** 791 tasks
+- **Done:** 792 tasks
 
 ---
 
@@ -49,7 +49,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | Provider-backed draft planning through strict local schema and recovery |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | More concrete business outcomes beyond the current catalog/site-kit slice |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-170-03-02-01 | Menu Item Upsert Executor Adapter | High | Medium | Executable `menu.item.upsert` through existing menu services |
 | TASK-170-03-02-02 | SEO Document Upsert Executor Adapter | High | Medium | Executable `seo.document.upsert` through existing SEO service |
 | TASK-170-03-02-03 | Media Reference Attach Executor Adapter | High | Large | Existing-media reference attachment with target-specific patching |
 | TASK-170-03-02-04 | Menu, SEO, and Media Adapters Docs, Tests, and Closure | High | Small | Closure for menu/SEO/media adapter wave |
@@ -92,9 +91,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: first entry draft executor adapter is complete; menu/SEO/media adapters are next |
+| TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: entry draft and menu item adapters are complete; SEO adapter is next |
 | TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | In progress: `entry.upsert-draft` adapter complete; remaining adapter leaves are next |
-| TASK-170-03-02 | Menu, SEO, and Media Action Executor Adapters | High | Large | In progress: split into menu, SEO, media, and closure leaves |
+| TASK-170-03-02 | Menu, SEO, and Media Action Executor Adapters | High | Large | In progress: `menu.item.upsert` adapter complete; SEO/media leaves are next |
 
 ---
 
@@ -104,10 +103,11 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-170-01 | Action Family Contract and Permission Model | High | Medium | Done: non-executable action family contract registry and permission model added |
 | TASK-170-01-01 | Entry Action Contracts | High | Medium | Done: entry contracts documented; `entry.upsert-draft` was later promoted by TASK-170-03-01 |
-| TASK-170-01-02 | Menu, SEO, and Media Action Contracts | High | Medium | Done: menu, SEO, and media reference contracts document permissions and boundaries |
+| TASK-170-01-02 | Menu, SEO, and Media Action Contracts | High | Medium | Done: menu/SEO/media contracts documented; `menu.item.upsert` was later promoted by TASK-170-03-02-01 |
 | TASK-170-01-03 | Form, Page, and Listing Expansion Contracts | High | Medium | Done: form automation and page/listing patch contracts stay contract-only |
 | TASK-170-02 | Registry, Diff, and Preview Metadata Expansion | High | Medium | Done: preview metadata redaction and contract-only conflict/dependency helpers added |
 | TASK-170-03-01 | Entry Draft Action Executor Adapters | High | Medium | Done: `entry.upsert-draft` executes draft create/update through existing entry services |
+| TASK-170-03-02-01 | Menu Item Upsert Executor Adapter | High | Medium | Done: `menu.item.upsert` executes through existing menu services and rejects unsafe hrefs |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

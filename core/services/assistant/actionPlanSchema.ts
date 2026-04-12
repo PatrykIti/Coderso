@@ -85,6 +85,11 @@ const readOptionalBoolean = (value: unknown) => {
 const readFiniteNumber = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : fail();
 
+const readOptionalFiniteNumber = (value: unknown) => {
+  if (value === undefined) return undefined;
+  return readFiniteNumber(value);
+};
+
 const readOptionalRecord = (value: unknown) => {
   if (value === undefined) return undefined;
   return assertRecord(value);
@@ -243,6 +248,38 @@ const normalizeEntryUpsertDraftInput = (input: JsonRecord) => {
     title: readText(input.title),
     slug: readText(input.slug),
     values: assertRecord(input.values),
+  };
+};
+
+const readSafeRelativeHref = (value: unknown) => {
+  const href = readText(value);
+  const hasControlChar = Array.from(href).some((char) => {
+    const code = char.charCodeAt(0);
+    return code <= 31 || code === 127;
+  });
+  if (
+    !href.startsWith("/") ||
+    href.startsWith("//") ||
+    href.includes("://") ||
+    href.includes("\\") ||
+    hasControlChar
+  ) {
+    fail();
+  }
+  return href;
+};
+
+const normalizeMenuItemUpsertInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["menuId", "label", "href", "parentId", "orderIndex", "settings"]));
+  return {
+    menuId: readText(input.menuId),
+    label: readText(input.label),
+    href: readSafeRelativeHref(input.href),
+    ...(input.parentId !== undefined ? { parentId: readOptionalText(input.parentId) } : {}),
+    ...(input.orderIndex !== undefined
+      ? { orderIndex: readOptionalFiniteNumber(input.orderIndex) }
+      : {}),
+    ...(input.settings !== undefined ? { settings: assertRecord(input.settings) } : {}),
   };
 };
 
@@ -426,6 +463,8 @@ const normalizeActionInput = (
       return normalizeFormInput(record);
     case "entry.upsert-draft":
       return normalizeEntryUpsertDraftInput(record);
+    case "menu.item.upsert":
+      return normalizeMenuItemUpsertInput(record);
     case "page.upsert":
       return normalizePageInput(record);
     case "site-kit.recommend":

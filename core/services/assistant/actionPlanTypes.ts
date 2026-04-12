@@ -234,6 +234,21 @@ export type AssistantEntryUpsertDraftAction = {
   };
 };
 
+export type AssistantMenuItemUpsertAction = {
+  id: string;
+  type: "menu.item.upsert";
+  title: string;
+  description: string;
+  input: {
+    menuId: string;
+    label: string;
+    href: string;
+    parentId?: string | null;
+    orderIndex?: number;
+    settings?: Record<string, unknown>;
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -308,6 +323,7 @@ export type AssistantPlannedAction =
   | AssistantListingTemplateUpsertAction
   | AssistantFormUpsertAction
   | AssistantEntryUpsertDraftAction
+  | AssistantMenuItemUpsertAction
   | AssistantPageUpsertAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction

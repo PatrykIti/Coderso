@@ -37,6 +37,12 @@ import {
   setFormFields,
   updateForm,
 } from "../forms/formsService";
+import {
+  listMenuItems,
+  replaceMenuItems,
+  type MenuItemInput,
+} from "../menus/menuService";
+import type { MenuItemNode, MenuItemRecord } from "../menus/treeBuilder";
 import type { FormFieldInput } from "../forms/validation";
 import { normalizeSitePath } from "../../site/cache/siteCache";
 import { logAudit } from "../audit/auditService";
@@ -54,6 +60,7 @@ import type {
   AssistantFormUpsertAction,
   AssistantListingQueryUpsertAction,
   AssistantListingTemplateUpsertAction,
+  AssistantMenuItemUpsertAction,
   AssistantPageUpsertAction,
   AssistantPlannedAction,
   AssistantSiteKitInstallAction,
@@ -337,6 +344,8 @@ type ActionExecutorDeps = {
   getEntryBySlug: typeof getEntryBySlug;
   createEntry: typeof createEntry;
   updateEntry: typeof updateEntry;
+  listMenuItems: typeof listMenuItems;
+  replaceMenuItems: typeof replaceMenuItems;
   logAudit: typeof logAudit;
   previewSiteKitPlan: typeof previewGuidedSiteBuilderPlan;
   executeSiteKit: typeof executeGuidedSiteBuilder;
@@ -371,6 +380,8 @@ const defaultDeps: ActionExecutorDeps = {
   getEntryBySlug,
   createEntry,
   updateEntry,
+  listMenuItems,
+  replaceMenuItems,
   logAudit,
   previewSiteKitPlan: previewGuidedSiteBuilderPlan,
   executeSiteKit: executeGuidedSiteBuilder,
@@ -548,6 +559,57 @@ const buildEntryUpsertDraftPreview = async (
       slug: action.input.slug,
       data: action.input.values,
     },
+  });
+};
+
+const flattenMenuNodes = (nodes: MenuItemNode[]): MenuItemRecord[] =>
+  nodes.flatMap((node) => {
+    const { children: _children, ...record } = node;
+    return [record, ...flattenMenuNodes(node.children)];
+  });
+
+const findMenuItemForAction = (
+  items: MenuItemRecord[],
+  action: AssistantMenuItemUpsertAction
+) => items.find((item) => item.href === action.input.href) ?? null;
+
+const buildNextMenuItem = (
+  action: AssistantMenuItemUpsertAction,
+  existing: MenuItemRecord | null,
+  orderIndex: number
+): MenuItemInput => ({
+  ...(existing ? { id: existing.id } : {}),
+  label: action.input.label,
+  href: action.input.href,
+  pageId: null,
+  parentId: action.input.parentId !== undefined ? action.input.parentId : existing?.parentId ?? null,
+  orderIndex: action.input.orderIndex ?? existing?.orderIndex ?? orderIndex,
+  settings: action.input.settings ?? existing?.settings ?? {},
+});
+
+const buildMenuItemPreview = async (
+  action: AssistantMenuItemUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const existing = findMenuItemForAction(existingItems, action);
+  const nextValue = buildNextMenuItem(action, existing, existingItems.length);
+
+  return createPreviewChange({
+    action,
+    targetType: "menu-item",
+    targetKey: `${action.input.menuId}/${action.input.href}`,
+    summary: `${existing ? "Update" : "Create"} menu item "${action.input.label}"`,
+    dependencies: [
+      {
+        actionId: null,
+        targetType: "permission",
+        targetKey: "menus:write",
+        optional: false,
+      },
+    ],
+    beforeValue: existing,
+    nextValue,
   });
 };
 
@@ -975,6 +1037,44 @@ const executeEntryUpsertDraftAction = async (
   };
 };
 
+const executeMenuItemAction = async (
+  action: AssistantMenuItemUpsertAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const existingItems = flattenMenuNodes(await deps.listMenuItems(action.input.menuId));
+  const existing = findMenuItemForAction(existingItems, action);
+  const nextItem = buildNextMenuItem(action, existing, existingItems.length);
+  const nextItems =
+    preview.operation === "create"
+      ? [...existingItems, nextItem]
+      : existingItems.map((item) => (existing && item.id === existing.id ? nextItem : item));
+
+  const tree = preview.operation === "noop"
+    ? await deps.listMenuItems(action.input.menuId)
+    : await deps.replaceMenuItems(action.input.menuId, nextItems);
+  const saved =
+    flattenMenuNodes(tree).find((item) => item.href === action.input.href) ??
+    existing ??
+    null;
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "menu-item",
+    targetKey: `${action.input.menuId}/${action.input.href}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: saved?.id ?? null,
+    adminHref: `/admin/menus/${encodeURIComponent(action.input.menuId)}`,
+    publicHref: action.input.href,
+    message:
+      preview.operation === "noop"
+        ? "Menu item already matched the planned navigation link."
+        : "Menu item is ready in navigation.",
+  };
+};
+
 const executePageAction = async (
   action: AssistantPageUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1233,6 +1333,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "entry.upsert-draft"
         ? executeEntryUpsertDraftAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
+  "menu.item.upsert": {
+    preview: (action, ctx) =>
+      action.type === "menu.item.upsert"
+        ? buildMenuItemPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "menu.item.upsert"
+        ? executeMenuItemAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "page.upsert": {

@@ -44,7 +44,9 @@ test("entry upsert draft action is executable and stays draft-scoped", () => {
 });
 
 test("menu seo media and surface expansion contracts declare domain permissions", () => {
-  expect(getAssistantActionFamilyContract("menu.item.upsert").permissions.execute).toEqual([
+  const menuContract = getAssistantActionFamilyContract("menu.item.upsert");
+  expect(menuContract.status).toBe("executable");
+  expect(menuContract.permissions.execute).toEqual([
     "menus:write",
   ]);
   expect(getAssistantActionFamilyContract("seo.document.upsert").permissions.execute).toEqual([

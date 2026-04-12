@@ -11,7 +11,6 @@ export const assistantContractOnlyActionTypes = [
   "entry.sample.create",
   "entry.bulk-draft.create",
   "entry.field.patch",
-  "menu.item.upsert",
   "menu.structure.patch",
   "seo.document.upsert",
   "media.reference.attach",
@@ -195,6 +194,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "menu.item.upsert",
+    "menu",
+    "core/services/menus/menuService.ts",
+    ["menuId", "label", "href"],
+    {
+      permissions: {
+        plan: ["menus:read"],
+        dryRun: ["menus:read"],
+        execute: ["menus:write"],
+      },
+      notes: ["Href must be a safe admin/public relative URL."],
+    }
+  ),
+  executableContract(
     "page.upsert",
     "page",
     "core/services/pages/pageService.ts",
@@ -270,20 +283,6 @@ export const assistantActionFamilyContracts = [
     },
     {
       notes: ["Patch values must be limited to fields in the owning content type schema."],
-    }
-  ),
-  plannedContract(
-    "menu.item.upsert",
-    "menu",
-    "core/services/menus/menuService.ts",
-    ["menuId", "label", "href"],
-    {
-      plan: ["menus:read"],
-      dryRun: ["menus:read"],
-      execute: ["menus:write"],
-    },
-    {
-      notes: ["Href must be a safe admin/public relative URL unless explicitly allowed."],
     }
   ),
   plannedContract(

@@ -95,3 +95,7 @@ if (action.type.startsWith("media.")) {
 - Registered contract-only menu, SEO, and media actions: `menu.item.upsert`, `menu.structure.patch`, `seo.document.upsert`, and `media.reference.attach`.
 - Documented `menus:*`, `content:*`, and `media:*` permission ownership plus no raw-upload/media-secret handling.
 - Added Vitest coverage for the contract boundary and domain permission metadata.
+
+## Follow-Up Notes
+
+- 2026-04-12: `TASK-170-03-02-01` promoted `menu.item.upsert` to an executable action. `menu.structure.patch`, `seo.document.upsert`, and `media.reference.attach` remain contract-only.

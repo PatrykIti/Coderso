@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 591 | 2026-04-12 | TASK-170-03-02-01 menu item action executor | Assistant/Core |
 | 590 | 2026-04-12 | TASK-170-03-01 entry draft action executor | Assistant/Core |
 | 589 | 2026-04-12 | TASK-170-02 preview metadata expansion | Assistant/Core |
 | 588 | 2026-04-12 | TASK-170-01 action family contracts | Assistant/Core |

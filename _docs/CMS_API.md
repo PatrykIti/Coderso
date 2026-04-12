@@ -2442,7 +2442,9 @@ Endpoints:
 Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execution idzie przez `site-kit.*` actions w `/assistant/actions/*`.
 `site-kit.*` wymaga skonfigurowanego `LLM Guide` (`llmAvailable=true`); endpoint zwraca `assistant_llm_unavailable`, gdy provider/API key nie jest gotowy.
 `TASK-170-01` dodalo contract-only registry dla przyszlych rodzin akcji (`entry.*`, `menu.*`, `seo.*`, `media.*`, `form.automation.*`, `page.widget.*`, `listing-*.*`).
-`TASK-170-03-01` promuje `entry.upsert-draft` do executable typed action; pozostale nowe rodziny nadal sa odrzucane przez strict action plan schema/provider draft adapter do czasu osobnych adapterow preview/execute.
+`TASK-170-03-01` promuje `entry.upsert-draft` do executable typed action.
+`TASK-170-03-02-01` promuje `menu.item.upsert` do executable typed action dla bezpiecznych relatywnych linkow menu.
+Pozostale nowe rodziny nadal sa odrzucane przez strict action plan schema/provider draft adapter do czasu osobnych adapterow preview/execute.
 
 `retrievalBackend` ma wartosc `db` dla official assistant corpus.
 

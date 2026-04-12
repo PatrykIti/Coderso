@@ -78,6 +78,18 @@ const createDeps = () => {
     createdAt: Date;
     updatedAt: Date;
   }> = [];
+  const menuItemsByMenu = new Map<
+    string,
+    Array<{
+      id: string;
+      label: string;
+      href: string | null;
+      pageId: string | null;
+      parentId: string | null;
+      orderIndex: number;
+      settings: Record<string, unknown>;
+    }>
+  >();
   const formFields = new Map<string, Array<Record<string, unknown>>>();
   const deps = {
     getSetting: async (key: string) => {
@@ -369,6 +381,41 @@ const createDeps = () => {
         ReturnType<(typeof import("../../../core/services/content/entryService"))["updateEntry"]>
       >;
     },
+    listMenuItems: async (menuId: string) =>
+      (menuItemsByMenu.get(menuId) ?? []).map((item) => ({
+        ...item,
+        children: [],
+      })),
+    replaceMenuItems: async (
+      menuId: string,
+      items: Array<{
+        id?: string;
+        label: string;
+        href?: string | null;
+        pageId?: string | null;
+        parentId?: string | null;
+        orderIndex?: number;
+        settings?: unknown;
+      }>
+    ) => {
+      const next = items.map((item, index) => ({
+        id: item.id ?? `menu-item-${index + 1}`,
+        label: item.label,
+        href: item.href ?? null,
+        pageId: item.pageId ?? null,
+        parentId: item.parentId ?? null,
+        orderIndex: item.orderIndex ?? index,
+        settings:
+          item.settings && typeof item.settings === "object" && !Array.isArray(item.settings)
+            ? (item.settings as Record<string, unknown>)
+            : {},
+      }));
+      menuItemsByMenu.set(menuId, next);
+      return next.map((item) => ({
+        ...item,
+        children: [],
+      }));
+    },
     logAudit: async () => ({
       id: "audit-1",
       actorId: "user-1",
@@ -468,6 +515,7 @@ const createDeps = () => {
       pages,
       forms,
       entries,
+      menuItemsByMenu,
       formFields,
     },
   });
@@ -552,6 +600,94 @@ test("executeAssistantActionPlan creates and reuses draft entry actions", async 
 
   const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(replayPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan upserts menu items without duplicates", async () => {
+  const deps = createDeps();
+  const plan: AssistantActionPlan = {
+    id: "plan-menu-item",
+    status: "ready",
+    intentId: "menu-item",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Add menu item",
+    answer: "I can add a menu item.",
+    summary: "Add products to the primary menu.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "menu-products",
+        type: "menu.item.upsert",
+        title: "Add products menu item",
+        description: "Add products catalog link to navigation.",
+        input: {
+          menuId: "menu-primary",
+          label: "Products",
+          href: "/products",
+          orderIndex: 0,
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("create");
+  expect(preview.changes[0]?.dependencies).toEqual([
+    {
+      actionId: null,
+      targetType: "permission",
+      targetKey: "menus:write",
+      optional: false,
+    },
+  ]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-menu-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(1);
+  expect(executed.results[0]?.resourceId).toBe("menu-item-1");
+  expect(executed.results[0]?.publicHref).toBe("/products");
+  expect(deps.__state.menuItemsByMenu.get("menu-primary")).toHaveLength(1);
+
+  const updatedPlan: AssistantActionPlan = {
+    ...plan,
+    id: "plan-menu-item-update",
+    actions: [
+      {
+        ...plan.actions[0]!,
+        input: {
+          ...plan.actions[0]!.input,
+          label: "Products Catalog",
+        },
+      },
+    ],
+  };
+  const updatePreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
+  expect(updatePreview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan: updatedPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-menu-2",
+    },
+    deps
+  );
+  expect(deps.__state.menuItemsByMenu.get("menu-primary")).toHaveLength(1);
+  expect(deps.__state.menuItemsByMenu.get("menu-primary")?.[0]?.label).toBe(
+    "Products Catalog"
+  );
+
+  const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
+  expect(noopPreview.changes[0]?.operation).toBe("noop");
 });
 
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {

@@ -102,6 +102,27 @@ test("adaptProviderDraftPlan accepts executable entry draft actions", () => {
   expect(plan.actions[0]?.type).toBe("entry.upsert-draft");
 });
 
+test("adaptProviderDraftPlan accepts executable menu item actions", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "add products to navigation",
+    draft: {
+      actions: [
+        {
+          type: "menu.item.upsert",
+          input: {
+            menuId: "menu-primary",
+            label: "Products",
+            href: "/products",
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]?.type).toBe("menu.item.upsert");
+});
+
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {
   const unknown = adaptProviderDraftPlan({
     prompt: "create product catalog",

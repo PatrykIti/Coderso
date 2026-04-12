@@ -144,6 +144,62 @@ test("normalizeAssistantActionPlan accepts entry upsert draft actions", () => {
   expect(normalized.actions[0]?.type).toBe("entry.upsert-draft");
 });
 
+test("normalizeAssistantActionPlan accepts safe menu item upsert actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "menu-products",
+        type: "menu.item.upsert",
+        title: "Add products to menu",
+        description: "Add products catalog link.",
+        input: {
+          menuId: "menu-primary",
+          label: "Products",
+          href: "/products",
+          orderIndex: 1,
+          settings: {
+            description: "Browse products",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("menu.item.upsert");
+});
+
+test("normalizeAssistantActionPlan rejects unsafe menu hrefs", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "menu-products",
+          type: "menu.item.upsert",
+          title: "Add products to menu",
+          description: "Add products catalog link.",
+          input: {
+            menuId: "menu-primary",
+            label: "Products",
+            href: "https://example.com/products",
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects remaining contract-only actions until adapters land", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

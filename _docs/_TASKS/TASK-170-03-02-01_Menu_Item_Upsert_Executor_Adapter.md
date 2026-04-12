@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Menus  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-03-02  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -75,3 +75,10 @@ await deps.replaceMenuItems(action.input.menuId, next);
 1. `menu.item.upsert` executes through existing menu services.
 2. Unsafe hrefs are rejected.
 3. Re-execution does not duplicate menu items.
+
+## Completion Notes (2026-04-12)
+
+- Promoted `menu.item.upsert` from contract-only to executable assistant action type.
+- Added strict safe-relative-href validation and input normalization for menu id, label, href, parent, order, and settings.
+- Added dry-run/execute adapter logic through existing `listMenuItems` and `replaceMenuItems`; repeated plans update/noop by href instead of duplicating items.
+- Added Vitest schema/provider/registry contract coverage and Bun executor coverage for create/update/noop behavior.
