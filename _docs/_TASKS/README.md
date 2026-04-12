@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 40 tasks
+- **To Do:** 39 tasks
 - **In Progress:** 8 tasks
-- **Done:** 797 tasks
+- **Done:** 798 tasks
 
 ---
 
@@ -49,7 +49,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | Provider-backed draft planning through strict local schema and recovery |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | More concrete business outcomes beyond the current catalog/site-kit slice |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-170-03-03-02 | Listing Template Card Patch Executor Adapter | High | Medium | Executable listing-template card config patch |
 | TASK-170-03-03-03 | Page Widget Patch Executor Adapter | High | Large | Deterministic page widget block patching |
 | TASK-170-03-03-04 | Form Automation Upsert Executor Adapter | High | Large | Form automation adapter with secret-handling guardrails |
 | TASK-170-03-03-05 | Form, Page, and Listing Patch Adapters Docs, Tests, and Closure | High | Medium | Closure for form/page/listing patch adapter wave |
@@ -91,9 +90,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: listing filter patch is complete; listing template card patch is next |
-| TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | In progress: listing filter patch complete; remaining patch leaves are next |
-| TASK-170-03-03 | Form, Page, and Listing Patch Executor Adapters | High | Large | In progress: listing query filters patch complete; remaining patch leaves are next |
+| TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: listing filter/card patches are complete; page widget patch is next |
+| TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | In progress: listing filter/card patches complete; remaining patch leaves are next |
+| TASK-170-03-03 | Form, Page, and Listing Patch Executor Adapters | High | Large | In progress: listing query/template patches complete; page/form leaves are next |
 
 ---
 
@@ -113,6 +112,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-170-03-02-03 | Media Reference Attach Executor Adapter | High | Large | Done: `media.reference.attach` attaches existing media to entry targets only |
 | TASK-170-03-02-04 | Menu, SEO, and Media Adapters Docs, Tests, and Closure | High | Small | Done: docs, board, and changelog synced for menu/SEO/media adapter wave |
 | TASK-170-03-03-01 | Listing Query Filters Patch Executor Adapter | High | Medium | Done: `listing-query.filters.patch` updates query filters through existing listing query service |
+| TASK-170-03-03-02 | Listing Template Card Patch Executor Adapter | High | Medium | Done: `listing-template.card.patch` updates card config through existing listing template service |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

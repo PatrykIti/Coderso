@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Listings  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-03-03-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -72,3 +72,11 @@ await deps.updateListingTemplate(template.id, { config: nextConfig });
 1. Card config patch preserves unrelated template config.
 2. Re-execution noops when card config already matches.
 3. Action uses existing listing template service.
+
+## Completion Notes (2026-04-12)
+
+- Promoted `listing-template.card.patch` from contract-only to executable assistant action type.
+- Added strict input normalization for `listingTemplateSlug` and `card`.
+- Added dry-run/execute adapter logic through existing `listListingTemplates` and `updateListingTemplate`.
+- Preserved unrelated listing template config while patching only `config.card`.
+- Added Vitest schema/provider/registry contract coverage and Bun executor coverage for update/noop behavior.

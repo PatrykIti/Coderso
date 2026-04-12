@@ -1057,6 +1057,69 @@ test("executeAssistantActionPlan patches listing query filters without rewriting
   expect(noopPreview.changes[0]?.operation).toBe("noop");
 });
 
+test("executeAssistantActionPlan patches listing template card config without rewriting config", async () => {
+  const deps = createDeps();
+  await deps.createListingTemplate({
+    name: "Products Grid",
+    slug: "products-grid",
+    description: "Product listing template",
+    layout: "grid",
+    config: {
+      columns: 3,
+      card: {
+        showImage: true,
+      },
+    },
+  });
+  const card = {
+    showImage: true,
+    showPrice: true,
+    showStatus: true,
+  };
+  const plan: AssistantActionPlan = {
+    id: "plan-listing-card",
+    status: "ready",
+    intentId: "listing-card",
+    promptKind: "refinement_request",
+    intentFamily: "product_catalog",
+    title: "Patch listing card",
+    answer: "I can patch listing card config.",
+    summary: "Add price and status to listing cards.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "listing-card-patch",
+        type: "listing-template.card.patch",
+        title: "Show price and status",
+        description: "Patch listing template card config.",
+        input: {
+          listingTemplateSlug: "products-grid",
+          card,
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-listing-card-1",
+    },
+    deps
+  );
+  expect(deps.__state.listingTemplates[0]?.config.card).toEqual(card);
+  expect(deps.__state.listingTemplates[0]?.config.columns).toBe(3);
+
+  const noopPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {
   const plan = buildHouseProjectsCatalogPlan();
   const deps = createDeps();

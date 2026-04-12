@@ -95,3 +95,4 @@ return diffSurface(current, next);
 ## Follow-Up Notes
 
 - 2026-04-12: `TASK-170-03-03-01` promoted `listing-query.filters.patch` to an executable action. `form.automation.upsert`, `page.widget.patch`, and `listing-template.card.patch` remain contract-only.
+- 2026-04-12: `TASK-170-03-03-02` promoted `listing-template.card.patch` to an executable action. `form.automation.upsert` and `page.widget.patch` remain contract-only.

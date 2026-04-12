@@ -326,6 +326,14 @@ const normalizeListingQueryFiltersPatchInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeListingTemplateCardPatchInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["listingTemplateSlug", "card"]));
+  return {
+    listingTemplateSlug: readText(input.listingTemplateSlug),
+    card: assertRecord(input.card),
+  };
+};
+
 const normalizeContentListStyle = (value: unknown) => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -514,6 +522,8 @@ const normalizeActionInput = (
       return normalizeMediaReferenceAttachInput(record);
     case "listing-query.filters.patch":
       return normalizeListingQueryFiltersPatchInput(record);
+    case "listing-template.card.patch":
+      return normalizeListingTemplateCardPatchInput(record);
     case "page.upsert":
       return normalizePageInput(record);
     case "site-kit.recommend":

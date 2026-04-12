@@ -291,6 +291,17 @@ export type AssistantListingQueryFiltersPatchAction = {
   };
 };
 
+export type AssistantListingTemplateCardPatchAction = {
+  id: string;
+  type: "listing-template.card.patch";
+  title: string;
+  description: string;
+  input: {
+    listingTemplateSlug: string;
+    card: Record<string, unknown>;
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -369,6 +380,7 @@ export type AssistantPlannedAction =
   | AssistantSeoDocumentUpsertAction
   | AssistantMediaReferenceAttachAction
   | AssistantListingQueryFiltersPatchAction
+  | AssistantListingTemplateCardPatchAction
   | AssistantPageUpsertAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction

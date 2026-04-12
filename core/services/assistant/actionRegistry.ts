@@ -15,6 +15,7 @@ export const assistantActionTypes = [
   "seo.document.upsert",
   "media.reference.attach",
   "listing-query.filters.patch",
+  "listing-template.card.patch",
   "page.upsert",
   "site-kit.recommend",
   "site-kit.install",

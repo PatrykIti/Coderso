@@ -263,6 +263,60 @@ test("normalizeAssistantActionPlan accepts listing query filter patch actions", 
   expect(normalized.actions[0]?.type).toBe("listing-query.filters.patch");
 });
 
+test("normalizeAssistantActionPlan accepts listing template card patch actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "listing-card",
+        type: "listing-template.card.patch",
+        title: "Update card config",
+        description: "Patch product card config.",
+        input: {
+          listingTemplateSlug: "products-grid",
+          card: {
+            showPrice: true,
+            showStatus: true,
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("listing-template.card.patch");
+});
+
+test("normalizeAssistantActionPlan rejects malformed listing template card patches", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "listing-card",
+          type: "listing-template.card.patch",
+          title: "Update card config",
+          description: "Patch product card config.",
+          input: {
+            listingTemplateSlug: "products-grid",
+            card: {},
+            debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects malformed listing query filter patches", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

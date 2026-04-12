@@ -21,6 +21,7 @@ test("assistantActionTypes lists every supported action type once", () => {
     "seo.document.upsert",
     "media.reference.attach",
     "listing-query.filters.patch",
+    "listing-template.card.patch",
     "page.upsert",
     "site-kit.recommend",
     "site-kit.install",
@@ -62,6 +63,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("seo.document.upsert")).toBe(true);
   expect(isAssistantActionType("media.reference.attach")).toBe(true);
   expect(isAssistantActionType("listing-query.filters.patch")).toBe(true);
+  expect(isAssistantActionType("listing-template.card.patch")).toBe(true);
   expect(isAssistantActionType("entry.sample.create")).toBe(false);
   expect(isAssistantActionType("database.drop")).toBe(false);
   expect(getAssistantActionHandler(registry, "site-kit.install").label).toBe(

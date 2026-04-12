@@ -14,7 +14,6 @@ export const assistantContractOnlyActionTypes = [
   "menu.structure.patch",
   "form.automation.upsert",
   "page.widget.patch",
-  "listing-template.card.patch",
 ] as const;
 
 export type AssistantContractOnlyActionType =
@@ -247,6 +246,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "listing-template.card.patch",
+    "listing",
+    "core/services/content/listingTemplatesService.ts",
+    ["listingTemplateSlug", "card"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Card config patch must preserve unrelated listing template config."],
+    }
+  ),
+  executableContract(
     "page.upsert",
     "page",
     "core/services/pages/pageService.ts",
@@ -370,20 +383,6 @@ export const assistantActionFamilyContracts = [
     },
     {
       notes: ["Widget patch must preserve unknown legacy blocks and reject unsupported widget types."],
-    }
-  ),
-  plannedContract(
-    "listing-template.card.patch",
-    "listing",
-    "core/services/content/listingTemplatesService.ts",
-    ["listingTemplateSlug", "card"],
-    {
-      plan: ["content:read"],
-      dryRun: ["content:read"],
-      execute: ["content:write"],
-    },
-    {
-      notes: ["Card field/layout patch must be deterministic and non-destructive."],
     }
   ),
 ] as const satisfies readonly AssistantActionFamilyContract<AssistantKnownActionContractType>[];

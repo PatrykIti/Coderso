@@ -67,6 +67,7 @@ import type {
   AssistantFormUpsertAction,
   AssistantListingQueryFiltersPatchAction,
   AssistantListingQueryUpsertAction,
+  AssistantListingTemplateCardPatchAction,
   AssistantListingTemplateUpsertAction,
   AssistantMediaReferenceAttachAction,
   AssistantMenuItemUpsertAction,
@@ -558,6 +559,41 @@ const buildListingTemplatePreview = async (
     summary: `${existing ? "Update" : "Create"} listing template "${action.input.name}"`,
     beforeValue: existing,
     nextValue: action.input,
+  });
+};
+
+const buildListingTemplateCardPatchPreview = async (
+  action: AssistantListingTemplateCardPatchAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listListingTemplates()).find(
+      (entry) => entry.slug === action.input.listingTemplateSlug
+    ) ?? null;
+  const nextConfig = existing
+    ? {
+        ...existing.config,
+        card: action.input.card,
+      }
+    : null;
+
+  return createPreviewChange({
+    action,
+    targetType: "listing-template",
+    targetKey: action.input.listingTemplateSlug,
+    summary: `Patch card config for listing template "${action.input.listingTemplateSlug}"`,
+    warnings: existing ? [] : ["The listing template does not exist."],
+    conflicts: existing
+      ? []
+      : [
+          {
+            code: "assistant_action_dependency_missing",
+            severity: "error",
+            message: "Listing template is required before card config can be patched.",
+          },
+        ],
+    beforeValue: existing?.config ?? null,
+    nextValue: nextConfig,
   });
 };
 
@@ -1225,6 +1261,47 @@ const executeListingTemplateAction = async (
   };
 };
 
+const executeListingTemplateCardPatchAction = async (
+  action: AssistantListingTemplateCardPatchAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listListingTemplates()).find(
+      (entry) => entry.slug === action.input.listingTemplateSlug
+    ) ?? null;
+  if (!existing) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const nextConfig = {
+    ...existing.config,
+    card: action.input.card,
+  };
+  const record =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateListingTemplate(existing.id, {
+          config: nextConfig,
+        });
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "listing-template",
+    targetKey: action.input.listingTemplateSlug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record?.id ?? null,
+    adminHref: "/admin/coderso/listings",
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Listing template card config already matched the planned patch."
+        : "Listing template card config is updated.",
+  };
+};
+
 const executeFormAction = async (
   action: AssistantFormUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1680,6 +1757,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "listing-template.upsert"
         ? executeListingTemplateAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "listing-template.card.patch": {
+    preview: (action, ctx) =>
+      action.type === "listing-template.card.patch"
+        ? buildListingTemplateCardPatchPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "listing-template.card.patch"
+        ? executeListingTemplateCardPatchAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "form.upsert": {

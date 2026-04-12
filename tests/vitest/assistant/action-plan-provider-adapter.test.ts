@@ -195,6 +195,28 @@ test("adaptProviderDraftPlan accepts executable listing query filter patches", (
   expect(plan.actions[0]?.type).toBe("listing-query.filters.patch");
 });
 
+test("adaptProviderDraftPlan accepts executable listing template card patches", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "update listing cards",
+    draft: {
+      actions: [
+        {
+          type: "listing-template.card.patch",
+          input: {
+            listingTemplateSlug: "products-grid",
+            card: {
+              showPrice: true,
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]?.type).toBe("listing-template.card.patch");
+});
+
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {
   const unknown = adaptProviderDraftPlan({
     prompt: "create product catalog",

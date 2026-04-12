@@ -65,6 +65,9 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(
     getAssistantActionFamilyContract("listing-query.filters.patch").strictInput.notes.join(" ")
   ).toContain("array records");
+  expect(
+    getAssistantActionFamilyContract("listing-template.card.patch").strictInput.notes.join(" ")
+  ).toContain("preserve unrelated");
 });
 
 test("normalizeAssistantActionFamilyContract enforces strict contract shape", () => {

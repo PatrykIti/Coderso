@@ -158,3 +158,4 @@ for (const plannedFamily of selectedActionFamilies) {
 - 2026-04-12: Completed SEO document executor leaf; `seo.document.upsert` now executes through existing SEO services for page/entry targets.
 - 2026-04-12: Completed media reference executor leaf; `media.reference.attach` now attaches existing media to entry targets through existing services.
 - 2026-04-12: Completed listing query filter patch leaf; `listing-query.filters.patch` now updates existing query filters without rewriting unrelated query config.
+- 2026-04-12: Completed listing template card patch leaf; `listing-template.card.patch` now updates template card config without rewriting unrelated config.
