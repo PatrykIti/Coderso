@@ -370,6 +370,7 @@ Planner schema/recovery:
 - `planAssistantActionsWithProviderDraft` is the async helper for controlled provider draft planning. It requires injected provider availability, maps provider JSON through `actionPlanProviderAdapter.ts`, and falls back to the deterministic local planner on provider errors/unavailability.
 - Provider draft adapter repair fills safe optional action labels and preserves typed provider questions when strict schema validation fails.
 - Assistant action plans can carry strict planner metadata (`local`, `provider`, or `fallback`) so the admin review UI can explain whether a plan came from provider draft or local deterministic planning.
+- Provider planner fixture coverage uses injected fake providers only; live route wiring remains a separate opt-in step.
 
 Execution registry and idempotency:
 - Dry-run/execute dispatch korzysta z formalnego `actionRegistry.ts`, nie z ukrytego centralnego switcha.

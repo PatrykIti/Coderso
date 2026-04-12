@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Provider Planning  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-171-02, TASK-171-03, TASK-171-04  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -73,3 +73,9 @@ for (const fixture of providerPlannerFixtures) {
 1. Provider planner tests do not call live network.
 2. Unsafe drafts recover to questions or safe fallback.
 3. Route behavior and docs match the implemented provider planning contract.
+
+## Completion Notes (2026-04-12)
+
+- Added deterministic provider planner fixtures for provider success, unsafe draft recovery, provider error fallback, and provider unavailable fallback.
+- Confirmed fixture tests use fake providers only and never call live network.
+- Route behavior did not change in this wave; provider planner helper remains injectable and not wired to live provider by default.

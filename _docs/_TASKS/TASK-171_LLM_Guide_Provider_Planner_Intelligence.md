@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + LLM Planning + Security  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09, TASK-170  
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -153,3 +153,13 @@ return adapted.ok ? adapted.plan : buildNeedsInputPlan(adapted.questions);
 - 2026-04-12: Completed `TASK-171-02`; provider draft helper now supports fake-provider draft execution, strict adapter mapping, and deterministic fallback without live network calls.
 - 2026-04-12: Completed `TASK-171-03`; provider draft schema repair now preserves typed clarification questions when strict schema validation fails.
 - 2026-04-12: Completed `TASK-171-04`; action plans can carry strict planner metadata and review UI distinguishes provider draft vs local planner.
+- 2026-04-12: Completed `TASK-171-05`; deterministic fake-provider fixtures cover success, unsafe draft, provider error, and unavailable-provider fallback.
+
+## Completion Notes (2026-04-12)
+
+- Added bounded/redacted provider planning prompt packages.
+- Added async provider draft planning helper with injected provider, strict local adapter mapping, and deterministic fallback.
+- Hardened schema repair and typed clarification question preservation.
+- Added planner metadata for provider/local/fallback review UI.
+- Added deterministic fixture coverage without live provider/network dependency.
+- Live route wiring remains intentionally out of scope; later product tasks can opt into the helper with explicit provider settings and route gates.
