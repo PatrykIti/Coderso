@@ -205,6 +205,60 @@ test("normalizeAssistantActionPlan accepts seo document upsert actions", () => {
   expect(normalized.actions[0]?.type).toBe("seo.document.upsert");
 });
 
+test("normalizeAssistantActionPlan accepts entry media reference attach actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "media-entry",
+        type: "media.reference.attach",
+        title: "Attach hero image",
+        description: "Attach existing media to entry field.",
+        input: {
+          mediaId: "media-1",
+          targetType: "entry",
+          targetId: "entry-1",
+          field: "heroImage",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("media.reference.attach");
+});
+
+test("normalizeAssistantActionPlan rejects unsupported media reference targets", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "media-entry",
+          type: "media.reference.attach",
+          title: "Attach hero image",
+          description: "Attach existing media to page field.",
+          input: {
+            mediaId: "media-1",
+            targetType: "page",
+            targetId: "page-1",
+            field: "heroImage",
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects invalid seo targets and fields", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

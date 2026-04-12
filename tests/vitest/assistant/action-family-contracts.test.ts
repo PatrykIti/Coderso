@@ -54,8 +54,10 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(seoContract.permissions.execute).toEqual([
     "content:write",
   ]);
+  const mediaContract = getAssistantActionFamilyContract("media.reference.attach");
+  expect(mediaContract.status).toBe("executable");
   expect(
-    getAssistantActionFamilyContract("media.reference.attach").strictInput.notes.join(" ")
+    mediaContract.strictInput.notes.join(" ")
   ).toContain("raw upload bytes");
   expect(getAssistantActionFamilyContract("form.automation.upsert").publicWrite).toBe(
     "uses-existing-public-form-hardening"

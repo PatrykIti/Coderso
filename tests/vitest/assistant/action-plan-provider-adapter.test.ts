@@ -147,6 +147,28 @@ test("adaptProviderDraftPlan accepts executable seo document actions", () => {
   expect(plan.actions[0]?.type).toBe("seo.document.upsert");
 });
 
+test("adaptProviderDraftPlan accepts executable media reference actions", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "attach hero image",
+    draft: {
+      actions: [
+        {
+          type: "media.reference.attach",
+          input: {
+            mediaId: "media-1",
+            targetType: "entry",
+            targetId: "entry-1",
+            field: "heroImage",
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]?.type).toBe("media.reference.attach");
+});
+
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {
   const unknown = adaptProviderDraftPlan({
     prompt: "create product catalog",

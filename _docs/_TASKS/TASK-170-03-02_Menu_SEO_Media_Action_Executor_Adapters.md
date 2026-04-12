@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Menus + SEO + Media  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-03, TASK-170-01-02, TASK-170-03-01  
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -91,3 +91,10 @@ if (action.type === "media.reference.attach") {
 - 2026-04-12: Split menu, SEO, and media adapters into separate implementation leaves because media reference attachment needs target-specific patch semantics.
 - 2026-04-12: Completed `TASK-170-03-02-01`; `menu.item.upsert` now executes through existing menu services with safe relative href validation.
 - 2026-04-12: Completed `TASK-170-03-02-02`; `seo.document.upsert` now executes through existing SEO services with explicit page/entry target checks.
+- 2026-04-12: Completed `TASK-170-03-02-03`; `media.reference.attach` now attaches existing media to entry targets through existing media/entry services.
+
+## Completion Notes (2026-04-12)
+
+- `menu.item.upsert`, `seo.document.upsert`, and `media.reference.attach` are executable.
+- `media.reference.attach` intentionally supports entry targets only in this slice; page media patching remains out of scope.
+- `menu.structure.patch` remains contract-only for a future adapter.

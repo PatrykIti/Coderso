@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Docs  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-170-03-02-01, TASK-170-03-02-02, TASK-170-03-02-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -67,3 +67,9 @@ assertContractOnly("menu.structure.patch");
 1. Docs match implemented menu/SEO/media behavior.
 2. Task board and changelog are synchronized.
 3. `TASK-170-03-02` can be marked Done.
+
+## Completion Notes (2026-04-12)
+
+- Synced architecture, CMS API, and security docs for executable menu, SEO, and entry media-reference actions.
+- Synced task board and changelog entries for the menu/SEO/media adapter wave.
+- Left `menu.structure.patch` as contract-only for a later implementation slice.

@@ -12,7 +12,6 @@ export const assistantContractOnlyActionTypes = [
   "entry.bulk-draft.create",
   "entry.field.patch",
   "menu.structure.patch",
-  "media.reference.attach",
   "form.automation.upsert",
   "page.widget.patch",
   "listing-query.filters.patch",
@@ -221,6 +220,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "media.reference.attach",
+    "media",
+    "core/services/media/mediaService.ts",
+    ["mediaId", "targetType", "targetId", "field"],
+    {
+      permissions: {
+        plan: ["media:read", "content:read"],
+        dryRun: ["media:read", "content:read"],
+        execute: ["media:read", "content:write"],
+      },
+      notes: ["References existing media on entry targets only; raw upload bytes are never accepted."],
+    }
+  ),
+  executableContract(
     "page.upsert",
     "page",
     "core/services/pages/pageService.ts",
@@ -310,20 +323,6 @@ export const assistantActionFamilyContracts = [
     },
     {
       notes: ["Patch must be deterministic and avoid duplicate menu items."],
-    }
-  ),
-  plannedContract(
-    "media.reference.attach",
-    "media",
-    "core/services/media/mediaService.ts",
-    ["mediaId", "targetType", "targetId", "field"],
-    {
-      plan: ["media:read"],
-      dryRun: ["media:read"],
-      execute: ["media:read", "content:write"],
-    },
-    {
-      notes: ["References existing media only; raw upload bytes are never accepted."],
     }
   ),
   plannedContract(

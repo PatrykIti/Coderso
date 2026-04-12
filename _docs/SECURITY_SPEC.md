@@ -262,6 +262,7 @@ Rotacja klucza:
   - `entry.upsert-draft` is the first promoted future action; it is internal-only, draft-only, requires `content:write` for execute, and delegates to existing entry services without publishing,
   - `menu.item.upsert` is internal-only, requires `menus:write` for execute, rejects unsafe/external hrefs, and delegates to existing menu services,
   - `seo.document.upsert` is internal-only, requires `content:write` for execute, validates explicit `page`/`entry` targets, and delegates to existing SEO services,
+  - `media.reference.attach` is internal-only, requires `media:read` plus `content:write` for execute, accepts existing media ids only, supports entry targets in the first adapter slice, and never transports raw upload bytes,
   - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
   - preview metadata strings from `actionDiffService.ts` redact secret-like `key=value` fragments before they are returned to admin UI/API clients,
   - `execute` wymaga `idempotencyKey`,

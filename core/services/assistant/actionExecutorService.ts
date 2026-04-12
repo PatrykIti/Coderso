@@ -48,6 +48,7 @@ import {
   replaceMenuItems,
   type MenuItemInput,
 } from "../menus/menuService";
+import { getMediaById } from "../media/mediaService";
 import type { MenuItemNode, MenuItemRecord } from "../menus/treeBuilder";
 import type { FormFieldInput } from "../forms/validation";
 import { normalizeSitePath } from "../../site/cache/siteCache";
@@ -66,6 +67,7 @@ import type {
   AssistantFormUpsertAction,
   AssistantListingQueryUpsertAction,
   AssistantListingTemplateUpsertAction,
+  AssistantMediaReferenceAttachAction,
   AssistantMenuItemUpsertAction,
   AssistantPageUpsertAction,
   AssistantPlannedAction,
@@ -357,6 +359,7 @@ type ActionExecutorDeps = {
   replaceMenuItems: typeof replaceMenuItems;
   getSeoDocumentByTarget: typeof getSeoDocumentByTarget;
   upsertSeoDocument: typeof upsertSeoDocument;
+  getMediaById: typeof getMediaById;
   logAudit: typeof logAudit;
   previewSiteKitPlan: typeof previewGuidedSiteBuilderPlan;
   executeSiteKit: typeof executeGuidedSiteBuilder;
@@ -397,6 +400,7 @@ const defaultDeps: ActionExecutorDeps = {
   replaceMenuItems,
   getSeoDocumentByTarget,
   upsertSeoDocument,
+  getMediaById,
   logAudit,
   previewSiteKitPlan: previewGuidedSiteBuilderPlan,
   executeSiteKit: executeGuidedSiteBuilder,
@@ -732,6 +736,85 @@ const buildSeoDocumentPreview = async (
         }
       : null,
     nextValue,
+  });
+};
+
+const attachMediaReferenceValue = (currentValue: unknown, mediaId: string) => {
+  if (Array.isArray(currentValue)) {
+    const existing = currentValue.filter((item): item is string => typeof item === "string");
+    return existing.includes(mediaId) ? existing : [...existing, mediaId];
+  }
+  return mediaId;
+};
+
+const buildMediaReferenceNextData = (
+  action: AssistantMediaReferenceAttachAction,
+  currentData: Record<string, unknown>
+) => ({
+  ...currentData,
+  [action.input.field]: attachMediaReferenceValue(
+    currentData[action.input.field],
+    action.input.mediaId
+  ),
+});
+
+const buildMediaReferencePreview = async (
+  action: AssistantMediaReferenceAttachAction,
+  deps: ActionExecutorDeps
+) => {
+  const [media, entry] = await Promise.all([
+    deps.getMediaById(action.input.mediaId),
+    deps.getEntry(action.input.targetId),
+  ]);
+  const currentData = entry?.data ?? {};
+  const nextData = entry ? buildMediaReferenceNextData(action, currentData) : null;
+  const warnings = [
+    ...(media ? [] : ["The media asset does not exist."]),
+    ...(entry ? [] : ["The entry target does not exist."]),
+  ];
+
+  return createPreviewChange({
+    action,
+    targetType: "media-reference",
+    targetKey: `${action.input.targetType}/${action.input.targetId}/${action.input.field}`,
+    summary: `Attach media ${action.input.mediaId} to entry field "${action.input.field}"`,
+    warnings,
+    dependencies: [
+      {
+        actionId: null,
+        targetType: "media",
+        targetKey: action.input.mediaId,
+        optional: false,
+      },
+      {
+        actionId: null,
+        targetType: action.input.targetType,
+        targetKey: action.input.targetId,
+        optional: false,
+      },
+    ],
+    conflicts:
+      media && entry
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: "Media asset and entry target are required before the reference can be attached.",
+            },
+          ],
+    beforeValue: entry
+      ? {
+          field: action.input.field,
+          value: currentData[action.input.field] ?? null,
+        }
+      : null,
+    nextValue: entry
+      ? {
+          field: action.input.field,
+          value: nextData?.[action.input.field] ?? null,
+        }
+      : action.input,
   });
 };
 
@@ -1234,6 +1317,44 @@ const executeSeoDocumentAction = async (
   };
 };
 
+const executeMediaReferenceAction = async (
+  action: AssistantMediaReferenceAttachAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const [media, entry] = await Promise.all([
+    deps.getMediaById(action.input.mediaId),
+    deps.getEntry(action.input.targetId),
+  ]);
+  if (!media || !entry) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const nextData = buildMediaReferenceNextData(action, entry.data);
+  const record =
+    preview.operation === "noop"
+      ? entry
+      : await deps.updateEntry(entry.id, {
+          data: nextData,
+        });
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "media-reference",
+    targetKey: `${action.input.targetType}/${action.input.targetId}/${action.input.field}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record?.id ?? null,
+    adminHref: "/admin/coderso/entries",
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Media reference already matched the planned field value."
+        : "Media reference is attached to the entry draft.",
+  };
+};
+
 const executePageAction = async (
   action: AssistantPageUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1512,6 +1633,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "seo.document.upsert"
         ? executeSeoDocumentAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "media.reference.attach": {
+    preview: (action, ctx) =>
+      action.type === "media.reference.attach"
+        ? buildMediaReferencePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "media.reference.attach"
+        ? executeMediaReferenceAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "page.upsert": {

@@ -267,6 +267,19 @@ export type AssistantSeoDocumentUpsertAction = {
   };
 };
 
+export type AssistantMediaReferenceAttachAction = {
+  id: string;
+  type: "media.reference.attach";
+  title: string;
+  description: string;
+  input: {
+    mediaId: string;
+    targetType: "entry";
+    targetId: string;
+    field: string;
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -343,6 +356,7 @@ export type AssistantPlannedAction =
   | AssistantEntryUpsertDraftAction
   | AssistantMenuItemUpsertAction
   | AssistantSeoDocumentUpsertAction
+  | AssistantMediaReferenceAttachAction
   | AssistantPageUpsertAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction

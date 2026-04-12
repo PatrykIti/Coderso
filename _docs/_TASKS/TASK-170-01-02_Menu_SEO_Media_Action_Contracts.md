@@ -100,3 +100,4 @@ if (action.type.startsWith("media.")) {
 
 - 2026-04-12: `TASK-170-03-02-01` promoted `menu.item.upsert` to an executable action. `menu.structure.patch`, `seo.document.upsert`, and `media.reference.attach` remain contract-only.
 - 2026-04-12: `TASK-170-03-02-02` promoted `seo.document.upsert` to an executable action. `menu.structure.patch` and `media.reference.attach` remain contract-only.
+- 2026-04-12: `TASK-170-03-02-03` promoted `media.reference.attach` to an executable action for entry targets. `menu.structure.patch` remains contract-only.

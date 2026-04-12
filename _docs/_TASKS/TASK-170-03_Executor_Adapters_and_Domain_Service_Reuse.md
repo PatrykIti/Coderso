@@ -85,3 +85,4 @@ async function executeAction(action, deps, actor) {
 
 - 2026-04-12: Split executor adapter work into entry, menu/SEO/media, form/page/listing patch, and closure leaves before implementation.
 - 2026-04-12: Completed `TASK-170-03-01`; `entry.upsert-draft` now executes as a draft-only action through existing entry services.
+- 2026-04-12: Completed `TASK-170-03-02`; menu item, SEO document, and entry media-reference actions now execute through existing domain services.

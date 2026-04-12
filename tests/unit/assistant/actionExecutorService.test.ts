@@ -106,6 +106,20 @@ const createDeps = () => {
     createdAt: Date;
     updatedAt: Date;
   }> = [];
+  const mediaAssets: Array<{
+    id: string;
+    key: string;
+    url: string;
+    originalName: string;
+    type: "image" | "file";
+    mimeType: string;
+    size: number;
+    alt: string | null;
+    title: string | null;
+    caption: string | null;
+    createdBy: string | null;
+    createdAt: Date;
+  }> = [];
   const formFields = new Map<string, Array<Record<string, unknown>>>();
   const deps = {
     getSetting: async (key: string) => {
@@ -355,6 +369,10 @@ const createDeps = () => {
           (typeof import("../../../core/services/content/entryService"))["getEntryBySlug"]
         >
       >,
+    getEntry: async (id: string) =>
+      (entries.find((entry) => entry.id === id) ?? null) as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/content/entryService"))["getEntry"]>
+      >,
     createEntry: async (
       typeId: string,
       input: {
@@ -480,6 +498,8 @@ const createDeps = () => {
       seoDocuments.push(record);
       return record;
     },
+    getMediaById: async (id: string) =>
+      mediaAssets.find((entry) => entry.id === id) ?? null,
     logAudit: async () => ({
       id: "audit-1",
       actorId: "user-1",
@@ -581,6 +601,7 @@ const createDeps = () => {
       entries,
       menuItemsByMenu,
       seoDocuments,
+      mediaAssets,
       formFields,
     },
   });
@@ -851,6 +872,112 @@ test("executeAssistantActionPlan upserts seo documents for known targets", async
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan attaches existing media references to entries", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+        heroImage: { type: "string", xFieldType: "media" },
+      },
+    },
+  });
+  const entry = await deps.createEntry(contentType.id, {
+    title: "Sample Product",
+    slug: "sample-product",
+    data: {
+      title: "Sample Product",
+    },
+    authorId: "user-1",
+  });
+  deps.__state.mediaAssets.push({
+    id: "media-1",
+    key: "media-1.jpg",
+    url: "/media/media-1.jpg",
+    originalName: "media-1.jpg",
+    type: "image",
+    mimeType: "image/jpeg",
+    size: 100,
+    alt: null,
+    title: null,
+    caption: null,
+    createdBy: "user-1",
+    createdAt: new Date("2026-04-10T12:00:00.000Z"),
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-media-reference",
+    status: "ready",
+    intentId: "media-reference",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Attach media",
+    answer: "I can attach media to an entry.",
+    summary: "Attach hero image to draft entry.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "media-entry-hero",
+        type: "media.reference.attach",
+        title: "Attach hero image",
+        description: "Attach existing media to the hero image field.",
+        input: {
+          mediaId: "media-1",
+          targetType: "entry",
+          targetId: entry.id,
+          field: "heroImage",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+  expect(preview.changes[0]?.dependencies).toEqual([
+    {
+      actionId: null,
+      targetType: "media",
+      targetKey: "media-1",
+      optional: false,
+    },
+    {
+      actionId: null,
+      targetType: "entry",
+      targetKey: entry.id,
+      optional: false,
+    },
+  ]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-media-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(deps.__state.entries[0]?.data.heroImage).toBe("media-1");
+
+  const noopPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(noopPreview.changes[0]?.operation).toBe("noop");
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-media-2",
+    },
+    deps
+  );
+  expect(deps.__state.entries[0]?.data.heroImage).toBe("media-1");
 });
 
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {

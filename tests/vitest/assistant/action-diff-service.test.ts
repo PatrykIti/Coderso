@@ -134,24 +134,24 @@ test("createPreviewChange redacts secret-like preview metadata", () => {
 
 test("createContractOnlyActionPreviewMetadata emits non-executable conflict metadata", () => {
   const metadata = createContractOnlyActionPreviewMetadata(
-    getAssistantActionFamilyContract("entry.sample.create")
+    getAssistantActionFamilyContract("menu.structure.patch")
   );
 
   expect(metadata.warnings).toEqual([
-    "entry.sample.create is contract-only until preview and execute adapters land.",
+    "menu.structure.patch is contract-only until preview and execute adapters land.",
   ]);
   expect(metadata.conflicts).toEqual([
     {
       code: "assistant_action_contract_only",
       severity: "error",
-      message: "entry.sample.create is documented but not executable yet.",
+      message: "menu.structure.patch is documented but not executable yet.",
     },
   ]);
   expect(metadata.dependencies).toEqual([
     {
       actionId: null,
       targetType: "permission",
-      targetKey: "content:write",
+      targetKey: "menus:write",
       optional: false,
     },
   ]);

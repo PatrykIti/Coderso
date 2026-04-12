@@ -13,6 +13,7 @@ export const assistantActionTypes = [
   "entry.upsert-draft",
   "menu.item.upsert",
   "seo.document.upsert",
+  "media.reference.attach",
   "page.upsert",
   "site-kit.recommend",
   "site-kit.install",

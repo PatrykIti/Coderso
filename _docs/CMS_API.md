@@ -2445,6 +2445,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-170-03-01` promuje `entry.upsert-draft` do executable typed action.
 `TASK-170-03-02-01` promuje `menu.item.upsert` do executable typed action dla bezpiecznych relatywnych linkow menu.
 `TASK-170-03-02-02` promuje `seo.document.upsert` do executable typed action dla jawnych targetow `page` i `entry`.
+`TASK-170-03-02-03` promuje `media.reference.attach` do executable typed action dla istniejacych media assetow i targetow `entry`.
 Pozostale nowe rodziny nadal sa odrzucane przez strict action plan schema/provider draft adapter do czasu osobnych adapterow preview/execute.
 
 `retrievalBackend` ma wartosc `db` dla official assistant corpus.

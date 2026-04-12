@@ -308,6 +308,16 @@ const normalizeSeoDocumentUpsertInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeMediaReferenceAttachInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["mediaId", "targetType", "targetId", "field"]));
+  return {
+    mediaId: readText(input.mediaId),
+    targetType: readEnum(input.targetType, new Set(["entry"])),
+    targetId: readText(input.targetId),
+    field: readText(input.field),
+  };
+};
+
 const normalizeContentListStyle = (value: unknown) => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -492,6 +502,8 @@ const normalizeActionInput = (
       return normalizeMenuItemUpsertInput(record);
     case "seo.document.upsert":
       return normalizeSeoDocumentUpsertInput(record);
+    case "media.reference.attach":
+      return normalizeMediaReferenceAttachInput(record);
     case "page.upsert":
       return normalizePageInput(record);
     case "site-kit.recommend":

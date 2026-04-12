@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Media  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-03-02-01, TASK-170-03-02-02  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -73,3 +73,11 @@ return saveTargetThroughDomainService(next);
 1. Action attaches existing media only.
 2. Raw upload bytes never enter assistant action payloads.
 3. Target writes use existing domain services.
+
+## Completion Notes (2026-04-12)
+
+- Promoted `media.reference.attach` from contract-only to executable assistant action type for `entry` targets.
+- Added strict input normalization for `mediaId`, `targetType=entry`, `targetId`, and `field`.
+- Added dry-run/execute adapter logic through existing `getMediaById`, `getEntry`, and `updateEntry`.
+- Kept page/media-block attachment out of scope until a page-specific patch contract lands.
+- Added Vitest schema/provider/registry contract coverage and Bun executor coverage for attach/noop behavior.
