@@ -90,3 +90,4 @@ return saveThroughDomainService(next);
 - 2026-04-12: Completed `TASK-170-03-03-01`; `listing-query.filters.patch` now patches existing listing query filters without rewriting unrelated query config.
 - 2026-04-12: Completed `TASK-170-03-03-02`; `listing-template.card.patch` now patches card config without rewriting unrelated template config.
 - 2026-04-12: Completed `TASK-170-03-03-03`; `page.widget.patch` now upserts one top-level widget block while preserving unrelated blocks.
+- 2026-04-12: Completed `TASK-170-03-03-04`; `form.automation.upsert` now upserts safe non-webhook form actions through existing form action services.

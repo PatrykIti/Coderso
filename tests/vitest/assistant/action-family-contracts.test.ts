@@ -59,9 +59,8 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(
     mediaContract.strictInput.notes.join(" ")
   ).toContain("raw upload bytes");
-  expect(getAssistantActionFamilyContract("form.automation.upsert").publicWrite).toBe(
-    "uses-existing-public-form-hardening"
-  );
+  const formAutomationContract = getAssistantActionFamilyContract("form.automation.upsert");
+  expect(formAutomationContract.status).toBe("executable");
   expect(
     getAssistantActionFamilyContract("listing-query.filters.patch").strictInput.notes.join(" ")
   ).toContain("array records");
@@ -71,15 +70,16 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(
     getAssistantActionFamilyContract("page.widget.patch").strictInput.notes.join(" ")
   ).toContain("top-level");
+  expect(formAutomationContract.strictInput.notes.join(" ")).toContain("non-webhook");
 });
 
 test("normalizeAssistantActionFamilyContract enforces strict contract shape", () => {
-  const contract = getAssistantActionFamilyContract("form.automation.upsert");
+  const contract = getAssistantActionFamilyContract("entry.sample.create");
 
   expect(normalizeAssistantActionFamilyContract(contract)).toMatchObject({
-    type: "form.automation.upsert",
+    type: "entry.sample.create",
     status: "contract-only",
-    family: "form",
+    family: "entry",
   });
 
   expect(() =>

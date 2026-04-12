@@ -17,6 +17,7 @@ export const assistantActionTypes = [
   "listing-query.filters.patch",
   "listing-template.card.patch",
   "page.widget.patch",
+  "form.automation.upsert",
   "page.upsert",
   "site-kit.recommend",
   "site-kit.install",

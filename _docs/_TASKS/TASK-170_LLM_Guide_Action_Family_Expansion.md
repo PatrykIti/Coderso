@@ -160,3 +160,4 @@ for (const plannedFamily of selectedActionFamilies) {
 - 2026-04-12: Completed listing query filter patch leaf; `listing-query.filters.patch` now updates existing query filters without rewriting unrelated query config.
 - 2026-04-12: Completed listing template card patch leaf; `listing-template.card.patch` now updates template card config without rewriting unrelated config.
 - 2026-04-12: Completed page widget patch leaf; `page.widget.patch` now upserts one top-level widget block with widget validation.
+- 2026-04-12: Completed form automation patch leaf; `form.automation.upsert` now upserts safe non-webhook form actions through existing services.

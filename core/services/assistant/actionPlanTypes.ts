@@ -5,6 +5,7 @@ import type {
   SolutionKitId,
 } from "../kits/solutionKitTypes";
 import type { WidgetBlock } from "../../widgets/types";
+import type { NormalizedFormAction } from "../forms/formActionsContract";
 import type {
   GuidedSiteBuilderExecuteResult,
   GuidedSiteBuilderPlanResult,
@@ -315,6 +316,17 @@ export type AssistantPageWidgetPatchAction = {
   };
 };
 
+export type AssistantFormAutomationUpsertAction = {
+  id: string;
+  type: "form.automation.upsert";
+  title: string;
+  description: string;
+  input: {
+    formId: string;
+    action: NormalizedFormAction;
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -395,6 +407,7 @@ export type AssistantPlannedAction =
   | AssistantListingQueryFiltersPatchAction
   | AssistantListingTemplateCardPatchAction
   | AssistantPageWidgetPatchAction
+  | AssistantFormAutomationUpsertAction
   | AssistantPageUpsertAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction

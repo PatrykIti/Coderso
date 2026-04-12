@@ -67,6 +67,16 @@ const createDeps = () => {
     successMessage: string | null;
     submissionAccess: string;
   }> = [];
+  const formActions = new Map<string, Array<{
+    id: string;
+    type: "email" | "webhook" | "entry_sync" | "redirect" | "success_message";
+    label: string;
+    enabled: boolean;
+    continueOnError: boolean;
+    condition: Record<string, unknown>;
+    config: Record<string, unknown>;
+    orderIndex: number;
+  }>>();
   const entries: Array<{
     id: string;
     typeId: string;
@@ -362,6 +372,27 @@ const createDeps = () => {
       formFields.set(formId, fields);
       return fields;
     },
+    listFormActions: async (formId: string) => formActions.get(formId) ?? [],
+    setFormActions: async (
+      formId: string,
+      actions: Array<{
+        id: string;
+        type: "email" | "webhook" | "entry_sync" | "redirect" | "success_message";
+        label: string;
+        enabled: boolean;
+        continueOnError: boolean;
+        condition: Record<string, unknown>;
+        config: Record<string, unknown>;
+        orderIndex: number;
+      }>
+    ) => {
+      const next = actions.map((action, index) => ({
+        ...action,
+        orderIndex: index,
+      }));
+      formActions.set(formId, next);
+      return next;
+    },
     getEntryBySlug: async (typeId: string, slug: string) =>
       (entries.find((entry) => entry.typeId === typeId && entry.slug === slug) ??
         null) as unknown as Awaited<
@@ -598,6 +629,7 @@ const createDeps = () => {
       listingTemplates,
       pages,
       forms,
+      formActions,
       entries,
       menuItemsByMenu,
       seoDocuments,
@@ -1239,6 +1271,104 @@ test("dryRunAssistantActionPlan rejects unsupported page widget patch types", as
   await expect(dryRunAssistantActionPlan({ plan }, deps)).rejects.toThrow(
     "widget_unknown_type"
   );
+});
+
+test("executeAssistantActionPlan upserts safe form automation without duplicates", async () => {
+  const deps = createDeps();
+  const form = await deps.createForm({
+    name: "Contact",
+    slug: "contact",
+    status: "published",
+    submissionAccess: "public",
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-form-automation",
+    status: "ready",
+    intentId: "form-automation",
+    promptKind: "refinement_request",
+    intentFamily: "lead_capture_site",
+    title: "Set form automation",
+    answer: "I can set a form automation.",
+    summary: "Set success message automation.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "form-success",
+        type: "form.automation.upsert",
+        title: "Set success message",
+        description: "Set form success message automation.",
+        input: {
+          formId: form.id,
+          action: {
+            id: "success-message",
+            type: "success_message",
+            label: "Show success",
+            enabled: true,
+            continueOnError: true,
+            condition: { operator: "always" },
+            config: {
+              message: "Thanks for your message.",
+            },
+            orderIndex: 0,
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-form-automation-1",
+    },
+    deps
+  );
+
+  expect(deps.__state.formActions.get(form.id)).toHaveLength(1);
+  expect(deps.__state.formActions.get(form.id)?.[0]?.config).toEqual({
+    message: "Thanks for your message.",
+  });
+
+  const updatedPlan: AssistantActionPlan = {
+    ...plan,
+    id: "plan-form-automation-update",
+    actions: [
+      {
+        ...plan.actions[0]!,
+        input: {
+          ...plan.actions[0]!.input,
+          action: {
+            ...plan.actions[0]!.input.action,
+            config: {
+              message: "Thanks. We will reply soon.",
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  await executeAssistantActionPlan(
+    {
+      plan: updatedPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-form-automation-2",
+    },
+    deps
+  );
+  expect(deps.__state.formActions.get(form.id)).toHaveLength(1);
+  expect(deps.__state.formActions.get(form.id)?.[0]?.config).toEqual({
+    message: "Thanks. We will reply soon.",
+  });
+
+  const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
+  expect(noopPreview.changes[0]?.operation).toBe("noop");
 });
 
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {

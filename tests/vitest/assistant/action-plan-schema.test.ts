@@ -321,6 +321,75 @@ test("normalizeAssistantActionPlan accepts page widget patch actions", () => {
   expect(normalized.actions[0]?.type).toBe("page.widget.patch");
 });
 
+test("normalizeAssistantActionPlan accepts safe form automation upsert actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "form-success",
+        type: "form.automation.upsert",
+        title: "Set success message",
+        description: "Set form success message automation.",
+        input: {
+          formId: "form-1",
+          action: {
+            id: "success-message",
+            type: "success_message",
+            label: "Show success",
+            config: {
+              message: "Thanks for your message.",
+            },
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("form.automation.upsert");
+});
+
+test("normalizeAssistantActionPlan rejects webhook form automation in this slice", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "form-webhook",
+          type: "form.automation.upsert",
+          title: "Set webhook",
+          description: "Set form webhook automation.",
+          input: {
+            formId: "form-1",
+            action: {
+              id: "webhook",
+              type: "webhook",
+              config: {
+                url: "https://example.com/hook",
+                method: "POST",
+                headers: {
+                  authorization: "secret",
+                },
+                timeoutMs: 8000,
+                includeSubmission: true,
+              },
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects unsupported page widget patch operations", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

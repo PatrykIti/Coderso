@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Forms  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-03-03-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -72,3 +72,11 @@ await deps.upsertFormAction(form.id, nextAction);
 1. Automation upsert uses existing forms services.
 2. Secrets are not exposed in action payloads or metadata.
 3. Public form hardening remains unchanged.
+
+## Completion Notes (2026-04-12)
+
+- Promoted `form.automation.upsert` from contract-only to executable assistant action type for safe non-webhook actions.
+- Added strict input normalization for `formId` and one stable-id form action.
+- Added dry-run/execute adapter logic through existing `listFormActions` and `setFormActions`.
+- Kept webhook automations out of scope until secret handling for headers/body templates is explicit.
+- Added Vitest schema/provider/registry contract coverage and Bun executor coverage for create/update/noop behavior.

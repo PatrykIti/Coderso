@@ -44,6 +44,10 @@ import {
   updateForm,
 } from "../forms/formsService";
 import {
+  listFormActions,
+  setFormActions,
+} from "../forms/formActionsService";
+import {
   listMenuItems,
   replaceMenuItems,
   type MenuItemInput,
@@ -67,6 +71,7 @@ import type {
   AssistantCustomScreenUpsertAction,
   AssistantEntryUpsertDraftAction,
   AssistantFormUpsertAction,
+  AssistantFormAutomationUpsertAction,
   AssistantListingQueryFiltersPatchAction,
   AssistantListingQueryUpsertAction,
   AssistantListingTemplateCardPatchAction,
@@ -356,6 +361,8 @@ type ActionExecutorDeps = {
   createForm: typeof createForm;
   updateForm: typeof updateForm;
   setFormFields: typeof setFormFields;
+  listFormActions: typeof listFormActions;
+  setFormActions: typeof setFormActions;
   getEntryBySlug: typeof getEntryBySlug;
   createEntry: typeof createEntry;
   updateEntry: typeof updateEntry;
@@ -397,6 +404,8 @@ const defaultDeps: ActionExecutorDeps = {
   createForm,
   updateForm,
   setFormFields,
+  listFormActions,
+  setFormActions,
   getEntryBySlug,
   createEntry,
   updateEntry,
@@ -656,6 +665,47 @@ const buildPageWidgetPatchPreview = async (
     nextValue: existing
       ? {
           blocks: nextBlocks,
+        }
+      : null,
+  });
+};
+
+const buildFormAutomationPreview = async (
+  action: AssistantFormAutomationUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  const form = (await deps.listForms()).find((entry) => entry.id === action.input.formId) ?? null;
+  const actions = form ? await deps.listFormActions(action.input.formId) : [];
+  const existing = actions.find((entry) => entry.id === action.input.action.id) ?? null;
+  const nextActions = existing
+    ? actions.map((entry) =>
+        entry.id === action.input.action.id ? action.input.action : entry
+      )
+    : [...actions, { ...action.input.action, orderIndex: actions.length }];
+
+  return createPreviewChange({
+    action,
+    targetType: "form-action",
+    targetKey: `${action.input.formId}/${action.input.action.id}`,
+    summary: `${existing ? "Update" : "Create"} form automation "${action.input.action.label}"`,
+    warnings: form ? [] : ["The form does not exist."],
+    conflicts: form
+      ? []
+      : [
+          {
+            code: "assistant_action_dependency_missing",
+            severity: "error",
+            message: "Form is required before automation can be updated.",
+          },
+        ],
+    beforeValue: form
+      ? {
+          actions,
+        }
+      : null,
+    nextValue: form
+      ? {
+          actions: nextActions,
         }
       : null,
   });
@@ -1407,6 +1457,45 @@ const executePageWidgetPatchAction = async (
   };
 };
 
+const executeFormAutomationAction = async (
+  action: AssistantFormAutomationUpsertAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const form = (await deps.listForms()).find((entry) => entry.id === action.input.formId) ?? null;
+  if (!form) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const actions = await deps.listFormActions(action.input.formId);
+  const existing = actions.find((entry) => entry.id === action.input.action.id) ?? null;
+  const nextActions = existing
+    ? actions.map((entry) =>
+        entry.id === action.input.action.id ? action.input.action : entry
+      )
+    : [...actions, { ...action.input.action, orderIndex: actions.length }];
+  const saved =
+    preview.operation === "noop"
+      ? actions
+      : await deps.setFormActions(action.input.formId, nextActions);
+  const record = saved.find((entry) => entry.id === action.input.action.id) ?? null;
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "form-action",
+    targetKey: `${action.input.formId}/${action.input.action.id}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record?.id ?? null,
+    adminHref: `/admin/coderso/forms/${encodeURIComponent(action.input.formId)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Form automation already matched the planned action."
+        : "Form automation is updated.",
+  };
+};
+
 const executeFormAction = async (
   action: AssistantFormUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1882,6 +1971,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "page.widget.patch"
         ? executePageWidgetPatchAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "form.automation.upsert": {
+    preview: (action, ctx) =>
+      action.type === "form.automation.upsert"
+        ? buildFormAutomationPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "form.automation.upsert"
+        ? executeFormAutomationAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "form.upsert": {

@@ -23,6 +23,7 @@ test("assistantActionTypes lists every supported action type once", () => {
     "listing-query.filters.patch",
     "listing-template.card.patch",
     "page.widget.patch",
+    "form.automation.upsert",
     "page.upsert",
     "site-kit.recommend",
     "site-kit.install",
@@ -66,6 +67,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("listing-query.filters.patch")).toBe(true);
   expect(isAssistantActionType("listing-template.card.patch")).toBe(true);
   expect(isAssistantActionType("page.widget.patch")).toBe(true);
+  expect(isAssistantActionType("form.automation.upsert")).toBe(true);
   expect(isAssistantActionType("entry.sample.create")).toBe(false);
   expect(isAssistantActionType("database.drop")).toBe(false);
   expect(getAssistantActionHandler(registry, "site-kit.install").label).toBe(

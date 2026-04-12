@@ -12,7 +12,6 @@ export const assistantContractOnlyActionTypes = [
   "entry.bulk-draft.create",
   "entry.field.patch",
   "menu.structure.patch",
-  "form.automation.upsert",
 ] as const;
 
 export type AssistantContractOnlyActionType =
@@ -273,6 +272,22 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "form.automation.upsert",
+    "form",
+    "core/services/forms/formActionsService.ts",
+    ["formId", "action"],
+    {
+      permissions: {
+        plan: ["forms:read"],
+        dryRun: ["forms:read"],
+        execute: ["forms:write"],
+      },
+      notes: [
+        "Supports safe non-webhook automation actions first; webhook actions remain unsupported until secret handling is explicit.",
+      ],
+    }
+  ),
+  executableContract(
     "page.upsert",
     "page",
     "core/services/pages/pageService.ts",
@@ -362,26 +377,6 @@ export const assistantActionFamilyContracts = [
     },
     {
       notes: ["Patch must be deterministic and avoid duplicate menu items."],
-    }
-  ),
-  plannedContract(
-    "form.automation.upsert",
-    "form",
-    "core/services/forms/formActionsService.ts",
-    ["formId", "action"],
-    {
-      plan: ["forms:read"],
-      dryRun: ["forms:read"],
-      execute: ["forms:write"],
-    },
-    {
-      notes: ["Automation payload must not include integration secrets in browser-visible data."],
-      publicWrite: "uses-existing-public-form-hardening",
-      secretHandling: [
-        ...baseSecretHandling,
-        "no-integration-provider-secrets",
-        "no-webhook-secret-material",
-      ],
     }
   ),
 ] as const satisfies readonly AssistantActionFamilyContract<AssistantKnownActionContractType>[];

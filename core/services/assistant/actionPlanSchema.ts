@@ -7,6 +7,11 @@ import type {
   AssistantPromptKind,
 } from "./actionPlanTypes";
 import { assistantActionTypes } from "./actionRegistry";
+import {
+  normalizeFormActionInput,
+  type FormActionInput,
+  type FormActionType,
+} from "../forms/formActionsContract";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -40,6 +45,13 @@ const intentFamilies = new Set<AssistantIntentFamily>([
   "lead_capture_site",
   "site_kit",
   "unknown",
+]);
+
+const safeFormAutomationActionTypes = new Set<FormActionType>([
+  "email",
+  "entry_sync",
+  "redirect",
+  "success_message",
 ]);
 
 const actionTypes = new Set<AssistantExecutableActionType>(assistantActionTypes);
@@ -357,6 +369,35 @@ const normalizePageWidgetPatchInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeFormAutomationActionInput = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(
+    input,
+    new Set([
+      "id",
+      "type",
+      "label",
+      "enabled",
+      "continueOnError",
+      "condition",
+      "config",
+      "orderIndex",
+    ])
+  );
+  const type = readText(input.type);
+  if (!safeFormAutomationActionTypes.has(type as FormActionType)) fail();
+  if (input.id === undefined) fail();
+  return normalizeFormActionInput(input as FormActionInput, 0);
+};
+
+const normalizeFormAutomationUpsertInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["formId", "action"]));
+  return {
+    formId: readText(input.formId),
+    action: normalizeFormAutomationActionInput(input.action),
+  };
+};
+
 const normalizeContentListStyle = (value: unknown) => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -549,6 +590,8 @@ const normalizeActionInput = (
       return normalizeListingTemplateCardPatchInput(record);
     case "page.widget.patch":
       return normalizePageWidgetPatchInput(record);
+    case "form.automation.upsert":
+      return normalizeFormAutomationUpsertInput(record);
     case "page.upsert":
       return normalizePageInput(record);
     case "site-kit.recommend":

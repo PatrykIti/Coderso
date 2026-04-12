@@ -378,8 +378,7 @@ Action family contract registry:
 - `core/services/assistant/actionFamilyContracts.ts` documents the next assistant action families without enabling execution.
 - Contract-only action types currently include:
   - `entry.sample.create`, `entry.bulk-draft.create`, `entry.field.patch`,
-  - `menu.structure.patch`,
-  - `form.automation.upsert`.
+  - `menu.structure.patch`.
 - These contracts declare schema owners, required permissions, strict reject-unknown expectations, anti-abuse notes, and secret-handling rules.
 - Contract-only action types are not part of `assistantActionTypes`; strict plan schema and provider draft adaptation continue to reject them until their preview/execute adapters land in later `TASK-170` slices.
 - Contract-only action families can still produce non-executable preview metadata through `createContractOnlyActionPreviewMetadata`, which returns a machine-readable `assistant_action_contract_only` conflict and permission dependencies for future adapters/UI work.
@@ -390,6 +389,7 @@ Action family contract registry:
 - `listing-query.filters.patch` is executable and updates `query.filters` on existing listing queries while preserving unrelated query configuration.
 - `listing-template.card.patch` is executable and updates `config.card` on existing listing templates while preserving unrelated template config.
 - `page.widget.patch` is executable for top-level `upsert-block` operations and uses runtime widget validation before updating page current data.
+- `form.automation.upsert` is executable for safe non-webhook form actions and uses existing form action services; webhook automation remains out of scope until secret handling is explicit.
 
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,

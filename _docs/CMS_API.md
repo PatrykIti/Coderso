@@ -2449,6 +2449,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-170-03-03-01` promuje `listing-query.filters.patch` do executable typed action dla patchowania `query.filters` na istniejacych listing queries.
 `TASK-170-03-03-02` promuje `listing-template.card.patch` do executable typed action dla patchowania `config.card` na istniejacych listing templates.
 `TASK-170-03-03-03` promuje `page.widget.patch` do executable typed action dla top-level `upsert-block` na istniejacych stronach.
+`TASK-170-03-03-04` promuje `form.automation.upsert` do executable typed action dla bezpiecznych non-webhook form actions; webhook automation pozostaje poza zakresem do czasu jawnej obslugi sekretow.
 Pozostale nowe rodziny nadal sa odrzucane przez strict action plan schema/provider draft adapter do czasu osobnych adapterow preview/execute.
 
 `retrievalBackend` ma wartosc `db` dla official assistant corpus.

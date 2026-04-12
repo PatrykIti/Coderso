@@ -242,6 +242,32 @@ test("adaptProviderDraftPlan accepts executable page widget patches", () => {
   expect(plan.actions[0]?.type).toBe("page.widget.patch");
 });
 
+test("adaptProviderDraftPlan accepts safe form automation actions", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "set success message",
+    draft: {
+      actions: [
+        {
+          type: "form.automation.upsert",
+          input: {
+            formId: "form-1",
+            action: {
+              id: "success-message",
+              type: "success_message",
+              config: {
+                message: "Thanks.",
+              },
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]?.type).toBe("form.automation.upsert");
+});
+
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {
   const unknown = adaptProviderDraftPlan({
     prompt: "create product catalog",
