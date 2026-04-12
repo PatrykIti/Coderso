@@ -379,7 +379,6 @@ Action family contract registry:
 - Contract-only action types currently include:
   - `entry.sample.create`, `entry.bulk-draft.create`, `entry.field.patch`,
   - `menu.structure.patch`,
-  - `seo.document.upsert`,
   - `media.reference.attach`,
   - `form.automation.upsert`,
   - `page.widget.patch`,
@@ -389,6 +388,7 @@ Action family contract registry:
 - Contract-only action families can still produce non-executable preview metadata through `createContractOnlyActionPreviewMetadata`, which returns a machine-readable `assistant_action_contract_only` conflict and permission dependencies for future adapters/UI work.
 - `entry.upsert-draft` is the first promoted action from this registry. It is executable, draft-only, uses existing content entry services, and does not publish content.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
+- `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
 
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,

@@ -174,6 +174,87 @@ test("normalizeAssistantActionPlan accepts safe menu item upsert actions", () =>
   expect(normalized.actions[0]?.type).toBe("menu.item.upsert");
 });
 
+test("normalizeAssistantActionPlan accepts seo document upsert actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "seo-products",
+        type: "seo.document.upsert",
+        title: "Update product SEO",
+        description: "Add SEO metadata to products page.",
+        input: {
+          targetType: "page",
+          targetId: "page-products",
+          seo: {
+            title: "Products",
+            description: "Browse products.",
+            canonicalUrl: "/products",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("seo.document.upsert");
+});
+
+test("normalizeAssistantActionPlan rejects invalid seo targets and fields", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "seo-products",
+          type: "seo.document.upsert",
+          title: "Update product SEO",
+          description: "Add SEO metadata to products page.",
+          input: {
+            targetType: "product",
+            targetId: "page-products",
+            seo: {
+              title: "Products",
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "seo-products",
+          type: "seo.document.upsert",
+          title: "Update product SEO",
+          description: "Add SEO metadata to products page.",
+          input: {
+            targetType: "page",
+            targetId: "page-products",
+            seo: {
+              title: "Products",
+              debug: true,
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects unsafe menu hrefs", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

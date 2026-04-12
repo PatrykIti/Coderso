@@ -22,15 +22,21 @@ import {
 } from "../content/listingTemplatesService";
 import {
   createEntry,
+  getEntry,
   getEntryBySlug,
   updateEntry,
 } from "../content/entryService";
 import {
   createPage,
+  getPage,
   getPageBySlug,
   publishPage,
   updatePage,
 } from "../pages/pageService";
+import {
+  getSeoDocumentByTarget,
+  upsertSeoDocument,
+} from "../seo/seoService";
 import {
   createForm,
   listForms,
@@ -63,6 +69,7 @@ import type {
   AssistantMenuItemUpsertAction,
   AssistantPageUpsertAction,
   AssistantPlannedAction,
+  AssistantSeoDocumentUpsertAction,
   AssistantSiteKitInstallAction,
   AssistantSiteKitRecommendAction,
   AssistantSiteKitValidateAction,
@@ -334,6 +341,7 @@ type ActionExecutorDeps = {
   createListingTemplate: typeof createListingTemplate;
   updateListingTemplate: typeof updateListingTemplate;
   getPageBySlug: typeof getPageBySlug;
+  getPage: typeof getPage;
   createPage: typeof createPage;
   updatePage: typeof updatePage;
   publishPage: typeof publishPage;
@@ -344,8 +352,11 @@ type ActionExecutorDeps = {
   getEntryBySlug: typeof getEntryBySlug;
   createEntry: typeof createEntry;
   updateEntry: typeof updateEntry;
+  getEntry: typeof getEntry;
   listMenuItems: typeof listMenuItems;
   replaceMenuItems: typeof replaceMenuItems;
+  getSeoDocumentByTarget: typeof getSeoDocumentByTarget;
+  upsertSeoDocument: typeof upsertSeoDocument;
   logAudit: typeof logAudit;
   previewSiteKitPlan: typeof previewGuidedSiteBuilderPlan;
   executeSiteKit: typeof executeGuidedSiteBuilder;
@@ -370,6 +381,7 @@ const defaultDeps: ActionExecutorDeps = {
   createListingTemplate,
   updateListingTemplate,
   getPageBySlug,
+  getPage,
   createPage,
   updatePage,
   publishPage,
@@ -380,8 +392,11 @@ const defaultDeps: ActionExecutorDeps = {
   getEntryBySlug,
   createEntry,
   updateEntry,
+  getEntry,
   listMenuItems,
   replaceMenuItems,
+  getSeoDocumentByTarget,
+  upsertSeoDocument,
   logAudit,
   previewSiteKitPlan: previewGuidedSiteBuilderPlan,
   executeSiteKit: executeGuidedSiteBuilder,
@@ -609,6 +624,113 @@ const buildMenuItemPreview = async (
       },
     ],
     beforeValue: existing,
+    nextValue,
+  });
+};
+
+const normalizeSeoSlugForAction = (value: string | null | undefined) => {
+  if (!value) return null;
+  return value.startsWith("/") ? value : `/${value}`;
+};
+
+const loadSeoActionTarget = async (
+  action: AssistantSeoDocumentUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  if (action.input.targetType === "page") {
+    const page = await deps.getPage(action.input.targetId);
+    return page
+      ? {
+          id: page.id,
+          title: page.title,
+          slug: normalizeSeoSlugForAction(page.slug),
+        }
+      : null;
+  }
+  const entry = await deps.getEntry(action.input.targetId);
+  return entry
+    ? {
+        id: entry.id,
+        title: entry.title,
+        slug: normalizeSeoSlugForAction(entry.slug),
+      }
+    : null;
+};
+
+const buildSeoNextValue = (
+  action: AssistantSeoDocumentUpsertAction,
+  existing: Awaited<ReturnType<typeof getSeoDocumentByTarget>>,
+  target: { title: string; slug: string | null }
+) => ({
+  targetType: action.input.targetType,
+  targetId: action.input.targetId,
+  slug: action.input.seo.slug !== undefined
+    ? normalizeSeoSlugForAction(action.input.seo.slug)
+    : existing?.slug ?? target.slug,
+  title: action.input.seo.title !== undefined
+    ? action.input.seo.title
+    : existing?.title ?? target.title,
+  description: action.input.seo.description !== undefined
+    ? action.input.seo.description
+    : existing?.description ?? null,
+  canonicalUrl: action.input.seo.canonicalUrl !== undefined
+    ? action.input.seo.canonicalUrl
+    : existing?.canonicalUrl ?? null,
+  robots: action.input.seo.robots !== undefined
+    ? action.input.seo.robots
+    : existing?.robots ?? null,
+});
+
+const buildSeoDocumentPreview = async (
+  action: AssistantSeoDocumentUpsertAction,
+  deps: ActionExecutorDeps
+) => {
+  const target = await loadSeoActionTarget(action, deps);
+  const existing = target
+    ? await deps.getSeoDocumentByTarget(action.input.targetType, action.input.targetId)
+    : null;
+  const nextValue = target
+    ? buildSeoNextValue(action, existing, target)
+    : {
+        targetType: action.input.targetType,
+        targetId: action.input.targetId,
+        ...action.input.seo,
+      };
+
+  return createPreviewChange({
+    action,
+    targetType: "seo-document",
+    targetKey: `${action.input.targetType}/${action.input.targetId}`,
+    summary: `${existing ? "Update" : "Create"} SEO document for ${action.input.targetType} ${action.input.targetId}`,
+    warnings: target ? [] : ["The SEO target does not exist."],
+    dependencies: [
+      {
+        actionId: null,
+        targetType: action.input.targetType,
+        targetKey: action.input.targetId,
+        optional: false,
+      },
+    ],
+    conflicts: target
+      ? []
+      : [
+          {
+            code: "assistant_action_dependency_missing",
+            severity: "error",
+            message: "SEO target is required before the document can be updated.",
+          },
+        ],
+    beforeValue: existing
+      ? {
+          targetType: existing.targetType,
+          targetId: existing.targetId,
+          slug: existing.slug,
+          title: existing.title,
+          description: existing.description,
+          canonicalUrl: existing.canonicalUrl,
+          robots: existing.robots,
+        }
+      : null,
     nextValue,
   });
 };
@@ -1075,6 +1197,43 @@ const executeMenuItemAction = async (
   };
 };
 
+const executeSeoDocumentAction = async (
+  action: AssistantSeoDocumentUpsertAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const target = await loadSeoActionTarget(action, deps);
+  if (!target) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const existing = await deps.getSeoDocumentByTarget(
+    action.input.targetType,
+    action.input.targetId
+  );
+  const nextValue = buildSeoNextValue(action, existing, target);
+  const record =
+    preview.operation === "noop"
+      ? existing
+      : await deps.upsertSeoDocument(nextValue);
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "seo-document",
+    targetKey: `${action.input.targetType}/${action.input.targetId}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record?.id ?? null,
+    adminHref: record ? `/admin/seo/${encodeURIComponent(record.id)}` : "/admin/seo",
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "SEO document already matched the planned metadata."
+        : "SEO document is ready.",
+  };
+};
+
 const executePageAction = async (
   action: AssistantPageUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1343,6 +1502,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "menu.item.upsert"
         ? executeMenuItemAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "seo.document.upsert": {
+    preview: (action, ctx) =>
+      action.type === "seo.document.upsert"
+        ? buildSeoDocumentPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "seo.document.upsert"
+        ? executeSeoDocumentAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "page.upsert": {

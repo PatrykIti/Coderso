@@ -249,6 +249,24 @@ export type AssistantMenuItemUpsertAction = {
   };
 };
 
+export type AssistantSeoDocumentUpsertAction = {
+  id: string;
+  type: "seo.document.upsert";
+  title: string;
+  description: string;
+  input: {
+    targetType: "page" | "entry";
+    targetId: string;
+    seo: {
+      slug?: string | null;
+      title?: string | null;
+      description?: string | null;
+      canonicalUrl?: string | null;
+      robots?: string | null;
+    };
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -324,6 +342,7 @@ export type AssistantPlannedAction =
   | AssistantFormUpsertAction
   | AssistantEntryUpsertDraftAction
   | AssistantMenuItemUpsertAction
+  | AssistantSeoDocumentUpsertAction
   | AssistantPageUpsertAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction

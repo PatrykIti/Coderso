@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + SEO  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-03-02-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -70,3 +70,10 @@ return deps.upsertSeoDocument({ targetType, targetId, ...next });
 1. SEO action uses existing SEO service.
 2. Target scope is explicit and strict.
 3. Re-execution remains idempotent.
+
+## Completion Notes (2026-04-12)
+
+- Promoted `seo.document.upsert` from contract-only to executable assistant action type.
+- Added strict input normalization for `targetType`, `targetId`, and nested SEO fields.
+- Added dry-run/execute adapter logic through existing `getSeoDocumentByTarget` and `upsertSeoDocument`, with page/entry target checks through existing domain services.
+- Added Vitest schema/provider/registry contract coverage and Bun executor coverage for create/update/noop behavior.

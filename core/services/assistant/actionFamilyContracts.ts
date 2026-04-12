@@ -12,7 +12,6 @@ export const assistantContractOnlyActionTypes = [
   "entry.bulk-draft.create",
   "entry.field.patch",
   "menu.structure.patch",
-  "seo.document.upsert",
   "media.reference.attach",
   "form.automation.upsert",
   "page.widget.patch",
@@ -208,6 +207,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "seo.document.upsert",
+    "seo",
+    "core/services/seo/seoService.ts",
+    ["targetType", "targetId", "seo"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["SEO target must resolve to an existing schema-owned page or entry."],
+    }
+  ),
+  executableContract(
     "page.upsert",
     "page",
     "core/services/pages/pageService.ts",
@@ -297,20 +310,6 @@ export const assistantActionFamilyContracts = [
     },
     {
       notes: ["Patch must be deterministic and avoid duplicate menu items."],
-    }
-  ),
-  plannedContract(
-    "seo.document.upsert",
-    "seo",
-    "core/services/seo/seoService.ts",
-    ["targetType", "targetId", "seo"],
-    {
-      plan: ["content:read"],
-      dryRun: ["content:read"],
-      execute: ["content:write"],
-    },
-    {
-      notes: ["SEO target must resolve to an existing schema-owned target."],
     }
   ),
   plannedContract(

@@ -90,3 +90,4 @@ if (action.type === "media.reference.attach") {
 
 - 2026-04-12: Split menu, SEO, and media adapters into separate implementation leaves because media reference attachment needs target-specific patch semantics.
 - 2026-04-12: Completed `TASK-170-03-02-01`; `menu.item.upsert` now executes through existing menu services with safe relative href validation.
+- 2026-04-12: Completed `TASK-170-03-02-02`; `seo.document.upsert` now executes through existing SEO services with explicit page/entry target checks.

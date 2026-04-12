@@ -90,6 +90,22 @@ const createDeps = () => {
       settings: Record<string, unknown>;
     }>
   >();
+  const seoDocuments: Array<{
+    id: string;
+    targetType: "page" | "entry";
+    targetId: string;
+    slug: string | null;
+    title: string | null;
+    description: string | null;
+    canonicalUrl: string | null;
+    robots: string | null;
+    score: number | null;
+    status: "warning";
+    issues: [];
+    lastAuditAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
   const formFields = new Map<string, Array<Record<string, unknown>>>();
   const deps = {
     getSetting: async (key: string) => {
@@ -249,6 +265,8 @@ const createDeps = () => {
     },
     getPageBySlug: async (slug: string) =>
       pages.find((entry) => entry.slug === slug) ?? null,
+    getPage: async (id: string) =>
+      pages.find((entry) => entry.id === id) ?? null,
     createPage: async (input: {
       title: string;
       slug: string;
@@ -416,6 +434,52 @@ const createDeps = () => {
         children: [],
       }));
     },
+    getSeoDocumentByTarget: async (targetType: "page" | "entry", targetId: string) =>
+      seoDocuments.find(
+        (entry) => entry.targetType === targetType && entry.targetId === targetId
+      ) ?? null,
+    upsertSeoDocument: async (input: {
+      targetType: "page" | "entry";
+      targetId: string;
+      slug?: string | null;
+      title?: string | null;
+      description?: string | null;
+      canonicalUrl?: string | null;
+      robots?: string | null;
+    }) => {
+      const existing =
+        seoDocuments.find(
+          (entry) => entry.targetType === input.targetType && entry.targetId === input.targetId
+        ) ?? null;
+      if (existing) {
+        existing.slug = input.slug ?? existing.slug;
+        existing.title = input.title ?? existing.title;
+        existing.description = input.description ?? existing.description;
+        existing.canonicalUrl = input.canonicalUrl ?? existing.canonicalUrl;
+        existing.robots = input.robots ?? existing.robots;
+        existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
+        return existing;
+      }
+      const now = new Date("2026-04-10T12:00:00.000Z");
+      const record = {
+        id: `seo-${seoDocuments.length + 1}`,
+        targetType: input.targetType,
+        targetId: input.targetId,
+        slug: input.slug ?? null,
+        title: input.title ?? null,
+        description: input.description ?? null,
+        canonicalUrl: input.canonicalUrl ?? null,
+        robots: input.robots ?? null,
+        score: null,
+        status: "warning" as const,
+        issues: [] as [],
+        lastAuditAt: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      seoDocuments.push(record);
+      return record;
+    },
     logAudit: async () => ({
       id: "audit-1",
       actorId: "user-1",
@@ -516,6 +580,7 @@ const createDeps = () => {
       forms,
       entries,
       menuItemsByMenu,
+      seoDocuments,
       formFields,
     },
   });
@@ -685,6 +750,104 @@ test("executeAssistantActionPlan upserts menu items without duplicates", async (
   expect(deps.__state.menuItemsByMenu.get("menu-primary")?.[0]?.label).toBe(
     "Products Catalog"
   );
+
+  const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
+  expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan upserts seo documents for known targets", async () => {
+  const deps = createDeps();
+  const page = await deps.createPage({
+    title: "Products",
+    slug: "/products",
+    data: { blocks: [] },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-seo-document",
+    status: "ready",
+    intentId: "seo-document",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Update SEO",
+    answer: "I can update SEO metadata.",
+    summary: "Update products page SEO.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "seo-products",
+        type: "seo.document.upsert",
+        title: "Update products SEO",
+        description: "Add SEO metadata for the products page.",
+        input: {
+          targetType: "page",
+          targetId: page.id,
+          seo: {
+            title: "Products Catalog",
+            description: "Browse the product catalog.",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("create");
+  expect(preview.changes[0]?.dependencies).toEqual([
+    {
+      actionId: null,
+      targetType: "page",
+      targetKey: page.id,
+      optional: false,
+    },
+  ]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-seo-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(1);
+  expect(executed.results[0]?.resourceId).toBe("seo-1");
+  expect(deps.__state.seoDocuments[0]?.slug).toBe("/products");
+  expect(deps.__state.seoDocuments[0]?.title).toBe("Products Catalog");
+
+  const updatedPlan: AssistantActionPlan = {
+    ...plan,
+    id: "plan-seo-document-update",
+    actions: [
+      {
+        ...plan.actions[0]!,
+        input: {
+          ...plan.actions[0]!.input,
+          seo: {
+            title: "Products Catalog",
+            description: "Browse updated products.",
+            robots: "index,follow",
+          },
+        },
+      },
+    ],
+  };
+  const updatePreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
+  expect(updatePreview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan: updatedPlan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-seo-2",
+    },
+    deps
+  );
+  expect(deps.__state.seoDocuments).toHaveLength(1);
+  expect(deps.__state.seoDocuments[0]?.description).toBe("Browse updated products.");
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");

@@ -49,7 +49,9 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(menuContract.permissions.execute).toEqual([
     "menus:write",
   ]);
-  expect(getAssistantActionFamilyContract("seo.document.upsert").permissions.execute).toEqual([
+  const seoContract = getAssistantActionFamilyContract("seo.document.upsert");
+  expect(seoContract.status).toBe("executable");
+  expect(seoContract.permissions.execute).toEqual([
     "content:write",
   ]);
   expect(

@@ -283,6 +283,31 @@ const normalizeMenuItemUpsertInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeSeoPayload = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["slug", "title", "description", "canonicalUrl", "robots"]));
+  return {
+    ...(input.slug !== undefined ? { slug: readOptionalText(input.slug) } : {}),
+    ...(input.title !== undefined ? { title: readOptionalText(input.title) } : {}),
+    ...(input.description !== undefined
+      ? { description: readOptionalText(input.description) }
+      : {}),
+    ...(input.canonicalUrl !== undefined
+      ? { canonicalUrl: readOptionalText(input.canonicalUrl) }
+      : {}),
+    ...(input.robots !== undefined ? { robots: readOptionalText(input.robots) } : {}),
+  };
+};
+
+const normalizeSeoDocumentUpsertInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["targetType", "targetId", "seo"]));
+  return {
+    targetType: readEnum(input.targetType, new Set(["page", "entry"])),
+    targetId: readText(input.targetId),
+    seo: normalizeSeoPayload(input.seo),
+  };
+};
+
 const normalizeContentListStyle = (value: unknown) => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -465,6 +490,8 @@ const normalizeActionInput = (
       return normalizeEntryUpsertDraftInput(record);
     case "menu.item.upsert":
       return normalizeMenuItemUpsertInput(record);
+    case "seo.document.upsert":
+      return normalizeSeoDocumentUpsertInput(record);
     case "page.upsert":
       return normalizePageInput(record);
     case "site-kit.recommend":

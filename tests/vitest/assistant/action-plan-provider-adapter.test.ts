@@ -123,6 +123,30 @@ test("adaptProviderDraftPlan accepts executable menu item actions", () => {
   expect(plan.actions[0]?.type).toBe("menu.item.upsert");
 });
 
+test("adaptProviderDraftPlan accepts executable seo document actions", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "update page SEO",
+    draft: {
+      actions: [
+        {
+          type: "seo.document.upsert",
+          input: {
+            targetType: "page",
+            targetId: "page-products",
+            seo: {
+              title: "Products",
+              description: "Browse products.",
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]?.type).toBe("seo.document.upsert");
+});
+
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {
   const unknown = adaptProviderDraftPlan({
     prompt: "create product catalog",

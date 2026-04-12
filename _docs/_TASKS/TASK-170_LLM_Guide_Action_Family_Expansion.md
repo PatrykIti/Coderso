@@ -155,3 +155,4 @@ for (const plannedFamily of selectedActionFamilies) {
 - 2026-04-12: Completed `TASK-170-02` preview metadata slice with redacted preview strings and contract-only conflict/dependency metadata helpers.
 - 2026-04-12: Completed first executor adapter leaf; `entry.upsert-draft` is now executable and remains draft-only.
 - 2026-04-12: Completed menu item executor leaf; `menu.item.upsert` now executes through existing menu services and rejects unsafe hrefs.
+- 2026-04-12: Completed SEO document executor leaf; `seo.document.upsert` now executes through existing SEO services for page/entry targets.
