@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 7 tasks
+- **To Do:** 9 tasks
 - **In Progress:** 16 tasks
 - **Done:** 772 tasks
 
@@ -43,6 +43,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
+| TASK-101-09-03-03 | Provider Draft Plan Adapter and Malformed Output Recovery | High | Medium | Normalize mocked provider plan drafts into local strict drafts without bypassing schema/repair |
+| TASK-101-09-03-04 | Planner Test, Docs, and Closure | Medium | Small | Run planner schema/heuristics/provider regression suites and close docs/changelog/board |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -55,9 +57,9 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling, action gating, and single-flow site-kit convergence shipped; canonical `llm-rag` -> `llm-guide` transport migration remains open |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | In progress: docs-only action guard shipped; full legacy transport alias/migration remains open |
-| TASK-101-09-03 | LLM Guide Planner and Typed Plan Schema | High | Large | In progress: typed plans, classification, presets, and needs-input fallback shipped; LLM-provider generated planning and strict nested JSON schema remain open |
-| TASK-101-09-03-01 | Prompt Normalization, Intent Extraction, and Strict Plan Schema | High | Medium | In progress: typed plan model and prompt classification shipped; full nested JSON schema validation remains open |
-| TASK-101-09-03-02 | Local Heuristics, Plan Repair, and Missing Context Questions | Medium | Medium | In progress: deterministic local routing/refinement heuristics shipped; separate repair module and broader recovery matrix remain open |
+| TASK-101-09-03 | LLM Guide Planner and Typed Plan Schema | High | Large | In progress: current typed planner exists; remaining scope is strict nested schema, context-aware repair, provider draft adapter, and orchestration cleanup |
+| TASK-101-09-03-01 | Prompt Normalization, Intent Extraction, and Strict Plan Schema | High | Medium | In progress: typed plan model exists; strict nested schema ownership and per-action input validation remain open |
+| TASK-101-09-03-02 | Local Heuristics, Plan Repair, and Missing Context Questions | High | Medium | In progress: deterministic routing/refinement exists; separate context-aware repair module using resource/runtime context remains open |
 | TASK-101-09-04 | Typed Action Registry, Dry-Run, and Execution Pipeline | High | Large | In progress: dry-run/execute pipeline shipped through centralized executor switch; formal action registry and broader conflict model remain open |
 | TASK-101-09-04-01 | Action Registry, Dry-Run Diff, and Conflict Model | High | Medium | In progress: diff objects shipped through `actionDiffService`; formal registry and conflict-code model remain open |
 | TASK-101-09-04-02 | Execution, Idempotency, Revisions, and Audit Hooks | High | Medium | In progress: execute path, audit event, and process-local idempotency shipped; persisted idempotency and broader revision hooks remain open |
