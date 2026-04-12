@@ -1,102 +1,108 @@
 # TASK-101-09-04: Typed Action Registry, Dry-Run, and Execution Pipeline
 # FileName: TASK-101-09-04_Typed_Action_Registry_Dry_Run_and_Execution_Pipeline.md
 
-**Priority:** High  
-**Category:** Core/Assistant + Core/Services + Runtime  
-**Estimated Effort:** Large  
-**Dependencies:** TASK-101-09-03  
-**Status:** In Progress (2026-04-11)
+**Priority:** High
+**Category:** Core/Assistant + Core/Services + Runtime
+**Estimated Effort:** Large
+**Dependencies:** TASK-101-09-03
+**Status:** In Progress (2026-04-12)
 
 ---
 
 ## Overview
 
-Zbudowac wspolny silnik wykonawczy dla `llm-guide`, ale tak, aby:
-- action registry byl jawny i whitelistowany,
-- `dry-run` zwracal diff/conflicts/dependencies,
-- execute korzystal z istniejacych serwisow i revision hooks.
+Execution pipeline juz istnieje, ale nadal jest za bardzo scentralizowany w `actionExecutorService.ts`.
 
-## Scope
+Aktualny stan po TASK-101-09-01/02/03:
+- `/assistant/actions/plan`, `/assistant/actions/dry-run`, `/assistant/actions/execute` sa jednym flow.
+- `site-kit.*` jest juz zintegrowany z tym flow; `/assistant/site-builder/*` jest retired.
+- Planner ma strict nested schema i provider draft recovery.
+- `actionExecutorService.ts` reuse’uje domain services i site-kit installer adapter.
+- `actionDiffService.ts` tworzy podstawowe preview operations.
+- Brakuje formalnego registry, szerszego conflict/dependency modelu oraz persistent idempotency.
 
-1. Registry typed actions i executor ownership per domain.
-2. Dry-run diff model z conflict detection.
-3. Execute flow z idempotency, audit i revision hooks.
+Ten task ma uporzadkowac execute layer bez wprowadzania nowego mutation flow.
 
-## Existing Services to Reuse First
+## Current Code To Reuse
 
-First-release action families must reuse current services before introducing any new mutation layer:
+- `core/services/assistant/actionExecutorService.ts`
+  - obecny dry-run/execute pipeline,
+  - centralized `switch (action.type)` dla preview i execute.
+- `core/services/assistant/actionDiffService.ts`
+  - obecny `createPreviewChange`,
+  - basic `create|update|noop`.
+- `core/services/assistant/actionPlanSchema.ts`
+  - strict nested action validation.
+- `core/services/assistant/siteBuilderExecutor.ts`
+  - internal site-kit execution adapter.
+- Domain services already reused by executor:
+  - `core/services/content/typeService.ts`
+  - `core/services/customScreens/customScreenService.ts`
+  - `core/services/content/listingQueriesService.ts`
+  - `core/services/content/listingTemplatesService.ts`
+  - `core/services/pages/pageService.ts`
+  - `core/services/forms/formsService.ts`
+  - `core/services/settings/settingsService.ts`
+  - `core/services/audit/auditService.ts`
 
-- content types:
-  - `getContentTypeBySlug`
-  - `createContentType`
-  - `updateContentType`
-  - file: `core/services/content/typeService.ts`
-- entries:
-  - `createEntry`
-  - `updateEntry`
-  - `updateEntryMetadata`
-  - `publishEntry`
-  - file: `core/services/content/entryService.ts`
-- custom screens:
-  - `createCustomScreen`
-  - `updateCustomScreen`
-  - file: `core/services/customScreens/customScreenService.ts`
-- listing queries:
-  - `createListingQuery`
-  - `updateListingQuery`
-  - `previewListingQuery`
-  - file: `core/services/content/listingQueriesService.ts`
-- listing templates:
-  - `createListingTemplate`
-  - `updateListingTemplate`
-  - file: `core/services/content/listingTemplatesService.ts`
-- pages:
-  - `getPageBySlug`
-  - `createPage`
-  - `updatePage`
-  - `publishPage`
-  - file: `core/services/pages/pageService.ts`
-- forms:
-  - `createForm`
-  - `updateForm`
-  - `setFormFields`
-  - file: `core/services/forms/formsService.ts`
+## Remaining Gaps
 
-Current kit-install flows to mine for reusable logic:
-- `core/services/kits/solutionKitsInstallService.ts`
-- `core/services/kits/kitInstaller.ts`
+1. Formal action registry:
+   - explicit whitelist of action types,
+   - handler ownership per action family,
+   - no hidden switch growth in executor.
+2. Dry-run conflict/dependency model:
+   - stable conflict codes,
+   - dependency declarations between actions,
+   - no-op and missing-dependency states remain explainable.
+3. Persistent idempotency and audit/revision hardening:
+   - current idempotency is process-local memory,
+   - retry-safe result replay is lost on restart,
+   - audit metadata needs tighter redaction and result linkage,
+   - revision hooks should be documented/tested for resources that already have them.
+4. Adapter/helper extraction:
+   - site-kit convergence is done,
+   - remaining work is only extraction of reusable helpers where assistant and kit installer still duplicate resource-shaping logic.
 
-Rule:
-- do not add assistant-specific direct DB writes for any resource that already has a domain service,
-- if kit install owns the only robust implementation for part of a resource flow, extract shared helper(s)
-  and make both kit-install and assistant actions call them.
+## Security Contract
 
-## Legacy to Replace or Retire
-
-- new duplicate resource mutators inside `core/services/assistant/actions/*` that bypass current domain services,
-- wizard-only execution paths that duplicate generic preview/execute behavior,
-- further growth of direct-DB install-only logic when it should become a shared reusable helper.
+- Visibility: internal only through existing `/admin/api/assistant/actions/*`.
+- New public endpoints: none.
+- Auth: existing admin session.
+- RBAC:
+  - route-level permissions remain enforced in `assistantRoutes.ts`,
+  - registry/handler metadata is advisory and must not replace domain service checks,
+  - `site-kit.*` keeps its existing LLM availability and solution-kit permission guard.
+- CSRF: existing `POST /assistant/actions/*` CSRF.
+- Rate-limit bucket: `assistant`.
+- Reject-unknown validation:
+  - strict planner schema remains the input gate,
+  - registry must reject unsupported action types with machine-readable error.
+- Anti-abuse:
+  - no public route,
+  - no nonce/HMAC/reCAPTCHA path because endpoints are internal-only.
+- Idempotency:
+  - `execute` keeps requiring idempotency key,
+  - persistent idempotency storage, if implemented through DB, must include migration artifacts and replay-safe result loading.
+- Secret handling:
+  - audit/idempotency metadata must exclude provider keys, session/cookie/CSRF data, form submissions, raw entry values, and secret-like settings.
 
 ## Files to Change
 
-- `core/services/assistant/actionRegistry.ts` (new, ~160-240 LOC)
-- `core/services/assistant/actionExecutorService.ts` (new, ~220-320 LOC)
-- `core/services/assistant/actionDiffService.ts` (new, ~140-220 LOC)
-- `core/services/assistant/actions/*` (new, ~400-700 LOC)
-- `tests/vitest/assistant/action-registry.test.ts` (new, ~140-220 LOC)
-- `tests/vitest/assistant/action-diff-service.test.ts` (new, ~140-220 LOC)
-- `tests/vitest/assistant/action-executor-service.test.ts` (new, only if executor becomes Bun-free after extraction, ~180-280 LOC)
-- `tests/unit/assistant/actionExecutorService.test.ts` (Bun-owned fallback if executor still imports DB/runtime at module load)
-
-## Pseudocode
-
-```ts
-for (const action of plan.actions) {
-  const handler = actionRegistry.get(action.type);
-  const preview = await handler.preview(action, ctx);
-  previews.push(preview);
-}
-```
+- `core/services/assistant/actionRegistry.ts` (new)
+- `core/services/assistant/actionExecutorService.ts` (update/refactor)
+- `core/services/assistant/actionDiffService.ts` (update)
+- `core/services/assistant/actionPlanTypes.ts` (update if preview conflict/dependency types change)
+- `core/services/assistant/actions/*` (new only if handler split is useful and avoids import-time coupling)
+- optional persistent idempotency storage:
+  - `core/db/schema.ts`
+  - SQL migration file
+  - `meta/*_snapshot.json`
+  - `meta/_journal.json`
+- docs:
+  - `_docs/ARCHITECTURE.md`
+  - `_docs/CMS_API.md` if response shapes change
+  - `_docs/SECURITY_SPEC.md`
 
 ## Sub-Tasks
 
@@ -104,22 +110,48 @@ for (const action of plan.actions) {
 - `TASK-101-09-04-02_Execution_Idempotency_Revisions_and_Audit_Hooks.md`
 - `TASK-101-09-04-03_Existing_Service_Adapters_and_Installer_Extraction.md`
 
-## Testing Requirements
+## Test Matrix
 
-- Vitest unit for registry ownership and action validation.
-- Vitest unit for diff/conflict detection.
-- Executor unit tests belong to Vitest only after extraction-first cleanup makes the module Bun-free.
-- Until then keep executor verification in Bun-owned service/route tests.
-- Bun integration for execute flow against real route/service boundaries where needed.
+### Registry And Diff
+
+Runner:
+- `Vitest` for pure registry metadata and diff/conflict helpers.
+- `Bun` only if handler tests import runtime/DB-backed default deps.
+
+Files:
+- `tests/vitest/assistant/action-registry.test.ts`
+- `tests/vitest/assistant/action-diff-service.test.ts`
+- existing `tests/unit/assistant/actionExecutorService.test.ts` for runtime-coupled executor regression.
+
+### Execution/Idempotency
+
+Runner:
+- `Bun` for current executor because default deps import DB/domain services at module load.
+- `Vitest` only for extracted pure helper logic.
+
+Files:
+- `tests/unit/assistant/actionExecutorService.test.ts`
+- `tests/unit/assistant/actionExecutorService.db.test.ts` when `DATABASE_URL` is reachable.
+- `tests/integration/routes/assistant.test.ts`
+
+### Adapter Extraction
+
+Runner:
+- `Vitest` for pure resource-shaping helpers.
+- `Bun` for helpers coupled to DB/domain services or kit installer runtime.
+
+Files:
+- existing assistant executor/site-builder tests plus new focused helper tests only when extraction lands.
 
 ## Documentation Updates Required
 
 - `_docs/ARCHITECTURE.md`
-- `_docs/CMS_API.md`
+- `_docs/CMS_API.md` if preview/execute response shapes change
 - `_docs/SECURITY_SPEC.md`
 
-## Audit Notes (2026-04-11)
+## Audit Notes (2026-04-12)
 
-- `actionExecutorService` and `actionDiffService` implement the shipped dry-run/execute pipeline.
-- Typed actions currently use a centralized executor switch rather than a separate `actionRegistry.ts`.
-- Broader conflict model and formal registry module remain open.
+- Basic dry-run/execute pipeline is shipped.
+- Site-kit is already integrated into `/assistant/actions/*`; no separate site-builder flow remains.
+- Existing executor reuses domain services and site-kit installer adapter.
+- Remaining scope is formal registry, richer conflict/dependency model, persistent idempotency, and targeted helper extraction.
