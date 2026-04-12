@@ -125,6 +125,12 @@ const mapAssistantError = (error: unknown) => {
         message: "Assistant action execution requires idempotency key",
         status: 400,
       };
+    case "assistant_action_idempotency_conflict":
+      return {
+        code: "assistant_action_idempotency_conflict",
+        message: "Assistant action idempotency key was already used for another plan",
+        status: 409,
+      };
     case "assistant_action_actor_required":
       return {
         code: "assistant_action_actor_required",

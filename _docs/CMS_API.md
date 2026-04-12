@@ -2720,6 +2720,8 @@ Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fie
   - `operation` (`create|update|noop`)
   - `summary`
   - `warnings[]`
+  - `conflicts[]` with machine-readable conflict metadata
+  - `dependencies[]` with previewed dependency hints
 - `warnings[]`
 - `readyToExecute`
 
@@ -2761,6 +2763,8 @@ Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fie
   - `update`
   - `noop`
   - `failed`
+
+`idempotencyKey` is persisted for successful executions. Reusing the same key with a different actor/plan/hash returns `assistant_action_idempotency_conflict` (HTTP 409).
 
 Site-kit action plan fragment:
 

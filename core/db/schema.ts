@@ -450,6 +450,28 @@ export const assistantDocIngestRuns = pgTable(
   })
 );
 
+export const assistantActionExecutions = pgTable(
+  "assistant_action_executions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    actorId: uuid("actor_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    planId: text("plan_id").notNull(),
+    planHash: text("plan_hash").notNull(),
+    result: jsonb("result").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    keyIdx: uniqueIndex("assistant_action_executions_key_idx").on(t.idempotencyKey),
+    actorIdx: index("assistant_action_executions_actor_idx").on(t.actorId),
+    planIdx: index("assistant_action_executions_plan_idx").on(t.planId),
+    createdIdx: index("assistant_action_executions_created_idx").on(t.createdAt),
+  })
+);
+
 export const backups = pgTable(
   "backups",
   {

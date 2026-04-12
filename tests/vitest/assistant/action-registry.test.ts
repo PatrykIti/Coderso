@@ -1,0 +1,59 @@
+import { expect, test } from "vitest";
+
+import {
+  assistantActionTypes,
+  createAssistantActionRegistry,
+  getAssistantActionHandler,
+  isAssistantActionType,
+} from "../../../core/services/assistant/actionRegistry";
+
+test("assistantActionTypes lists every supported action type once", () => {
+  expect([...new Set(assistantActionTypes)]).toHaveLength(assistantActionTypes.length);
+  expect(assistantActionTypes).toEqual([
+    "setting.content-route.upsert",
+    "content-type.upsert",
+    "custom-screen.upsert",
+    "listing-query.upsert",
+    "listing-template.upsert",
+    "form.upsert",
+    "page.upsert",
+    "site-kit.recommend",
+    "site-kit.install",
+    "site-kit.validate",
+  ]);
+});
+
+test("createAssistantActionRegistry requires complete registered handlers", () => {
+  expect(() =>
+    createAssistantActionRegistry({
+      "content-type.upsert": { label: "content" },
+    })
+  ).toThrow("assistant_action_registry_missing_type");
+});
+
+test("createAssistantActionRegistry rejects unknown registered handlers", () => {
+  const handlers = Object.fromEntries(
+    assistantActionTypes.map((type) => [type, { label: type }])
+  );
+
+  expect(() =>
+    createAssistantActionRegistry({
+      ...handlers,
+      "database.drop": { label: "bad" },
+    } as never)
+  ).toThrow("assistant_action_registry_unknown_type");
+});
+
+test("getAssistantActionHandler returns whitelisted handlers", () => {
+  const registry = createAssistantActionRegistry(
+    Object.fromEntries(
+      assistantActionTypes.map((type) => [type, { label: type }])
+    ) as Record<(typeof assistantActionTypes)[number], { label: string }>
+  );
+
+  expect(isAssistantActionType("site-kit.install")).toBe(true);
+  expect(isAssistantActionType("database.drop")).toBe(false);
+  expect(getAssistantActionHandler(registry, "site-kit.install").label).toBe(
+    "site-kit.install"
+  );
+});

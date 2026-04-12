@@ -21,6 +21,8 @@ export const createPreviewChange = (input: {
   targetKey: string;
   summary: string;
   warnings?: string[];
+  conflicts?: AssistantActionPreviewChange["conflicts"];
+  dependencies?: AssistantActionPreviewChange["dependencies"];
   beforeValue?: unknown;
   nextValue?: unknown;
   details?: AssistantActionPreviewChange["details"];
@@ -32,5 +34,7 @@ export const createPreviewChange = (input: {
   operation: buildOperation(input.beforeValue, input.nextValue),
   summary: input.summary,
   warnings: [...(input.warnings ?? [])],
+  conflicts: [...(input.conflicts ?? [])],
+  dependencies: [...(input.dependencies ?? [])],
   details: input.details,
 });

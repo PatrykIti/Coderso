@@ -324,6 +324,17 @@ export type AssistantActionPreviewChange = {
   operation: AssistantActionOperation;
   summary: string;
   warnings: string[];
+  conflicts: Array<{
+    code: string;
+    severity: "warning" | "error";
+    message: string;
+  }>;
+  dependencies: Array<{
+    actionId: string | null;
+    targetType: string;
+    targetKey: string;
+    optional: boolean;
+  }>;
   details?: AssistantSiteKitPreviewDetails;
 };
 

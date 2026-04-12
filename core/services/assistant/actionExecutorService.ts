@@ -57,10 +57,19 @@ import type {
 import { createPreviewChange } from "./actionDiffService";
 import { isAssistantActionPlan } from "./actionPlanTypes";
 import {
+  createAssistantActionRegistry,
+  getAssistantActionHandler,
+} from "./actionRegistry";
+import {
   executeGuidedSiteBuilder,
   previewGuidedSiteBuilderPlan,
   validateGuidedSiteBuilderRun,
 } from "./siteBuilderExecutor";
+import {
+  getAssistantActionExecutionByIdempotencyKey,
+  hashAssistantActionPlan,
+  saveAssistantActionExecutionResult,
+} from "./actionExecutionStore";
 
 type ExecutionCacheEntry = {
   result: AssistantActionExecuteResult;
@@ -323,6 +332,8 @@ type ActionExecutorDeps = {
   previewSiteKitPlan: typeof previewGuidedSiteBuilderPlan;
   executeSiteKit: typeof executeGuidedSiteBuilder;
   validateSiteKitRun: typeof validateGuidedSiteBuilderRun;
+  getExecutionResult?: typeof getAssistantActionExecutionByIdempotencyKey;
+  saveExecutionResult?: typeof saveAssistantActionExecutionResult;
 };
 
 const defaultDeps: ActionExecutorDeps = {
@@ -352,6 +363,8 @@ const defaultDeps: ActionExecutorDeps = {
   previewSiteKitPlan: previewGuidedSiteBuilderPlan,
   executeSiteKit: executeGuidedSiteBuilder,
   validateSiteKitRun: validateGuidedSiteBuilderRun,
+  getExecutionResult: getAssistantActionExecutionByIdempotencyKey,
+  saveExecutionResult: saveAssistantActionExecutionResult,
 };
 
 const assertAssistantActionPlan = (value: unknown): AssistantActionPlan => {
@@ -568,49 +581,25 @@ const buildSiteKitValidatePreview = async (
     nextValue: action.input.runId,
   });
 
-const buildPreviewForAction = async (
-  action: AssistantPlannedAction,
-  deps: ActionExecutorDeps
-): Promise<AssistantActionPreviewChange> => {
-  switch (action.type) {
-    case "setting.content-route.upsert":
-      return buildContentRoutePreview(action, deps);
-    case "content-type.upsert":
-      return buildContentTypePreview(action, deps);
-    case "custom-screen.upsert":
-      return buildCustomScreenPreview(action, deps);
-    case "listing-query.upsert":
-      return buildListingQueryPreview(action, deps);
-    case "listing-template.upsert":
-      return buildListingTemplatePreview(action, deps);
-    case "form.upsert":
-      return buildFormPreview(action, deps);
-    case "page.upsert":
-      return buildPagePreview(action, deps);
-    case "site-kit.recommend":
-      return buildSiteKitRecommendPreview(action, deps);
-    case "site-kit.install":
-      return buildSiteKitInstallPreview(action, deps);
-    case "site-kit.validate":
-      return buildSiteKitValidatePreview(action);
-  }
+type ActionHandlerContext = {
+  deps: ActionExecutorDeps;
+  actorId: string;
 };
 
-export const dryRunAssistantActionPlan = async (
-  input: { plan: AssistantActionPlan },
-  deps: ActionExecutorDeps = defaultDeps
-): Promise<AssistantActionDryRunResult> => {
-  const plan = assertAssistantActionPlan(input.plan);
-  const changes = await Promise.all(
-    plan.actions.map((action) => buildPreviewForAction(action, deps))
-  );
+type AssistantActionHandler = {
+  preview: (
+    action: AssistantPlannedAction,
+    ctx: ActionHandlerContext
+  ) => Promise<AssistantActionPreviewChange>;
+  execute: (
+    action: AssistantPlannedAction,
+    preview: AssistantActionPreviewChange,
+    ctx: ActionHandlerContext
+  ) => Promise<AssistantActionExecutionItem>;
+};
 
-  return {
-    plan,
-    changes,
-    warnings: changes.flatMap((change) => change.warnings),
-    readyToExecute: plan.status === "ready" && plan.questions.length === 0,
-  };
+const unexpectedAction = (): never => {
+  throw new Error("assistant_action_unsupported");
 };
 
 const mergeContentRoute = (
@@ -1076,35 +1065,145 @@ const executeSiteKitValidateAction = async (
   };
 };
 
+const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
+  "setting.content-route.upsert": {
+    preview: (action, ctx) =>
+      action.type === "setting.content-route.upsert"
+        ? buildContentRoutePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "setting.content-route.upsert"
+        ? executeContentRouteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "content-type.upsert": {
+    preview: (action, ctx) =>
+      action.type === "content-type.upsert"
+        ? buildContentTypePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "content-type.upsert"
+        ? executeContentTypeAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.upsert": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.upsert"
+        ? buildCustomScreenPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.upsert"
+        ? executeCustomScreenAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "listing-query.upsert": {
+    preview: (action, ctx) =>
+      action.type === "listing-query.upsert"
+        ? buildListingQueryPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "listing-query.upsert"
+        ? executeListingQueryAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "listing-template.upsert": {
+    preview: (action, ctx) =>
+      action.type === "listing-template.upsert"
+        ? buildListingTemplatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "listing-template.upsert"
+        ? executeListingTemplateAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "form.upsert": {
+    preview: (action, ctx) =>
+      action.type === "form.upsert"
+        ? buildFormPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "form.upsert"
+        ? executeFormAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "page.upsert": {
+    preview: (action, ctx) =>
+      action.type === "page.upsert"
+        ? buildPagePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "page.upsert"
+        ? executePageAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
+  "site-kit.recommend": {
+    preview: (action, ctx) =>
+      action.type === "site-kit.recommend"
+        ? buildSiteKitRecommendPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "site-kit.recommend"
+        ? executeSiteKitRecommendAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "site-kit.install": {
+    preview: (action, ctx) =>
+      action.type === "site-kit.install"
+        ? buildSiteKitInstallPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "site-kit.install"
+        ? executeSiteKitInstallAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
+  "site-kit.validate": {
+    preview: (action) =>
+      action.type === "site-kit.validate"
+        ? buildSiteKitValidatePreview(action)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "site-kit.validate"
+        ? executeSiteKitValidateAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+});
+
+const buildPreviewForAction = async (
+  action: AssistantPlannedAction,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionPreviewChange> =>
+  getAssistantActionHandler(actionHandlers, action.type).preview(action, {
+    deps,
+    actorId: "",
+  });
+
+export const dryRunAssistantActionPlan = async (
+  input: { plan: AssistantActionPlan },
+  deps: ActionExecutorDeps = defaultDeps
+): Promise<AssistantActionDryRunResult> => {
+  const plan = assertAssistantActionPlan(input.plan);
+  const changes = await Promise.all(
+    plan.actions.map((action) => buildPreviewForAction(action, deps))
+  );
+
+  return {
+    plan,
+    changes,
+    warnings: changes.flatMap((change) => change.warnings),
+    readyToExecute: plan.status === "ready" && plan.questions.length === 0,
+  };
+};
+
 const executeAction = async (
   action: AssistantPlannedAction,
   preview: AssistantActionPreviewChange,
   actorId: string,
   deps: ActionExecutorDeps
-): Promise<AssistantActionExecutionItem> => {
-  switch (action.type) {
-    case "setting.content-route.upsert":
-      return executeContentRouteAction(action, preview, deps);
-    case "content-type.upsert":
-      return executeContentTypeAction(action, preview, deps);
-    case "custom-screen.upsert":
-      return executeCustomScreenAction(action, preview, deps);
-    case "listing-query.upsert":
-      return executeListingQueryAction(action, preview, deps);
-    case "listing-template.upsert":
-      return executeListingTemplateAction(action, preview, deps);
-    case "form.upsert":
-      return executeFormAction(action, preview, deps);
-    case "page.upsert":
-      return executePageAction(action, preview, actorId, deps);
-    case "site-kit.recommend":
-      return executeSiteKitRecommendAction(action, preview, deps);
-    case "site-kit.install":
-      return executeSiteKitInstallAction(action, preview, actorId, deps);
-    case "site-kit.validate":
-      return executeSiteKitValidateAction(action, preview, deps);
-  }
-};
+): Promise<AssistantActionExecutionItem> =>
+  getAssistantActionHandler(actionHandlers, action.type).execute(action, preview, {
+    deps,
+    actorId,
+  });
 
 export const executeAssistantActionPlan = async (
   input: {
@@ -1122,10 +1221,18 @@ export const executeAssistantActionPlan = async (
     throw new Error("assistant_action_idempotency_required");
   }
 
+  const planHash = hashAssistantActionPlan(plan);
   cleanupExecutionCache();
-  const cached = executionCache.get(input.idempotencyKey);
+  const cached = deps.getExecutionResult
+    ? await deps.getExecutionResult({
+        idempotencyKey: input.idempotencyKey,
+        actorId: input.actorId,
+        planId: plan.id,
+        planHash,
+      })
+    : executionCache.get(input.idempotencyKey)?.result ?? null;
   if (cached) {
-    return cached.result;
+    return cached;
   }
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
@@ -1179,10 +1286,20 @@ export const executeAssistantActionPlan = async (
     summary,
   };
 
-  executionCache.set(input.idempotencyKey, {
-    result,
-    savedAt: Date.now(),
-  });
+  if (deps.saveExecutionResult) {
+    await deps.saveExecutionResult({
+      idempotencyKey: input.idempotencyKey,
+      actorId: input.actorId,
+      planId: plan.id,
+      planHash,
+      result,
+    });
+  } else {
+    executionCache.set(input.idempotencyKey, {
+      result,
+      savedAt: Date.now(),
+    });
+  }
 
   return result;
 };

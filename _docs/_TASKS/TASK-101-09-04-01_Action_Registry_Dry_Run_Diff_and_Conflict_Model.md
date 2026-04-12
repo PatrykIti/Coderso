@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-04, TASK-101-09-03
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -96,7 +96,13 @@ const handler = getAssistantActionHandler(action.type);
 - `_docs/CMS_API.md` only if preview response shape changes.
 - Parent TASK-101-09-04 docs/changelog on closure.
 
-## Audit Notes (2026-04-12)
+## Completion Notes (2026-04-12)
 
-- Basic diff service and executor work.
-- Formal registry and conflict/dependency model remain the real open scope.
+- Added `actionRegistry.ts` with explicit action type whitelist and registry completeness checks.
+- Replaced preview/execute switch dispatch with registry handler lookup.
+- Added `conflicts[]` and `dependencies[]` to preview changes with backwards-compatible empty defaults.
+
+## Validation (2026-04-12)
+
+- `bunx vitest run tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-diff-service.test.ts --config vitest.config.ts`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

@@ -19,7 +19,8 @@ Aktualny stan po TASK-101-09-01/02/03:
 - Planner ma strict nested schema i provider draft recovery.
 - `actionExecutorService.ts` reuse’uje domain services i site-kit installer adapter.
 - `actionDiffService.ts` tworzy podstawowe preview operations.
-- Brakuje formalnego registry, szerszego conflict/dependency modelu oraz persistent idempotency.
+- Formal registry, conflict/dependency fields i persistent idempotency sa juz wdrozone.
+- Pozostaly zakres to targeted helper extraction po audycie duplikacji resource-shaping.
 
 Ten task ma uporzadkowac execute layer bez wprowadzania nowego mutation flow.
 
@@ -47,20 +48,7 @@ Ten task ma uporzadkowac execute layer bez wprowadzania nowego mutation flow.
 
 ## Remaining Gaps
 
-1. Formal action registry:
-   - explicit whitelist of action types,
-   - handler ownership per action family,
-   - no hidden switch growth in executor.
-2. Dry-run conflict/dependency model:
-   - stable conflict codes,
-   - dependency declarations between actions,
-   - no-op and missing-dependency states remain explainable.
-3. Persistent idempotency and audit/revision hardening:
-   - current idempotency is process-local memory,
-   - retry-safe result replay is lost on restart,
-   - audit metadata needs tighter redaction and result linkage,
-   - revision hooks should be documented/tested for resources that already have them.
-4. Adapter/helper extraction:
+1. Adapter/helper extraction:
    - site-kit convergence is done,
    - remaining work is only extraction of reusable helpers where assistant and kit installer still duplicate resource-shaping logic.
 
@@ -89,16 +77,7 @@ Ten task ma uporzadkowac execute layer bez wprowadzania nowego mutation flow.
 
 ## Files to Change
 
-- `core/services/assistant/actionRegistry.ts` (new)
-- `core/services/assistant/actionExecutorService.ts` (update/refactor)
-- `core/services/assistant/actionDiffService.ts` (update)
-- `core/services/assistant/actionPlanTypes.ts` (update if preview conflict/dependency types change)
 - `core/services/assistant/actions/*` (new only if handler split is useful and avoids import-time coupling)
-- optional persistent idempotency storage:
-  - `core/db/schema.ts`
-  - SQL migration file
-  - `meta/*_snapshot.json`
-  - `meta/_journal.json`
 - docs:
   - `_docs/ARCHITECTURE.md`
   - `_docs/CMS_API.md` if response shapes change
@@ -154,4 +133,5 @@ Files:
 - Basic dry-run/execute pipeline is shipped.
 - Site-kit is already integrated into `/assistant/actions/*`; no separate site-builder flow remains.
 - Existing executor reuses domain services and site-kit installer adapter.
-- Remaining scope is formal registry, richer conflict/dependency model, persistent idempotency, and targeted helper extraction.
+- Formal registry and persistent idempotency are shipped.
+- Remaining scope is targeted helper extraction only where duplication or wrong ownership is found.

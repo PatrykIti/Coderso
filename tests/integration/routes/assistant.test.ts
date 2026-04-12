@@ -739,3 +739,38 @@ test("assistant action execute maps site-kit validate errors through generic rou
     expect(apiError.details).toEqual({ requestId: "req-site-kit-2" });
   }
 });
+
+test("assistant action execute maps idempotency conflicts", async () => {
+  const { router, routes } = makeRouter();
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+    service: {
+      executeActions: async () => {
+        throw new Error("assistant_action_idempotency_conflict");
+      },
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
+  const handler = route?.handlers[route.handlers.length - 1];
+  const plan = buildHouseProjectsCatalogPlan();
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { plan, idempotencyKey: "assistant-action-conflict-1" },
+      requestId: "req-idempotency-conflict",
+      user: { id: "user-2" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_action_idempotency_conflict");
+    expect(apiError.status).toBe(409);
+    expect(apiError.details).toEqual({ requestId: "req-idempotency-conflict" });
+  }
+});

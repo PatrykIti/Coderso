@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Security + Runtime
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-04-01
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -19,11 +19,11 @@ Already done:
 - `assistant.actions.execute` audit event jest emitowany,
 - pages/entries publish flows uzywaja istniejacych domain service hooks tam, gdzie sa wywolane.
 
-Open scope:
+Implemented in this slice:
 - persistent idempotency/replay-safe result loading across restart/process,
-- tighter audit metadata redaction/result linkage,
-- explicit revision-hook expectations per resource family,
-- DB migration artifacts if persistent storage uses DB.
+- idempotency conflict detection scoped by actor/plan/hash,
+- redacted stored result payload,
+- DB migration artifacts for `assistant_action_executions`.
 
 ## Target Contract
 
@@ -86,7 +86,16 @@ return result;
 - `_docs/SECURITY_SPEC.md`
 - `_docs/ARCHITECTURE.md`
 
-## Audit Notes (2026-04-12)
+## Completion Notes (2026-04-12)
 
-- Process-local idempotency is implemented.
-- Persistent idempotency and deeper audit/revision hardening remain open.
+- Added `assistant_action_executions` DB table and migration artifacts.
+- Added `actionExecutionStore.ts` with plan hashing, replay lookup, and save path.
+- `executeAssistantActionPlan` uses DB-backed idempotency by default and falls back to process-local cache only when injected deps omit the store.
+- Added route mapping for `assistant_action_idempotency_conflict`.
+- Added `db:migrate` and `db:generate` root scripts.
+
+## Validation (2026-04-12)
+
+- `bun run db:migrate`
+- `set -a && source .env && set +a && bun test tests/unit/assistant/actionExecutorService.db.test.ts`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

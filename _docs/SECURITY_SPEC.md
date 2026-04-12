@@ -259,6 +259,8 @@ Rotacja klucza:
   - `context.runtimeSnapshot` jest advisory-only i nie moze zastapic RBAC w route/domain services,
   - runtime snapshot nie zawiera user email/name, role names, raw permissions, session ids, cookies, CSRF tokens ani access logs,
   - `execute` wymaga `idempotencyKey`,
+  - idempotency jest persystowane w tabeli `assistant_action_executions` i scope’owane przez actor/plan/hash,
+  - ponowne uzycie idempotency key z innym actor/plan/hash zwraca `assistant_action_idempotency_conflict`,
   - metadata akcji trafia do audit log przez `assistant.actions.execute`
 - Current first shipped business flow:
   - `house projects catalog`

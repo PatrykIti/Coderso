@@ -330,6 +330,8 @@ Zamiast tego:
 - `core/services/assistant/actionPlanSchema.ts` waliduje strict nested action-plan schema,
 - `core/services/assistant/actionPlanHeuristics.ts` trzyma pure prompt/context heuristics,
 - `core/services/assistant/actionPlanProviderAdapter.ts` mapuje untrusted provider draft JSON do lokalnego strict planu albo typed questions,
+- `core/services/assistant/actionRegistry.ts` trzyma whitelistowany registry action handlers,
+- `core/services/assistant/actionExecutionStore.ts` zapisuje replay-safe idempotency results w DB,
 - `core/services/assistant/actionExecutorService.ts` reuse’uje obecne serwisy domenowe,
 - `core/server/routes/assistantRoutes.ts` wystawia internal action endpoints,
 - `core/admin/ui/assistant/components/ActionPlanReview.tsx` i `ActionExecutionResult.tsx`
@@ -363,6 +365,13 @@ Planner schema/recovery:
 - Planner output jest normalizowany przez strict schema przed zwroceniem z `planAssistantActions`.
 - Provider draft output jest traktowany jako untrusted input; unknown fields/actions, secret-like keys i malformed drafts wracaja jako typed `needs_input` questions zamiast executable actions.
 - Provider adapter nie wykonuje network calli i nie omija lokalnej walidacji akcji.
+
+Execution registry and idempotency:
+- Dry-run/execute dispatch korzysta z formalnego `actionRegistry.ts`, nie z ukrytego centralnego switcha.
+- Preview changes maja stabilne pola `conflicts[]` i `dependencies[]`.
+- `execute` nadal wymaga `idempotencyKey`.
+- Wyniki execute sa zapisywane w `assistant_action_executions` z `actorId`, `planId`, `planHash` i zredagowanym result payload.
+- Powtorzony klucz idempotency dla tego samego actor/plan/hash zwraca zapisany wynik; konflikt actor/plan/hash zwraca machine-readable idempotency conflict.
 
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,

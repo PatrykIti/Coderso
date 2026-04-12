@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { users } from "../../../core/db/schema";
+import { assistantActionExecutions, users } from "../../../core/db/schema";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
@@ -19,14 +19,19 @@ const testIfDb = hasDb ? test : test.skip;
 
 async function canConnect() {
   try {
-    await db.execute(sql`select 1`);
-    return true;
+    const result = await db.execute(sql`
+      select to_regclass('public.assistant_action_executions') as table_name
+    `);
+    const rows = Array.isArray(result) ? result : [];
+    const first = rows[0] as { table_name?: string | null } | undefined;
+    return first?.table_name === "assistant_action_executions";
   } catch {
     return false;
   }
 }
 
 const createdUserIds = new Set<string>();
+const idempotencyKeysToCleanup = new Set<string>();
 const plansToCleanup: Array<{
   contentTypeSlug: string;
   customScreenName: string;
@@ -163,6 +168,14 @@ afterAll(async () => {
     await setSetting("site.contentRoutes", originalContentRoutes);
   }
 
+  for (const key of idempotencyKeysToCleanup) {
+    await db
+      .delete(assistantActionExecutions)
+      .where(eq(assistantActionExecutions.idempotencyKey, key))
+      .catch(() => undefined);
+  }
+  idempotencyKeysToCleanup.clear();
+
   for (const plan of plansToCleanup.reverse()) {
     const page = await getPageBySlug(plan.pageSlug);
     if (page) {
@@ -220,6 +233,7 @@ testIfDb(
       actorId: actor.id,
       idempotencyKey: `assistant-action-${token}-1`,
     });
+    idempotencyKeysToCleanup.add(`assistant-action-${token}-1`);
 
     expect(first.summary.failed).toBe(0);
     expect(first.summary.create).toBeGreaterThan(0);
@@ -249,6 +263,7 @@ testIfDb(
       actorId: actor.id,
       idempotencyKey: `assistant-action-${token}-2`,
     });
+    idempotencyKeysToCleanup.add(`assistant-action-${token}-2`);
 
     expect(second.summary.failed).toBe(0);
     expect(second.summary.create).toBe(0);
@@ -306,6 +321,7 @@ testIfDb(
       actorId: actor.id,
       idempotencyKey: `assistant-action-${token}-3`,
     });
+    idempotencyKeysToCleanup.add(`assistant-action-${token}-3`);
 
     expect(refinement.summary.failed).toBe(0);
     expect(refinement.summary.create).toBe(0);

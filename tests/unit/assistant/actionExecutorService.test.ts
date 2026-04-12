@@ -447,6 +447,90 @@ test("executeAssistantActionPlan creates resources and reuses idempotency key", 
   expect(second.results).toEqual(first.results);
 });
 
+test("executeAssistantActionPlan replays persisted idempotency result", async () => {
+  const plan = buildHouseProjectsCatalogPlan();
+  const deps = createDeps();
+  let saved:
+    | {
+        idempotencyKey: string;
+        actorId: string;
+        planId: string;
+        planHash: string;
+        result: Awaited<ReturnType<typeof executeAssistantActionPlan>>;
+      }
+    | null = null;
+
+  const persistentDeps = Object.assign(deps, {
+    getExecutionResult: async (input: {
+      idempotencyKey: string;
+      actorId: string;
+      planId: string;
+      planHash: string;
+    }) => {
+      if (
+        saved &&
+        saved.idempotencyKey === input.idempotencyKey &&
+        saved.actorId === input.actorId &&
+        saved.planId === input.planId &&
+        saved.planHash === input.planHash
+      ) {
+        return saved.result;
+      }
+      return null;
+    },
+    saveExecutionResult: async (input: {
+      idempotencyKey: string;
+      actorId: string;
+      planId: string;
+      planHash: string;
+      result: Awaited<ReturnType<typeof executeAssistantActionPlan>>;
+    }) => {
+      saved = input;
+    },
+  });
+
+  const first = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-house-projects-persistent-1",
+    },
+    persistentDeps
+  );
+  const second = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-house-projects-persistent-1",
+    },
+    persistentDeps
+  );
+
+  expect(saved?.planId).toBe(plan.id);
+  expect(second).toEqual(first);
+});
+
+test("executeAssistantActionPlan propagates idempotency conflicts", async () => {
+  const plan = buildHouseProjectsCatalogPlan();
+  const deps = Object.assign(createDeps(), {
+    getExecutionResult: async () => {
+      throw new Error("assistant_action_idempotency_conflict");
+    },
+    saveExecutionResult: async () => undefined,
+  });
+
+  await expect(
+    executeAssistantActionPlan(
+      {
+        plan,
+        actorId: "user-1",
+        idempotencyKey: "assistant-house-projects-conflict-1",
+      },
+      deps
+    )
+  ).rejects.toThrow("assistant_action_idempotency_conflict");
+});
+
 test("dryRunAssistantActionPlan supports product catalog preset through the same executor contract", async () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

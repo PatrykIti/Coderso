@@ -25,6 +25,8 @@
     "test:integration": "bun test tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins",
     "test:perf": "bun test tests/perf",
     "test:security": "bun test tests/security",
+    "db:generate": "set -a; [ ! -f .env ] || . ./.env; set +a; bunx drizzle-kit generate --config core/db/drizzle.config.ts",
+    "db:migrate": "set -a; [ ! -f .env ] || . ./.env; set +a; bunx drizzle-kit migrate --config core/db/drizzle.config.ts",
     "gates:coderso": "bun scripts/coderso-release-gates.ts --report .tmp/coderso-release-gates.json",
     "gates:coderso:perf": "bun scripts/coderso-release-gates.ts --gate performance",
     "gates:coderso:security": "bun scripts/coderso-release-gates.ts --gate security"

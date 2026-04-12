@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Domain Services
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-04-02, TASK-101-09-01-03
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -79,4 +79,6 @@ Potential remaining extraction candidates:
 ## Audit Notes (2026-04-12)
 
 - Site-kit convergence is done and should not be reimplemented here.
-- Remaining scope is targeted helper extraction only where current code still has duplication or wrong ownership.
+- After registry refactor, no safe cross-domain helper extraction was identified for this slice.
+- Remaining page/listing/form composition helpers are assistant-specific and should stay local until another owner needs them.
+- No extra helper extraction landed to avoid a cosmetic refactor without shared ownership.

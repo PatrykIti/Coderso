@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 7 tasks
-- **In Progress:** 13 tasks
-- **Done:** 777 tasks
+- **In Progress:** 9 tasks
+- **Done:** 781 tasks
 
 ---
 
@@ -55,11 +55,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling, action gating, and single-flow site-kit convergence shipped; canonical `llm-rag` -> `llm-guide` transport migration remains open |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | In progress: docs-only action guard shipped; full legacy transport alias/migration remains open |
-| TASK-101-09-04 | Typed Action Registry, Dry-Run, and Execution Pipeline | High | Large | In progress: one `/assistant/actions/*` execute flow exists; formal registry, conflict/dependency model, persistent idempotency, and targeted helper extraction remain open |
-| TASK-101-09-04-01 | Action Registry, Dry-Run Diff, and Conflict Model | High | Medium | In progress: strict schema and basic diff exist; formal registry/handler ownership and machine-readable conflicts remain open |
-| TASK-101-09-04-02 | Execution, Idempotency, Revisions, and Audit Hooks | High | Medium | In progress: execute path/audit/process-local idempotency exist; persistent idempotency and richer audit/revision hardening remain open |
-| TASK-101-09-04-03 | Existing Service Adapters and Installer Extraction | High | Medium | In progress: site-kit convergence is done; remaining scope is targeted helper extraction for duplicated resource-shaping logic |
-| TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: typed planning, context snapshots, resource catalogs, dry-run, and execute are shipped; action registry/idempotency hardening remains open |
+| TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: typed planning, context snapshots, resource catalogs, dry-run/execute, registry, and persistent idempotency are shipped; canonical mode cleanup remains open |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -72,6 +68,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-04 | Typed Action Registry, Dry-Run, and Execution Pipeline | High | Large | Done: registry dispatch, preview conflict/dependency arrays, DB-backed idempotency, and adapter audit are complete |
+| TASK-101-09-04-03 | Existing Service Adapters and Installer Extraction | High | Medium | Done: site-kit convergence remained done; no additional safe helper extraction was identified beyond registry/idempotency cleanup |
+| TASK-101-09-04-02 | Execution, Idempotency, Revisions, and Audit Hooks | High | Medium | Done: execute uses persistent idempotency storage with actor/plan/hash conflict checks and DB migration artifacts |
+| TASK-101-09-04-01 | Action Registry, Dry-Run Diff, and Conflict Model | High | Medium | Done: formal action registry replaces central switch dispatch and preview changes expose conflicts/dependencies arrays |
 | TASK-101-09-03 | LLM Guide Planner and Typed Plan Schema | High | Large | Done: strict nested schema, context heuristics, provider draft adapter, and planner regression coverage are shipped |
 | TASK-101-09-03-04 | Planner Test, Docs, and Closure | Medium | Small | Done: planner schema/heuristics/provider tests, docs, changelog, and board sync are complete |
 | TASK-101-09-03-03 | Provider Draft Plan Adapter and Malformed Output Recovery | High | Medium | Done: untrusted mocked provider drafts map through local strict schema or recover to typed questions |
