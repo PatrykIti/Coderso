@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 7 tasks
+- **To Do:** 15 tasks
 - **In Progress:** 5 tasks
 - **Done:** 833 tasks
 
@@ -45,6 +45,14 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
+| TASK-174 | LLM Guide Created Resource Undo and Cleanup | High | Large | Manifest-scoped cleanup for resources created by assistant runs |
+| TASK-174-01 | Provenance Undo Manifest and Persistence | High | Large | Persist assistant-created resource provenance and undo metadata |
+| TASK-174-02 | Cleanup Dry-Run Planner and Dependency Order | High | Large | Build reviewable cleanup plans from persisted undo manifests |
+| TASK-174-03 | Create Resource Delete Adapters | High | Large | Delete/archive assistant-created resource records safely |
+| TASK-174-04 | Inverse Patch and Attach Adapters | High | Large | Detach/restore assistant-owned patches and references |
+| TASK-174-05 | Site-Kit Rollback Bridge | High | Medium | Route assistant cleanup through existing solution-kit rollback |
+| TASK-174-06 | Admin Undo Review and Execution UI | High | Large | Review and execute cleanup without autonomous deletion |
+| TASK-174-07 | Security Gates, Docs, and Closure | High | Medium | Security/perf/docs/changelog closure for assistant cleanup |
 
 ---
 
