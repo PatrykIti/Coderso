@@ -30,6 +30,7 @@ export {
   isLikelyGuidePlanningPrompt,
   isLikelyHouseProjectsCatalogPrompt,
 } from "./actionPlanHeuristics";
+export { buildProviderPlanningPromptPackage } from "./providerPlanningContext";
 
 const filterKeywords = [
   "filtr",

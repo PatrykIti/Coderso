@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-171-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -72,3 +72,9 @@ audit("assistant.provider.plan", {
 1. Provider prompt and draft diagnostics use the same redaction policy.
 2. Audit/metrics metadata is support-useful but secret-free.
 3. Redaction tests include nested malicious-looking payloads.
+
+## Completion Notes (2026-04-12)
+
+- Extended assistant redaction to cover signed-url-like metadata keys.
+- Provider planning prompt packages are passed through `redactAssistantMetadata`.
+- Added Vitest coverage for nested arrays, signed URL redaction, and provider prompt redaction.

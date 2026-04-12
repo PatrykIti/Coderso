@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 602 | 2026-04-12 | TASK-171-01 provider planning prompt package | Assistant/Core |
 | 601 | 2026-04-12 | TASK-170 action family expansion closure | Assistant/Core |
 | 600 | 2026-04-12 | TASK-170-04 assistant action review UI labels | Admin/UI |
 | 599 | 2026-04-12 | TASK-170-03 executor adapter closure | Assistant/Core |

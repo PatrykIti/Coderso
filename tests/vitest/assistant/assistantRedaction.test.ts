@@ -33,3 +33,23 @@ test("redactAssistantMetadata removes sensitive keys and redacts nested strings"
   });
   expect(output.items).toEqual(["ok", "Bearer [REDACTED]"]);
 });
+
+test("redactAssistantMetadata handles arrays and signed-looking urls", () => {
+  const output = redactAssistantMetadata({
+    items: [
+      {
+        signedUrl: "https://example.test/file?token=secret",
+        safe: "visible",
+      },
+    ],
+  });
+
+  expect(output).toEqual({
+    items: [
+      {
+        signedUrl: "[REDACTED]",
+        safe: "visible",
+      },
+    ],
+  });
+});

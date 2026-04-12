@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + LLM Security  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-171  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -75,3 +75,10 @@ return redactAssistantPromptPackage(package, {
 1. Provider planning has a single redacted prompt package owner.
 2. Context budgets are deterministic and test-covered.
 3. No provider call receives raw admin secrets or sensitive runtime data.
+
+## Completion Notes (2026-04-12)
+
+- Added `providerPlanningContext.ts` as the single pure owner for provider planning prompt packages.
+- The helper packages user prompt, bounded docs evidence, advisory runtime snapshot, and bounded resource catalog summaries.
+- The helper redacts prompt package metadata before any future provider call boundary.
+- No live provider call was introduced in this task.

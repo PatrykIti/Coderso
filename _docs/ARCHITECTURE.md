@@ -365,6 +365,8 @@ Planner schema/recovery:
 - Planner output jest normalizowany przez strict schema przed zwroceniem z `planAssistantActions`.
 - Provider draft output jest traktowany jako untrusted input; unknown fields/actions, secret-like keys i malformed drafts wracaja jako typed `needs_input` questions zamiast executable actions.
 - Provider adapter nie wykonuje network calli i nie omija lokalnej walidacji akcji.
+- `core/services/assistant/providerPlanningContext.ts` owns the bounded/redacted provider planning prompt package. It can package prompt text, docs evidence, advisory runtime context, and resource catalog summaries for future provider draft calls without adding network behavior by itself.
+- Provider planning packages are passed through `assistantRedaction.ts` before a future provider boundary.
 
 Execution registry and idempotency:
 - Dry-run/execute dispatch korzysta z formalnego `actionRegistry.ts`, nie z ukrytego centralnego switcha.

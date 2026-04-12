@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Context Budgeting  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-171-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -68,3 +68,9 @@ return stableSerializeForProvider(contextBudget);
 1. Provider context has explicit docs/resource/runtime budgets.
 2. Serialization is stable across test runs.
 3. Over-budget context is truncated rather than rejected late.
+
+## Completion Notes (2026-04-12)
+
+- Added deterministic budgets for docs evidence and resource catalog groups.
+- Runtime context packaging includes route, area/module, selected resource, and visible action hints only.
+- Added Vitest coverage for truncation warnings and stable bounded output.

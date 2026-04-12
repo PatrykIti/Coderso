@@ -1,4 +1,5 @@
-const sensitiveKeyPattern = /(password|token|secret|authorization|cookie|apikey|api_key|bearer)/i;
+const sensitiveKeyPattern =
+  /(password|token|secret|authorization|cookie|apikey|api_key|bearer|signed.*url)/i;
 
 const tokenPatterns = [
   /\bsk-or-v1-[a-zA-Z0-9]{8,}\b/g,

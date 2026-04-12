@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + LLM Planning + Security  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09, TASK-170  
-**Status:** To Do
+**Status:** In Progress (2026-04-12)
 
 ---
 
@@ -146,3 +146,7 @@ return adapted.ok ? adapted.plan : buildNeedsInputPlan(adapted.questions);
 - docs for Assistant Settings / Integrations if provider setup UX changes
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and a changelog entry when each implementation task is completed
+
+## Progress Notes
+
+- 2026-04-12: Completed `TASK-171-01`; provider planning prompt package helper now builds bounded/redacted docs/runtime/resource context without introducing live provider calls.
