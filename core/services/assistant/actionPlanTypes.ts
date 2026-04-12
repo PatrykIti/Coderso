@@ -299,6 +299,48 @@ export type AssistantPlannedAction =
   | AssistantSiteKitInstallAction
   | AssistantSiteKitValidateAction;
 
+export type AssistantExecutableActionType = AssistantPlannedAction["type"];
+
+export type AssistantActionContractStatus = "executable" | "contract-only";
+
+export type AssistantActionContractFamily =
+  | "settings"
+  | "content"
+  | "custom-screen"
+  | "listing"
+  | "form"
+  | "page"
+  | "site-kit"
+  | "entry"
+  | "menu"
+  | "seo"
+  | "media";
+
+export type AssistantActionPermissionModel = {
+  plan: readonly string[];
+  dryRun: readonly string[];
+  execute: readonly string[];
+};
+
+export type AssistantActionInputContract = {
+  required: readonly string[];
+  rejectsUnknown: boolean;
+  notes: readonly string[];
+};
+
+export type AssistantActionFamilyContract<TType extends string = string> = {
+  type: TType;
+  family: AssistantActionContractFamily;
+  status: AssistantActionContractStatus;
+  schemaOwner: string;
+  executionBoundary: "existing-domain-service" | "existing-site-kit-adapter";
+  permissions: AssistantActionPermissionModel;
+  strictInput: AssistantActionInputContract;
+  publicWrite: false | "uses-existing-public-form-hardening";
+  antiAbuse: readonly string[];
+  secretHandling: readonly string[];
+};
+
 export type AssistantActionPlan = {
   id: string;
   status: AssistantActionPlanStatus;

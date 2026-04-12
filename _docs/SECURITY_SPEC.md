@@ -258,6 +258,8 @@ Rotacja klucza:
   - resource catalog nie zawiera form submissions, entry values, provider credentials, API key material ani secret-like config keys,
   - `context.runtimeSnapshot` jest advisory-only i nie moze zastapic RBAC w route/domain services,
   - runtime snapshot nie zawiera user email/name, role names, raw permissions, session ids, cookies, CSRF tokens ani access logs,
+  - contract-only future action families in `actionFamilyContracts.ts` are documentation/type contracts only; they are rejected by strict action plan schema/provider draft adaptation until preview/execute adapters and route/domain permission checks land,
+  - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
   - `execute` wymaga `idempotencyKey`,
   - idempotency jest persystowane w tabeli `assistant_action_executions` i scope’owane przez actor/plan/hash,
   - ponowne uzycie idempotency key z innym actor/plan/hash zwraca `assistant_action_idempotency_conflict`,

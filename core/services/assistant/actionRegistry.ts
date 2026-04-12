@@ -1,4 +1,7 @@
-import type { AssistantPlannedAction } from "./actionPlanTypes";
+import type {
+  AssistantExecutableActionType,
+  AssistantPlannedAction,
+} from "./actionPlanTypes";
 
 export const assistantActionTypes = [
   "setting.content-route.upsert",
@@ -11,7 +14,7 @@ export const assistantActionTypes = [
   "site-kit.recommend",
   "site-kit.install",
   "site-kit.validate",
-] as const satisfies AssistantPlannedAction["type"][];
+] as const satisfies AssistantExecutableActionType[];
 
 export type AssistantActionType = (typeof assistantActionTypes)[number];
 export type AssistantActionHandlerMap<THandler> = Record<AssistantActionType, THandler>;

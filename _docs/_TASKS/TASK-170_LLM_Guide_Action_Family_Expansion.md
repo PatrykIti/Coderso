@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Core/Services + Admin Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09  
-**Status:** To Do
+**Status:** In Progress (2026-04-12)
 
 ---
 
@@ -148,3 +148,7 @@ for (const plannedFamily of selectedActionFamilies) {
 - `_docs/ASSISTANT_SITE_BUILDER.md` if site-kit or guided setup action families are extended
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and a changelog entry when each implementation task is completed
+
+## Progress Notes
+
+- 2026-04-12: Completed `TASK-170-01` contract slice with a non-executable action family contract registry for entry, menu, SEO, media, form automation, page widget patch, and listing patch actions.

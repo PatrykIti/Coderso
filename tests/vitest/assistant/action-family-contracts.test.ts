@@ -1,0 +1,93 @@
+import { expect, test } from "vitest";
+
+import {
+  assistantActionFamilyContracts,
+  assistantContractOnlyActionTypes,
+  getAssistantActionFamilyContract,
+  isAssistantContractOnlyActionType,
+  isAssistantKnownActionContractType,
+  normalizeAssistantActionFamilyContract,
+} from "../../../core/services/assistant/actionFamilyContracts";
+import {
+  assistantActionTypes,
+  isAssistantActionType,
+} from "../../../core/services/assistant/actionRegistry";
+
+test("assistant action family contracts list executable and contract-only actions once", () => {
+  const types = assistantActionFamilyContracts.map((contract) => contract.type);
+
+  expect(new Set(types).size).toBe(types.length);
+  expect(types).toEqual([...assistantActionTypes, ...assistantContractOnlyActionTypes]);
+});
+
+test("contract-only action families are known but not executable", () => {
+  expect(isAssistantKnownActionContractType("entry.upsert-draft")).toBe(true);
+  expect(isAssistantContractOnlyActionType("entry.upsert-draft")).toBe(true);
+  expect(isAssistantActionType("entry.upsert-draft")).toBe(false);
+  expect(isAssistantKnownActionContractType("database.drop")).toBe(false);
+});
+
+test("entry action contracts stay draft-scoped and content-owned", () => {
+  const contract = getAssistantActionFamilyContract("entry.upsert-draft");
+
+  expect(contract.status).toBe("contract-only");
+  expect(contract.family).toBe("entry");
+  expect(contract.schemaOwner).toBe("core/services/content/entryService.ts");
+  expect(contract.permissions.execute).toEqual(["content:write"]);
+  expect(contract.strictInput.required).toEqual([
+    "contentTypeSlug",
+    "title",
+    "slug",
+    "values",
+  ]);
+  expect(contract.strictInput.notes.join(" ")).toContain("Draft-only");
+});
+
+test("menu seo media and surface expansion contracts declare domain permissions", () => {
+  expect(getAssistantActionFamilyContract("menu.item.upsert").permissions.execute).toEqual([
+    "menus:write",
+  ]);
+  expect(getAssistantActionFamilyContract("seo.document.upsert").permissions.execute).toEqual([
+    "content:write",
+  ]);
+  expect(
+    getAssistantActionFamilyContract("media.reference.attach").strictInput.notes.join(" ")
+  ).toContain("raw upload bytes");
+  expect(getAssistantActionFamilyContract("form.automation.upsert").publicWrite).toBe(
+    "uses-existing-public-form-hardening"
+  );
+  expect(
+    getAssistantActionFamilyContract("listing-query.filters.patch").strictInput.notes.join(" ")
+  ).toContain("schema-known");
+});
+
+test("normalizeAssistantActionFamilyContract enforces strict contract shape", () => {
+  const contract = getAssistantActionFamilyContract("page.widget.patch");
+
+  expect(normalizeAssistantActionFamilyContract(contract)).toMatchObject({
+    type: "page.widget.patch",
+    status: "contract-only",
+    family: "page",
+  });
+
+  expect(() =>
+    normalizeAssistantActionFamilyContract({
+      ...contract,
+      debug: true,
+    })
+  ).toThrow("assistant_action_contract_invalid");
+
+  expect(() =>
+    normalizeAssistantActionFamilyContract({
+      ...contract,
+      type: "database.drop",
+    })
+  ).toThrow("assistant_action_contract_invalid");
+
+  expect(() =>
+    normalizeAssistantActionFamilyContract({
+      ...contract,
+      status: "executable",
+    })
+  ).toThrow("assistant_action_contract_invalid");
+});

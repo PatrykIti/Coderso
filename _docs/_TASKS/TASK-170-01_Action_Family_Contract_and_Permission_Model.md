@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Security + Contracts  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -82,3 +82,9 @@ for (const family of nextActionFamilies) {
 1. Action families have explicit names and input ownership.
 2. Required permissions are documented before implementation.
 3. Leaf tasks can implement families without redefining the security model.
+
+## Completion Notes (2026-04-12)
+
+- Added `core/services/assistant/actionFamilyContracts.ts` as a typed contract registry for executable and contract-only action families.
+- Kept `assistantActionTypes` as the executable whitelist, so new contract-only families are known for planning work but still rejected by strict plan/provider execution paths until adapters land.
+- Added Vitest coverage for contract uniqueness, permissions, strict contract normalization, and executable-boundary rejection.

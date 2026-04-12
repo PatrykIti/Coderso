@@ -115,6 +115,35 @@ test("normalizeAssistantActionPlan rejects malformed action inputs", () => {
   ).toThrow("assistant_action_plan_invalid");
 });
 
+test("normalizeAssistantActionPlan rejects contract-only actions until adapters land", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "entry-products",
+          type: "entry.upsert-draft",
+          title: "Create product entry",
+          description: "Draft sample product entry.",
+          input: {
+            contentTypeSlug: "products",
+            title: "Sample",
+            slug: "sample",
+            values: {
+              title: "Sample",
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan enforces ready and needs-input invariants", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

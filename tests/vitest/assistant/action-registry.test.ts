@@ -52,6 +52,7 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   );
 
   expect(isAssistantActionType("site-kit.install")).toBe(true);
+  expect(isAssistantActionType("entry.upsert-draft")).toBe(false);
   expect(isAssistantActionType("database.drop")).toBe(false);
   expect(getAssistantActionHandler(registry, "site-kit.install").label).toBe(
     "site-kit.install"

@@ -6,6 +6,7 @@ import type {
   AssistantPromptKind,
 } from "./actionPlanTypes";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
+import { assistantActionTypes } from "./actionRegistry";
 
 export type AssistantProviderDraftAdapterInput = {
   draft: unknown;
@@ -25,18 +26,7 @@ const allowedDraftKeys = new Set([
   "actions",
 ]);
 
-const allowedActionTypes = new Set<AssistantPlannedAction["type"]>([
-  "setting.content-route.upsert",
-  "content-type.upsert",
-  "custom-screen.upsert",
-  "listing-query.upsert",
-  "listing-template.upsert",
-  "form.upsert",
-  "page.upsert",
-  "site-kit.recommend",
-  "site-kit.install",
-  "site-kit.validate",
-]);
+const allowedActionTypes = new Set<AssistantPlannedAction["type"]>(assistantActionTypes);
 
 const secretKeyPattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf)/i;
 

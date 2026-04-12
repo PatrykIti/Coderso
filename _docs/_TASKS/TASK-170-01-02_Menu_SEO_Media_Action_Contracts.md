@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Navigation + SEO + Media  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -89,3 +89,9 @@ if (action.type.startsWith("media.")) {
 1. Menu actions cannot create unsafe or duplicate navigation targets.
 2. SEO actions are target-scoped and deterministic.
 3. Media actions only attach existing assets and never transport raw file data.
+
+## Completion Notes (2026-04-12)
+
+- Registered contract-only menu, SEO, and media actions: `menu.item.upsert`, `menu.structure.patch`, `seo.document.upsert`, and `media.reference.attach`.
+- Documented `menus:*`, `content:*`, and `media:*` permission ownership plus no raw-upload/media-secret handling.
+- Added Vitest coverage for the contract boundary and domain permission metadata.

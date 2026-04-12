@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Coderso Surfaces  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -85,3 +85,9 @@ return diffSurface(current, next);
 1. Existing catalog actions can grow without breaking the shipped plan shape.
 2. Patch actions are non-destructive and deterministic.
 3. Public form hardening stays owned by existing forms contracts.
+
+## Completion Notes (2026-04-12)
+
+- Registered contract-only expansion actions: `form.automation.upsert`, `page.widget.patch`, `listing-query.filters.patch`, and `listing-template.card.patch`.
+- Documented existing public form hardening reuse for form automation and non-destructive patch expectations for pages/listings.
+- Added Vitest coverage proving the new expansion contracts do not widen strict executable action plans yet.

@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Content Entries  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -79,3 +79,9 @@ return {
 1. `entry.*` actions are explicitly scoped to drafts unless publish is separately planned.
 2. Schema-known fields are the only writeable values.
 3. The executor implementation can call `entryService` without inventing assistant-only persistence.
+
+## Completion Notes (2026-04-12)
+
+- Registered contract-only entry actions: `entry.upsert-draft`, `entry.sample.create`, `entry.bulk-draft.create`, and `entry.field.patch`.
+- Documented `content:read`/`content:write` permission ownership, draft-only boundary, schema-known field requirement, and no-publish side effect.
+- Added Vitest coverage proving entry contracts are known but not executable yet.

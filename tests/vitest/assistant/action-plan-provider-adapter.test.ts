@@ -58,6 +58,30 @@ test("adaptProviderDraftPlan returns questions for unsupported actions", () => {
   expect(plan.summary).toContain("unsupported actions");
 });
 
+test("adaptProviderDraftPlan treats contract-only actions as unsupported until executable", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "create sample entries",
+    draft: {
+      actions: [
+        {
+          type: "entry.upsert-draft",
+          input: {
+            contentTypeSlug: "products",
+            title: "Sample",
+            slug: "sample",
+            values: {
+              title: "Sample",
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.summary).toContain("unsupported actions");
+});
+
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {
   const unknown = adaptProviderDraftPlan({
     prompt: "create product catalog",

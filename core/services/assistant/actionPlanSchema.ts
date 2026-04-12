@@ -1,10 +1,12 @@
 import type {
   AssistantActionPlan,
   AssistantActionPlanStatus,
+  AssistantExecutableActionType,
   AssistantIntentFamily,
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "./actionPlanTypes";
+import { assistantActionTypes } from "./actionRegistry";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -40,18 +42,7 @@ const intentFamilies = new Set<AssistantIntentFamily>([
   "unknown",
 ]);
 
-const actionTypes = new Set<AssistantPlannedAction["type"]>([
-  "setting.content-route.upsert",
-  "content-type.upsert",
-  "custom-screen.upsert",
-  "listing-query.upsert",
-  "listing-template.upsert",
-  "form.upsert",
-  "page.upsert",
-  "site-kit.recommend",
-  "site-kit.install",
-  "site-kit.validate",
-]);
+const actionTypes = new Set<AssistantExecutableActionType>(assistantActionTypes);
 
 const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);

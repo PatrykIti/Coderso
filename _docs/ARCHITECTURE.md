@@ -373,6 +373,19 @@ Execution registry and idempotency:
 - Wyniki execute sa zapisywane w `assistant_action_executions` z `actorId`, `planId`, `planHash` i zredagowanym result payload.
 - Powtorzony klucz idempotency dla tego samego actor/plan/hash zwraca zapisany wynik; konflikt actor/plan/hash zwraca machine-readable idempotency conflict.
 
+Action family contract registry:
+- `core/services/assistant/actionFamilyContracts.ts` documents the next assistant action families without enabling execution.
+- Contract-only action types currently include:
+  - `entry.upsert-draft`, `entry.sample.create`, `entry.bulk-draft.create`, `entry.field.patch`,
+  - `menu.item.upsert`, `menu.structure.patch`,
+  - `seo.document.upsert`,
+  - `media.reference.attach`,
+  - `form.automation.upsert`,
+  - `page.widget.patch`,
+  - `listing-query.filters.patch`, `listing-template.card.patch`.
+- These contracts declare schema owners, required permissions, strict reject-unknown expectations, anti-abuse notes, and secret-handling rules.
+- Contract-only action types are not part of `assistantActionTypes`; strict plan schema and provider draft adaptation continue to reject them until their preview/execute adapters land in later `TASK-170` slices.
+
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,
 - planner tworzy plan dla:
