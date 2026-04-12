@@ -54,6 +54,8 @@ Normalization rules:
 Selected kit can act as an admin-side focus preference:
 - active kit selection is persisted client-side in admin UI,
 - `AdminShell` can narrow the `Coderso` sidebar to modules declared by the active kit,
+- active kit focus expands module dependencies from the Coderso module registry,
+- content kits with `engine`, `entries`, and `widgets` keep `Screens` visible,
 - no active kit means full default `Coderso` navigation remains visible,
 - `Solution Kits` stays visible even when kit gating is active so the user can switch kits.
 
@@ -61,11 +63,11 @@ Recommended module scope after audit:
 
 | Kit ID | Recommended Coderso modules |
 |---|---|
-| `automotive-workshop` | `engine`, `entries`, `widgets`, `forms`, `booking`, `reviews` |
-| `medical-clinic` | `engine`, `entries`, `widgets`, `forms`, `booking`, `reviews` |
-| `beauty-salon` | `engine`, `entries`, `widgets`, `forms`, `booking`, `reviews` |
-| `services-directory` | `engine`, `entries`, `widgets`, `forms`, `listings`, `filters`, `search` |
-| `small-ecommerce` | `engine`, `entries`, `widgets`, `forms`, `commerce`, `reviews` |
+| `automotive-workshop` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
+| `medical-clinic` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
+| `beauty-salon` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `booking`, `reviews` |
+| `services-directory` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `filters`, `search` |
+| `small-ecommerce` | `engine`, `entries`, `custom-screens`, `widgets`, `forms`, `listings`, `filters`, `commerce`, `reviews` |
 
 ## Installer Phases
 

@@ -22,6 +22,7 @@ const solutionKitIds: SolutionKitId[] = [
 const codersoModuleIds = new Set<CodersoModuleId>(
   CODERSO_MODULE_REGISTRY.map((module) => module.id)
 );
+const codersoModulesById = new Map(CODERSO_MODULE_REGISTRY.map((module) => [module.id, module]));
 
 const isSolutionKitId = (value: unknown): value is SolutionKitId =>
   typeof value === "string" && solutionKitIds.includes(value as SolutionKitId);
@@ -86,13 +87,26 @@ const collectKitModules = (kit: SolutionKitSummary | null) => {
   if (!kit) return new Set<CodersoModuleId>(["ai-kit-wizard"]);
 
   const modules = new Set<CodersoModuleId>(["ai-kit-wizard"]);
+  const addWithDependencies = (moduleId: CodersoModuleId) => {
+    if (modules.has(moduleId)) return;
+    modules.add(moduleId);
+    const definition = codersoModulesById.get(moduleId);
+    for (const dependency of definition?.dependencies ?? []) {
+      addWithDependencies(dependency);
+    }
+  };
+
   [
     ...kit.recommendedModules,
     ...(kit.manifest?.requiredModules ?? []),
     ...(kit.manifest?.optionalModules ?? []),
   ]
     .filter(isCodersoModuleId)
-    .forEach((moduleId) => modules.add(moduleId));
+    .forEach(addWithDependencies);
+
+  if (modules.has("engine") && modules.has("entries") && modules.has("widgets")) {
+    addWithDependencies("custom-screens");
+  }
 
   return modules;
 };

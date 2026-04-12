@@ -38,12 +38,21 @@ test("subscribeActiveSolutionKitId reacts to same-tab updates", () => {
   }
 });
 
-test("buildCodersoFeatureFlagsForSolutionKit keeps solution kits visible and gates unrelated modules", () => {
+test("buildCodersoFeatureFlagsForSolutionKit keeps solution kits visible and expands screen/dependency modules", () => {
   const flags = buildCodersoFeatureFlagsForSolutionKit({
     id: "services-directory",
     title: "Services Directory",
     shortDescription: "Directory starter",
-    recommendedModules: ["engine", "entries", "widgets", "forms", "listings", "filters", "search"],
+    recommendedModules: [
+      "engine",
+      "entries",
+      "custom-screens",
+      "widgets",
+      "forms",
+      "listings",
+      "filters",
+      "search",
+    ],
     features: [],
     manifest: {
       id: "services-directory",
@@ -57,7 +66,16 @@ test("buildCodersoFeatureFlagsForSolutionKit keeps solution kits visible and gat
         forms: ["directory-inquiry"],
         menus: ["primary", "footer"],
       },
-      requiredModules: ["engine", "entries", "forms", "listings", "filters", "search", "widgets"],
+      requiredModules: [
+        "engine",
+        "entries",
+        "custom-screens",
+        "forms",
+        "listings",
+        "filters",
+        "search",
+        "widgets",
+      ],
       optionalModules: [],
       postInstallTasks: [],
     },
@@ -74,5 +92,21 @@ test("buildCodersoFeatureFlagsForSolutionKit keeps solution kits visible and gat
   expect(flags.booking).toBe(false);
   expect(flags.commerce).toBe(false);
   expect(flags.reviews).toBe(false);
-  expect(flags["custom-screens"]).toBe(false);
+  expect(flags["custom-screens"]).toBe(true);
+});
+
+test("buildCodersoFeatureFlagsForSolutionKit enables dependencies from the module registry", () => {
+  const flags = buildCodersoFeatureFlagsForSolutionKit({
+    id: "small-ecommerce",
+    title: "Small E-commerce",
+    shortDescription: "Shop starter",
+    recommendedModules: ["commerce"],
+    features: [],
+  });
+
+  expect(flags["ai-kit-wizard"]).toBe(true);
+  expect(flags.commerce).toBe(true);
+  expect(flags.listings).toBe(true);
+  expect(flags.filters).toBe(true);
+  expect(flags.search).toBe(false);
 });

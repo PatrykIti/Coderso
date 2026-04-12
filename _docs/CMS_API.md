@@ -1591,6 +1591,7 @@ Plan response highlights:
 Admin UI note:
 - `selectedKitId` can also be persisted client-side as an admin preference to focus the `Coderso` sidebar on kit-relevant modules.
 - This preference is not a dedicated persisted API resource in v1; it is an admin UI concern layered on top of list/detail payloads and kit manifests.
+- Active kit focus expands module dependencies from the Coderso module registry and keeps `custom-screens` visible for content kits that include `engine`, `entries`, and `widgets`.
 
 Install engine:
 - `solution_kit_install_runs` stores one run per `dry_run` / `apply` / `rollback`,

@@ -706,6 +706,8 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Admin navigation focus contract:
   - selected kit moze byc persistowany client-side jako active admin preference,
   - `AdminShell` wyprowadza z niego `CodersoFeatureFlags`,
+  - active kit focus rozwija dependency graph z `CODERSO_MODULE_REGISTRY`,
+  - kity z `engine`, `entries` i `widgets` nie ukrywaja `Screens` (`custom-screens`),
   - gating dotyczy tylko grupy `Coderso`; top-level `Main/Tools/Admin` pozostaja bez zmian,
   - `Solution Kits` pozostaje widoczne niezaleznie od aktywnego kitu.
 - Install engine foundation (service + DB):

@@ -76,6 +76,7 @@ test("solution kit recommended modules stay aligned with known Coderso modules a
     if (kit.resourceBlueprint.contentTypes.length > 0) {
       expect(kit.recommendedModules).toContain("engine");
       expect(kit.recommendedModules).toContain("entries");
+      expect(kit.recommendedModules).toContain("custom-screens");
     }
 
     if (kit.resourceBlueprint.pages.length > 0) {
@@ -90,5 +91,6 @@ test("solution kit recommended modules stay aligned with known Coderso modules a
   expect(beautySalon?.recommendedModules).toContain("entries");
   expect(servicesDirectory?.recommendedModules).toContain("widgets");
   expect(smallEcommerce?.recommendedModules).toContain("entries");
-  expect(smallEcommerce?.recommendedModules).not.toContain("listings");
+  expect(smallEcommerce?.recommendedModules).toContain("listings");
+  expect(smallEcommerce?.recommendedModules).toContain("filters");
 });
