@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-03-03-01, TASK-170-03-03-02, TASK-170-03-03-03, TASK-170-03-03-04  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -70,3 +70,9 @@ assertDocsAndSecurityContractsMatch();
 1. Docs match implemented patch behavior.
 2. Task board and changelog are synchronized.
 3. `TASK-170-03-03` can be marked Done.
+
+## Completion Notes (2026-04-12)
+
+- Confirmed docs already describe executable `listing-query.filters.patch`, `listing-template.card.patch`, `page.widget.patch`, and safe non-webhook `form.automation.upsert` behavior.
+- Synced task board and changelog for the form/page/listing patch wave.
+- Left webhook form automation out of scope until explicit secret-handling support lands.

@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Coderso Surfaces  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-03, TASK-170-01-03, TASK-170-03-01  
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -91,3 +91,9 @@ return saveThroughDomainService(next);
 - 2026-04-12: Completed `TASK-170-03-03-02`; `listing-template.card.patch` now patches card config without rewriting unrelated template config.
 - 2026-04-12: Completed `TASK-170-03-03-03`; `page.widget.patch` now upserts one top-level widget block while preserving unrelated blocks.
 - 2026-04-12: Completed `TASK-170-03-03-04`; `form.automation.upsert` now upserts safe non-webhook form actions through existing form action services.
+
+## Completion Notes (2026-04-12)
+
+- Listing query filters, listing template card, page widget, and safe form automation patch actions are executable.
+- Webhook form automation remains intentionally unsupported until secret-handling semantics are explicit.
+- Closure docs/changelog/task board sync completed in `TASK-170-03-03-05`.
