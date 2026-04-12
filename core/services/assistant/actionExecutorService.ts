@@ -103,6 +103,7 @@ import {
   saveAssistantActionExecutionResult,
   withAssistantActionExecutionReplayMetadata,
 } from "./actionExecutionStore";
+import { recordAssistantActionMetric } from "./assistantMetrics";
 
 type ExecutionCacheEntry = {
   result: AssistantActionExecuteResult;
@@ -2257,6 +2258,10 @@ export const executeAssistantActionPlan = async (
       })
     : executionCache.get(input.idempotencyKey)?.result ?? null;
   if (cached) {
+    recordAssistantActionMetric({
+      failedCount: cached.summary.failed,
+      replayed: true,
+    });
     return withAssistantActionExecutionReplayMetadata(cached, true);
   }
 
@@ -2292,6 +2297,14 @@ export const executeAssistantActionPlan = async (
   }
 
   const summary = countExecutionOperations(results);
+  const idempotency = {
+    replayed: false,
+    scope: "actor_plan_hash" as const,
+  };
+  recordAssistantActionMetric({
+    failedCount: summary.failed,
+    replayed: false,
+  });
 
   await deps.logAudit({
     actorId: input.actorId,
@@ -2300,6 +2313,7 @@ export const executeAssistantActionPlan = async (
     targetId: plan.id,
     metadata: {
       actionIds: plan.actions.map((action) => action.id),
+      idempotency,
       summary,
     },
   });
@@ -2308,10 +2322,7 @@ export const executeAssistantActionPlan = async (
     plan,
     preview,
     results,
-    idempotency: {
-      replayed: false,
-      scope: "actor_plan_hash",
-    },
+    idempotency,
     summary,
   };
 

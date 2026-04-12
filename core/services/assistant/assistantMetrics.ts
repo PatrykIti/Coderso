@@ -5,6 +5,9 @@ export type AssistantMetricsSnapshot = {
   noHitCount: number;
   llmRequestCount: number;
   llmFailureCount: number;
+  actionExecuteCount: number;
+  actionFailureCount: number;
+  actionReplayCount: number;
   totalLatencyMs: number;
   averageLatencyMs: number;
   maxLatencyMs: number;
@@ -26,6 +29,9 @@ type MutableMetricsState = {
   noHitCount: number;
   llmRequestCount: number;
   llmFailureCount: number;
+  actionExecuteCount: number;
+  actionFailureCount: number;
+  actionReplayCount: number;
   totalLatencyMs: number;
   maxLatencyMs: number;
 };
@@ -37,6 +43,9 @@ const createDefaultState = (): MutableMetricsState => ({
   noHitCount: 0,
   llmRequestCount: 0,
   llmFailureCount: 0,
+  actionExecuteCount: 0,
+  actionFailureCount: 0,
+  actionReplayCount: 0,
   totalLatencyMs: 0,
   maxLatencyMs: 0,
 });
@@ -62,6 +71,15 @@ export const recordAssistantMetric = (event: AssistantMetricEvent) => {
   if (event.llmFailed) state.llmFailureCount += 1;
 };
 
+export const recordAssistantActionMetric = (event: {
+  failedCount: number;
+  replayed: boolean;
+}) => {
+  state.actionExecuteCount += 1;
+  state.actionFailureCount += Math.max(0, Math.floor(event.failedCount));
+  if (event.replayed) state.actionReplayCount += 1;
+};
+
 export const getAssistantMetricsSnapshot = (): AssistantMetricsSnapshot => ({
   requestCount: state.requestCount,
   errorCount: state.errorCount,
@@ -69,6 +87,9 @@ export const getAssistantMetricsSnapshot = (): AssistantMetricsSnapshot => ({
   noHitCount: state.noHitCount,
   llmRequestCount: state.llmRequestCount,
   llmFailureCount: state.llmFailureCount,
+  actionExecuteCount: state.actionExecuteCount,
+  actionFailureCount: state.actionFailureCount,
+  actionReplayCount: state.actionReplayCount,
   totalLatencyMs: state.totalLatencyMs,
   averageLatencyMs:
     state.requestCount > 0
@@ -85,6 +106,9 @@ export const resetAssistantMetrics = () => {
   state.noHitCount = defaults.noHitCount;
   state.llmRequestCount = defaults.llmRequestCount;
   state.llmFailureCount = defaults.llmFailureCount;
+  state.actionExecuteCount = defaults.actionExecuteCount;
+  state.actionFailureCount = defaults.actionFailureCount;
+  state.actionReplayCount = defaults.actionReplayCount;
   state.totalLatencyMs = defaults.totalLatencyMs;
   state.maxLatencyMs = defaults.maxLatencyMs;
 };

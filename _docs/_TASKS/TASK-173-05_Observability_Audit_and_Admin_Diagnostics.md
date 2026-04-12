@@ -5,7 +5,7 @@
 **Category:** Assistant + Observability + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-173-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -70,3 +70,13 @@ audit("assistant.actions.execute", redactAuditPayload(summary));
 1. Support can distinguish plan/dry-run/execute/fallback/replay outcomes.
 2. Metrics and audit payloads remain redacted.
 3. No new diagnostics leak privileged context to browser storage.
+
+## Completion Notes (2026-04-12)
+
+- Added aggregate action execution metrics:
+  - action execute count,
+  - failed action count,
+  - idempotency replay count.
+- Executor records metrics for fresh execution and idempotency replay.
+- Existing audit event now includes redacted idempotency scope metadata.
+- No admin browser storage/debug payload was added.

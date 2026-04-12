@@ -385,6 +385,7 @@ Execution registry and idempotency:
 - Wyniki execute sa zapisywane w `assistant_action_executions` z `actorId`, `planId`, `planHash` i zredagowanym result payload.
 - Powtorzony klucz idempotency dla tego samego actor/plan/hash zwraca zapisany wynik; konflikt actor/plan/hash zwraca machine-readable idempotency conflict.
 - Execute responses include idempotency diagnostics with `replayed` and `scope=actor_plan_hash`; no raw stored payload is exposed.
+- Assistant metrics track action execution count, failed action count, and idempotency replay count for support diagnostics.
 
 Action family contract registry:
 - `core/services/assistant/actionFamilyContracts.ts` documents the next assistant action families without enabling execution.
