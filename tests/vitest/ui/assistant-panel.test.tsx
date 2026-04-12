@@ -253,14 +253,14 @@ test("ActionPlanReview renders planned guide actions", () => {
         questions: [],
         actions: [
           {
-            id: "content-type-house-projects",
-            type: "content-type.upsert",
-            title: "Create the house projects content model",
-            description: "Structured fields for project data.",
+            id: "menu-products",
+            type: "menu.item.upsert",
+            title: "Add products to navigation",
+            description: "Add a safe relative menu item.",
             input: {
-              slug: "house-projects",
-              name: "House Projects",
-              schema: { type: "object" },
+              menuId: "primary",
+              label: "Products",
+              href: "/products",
             },
           },
         ],
@@ -280,13 +280,28 @@ test("ActionPlanReview renders planned guide actions", () => {
         },
         changes: [
           {
-            actionId: "content-type-house-projects",
-            type: "content-type.upsert",
-            targetType: "content-type",
-            targetKey: "house-projects",
+            actionId: "menu-products",
+            type: "menu.item.upsert",
+            targetType: "menu-item",
+            targetKey: "primary//products",
             operation: "create",
-            summary: "Create content type",
-            warnings: [],
+            summary: "Create menu item",
+            warnings: ["Menu will be updated."],
+            conflicts: [
+              {
+                code: "navigation_conflict",
+                severity: "warning",
+                message: "Existing menu item will be reused if present.",
+              },
+            ],
+            dependencies: [
+              {
+                actionId: null,
+                targetType: "permission",
+                targetKey: "menus:write",
+                optional: false,
+              },
+            ],
           },
         ],
         warnings: [],
@@ -299,7 +314,16 @@ test("ActionPlanReview renders planned guide actions", () => {
 
   expect(html).toContain("LLM Guide Plan");
   expect(html).toContain("House Projects Catalog");
-  expect(html).toContain("Create the house projects content model");
+  expect(html).toContain("Add products to navigation");
+  expect(html).toContain("Menu item");
+  expect(html).toContain("Target:");
+  expect(html).toContain("menu-item");
+  expect(html).toContain("primary//products");
+  expect(html).toContain("Menu will be updated.");
+  expect(html).toContain("Conflict:");
+  expect(html).toContain("Existing menu item will be reused if present.");
+  expect(html).toContain("Depends on:");
+  expect(html).toContain("permission/menus:write");
   expect(html).toContain("Execute setup");
 });
 
@@ -339,20 +363,20 @@ test("ActionExecutionResult renders resource links and summary", () => {
         results: [
           {
             actionId: "page-house-projects-catalog",
-            type: "page.upsert",
+            type: "page.widget.patch",
             targetType: "page",
-            targetKey: "/projekty-domow",
-            operation: "create",
+            targetKey: "/projekty-domow/assistant-spacer",
+            operation: "update",
             status: "success",
             resourceId: "page-1",
             adminHref: "/admin/pages/page-1",
             publicHref: "/projekty-domow",
-            message: "Public catalog page is ready.",
+            message: "Page widget block is updated.",
           },
         ],
         summary: {
-          create: 1,
-          update: 0,
+          create: 0,
+          update: 1,
           noop: 0,
           failed: 0,
         },
@@ -361,6 +385,8 @@ test("ActionExecutionResult renders resource links and summary", () => {
   );
 
   expect(html).toContain("Setup results");
+  expect(html).toContain("Page widget");
+  expect(html).toContain("Page widget block is updated.");
   expect(html).toContain("Open in admin");
   expect(html).toContain("Open public page");
 });

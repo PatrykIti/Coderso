@@ -25,6 +25,30 @@ const labelByOperation = {
   noop: "No change",
 } as const;
 
+const actionTypeLabels: Record<string, string> = {
+  "setting.content-route.upsert": "Content route",
+  "content-type.upsert": "Content model",
+  "custom-screen.upsert": "Custom screen",
+  "listing-query.upsert": "Listing query",
+  "listing-template.upsert": "Listing template",
+  "form.upsert": "Form",
+  "entry.upsert-draft": "Draft entry",
+  "menu.item.upsert": "Menu item",
+  "seo.document.upsert": "SEO document",
+  "media.reference.attach": "Media reference",
+  "listing-query.filters.patch": "Listing filters",
+  "listing-template.card.patch": "Listing card",
+  "page.widget.patch": "Page widget",
+  "form.automation.upsert": "Form automation",
+  "page.upsert": "Page",
+  "site-kit.recommend": "Site kit recommendation",
+  "site-kit.install": "Site kit install",
+  "site-kit.validate": "Site kit validation",
+};
+
+const resolveActionTypeLabel = (type: string) =>
+  actionTypeLabels[type] ?? type.replaceAll(".", " ");
+
 export function ActionPlanReview({
   plan,
   preview,
@@ -100,6 +124,7 @@ export function ActionPlanReview({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{action.title}</span>
+                    <Badge variant="secondary">{resolveActionTypeLabel(action.type)}</Badge>
                     {previewChange ? (
                       <Badge variant="outline">
                         {labelByOperation[previewChange.operation]}
@@ -107,12 +132,41 @@ export function ActionPlanReview({
                     ) : null}
                   </div>
                   <p className="mt-1 text-muted-foreground">{action.description}</p>
+                  {previewChange ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Target: {previewChange.targetType} / {previewChange.targetKey}
+                    </p>
+                  ) : null}
                   {previewChange?.warnings.length ? (
                     <ul className="ml-5 mt-2 list-disc space-y-1 text-xs text-muted-foreground">
                       {previewChange.warnings.map((warning) => (
                         <li key={warning}>{warning}</li>
                       ))}
                     </ul>
+                  ) : null}
+                  {previewChange?.conflicts?.length ? (
+                    <div className="mt-2 space-y-1 text-xs">
+                      {previewChange.conflicts.map((conflict) => (
+                        <p
+                          key={`${conflict.code}-${conflict.message}`}
+                          className={
+                            conflict.severity === "error"
+                              ? "text-destructive"
+                              : "text-muted-foreground"
+                          }
+                        >
+                          Conflict: {conflict.message}
+                        </p>
+                      ))}
+                    </div>
+                  ) : null}
+                  {previewChange?.dependencies?.length ? (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Depends on:{" "}
+                      {previewChange.dependencies
+                        .map((dependency) => `${dependency.targetType}/${dependency.targetKey}`)
+                        .join(", ")}
+                    </div>
                   ) : null}
                 </div>
               );

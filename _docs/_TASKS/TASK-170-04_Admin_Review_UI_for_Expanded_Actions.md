@@ -5,7 +5,7 @@
 **Category:** Admin/UI + Assistant  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-02, TASK-170-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -72,3 +72,10 @@ function ActionPlanReview({ plan, preview }) {
 1. New action families are readable in plan review.
 2. Conflicts and warnings are visible before confirm.
 3. UI does not expose secrets or create a parallel execution surface.
+
+## Completion Notes (2026-04-12)
+
+- Added action type labels for newly executable assistant action families in plan review and execution result UI.
+- Added dry-run target display plus conflict and dependency metadata rendering in `ActionPlanReview`.
+- Kept execution surface unchanged; UI continues to rely on server dry-run/execute payloads and server-required idempotency.
+- Added Vitest UI coverage for labels, targets, warnings, conflicts, dependencies, and execution result labels.

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 600 | 2026-04-12 | TASK-170-04 assistant action review UI labels | Admin/UI |
 | 599 | 2026-04-12 | TASK-170-03 executor adapter closure | Assistant/Core |
 | 598 | 2026-04-12 | TASK-170-03-03 form page listing patch adapter closure | Assistant/Core |
 | 597 | 2026-04-12 | TASK-170-03-03-04 form automation action executor | Assistant/Core |

@@ -163,3 +163,4 @@ for (const plannedFamily of selectedActionFamilies) {
 - 2026-04-12: Completed form automation patch leaf; `form.automation.upsert` now upserts safe non-webhook form actions through existing services.
 - 2026-04-12: Completed form/page/listing patch adapter wave closure; executor adapter wave closure is next.
 - 2026-04-12: Completed executor adapter wave closure; action-specific permissions are now enforced at dry-run/execute route boundary.
+- 2026-04-12: Completed admin review UI labels/metadata slice; route security/docs closure is next.

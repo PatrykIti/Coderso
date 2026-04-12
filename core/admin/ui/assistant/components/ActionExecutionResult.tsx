@@ -9,6 +9,30 @@ type ActionExecutionResultProps = {
   result: AssistantActionExecuteResponse;
 };
 
+const actionTypeLabels: Record<string, string> = {
+  "setting.content-route.upsert": "Content route",
+  "content-type.upsert": "Content model",
+  "custom-screen.upsert": "Custom screen",
+  "listing-query.upsert": "Listing query",
+  "listing-template.upsert": "Listing template",
+  "form.upsert": "Form",
+  "entry.upsert-draft": "Draft entry",
+  "menu.item.upsert": "Menu item",
+  "seo.document.upsert": "SEO document",
+  "media.reference.attach": "Media reference",
+  "listing-query.filters.patch": "Listing filters",
+  "listing-template.card.patch": "Listing card",
+  "page.widget.patch": "Page widget",
+  "form.automation.upsert": "Form automation",
+  "page.upsert": "Page",
+  "site-kit.recommend": "Site kit recommendation",
+  "site-kit.install": "Site kit install",
+  "site-kit.validate": "Site kit validation",
+};
+
+const resolveActionTypeLabel = (type: string) =>
+  actionTypeLabels[type] ?? type.replaceAll(".", " ");
+
 export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
   return (
     <Card className="border-border/80">
@@ -44,6 +68,7 @@ export function ActionExecutionResult({ result }: ActionExecutionResultProps) {
                   </span>
                 )}
               </Badge>
+              <Badge variant="secondary">{resolveActionTypeLabel(item.type)}</Badge>
               <Badge variant="outline">{item.operation}</Badge>
               <span className="font-medium">{item.targetKey}</span>
             </div>
