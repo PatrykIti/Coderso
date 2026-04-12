@@ -255,6 +255,7 @@ Rotacja klucza:
   - provider draft output jest untrusted: unknown fields/actions, malformed draft i secret-like keys sa odzyskiwane jako typed questions,
   - provider planning prompt packages are built by `providerPlanningContext.ts` with bounded docs/resource/runtime context and redacted through `assistantRedaction.ts` before future provider calls,
   - provider draft execution through `planAssistantActionsWithProviderDraft` requires injected provider availability, uses strict local adapter validation, and falls back to deterministic local planning on provider failures,
+  - provider draft assumptions are redacted before they appear in action plan metadata/review UI,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
   - resource catalog nie zawiera form submissions, entry values, provider credentials, API key material ani secret-like config keys,

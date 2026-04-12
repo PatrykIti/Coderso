@@ -27,6 +27,39 @@ test("normalizeAssistantActionPlan accepts current catalog family plans", () => 
   ]);
 });
 
+test("normalizeAssistantActionPlan accepts strict planner metadata", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        providerId: "fake",
+      },
+    }).metadata
+  ).toEqual({
+    planner: "provider",
+    providerDraftUsed: true,
+    providerId: "fake",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+        debug: true,
+      },
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan accepts site-kit action plans", () => {
   const plan = planAssistantActions({
     prompt: "prepare a starter site kit",

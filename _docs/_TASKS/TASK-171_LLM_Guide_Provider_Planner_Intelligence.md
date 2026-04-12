@@ -152,3 +152,4 @@ return adapted.ok ? adapted.plan : buildNeedsInputPlan(adapted.questions);
 - 2026-04-12: Completed `TASK-171-01`; provider planning prompt package helper now builds bounded/redacted docs/runtime/resource context without introducing live provider calls.
 - 2026-04-12: Completed `TASK-171-02`; provider draft helper now supports fake-provider draft execution, strict adapter mapping, and deterministic fallback without live network calls.
 - 2026-04-12: Completed `TASK-171-03`; provider draft schema repair now preserves typed clarification questions when strict schema validation fails.
+- 2026-04-12: Completed `TASK-171-04`; action plans can carry strict planner metadata and review UI distinguishes provider draft vs local planner.

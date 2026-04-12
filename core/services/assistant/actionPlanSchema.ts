@@ -3,6 +3,7 @@ import type {
   AssistantActionPlanStatus,
   AssistantExecutableActionType,
   AssistantIntentFamily,
+  AssistantActionPlanMetadata,
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "./actionPlanTypes";
@@ -21,6 +22,7 @@ const planKeys = new Set([
   "intentId",
   "promptKind",
   "intentFamily",
+  "metadata",
   "title",
   "answer",
   "summary",
@@ -141,6 +143,17 @@ const normalizeQuestions = (value: unknown) =>
       required: readBoolean(question.required),
     };
   });
+
+const normalizePlanMetadata = (value: unknown): AssistantActionPlanMetadata | undefined => {
+  if (value === undefined) return undefined;
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["planner", "providerDraftUsed", "providerId"]));
+  return {
+    planner: readEnum(input.planner, new Set(["local", "provider", "fallback"])),
+    providerDraftUsed: readBoolean(input.providerDraftUsed),
+    ...(input.providerId !== undefined ? { providerId: readOptionalText(input.providerId) } : {}),
+  };
+};
 
 const normalizeSort = (value: unknown) =>
   readRecordArray(value).map((item) => {
@@ -636,6 +649,7 @@ export const normalizeAssistantActionPlan = (value: unknown): AssistantActionPla
     ...(input.intentFamily !== undefined
       ? { intentFamily: readOptionalEnum(input.intentFamily, intentFamilies) }
       : {}),
+    ...(input.metadata !== undefined ? { metadata: normalizePlanMetadata(input.metadata) } : {}),
     title: readText(input.title),
     answer: readText(input.answer),
     summary: readText(input.summary),

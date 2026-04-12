@@ -7,6 +7,7 @@ import type {
 } from "./actionPlanTypes";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
 import { assistantActionTypes } from "./actionRegistry";
+import { redactAssistantText } from "./assistantRedaction";
 
 export type AssistantProviderDraftAdapterInput = {
   draft: unknown;
@@ -58,7 +59,9 @@ const number = (value: unknown, fallback: number) =>
 
 const stringArray = (value: unknown) =>
   Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    ? value
+        .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+        .map((item) => redactAssistantText(item, 240))
     : [];
 
 const questions = (value: unknown): AssistantPlanQuestion[] =>
@@ -91,7 +94,11 @@ const buildRecoveryPlan = (
     "I need a safer structured plan before I can prepare executable actions.",
   summary: reason,
   confidence: 0.2,
-  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  metadata: {
+    planner: "provider",
+    providerDraftUsed: true,
+  },
+  assumptions: [`Original prompt: ${redactAssistantText(prompt.trim() || "empty prompt", 240)}`],
   questions:
     inputQuestions && inputQuestions.length > 0
       ? inputQuestions
@@ -167,6 +174,10 @@ export const adaptProviderDraftPlan = (
       answer: text(input.draft.answer, "I prepared a typed plan from the provider draft."),
       summary: text(input.draft.summary, "Provider drafted typed actions."),
       confidence: number(input.draft.confidence, 0.5),
+      metadata: {
+        planner: "provider",
+        providerDraftUsed: true,
+      },
       assumptions: stringArray(input.draft.assumptions),
       questions: [],
       actions,

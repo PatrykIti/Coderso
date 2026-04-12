@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Admin/UI  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-171-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -68,3 +68,10 @@ No child task files.
 1. Review UI distinguishes ready plans from question/fallback plans.
 2. Provider-assisted assumptions are visible but redacted.
 3. User still must confirm before execute.
+
+## Completion Notes (2026-04-12)
+
+- Added optional strict planner metadata to assistant action plans.
+- Provider draft plans now include provider metadata and redacted provider assumptions.
+- `ActionPlanReview` now shows whether a plan came from provider draft, fallback, or local planner.
+- Existing confirm/execute flow remains unchanged.

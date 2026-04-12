@@ -249,6 +249,11 @@ test("ActionPlanReview renders planned guide actions", () => {
         answer: "Plan ready",
         summary: "Create structured catalog surfaces for house projects.",
         confidence: 0.91,
+        metadata: {
+          planner: "provider",
+          providerDraftUsed: true,
+          providerId: "fake",
+        },
         assumptions: ["Use existing Coderso surfaces."],
         questions: [],
         actions: [
@@ -314,6 +319,7 @@ test("ActionPlanReview renders planned guide actions", () => {
 
   expect(html).toContain("LLM Guide Plan");
   expect(html).toContain("House Projects Catalog");
+  expect(html).toContain("Provider draft");
   expect(html).toContain("Add products to navigation");
   expect(html).toContain("Menu item");
   expect(html).toContain("Target:");

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 605 | 2026-04-12 | TASK-171-04 provider planner explanation metadata | Assistant/UI |
 | 604 | 2026-04-12 | TASK-171-03 provider draft schema repair | Assistant/Core |
 | 603 | 2026-04-12 | TASK-171-02 provider draft execution helper | Assistant/Core |
 | 602 | 2026-04-12 | TASK-171-01 provider planning prompt package | Assistant/Core |

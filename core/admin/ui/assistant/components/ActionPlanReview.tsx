@@ -49,6 +49,12 @@ const actionTypeLabels: Record<string, string> = {
 const resolveActionTypeLabel = (type: string) =>
   actionTypeLabels[type] ?? type.replaceAll(".", " ");
 
+const resolvePlannerLabel = (metadata: AssistantActionPlanResponse["metadata"]) => {
+  if (metadata?.providerDraftUsed) return "Provider draft";
+  if (metadata?.planner === "fallback") return "Planner fallback";
+  return "Local planner";
+};
+
 export function ActionPlanReview({
   plan,
   preview,
@@ -72,6 +78,7 @@ export function ActionPlanReview({
             {plan.status === "ready" ? "Ready" : "Needs input"}
           </Badge>
           <Badge variant="outline">Confidence {Math.round(plan.confidence * 100)}%</Badge>
+          <Badge variant="outline">{resolvePlannerLabel(plan.metadata)}</Badge>
         </div>
         <div>
           <CardTitle className="text-base">{plan.title}</CardTitle>

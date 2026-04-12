@@ -37,6 +37,10 @@ test("adaptProviderDraftPlan maps valid provider drafts through strict schema", 
 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("product_catalog");
+  expect(plan.metadata).toEqual({
+    planner: "provider",
+    providerDraftUsed: true,
+  });
   expect(plan.actions[0]?.type).toBe("content-type.upsert");
 });
 
@@ -62,6 +66,7 @@ test("adaptProviderDraftPlan repairs missing optional action labels", () => {
   });
 
   expect(plan.status).toBe("ready");
+  expect(plan.metadata?.providerDraftUsed).toBe(true);
   expect(plan.actions[0]).toMatchObject({
     id: "provider-action-1",
     title: "content-type.upsert",
@@ -358,6 +363,19 @@ test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () =>
   expect(unknown.summary).toContain("unknown fields");
   expect(secret.status).toBe("needs_input");
   expect(secret.summary).toContain("secret-like keys");
+});
+
+test("adaptProviderDraftPlan redacts provider assumptions", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "create product catalog",
+    draft: {
+      actions: [validContentTypeAction],
+      assumptions: ["Use token sk-or-v1-1234567890abcdef"],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.assumptions[0]).toBe("Use token [REDACTED]");
 });
 
 test("adaptProviderDraftPlan returns typed provider questions when no actions exist", () => {

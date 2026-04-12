@@ -455,12 +455,19 @@ export type AssistantActionFamilyContract<TType extends string = string> = {
   secretHandling: readonly string[];
 };
 
+export type AssistantActionPlanMetadata = {
+  planner: "local" | "provider" | "fallback";
+  providerDraftUsed: boolean;
+  providerId?: string | null;
+};
+
 export type AssistantActionPlan = {
   id: string;
   status: AssistantActionPlanStatus;
   intentId: string;
   promptKind?: AssistantPromptKind;
   intentFamily?: AssistantIntentFamily;
+  metadata?: AssistantActionPlanMetadata;
   title: string;
   answer: string;
   summary: string;
