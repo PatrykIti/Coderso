@@ -88,6 +88,7 @@ test("business blueprint packs expose shared catalog contract", () => {
     "portfolio-projects",
     "services-directory",
     "lead-capture-site",
+    "booking-service",
   ]);
   expect(productPack).toMatchObject({
     id: "product-catalog",
@@ -110,6 +111,22 @@ test("business blueprint packs expose shared catalog contract", () => {
     ],
   });
   expect(getBusinessBlueprintPack("unknown")).toBeNull();
+});
+
+test("booking service blueprint pack is gated until booking adapters exist", () => {
+  const pack = getBusinessBlueprintPack("booking_service");
+  const plan = pack?.buildPlan({ promptKind: "setup_request" });
+
+  expect(pack).toMatchObject({
+    id: "booking-service",
+    intentFamily: "booking_service",
+    status: "requires-prerequisite",
+    actionTypes: [],
+  });
+  expect(plan?.status).toBe("needs_input");
+  expect(plan?.intentFamily).toBe("booking_service");
+  expect(plan?.actions).toEqual([]);
+  expect(plan?.questions[0]?.id).toBe("booking-adapter-scope");
 });
 
 test("lead capture business blueprint pack builds page and form plan", () => {

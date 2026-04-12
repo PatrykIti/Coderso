@@ -22,6 +22,7 @@ import {
 } from "./providerPlanningContext";
 import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
+import { buildBookingServiceNeedsInputPlan } from "./blueprints/bookingServiceBlueprint";
 import { buildLeadCaptureSitePlan } from "./blueprints/leadCaptureBlueprint";
 import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
 import { buildCatalogFamilyPlan } from "./blueprints/catalogFamilyBlueprint";
@@ -81,6 +82,8 @@ const buildReadyPlanForIntentFamily = (
       return buildCatalogFamilyPlan(SERVICES_DIRECTORY_PRESET, options);
     case "lead_capture_site":
       return buildLeadCaptureSitePlan({ promptKind: options.promptKind });
+    case "booking_service":
+      return buildBookingServiceNeedsInputPlan({ promptKind: options.promptKind });
     default:
       return null;
   }

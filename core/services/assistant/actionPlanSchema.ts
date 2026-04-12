@@ -45,6 +45,7 @@ const intentFamilies = new Set<AssistantIntentFamily>([
   "portfolio_projects",
   "services_directory",
   "lead_capture_site",
+  "booking_service",
   "site_kit",
   "unknown",
 ]);

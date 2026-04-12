@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Booking  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-172-01, TASK-170  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -73,3 +73,10 @@ return buildBlueprintPlan(bookingServicePack, {
 1. Pack does not ship until booking service contracts are safe to reuse.
 2. No assistant-only booking write path is introduced.
 3. Runtime booking surface is covered by Bun acceptance tests.
+
+## Completion Notes (2026-04-12)
+
+- Added `Booking Service Business` blueprint pack as `requires-prerequisite`.
+- Booking prompts now route to a typed `needs_input` plan instead of pretending booking setup is executable.
+- No booking resources, schedules, or reservation flows are created by the assistant in this task.
+- The pack is blocked until dedicated booking action adapters and public booking hardening coverage are implemented.

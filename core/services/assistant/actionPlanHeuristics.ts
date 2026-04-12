@@ -134,6 +134,20 @@ const leadCaptureKeywords = [
   "quote",
 ];
 
+const bookingServiceKeywords = [
+  "booking",
+  "bookings",
+  "rezerwacja",
+  "rezerwacje",
+  "rezerwacji",
+  "umow",
+  "umów",
+  "appointment",
+  "appointments",
+  "calendar",
+  "kalendarz",
+];
+
 const houseProjectsRefinementKeywords = [
   "metraz",
   "metraż",
@@ -205,6 +219,7 @@ export const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
   if (includesAny(normalized, servicesRefinementKeywords)) return "services_directory";
   if (isLikelyPortfolioProjectsPrompt(normalized)) return "portfolio_projects";
   if (includesAny(normalized, portfolioRefinementKeywords)) return "portfolio_projects";
+  if (includesAny(normalized, bookingServiceKeywords)) return "booking_service";
   if (includesAny(normalized, leadCaptureKeywords)) return "lead_capture_site";
   if (includesAny(normalized, catalogKeywords)) return "catalog_showcase";
   return "unknown";

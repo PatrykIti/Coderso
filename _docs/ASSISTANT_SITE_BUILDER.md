@@ -22,6 +22,8 @@ Current implemented guide blueprint:
 - lead capture site pack:
   - public inquiry form
   - simple landing page with form embed
+- booking service business pack:
+  - registered as gated until booking action adapters are implemented
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`

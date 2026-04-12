@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 609 | 2026-04-12 | TASK-172-03 gated booking service pack | Assistant/Product |
 | 608 | 2026-04-12 | TASK-172-02 lead capture site pack | Assistant/Product |
 | 607 | 2026-04-12 | TASK-172-01 shared business blueprint pack contract | Assistant/Product |
 | 606 | 2026-04-12 | TASK-171 provider planner intelligence closure | Assistant/Core |

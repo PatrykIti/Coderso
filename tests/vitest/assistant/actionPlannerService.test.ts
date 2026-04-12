@@ -146,6 +146,21 @@ test("planAssistantActions builds ready lead capture site plan", () => {
   expect(plan.actions.map((action) => action.type)).toEqual(["form.upsert", "page.upsert"]);
 });
 
+test("planAssistantActions returns gated needs-input plan for booking service prompts", () => {
+  const plan = planAssistantActions({
+    prompt: "potrzebuje strony z rezerwacja online i kalendarzem wizyt",
+    context: {
+      page: "/admin/coderso/booking",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentFamily).toBe("booking_service");
+  expect(plan.intentId).toBe("booking-service-needs-prerequisite");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActions builds ready refinement plan for house-project filters", () => {
   const plan = planAssistantActions({
     prompt: "dodaj filtr po metrazu i liczbie pokoi",
