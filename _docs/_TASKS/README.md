@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 37 tasks
-- **In Progress:** 7 tasks
+- **To Do:** 41 tasks
+- **In Progress:** 8 tasks
 - **Done:** 796 tasks
 
 ---
@@ -49,7 +49,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | Provider-backed draft planning through strict local schema and recovery |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | More concrete business outcomes beyond the current catalog/site-kit slice |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-170-03-03 | Form, Page, and Listing Patch Executor Adapters | High | Large | Non-destructive form/page/listing patch adapters |
+| TASK-170-03-03-01 | Listing Query Filters Patch Executor Adapter | High | Medium | Executable listing-query filter patch through existing listing query service |
+| TASK-170-03-03-02 | Listing Template Card Patch Executor Adapter | High | Medium | Executable listing-template card config patch |
+| TASK-170-03-03-03 | Page Widget Patch Executor Adapter | High | Large | Deterministic page widget block patching |
+| TASK-170-03-03-04 | Form Automation Upsert Executor Adapter | High | Large | Form automation adapter with secret-handling guardrails |
+| TASK-170-03-03-05 | Form, Page, and Listing Patch Adapters Docs, Tests, and Closure | High | Medium | Closure for form/page/listing patch adapter wave |
 | TASK-170-03-04 | Executor Adapter Docs, Tests, and Closure | High | Medium | Final route/security/docs/test closure for executor adapter wave |
 | TASK-170-04 | Admin Review UI for Expanded Actions | Medium | Medium | Review/result UI for new action families |
 | TASK-170-05 | Route Security, Tests, Docs, and Closure | High | Medium | Route validation, security coverage, docs, and changelog closure |
@@ -90,6 +94,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 | TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: entry, menu, SEO, and media-reference adapters complete; form/page/listing patches are next |
 | TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | In progress: entry and menu/SEO/media adapter leaves complete; form/page/listing patches are next |
+| TASK-170-03-03 | Form, Page, and Listing Patch Executor Adapters | High | Large | In progress: split into listing, page, form, and closure leaves |
 
 ---
 

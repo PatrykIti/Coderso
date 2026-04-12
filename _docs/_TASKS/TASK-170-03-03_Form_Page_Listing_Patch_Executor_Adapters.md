@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Coderso Surfaces  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-03, TASK-170-01-03, TASK-170-03-01  
-**Status:** To Do
+**Status:** In Progress (2026-04-12)
 
 ---
 
@@ -15,7 +15,11 @@ Implement non-destructive patch adapters for form automation, page widget patche
 
 ## Sub-Tasks
 
-No child task files yet. Split by domain if patch semantics become too large for one implementation slice.
+- `TASK-170-03-03-01_Listing_Query_Filters_Patch_Executor_Adapter.md`
+- `TASK-170-03-03-02_Listing_Template_Card_Patch_Executor_Adapter.md`
+- `TASK-170-03-03-03_Page_Widget_Patch_Executor_Adapter.md`
+- `TASK-170-03-03-04_Form_Automation_Upsert_Executor_Adapter.md`
+- `TASK-170-03-03-05_Form_Page_Listing_Patch_Adapters_Docs_Tests_and_Closure.md`
 
 ## Pseudocode
 
@@ -79,3 +83,7 @@ return saveThroughDomainService(next);
 1. Patch actions are deterministic and non-destructive.
 2. Public form hardening is preserved.
 3. Runtime-facing changes have Bun acceptance coverage.
+
+## Progress Notes
+
+- 2026-04-12: Split patch adapter work into listing query filters, listing template card, page widget, form automation, and closure leaves before implementation.
