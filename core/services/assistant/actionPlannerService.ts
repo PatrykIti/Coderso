@@ -6,14 +6,20 @@ import type {
   AssistantPlanQuestion,
   AssistantSiteKitPlanInput,
 } from "./actionPlanTypes";
+import type { AssistantProvider } from "./providers/providerTypes";
 import { buildAssistantAdminContext } from "./adminContextService";
 import { normalizeAssistantActionPlan } from "./actionPlanSchema";
+import { adaptProviderDraftPlan } from "./actionPlanProviderAdapter";
 import {
   classifyAssistantPrompt,
   includesAny,
   normalizeAssistantPlannerPrompt,
   resolveContextualRefinementFamily,
 } from "./actionPlanHeuristics";
+import {
+  buildProviderPlanningPromptPackage,
+  type AssistantProviderPlanningEvidence,
+} from "./providerPlanningContext";
 import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
 import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
@@ -408,6 +414,34 @@ export type AssistantActionPlanInput = {
   context?: AssistantActionContext;
 };
 
+export type AssistantProviderDraftPlanInput = AssistantActionPlanInput & {
+  provider?: AssistantProvider | null;
+  llmAvailable?: boolean;
+  evidence?: AssistantProviderPlanningEvidence[];
+  limits?: {
+    maxInputTokens?: number;
+    maxOutputTokens?: number;
+    timeoutMs?: number;
+  };
+};
+
+const providerPlannerSystemPrompt = [
+  "You draft Nextless LLM Guide action plans.",
+  "Return only JSON.",
+  "Use only supported typed actions and never invent arbitrary commands.",
+  "The local server will validate your draft through a strict schema before any dry-run or execution.",
+].join(" ");
+
+const parseProviderDraftJson = (value: string) => JSON.parse(value) as unknown;
+
+const buildProviderRequestLimits = (
+  limits: AssistantProviderDraftPlanInput["limits"] | undefined
+) => ({
+  maxInputTokens: Math.max(1, Math.floor(limits?.maxInputTokens ?? 4_000)),
+  maxOutputTokens: Math.max(1, Math.floor(limits?.maxOutputTokens ?? 1_500)),
+  timeoutMs: Math.max(1_000, Math.floor(limits?.timeoutMs ?? 15_000)),
+});
+
 export const planAssistantActions = (
   input: AssistantActionPlanInput
 ): AssistantActionPlan => {
@@ -457,4 +491,32 @@ export const planAssistantActions = (
   return normalizeAssistantActionPlan(
     buildClarifyingPlan(input.prompt, context, routedClassification)
   );
+};
+
+export const planAssistantActionsWithProviderDraft = async (
+  input: AssistantProviderDraftPlanInput
+): Promise<AssistantActionPlan> => {
+  if (!input.llmAvailable || !input.provider) {
+    return planAssistantActions(input);
+  }
+
+  try {
+    const promptPackage = buildProviderPlanningPromptPackage({
+      prompt: input.prompt,
+      context: input.context,
+      evidence: input.evidence,
+    });
+    const response = await input.provider.complete({
+      systemPrompt: providerPlannerSystemPrompt,
+      userMessage: JSON.stringify(promptPackage),
+      snippets: [],
+      limits: buildProviderRequestLimits(input.limits),
+    });
+    return adaptProviderDraftPlan({
+      prompt: input.prompt,
+      draft: parseProviderDraftJson(response.text),
+    });
+  } catch {
+    return planAssistantActions(input);
+  }
 };

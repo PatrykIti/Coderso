@@ -150,3 +150,4 @@ return adapted.ok ? adapted.plan : buildNeedsInputPlan(adapted.questions);
 ## Progress Notes
 
 - 2026-04-12: Completed `TASK-171-01`; provider planning prompt package helper now builds bounded/redacted docs/runtime/resource context without introducing live provider calls.
+- 2026-04-12: Completed `TASK-171-02`; provider draft helper now supports fake-provider draft execution, strict adapter mapping, and deterministic fallback without live network calls.

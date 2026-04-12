@@ -5,7 +5,14 @@ import {
   isLikelyGuidePlanningPrompt,
   isLikelyHouseProjectsCatalogPrompt,
   planAssistantActions,
+  planAssistantActionsWithProviderDraft,
 } from "../../../core/services/assistant/actionPlannerService";
+import type { AssistantProvider } from "../../../core/services/assistant/providers/providerTypes";
+
+const createFakeProvider = (text: string): AssistantProvider => ({
+  id: "fake",
+  complete: async () => ({ text }),
+});
 
 test("detects guide planning prompt for house projects catalog", () => {
   expect(
@@ -235,4 +242,100 @@ test("planAssistantActions accepts enriched resource catalog context without DB 
   expect(plan.status).toBe("ready");
   expect(plan.intentFamily).toBe("product_catalog");
   expect(plan.intentId).toBe("product-catalog");
+});
+
+test("planAssistantActionsWithProviderDraft maps provider JSON through strict adapter", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "create one draft product entry",
+    llmAvailable: true,
+    provider: createFakeProvider(
+      JSON.stringify({
+        intentId: "provider-entry",
+        promptKind: "setup_request",
+        intentFamily: "product_catalog",
+        title: "Draft entry",
+        answer: "I can draft an entry.",
+        summary: "Create a draft product entry.",
+        confidence: 0.8,
+        assumptions: [],
+        actions: [
+          {
+            type: "entry.upsert-draft",
+            input: {
+              contentTypeSlug: "products",
+              title: "Sample",
+              slug: "sample",
+              values: {
+                title: "Sample",
+              },
+            },
+          },
+        ],
+      })
+    ),
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("provider-entry");
+  expect(plan.actions[0]?.type).toBe("entry.upsert-draft");
+});
+
+test("planAssistantActionsWithProviderDraft falls back when provider is unavailable", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "potrzebuje katalogu produktow dla sklepu z meblami",
+    llmAvailable: false,
+    provider: createFakeProvider(
+      JSON.stringify({
+        actions: [
+          {
+            type: "database.drop",
+            input: {},
+          },
+        ],
+      })
+    ),
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("product_catalog");
+  expect(plan.intentId).toBe("product-catalog");
+});
+
+test("planAssistantActionsWithProviderDraft falls back on provider errors", async () => {
+  const provider: AssistantProvider = {
+    id: "fake",
+    complete: async () => {
+      throw new Error("timeout");
+    },
+  };
+
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "potrzebuje katalogu uslug dla firmy sprzatajacej",
+    llmAvailable: true,
+    provider,
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("services_directory");
+  expect(plan.intentId).toBe("services-directory");
+});
+
+test("planAssistantActionsWithProviderDraft recovers unsafe provider drafts as questions", async () => {
+  const plan = await planAssistantActionsWithProviderDraft({
+    prompt: "create catalog",
+    llmAvailable: true,
+    provider: createFakeProvider(
+      JSON.stringify({
+        actions: [
+          {
+            type: "database.drop",
+            input: {},
+          },
+        ],
+      })
+    ),
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.summary).toContain("unsupported actions");
 });

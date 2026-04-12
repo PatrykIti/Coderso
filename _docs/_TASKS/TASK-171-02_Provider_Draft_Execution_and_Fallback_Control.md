@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Provider Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-171-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -78,3 +78,11 @@ async function draftPlanWithProvider(input) {
 1. Provider draft execution is behind existing LLM availability and quota gates.
 2. Failure falls back without creating executable unsafe plans.
 3. Tests do not depend on live network/provider access.
+
+## Completion Notes (2026-04-12)
+
+- Added `planAssistantActionsWithProviderDraft` as an async provider-draft planner helper.
+- The helper requires `llmAvailable=true` plus an injected provider; otherwise it falls back to the local deterministic planner.
+- Provider responses are parsed as JSON and passed through `adaptProviderDraftPlan`, so unsupported actions and unsafe drafts still recover to typed questions.
+- Provider exceptions fall back to the local deterministic planner.
+- Tests use fake providers only; no live network call was introduced.
