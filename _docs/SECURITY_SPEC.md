@@ -274,6 +274,7 @@ Rotacja klucza:
   - booking blueprint is gated as `needs_input` and does not create booking resources until booking action adapters and public booking hardening are explicit,
   - product inquiry blueprint can create public inquiry forms through existing Forms runtime; checkout/payment remains gated until commerce/payment adapters are explicit,
   - editorial content hub blueprint creates a page with posts-feed only and does not create or mutate post records,
+  - solution-kit refinement remains gated until installed-kit resource context is server-derived; client-supplied installed resource maps are not trusted,
   - dry-run and execute routes request per-action permissions from `actionFamilyContracts.ts` before delegating to executor services,
   - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
   - preview metadata strings from `actionDiffService.ts` redact secret-like `key=value` fragments before they are returned to admin UI/API clients,

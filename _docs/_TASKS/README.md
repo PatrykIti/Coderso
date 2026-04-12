@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 18 tasks
+- **To Do:** 17 tasks
 - **In Progress:** 6 tasks
-- **Done:** 821 tasks
+- **Done:** 822 tasks
 
 ---
 
@@ -47,7 +47,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-172-07 | Solution Kit Refinement Packs and No-Reinstall Flow | High | Large | Installed-kit refinements without duplicate reinstall |
 | TASK-172-08 | Runtime Acceptance, Docs, and Widget Pack Matrix Closure | High | Medium | Runtime acceptance and docs/matrix sync for implemented packs |
 | TASK-173-01 | Acceptance Matrix and Flow Inventory | High | Medium | Declared capability matrix with Bun/Vitest ownership |
 | TASK-173-01-01 | Docs-Only Cannot Mutate Regression | High | Small | Regression proving docs-only stays read-only |
@@ -69,7 +68,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-172 | LLM Guide Business Blueprint Packs | High | Large | In progress: editorial content hub complete; solution-kit refinement is next |
+| TASK-172 | LLM Guide Business Blueprint Packs | High | Large | In progress: solution-kit refinement is gated; runtime/docs/matrix closure is next |
 
 ---
 
@@ -113,6 +112,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-172-04 | Product Inquiry and Ecommerce Starter Pack | High | Large | Done: product inquiry catalog is executable; checkout/payment prompts stay gated |
 | TASK-172-05 | Portfolio Case Study Pack | Medium | Medium | Done: portfolio pack includes case-study result and testimonial fields |
 | TASK-172-06 | Editorial Content Hub Pack | Medium | Large | Done: editorial hub page uses posts-feed widget without mutating post records |
+| TASK-172-07 | Solution Kit Refinement Packs and No-Reinstall Flow | High | Large | Done: refinements gated until server-derived installed-kit context exists |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

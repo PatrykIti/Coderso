@@ -40,6 +40,8 @@ Current implemented guide blueprint:
   - `site-kit.recommend`
   - `site-kit.install`
   - `site-kit.validate`
+- solution-kit refinements:
+  - gated until LLM Guide has server-derived installed-kit resource context
 - creates:
   - content type
   - custom screen

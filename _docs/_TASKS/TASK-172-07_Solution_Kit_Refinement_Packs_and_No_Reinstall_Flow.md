@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Solution Kits  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-172-01, TASK-101-09-01-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -78,3 +78,11 @@ return buildKitRefinementPlan({
 1. Follow-up prompts refine existing kit resources where possible.
 2. Reinstall is not the default for installed-kit context.
 3. Server-derived kit state is the only trusted refinement source.
+
+## Completion Notes (2026-04-12)
+
+- Audited current site-kit guide context and route schema.
+- Confirmed `/assistant/actions/plan` accepts `context.siteKit` for install planning, but does not accept client-supplied installed resource maps.
+- Confirmed client-supplied unknown context fields are rejected by `assistantActionPlanRequestSchema`.
+- No solution-kit refinement plan was shipped because there is no server-derived installed-kit resource context in LLM Guide planning yet.
+- Result: this pack remains gated until a server-side installed-kit context resolver is added.

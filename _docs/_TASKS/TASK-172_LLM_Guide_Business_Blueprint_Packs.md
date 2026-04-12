@@ -157,3 +157,4 @@ return normalizeAssistantActionPlan(pack.buildActions({ prompt, context }));
 - 2026-04-12: Completed `TASK-172-04`; product inquiry prompts now create catalog plus public inquiry form, while checkout/payment prompts stay gated.
 - 2026-04-12: Completed `TASK-172-06`; editorial content hub prompts now create a page with posts-feed widget without mutating post records.
 - 2026-04-12: Completed `TASK-172-05`; portfolio pack now includes case-study result and testimonial fields while preserving the existing catalog action flow.
+- 2026-04-12: Completed `TASK-172-07`; solution-kit refinements remain gated until server-derived installed-kit context exists.
