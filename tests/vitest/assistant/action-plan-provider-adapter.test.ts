@@ -40,6 +40,75 @@ test("adaptProviderDraftPlan maps valid provider drafts through strict schema", 
   expect(plan.actions[0]?.type).toBe("content-type.upsert");
 });
 
+test("adaptProviderDraftPlan repairs missing optional action labels", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "create product catalog",
+    draft: {
+      actions: [
+        {
+          type: "content-type.upsert",
+          input: {
+            slug: "products",
+            name: "Products",
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {},
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]).toMatchObject({
+    id: "provider-action-1",
+    title: "content-type.upsert",
+    description: "Provider drafted action.",
+  });
+});
+
+test("adaptProviderDraftPlan returns provider questions when strict schema repair needs identity", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "create product catalog",
+    draft: {
+      questions: [
+        {
+          id: "content-type-slug",
+          label: "Content type slug",
+          description: "Which slug should I use?",
+          required: true,
+        },
+      ],
+      actions: [
+        {
+          type: "content-type.upsert",
+          input: {
+            name: "Products",
+            schema: {
+              type: "object",
+              additionalProperties: false,
+              properties: {},
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.summary).toContain("strict plan schema");
+  expect(plan.questions).toEqual([
+    {
+      id: "content-type-slug",
+      label: "Content type slug",
+      description: "Which slug should I use?",
+      required: true,
+    },
+  ]);
+});
+
 test("adaptProviderDraftPlan returns questions for unsupported actions", () => {
   const plan = adaptProviderDraftPlan({
     prompt: "create product catalog",

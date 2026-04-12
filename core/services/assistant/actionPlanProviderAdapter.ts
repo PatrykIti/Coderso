@@ -172,6 +172,10 @@ export const adaptProviderDraftPlan = (
       actions,
     });
   } catch {
-    return buildRecoveryPlan(input.prompt, "Provider draft failed strict plan schema.");
+    return buildRecoveryPlan(
+      input.prompt,
+      "Provider draft failed strict plan schema.",
+      draftQuestions
+    );
   }
 };

@@ -368,6 +368,7 @@ Planner schema/recovery:
 - `core/services/assistant/providerPlanningContext.ts` owns the bounded/redacted provider planning prompt package. It can package prompt text, docs evidence, advisory runtime context, and resource catalog summaries for future provider draft calls without adding network behavior by itself.
 - Provider planning packages are passed through `assistantRedaction.ts` before a future provider boundary.
 - `planAssistantActionsWithProviderDraft` is the async helper for controlled provider draft planning. It requires injected provider availability, maps provider JSON through `actionPlanProviderAdapter.ts`, and falls back to the deterministic local planner on provider errors/unavailability.
+- Provider draft adapter repair fills safe optional action labels and preserves typed provider questions when strict schema validation fails.
 
 Execution registry and idempotency:
 - Dry-run/execute dispatch korzysta z formalnego `actionRegistry.ts`, nie z ukrytego centralnego switcha.

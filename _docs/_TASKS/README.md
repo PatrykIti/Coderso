@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 28 tasks
+- **To Do:** 27 tasks
 - **In Progress:** 6 tasks
-- **Done:** 811 tasks
+- **Done:** 812 tasks
 
 ---
 
@@ -48,7 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | More concrete business outcomes beyond the current catalog/site-kit slice |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-171-03 | Schema Repair and Clarification Questions | High | Medium | Safe partial draft repair and typed questions |
 | TASK-171-04 | Plan Confidence, Assumptions, and UX Explanation | Medium | Medium | Review UI explanation for provider/local planner assumptions |
 | TASK-171-05 | Provider Planner Evaluation Fixtures and Route Coverage | High | Medium | Deterministic fixtures and plan route coverage without live network |
 | TASK-172-01 | Blueprint Pack Contract and Shared Builder Expansion | High | Medium | Typed pack interface for business blueprint outcomes |
@@ -79,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | In progress: provider draft execution helper complete; schema repair hardening is next |
+| TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | In progress: provider schema repair hardening complete; confidence/assumption UX is next |
 
 ---
 
@@ -113,6 +112,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-171-01-01 | Docs and Runtime Context Budgeting | High | Medium | Done: docs/runtime/resource budgets are deterministic and test-covered |
 | TASK-171-01-02 | Secret Redaction and Audit-Safe Payloads | High | Medium | Done: provider package redaction covers nested secrets and signed URL metadata |
 | TASK-171-02 | Provider Draft Execution and Fallback Control | High | Large | Done: fake-provider draft helper maps through strict adapter and falls back deterministically |
+| TASK-171-03 | Schema Repair and Clarification Questions | High | Medium | Done: safe draft repair keeps typed provider questions when strict schema fails |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

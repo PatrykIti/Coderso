@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Planner Schema  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-171-02  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -72,3 +72,9 @@ return strict.ok ? strict.plan : needsInput("Some required details are missing."
 1. Safe partial drafts can be repaired deterministically.
 2. Unsafe drafts never become executable plans.
 3. Clarification questions are typed and user-actionable.
+
+## Completion Notes (2026-04-12)
+
+- Provider drafts with missing optional action labels now repair deterministically through existing fallback id/title/description defaults.
+- Provider drafts that fail strict schema can preserve typed provider questions instead of losing useful clarification context.
+- Unsafe unknown actions and secret-like keys remain non-executable recovery paths.
