@@ -8,6 +8,7 @@ import { normalizeAssistantActionPlan } from "../actionPlanSchema";
 import type { CatalogFamilyPreset } from "./catalogFamilyBlueprint";
 import { buildCatalogFamilyPlan } from "./catalogFamilyBlueprint";
 import { CATALOG_FAMILY_PRESETS } from "./catalogFamilyPresets";
+import { LEAD_CAPTURE_SITE_PACK } from "./leadCaptureBlueprint";
 
 export type AssistantBusinessBlueprintSurface =
   | "content-type"
@@ -85,9 +86,11 @@ export const catalogBusinessBlueprintPacks = Object.fromEntries(
 };
 
 export const listBusinessBlueprintPacks = () =>
-  Object.values(catalogBusinessBlueprintPacks);
+  [...Object.values(catalogBusinessBlueprintPacks), LEAD_CAPTURE_SITE_PACK];
 
-export const getBusinessBlueprintPack = (intentFamily: AssistantIntentFamily) =>
-  intentFamily in catalogBusinessBlueprintPacks
+export const getBusinessBlueprintPack = (intentFamily: AssistantIntentFamily) => {
+  if (intentFamily === "lead_capture_site") return LEAD_CAPTURE_SITE_PACK;
+  return intentFamily in catalogBusinessBlueprintPacks
     ? catalogBusinessBlueprintPacks[intentFamily as keyof typeof catalogBusinessBlueprintPacks]
     : null;
+};

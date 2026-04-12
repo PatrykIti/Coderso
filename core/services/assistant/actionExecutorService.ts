@@ -337,6 +337,63 @@ const buildCatalogPageData = (input: {
   },
 });
 
+const buildSimplePageData = (input: {
+  introTitle: string;
+  introBody: string;
+  blocks?: WidgetBlock[];
+  formEmbed?: {
+    formId: string;
+    title: string;
+    description: string;
+    submitLabel: string;
+    successMessage: string;
+  } | null;
+}) => ({
+  blocks: [
+    ...(input.blocks ?? []).map(normalizeAssistantPagePatchBlock),
+    ...(input.formEmbed
+      ? [
+          normalizeAssistantPagePatchBlock({
+            id: "lead-capture-form",
+            type: "form-embed",
+            data: {
+              formId: input.formEmbed.formId,
+              title: input.formEmbed.title,
+              description: input.formEmbed.description,
+              submitLabel: input.formEmbed.submitLabel,
+              successMessage: input.formEmbed.successMessage,
+              layout: {
+                alignment: "start",
+                width: "lg",
+                spacing: "md",
+                buttonAlignment: "start",
+              },
+              style: {
+                background: "transparent",
+                surface: "var(--color-bg)",
+                borderColor: "var(--color-border)",
+                borderWidth: "1",
+                radius: "md",
+                inputSize: "md",
+              },
+              fields: {
+                showLabels: true,
+                showRequiredIndicator: true,
+              },
+            },
+          }),
+        ]
+      : []),
+  ],
+  settings: {
+    showInNav: true,
+    seo: {
+      title: input.introTitle,
+      description: input.introBody,
+    },
+  },
+});
+
 type ActionExecutorDeps = {
   getSetting: typeof getSetting;
   setSetting: typeof setSetting;
@@ -1009,6 +1066,53 @@ const buildPagePreview = async (
   deps: ActionExecutorDeps
 ) => {
   const existing = await deps.getPageBySlug(action.input.slug);
+  const simplePageMode =
+    Boolean(action.input.blocks) || !action.input.listingQueryName || !action.input.listingTemplateSlug;
+  const existingData = isRecord(existing?.currentData) ? existing.currentData : {};
+  const forms = action.input.formEmbed ? await deps.listForms() : [];
+  const form = action.input.formEmbed
+    ? forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
+      (readFormEmbedSource(existing)?.formId
+        ? forms.find((entry) => entry.id === readFormEmbedSource(existing)?.formId)
+        : null) ??
+      null
+    : null;
+  const nextValue =
+    simplePageMode
+      ? {
+          title: action.input.title,
+          slug: action.input.slug,
+          status: action.input.status,
+          blocks: [
+            ...(action.input.blocks ?? []).map(normalizeAssistantPagePatchBlock),
+            ...(action.input.formEmbed
+              ? [
+                  normalizeAssistantPagePatchBlock({
+                    id: "lead-capture-form",
+                    type: "form-embed",
+                    data: {
+                      ...(form ? { formId: form.id } : {}),
+                      title: action.input.formEmbed.title,
+                      description: action.input.formEmbed.description,
+                      submitLabel: action.input.formEmbed.submitLabel,
+                      successMessage: action.input.formEmbed.successMessage,
+                    },
+                  }),
+                ]
+              : []),
+          ],
+          formEmbed: action.input.formEmbed ?? null,
+        }
+      : {
+          title: action.input.title,
+          slug: action.input.slug,
+          status: action.input.status,
+          listingQueryName: action.input.listingQueryName,
+          listingTemplateSlug: action.input.listingTemplateSlug,
+          contentListStyle: action.input.contentListStyle,
+          listingFilters: action.input.listingFilters,
+          formEmbed: action.input.formEmbed,
+        };
   return createPreviewChange({
     action,
     targetType: "page",
@@ -1016,17 +1120,18 @@ const buildPagePreview = async (
     summary: `${existing ? "Update" : "Create"} catalog page ${action.input.slug}`,
     beforeValue: existing
       ? {
-          id: existing.id,
           title: existing.title,
           slug: existing.slug,
           status: existing.status,
+          ...(simplePageMode
+            ? {
+                blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
+                formEmbed: action.input.formEmbed ?? null,
+              }
+            : {}),
         }
       : null,
-    nextValue: {
-      title: action.input.title,
-      slug: action.input.slug,
-      status: action.input.status,
-    },
+    nextValue,
   });
 };
 
@@ -1715,47 +1820,59 @@ const executePageAction = async (
   const listingQueries = await deps.listListingQueries();
   const listingTemplates = await deps.listListingTemplates();
   const forms = action.input.formEmbed ? await deps.listForms() : [];
+  const simplePageMode =
+    Boolean(action.input.blocks) || !action.input.listingQueryName || !action.input.listingTemplateSlug;
 
-  const listingQuery =
-    listingQueries.find((entry) => entry.name === action.input.listingQueryName) ??
-    (currentCatalogSource?.listingQueryId
-      ? listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId)
-      : null) ??
-    null;
-  const listingTemplate =
-    listingTemplates.find((entry) => entry.slug === action.input.listingTemplateSlug) ??
-    (currentCatalogSource?.listingTemplateId
-      ? listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId)
-      : null) ??
-    null;
+  const listingQueryByName = action.input.listingQueryName
+    ? listingQueries.find((entry) => entry.name === action.input.listingQueryName) ?? null
+    : null;
+  const listingQueryFromCurrent = currentCatalogSource?.listingQueryId
+    ? listingQueries.find((entry) => entry.id === currentCatalogSource.listingQueryId) ?? null
+    : null;
+  const listingQuery = listingQueryByName ?? listingQueryFromCurrent;
+  const listingTemplateBySlug = action.input.listingTemplateSlug
+    ? listingTemplates.find((entry) => entry.slug === action.input.listingTemplateSlug) ?? null
+    : null;
+  const listingTemplateFromCurrent = currentCatalogSource?.listingTemplateId
+    ? listingTemplates.find((entry) => entry.id === currentCatalogSource.listingTemplateId) ?? null
+    : null;
+  const listingTemplate = listingTemplateBySlug ?? listingTemplateFromCurrent;
   const form = action.input.formEmbed
     ? forms.find((entry) => entry.name === action.input.formEmbed?.formName) ??
       (currentFormSource?.formId ? forms.find((entry) => entry.id === currentFormSource.formId) : null) ??
       null
     : null;
 
-  if (!listingQuery || !listingTemplate || (action.input.formEmbed && !form)) {
+  if ((!simplePageMode && (!listingQuery || !listingTemplate)) || (action.input.formEmbed && !form)) {
     throw new Error("assistant_action_dependency_missing");
   }
 
-  const data = buildCatalogPageData({
-    introTitle: action.input.introTitle,
-    introBody: action.input.introBody,
-    listingQueryId: listingQuery.id,
-    listingTemplateId: listingTemplate.id,
-    ctaLabel: action.input.ctaLabel,
-    contentListStyle: action.input.contentListStyle,
-    listingFilters: action.input.listingFilters,
-    formEmbed: form && action.input.formEmbed
-      ? {
-          formId: form.id,
-          title: action.input.formEmbed.title,
-          description: action.input.formEmbed.description,
-          submitLabel: action.input.formEmbed.submitLabel,
-          successMessage: action.input.formEmbed.successMessage,
-        }
-      : null,
-  });
+  const resolvedFormEmbed = form && action.input.formEmbed
+    ? {
+        formId: form.id,
+        title: action.input.formEmbed.title,
+        description: action.input.formEmbed.description,
+        submitLabel: action.input.formEmbed.submitLabel,
+        successMessage: action.input.formEmbed.successMessage,
+      }
+    : null;
+  const data = simplePageMode
+    ? buildSimplePageData({
+        introTitle: action.input.introTitle,
+        introBody: action.input.introBody,
+        blocks: action.input.blocks,
+        formEmbed: resolvedFormEmbed,
+      })
+    : buildCatalogPageData({
+        introTitle: action.input.introTitle,
+        introBody: action.input.introBody,
+        listingQueryId: listingQuery!.id,
+        listingTemplateId: listingTemplate!.id,
+        ctaLabel: action.input.ctaLabel ?? "Read more",
+        contentListStyle: action.input.contentListStyle,
+        listingFilters: action.input.listingFilters,
+        formEmbed: resolvedFormEmbed,
+      });
 
   const page =
     preview.operation === "create"

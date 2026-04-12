@@ -19,6 +19,9 @@ Current implemented guide blueprint:
   - product catalog
   - portfolio projects
   - services directory
+- lead capture site pack:
+  - public inquiry form
+  - simple landing page with form embed
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`

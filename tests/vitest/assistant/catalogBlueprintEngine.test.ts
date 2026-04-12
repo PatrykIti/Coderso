@@ -87,6 +87,7 @@ test("business blueprint packs expose shared catalog contract", () => {
     "product-catalog",
     "portfolio-projects",
     "services-directory",
+    "lead-capture-site",
   ]);
   expect(productPack).toMatchObject({
     id: "product-catalog",
@@ -109,6 +110,30 @@ test("business blueprint packs expose shared catalog contract", () => {
     ],
   });
   expect(getBusinessBlueprintPack("unknown")).toBeNull();
+});
+
+test("lead capture business blueprint pack builds page and form plan", () => {
+  const pack = getBusinessBlueprintPack("lead_capture_site");
+  const plan = pack?.buildPlan({ promptKind: "setup_request" });
+
+  expect(pack).toMatchObject({
+    id: "lead-capture-site",
+    intentFamily: "lead_capture_site",
+    surfaces: ["page", "form"],
+    actionTypes: ["form.upsert", "page.upsert"],
+  });
+  expect(plan?.status).toBe("ready");
+  expect(plan?.actions.map((action) => action.type)).toEqual(["form.upsert", "page.upsert"]);
+  expect(plan?.actions.find((action) => action.type === "form.upsert")?.input).toMatchObject({
+    slug: "lead-capture-inquiry",
+    submissionAccess: "public",
+  });
+  expect(plan?.actions.find((action) => action.type === "page.upsert")?.input).toMatchObject({
+    slug: "/kontakt",
+    formEmbed: {
+      formName: "Lead Capture Inquiry",
+    },
+  });
 });
 
 test("business blueprint pack builds strict plans without changing catalog output", () => {

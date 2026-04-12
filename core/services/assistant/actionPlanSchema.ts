@@ -478,6 +478,7 @@ const normalizePageInput = (input: JsonRecord) => {
       "introTitle",
       "introBody",
       "ctaLabel",
+      "blocks",
       "contentListStyle",
       "listingFilters",
       "formEmbed",
@@ -487,11 +488,18 @@ const normalizePageInput = (input: JsonRecord) => {
     title: readText(input.title),
     slug: readText(input.slug),
     status: readEnum(input.status, new Set(["draft", "published"])),
-    listingQueryName: readText(input.listingQueryName),
-    listingTemplateSlug: readText(input.listingTemplateSlug),
+    ...(input.listingQueryName !== undefined
+      ? { listingQueryName: readText(input.listingQueryName) }
+      : {}),
+    ...(input.listingTemplateSlug !== undefined
+      ? { listingTemplateSlug: readText(input.listingTemplateSlug) }
+      : {}),
     introTitle: readText(input.introTitle),
     introBody: readText(input.introBody),
-    ctaLabel: readText(input.ctaLabel),
+    ...(input.ctaLabel !== undefined ? { ctaLabel: readText(input.ctaLabel) } : {}),
+    ...(input.blocks !== undefined
+      ? { blocks: readRecordArray(input.blocks).map(normalizePageWidgetPatchBlock) }
+      : {}),
     ...(input.contentListStyle !== undefined
       ? { contentListStyle: normalizeContentListStyle(input.contentListStyle) }
       : {}),

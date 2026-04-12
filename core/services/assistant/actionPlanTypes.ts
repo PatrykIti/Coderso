@@ -336,11 +336,12 @@ export type AssistantPageUpsertAction = {
     title: string;
     slug: string;
     status: "draft" | "published";
-    listingQueryName: string;
-    listingTemplateSlug: string;
+    listingQueryName?: string;
+    listingTemplateSlug?: string;
     introTitle: string;
     introBody: string;
-    ctaLabel: string;
+    ctaLabel?: string;
+    blocks?: WidgetBlock[];
     contentListStyle?: {
       columns?: "1" | "2" | "3";
       cardStyle?: "outlined" | "elevated" | "minimal";

@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Forms + Pages  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-172-01, TASK-170-01-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -78,3 +78,13 @@ const plan = buildBlueprintPlan(leadCapturePack, {
 1. User prompt for a service lead page routes to a ready plan.
 2. Execute creates/update a page and hardened inquiry form.
 3. Runtime acceptance proves the public surface renders without duplicate setup.
+
+## Completion Notes (2026-04-12)
+
+- Added `Lead Capture Site` business blueprint pack.
+- Planner now routes lead capture prompts to a ready plan with:
+  - `form.upsert` for a public inquiry form,
+  - `page.upsert` for a simple landing page with a validated rich text block and form embed.
+- Extended `page.upsert` to support simple block-backed landing pages without requiring listing query/template resources.
+- Added Bun executor coverage proving repeated execution does not duplicate the created form/page.
+- No webhook automation was added; public form submission hardening remains owned by the existing Forms runtime.

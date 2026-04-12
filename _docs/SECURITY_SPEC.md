@@ -270,6 +270,7 @@ Rotacja klucza:
   - `listing-template.card.patch` is internal-only, requires `content:write` for execute, and updates only existing listing template `config.card` while preserving unrelated template config,
   - `page.widget.patch` is internal-only, requires `content:write` for execute, supports top-level `upsert-block`, and validates widget type/data before updating page current data,
   - `form.automation.upsert` is internal-only, requires `forms:write` for execute, supports safe non-webhook form actions first, and leaves webhook automation disabled until secret handling is explicit,
+  - lead capture blueprint creates public forms through existing Forms runtime; it does not add a new public write endpoint or bypass form nonce/access hardening,
   - dry-run and execute routes request per-action permissions from `actionFamilyContracts.ts` before delegating to executor services,
   - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
   - preview metadata strings from `actionDiffService.ts` redact secret-like `key=value` fragments before they are returned to admin UI/API clients,

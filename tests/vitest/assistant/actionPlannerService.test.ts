@@ -131,6 +131,21 @@ test("planAssistantActions builds ready portfolio and services plans for routed 
   expect(servicesPlan.intentId).toBe("services-directory");
 });
 
+test("planAssistantActions builds ready lead capture site plan", () => {
+  const plan = planAssistantActions({
+    prompt: "potrzebuje strony kontaktowej z formularzem kontaktowym do zbierania leadow",
+    context: {
+      page: "/admin/coderso/forms",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("lead_capture_site");
+  expect(plan.intentId).toBe("lead-capture-site");
+  expect(plan.actions.map((action) => action.type)).toEqual(["form.upsert", "page.upsert"]);
+});
+
 test("planAssistantActions builds ready refinement plan for house-project filters", () => {
   const plan = planAssistantActions({
     prompt: "dodaj filtr po metrazu i liczbie pokoi",

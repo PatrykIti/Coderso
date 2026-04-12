@@ -220,7 +220,7 @@ export const classifyAssistantPrompt = (prompt: string) => {
   let promptKind: AssistantPromptKind = "unknown";
   if (hasDocsSignal && !hasSetupSignal) {
     promptKind = "docs_question";
-  } else if (hasRefinementSignal) {
+  } else if (hasRefinementSignal && !(hasSetupSignal && intentFamily === "lead_capture_site")) {
     promptKind = "refinement_request";
   } else if (hasSetupSignal || intentFamily !== "unknown") {
     promptKind = "setup_request";

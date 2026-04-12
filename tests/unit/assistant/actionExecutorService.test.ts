@@ -4,6 +4,7 @@ import { planAssistantActions } from "../../../core/services/assistant/actionPla
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
+import { buildLeadCaptureSitePlan } from "../../../core/services/assistant/blueprints/leadCaptureBlueprint";
 import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
@@ -1369,6 +1370,43 @@ test("executeAssistantActionPlan upserts safe form automation without duplicates
 
   const noopPreview = await dryRunAssistantActionPlan({ plan: updatedPlan }, deps);
   expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan creates lead capture form and landing page", async () => {
+  const deps = createDeps();
+  const plan = buildLeadCaptureSitePlan();
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.readyToExecute).toBe(true);
+  expect(preview.changes.map((change) => change.targetType)).toEqual(["form", "page"]);
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-lead-capture-1",
+    },
+    deps
+  );
+
+  expect(deps.__state.forms).toHaveLength(1);
+  expect(deps.__state.forms[0]?.slug).toBe("lead-capture-inquiry");
+  expect(deps.__state.formFields.get("form-1")).toHaveLength(4);
+  expect(deps.__state.pages).toHaveLength(1);
+  expect(deps.__state.pages[0]?.slug).toBe("/kontakt");
+  const blocks = deps.__state.pages[0]?.currentData.blocks as Array<Record<string, unknown>>;
+  expect(blocks.map((block) => block.type)).toEqual(["rich-text-section", "form-embed"]);
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-lead-capture-2",
+    },
+    deps
+  );
+  expect(deps.__state.forms).toHaveLength(1);
+  expect(deps.__state.pages).toHaveLength(1);
 });
 
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {

@@ -152,3 +152,4 @@ return normalizeAssistantActionPlan(pack.buildActions({ prompt, context }));
 ## Progress Notes
 
 - 2026-04-12: Completed `TASK-172-01`; shared business blueprint pack contract now wraps existing catalog-family presets without changing generated plan output.
+- 2026-04-12: Completed `TASK-172-02`; lead capture prompts now route to a ready plan that creates a public inquiry form and simple landing page.
