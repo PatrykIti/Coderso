@@ -6,6 +6,7 @@ import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/bluepri
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { buildLeadCaptureSitePlan } from "../../../core/services/assistant/blueprints/leadCaptureBlueprint";
 import { buildProductInquiryCatalogPlan } from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
+import { buildEditorialContentHubPlan } from "../../../core/services/assistant/blueprints/editorialContentHubBlueprint";
 import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
@@ -1408,6 +1409,26 @@ test("executeAssistantActionPlan creates lead capture form and landing page", as
   );
   expect(deps.__state.forms).toHaveLength(1);
   expect(deps.__state.pages).toHaveLength(1);
+});
+
+test("executeAssistantActionPlan creates editorial hub page without post mutations", async () => {
+  const deps = createDeps();
+  const plan = buildEditorialContentHubPlan();
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-editorial-hub-1",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(0);
+  expect(deps.__state.pages).toHaveLength(1);
+  expect(deps.__state.pages[0]?.slug).toBe("/blog");
+  const blocks = deps.__state.pages[0]?.currentData.blocks as Array<Record<string, unknown>>;
+  expect(blocks.map((block) => block.type)).toEqual(["rich-text-section", "posts-feed"]);
 });
 
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {

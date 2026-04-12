@@ -202,6 +202,22 @@ test("planAssistantActions returns gated needs-input plan for booking service pr
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions builds editorial content hub without post mutations", () => {
+  const plan = planAssistantActions({
+    prompt: "stworz blog z aktualnosciami i najnowszymi wpisami",
+    context: {
+      page: "/admin/posts",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("editorial_content_hub");
+  expect(plan.intentId).toBe("editorial-content-hub");
+  expect(plan.actions.map((action) => action.type)).toEqual(["page.upsert"]);
+  expect(JSON.stringify(plan.actions)).toContain("posts-feed");
+});
+
 test("planAssistantActions builds ready refinement plan for house-project filters", () => {
   const plan = planAssistantActions({
     prompt: "dodaj filtr po metrazu i liczbie pokoi",

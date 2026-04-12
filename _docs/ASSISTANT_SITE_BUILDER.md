@@ -32,6 +32,10 @@ Current implemented guide blueprint:
   - portfolio catalog
   - case-study result summary
   - testimonial field
+- editorial content hub pack:
+  - public hub page
+  - posts-feed widget
+  - no post mutations
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`

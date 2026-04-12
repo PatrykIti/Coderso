@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 612 | 2026-04-12 | TASK-172-06 editorial content hub pack | Assistant/Product |
 | 611 | 2026-04-12 | TASK-172-05 portfolio case study pack | Assistant/Product |
 | 610 | 2026-04-12 | TASK-172-04 product inquiry catalog pack | Assistant/Product |
 | 609 | 2026-04-12 | TASK-172-03 gated booking service pack | Assistant/Product |

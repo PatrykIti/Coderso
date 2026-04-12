@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Posts + Pages  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-172-01, TASK-170  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -70,3 +70,10 @@ return buildContentHubPlan({ page, postsFeedWidget, navigationLink });
 1. Pack respects the dedicated posts architecture.
 2. Unsupported post mutations are questions, not unsafe plans.
 3. Generated content hub runtime is covered by Bun acceptance tests.
+
+## Completion Notes (2026-04-12)
+
+- Added `Editorial Content Hub` blueprint pack.
+- The pack creates a public `/blog` page with intro copy and a `posts-feed` widget.
+- No `post.*` mutation actions were introduced and no post records are created/edited.
+- Added planner and executor coverage for page creation with posts feed blocks.

@@ -100,6 +100,7 @@ test("business blueprint packs expose shared catalog contract", () => {
     "services-directory",
     "lead-capture-site",
     "booking-service",
+    "editorial-content-hub",
   ]);
   expect(productPack).toMatchObject({
     id: "product-catalog",
@@ -122,6 +123,23 @@ test("business blueprint packs expose shared catalog contract", () => {
     ],
   });
   expect(getBusinessBlueprintPack("unknown")).toBeNull();
+});
+
+test("editorial content hub pack builds posts feed page without post mutations", () => {
+  const pack = getBusinessBlueprintPack("editorial_content_hub");
+  const plan = pack?.buildPlan({ promptKind: "setup_request" });
+
+  expect(pack).toMatchObject({
+    id: "editorial-content-hub",
+    intentFamily: "editorial_content_hub",
+    status: "ready",
+    actionTypes: ["page.upsert"],
+  });
+  expect(plan?.status).toBe("ready");
+  expect(plan?.actions.map((action) => action.type)).toEqual(["page.upsert"]);
+  const page = plan?.actions.find((action) => action.type === "page.upsert");
+  expect(JSON.stringify(page?.input.blocks)).toContain("posts-feed");
+  expect(JSON.stringify(plan)).not.toContain("post.upsert");
 });
 
 test("booking service blueprint pack is gated until booking adapters exist", () => {

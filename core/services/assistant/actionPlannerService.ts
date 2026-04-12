@@ -23,6 +23,7 @@ import {
 import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
 import { buildBookingServiceNeedsInputPlan } from "./blueprints/bookingServiceBlueprint";
+import { buildEditorialContentHubPlan } from "./blueprints/editorialContentHubBlueprint";
 import { buildLeadCaptureSitePlan } from "./blueprints/leadCaptureBlueprint";
 import {
   buildProductCheckoutNeedsInputPlan,
@@ -107,6 +108,8 @@ const buildReadyPlanForIntentFamily = (
       return buildLeadCaptureSitePlan({ promptKind: options.promptKind });
     case "booking_service":
       return buildBookingServiceNeedsInputPlan({ promptKind: options.promptKind });
+    case "editorial_content_hub":
+      return buildEditorialContentHubPlan({ promptKind: options.promptKind });
     default:
       return null;
   }

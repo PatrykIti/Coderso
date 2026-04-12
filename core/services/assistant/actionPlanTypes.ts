@@ -27,6 +27,7 @@ export type AssistantIntentFamily =
   | "services_directory"
   | "lead_capture_site"
   | "booking_service"
+  | "editorial_content_hub"
   | "site_kit"
   | "unknown";
 
