@@ -261,6 +261,22 @@ const portfolioProjectsSchema = {
         layout: { tab: "content", section: "Description", width: "full" },
       },
     },
+    resultSummary: {
+      type: "string",
+      title: "Results summary",
+      xFieldType: "richtext",
+      xFieldConfig: {
+        layout: { tab: "content", section: "Case study", width: "full" },
+      },
+    },
+    testimonialQuote: {
+      type: "string",
+      title: "Client testimonial",
+      xFieldType: "textarea",
+      xFieldConfig: {
+        layout: { tab: "content", section: "Case study", width: "full" },
+      },
+    },
     heroImage: {
       type: "string",
       title: "Project image",
@@ -826,6 +842,13 @@ export const PORTFOLIO_PROJECTS_PRESET: CatalogFamilyPreset = {
         tone: "default",
         field: "serviceType",
       },
+      {
+        id: "result",
+        label: "Result",
+        helper: "Short outcome summary for case-study context.",
+        tone: "default",
+        field: "resultSummary",
+      },
     ],
     rightFields: [
       {
@@ -843,6 +866,13 @@ export const PORTFOLIO_PROJECTS_PRESET: CatalogFamilyPreset = {
         field: "location",
       },
       {
+        id: "testimonial",
+        label: "Testimonial",
+        helper: "Client quote shown in case-study detail workflows.",
+        tone: "default",
+        field: "testimonialQuote",
+      },
+      {
         id: "status",
         label: "Status",
         helper: "Used for badges and project visibility.",
@@ -854,6 +884,7 @@ export const PORTFOLIO_PROJECTS_PRESET: CatalogFamilyPreset = {
   assumptions: [
     "The first portfolio preset focuses on project showcase fields rather than complex case-study sections.",
     "Portfolio cards prioritize client, delivery year, and status metadata.",
+    "Case-study detail fields capture result summary and testimonial copy without adding a bespoke page type.",
   ],
   refinement: {
     defaultFilterTitle: "Filter portfolio projects",

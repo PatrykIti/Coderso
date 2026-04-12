@@ -155,3 +155,4 @@ return normalizeAssistantActionPlan(pack.buildActions({ prompt, context }));
 - 2026-04-12: Completed `TASK-172-02`; lead capture prompts now route to a ready plan that creates a public inquiry form and simple landing page.
 - 2026-04-12: Completed `TASK-172-03`; booking prompts now return a gated `needs_input` plan because booking action adapters are not implemented yet.
 - 2026-04-12: Completed `TASK-172-04`; product inquiry prompts now create catalog plus public inquiry form, while checkout/payment prompts stay gated.
+- 2026-04-12: Completed `TASK-172-05`; portfolio pack now includes case-study result and testimonial fields while preserving the existing catalog action flow.

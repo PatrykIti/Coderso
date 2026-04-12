@@ -156,6 +156,8 @@ test("planAssistantActions builds ready portfolio and services plans for routed 
   expect(portfolioPlan.status).toBe("ready");
   expect(portfolioPlan.intentFamily).toBe("portfolio_projects");
   expect(portfolioPlan.intentId).toBe("portfolio-projects");
+  expect(JSON.stringify(portfolioPlan.actions)).toContain("resultSummary");
+  expect(JSON.stringify(portfolioPlan.actions)).toContain("testimonialQuote");
 
   const servicesPlan = planAssistantActions({
     prompt: "potrzebuje katalogu uslug dla firmy sprzatajacej",

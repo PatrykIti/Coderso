@@ -28,6 +28,10 @@ Current implemented guide blueprint:
   - product catalog
   - public inquiry form
   - checkout/payment remains gated
+- portfolio case-study pack:
+  - portfolio catalog
+  - case-study result summary
+  - testimonial field
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`

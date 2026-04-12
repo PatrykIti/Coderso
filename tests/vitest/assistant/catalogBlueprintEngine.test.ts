@@ -80,6 +80,13 @@ test("buildCatalogFamilyPlan produces portfolio projects plan from preset", () =
     name: "Portfolio Projects",
     contentTypeSlug: "portfolio-projects",
   });
+  const schema = plan.actions.find((action) => action.type === "content-type.upsert")?.input
+    .schema as { properties?: Record<string, unknown> } | undefined;
+  expect(Object.keys(schema?.properties ?? {})).toEqual(
+    expect.arrayContaining(["resultSummary", "testimonialQuote"])
+  );
+  expect(JSON.stringify(plan.actions)).toContain("resultSummary");
+  expect(JSON.stringify(plan.actions)).toContain("testimonialQuote");
 });
 
 test("business blueprint packs expose shared catalog contract", () => {

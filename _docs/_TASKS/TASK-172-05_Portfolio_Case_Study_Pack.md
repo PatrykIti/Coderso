@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Portfolio  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-172-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -67,3 +67,12 @@ return buildBlueprintPlan(portfolioCaseStudyPack, {
 1. Portfolio/case-study prompts create a complete ready plan.
 2. Generated pages support list/detail flow.
 3. Follow-up changes update existing resources.
+
+## Completion Notes (2026-04-12)
+
+- Extended the existing portfolio/projects pack with case-study fields:
+  - `resultSummary`
+  - `testimonialQuote`
+- Added these fields to the dedicated admin screen bindings so editors can review result/testimonial data.
+- Kept the existing listing/page/detail route action flow unchanged.
+- Added Vitest coverage for schema and plan output.
