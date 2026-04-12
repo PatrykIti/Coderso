@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Security + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-02, TASK-170-03, TASK-170-04  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -77,3 +77,10 @@ await expectIdempotencyConflictDifferentPlanHash();
 1. New action families are covered at schema, UI, route, and executor levels.
 2. Security docs match route behavior.
 3. Task board and changelog are synchronized when the wave is marked Done.
+
+## Completion Notes (2026-04-12)
+
+- Confirmed strict schema, provider adapter, preview diff, UI review, executor, and route tests cover the expanded action families.
+- Confirmed route boundary enforces per-action dry-run/execute permissions from `actionFamilyContracts`.
+- Confirmed CSRF coverage remains in admin client/middleware lanes; `registerAssistantRoutes` route harness does not mount CSRF middleware directly.
+- Ran lint, typecheck, targeted Vitest, Bun executor, route, and DB-backed executor validation.

@@ -29,3 +29,4 @@
   - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/action-plan-provider-adapter.test.ts tests/vitest/assistant/action-diff-service.test.ts`
   - `bun test tests/unit/assistant/actionExecutorService.test.ts`
   - `bun test tests/integration/routes/assistant.test.ts`
+  - `set -a && source .env && set +a && bun test tests/unit/assistant/actionExecutorService.db.test.ts`

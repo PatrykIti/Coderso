@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Core/Services + Admin Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09  
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -164,3 +164,22 @@ for (const plannedFamily of selectedActionFamilies) {
 - 2026-04-12: Completed form/page/listing patch adapter wave closure; executor adapter wave closure is next.
 - 2026-04-12: Completed executor adapter wave closure; action-specific permissions are now enforced at dry-run/execute route boundary.
 - 2026-04-12: Completed admin review UI labels/metadata slice; route security/docs closure is next.
+
+## Completion Notes (2026-04-12)
+
+- Expanded the `LLM Guide` typed action engine with additional executable, schema-owned action families:
+  - `entry.upsert-draft`
+  - `menu.item.upsert`
+  - `seo.document.upsert`
+  - `media.reference.attach` for entry targets
+  - `listing-query.filters.patch`
+  - `listing-template.card.patch`
+  - `page.widget.patch` for top-level `upsert-block`
+  - `form.automation.upsert` for safe non-webhook form actions
+- Added contract-only tracking for remaining future action families.
+- Added preview metadata redaction, per-action permission enforcement, and expanded review/result UI labels.
+- Left broader future work intentionally scoped out:
+  - webhook form automation until secret handling is explicit,
+  - nested/slot page widget patching,
+  - menu structure patching,
+  - remaining entry sample/bulk/field patch actions.
