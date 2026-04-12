@@ -21,6 +21,11 @@ import {
   updateListingTemplate,
 } from "../content/listingTemplatesService";
 import {
+  createEntry,
+  getEntryBySlug,
+  updateEntry,
+} from "../content/entryService";
+import {
   createPage,
   getPageBySlug,
   publishPage,
@@ -45,6 +50,7 @@ import type {
   AssistantContentRouteUpsertAction,
   AssistantContentTypeUpsertAction,
   AssistantCustomScreenUpsertAction,
+  AssistantEntryUpsertDraftAction,
   AssistantFormUpsertAction,
   AssistantListingQueryUpsertAction,
   AssistantListingTemplateUpsertAction,
@@ -328,6 +334,9 @@ type ActionExecutorDeps = {
   createForm: typeof createForm;
   updateForm: typeof updateForm;
   setFormFields: typeof setFormFields;
+  getEntryBySlug: typeof getEntryBySlug;
+  createEntry: typeof createEntry;
+  updateEntry: typeof updateEntry;
   logAudit: typeof logAudit;
   previewSiteKitPlan: typeof previewGuidedSiteBuilderPlan;
   executeSiteKit: typeof executeGuidedSiteBuilder;
@@ -359,6 +368,9 @@ const defaultDeps: ActionExecutorDeps = {
   createForm,
   updateForm,
   setFormFields,
+  getEntryBySlug,
+  createEntry,
+  updateEntry,
   logAudit,
   previewSiteKitPlan: previewGuidedSiteBuilderPlan,
   executeSiteKit: executeGuidedSiteBuilder,
@@ -496,6 +508,46 @@ const buildFormPreview = async (
     summary: `${existing ? "Update" : "Create"} form "${action.input.name}"`,
     beforeValue: existing,
     nextValue: action.input,
+  });
+};
+
+const buildEntryUpsertDraftPreview = async (
+  action: AssistantEntryUpsertDraftAction,
+  deps: ActionExecutorDeps
+) => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  const existing = contentType
+    ? await deps.getEntryBySlug(contentType.id, action.input.slug)
+    : null;
+
+  return createPreviewChange({
+    action,
+    targetType: "entry",
+    targetKey: `${action.input.contentTypeSlug}/${action.input.slug}`,
+    summary: `${existing ? "Update" : "Create"} draft entry "${action.input.title}"`,
+    warnings: contentType
+      ? []
+      : ["The content type does not exist yet and must be created earlier in the plan."],
+    dependencies: [
+      {
+        actionId: null,
+        targetType: "content-type",
+        targetKey: action.input.contentTypeSlug,
+        optional: false,
+      },
+    ],
+    beforeValue: existing
+      ? {
+          title: existing.title,
+          slug: existing.slug,
+          data: existing.data,
+        }
+      : null,
+    nextValue: {
+      title: action.input.title,
+      slug: action.input.slug,
+      data: action.input.values,
+    },
   });
 };
 
@@ -876,6 +928,53 @@ const executeFormAction = async (
   };
 };
 
+const executeEntryUpsertDraftAction = async (
+  action: AssistantEntryUpsertDraftAction,
+  preview: AssistantActionPreviewChange,
+  actorId: string,
+  deps: ActionExecutorDeps
+) => {
+  const contentType = await deps.getContentTypeBySlug(action.input.contentTypeSlug);
+  if (!contentType) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const existing = await deps.getEntryBySlug(contentType.id, action.input.slug);
+  const record =
+    preview.operation === "create"
+      ? await deps.createEntry(contentType.id, {
+          title: action.input.title,
+          slug: action.input.slug,
+          data: action.input.values,
+          authorId: actorId,
+        })
+      : preview.operation === "update" && existing
+        ? await deps.updateEntry(existing.id, {
+            title: action.input.title,
+            slug: action.input.slug,
+            data: action.input.values,
+          })
+        : existing;
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "entry",
+    targetKey: `${action.input.contentTypeSlug}/${action.input.slug}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record?.id ?? null,
+    adminHref: record
+      ? `/admin/coderso/entries/${encodeURIComponent(action.input.contentTypeSlug)}/${encodeURIComponent(record.id)}`
+      : "/admin/coderso/entries",
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Draft entry already matched the planned data."
+        : "Draft entry is ready in Coderso Entries.",
+  };
+};
+
 const executePageAction = async (
   action: AssistantPageUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1124,6 +1223,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "form.upsert"
         ? executeFormAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "entry.upsert-draft": {
+    preview: (action, ctx) =>
+      action.type === "entry.upsert-draft"
+        ? buildEntryUpsertDraftPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "entry.upsert-draft"
+        ? executeEntryUpsertDraftAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
   "page.upsert": {

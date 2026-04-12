@@ -21,16 +21,16 @@ test("assistant action family contracts list executable and contract-only action
 });
 
 test("contract-only action families are known but not executable", () => {
-  expect(isAssistantKnownActionContractType("entry.upsert-draft")).toBe(true);
-  expect(isAssistantContractOnlyActionType("entry.upsert-draft")).toBe(true);
-  expect(isAssistantActionType("entry.upsert-draft")).toBe(false);
+  expect(isAssistantKnownActionContractType("entry.sample.create")).toBe(true);
+  expect(isAssistantContractOnlyActionType("entry.sample.create")).toBe(true);
+  expect(isAssistantActionType("entry.sample.create")).toBe(false);
   expect(isAssistantKnownActionContractType("database.drop")).toBe(false);
 });
 
-test("entry action contracts stay draft-scoped and content-owned", () => {
+test("entry upsert draft action is executable and stays draft-scoped", () => {
   const contract = getAssistantActionFamilyContract("entry.upsert-draft");
 
-  expect(contract.status).toBe("contract-only");
+  expect(contract.status).toBe("executable");
   expect(contract.family).toBe("entry");
   expect(contract.schemaOwner).toBe("core/services/content/entryService.ts");
   expect(contract.permissions.execute).toEqual(["content:write"]);

@@ -10,6 +10,7 @@ export const assistantActionTypes = [
   "listing-query.upsert",
   "listing-template.upsert",
   "form.upsert",
+  "entry.upsert-draft",
   "page.upsert",
   "site-kit.recommend",
   "site-kit.install",

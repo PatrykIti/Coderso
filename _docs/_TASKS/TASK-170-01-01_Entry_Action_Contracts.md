@@ -85,3 +85,7 @@ return {
 - Registered contract-only entry actions: `entry.upsert-draft`, `entry.sample.create`, `entry.bulk-draft.create`, and `entry.field.patch`.
 - Documented `content:read`/`content:write` permission ownership, draft-only boundary, schema-known field requirement, and no-publish side effect.
 - Added Vitest coverage proving entry contracts are known but not executable yet.
+
+## Follow-Up Notes
+
+- 2026-04-12: `TASK-170-03-01` promoted `entry.upsert-draft` to an executable draft-only action. The remaining entry actions stay contract-only.

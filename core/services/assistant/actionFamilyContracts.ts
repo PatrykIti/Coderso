@@ -8,7 +8,6 @@ import type {
 import { assistantActionTypes, isAssistantActionType } from "./actionRegistry";
 
 export const assistantContractOnlyActionTypes = [
-  "entry.upsert-draft",
   "entry.sample.create",
   "entry.bulk-draft.create",
   "entry.field.patch",
@@ -182,6 +181,20 @@ export const assistantActionFamilyContracts = [
     ["name", "slug", "status", "submissionAccess", "fields"]
   ),
   executableContract(
+    "entry.upsert-draft",
+    "entry",
+    "core/services/content/entryService.ts",
+    ["contentTypeSlug", "title", "slug", "values"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Draft-only entry upsert; publishing requires a separate explicit action."],
+    }
+  ),
+  executableContract(
     "page.upsert",
     "page",
     "core/services/pages/pageService.ts",
@@ -215,20 +228,6 @@ export const assistantActionFamilyContracts = [
     {
       executionBoundary: "existing-site-kit-adapter",
       permissions: siteKitPermissions,
-    }
-  ),
-  plannedContract(
-    "entry.upsert-draft",
-    "entry",
-    "core/services/content/entryService.ts",
-    ["contentTypeSlug", "title", "slug", "values"],
-    {
-      plan: ["content:read"],
-      dryRun: ["content:read"],
-      execute: ["content:write"],
-    },
-    {
-      notes: ["Draft-only entry upsert; publishing requires a separate explicit action."],
     }
   ),
   plannedContract(

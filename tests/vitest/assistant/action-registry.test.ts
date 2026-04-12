@@ -16,6 +16,7 @@ test("assistantActionTypes lists every supported action type once", () => {
     "listing-query.upsert",
     "listing-template.upsert",
     "form.upsert",
+    "entry.upsert-draft",
     "page.upsert",
     "site-kit.recommend",
     "site-kit.install",
@@ -52,7 +53,8 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   );
 
   expect(isAssistantActionType("site-kit.install")).toBe(true);
-  expect(isAssistantActionType("entry.upsert-draft")).toBe(false);
+  expect(isAssistantActionType("entry.upsert-draft")).toBe(true);
+  expect(isAssistantActionType("entry.sample.create")).toBe(false);
   expect(isAssistantActionType("database.drop")).toBe(false);
   expect(getAssistantActionHandler(registry, "site-kit.install").label).toBe(
     "site-kit.install"

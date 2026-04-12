@@ -236,6 +236,16 @@ const normalizeFormInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeEntryUpsertDraftInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["contentTypeSlug", "title", "slug", "values"]));
+  return {
+    contentTypeSlug: readText(input.contentTypeSlug),
+    title: readText(input.title),
+    slug: readText(input.slug),
+    values: assertRecord(input.values),
+  };
+};
+
 const normalizeContentListStyle = (value: unknown) => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -414,6 +424,8 @@ const normalizeActionInput = (
       return normalizeListingTemplateInput(record);
     case "form.upsert":
       return normalizeFormInput(record);
+    case "entry.upsert-draft":
+      return normalizeEntryUpsertDraftInput(record);
     case "page.upsert":
       return normalizePageInput(record);
     case "site-kit.recommend":

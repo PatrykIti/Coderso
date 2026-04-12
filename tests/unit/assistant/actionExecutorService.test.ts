@@ -13,6 +13,7 @@ import {
   previewGuidedSiteBuilderPlan,
   validateGuidedSiteBuilderRun,
 } from "../../../core/services/assistant/siteBuilderExecutor";
+import type { AssistantActionPlan } from "../../../core/services/assistant/actionPlanTypes";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 
 const createDeps = () => {
@@ -65,6 +66,17 @@ const createDeps = () => {
     description: string | null;
     successMessage: string | null;
     submissionAccess: string;
+  }> = [];
+  const entries: Array<{
+    id: string;
+    typeId: string;
+    title: string;
+    slug: string;
+    status: "draft";
+    data: Record<string, unknown>;
+    authorId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
   }> = [];
   const formFields = new Map<string, Array<Record<string, unknown>>>();
   const deps = {
@@ -306,6 +318,57 @@ const createDeps = () => {
       formFields.set(formId, fields);
       return fields;
     },
+    getEntryBySlug: async (typeId: string, slug: string) =>
+      (entries.find((entry) => entry.typeId === typeId && entry.slug === slug) ??
+        null) as unknown as Awaited<
+        ReturnType<
+          (typeof import("../../../core/services/content/entryService"))["getEntryBySlug"]
+        >
+      >,
+    createEntry: async (
+      typeId: string,
+      input: {
+        title: string;
+        slug: string;
+        data: Record<string, unknown>;
+        authorId?: string | null;
+      }
+    ) => {
+      const now = new Date("2026-04-10T12:00:00.000Z");
+      const record = {
+        id: `entry-${entries.length + 1}`,
+        typeId,
+        title: input.title,
+        slug: input.slug,
+        status: "draft" as const,
+        data: input.data,
+        authorId: input.authorId ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      entries.push(record);
+      return record as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/content/entryService"))["createEntry"]>
+      >;
+    },
+    updateEntry: async (
+      id: string,
+      input: {
+        title?: string;
+        slug?: string;
+        data?: Record<string, unknown>;
+      }
+    ) => {
+      const existing = entries.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      if (input.title !== undefined) existing.title = input.title;
+      if (input.slug !== undefined) existing.slug = input.slug;
+      if (input.data !== undefined) existing.data = input.data;
+      existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
+      return existing as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/content/entryService"))["updateEntry"]>
+      >;
+    },
     logAudit: async () => ({
       id: "audit-1",
       actorId: "user-1",
@@ -404,6 +467,7 @@ const createDeps = () => {
       listingTemplates,
       pages,
       forms,
+      entries,
       formFields,
     },
   });
@@ -417,6 +481,77 @@ test("dryRunAssistantActionPlan previews create operations for house projects ca
   expect(preview.changes).toHaveLength(6);
   expect(preview.changes.every((change) => change.operation === "create")).toBeTrue();
   expect(preview.warnings.some((warning) => warning.includes("system list route"))).toBeTrue();
+});
+
+test("executeAssistantActionPlan creates and reuses draft entry actions", async () => {
+  const deps = createDeps();
+  await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+      },
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-entry-draft",
+    status: "ready",
+    intentId: "entry-draft",
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+    title: "Create draft entry",
+    answer: "I can create a draft entry.",
+    summary: "Create one draft product entry.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "entry-products-sample",
+        type: "entry.upsert-draft",
+        title: "Create sample product",
+        description: "Create a draft product entry.",
+        input: {
+          contentTypeSlug: "products",
+          title: "Sample Product",
+          slug: "sample-product",
+          values: {
+            title: "Sample Product",
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("create");
+  expect(preview.changes[0]?.dependencies).toEqual([
+    {
+      actionId: null,
+      targetType: "content-type",
+      targetKey: "products",
+      optional: false,
+    },
+  ]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-entry-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.create).toBe(1);
+  expect(executed.results[0]?.adminHref).toBe("/admin/coderso/entries/products/entry-1");
+  expect(deps.__state.entries[0]?.authorId).toBe("user-1");
+
+  const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(replayPreview.changes[0]?.operation).toBe("noop");
 });
 
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {

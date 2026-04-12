@@ -64,6 +64,26 @@ test("adaptProviderDraftPlan treats contract-only actions as unsupported until e
     draft: {
       actions: [
         {
+          type: "entry.sample.create",
+          input: {
+            contentTypeSlug: "products",
+            samples: [],
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.summary).toContain("unsupported actions");
+});
+
+test("adaptProviderDraftPlan accepts executable entry draft actions", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "create sample entry",
+    draft: {
+      actions: [
+        {
           type: "entry.upsert-draft",
           input: {
             contentTypeSlug: "products",
@@ -78,8 +98,8 @@ test("adaptProviderDraftPlan treats contract-only actions as unsupported until e
     },
   });
 
-  expect(plan.status).toBe("needs_input");
-  expect(plan.summary).toContain("unsupported actions");
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]?.type).toBe("entry.upsert-draft");
 });
 
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {

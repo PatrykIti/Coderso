@@ -115,7 +115,36 @@ test("normalizeAssistantActionPlan rejects malformed action inputs", () => {
   ).toThrow("assistant_action_plan_invalid");
 });
 
-test("normalizeAssistantActionPlan rejects contract-only actions until adapters land", () => {
+test("normalizeAssistantActionPlan accepts entry upsert draft actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "entry-products",
+        type: "entry.upsert-draft",
+        title: "Create product entry",
+        description: "Draft sample product entry.",
+        input: {
+          contentTypeSlug: "products",
+          title: "Sample",
+          slug: "sample",
+          values: {
+            title: "Sample",
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("entry.upsert-draft");
+});
+
+test("normalizeAssistantActionPlan rejects remaining contract-only actions until adapters land", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
     intentFamily: "product_catalog",
@@ -127,16 +156,12 @@ test("normalizeAssistantActionPlan rejects contract-only actions until adapters 
       actions: [
         {
           id: "entry-products",
-          type: "entry.upsert-draft",
+          type: "entry.sample.create",
           title: "Create product entry",
           description: "Draft sample product entry.",
           input: {
             contentTypeSlug: "products",
-            title: "Sample",
-            slug: "sample",
-            values: {
-              title: "Sample",
-            },
+            samples: [],
           },
         },
       ],

@@ -377,7 +377,7 @@ Execution registry and idempotency:
 Action family contract registry:
 - `core/services/assistant/actionFamilyContracts.ts` documents the next assistant action families without enabling execution.
 - Contract-only action types currently include:
-  - `entry.upsert-draft`, `entry.sample.create`, `entry.bulk-draft.create`, `entry.field.patch`,
+  - `entry.sample.create`, `entry.bulk-draft.create`, `entry.field.patch`,
   - `menu.item.upsert`, `menu.structure.patch`,
   - `seo.document.upsert`,
   - `media.reference.attach`,
@@ -387,6 +387,7 @@ Action family contract registry:
 - These contracts declare schema owners, required permissions, strict reject-unknown expectations, anti-abuse notes, and secret-handling rules.
 - Contract-only action types are not part of `assistantActionTypes`; strict plan schema and provider draft adaptation continue to reject them until their preview/execute adapters land in later `TASK-170` slices.
 - Contract-only action families can still produce non-executable preview metadata through `createContractOnlyActionPreviewMetadata`, which returns a machine-readable `assistant_action_contract_only` conflict and permission dependencies for future adapters/UI work.
+- `entry.upsert-draft` is the first promoted action from this registry. It is executable, draft-only, uses existing content entry services, and does not publish content.
 
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,

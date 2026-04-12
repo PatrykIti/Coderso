@@ -221,6 +221,19 @@ export type AssistantFormUpsertAction = {
   };
 };
 
+export type AssistantEntryUpsertDraftAction = {
+  id: string;
+  type: "entry.upsert-draft";
+  title: string;
+  description: string;
+  input: {
+    contentTypeSlug: string;
+    title: string;
+    slug: string;
+    values: Record<string, unknown>;
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -294,6 +307,7 @@ export type AssistantPlannedAction =
   | AssistantListingQueryUpsertAction
   | AssistantListingTemplateUpsertAction
   | AssistantFormUpsertAction
+  | AssistantEntryUpsertDraftAction
   | AssistantPageUpsertAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction

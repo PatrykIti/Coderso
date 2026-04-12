@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Content Entries  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-03, TASK-170-01-01, TASK-170-02  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -80,3 +80,10 @@ return existing
 1. `entry.upsert-draft` executes through existing entry services.
 2. Entry writes remain draft-only and schema-owned.
 3. Strict schema/provider boundaries are updated with tests.
+
+## Completion Notes (2026-04-12)
+
+- Promoted `entry.upsert-draft` from contract-only to executable assistant action type.
+- Added strict action input normalization for `contentTypeSlug`, `title`, `slug`, and `values`.
+- Added dry-run/execute adapter logic through existing `getEntryBySlug`, `createEntry`, and `updateEntry` services; no publish side effect was added.
+- Added Vitest schema/provider/registry contract coverage and Bun executor coverage for create plus noop replay preview.
