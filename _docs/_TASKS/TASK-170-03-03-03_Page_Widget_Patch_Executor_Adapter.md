@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Pages + Widgets  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-03-03-01, TASK-170-03-03-02  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -73,3 +73,11 @@ await deps.updatePage(page.id, { data: { ...page.currentData, blocks: nextBlocks
 1. Page widget patches preserve unrelated blocks.
 2. Unsupported widget data is rejected.
 3. Runtime-facing changes are covered.
+
+## Completion Notes (2026-04-12)
+
+- Promoted `page.widget.patch` from contract-only to executable assistant action type.
+- Added strict input normalization for `pageSlug`, `operation=upsert-block`, and a single top-level widget block.
+- Added dry-run/execute adapter logic through existing `getPageBySlug` and `updatePage`.
+- Used runtime widget registration plus `normalizeWidgetBlock` to reject unsupported widget types and normalize supported blocks.
+- Preserved unrelated/legacy page blocks by patching only the target top-level block id or appending a new top-level block.

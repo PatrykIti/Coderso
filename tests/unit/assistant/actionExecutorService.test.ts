@@ -1120,6 +1120,127 @@ test("executeAssistantActionPlan patches listing template card config without re
   expect(noopPreview.changes[0]?.operation).toBe("noop");
 });
 
+test("executeAssistantActionPlan upserts top-level page widget blocks and preserves legacy blocks", async () => {
+  const deps = createDeps();
+  await deps.createPage({
+    title: "Products",
+    slug: "/products",
+    data: {
+      blocks: [
+        {
+          id: "legacy-1",
+          type: "legacy-widget",
+          data: {
+            untouched: true,
+          },
+        },
+      ],
+      settings: {
+        template: "default",
+      },
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-page-widget",
+    status: "ready",
+    intentId: "page-widget",
+    promptKind: "refinement_request",
+    intentFamily: "product_catalog",
+    title: "Patch page widget",
+    answer: "I can patch a page widget.",
+    summary: "Append a spacer block.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-widget-spacer",
+        type: "page.widget.patch",
+        title: "Add spacer",
+        description: "Append a spacer block to the page.",
+        input: {
+          pageSlug: "/products",
+          operation: "upsert-block",
+          block: {
+            id: "assistant-spacer",
+            type: "spacer",
+            data: {},
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-widget-1",
+    },
+    deps
+  );
+
+  const blocks = deps.__state.pages[0]?.currentData.blocks as Array<Record<string, unknown>>;
+  expect(blocks).toHaveLength(2);
+  expect(blocks[0]).toMatchObject({ id: "legacy-1", type: "legacy-widget" });
+  expect(blocks[1]).toMatchObject({
+    id: "assistant-spacer",
+    type: "spacer",
+    variant: "responsive",
+  });
+
+  const noopPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("dryRunAssistantActionPlan rejects unsupported page widget patch types", async () => {
+  const deps = createDeps();
+  await deps.createPage({
+    title: "Products",
+    slug: "/products",
+    data: {
+      blocks: [],
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-page-widget-unsupported",
+    status: "ready",
+    intentId: "page-widget",
+    promptKind: "refinement_request",
+    intentFamily: "product_catalog",
+    title: "Patch page widget",
+    answer: "I can patch a page widget.",
+    summary: "Append a widget block.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-widget-unknown",
+        type: "page.widget.patch",
+        title: "Add unknown widget",
+        description: "Append an unknown widget block to the page.",
+        input: {
+          pageSlug: "/products",
+          operation: "upsert-block",
+          block: {
+            id: "assistant-unknown",
+            type: "unknown-widget",
+            data: {},
+          },
+        },
+      },
+    ],
+  };
+
+  await expect(dryRunAssistantActionPlan({ plan }, deps)).rejects.toThrow(
+    "widget_unknown_type"
+  );
+});
+
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {
   const plan = buildHouseProjectsCatalogPlan();
   const deps = createDeps();

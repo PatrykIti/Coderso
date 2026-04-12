@@ -217,6 +217,31 @@ test("adaptProviderDraftPlan accepts executable listing template card patches", 
   expect(plan.actions[0]?.type).toBe("listing-template.card.patch");
 });
 
+test("adaptProviderDraftPlan accepts executable page widget patches", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "add spacer",
+    draft: {
+      actions: [
+        {
+          type: "page.widget.patch",
+          input: {
+            pageSlug: "/products",
+            operation: "upsert-block",
+            block: {
+              id: "assistant-spacer",
+              type: "spacer",
+              data: {},
+            },
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]?.type).toBe("page.widget.patch");
+});
+
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {
   const unknown = adaptProviderDraftPlan({
     prompt: "create product catalog",

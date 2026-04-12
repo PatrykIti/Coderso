@@ -265,6 +265,7 @@ Rotacja klucza:
   - `media.reference.attach` is internal-only, requires `media:read` plus `content:write` for execute, accepts existing media ids only, supports entry targets in the first adapter slice, and never transports raw upload bytes,
   - `listing-query.filters.patch` is internal-only, requires `content:write` for execute, and updates only existing listing query `filters` while preserving unrelated query config,
   - `listing-template.card.patch` is internal-only, requires `content:write` for execute, and updates only existing listing template `config.card` while preserving unrelated template config,
+  - `page.widget.patch` is internal-only, requires `content:write` for execute, supports top-level `upsert-block`, and validates widget type/data before updating page current data,
   - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
   - preview metadata strings from `actionDiffService.ts` redact secret-like `key=value` fragments before they are returned to admin UI/API clients,
   - `execute` wymaga `idempotencyKey`,

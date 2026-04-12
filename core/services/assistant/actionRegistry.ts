@@ -16,6 +16,7 @@ export const assistantActionTypes = [
   "media.reference.attach",
   "listing-query.filters.patch",
   "listing-template.card.patch",
+  "page.widget.patch",
   "page.upsert",
   "site-kit.recommend",
   "site-kit.install",

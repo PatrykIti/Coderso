@@ -13,7 +13,6 @@ export const assistantContractOnlyActionTypes = [
   "entry.field.patch",
   "menu.structure.patch",
   "form.automation.upsert",
-  "page.widget.patch",
 ] as const;
 
 export type AssistantContractOnlyActionType =
@@ -260,6 +259,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "page.widget.patch",
+    "page",
+    "core/services/pages/pageService.ts",
+    ["pageSlug", "operation", "block"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Supports top-level upsert-block only and preserves unrelated page blocks."],
+    }
+  ),
+  executableContract(
     "page.upsert",
     "page",
     "core/services/pages/pageService.ts",
@@ -369,20 +382,6 @@ export const assistantActionFamilyContracts = [
         "no-integration-provider-secrets",
         "no-webhook-secret-material",
       ],
-    }
-  ),
-  plannedContract(
-    "page.widget.patch",
-    "page",
-    "core/services/pages/pageService.ts",
-    ["pageSlug", "patch"],
-    {
-      plan: ["content:read"],
-      dryRun: ["content:read"],
-      execute: ["content:write", "content:publish"],
-    },
-    {
-      notes: ["Widget patch must preserve unknown legacy blocks and reject unsupported widget types."],
     }
   ),
 ] as const satisfies readonly AssistantActionFamilyContract<AssistantKnownActionContractType>[];

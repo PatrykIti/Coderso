@@ -4,6 +4,7 @@ import type {
   SiteBuilderPlanStepId,
   SolutionKitId,
 } from "../kits/solutionKitTypes";
+import type { WidgetBlock } from "../../widgets/types";
 import type {
   GuidedSiteBuilderExecuteResult,
   GuidedSiteBuilderPlanResult,
@@ -302,6 +303,18 @@ export type AssistantListingTemplateCardPatchAction = {
   };
 };
 
+export type AssistantPageWidgetPatchAction = {
+  id: string;
+  type: "page.widget.patch";
+  title: string;
+  description: string;
+  input: {
+    pageSlug: string;
+    operation: "upsert-block";
+    block: WidgetBlock;
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -381,6 +394,7 @@ export type AssistantPlannedAction =
   | AssistantMediaReferenceAttachAction
   | AssistantListingQueryFiltersPatchAction
   | AssistantListingTemplateCardPatchAction
+  | AssistantPageWidgetPatchAction
   | AssistantPageUpsertAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction

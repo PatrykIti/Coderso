@@ -53,6 +53,8 @@ import type { MenuItemNode, MenuItemRecord } from "../menus/treeBuilder";
 import type { FormFieldInput } from "../forms/validation";
 import { normalizeSitePath } from "../../site/cache/siteCache";
 import { logAudit } from "../audit/auditService";
+import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
+import { normalizeWidgetBlock } from "../../widgets/validator";
 import type { WidgetBlock } from "../../widgets/types";
 import type {
   AssistantActionDryRunResult,
@@ -71,6 +73,7 @@ import type {
   AssistantListingTemplateUpsertAction,
   AssistantMediaReferenceAttachAction,
   AssistantMenuItemUpsertAction,
+  AssistantPageWidgetPatchAction,
   AssistantPageUpsertAction,
   AssistantPlannedAction,
   AssistantSeoDocumentUpsertAction,
@@ -594,6 +597,67 @@ const buildListingTemplateCardPatchPreview = async (
         ],
     beforeValue: existing?.config ?? null,
     nextValue: nextConfig,
+  });
+};
+
+const readPageBlocks = (page: unknown): WidgetBlock[] => {
+  if (!isRecord(page)) return [];
+  const data = isRecord(page.currentData) ? page.currentData : {};
+  return Array.isArray(data.blocks) ? (data.blocks as WidgetBlock[]) : [];
+};
+
+const normalizeAssistantPagePatchBlock = (block: WidgetBlock) => {
+  ensureRuntimeWidgetsRegistered();
+  return normalizeWidgetBlock(block);
+};
+
+const applyPageWidgetPatch = (
+  blocks: WidgetBlock[],
+  patchBlock: WidgetBlock
+) => {
+  const normalized = normalizeAssistantPagePatchBlock(patchBlock);
+  const existingIndex = blocks.findIndex((block) => block?.id === normalized.id);
+  if (existingIndex >= 0) {
+    const next = [...blocks];
+    next[existingIndex] = normalized;
+    return next;
+  }
+  return [...blocks, normalized];
+};
+
+const buildPageWidgetPatchPreview = async (
+  action: AssistantPageWidgetPatchAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getPageBySlug(action.input.pageSlug);
+  const blocks = readPageBlocks(existing);
+  const nextBlocks = existing ? applyPageWidgetPatch(blocks, action.input.block) : [];
+
+  return createPreviewChange({
+    action,
+    targetType: "page",
+    targetKey: `${action.input.pageSlug}/${action.input.block.id}`,
+    summary: `Upsert widget block "${action.input.block.id}" on page ${action.input.pageSlug}`,
+    warnings: existing ? [] : ["The page does not exist."],
+    conflicts: existing
+      ? []
+      : [
+          {
+            code: "assistant_action_dependency_missing",
+            severity: "error",
+            message: "Page is required before widget block can be patched.",
+          },
+        ],
+    beforeValue: existing
+      ? {
+          blocks,
+        }
+      : null,
+    nextValue: existing
+      ? {
+          blocks: nextBlocks,
+        }
+      : null,
   });
 };
 
@@ -1302,6 +1366,47 @@ const executeListingTemplateCardPatchAction = async (
   };
 };
 
+const executePageWidgetPatchAction = async (
+  action: AssistantPageWidgetPatchAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getPageBySlug(action.input.pageSlug);
+  if (!existing) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const currentData = isRecord(existing.currentData) ? existing.currentData : {};
+  const blocks = Array.isArray(currentData.blocks) ? (currentData.blocks as WidgetBlock[]) : [];
+  const nextBlocks = applyPageWidgetPatch(blocks, action.input.block);
+  const record =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updatePage(existing.id, {
+          data: {
+            ...currentData,
+            blocks: nextBlocks,
+          },
+        });
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "page",
+    targetKey: `${action.input.pageSlug}/${action.input.block.id}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record?.id ?? null,
+    adminHref: record
+      ? `/admin/pages/${encodeURIComponent(record.id)}`
+      : "/admin/pages",
+    publicHref: action.input.pageSlug,
+    message:
+      preview.operation === "noop"
+        ? "Page widget block already matched the planned patch."
+        : "Page widget block is updated.",
+  };
+};
+
 const executeFormAction = async (
   action: AssistantFormUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1767,6 +1872,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "listing-template.card.patch"
         ? executeListingTemplateCardPatchAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "page.widget.patch": {
+    preview: (action, ctx) =>
+      action.type === "page.widget.patch"
+        ? buildPageWidgetPatchPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "page.widget.patch"
+        ? executePageWidgetPatchAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "form.upsert": {

@@ -291,6 +291,66 @@ test("normalizeAssistantActionPlan accepts listing template card patch actions",
   expect(normalized.actions[0]?.type).toBe("listing-template.card.patch");
 });
 
+test("normalizeAssistantActionPlan accepts page widget patch actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-spacer",
+        type: "page.widget.patch",
+        title: "Add spacer",
+        description: "Append a spacer block to the page.",
+        input: {
+          pageSlug: "/products",
+          operation: "upsert-block",
+          block: {
+            id: "assistant-spacer",
+            type: "spacer",
+            data: {},
+          },
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("page.widget.patch");
+});
+
+test("normalizeAssistantActionPlan rejects unsupported page widget patch operations", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-spacer",
+          type: "page.widget.patch",
+          title: "Add spacer",
+          description: "Append a spacer block to the page.",
+          input: {
+            pageSlug: "/products",
+            operation: "delete-block",
+            block: {
+              id: "assistant-spacer",
+              type: "spacer",
+              data: {},
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects malformed listing template card patches", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",

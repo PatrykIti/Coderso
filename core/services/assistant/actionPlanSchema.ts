@@ -334,6 +334,29 @@ const normalizeListingTemplateCardPatchInput = (input: JsonRecord) => {
   };
 };
 
+const normalizePageWidgetPatchBlock = (value: unknown) => {
+  const input = assertRecord(value);
+  assertKeys(input, new Set(["id", "type", "variant", "data", "layout", "visibility", "editor"]));
+  return {
+    id: readText(input.id),
+    type: readText(input.type),
+    ...(input.variant !== undefined ? { variant: readText(input.variant) } : {}),
+    data: assertRecord(input.data),
+    ...(input.layout !== undefined ? { layout: assertRecord(input.layout) } : {}),
+    ...(input.visibility !== undefined ? { visibility: assertRecord(input.visibility) } : {}),
+    ...(input.editor !== undefined ? { editor: assertRecord(input.editor) } : {}),
+  };
+};
+
+const normalizePageWidgetPatchInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["pageSlug", "operation", "block"]));
+  return {
+    pageSlug: readText(input.pageSlug),
+    operation: readEnum(input.operation, new Set(["upsert-block"])),
+    block: normalizePageWidgetPatchBlock(input.block),
+  };
+};
+
 const normalizeContentListStyle = (value: unknown) => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -524,6 +547,8 @@ const normalizeActionInput = (
       return normalizeListingQueryFiltersPatchInput(record);
     case "listing-template.card.patch":
       return normalizeListingTemplateCardPatchInput(record);
+    case "page.widget.patch":
+      return normalizePageWidgetPatchInput(record);
     case "page.upsert":
       return normalizePageInput(record);
     case "site-kit.recommend":

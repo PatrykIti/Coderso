@@ -68,15 +68,18 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(
     getAssistantActionFamilyContract("listing-template.card.patch").strictInput.notes.join(" ")
   ).toContain("preserve unrelated");
+  expect(
+    getAssistantActionFamilyContract("page.widget.patch").strictInput.notes.join(" ")
+  ).toContain("top-level");
 });
 
 test("normalizeAssistantActionFamilyContract enforces strict contract shape", () => {
-  const contract = getAssistantActionFamilyContract("page.widget.patch");
+  const contract = getAssistantActionFamilyContract("form.automation.upsert");
 
   expect(normalizeAssistantActionFamilyContract(contract)).toMatchObject({
-    type: "page.widget.patch",
+    type: "form.automation.upsert",
     status: "contract-only",
-    family: "page",
+    family: "form",
   });
 
   expect(() =>
