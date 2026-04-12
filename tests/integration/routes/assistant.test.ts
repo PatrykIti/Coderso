@@ -563,6 +563,55 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
   expect(requestedPermissions).toContain("media:read");
 });
 
+test("assistant action dry-run route maps unsupported actions to invalid plan error", async () => {
+  const { router, routes } = makeRouter();
+  const plan = {
+    id: "plan-unsupported-action",
+    status: "ready",
+    intentId: "unsupported",
+    title: "Unsupported",
+    answer: "Unsupported",
+    summary: "Unsupported",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "bad-action",
+        type: "database.drop",
+        title: "Drop database",
+        description: "Unsupported action.",
+        input: {},
+      },
+    ],
+  };
+
+  registerAssistantRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/dry-run");
+  const handler = route?.handlers[route.handlers.length - 1];
+
+  try {
+    await handler?.({
+      params: {},
+      query: {},
+      body: { plan },
+      requestId: "req-unsupported-action",
+      user: { id: "user-1" },
+    });
+    throw new Error("expected_error");
+  } catch (error) {
+    expect(error).toBeInstanceOf(ApiError);
+    const apiError = error as ApiError;
+    expect(apiError.code).toBe("assistant_action_plan_invalid");
+    expect(apiError.status).toBe(400);
+    expect(apiError.details).toEqual({ requestId: "req-unsupported-action" });
+  }
+});
+
 test("assistant action execute route injects actorId and idempotency key", async () => {
   const { router, routes } = makeRouter();
   const plan = buildHouseProjectsCatalogPlan();

@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Security  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-173-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -66,3 +66,8 @@ expectNoMutationRoutesCalled();
 1. Docs-only never returns executable action plans.
 2. UI does not show confirm flow for docs-only answers.
 3. Mutation prompts in docs-only become guidance/fallback, not writes.
+
+## Completion Notes (2026-04-12)
+
+- Added Bun service regression proving `docs-only` mutation prompts remain read-only and do not call the LLM provider.
+- Confirmed responses do not expose an `actions` payload.

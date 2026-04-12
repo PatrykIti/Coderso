@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Security + Product Acceptance  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09, TASK-170, TASK-171, TASK-172  
-**Status:** To Do
+**Status:** In Progress (2026-04-12)
 
 ---
 
@@ -144,3 +144,7 @@ for (const capability of declaredGuideCapabilities) {
 - relevant `docs/` assistant corpus pages
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/README.md` and a changelog entry when each implementation task is completed
+
+## Progress Notes
+
+- 2026-04-12: Completed `TASK-173-01`; acceptance matrix now maps declared capabilities to Vitest/Bun ownership and negative contracts.

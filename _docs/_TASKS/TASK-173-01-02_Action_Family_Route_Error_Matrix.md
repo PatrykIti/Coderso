@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Route Contracts  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-173-01, TASK-170  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -65,3 +65,9 @@ for (const family of supportedActionFamilies) {
 1. Route errors are machine-readable and documented.
 2. Permission/CSRF/idempotency cases are tested per action family.
 3. Error payloads remain redacted.
+
+## Completion Notes (2026-04-12)
+
+- Added Bun route regression for unsupported action types mapping to `assistant_action_plan_invalid`.
+- Existing route tests cover action-specific permissions and idempotency conflict mapping.
+- CSRF remains covered in admin client/middleware lanes; the `registerAssistantRoutes` route harness does not mount CSRF middleware directly.

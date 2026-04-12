@@ -445,6 +445,50 @@ test("answerAssistantQuestion keeps clarifying questions in docs-only mode even 
   expect(providerCalls).toBe(0);
 });
 
+test("answerAssistantQuestion keeps docs-only mutation prompts read-only", async () => {
+  let providerCalls = 0;
+
+  const result = await answerAssistantQuestion(
+    {
+      message: "stworz katalog produktow i opublikuj strone",
+      mode: "docs-only",
+    },
+    createDeps({
+      getSetting: async (key: string) => {
+        const values: Record<string, unknown> = {
+          "assistant.enabled": true,
+          "assistant.defaultMode": "llm-guide",
+          "assistant.docs.backend": "db",
+          "assistant.docs.sourceRoot": "docs",
+          "assistant.llm.enabled": true,
+          "assistant.llm.provider": "openrouter",
+          "assistant.llm.model": "google/gemma-3n-e2b-it:free",
+          "assistant.llm.maxInputTokens": 8192,
+          "assistant.llm.maxOutputTokens": 2048,
+          "assistant.llm.timeoutMs": 20000,
+        };
+        return values[key];
+      },
+      resolveAssistantProvider: async () => {
+        providerCalls += 1;
+        return {
+          id: "openrouter",
+          complete: async () => ({
+            text: "provider should not run",
+          }),
+        };
+      },
+    })
+  );
+
+  expect(result.mode).toBe("docs-only");
+  expect(result.requestedMode).toBe("docs-only");
+  expect(result.effectiveMode).toBe("docs-only");
+  expect(result.llm).toBeNull();
+  expect("actions" in result).toBe(false);
+  expect(providerCalls).toBe(0);
+});
+
 test("answerAssistantQuestion falls back when llm provider is not configured", async () => {
   const result = await answerAssistantQuestion(
     {

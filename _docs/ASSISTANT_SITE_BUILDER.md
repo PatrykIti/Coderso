@@ -130,3 +130,9 @@ Execution writes assistant metadata to run options (`assistantSiteBuilder`), inc
 - concrete actions
 
 This keeps rerun/diagnostics deterministic and inspectable.
+
+## Acceptance Matrix
+
+The current `LLM Guide` acceptance matrix is maintained in
+`_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`. It lists executable packs, gated packs,
+route/security coverage, and the owning Bun/Vitest test lanes.

@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 16 tasks
-- **In Progress:** 5 tasks
-- **Done:** 824 tasks
+- **To Do:** 12 tasks
+- **In Progress:** 6 tasks
+- **Done:** 827 tasks
 
 ---
 
@@ -46,10 +46,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-173-01 | Acceptance Matrix and Flow Inventory | High | Medium | Declared capability matrix with Bun/Vitest ownership |
-| TASK-173-01-01 | Docs-Only Cannot Mutate Regression | High | Small | Regression proving docs-only stays read-only |
-| TASK-173-01-02 | Action Family Route Error Matrix | High | Medium | Route errors, permissions, CSRF, and idempotency per action family |
 | TASK-173-02 | Partial Success and Recovery UX | Medium | Medium | Clear failed/partial execution state and retry guidance |
 | TASK-173-03 | Idempotency Replay Diagnostics and Support Metadata | High | Medium | Replay/conflict diagnostics without secret leakage |
 | TASK-173-04 | Security and Performance Gates for Action Endpoints | High | Medium | Security/perf gates for expanded assistant actions |
@@ -67,6 +63,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
+| TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | In progress: acceptance matrix complete; partial success/recovery UX is next |
 
 ---
 
@@ -113,6 +110,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-172-07 | Solution Kit Refinement Packs and No-Reinstall Flow | High | Large | Done: refinements gated until server-derived installed-kit context exists |
 | TASK-172-08 | Runtime Acceptance, Docs, and Widget Pack Matrix Closure | High | Medium | Done: planner/executor/public runtime coverage and docs closure completed |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | Done: executable and gated business blueprint packs shipped with docs and validation |
+| TASK-173-01 | Acceptance Matrix and Flow Inventory | High | Medium | Done: `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md` maps capabilities to Vitest/Bun ownership |
+| TASK-173-01-01 | Docs-Only Cannot Mutate Regression | High | Small | Done: docs-only mutation prompts stay read-only and do not call provider |
+| TASK-173-01-02 | Action Family Route Error Matrix | High | Medium | Done: unsupported action route error and permission matrix coverage recorded |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

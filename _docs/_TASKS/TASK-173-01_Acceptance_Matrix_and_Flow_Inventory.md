@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Product Acceptance  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-173  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -68,3 +68,9 @@ const acceptanceMatrix = supportedGuideFlows.map((flow) => ({
 1. Every supported capability maps to explicit tests.
 2. Unsupported capability prompts map to typed questions or docs-only answers.
 3. Matrix states Bun vs Vitest ownership per flow.
+
+## Completion Notes (2026-04-12)
+
+- Added `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`.
+- Matrix covers executable actions, business blueprint packs, gated flows, negative contracts, and known gaps.
+- Added explicit docs-only non-mutation regression and unsupported action route error coverage.
