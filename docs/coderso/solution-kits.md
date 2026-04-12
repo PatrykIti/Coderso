@@ -7,6 +7,7 @@ keywords:
   - solution kits
   - starter packs
   - site builder
+  - llm guide
   - setup
   - ai site wizard
 ---
@@ -51,6 +52,11 @@ Together they help you decide:
 - which modules should be active,
 - what content/resources are included,
 - what still needs to be done after installation.
+
+The AI Site Wizard uses the LLM Guide action flow for reviewed setup work:
+recommendation, typed plan, dry-run, then execute. It is not an unrestricted
+site generator and does not run arbitrary mutations outside the supported typed
+actions.
 
 # Instruction
 
@@ -102,6 +108,9 @@ Use this safe selection order when you want fewer setup mistakes:
   that should influence whether the kit is truly a fit.
 - The AI Site Wizard is useful for structure and decision support, but it does
   not remove the need for later content, schema, template, and settings work.
+- Kit execution remains a reviewed setup action. Booking resources,
+  checkout/payment setup, and solution-kit refinements that depend on installed
+  kit resource context stay gated until those contracts are implemented.
 - A good kit match reduces setup friction; it does not eliminate business
   choices.
 - The note about focusing the `Coderso` sidebar on recommended modules matters:

@@ -2455,7 +2455,14 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-172-03` dodaje gated booking blueprint pack: prompt bookingowy zwraca `needs_input`, dopoki nie powstana dedykowane booking action adapters.
 `TASK-172-04` dodaje product inquiry pack: produktowy katalog z formularzem zapytania jest executable, ale checkout/payment prompt zwraca `needs_input` do czasu dedykowanych adapterow commerce.
 `TASK-172-06` dodaje editorial content hub pack: prompt blogowy tworzy strone z `posts-feed`, bez mutowania rekordow posts.
-Pozostale nowe rodziny nadal sa odrzucane przez strict action plan schema/provider draft adapter do czasu osobnych adapterow preview/execute.
+Pozostale contract-only rodziny nadal sa odrzucane przez strict action plan schema/provider draft adapter do czasu osobnych adapterow preview/execute.
+
+Declared capability limits:
+- `docs-only` remains read-only and never returns executable action plans.
+- `LLM Guide` can execute only strict typed actions listed in `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`, after plan/dry-run/review/execute.
+- Executable business setup currently covers catalog-family packs, lead capture site, product inquiry catalog, portfolio case study, editorial content hub, and `site-kit.recommend/install/validate`.
+- Booking resources, checkout/payment, webhook form automation, nested page widget patches, `menu.structure.patch`, bulk/sample entry creation, field patching, and installed solution-kit refinements remain gated follow-up capabilities.
+- No assistant action endpoint supports arbitrary code execution or autonomous mutation outside the reviewed execute flow.
 
 `retrievalBackend` ma wartosc `db` dla official assistant corpus.
 
@@ -2826,6 +2833,12 @@ Error codes:
 - `assistant_message_invalid`
 - `assistant_rate_limited`
 - `assistant_budget_exceeded`
+- `assistant_action_plan_invalid`
+- `assistant_action_plan_not_ready`
+- `assistant_action_idempotency_required`
+- `assistant_action_idempotency_conflict`
+- `assistant_action_actor_required`
+- `assistant_action_dependency_missing`
 - `site_builder_kit_not_found`
 - `site_builder_run_not_found`
 - `validation_error` (payload schema mismatch)

@@ -242,7 +242,7 @@ Rotacja klucza:
   - `plan` / `dry-run`: `settings:read` + `content:read`
   - `execute`: `settings:write` + `content:write` + `content:publish`
   - `site-kit.*` actions additionally require `solution-kits:read` for planning/dry-run and `solution-kits:write` for execution
-  - `site-kit.*` actions require `llmAvailable=true`; they must not run as docs-only/RAG fallback
+  - `site-kit.*` actions require `llmAvailable=true`; they must not run as docs-only fallback
 - CSRF:
   - wszystkie action endpoints wymagaja `X-CSRF-Token`
 - Rate-limit:
@@ -285,9 +285,11 @@ Rotacja klucza:
   - execute response idempotency diagnostics expose only `replayed` plus `scope=actor_plan_hash`,
   - assistant action metrics are aggregate-only and track execute count, failed action count, and replay count without storing action payloads,
   - metadata akcji trafia do audit log przez `assistant.actions.execute`
-- Current first shipped business flow:
-  - `house projects catalog`
-  - `site-kit.recommend` / `site-kit.install` / `site-kit.validate`
+- Declared production capability set:
+  - `docs-only` remains read-only and cannot mutate resources,
+  - `LLM Guide` mutates only through strict typed actions after plan/dry-run/review/execute,
+  - executable business setup covers catalog-family packs, lead capture site, product inquiry catalog, portfolio case study, editorial content hub, and `site-kit.recommend` / `site-kit.install` / `site-kit.validate`,
+  - booking resources, checkout/payment, webhook form automation, nested page widget patches, bulk/sample entry creation, field patching, and installed solution-kit refinements remain gated follow-up capabilities,
   - executor reuse’uje obecne serwisy domenowe zamiast direct DB writes.
 
 ## API Keys (v1)

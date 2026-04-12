@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 620 | 2026-04-12 | TASK-173 LLM Guide production readiness closure | Docs/Assistant |
 | 619 | 2026-04-12 | TASK-173-05 assistant action metrics | Assistant/Core |
 | 618 | 2026-04-12 | TASK-173-04 security performance gate revalidation | QA/Security |
 | 617 | 2026-04-12 | TASK-173-03 idempotency replay diagnostics | Assistant/Core |

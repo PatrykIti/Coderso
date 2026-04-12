@@ -50,6 +50,16 @@ Current implemented guide blueprint:
   - public catalog page
   - public detail routes
 
+Current capability limits:
+- `docs-only` answers are read-only and never return executable action plans.
+- `LLM Guide` can plan, dry-run, and execute only the strict typed actions
+  listed in `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`.
+- Booking resources, checkout/payment setup, webhook automation, nested page
+  widget patches, and installed solution-kit refinements remain gated until
+  their adapters, permissions, and hardening are explicit.
+- No guide flow supports arbitrary code execution or autonomous mutation
+  without review/confirm.
+
 ## Runtime Contract
 
 Core domain service:

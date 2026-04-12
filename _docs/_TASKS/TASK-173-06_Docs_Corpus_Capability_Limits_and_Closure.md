@@ -5,7 +5,7 @@
 **Category:** Docs/Assistant + QA Closure  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-173-01, TASK-173-02, TASK-173-03, TASK-173-04, TASK-173-05  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -72,3 +72,21 @@ Not supported:
 1. Docs do not overclaim assistant autonomy.
 2. Capability limits match the acceptance matrix.
 3. Board, changelog, and docs are synchronized at closure.
+
+## Completion Notes (2026-04-12)
+
+- Updated the assistant corpus pages to describe `Docs only` vs `LLM Guide`
+  behavior honestly:
+  - docs-only remains read-only,
+  - LLM Guide runs reviewed typed action flows only,
+  - arbitrary code execution and autonomous mutation are unsupported.
+- Updated source-of-truth architecture/API/security/site-builder docs and the
+  acceptance matrix with the supported and gated capability set.
+- No testing lane ownership changed, so `_docs/TESTING_STRATEGY.md` did not
+  need an update.
+- Validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `bun test tests/unit/assistant/assistantService.test.ts tests/integration/routes/assistant.test.ts tests/unit/assistant/actionExecutorService.test.ts tests/security/codersoSecurityGate.test.ts tests/perf/codersoPerformanceGate.test.ts tests/integration/routes/assistant-rate-limit.test.ts`
+  - `set -a && source .env && set +a && bun test tests/unit/assistant/actionExecutorService.db.test.ts`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/assistant-panel.test.tsx tests/vitest/ui/assistant-panel-interaction.test.tsx tests/vitest/assistant/assistantMetrics.test.ts tests/vitest/assistant/provider-planner-fixtures.test.ts tests/vitest/assistant/provider-planning-context.test.ts tests/vitest/assistant/assistantRedaction.test.ts tests/vitest/assistant/action-diff-service.test.ts`

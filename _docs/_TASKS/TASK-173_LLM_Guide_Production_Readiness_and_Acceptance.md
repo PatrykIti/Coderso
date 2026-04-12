@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Security + Product Acceptance  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-09, TASK-170, TASK-171, TASK-172  
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -152,3 +152,4 @@ for (const capability of declaredGuideCapabilities) {
 - 2026-04-12: Completed `TASK-173-03`; execute results now expose replay-safe idempotency diagnostics without schema migration.
 - 2026-04-12: Completed `TASK-173-04`; existing security/performance gates and assistant rate-limit checks were revalidated without gate config changes.
 - 2026-04-12: Completed `TASK-173-05`; assistant metrics now aggregate action execution, failed action, and idempotency replay counts.
+- 2026-04-12: Completed `TASK-173-06` and closed `TASK-173`; docs/corpus now describe supported LLM Guide capabilities, gated gaps, and read-only docs-only behavior without overclaiming assistant autonomy.

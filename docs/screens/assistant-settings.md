@@ -6,7 +6,7 @@ language: "en"
 keywords:
   - assistant settings
   - doc navigator
-  - llm rag
+  - llm guide
   - reindex
   - assistant quotas
 ---
@@ -14,7 +14,7 @@ keywords:
 # Basic
 
 Assistant Settings is the runtime-control surface for the admin assistant. It
-is where you enable the assistant globally, choose docs-only vs LLM behavior,
+is where you enable the assistant globally, choose docs-only vs LLM Guide behavior,
 configure launcher presentation, manage reindex policy, and set request/token
 limits.
 
@@ -35,10 +35,15 @@ Use Assistant Settings when the question is about how the assistant should
 behave across the admin workspace, not about one specific conversation. The
 current route is designed for:
 - turning assistant availability on or off globally,
-- deciding whether the default answer path is `Docs only` or `LLM + RAG`,
+- deciding whether the default answer path is `Docs only` or `LLM Guide`,
 - controlling whether a launcher avatar is used,
 - managing the official `docs/` corpus expectations and reindex flow,
 - setting LLM token/time constraints and request quotas.
+
+`Docs only` answers questions from the official docs corpus and does not create
+or change resources. `LLM Guide` is for reviewed setup work: it can prepare a
+typed plan, run a dry-run preview, and execute only the supported assistant
+actions after confirmation.
 
 This is a runtime and governance screen, not a chat surface. It defines what
 the assistant is allowed to do and how expensive or constrained that behavior
@@ -53,7 +58,7 @@ should be.
 4. If `Launcher avatar` is enabled, review the asset URL field carefully.
 5. Choose the `Default mode` intentionally:
    - `Docs only`
-   - `LLM + RAG`
+   - `LLM Guide`
 6. Review the `LLM provider` before changing the mode assumption.
 7. Read the `Official assistant corpus` section carefully:
    the current contract is the root `docs/` corpus seeded to the DB-backed
@@ -76,8 +81,12 @@ should be.
     - requests per day.
 12. Use `Save changes` when you want an explicit save instead of relying only on
     auto-save behavior.
-13. Treat validation errors seriously, especially when `LLM + RAG` is selected
+13. Treat validation errors seriously, especially when `LLM Guide` is selected
     without a valid enabled provider.
+14. Keep the capability boundary clear:
+    - docs-only answers are read-only,
+    - LLM Guide setup actions require plan review, dry-run, and execute,
+    - arbitrary code execution and autonomous mutation are not supported.
 
 Use this safe Assistant Settings order when you want fewer runtime mistakes:
 1. Enable the assistant intentionally.
@@ -98,8 +107,13 @@ Use this safe Assistant Settings order when you want fewer runtime mistakes:
 - Reindex is also the cleanup path for removed assistant docs. Deleting a
   canonical article from root `docs/` does not change runtime answers until the
   DB corpus is rebuilt.
-- `Docs only` vs `LLM + RAG` is a policy decision as much as a feature toggle.
+- `Docs only` vs `LLM Guide` is a policy decision as much as a feature toggle.
   It changes cost, behavior, and operational expectations.
+- The current LLM Guide setup surface supports typed actions for catalog,
+  lead-capture, product-inquiry, portfolio, editorial-hub, and site-kit setup
+  flows. Booking, checkout/payment, webhook automation, nested page widget
+  patches, and installed-kit refinements remain gated until their adapters and
+  hardening are explicit.
 - Token/time limits and request quotas are part of runtime governance, not only
   technical tuning.
 - The launcher avatar settings affect assistant presentation, but they should
@@ -107,7 +121,7 @@ Use this safe Assistant Settings order when you want fewer runtime mistakes:
 
 # Troubleshooting
 
-- `LLM + RAG` cannot be saved:
+- `LLM Guide` cannot be saved:
   check that LLM mode is enabled and the provider is not `None`.
 - `Run reindex` is blocked:
   save and enable the assistant first before trying again.
@@ -119,9 +133,10 @@ Use this safe Assistant Settings order when you want fewer runtime mistakes:
 
 # Decision Guide
 
-- Choose docs-only vs LLM + RAG:
+- Choose docs-only vs LLM Guide:
   use docs-only when deterministic product guidance is the priority; use
-  LLM + RAG only when broader assisted generation is intentionally allowed.
+  LLM Guide only when reviewed setup planning and typed action execution are
+  intentionally allowed.
 - Choose reindex on boot vs manual reindex:
   use boot reindex only when automatic rebuild cost is acceptable; otherwise
   prefer explicit manual reindex.

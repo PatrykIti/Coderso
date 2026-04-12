@@ -2,7 +2,7 @@
 
 **Status:** Active  
 **Last Updated:** 2026-04-12  
-**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173-01
+**Related Tasks:** TASK-101-09, TASK-170, TASK-171, TASK-172, TASK-173, TASK-173-01, TASK-173-06
 
 ---
 
@@ -15,6 +15,7 @@ Rules:
 - `LLM Guide` can only execute strict typed actions through `/assistant/actions/*`.
 - Provider draft planning is helper-only in this wave; live route/provider wiring remains opt-in future work.
 - Gated packs must return typed `needs_input` plans and must not create resources.
+- Docs/corpus pages must describe the supported and gated capability set without implying broad assistant autonomy.
 
 ---
 

@@ -387,6 +387,13 @@ Execution registry and idempotency:
 - Execute responses include idempotency diagnostics with `replayed` and `scope=actor_plan_hash`; no raw stored payload is exposed.
 - Assistant metrics track action execution count, failed action count, and idempotency replay count for support diagnostics.
 
+Declared capability boundary:
+- `docs-only` pozostaje read-only i nie zwraca executable action plans.
+- `LLM Guide` wykonuje tylko strict typed actions opisane w `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`, po plan/dry-run/review/execute.
+- Obecny executable business set obejmuje house-projects catalog, catalog-family packs, lead capture site, product inquiry catalog, portfolio case study, editorial content hub oraz `site-kit.recommend/install/validate`.
+- Booking resource setup, checkout/payment, webhook form automation, nested page widget patches, `menu.structure.patch`, bulk/sample entry creation, field patching i solution-kit refinements bez server-derived installed-kit context pozostaja gated follow-up capabilities.
+- Guide nie wspiera arbitralnego code execution ani autonomicznych mutacji poza review/confirm flow.
+
 Action family contract registry:
 - `core/services/assistant/actionFamilyContracts.ts` documents the next assistant action families without enabling execution.
 - Contract-only action types currently include:
@@ -405,15 +412,12 @@ Action family contract registry:
 - `form.automation.upsert` is executable for safe non-webhook form actions and uses existing form action services; webhook automation remains out of scope until secret handling is explicit.
 - `/assistant/actions/dry-run` and `/assistant/actions/execute` enforce action-specific permissions from `actionFamilyContracts.ts` in addition to the baseline assistant route permissions.
 
-Aktualnie zaimplementowany biznesowy flow:
-- prompt o katalog projektow domow,
-- planner tworzy plan dla:
-  - content type,
-  - custom screen,
-  - listing query,
-  - listing template,
-  - public catalog page,
-  - public detail routes,
+Aktualnie zaimplementowany business setup surface:
+- executable catalog-family packs tworza content type, custom screen, listing query, listing template, public catalog page i public detail routes,
+- lead capture oraz product inquiry packs moga tworzyc public inquiry forms przez istniejacy Forms runtime,
+- portfolio case-study pack dodaje result/testimonial fields,
+- editorial content hub tworzy public hub page z `posts-feed` bez mutowania post records,
+- `site-kit.*` actions przechodza przez solution-kit installer/validator,
 - execute wykorzystuje:
   - `typeService`,
   - `customScreenService`,
@@ -437,7 +441,7 @@ Warstwa API:
 - `POST /assistant/actions/plan` z `context.siteKit` zwraca typed plan z `site-kit.recommend` + `site-kit.install`.
 - `POST /assistant/actions/dry-run` previewuje `site-kit.*` akcje.
 - `POST /assistant/actions/execute` uruchamia `site-kit.install` przez istniejacy solution kit installer i moze wykonac `site-kit.validate`.
-- `site-kit.*` akcje wymagaja `llmAvailable=true`; nie moga przejsc jako docs-only/RAG fallback.
+- `site-kit.*` akcje wymagaja `llmAvailable=true`; nie moga przejsc jako docs-only fallback.
 - Stare `/assistant/site-builder/*` endpointy nie sa rejestrowane jako osobna surface.
 - Wszystkie endpointy sa internal i CSRF-protected.
 
