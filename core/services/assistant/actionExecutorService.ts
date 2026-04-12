@@ -65,6 +65,7 @@ import type {
   AssistantCustomScreenUpsertAction,
   AssistantEntryUpsertDraftAction,
   AssistantFormUpsertAction,
+  AssistantListingQueryFiltersPatchAction,
   AssistantListingQueryUpsertAction,
   AssistantListingTemplateUpsertAction,
   AssistantMediaReferenceAttachAction,
@@ -506,6 +507,41 @@ const buildListingQueryPreview = async (
     summary: `${existing ? "Update" : "Create"} listing query "${action.input.name}"`,
     beforeValue: existing,
     nextValue: action.input,
+  });
+};
+
+const buildListingQueryFiltersPatchPreview = async (
+  action: AssistantListingQueryFiltersPatchAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listListingQueries()).find(
+      (entry) => entry.name === action.input.listingQueryName
+    ) ?? null;
+  const nextQuery = existing
+    ? {
+        ...existing.query,
+        filters: action.input.filters,
+      }
+    : null;
+
+  return createPreviewChange({
+    action,
+    targetType: "listing-query",
+    targetKey: action.input.listingQueryName,
+    summary: `Patch filters for listing query "${action.input.listingQueryName}"`,
+    warnings: existing ? [] : ["The listing query does not exist."],
+    conflicts: existing
+      ? []
+      : [
+          {
+            code: "assistant_action_dependency_missing",
+            severity: "error",
+            message: "Listing query is required before filters can be patched.",
+          },
+        ],
+    beforeValue: existing?.query ?? null,
+    nextValue: nextQuery,
   });
 };
 
@@ -1110,6 +1146,47 @@ const executeListingQueryAction = async (
   };
 };
 
+const executeListingQueryFiltersPatchAction = async (
+  action: AssistantListingQueryFiltersPatchAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listListingQueries()).find(
+      (entry) => entry.name === action.input.listingQueryName
+    ) ?? null;
+  if (!existing) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const nextQuery = {
+    ...existing.query,
+    filters: action.input.filters,
+  };
+  const record =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateListingQuery(existing.id, {
+          query: nextQuery,
+        });
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "listing-query",
+    targetKey: action.input.listingQueryName,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: record?.id ?? null,
+    adminHref: "/admin/coderso/listings",
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Listing query filters already matched the planned patch."
+        : "Listing query filters are updated.",
+  };
+};
+
 const executeListingTemplateAction = async (
   action: AssistantListingTemplateUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1583,6 +1660,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "listing-query.upsert"
         ? executeListingQueryAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "listing-query.filters.patch": {
+    preview: (action, ctx) =>
+      action.type === "listing-query.filters.patch"
+        ? buildListingQueryFiltersPatchPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "listing-query.filters.patch"
+        ? executeListingQueryFiltersPatchAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "listing-template.upsert": {

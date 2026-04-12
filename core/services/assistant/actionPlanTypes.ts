@@ -280,6 +280,17 @@ export type AssistantMediaReferenceAttachAction = {
   };
 };
 
+export type AssistantListingQueryFiltersPatchAction = {
+  id: string;
+  type: "listing-query.filters.patch";
+  title: string;
+  description: string;
+  input: {
+    listingQueryName: string;
+    filters: Array<Record<string, unknown>>;
+  };
+};
+
 export type AssistantPageUpsertAction = {
   id: string;
   type: "page.upsert";
@@ -357,6 +368,7 @@ export type AssistantPlannedAction =
   | AssistantMenuItemUpsertAction
   | AssistantSeoDocumentUpsertAction
   | AssistantMediaReferenceAttachAction
+  | AssistantListingQueryFiltersPatchAction
   | AssistantPageUpsertAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction

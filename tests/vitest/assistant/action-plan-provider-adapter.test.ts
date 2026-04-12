@@ -169,6 +169,32 @@ test("adaptProviderDraftPlan accepts executable media reference actions", () => 
   expect(plan.actions[0]?.type).toBe("media.reference.attach");
 });
 
+test("adaptProviderDraftPlan accepts executable listing query filter patches", () => {
+  const plan = adaptProviderDraftPlan({
+    prompt: "add listing filters",
+    draft: {
+      actions: [
+        {
+          type: "listing-query.filters.patch",
+          input: {
+            listingQueryName: "Products Catalog Query",
+            filters: [
+              {
+                field: "category",
+                operator: "eq",
+                value: "chairs",
+              },
+            ],
+          },
+        },
+      ],
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.actions[0]?.type).toBe("listing-query.filters.patch");
+});
+
 test("adaptProviderDraftPlan rejects unknown fields and secret-like keys", () => {
   const unknown = adaptProviderDraftPlan({
     prompt: "create product catalog",

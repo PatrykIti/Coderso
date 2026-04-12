@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Listings  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-03-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -73,3 +73,11 @@ await deps.updateListingQuery(query.id, { query: nextQuery });
 1. Existing listing query filters can be patched without rewriting other query config.
 2. Re-execution noops when the filter set already matches.
 3. Action uses existing listing query service.
+
+## Completion Notes (2026-04-12)
+
+- Promoted `listing-query.filters.patch` from contract-only to executable assistant action type.
+- Added strict input normalization for `listingQueryName` and `filters`.
+- Added dry-run/execute adapter logic through existing `listListingQueries` and `updateListingQuery`.
+- Preserved unrelated listing query configuration while patching only `query.filters`.
+- Added Vitest schema/provider/registry contract coverage and Bun executor coverage for update/noop behavior.

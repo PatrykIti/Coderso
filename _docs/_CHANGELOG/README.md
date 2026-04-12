@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 594 | 2026-04-12 | TASK-170-03-03-01 listing query filters action executor | Assistant/Core |
 | 593 | 2026-04-12 | TASK-170-03-02 media reference action and adapter closure | Assistant/Core |
 | 592 | 2026-04-12 | TASK-170-03-02-02 SEO document action executor | Assistant/Core |
 | 591 | 2026-04-12 | TASK-170-03-02-01 menu item action executor | Assistant/Core |

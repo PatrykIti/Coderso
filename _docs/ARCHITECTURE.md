@@ -381,7 +381,7 @@ Action family contract registry:
   - `menu.structure.patch`,
   - `form.automation.upsert`,
   - `page.widget.patch`,
-  - `listing-query.filters.patch`, `listing-template.card.patch`.
+  - `listing-template.card.patch`.
 - These contracts declare schema owners, required permissions, strict reject-unknown expectations, anti-abuse notes, and secret-handling rules.
 - Contract-only action types are not part of `assistantActionTypes`; strict plan schema and provider draft adaptation continue to reject them until their preview/execute adapters land in later `TASK-170` slices.
 - Contract-only action families can still produce non-executable preview metadata through `createContractOnlyActionPreviewMetadata`, which returns a machine-readable `assistant_action_contract_only` conflict and permission dependencies for future adapters/UI work.
@@ -389,6 +389,7 @@ Action family contract registry:
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
 - `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
 - `media.reference.attach` is executable for `entry` targets and uses existing media/entry services to attach existing media ids without accepting upload bytes.
+- `listing-query.filters.patch` is executable and updates `query.filters` on existing listing queries while preserving unrelated query configuration.
 
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,

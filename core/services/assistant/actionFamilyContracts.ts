@@ -14,7 +14,6 @@ export const assistantContractOnlyActionTypes = [
   "menu.structure.patch",
   "form.automation.upsert",
   "page.widget.patch",
-  "listing-query.filters.patch",
   "listing-template.card.patch",
 ] as const;
 
@@ -234,6 +233,20 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "listing-query.filters.patch",
+    "listing",
+    "core/services/content/listingQueriesService.ts",
+    ["listingQueryName", "filters"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Filters must be array records and preserve unrelated listing query config."],
+    }
+  ),
+  executableContract(
     "page.upsert",
     "page",
     "core/services/pages/pageService.ts",
@@ -357,20 +370,6 @@ export const assistantActionFamilyContracts = [
     },
     {
       notes: ["Widget patch must preserve unknown legacy blocks and reject unsupported widget types."],
-    }
-  ),
-  plannedContract(
-    "listing-query.filters.patch",
-    "listing",
-    "core/services/content/listingQueriesService.ts",
-    ["listingQueryName", "filters"],
-    {
-      plan: ["content:read"],
-      dryRun: ["content:read"],
-      execute: ["content:write"],
-    },
-    {
-      notes: ["Filters must reference schema-known listing fields only."],
     }
   ),
   plannedContract(

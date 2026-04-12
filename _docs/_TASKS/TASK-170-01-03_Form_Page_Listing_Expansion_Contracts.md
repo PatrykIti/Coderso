@@ -91,3 +91,7 @@ return diffSurface(current, next);
 - Registered contract-only expansion actions: `form.automation.upsert`, `page.widget.patch`, `listing-query.filters.patch`, and `listing-template.card.patch`.
 - Documented existing public form hardening reuse for form automation and non-destructive patch expectations for pages/listings.
 - Added Vitest coverage proving the new expansion contracts do not widen strict executable action plans yet.
+
+## Follow-Up Notes
+
+- 2026-04-12: `TASK-170-03-03-01` promoted `listing-query.filters.patch` to an executable action. `form.automation.upsert`, `page.widget.patch`, and `listing-template.card.patch` remain contract-only.

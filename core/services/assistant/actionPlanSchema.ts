@@ -318,6 +318,14 @@ const normalizeMediaReferenceAttachInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeListingQueryFiltersPatchInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["listingQueryName", "filters"]));
+  return {
+    listingQueryName: readText(input.listingQueryName),
+    filters: readRecordArray(input.filters),
+  };
+};
+
 const normalizeContentListStyle = (value: unknown) => {
   if (value === undefined) return undefined;
   const input = assertRecord(value);
@@ -504,6 +512,8 @@ const normalizeActionInput = (
       return normalizeSeoDocumentUpsertInput(record);
     case "media.reference.attach":
       return normalizeMediaReferenceAttachInput(record);
+    case "listing-query.filters.patch":
+      return normalizeListingQueryFiltersPatchInput(record);
     case "page.upsert":
       return normalizePageInput(record);
     case "site-kit.recommend":

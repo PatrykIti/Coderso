@@ -14,6 +14,7 @@ export const assistantActionTypes = [
   "menu.item.upsert",
   "seo.document.upsert",
   "media.reference.attach",
+  "listing-query.filters.patch",
   "page.upsert",
   "site-kit.recommend",
   "site-kit.install",

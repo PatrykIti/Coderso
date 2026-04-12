@@ -980,6 +980,83 @@ test("executeAssistantActionPlan attaches existing media references to entries",
   expect(deps.__state.entries[0]?.data.heroImage).toBe("media-1");
 });
 
+test("executeAssistantActionPlan patches listing query filters without rewriting config", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+      },
+    },
+  });
+  await deps.createListingQuery({
+    name: "Products Catalog Query",
+    description: "Product listing",
+    query: {
+      source: "entries",
+      sourceConfig: {
+        contentTypeId: contentType.id,
+      },
+      filters: [],
+      sort: [{ field: "title", dir: "asc" }],
+      limit: 12,
+    },
+  });
+  const filters = [
+    {
+      field: "category",
+      operator: "eq",
+      value: "chairs",
+    },
+  ];
+  const plan: AssistantActionPlan = {
+    id: "plan-listing-filters",
+    status: "ready",
+    intentId: "listing-filters",
+    promptKind: "refinement_request",
+    intentFamily: "product_catalog",
+    title: "Patch listing filters",
+    answer: "I can patch listing filters.",
+    summary: "Add filters to an existing listing query.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "listing-query-filters",
+        type: "listing-query.filters.patch",
+        title: "Add category filter",
+        description: "Patch product listing filters.",
+        input: {
+          listingQueryName: "Products Catalog Query",
+          filters,
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-listing-filters-1",
+    },
+    deps
+  );
+  expect(deps.__state.listingQueries[0]?.query.filters).toEqual(filters);
+  expect(deps.__state.listingQueries[0]?.query.limit).toBe(12);
+
+  const noopPreview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(noopPreview.changes[0]?.operation).toBe("noop");
+});
+
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {
   const plan = buildHouseProjectsCatalogPlan();
   const deps = createDeps();

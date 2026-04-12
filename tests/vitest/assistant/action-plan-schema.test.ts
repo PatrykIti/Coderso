@@ -232,6 +232,63 @@ test("normalizeAssistantActionPlan accepts entry media reference attach actions"
   expect(normalized.actions[0]?.type).toBe("media.reference.attach");
 });
 
+test("normalizeAssistantActionPlan accepts listing query filter patch actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "listing-filters",
+        type: "listing-query.filters.patch",
+        title: "Add listing filters",
+        description: "Patch filters onto the product listing query.",
+        input: {
+          listingQueryName: "Products Catalog Query",
+          filters: [
+            {
+              field: "category",
+              operator: "eq",
+              value: "chairs",
+            },
+          ],
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions[0]?.type).toBe("listing-query.filters.patch");
+});
+
+test("normalizeAssistantActionPlan rejects malformed listing query filter patches", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "listing-filters",
+          type: "listing-query.filters.patch",
+          title: "Add listing filters",
+          description: "Patch filters onto the product listing query.",
+          input: {
+            listingQueryName: "Products Catalog Query",
+            filters: [],
+            debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
 test("normalizeAssistantActionPlan rejects unsupported media reference targets", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
