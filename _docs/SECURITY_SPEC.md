@@ -282,6 +282,7 @@ Rotacja klucza:
   - `execute` wymaga `idempotencyKey`,
   - idempotency jest persystowane w tabeli `assistant_action_executions` i scope’owane przez actor/plan/hash,
   - ponowne uzycie idempotency key z innym actor/plan/hash zwraca `assistant_action_idempotency_conflict`,
+  - execute response idempotency diagnostics expose only `replayed` plus `scope=actor_plan_hash`,
   - metadata akcji trafia do audit log przez `assistant.actions.execute`
 - Current first shipped business flow:
   - `house projects catalog`

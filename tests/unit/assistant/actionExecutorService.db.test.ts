@@ -290,6 +290,8 @@ testIfDb(
 
     expect(replay.summary).toEqual(second.summary);
     expect(replay.results).toEqual(second.results);
+    expect(second.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
+    expect(replay.idempotency).toEqual({ replayed: true, scope: "actor_plan_hash" });
 
     const refinementPlan = planAssistantActions({
       prompt: "dodaj filtr po metrazu i liczbie pokoi",

@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Reliability  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-173-01, TASK-170-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -71,3 +71,10 @@ if (replay) throw new AssistantError("assistant_action_idempotency_conflict");
 1. Support metadata explains replay vs conflict without leaking payloads.
 2. DB-backed tests cover conflict boundaries.
 3. Any DB change includes migration artifacts and journal updates.
+
+## Completion Notes (2026-04-12)
+
+- Added optional execute result idempotency metadata: `replayed` plus `scope=actor_plan_hash`.
+- Replay results are marked as `replayed=true`; fresh executions are marked `replayed=false`.
+- DB-backed replay test now asserts replay metadata.
+- No DB schema/migration change was required.

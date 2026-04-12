@@ -532,6 +532,10 @@ export type AssistantActionExecuteResult = {
   plan: AssistantActionPlan;
   preview: AssistantActionDryRunResult;
   results: AssistantActionExecutionItem[];
+  idempotency?: {
+    replayed: boolean;
+    scope: "actor_plan_hash";
+  };
   summary: {
     create: number;
     update: number;

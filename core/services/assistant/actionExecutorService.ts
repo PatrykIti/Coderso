@@ -101,6 +101,7 @@ import {
   getAssistantActionExecutionByIdempotencyKey,
   hashAssistantActionPlan,
   saveAssistantActionExecutionResult,
+  withAssistantActionExecutionReplayMetadata,
 } from "./actionExecutionStore";
 
 type ExecutionCacheEntry = {
@@ -2256,7 +2257,7 @@ export const executeAssistantActionPlan = async (
       })
     : executionCache.get(input.idempotencyKey)?.result ?? null;
   if (cached) {
-    return cached;
+    return withAssistantActionExecutionReplayMetadata(cached, true);
   }
 
   const preview = await dryRunAssistantActionPlan({ plan }, deps);
@@ -2307,6 +2308,10 @@ export const executeAssistantActionPlan = async (
     plan,
     preview,
     results,
+    idempotency: {
+      replayed: false,
+      scope: "actor_plan_hash",
+    },
     summary,
   };
 

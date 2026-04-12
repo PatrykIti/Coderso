@@ -27,6 +27,17 @@ export const hashAssistantActionPlan = (plan: AssistantActionPlan) => {
 const sanitizeExecutionResult = (result: AssistantActionExecuteResult) =>
   sanitizeMetadata({ result }).result as AssistantActionExecuteResult;
 
+export const withAssistantActionExecutionReplayMetadata = (
+  result: AssistantActionExecuteResult,
+  replayed: boolean
+): AssistantActionExecuteResult => ({
+  ...result,
+  idempotency: {
+    replayed,
+    scope: "actor_plan_hash",
+  },
+});
+
 export async function getAssistantActionExecutionByIdempotencyKey(
   input: AssistantActionExecutionLookup
 ): Promise<AssistantActionExecuteResult | null> {
@@ -44,13 +55,18 @@ export async function getAssistantActionExecutionByIdempotencyKey(
     throw new Error("assistant_action_idempotency_conflict");
   }
 
-  return row.result as AssistantActionExecuteResult;
+  return withAssistantActionExecutionReplayMetadata(
+    row.result as AssistantActionExecuteResult,
+    true
+  );
 }
 
 export async function saveAssistantActionExecutionResult(
   input: AssistantActionExecutionSaveInput
 ) {
-  const result = sanitizeExecutionResult(input.result);
+  const result = sanitizeExecutionResult(
+    withAssistantActionExecutionReplayMetadata(input.result, false)
+  );
   await db
     .insert(assistantActionExecutions)
     .values({

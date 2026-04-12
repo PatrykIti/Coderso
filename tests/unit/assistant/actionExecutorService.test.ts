@@ -1454,9 +1454,11 @@ test("executeAssistantActionPlan creates resources and reuses idempotency key", 
 
   expect(first.summary.failed).toBe(0);
   expect(first.summary.create).toBe(6);
+  expect(first.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
   expect(first.results.some((item) => item.publicHref === "/projekty-domow")).toBeTrue();
   expect(second.summary).toEqual(first.summary);
   expect(second.results).toEqual(first.results);
+  expect(second.idempotency).toEqual({ replayed: true, scope: "actor_plan_hash" });
 });
 
 test("executeAssistantActionPlan replays persisted idempotency result", async () => {
@@ -1519,7 +1521,11 @@ test("executeAssistantActionPlan replays persisted idempotency result", async ()
   );
 
   expect(saved?.planId).toBe(plan.id);
-  expect(second).toEqual(first);
+  expect(saved?.result.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
+  expect(first.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
+  expect(second.summary).toEqual(first.summary);
+  expect(second.results).toEqual(first.results);
+  expect(second.idempotency).toEqual({ replayed: true, scope: "actor_plan_hash" });
 });
 
 test("executeAssistantActionPlan propagates idempotency conflicts", async () => {
