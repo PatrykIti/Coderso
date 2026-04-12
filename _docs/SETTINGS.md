@@ -23,7 +23,7 @@ Admin UI: Settings → Assistant.
 | `assistant.enabled` | `boolean` | `false` | Globalny toggle asystenta w Admin UI |
 | `assistant.launcher.avatarEnabled` | `boolean` | `false` | Czy floating launcher ma uzywac avatara zamiast domyslnej chmurki wiadomosci |
 | `assistant.launcher.avatarAsset` | `string \| null` | `null` | Asset id/url avatara launchera |
-| `assistant.defaultMode` | `"docs-only" \| "llm-rag"` | `"docs-only"` | Domyslny tryb odpowiedzi |
+| `assistant.defaultMode` | `"docs-only" \| "llm-guide"` | `"docs-only"` | Domyslny tryb odpowiedzi |
 | `assistant.docs.reindexOnBoot` | `boolean` | `false` | Czy wykonywac reindex przy starcie |
 | `assistant.llm.enabled` | `boolean` | `false` | Wlacza sciezke LLM |
 | `assistant.llm.provider` | `"openrouter" \| "none"` | `"none"` | Provider LLM |
@@ -63,16 +63,17 @@ Legacy compatibility:
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
-| `assistant.mode` | `"docs-only" \| "llm-rag" \| null` | `null` | Per-user override trybu |
+| `assistant.mode` | `"docs-only" \| "llm-guide" \| null` | `null` | Per-user override trybu; legacy `llm-rag` input is normalized to `llm-guide` |
 | `assistant.ui.enabled` | `boolean` | `true` | Legacy compatibility key |
 | `assistant.ui.avatarEnabled` | `boolean` | `false` | Legacy compatibility key |
 | `assistant.ui.avatarAsset` | `string \| null` | `null` | Legacy compatibility key |
 
 ## Validation invariants
 
-- `assistant.defaultMode="llm-rag"` wymaga:
+- `assistant.defaultMode="llm-guide"` wymaga:
   - `assistant.llm.enabled=true`
   - `assistant.llm.provider != "none"`
+- OpenRouter API key is configured in Settings -> Integrations as encrypted `openrouter.apiKey`, not in the Assistant card payload.
 - Official assistant corpus from `docs/` jest gotowy dopiero po seedzie do DB.
 - Official runtime nie moze fallbackowac do filesystem corpus, gdy DB corpus nie jest gotowy.
 - Assistant Settings screen exposes `Run reindex` as the manual DB seeding action.

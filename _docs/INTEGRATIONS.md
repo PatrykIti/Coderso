@@ -35,7 +35,7 @@ Overview of external integrations configured in Admin UI (`Settings -> Integrati
 
 ### `openrouter`
 - Category: `Developer Tools`
-- Used by Assistant in optional `llm-rag` mode.
+- Used by Assistant in optional `llm-guide` mode.
 - Fields:
   - `apiKey` (`secret`, required)
   - `baseUrl` (`url`, optional, default: `https://openrouter.ai/api/v1`)
@@ -44,7 +44,7 @@ Overview of external integrations configured in Admin UI (`Settings -> Integrati
 
 ## Assistant + OpenRouter flow
 
-1. Admin configures `openrouter` integration in Integrations page.
+1. Admin configures `openrouter` integration in Settings -> Integrations. The Assistant settings card links to this secret configuration surface.
 2. Assistant runtime resolves provider via integrations runtime config.
 3. If provider is missing or call fails, assistant falls back to `docs-only`.
 4. Frontend receives normalized response with:

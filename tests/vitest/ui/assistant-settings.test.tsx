@@ -47,6 +47,22 @@ test("AssistantSettingsPage renders assistant settings", () => {
   expect(html).toContain("Auto-save settings across all screens");
 });
 
+test("AssistantSettingsPage links OpenRouter provider to integrations secrets", () => {
+  const html = renderAdminUi(
+    <AssistantSettingsPage
+      values={{
+        assistantLlmEnabled: true,
+        assistantLlmProvider: "openrouter",
+      }}
+    />,
+    { path: "/admin/settings/assistant" }
+  );
+
+  expect(html).toContain("OpenRouter API key is stored as an encrypted integration secret");
+  expect(html).toContain("Configure OpenRouter API key");
+  expect(html).toContain("/admin/settings/integrations");
+});
+
 test("Run reindex triggers assistant reindex without calling onSave first", async () => {
   const onSave = vi.fn();
   const reindexSpy = vi

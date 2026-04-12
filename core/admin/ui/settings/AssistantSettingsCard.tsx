@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { AdminLink } from "@/ui/shared/AdminLink";
 
 export type AssistantSettingsValues = {
   assistantEnabled: boolean;
@@ -170,6 +171,18 @@ export function AssistantSettingsCard({
                 <SelectItem value="openrouter">OpenRouter</SelectItem>
               </SelectContent>
             </Select>
+            {values.assistantLlmProvider === "openrouter" ? (
+              <p className="text-xs text-muted-foreground">
+                OpenRouter API key is stored as an encrypted integration secret.{" "}
+                <AdminLink
+                  href="/admin/settings/integrations"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Configure OpenRouter API key
+                </AdminLink>
+                .
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
