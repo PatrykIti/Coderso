@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Docs  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-03-01, TASK-170-03-02, TASK-170-03-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -75,3 +75,10 @@ for (const executableFamily of newlyExecutableFamilies) {
 1. Newly executable action families have schema, dry-run, execute, and idempotency coverage.
 2. Docs match executable behavior and security constraints.
 3. `TASK-170-03` can be moved to Done.
+
+## Completion Notes (2026-04-12)
+
+- Added route-level per-action permission enforcement for assistant dry-run/execute based on `actionFamilyContracts`.
+- Confirmed newly executable action families have strict schema/provider tests plus Bun executor coverage.
+- Added route tests proving action-specific read/write permissions are requested.
+- Synced task board and changelog for the full executor adapter wave.

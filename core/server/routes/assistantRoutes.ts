@@ -24,6 +24,10 @@ import type {
   AssistantActionContext,
   AssistantActionPlan,
 } from "../../services/assistant/actionPlanTypes";
+import {
+  getAssistantActionFamilyContract,
+  isAssistantKnownActionContractType,
+} from "../../services/assistant/actionFamilyContracts";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -214,6 +218,34 @@ const hasSiteKitActions = (plan: unknown) => {
   );
 };
 
+const collectActionPermissions = (
+  plan: unknown,
+  phase: "dryRun" | "execute"
+) => {
+  if (!isRecord(plan) || !Array.isArray(plan.actions)) return [];
+  const permissions = new Set<string>();
+  for (const action of plan.actions) {
+    if (!isRecord(action) || !isAssistantKnownActionContractType(action.type)) {
+      continue;
+    }
+    for (const permission of getAssistantActionFamilyContract(action.type).permissions[phase]) {
+      permissions.add(permission);
+    }
+  }
+  return Array.from(permissions);
+};
+
+const requireActionPermissions = async (
+  ctx: RouteContext,
+  plan: unknown,
+  phase: "dryRun" | "execute",
+  requirePermission: (permission: string) => RouteHandler
+) => {
+  for (const permission of collectActionPermissions(plan, phase)) {
+    await requirePermission(permission)(ctx);
+  }
+};
+
 export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps) {
   const { requirePermission, validate } = deps;
   const service: AssistantRouteService = {
@@ -308,6 +340,7 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
     async (ctx) => {
       validate(assistantActionDryRunRequestSchema, ctx.body ?? {});
       const body = (ctx.body ?? {}) as { plan: AssistantActionPlan };
+      await requireActionPermissions(ctx, body.plan, "dryRun", requirePermission);
       if (hasSiteKitActions(body.plan)) {
         await requirePermission("solution-kits:read")(ctx);
       }
@@ -333,6 +366,7 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
         plan: AssistantActionPlan;
         idempotencyKey: string;
       };
+      await requireActionPermissions(ctx, body.plan, "execute", requirePermission);
       if (hasSiteKitActions(body.plan)) {
         await requirePermission("solution-kits:write")(ctx);
       }

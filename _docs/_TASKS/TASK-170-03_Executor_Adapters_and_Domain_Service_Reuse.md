@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Core/Services  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-01, TASK-170-02  
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -87,3 +87,13 @@ async function executeAction(action, deps, actor) {
 - 2026-04-12: Completed `TASK-170-03-01`; `entry.upsert-draft` now executes as a draft-only action through existing entry services.
 - 2026-04-12: Completed `TASK-170-03-02`; menu item, SEO document, and entry media-reference actions now execute through existing domain services.
 - 2026-04-12: Completed `TASK-170-03-03`; form/page/listing patch actions now execute where scoped, with webhook form automation left out until secret handling is explicit.
+
+## Completion Notes (2026-04-12)
+
+- Added executor adapters for entry draft, menu item, SEO document, entry media reference, listing filters, listing template card config, page widget top-level upsert, and safe non-webhook form automation.
+- Added route-level per-action permission enforcement for dry-run and execute.
+- Left broader future work in later tasks:
+  - `menu.structure.patch`,
+  - `entry.sample.create`, `entry.bulk-draft.create`, `entry.field.patch`,
+  - webhook form automation,
+  - page nested/slot widget patching.

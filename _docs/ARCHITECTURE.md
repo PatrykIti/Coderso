@@ -390,6 +390,7 @@ Action family contract registry:
 - `listing-template.card.patch` is executable and updates `config.card` on existing listing templates while preserving unrelated template config.
 - `page.widget.patch` is executable for top-level `upsert-block` operations and uses runtime widget validation before updating page current data.
 - `form.automation.upsert` is executable for safe non-webhook form actions and uses existing form action services; webhook automation remains out of scope until secret handling is explicit.
+- `/assistant/actions/dry-run` and `/assistant/actions/execute` enforce action-specific permissions from `actionFamilyContracts.ts` in addition to the baseline assistant route permissions.
 
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,

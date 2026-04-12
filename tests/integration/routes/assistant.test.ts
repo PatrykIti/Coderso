@@ -512,6 +512,57 @@ test("assistant action dry-run route forwards plan payload", async () => {
   });
 });
 
+test("assistant action dry-run route enforces per-action read permissions", async () => {
+  const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
+  const plan = {
+    id: "plan-per-action-dry-run",
+    status: "ready",
+    intentId: "per-action",
+    title: "Per action",
+    answer: "Plan",
+    summary: "Plan",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
+      { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
+      { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
+    ],
+  };
+
+  registerAssistantRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: () => undefined,
+    service: {
+      dryRunActions: async (payload) => ({
+        plan: payload.plan,
+        changes: [],
+        warnings: [],
+        readyToExecute: true,
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/dry-run");
+  const handler = route?.handlers[route.handlers.length - 1];
+  await handler?.({
+    params: {},
+    query: {},
+    body: { plan },
+    requestId: "req-dry-run-per-action",
+    user: { id: "user-1" },
+  });
+
+  expect(requestedPermissions).toContain("menus:read");
+  expect(requestedPermissions).toContain("forms:read");
+  expect(requestedPermissions).toContain("media:read");
+});
+
 test("assistant action execute route injects actorId and idempotency key", async () => {
   const { router, routes } = makeRouter();
   const plan = buildHouseProjectsCatalogPlan();
@@ -562,6 +613,68 @@ test("assistant action execute route injects actorId and idempotency key", async
       create: 0,
     },
   });
+});
+
+test("assistant action execute route enforces per-action write permissions", async () => {
+  const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
+  const plan = {
+    id: "plan-per-action-execute",
+    status: "ready",
+    intentId: "per-action",
+    title: "Per action",
+    answer: "Plan",
+    summary: "Plan",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
+      { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
+      { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
+    ],
+  };
+
+  registerAssistantRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: () => undefined,
+    service: {
+      executeActions: async (payload) => ({
+        plan: payload.plan,
+        preview: {
+          plan: payload.plan,
+          changes: [],
+          warnings: [],
+          readyToExecute: true,
+        },
+        results: [],
+        summary: {
+          create: 0,
+          update: 0,
+          noop: 0,
+          failed: 0,
+        },
+      }),
+    },
+  });
+
+  const route = routes.find((item) => item.path === "/assistant/actions/execute");
+  const handler = route?.handlers[route.handlers.length - 1];
+  await handler?.({
+    params: {},
+    query: {},
+    body: { plan, idempotencyKey: "assistant-per-action-1" },
+    requestId: "req-execute-per-action",
+    user: { id: "user-1" },
+  });
+
+  expect(requestedPermissions).toContain("menus:write");
+  expect(requestedPermissions).toContain("forms:write");
+  expect(requestedPermissions).toContain("media:read");
+  expect(requestedPermissions).toContain("content:write");
 });
 
 test("assistant action execute route enforces kit permission for site-kit plans", async () => {

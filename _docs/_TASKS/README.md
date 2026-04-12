@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 36 tasks
-- **In Progress:** 7 tasks
-- **Done:** 802 tasks
+- **To Do:** 35 tasks
+- **In Progress:** 6 tasks
+- **Done:** 804 tasks
 
 ---
 
@@ -49,7 +49,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | Provider-backed draft planning through strict local schema and recovery |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | More concrete business outcomes beyond the current catalog/site-kit slice |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-170-03-04 | Executor Adapter Docs, Tests, and Closure | High | Medium | Final route/security/docs/test closure for executor adapter wave |
 | TASK-170-04 | Admin Review UI for Expanded Actions | Medium | Medium | Review/result UI for new action families |
 | TASK-170-05 | Route Security, Tests, Docs, and Closure | High | Medium | Route validation, security coverage, docs, and changelog closure |
 | TASK-171-01 | Provider Prompt Context Packaging and Redaction | High | Medium | Bounded/redacted context package for provider planning |
@@ -87,8 +86,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: executor adapter leaves complete; executor closure is next |
-| TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | In progress: adapter family leaves complete; final closure is next |
+| TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: executor adapter wave complete; admin review UI is next |
 
 ---
 
@@ -113,6 +111,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-170-03-03-04 | Form Automation Upsert Executor Adapter | High | Large | Done: `form.automation.upsert` upserts safe non-webhook actions through existing form action services |
 | TASK-170-03-03 | Form, Page, and Listing Patch Executor Adapters | High | Large | Done: listing, page, and safe form automation patch adapters shipped |
 | TASK-170-03-03-05 | Form, Page, and Listing Patch Adapters Docs, Tests, and Closure | High | Medium | Done: docs, board, and changelog synced for patch adapter wave |
+| TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | Done: executor adapters and route-level per-action permission enforcement shipped |
+| TASK-170-03-04 | Executor Adapter Docs, Tests, and Closure | High | Medium | Done: route permission tests, docs, board, and changelog synced for executor adapter wave |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |
