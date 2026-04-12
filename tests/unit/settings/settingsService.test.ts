@@ -172,7 +172,7 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
     "assistant.enabled": true,
     "assistant.launcher.avatarEnabled": true,
     "assistant.launcher.avatarAsset": "https://cdn.example.com/assistant-avatar.png",
-    "assistant.defaultMode": "llm-rag",
+    "assistant.defaultMode": "llm-guide",
     "assistant.docs.reindexOnBoot": false,
     "assistant.llm.enabled": true,
     "assistant.llm.provider": "openrouter",
@@ -190,7 +190,7 @@ testIfDb("assistant settings enforce consistency in persistence layer", async ()
   expect(list["assistant.launcher.avatarAsset"]).toBe(
     "https://cdn.example.com/assistant-avatar.png"
   );
-  expect(list["assistant.defaultMode"]).toBe("llm-rag");
+  expect(list["assistant.defaultMode"]).toBe("llm-guide");
   expect(list["assistant.llm.provider"]).toBe("openrouter");
   await expect(setSetting("assistant.llm.enabled", false)).rejects.toThrow(
     "settings_value_invalid"
@@ -223,13 +223,13 @@ test("assertAssistantSettingsConsistency accepts docs-only mode without llm", ()
   ).not.toThrow();
 });
 
-test("assertAssistantSettingsConsistency rejects invalid llm-rag combinations", () => {
+test("assertAssistantSettingsConsistency rejects invalid llm-guide combinations", () => {
   expect(() =>
     assertAssistantSettingsConsistency({
       "assistant.enabled": true,
       "assistant.launcher.avatarEnabled": false,
       "assistant.launcher.avatarAsset": null,
-      "assistant.defaultMode": "llm-rag",
+      "assistant.defaultMode": "llm-guide",
       "assistant.docs.reindexOnBoot": false,
       "assistant.llm.enabled": false,
       "assistant.llm.provider": "none",

@@ -9,7 +9,7 @@ type WidgetTemplateCategorySetting = {
   name: string;
 };
 
-export type AssistantMode = "docs-only" | "llm-rag";
+export type AssistantMode = "docs-only" | "llm-guide";
 export type AssistantLlmProvider = "openrouter" | "none";
 export type AssistantDocsBackend = "db";
 export type PostEditorMode = "blocks" | "classic";
@@ -125,7 +125,7 @@ const ASSISTANT_SETTING_KEYS = [
 
 type AssistantSettingKey = (typeof ASSISTANT_SETTING_KEYS)[number];
 const assistantSettingKeySet = new Set<string>(ASSISTANT_SETTING_KEYS);
-const assistantModes: AssistantMode[] = ["docs-only", "llm-rag"];
+const assistantModes: AssistantMode[] = ["docs-only", "llm-guide"];
 const assistantProviders: AssistantLlmProvider[] = ["openrouter", "none"];
 const postEditorModes: PostEditorMode[] = ["blocks", "classic"];
 const LEGACY_ASSISTANT_DOCS_SETTING_KEYS = [
@@ -167,6 +167,7 @@ const normalizeBoundedInteger = (value: unknown, min: number, max: number) => {
 };
 
 const normalizeAssistantMode = (value: unknown): AssistantMode => {
+  if (value === "llm-rag") return "llm-guide";
   if (typeof value !== "string" || !assistantModes.includes(value as AssistantMode)) {
     throw new Error("settings_value_invalid");
   }
@@ -224,7 +225,7 @@ const pickAssistantSettings = (
 export function assertAssistantSettingsConsistency(
   values: AssistantGlobalSettings
 ): void {
-  if (values["assistant.defaultMode"] === "llm-rag") {
+  if (values["assistant.defaultMode"] === "llm-guide") {
     if (!values["assistant.llm.enabled"]) {
       throw new Error("settings_value_invalid");
     }
@@ -507,24 +508,36 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
   throw new Error("settings_value_invalid");
 }
 
-let legacyAssistantDocsSettingsMigrationPromise: Promise<void> | null = null;
+let legacyAssistantSettingsMigrationPromise: Promise<void> | null = null;
 
-async function ensureLegacyAssistantDocsSettingsRemoved() {
-  if (legacyAssistantDocsSettingsMigrationPromise) {
-    return legacyAssistantDocsSettingsMigrationPromise;
+async function ensureLegacyAssistantSettingsMigrated() {
+  if (legacyAssistantSettingsMigrationPromise) {
+    return legacyAssistantSettingsMigrationPromise;
   }
 
-  legacyAssistantDocsSettingsMigrationPromise = db
-    .delete(settings)
-    .where(inArray(settings.key, [...LEGACY_ASSISTANT_DOCS_SETTING_KEYS]))
-    .then(() => undefined)
-    .catch(() => undefined);
+  legacyAssistantSettingsMigrationPromise = (async () => {
+    await db
+      .delete(settings)
+      .where(inArray(settings.key, [...LEGACY_ASSISTANT_DOCS_SETTING_KEYS]));
 
-  return legacyAssistantDocsSettingsMigrationPromise;
+    const [defaultMode] = await db
+      .select({ value: settings.value })
+      .from(settings)
+      .where(eq(settings.key, "assistant.defaultMode"));
+
+    if (defaultMode?.value === "llm-rag") {
+      await db
+        .update(settings)
+        .set({ value: "llm-guide", updatedAt: new Date() })
+        .where(eq(settings.key, "assistant.defaultMode"));
+    }
+  })().catch(() => undefined);
+
+  return legacyAssistantSettingsMigrationPromise;
 }
 
 export async function listSettings(): Promise<SettingValueMap> {
-  await ensureLegacyAssistantDocsSettingsRemoved();
+  await ensureLegacyAssistantSettingsMigrated();
   const keys = Object.keys(DEFAULT_SETTINGS) as SettingKey[];
   const rows = await db
     .select()
@@ -617,7 +630,7 @@ export async function listSettings(): Promise<SettingValueMap> {
 }
 
 export async function getSetting(key: string) {
-  await ensureLegacyAssistantDocsSettingsRemoved();
+  await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
   const [row] = await db
     .select()
@@ -661,7 +674,7 @@ export async function getSetting(key: string) {
 }
 
 export async function getSettingRecord(key: string) {
-  await ensureLegacyAssistantDocsSettingsRemoved();
+  await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
   const [row] = await db
     .select()
@@ -671,7 +684,7 @@ export async function getSettingRecord(key: string) {
 }
 
 export async function setSetting(key: string, value: unknown) {
-  await ensureLegacyAssistantDocsSettingsRemoved();
+  await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
   const typedValue = validateSettingValue(normalizedKey, value);
   if (isAssistantSettingKey(normalizedKey)) {
@@ -697,7 +710,7 @@ export async function setSetting(key: string, value: unknown) {
 }
 
 export async function setSettings(values: Record<string, unknown>) {
-  await ensureLegacyAssistantDocsSettingsRemoved();
+  await ensureLegacyAssistantSettingsMigrated();
   if (!values || typeof values !== "object" || Array.isArray(values)) {
     throw new Error("settings_payload_invalid");
   }
@@ -740,7 +753,7 @@ export async function setSettings(values: Record<string, unknown>) {
 }
 
 export async function deleteSetting(key: string) {
-  await ensureLegacyAssistantDocsSettingsRemoved();
+  await ensureLegacyAssistantSettingsMigrated();
   const normalizedKey = resolveSettingKey(key);
   const [row] = await db
     .delete(settings)

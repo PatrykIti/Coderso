@@ -315,7 +315,8 @@ testIfDb("rejects invalid post editor preferences payload", async () => {
 });
 
 test("validateUserSettingValue validates assistant and post editor settings", () => {
-  expect(validateUserSettingValue("assistant.mode", "llm-rag")).toBe("llm-rag");
+  expect(validateUserSettingValue("assistant.mode", "llm-guide")).toBe("llm-guide");
+  expect(validateUserSettingValue("assistant.mode", "llm-rag")).toBe("llm-guide");
   expect(validateUserSettingValue("assistant.mode", null)).toBeNull();
   expect(validateUserSettingValue("assistant.ui.enabled", true)).toBe(true);
   expect(validateUserSettingValue("assistant.ui.avatarEnabled", false)).toBe(false);

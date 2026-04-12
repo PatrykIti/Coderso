@@ -28,7 +28,7 @@ const resolveAssistantValidationError = (
   input: AssistantSettingsValues
 ): string | null => {
   if (
-    input.assistantDefaultMode === "llm-rag" &&
+    input.assistantDefaultMode === "llm-guide" &&
     (!input.assistantLlmEnabled || input.assistantLlmProvider === "none")
   ) {
     return "LLM Guide requires enabled LLM and a provider different than 'none'.";
@@ -50,22 +50,27 @@ export function AssistantSettingsPage({
     };
   })();
 
-  const normalizeValues = (input: Partial<AssistantSettingsValues>) => ({
-    ...ASSISTANT_SETTINGS_DEFAULT_VALUES,
-    ...input,
-    assistantDefaultMode:
-      input.assistantDefaultMode === "llm-rag" || input.assistantDefaultMode === "docs-only"
-        ? input.assistantDefaultMode
-        : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantDefaultMode,
-    assistantLlmProvider:
-      input.assistantLlmProvider === "openrouter" || input.assistantLlmProvider === "none"
-        ? input.assistantLlmProvider
-        : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantLlmProvider,
-    assistantLlmModel:
-      typeof input.assistantLlmModel === "string"
-        ? input.assistantLlmModel
-        : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantLlmModel,
-  });
+  const normalizeValues = (input: Partial<AssistantSettingsValues>) => {
+    const rawMode = input.assistantDefaultMode as unknown;
+    return {
+      ...ASSISTANT_SETTINGS_DEFAULT_VALUES,
+      ...input,
+      assistantDefaultMode:
+        rawMode === "llm-rag"
+          ? "llm-guide"
+          : rawMode === "llm-guide" || rawMode === "docs-only"
+            ? rawMode
+            : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantDefaultMode,
+      assistantLlmProvider:
+        input.assistantLlmProvider === "openrouter" || input.assistantLlmProvider === "none"
+          ? input.assistantLlmProvider
+          : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantLlmProvider,
+      assistantLlmModel:
+        typeof input.assistantLlmModel === "string"
+          ? input.assistantLlmModel
+          : ASSISTANT_SETTINGS_DEFAULT_VALUES.assistantLlmModel,
+    };
+  };
 
   const [form, setForm] = useState(() => normalizeValues(values));
   const [saveError, setSaveError] = useState<string | null>(null);

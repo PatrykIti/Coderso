@@ -61,7 +61,7 @@ afterEach(() => {
 test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", async () => {
   vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
-    defaultMode: "llm-rag",
+    defaultMode: "llm-guide",
     retrievalBackend: "db",
     llmAvailable: true,
     indexReady: true,
@@ -86,14 +86,14 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
       defaultInspectorTab: "post",
       restoreLastSidebarsState: true,
     },
-    "assistant.mode": "llm-rag",
+    "assistant.mode": "llm-guide",
     "assistant.ui.enabled": true,
     "assistant.ui.avatarEnabled": false,
     "assistant.ui.avatarAsset": null,
   });
   vi.spyOn(userSettingsClient, "setUserSetting").mockResolvedValue({
     key: "assistant.mode",
-    value: "llm-rag",
+    value: "llm-guide",
   });
   vi.spyOn(assistantClient, "planAssistantActions").mockResolvedValue({
     id: "plan-house-projects-catalog",
@@ -306,7 +306,7 @@ test("AssistantPanel supports llm-guide prompt -> dry-run -> execute flow", asyn
 test("AssistantPanel renders needs-input guide plan without enabling execution", async () => {
   vi.spyOn(assistantClient, "getAssistantStatus").mockResolvedValue({
     enabled: true,
-    defaultMode: "llm-rag",
+    defaultMode: "llm-guide",
     retrievalBackend: "db",
     llmAvailable: true,
     indexReady: true,
@@ -331,7 +331,7 @@ test("AssistantPanel renders needs-input guide plan without enabling execution",
       defaultInspectorTab: "post",
       restoreLastSidebarsState: true,
     },
-    "assistant.mode": "llm-rag",
+    "assistant.mode": "llm-guide",
     "assistant.ui.enabled": true,
     "assistant.ui.avatarEnabled": false,
     "assistant.ui.avatarAsset": null,

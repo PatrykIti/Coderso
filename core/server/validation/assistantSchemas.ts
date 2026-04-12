@@ -4,7 +4,7 @@ export const assistantChatSchema = {
   additionalProperties: false,
   properties: {
     message: { type: "string", minLength: 1, maxLength: 2000 },
-    mode: { type: "string", enum: ["docs-only", "llm-rag"] },
+    mode: { type: "string", enum: ["docs-only", "llm-guide", "llm-rag"] },
     detailLevel: {
       type: "string",
       enum: ["basic", "medium", "instruction", "advanced"],

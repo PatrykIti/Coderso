@@ -230,7 +230,11 @@ const resolveSettingsPayload = (
     value: unknown,
     fallbackValue: SettingsValues["assistantDefaultMode"]
   ): SettingsValues["assistantDefaultMode"] =>
-    value === "docs-only" || value === "llm-rag" ? value : fallbackValue;
+    value === "llm-rag"
+      ? "llm-guide"
+      : value === "docs-only" || value === "llm-guide"
+        ? value
+        : fallbackValue;
   const resolveProvider = (
     value: unknown,
     fallbackValue: SettingsValues["assistantLlmProvider"]

@@ -164,7 +164,7 @@ Rotacja klucza:
   - przekroczenia zwracaja:
     - `assistant_rate_limited` (HTTP 429)
     - `assistant_budget_exceeded` (HTTP 429)
-- `assistant.defaultMode=llm-rag` jest dozwolony tylko gdy:
+- `assistant.defaultMode=llm-guide` jest dozwolony tylko gdy:
   - `assistant.llm.enabled=true`
   - `assistant.llm.provider != none`
 - Gdy provider nie jest skonfigurowany, runtime wraca do bezpiecznego `docs-only`.
@@ -172,7 +172,7 @@ Rotacja klucza:
   - integration id: `openrouter`
   - `apiKey` (secret) jest szyfrowany w DB i nigdy nie trafia do frontend payloadow
   - `baseUrl`, `siteUrl`, `appName` sa opcjonalne i nie sa traktowane jako sekrety
-- Sciezka `llm-rag` ma guardrails:
+- Sciezka `llm-guide` ma guardrails:
   - timeout requestu (`assistant.llm.timeoutMs`)
   - limity tokenow (`assistant.llm.maxInputTokens`, `assistant.llm.maxOutputTokens`)
   - retry-once tylko dla bledow retryable (HTTP 429/5xx)
@@ -216,7 +216,7 @@ Rotacja klucza:
   - `assistant_action_dependency_missing`
   - mapped errors zawieraja `requestId` w payload `error.details.requestId`
 - Chat response telemetry:
-  - przy sukcesie `llm-rag` odpowiedz zawiera `llm.provider`, `llm.model`, `llm.providerRequestId`, `llm.usage`
+  - przy sukcesie `llm-guide` odpowiedz zawiera `llm.provider`, `llm.model`, `llm.providerRequestId`, `llm.usage`
   - przy fallbacku lub trybie `docs-only` pole `llm` ma wartosc `null`
 - Observability:
   - in-memory metrics: request/error/fallback/no-hit/latency

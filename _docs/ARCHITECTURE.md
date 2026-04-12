@@ -279,9 +279,9 @@ Zasady runtime:
 - Seed do DB jest warunkiem gotowosci official assistant corpus.
 - Przy braku trafienia system zwraca `missing_answer` (bez halucynacji).
 
-## Assistant LLM mode + Admin UI integration (Phase B)
+## Assistant LLM Guide mode + Admin UI integration (Phase B)
 
-Rozszerzenie `llm-rag` korzysta z provider abstraction:
+Rozszerzenie `llm-guide` korzysta z provider abstraction:
 - `core/services/assistant/providers/providerTypes.ts`
 - `core/services/assistant/providers/openRouterProvider.ts`
 - `core/services/assistant/providers/index.ts`
@@ -293,7 +293,7 @@ Zasady:
 - provider jest uruchamiany tylko gdy retrieval zwroci snippets,
 - brak konfiguracji providera albo blad requestu powoduje fallback do `docs-only`,
 - odpowiedz API zawiera `llm` metadata (`provider`, `model`, `providerRequestId`, `usage`) lub `null`.
-- quota layer egzekwuje request limits (`per-user` + optional global) oraz optional token budget dla `llm-rag`.
+- quota layer egzekwuje request limits (`per-user` + optional global) oraz optional token budget dla `llm-guide`.
 - observability layer zapisuje metryki: request/error/fallback/no-hit/latency.
 - audit events rejestruja fallback mode i provider failures bez wycieku sekretow.
 

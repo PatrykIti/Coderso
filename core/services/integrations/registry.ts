@@ -108,7 +108,7 @@ const INTEGRATIONS: IntegrationDefinition[] = [
     id: "openrouter",
     name: "OpenRouter",
     description:
-      "Use OpenRouter as the optional LLM provider for Assistant llm-rag responses.",
+      "Use OpenRouter as the optional LLM provider for Assistant LLM Guide responses.",
     category: "Developer Tools",
     scopes: ["assistant:generate", "assistant:retrieve"],
     fields: [

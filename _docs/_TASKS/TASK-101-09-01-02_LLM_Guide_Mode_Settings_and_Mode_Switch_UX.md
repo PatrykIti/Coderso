@@ -47,5 +47,5 @@ Przemianowac UI i settings z `LLM + RAG` na `LLM Guide`, tak aby user widzial ro
 ## Completion Notes (2026-04-11)
 
 - Assistant UI and settings copy now use `LLM Guide` user-facing language.
-- Transport value remains backward-compatible as `llm-rag`.
+- At that point transport remained backward-compatible as `llm-rag`; TASK-101-09-01 later migrated canonical transport/settings to `llm-guide`.
 - Covered through assistant panel/settings UI tests.

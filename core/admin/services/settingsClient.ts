@@ -7,7 +7,7 @@ export type SettingResponse = {
   value: unknown;
 };
 
-export type AssistantMode = "docs-only" | "llm-rag";
+export type AssistantMode = "docs-only" | "llm-guide";
 export type AssistantLlmProvider = "openrouter" | "none";
 export type AssistantDocsBackend = "db";
 export type PostEditorMode = "blocks" | "classic";

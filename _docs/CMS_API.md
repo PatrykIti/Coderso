@@ -2390,7 +2390,7 @@ Response:
 - Official assistant corpus jest sourced z root `docs/` i seedowany do DB.
 - Official runtime readiness wymaga seeded DB corpus; brak gotowosci nie fallbackuje do filesystem.
 - Alias kompatybilnosciowy: `site.baseUrl` mapuje read/write na `site.publicBaseUrl`.
-- Walidacja: `assistant.defaultMode=llm-rag` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
+- Walidacja: `assistant.defaultMode=llm-guide` wymaga `assistant.llm.enabled=true` i `assistant.llm.provider != none`.
 
 ---
 
@@ -2414,7 +2414,7 @@ Przykładowe klucze:
 - `widgets.favorites` (string[])
 - `widgets.hero.presets` (preset[])
 - `posts.editor.preferences` (object; `version=2`, `focusModeOnOpen`, `compactSidePanels`, `showOutlineHints`, `editorDensity`, `showKeyboardHints`, `defaultInspectorTab`, `restoreLastSidebarsState`)
-- `assistant.mode` (`docs-only` | `llm-rag` | null; legacy compatibility)
+- `assistant.mode` (`docs-only` | `llm-guide` | null; legacy `llm-rag` input is normalized to `llm-guide`)
 - `assistant.ui.enabled` (bool; legacy compatibility)
 - `assistant.ui.avatarEnabled` (bool; legacy compatibility)
 - `assistant.ui.avatarAsset` (string | null; legacy compatibility)
@@ -2480,7 +2480,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 
 ```json
 {
-  "mode": "llm-rag",
+  "mode": "llm-guide",
   "template": "location_answer",
   "detailLevel": "instruction",
   "guideMode": "default",
@@ -2513,8 +2513,8 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
     }
   ],
   "fallbackUsed": false,
-  "requestedMode": "llm-rag",
-  "effectiveMode": "llm-rag",
+  "requestedMode": "llm-guide",
+  "effectiveMode": "llm-guide",
   "retrievalBackend": "db",
   "llm": {
     "provider": "openrouter",
@@ -2816,7 +2816,7 @@ Error codes:
 
 Uwagi:
 - Message sanitization usuwa control chars i blokuje prompt-injection markers.
-- Gdy żądany tryb to `llm-rag`, a LLM jest wyłączony, runtime zwraca `docs-only` z `fallbackUsed=true`.
+- Gdy żądany tryb to `llm-guide`, a LLM jest wyłączony, runtime zwraca `docs-only` z `fallbackUsed=true`.
 - Gdy provider nie odpowie lub nie jest skonfigurowany, runtime zwraca odpowiedz `docs-only` oraz `llm=null`.
 - Official assistant retrieval korzysta z DB-seeded corpus tylko w modelu `db`.
 - Quota enforcement dziala per user (`assistant.quotas.requestsPerMinute`, `assistant.quotas.requestsPerDay`) przed retrieval/provider call.

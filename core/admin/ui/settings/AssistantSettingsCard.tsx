@@ -15,7 +15,7 @@ export type AssistantSettingsValues = {
   assistantEnabled: boolean;
   assistantLauncherAvatarEnabled: boolean;
   assistantLauncherAvatarAsset: string;
-  assistantDefaultMode: "docs-only" | "llm-rag";
+  assistantDefaultMode: "docs-only" | "llm-guide";
   assistantDocsReindexOnBoot: boolean;
   assistantLlmEnabled: boolean;
   assistantLlmProvider: "openrouter" | "none";
@@ -146,7 +146,7 @@ export function AssistantSettingsCard({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="docs-only">Docs Assistant</SelectItem>
-                <SelectItem value="llm-rag">LLM Guide</SelectItem>
+                <SelectItem value="llm-guide">LLM Guide</SelectItem>
               </SelectContent>
             </Select>
           </div>

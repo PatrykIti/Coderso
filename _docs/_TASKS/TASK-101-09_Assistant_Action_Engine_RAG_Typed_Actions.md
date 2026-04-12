@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Admin/UI + CMS Runtime  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-101-04, TASK-101-05, TASK-101-07, TASK-101-08  
-**Status:** In Progress (2026-04-10)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -358,6 +358,12 @@ if (confirmed) {
 - `TASK-101-09-06-04` is now complete, so this first vertical slice is tested end-to-end.
 - The main remaining gap is no longer "does the shipped slice work?";
   it is "how to generalize the planner beyond the single house-projects blueprint".
+
+## Completion Notes (2026-04-12)
+
+- The LLM Guide action engine shipped as one `/assistant/actions/*` flow.
+- Site-kit convergence, admin context snapshots, resource catalog context, runtime snapshot context, strict planner schema, provider draft recovery, registry dispatch, persistent idempotency, and canonical `llm-guide` mode cleanup are complete for the current scope.
+- Future product expansion should use new task IDs instead of reopening the legacy `llm-rag` action-engine framing.
 
 ## Next Generic Wave
 

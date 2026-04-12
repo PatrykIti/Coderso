@@ -5,7 +5,7 @@
 **Category:** Core/Assistant  
 **Estimated Effort:** Small  
 **Dependencies:** TASK-101-09-01  
-**Status:** In Progress (2026-04-11)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -50,4 +50,15 @@ if (mode === "docs-only") {
 
 - `docs-only` path remains read-only in current assistant flow.
 - Action planning/execution is only triggered from the LLM guide path in the floating assistant panel.
-- Full `llm-rag -> llm-guide` canonical alias/migration remains open.
+- Historical gap before closure: `llm-rag -> llm-guide` canonical alias/migration.
+
+## Completion Notes (2026-04-12)
+
+- `docs-only` remains read-only.
+- Legacy `llm-rag` input is normalized to canonical `llm-guide`.
+- Stored legacy global/user assistant mode values migrate to `llm-guide` on read.
+
+## Validation (2026-04-12)
+
+- `bun test tests/unit/assistant/assistantService.test.ts`
+- `bun test tests/unit/settings/settingsService.test.ts tests/unit/settings/userSettingsService.test.ts`

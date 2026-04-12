@@ -608,7 +608,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
       setIsSending(true);
 
       try {
-        if (currentMode === "llm-rag" && isLikelyGuidePlanningPrompt(outgoingMessage)) {
+        if (currentMode === "llm-guide" && isLikelyGuidePlanningPrompt(outgoingMessage)) {
           const plan = await planAssistantActions({
             prompt: outgoingMessage,
             context: {
@@ -958,7 +958,7 @@ export function AssistantPanel({ activeHref = null }: AssistantPanelProps = {}) 
                     value={message}
                     onChange={(event) => setMessage(event.target.value)}
                     placeholder={
-                      currentMode === "llm-rag"
+                      currentMode === "llm-guide"
                         ? "Describe the setup or admin surface you want LLM Guide to create..."
                         : "Ask where to find a feature in documentation..."
                     }

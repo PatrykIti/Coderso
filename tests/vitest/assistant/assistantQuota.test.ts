@@ -95,13 +95,13 @@ test("enforceAssistantQuota blocks when llm token budget is exceeded", () => {
 
   enforceAssistantQuota(baseConfig, {
     actorId: "user-3",
-    mode: "llm-rag",
+    mode: "llm-guide",
     estimatedLlmTokens: 20,
     nowMs,
   });
   enforceAssistantQuota(baseConfig, {
     actorId: "user-3",
-    mode: "llm-rag",
+    mode: "llm-guide",
     estimatedLlmTokens: 20,
     nowMs: nowMs + 61_000,
   });
@@ -109,7 +109,7 @@ test("enforceAssistantQuota blocks when llm token budget is exceeded", () => {
   expect(() =>
     enforceAssistantQuota(baseConfig, {
       actorId: "user-3",
-      mode: "llm-rag",
+      mode: "llm-guide",
       estimatedLlmTokens: 20,
       nowMs: nowMs + 122_000,
     })

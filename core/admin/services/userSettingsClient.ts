@@ -15,7 +15,7 @@ export type UserSettings = {
   "widgets.favorites": string[];
   "widgets.hero.presets": HeroPresetSetting[];
   "posts.editor.preferences": StoredPostEditorPreferences;
-  "assistant.mode": "docs-only" | "llm-rag" | null;
+  "assistant.mode": "docs-only" | "llm-guide" | null;
   "assistant.ui.enabled": boolean;
   "assistant.ui.avatarEnabled": boolean;
   "assistant.ui.avatarAsset": string | null;

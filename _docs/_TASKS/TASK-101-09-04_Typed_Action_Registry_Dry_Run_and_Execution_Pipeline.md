@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Core/Services + Runtime
 **Estimated Effort:** Large
 **Dependencies:** TASK-101-09-03
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -134,4 +134,4 @@ Files:
 - Site-kit is already integrated into `/assistant/actions/*`; no separate site-builder flow remains.
 - Existing executor reuses domain services and site-kit installer adapter.
 - Formal registry and persistent idempotency are shipped.
-- Remaining scope is targeted helper extraction only where duplication or wrong ownership is found.
+- Targeted helper extraction was audited in TASK-101-09-04-03; no additional safe extraction was identified for this slice.

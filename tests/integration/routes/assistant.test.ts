@@ -287,7 +287,7 @@ test("assistant action plan route attaches resource catalog context when request
     service: {
       getStatus: async () => ({
         enabled: true,
-        defaultMode: "llm-rag",
+        defaultMode: "llm-guide",
         retrievalBackend: "db",
         llmAvailable: true,
         indexReady: true,
@@ -580,7 +580,7 @@ test("assistant action execute route enforces kit permission for site-kit plans"
     service: {
       getStatus: async () => ({
         enabled: true,
-        defaultMode: "llm-rag",
+        defaultMode: "llm-guide",
         retrievalBackend: "db",
         llmAvailable: true,
         indexReady: true,
@@ -681,7 +681,7 @@ test("assistant action execute maps site-kit validate errors through generic rou
     service: {
       getStatus: async () => ({
         enabled: true,
-        defaultMode: "llm-rag",
+        defaultMode: "llm-guide",
         retrievalBackend: "db",
         llmAvailable: true,
         indexReady: true,

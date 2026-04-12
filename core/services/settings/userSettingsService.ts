@@ -14,7 +14,7 @@ type HeroPresetSettingValue = {
   updatedAt: string;
 };
 
-export type AssistantUserMode = "docs-only" | "llm-rag";
+export type AssistantUserMode = "docs-only" | "llm-guide";
 export type PostEditorDensity = "comfortable" | "compact";
 export type PostEditorDefaultInspectorTab = "post" | "block";
 
@@ -86,7 +86,7 @@ function assertUserSettingKey(key: string): asserts key is UserSettingKey {
   }
 }
 
-const assistantModes = new Set<AssistantUserMode>(["docs-only", "llm-rag"]);
+const assistantModes = new Set<AssistantUserMode>(["docs-only", "llm-guide"]);
 
 const normalizeOptionalString = (value: unknown) => {
   if (value === null) return null;
@@ -244,6 +244,9 @@ export function validateUserSettingValue<K extends UserSettingKey>(
     if (value === null) {
       return null as UserSettingValueMap[K];
     }
+    if (value === "llm-rag") {
+      return "llm-guide" as UserSettingValueMap[K];
+    }
     if (typeof value !== "string" || !assistantModes.has(value as AssistantUserMode)) {
       throw new Error("user_settings_value_invalid");
     }
@@ -280,6 +283,9 @@ export async function listUserSettings(userId: string) {
     if (!(key in merged)) continue;
     try {
       mergedByKey[key] = validateUserSettingValue(key, row.value);
+      if (key === "assistant.mode" && row.value === "llm-rag") {
+        await setUserSetting(userId, key, "llm-guide");
+      }
     } catch {
       mergedByKey[key] = DEFAULT_USER_SETTINGS[key];
     }
@@ -296,7 +302,11 @@ export async function getUserSetting(userId: string, key: string) {
     .where(and(eq(userSettings.userId, userId), eq(userSettings.key, key)));
   if (!row) return DEFAULT_USER_SETTINGS[key];
   try {
-    return validateUserSettingValue(key, row.value);
+    const normalized = validateUserSettingValue(key, row.value);
+    if (key === "assistant.mode" && row.value === "llm-rag") {
+      await setUserSetting(userId, key, "llm-guide");
+    }
+    return normalized;
   } catch {
     return DEFAULT_USER_SETTINGS[key];
   }

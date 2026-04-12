@@ -9,7 +9,7 @@ export type AssistantQuotaConfig = {
 
 export type AssistantQuotaInput = {
   actorId?: string | null;
-  mode: "docs-only" | "llm-rag";
+  mode: "docs-only" | "llm-guide";
   estimatedLlmTokens?: number;
   nowMs?: number;
 };
@@ -161,7 +161,7 @@ export const enforceAssistantQuota = (
     "assistant_rate_limited"
   );
 
-  if (input.mode === "llm-rag") {
+  if (input.mode === "llm-guide") {
     consumeDayTokenLimit(
       `assistant:user:${actorKey}`,
       dayKey,

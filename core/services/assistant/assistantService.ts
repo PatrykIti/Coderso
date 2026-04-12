@@ -98,7 +98,7 @@ export type AssistantLlmResult = {
 };
 
 export type AssistantChatResult = {
-  mode: "docs-only" | "llm-rag";
+  mode: "docs-only" | "llm-guide";
   template: DocsAnswerTemplate;
   detailLevel: DocsDetailLevel;
   guideMode: DocsGuideMode;
@@ -108,7 +108,7 @@ export type AssistantChatResult = {
   followUpOptions: DocsFollowUpOption[];
   fallbackUsed: boolean;
   requestedMode: AssistantMode;
-  effectiveMode: "docs-only" | "llm-rag";
+  effectiveMode: "docs-only" | "llm-guide";
   retrievalBackend: AssistantRetrievalBackend;
   llm: AssistantLlmResult | null;
 };
@@ -157,7 +157,8 @@ const defaultDeps: AssistantServiceDeps = {
 };
 
 const normalizeMode = (value: unknown, fallback: AssistantMode): AssistantMode => {
-  if (value === "docs-only" || value === "llm-rag") return value;
+  if (value === "llm-rag") return "llm-guide";
+  if (value === "docs-only" || value === "llm-guide") return value;
   return fallback;
 };
 
@@ -358,7 +359,7 @@ const resolveMode = (
   requestedMode: AssistantMode,
   settings: AssistantRuntimeSettings
 ) => {
-  if (requestedMode === "llm-rag") {
+  if (requestedMode === "llm-guide") {
     if (!settings.llmEnabled || settings.llmProvider === "none") {
       return {
         requestedMode,
@@ -368,7 +369,7 @@ const resolveMode = (
     }
     return {
       requestedMode,
-      effectiveMode: "llm-rag" as const,
+      effectiveMode: "llm-guide" as const,
       fallbackUsed: false,
     };
   }
@@ -563,7 +564,7 @@ export const answerAssistantQuestion = async (
         actorId: input.actorId ?? null,
         mode: mode.effectiveMode,
         estimatedLlmTokens:
-          mode.effectiveMode === "llm-rag" ? settings.llmMaxOutputTokens : 0,
+          mode.effectiveMode === "llm-guide" ? settings.llmMaxOutputTokens : 0,
         nowMs: startedAtMs,
       }
     );
@@ -579,7 +580,7 @@ export const answerAssistantQuestion = async (
 
     metricNoHit = composed.sources.length === 0;
 
-    let effectiveMode: "docs-only" | "llm-rag" = mode.effectiveMode;
+    let effectiveMode: "docs-only" | "llm-guide" = mode.effectiveMode;
     let llm: AssistantLlmResult | null = null;
     let llmFallbackUsed = false;
 
@@ -588,7 +589,7 @@ export const answerAssistantQuestion = async (
       composed.template !== "missing_answer" &&
       composed.sources.length > 0;
 
-    if (mode.effectiveMode === "llm-rag" && canUseLlmForAnswer) {
+    if (mode.effectiveMode === "llm-guide" && canUseLlmForAnswer) {
       try {
         const provider = await deps.resolveAssistantProvider({
           provider: settings.llmProvider,
@@ -615,7 +616,7 @@ export const answerAssistantQuestion = async (
               composed.fallbackUsed || mode.fallbackUsed || retrieval.backendFallbackUsed;
             metricFallbackUsed = fallbackUsed;
             return {
-              mode: "llm-rag",
+              mode: "llm-guide",
               template: composed.template,
               detailLevel: composed.detailLevel,
               guideMode: composed.guideMode,
@@ -625,7 +626,7 @@ export const answerAssistantQuestion = async (
               followUpOptions: composed.followUpOptions,
               fallbackUsed,
               requestedMode: mode.requestedMode,
-              effectiveMode: "llm-rag",
+              effectiveMode: "llm-guide",
               retrievalBackend: retrieval.retrievalBackend,
               llm,
             };
@@ -659,7 +660,7 @@ export const answerAssistantQuestion = async (
           // Audit is best-effort and must not block assistant chat response.
         }
       }
-    } else if (mode.effectiveMode === "llm-rag") {
+    } else if (mode.effectiveMode === "llm-guide") {
       llmFallbackUsed = true;
       effectiveMode = "docs-only";
     }
@@ -672,13 +673,13 @@ export const answerAssistantQuestion = async (
 
     metricFallbackUsed = fallbackUsed;
 
-    if (mode.requestedMode === "llm-rag" && effectiveMode === "docs-only") {
+    if (mode.requestedMode === "llm-guide" && effectiveMode === "docs-only") {
       try {
         await deps.logAudit({
           actorId: input.actorId ?? null,
           action: "assistant.mode.fallback",
           targetType: "assistant",
-          targetId: "llm-rag",
+          targetId: "llm-guide",
           metadata: {
             reason: llmFallbackUsed ? "provider_or_snippet_fallback" : "llm_disabled",
             retrievalBackend: retrieval.retrievalBackend,

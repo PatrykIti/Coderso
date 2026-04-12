@@ -86,7 +86,7 @@ test("AssistantMessage renders assistant metadata and sources", () => {
       role="assistant"
       text="Use General Settings > Assistant card."
       response={{
-        mode: "llm-rag",
+        mode: "llm-guide",
         template: "location_answer",
         detailLevel: "instruction",
         guideMode: "default",
@@ -104,7 +104,7 @@ test("AssistantMessage renders assistant metadata and sources", () => {
         ],
         followUpOptions: [],
         fallbackUsed: true,
-        requestedMode: "llm-rag",
+        requestedMode: "llm-guide",
         effectiveMode: "docs-only",
         retrievalBackend: "db",
         llm: null,

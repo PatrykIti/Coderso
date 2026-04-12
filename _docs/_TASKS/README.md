@@ -30,8 +30,8 @@ Task board for project work. Keep task files and this board in sync.
 
 ## Statistics
 - **To Do:** 7 tasks
-- **In Progress:** 9 tasks
-- **Done:** 781 tasks
+- **In Progress:** 6 tasks
+- **Done:** 784 tasks
 
 ---
 
@@ -53,9 +53,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling, action gating, and single-flow site-kit convergence shipped; canonical `llm-rag` -> `llm-guide` transport migration remains open |
-| TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | In progress: docs-only action guard shipped; full legacy transport alias/migration remains open |
-| TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: typed planning, context snapshots, resource catalogs, dry-run/execute, registry, and persistent idempotency are shipped; canonical mode cleanup remains open |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -68,6 +65,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
+| TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
+| TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |
 | TASK-101-09-04 | Typed Action Registry, Dry-Run, and Execution Pipeline | High | Large | Done: registry dispatch, preview conflict/dependency arrays, DB-backed idempotency, and adapter audit are complete |
 | TASK-101-09-04-03 | Existing Service Adapters and Installer Extraction | High | Medium | Done: site-kit convergence remained done; no additional safe helper extraction was identified beyond registry/idempotency cleanup |
 | TASK-101-09-04-02 | Execution, Idempotency, Revisions, and Audit Hooks | High | Medium | Done: execute uses persistent idempotency storage with actor/plan/hash conflict checks and DB migration artifacts |

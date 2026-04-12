@@ -172,16 +172,31 @@ test("answerAssistantQuestion falls back to docs-only when llm is unavailable", 
   const result = await answerAssistantQuestion(
     {
       message: "Where are hero settings?",
-      mode: "llm-rag",
+      mode: "llm-guide",
     },
     createDeps()
   );
 
   expect(result.mode).toBe("docs-only");
-  expect(result.requestedMode).toBe("llm-rag");
+  expect(result.requestedMode).toBe("llm-guide");
   expect(result.effectiveMode).toBe("docs-only");
   expect(result.fallbackUsed).toBe(true);
   expect(result.retrievalBackend).toBe("db");
+});
+
+test("answerAssistantQuestion normalizes legacy llm-rag mode to llm-guide", async () => {
+  const result = await answerAssistantQuestion(
+    {
+      message: "Where are hero settings?",
+      mode: "llm-rag" as never,
+    },
+    createDeps()
+  );
+
+  expect(result.mode).toBe("docs-only");
+  expect(result.requestedMode).toBe("llm-guide");
+  expect(result.effectiveMode).toBe("docs-only");
+  expect(result.fallbackUsed).toBe(true);
 });
 
 test("answerAssistantQuestion uses DB backend when DB index is ready", async () => {
@@ -313,17 +328,17 @@ test("answerAssistantQuestion throws when assistant is disabled", async () => {
   ).rejects.toThrow("assistant_disabled");
 });
 
-test("answerAssistantQuestion uses llm-rag provider when configured", async () => {
+test("answerAssistantQuestion uses llm-guide provider when configured", async () => {
   const result = await answerAssistantQuestion(
     {
       message: "Where are hero settings?",
-      mode: "llm-rag",
+      mode: "llm-guide",
     },
     createDeps({
       getSetting: async (key: string) => {
         const values: Record<string, unknown> = {
           "assistant.enabled": true,
-          "assistant.defaultMode": "llm-rag",
+          "assistant.defaultMode": "llm-guide",
           "assistant.docs.backend": "db",
           "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
@@ -350,8 +365,8 @@ test("answerAssistantQuestion uses llm-rag provider when configured", async () =
     })
   );
 
-  expect(result.mode).toBe("llm-rag");
-  expect(result.effectiveMode).toBe("llm-rag");
+  expect(result.mode).toBe("llm-guide");
+  expect(result.effectiveMode).toBe("llm-guide");
   expect(result.fallbackUsed).toBe(false);
   expect(result.llm).toEqual({
     provider: "openrouter",
@@ -371,13 +386,13 @@ test("answerAssistantQuestion keeps clarifying questions in docs-only mode even 
   const result = await answerAssistantQuestion(
     {
       message: "Where can I configure colors?",
-      mode: "llm-rag",
+      mode: "llm-guide",
     },
     createDeps({
       getSetting: async (key: string) => {
         const values: Record<string, unknown> = {
           "assistant.enabled": true,
-          "assistant.defaultMode": "llm-rag",
+          "assistant.defaultMode": "llm-guide",
           "assistant.docs.backend": "db",
           "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
@@ -434,13 +449,13 @@ test("answerAssistantQuestion falls back when llm provider is not configured", a
   const result = await answerAssistantQuestion(
     {
       message: "Where are hero settings?",
-      mode: "llm-rag",
+      mode: "llm-guide",
     },
     createDeps({
       getSetting: async (key: string) => {
         const values: Record<string, unknown> = {
           "assistant.enabled": true,
-          "assistant.defaultMode": "llm-rag",
+          "assistant.defaultMode": "llm-guide",
           "assistant.docs.backend": "db",
           "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,
@@ -466,13 +481,13 @@ test("answerAssistantQuestion falls back when llm provider fails", async () => {
   const result = await answerAssistantQuestion(
     {
       message: "Where are hero settings?",
-      mode: "llm-rag",
+      mode: "llm-guide",
     },
     createDeps({
       getSetting: async (key: string) => {
         const values: Record<string, unknown> = {
           "assistant.enabled": true,
-          "assistant.defaultMode": "llm-rag",
+          "assistant.defaultMode": "llm-guide",
           "assistant.docs.backend": "db",
           "assistant.docs.sourceRoot": "docs",
           "assistant.llm.enabled": true,

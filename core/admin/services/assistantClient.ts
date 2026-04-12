@@ -17,7 +17,7 @@ import type {
   AssistantSiteKitInstallAction,
 } from "../../services/assistant/actionPlanTypes";
 
-export type AssistantMode = "docs-only" | "llm-rag";
+export type AssistantMode = "docs-only" | "llm-guide";
 export type AssistantDetailLevel = "basic" | "medium" | "instruction" | "advanced";
 export type AssistantGuideMode =
   | "default"
