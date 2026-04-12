@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 589 | 2026-04-12 | TASK-170-02 preview metadata expansion | Assistant/Core |
 | 588 | 2026-04-12 | TASK-170-01 action family contracts | Assistant/Core |
 | 587 | 2026-04-12 | OpenRouter API key settings link | Admin/UI |
 | 586 | 2026-04-12 | TASK-101-09-01 canonical LLM Guide mode | Assistant/Core |

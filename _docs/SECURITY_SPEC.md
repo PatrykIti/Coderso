@@ -260,6 +260,7 @@ Rotacja klucza:
   - runtime snapshot nie zawiera user email/name, role names, raw permissions, session ids, cookies, CSRF tokens ani access logs,
   - contract-only future action families in `actionFamilyContracts.ts` are documentation/type contracts only; they are rejected by strict action plan schema/provider draft adaptation until preview/execute adapters and route/domain permission checks land,
   - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
+  - preview metadata strings from `actionDiffService.ts` redact secret-like `key=value` fragments before they are returned to admin UI/API clients,
   - `execute` wymaga `idempotencyKey`,
   - idempotency jest persystowane w tabeli `assistant_action_executions` i scope’owane przez actor/plan/hash,
   - ponowne uzycie idempotency key z innym actor/plan/hash zwraca `assistant_action_idempotency_conflict`,

@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Preview Contracts  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-170-01  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -75,3 +75,9 @@ return createPreviewChange({
 1. Every new action family has preview metadata before execute support ships.
 2. Conflicts and dependencies are machine-readable.
 3. Preview never writes or exposes secrets.
+
+## Completion Notes (2026-04-12)
+
+- Added centralized preview metadata normalization/redaction in `actionDiffService`.
+- Added `createContractOnlyActionPreviewMetadata` so contract-only action families can surface machine-readable `assistant_action_contract_only` conflicts and permission dependencies before execute adapters land.
+- Revalidated existing Bun executor dry-run behavior and expanded Vitest coverage for secret-like metadata redaction.

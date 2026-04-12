@@ -152,3 +152,4 @@ for (const plannedFamily of selectedActionFamilies) {
 ## Progress Notes
 
 - 2026-04-12: Completed `TASK-170-01` contract slice with a non-executable action family contract registry for entry, menu, SEO, media, form automation, page widget patch, and listing patch actions.
+- 2026-04-12: Completed `TASK-170-02` preview metadata slice with redacted preview strings and contract-only conflict/dependency metadata helpers.
