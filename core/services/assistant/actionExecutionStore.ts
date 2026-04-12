@@ -3,9 +3,10 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
-import { assistantActionExecutions } from "../../db/schema";
+import { assistantActionExecutions, assistantActionUndoItems } from "../../db/schema";
 import { sanitizeMetadata } from "../audit/auditService";
 import type { AssistantActionExecuteResult, AssistantActionPlan } from "./actionPlanTypes";
+import type { AssistantUndoManifestItem } from "./actionUndoManifest";
 
 export type AssistantActionExecutionLookup = {
   idempotencyKey: string;
@@ -16,6 +17,7 @@ export type AssistantActionExecutionLookup = {
 
 export type AssistantActionExecutionSaveInput = AssistantActionExecutionLookup & {
   result: AssistantActionExecuteResult;
+  undoItems?: AssistantUndoManifestItem[];
 };
 
 export const hashAssistantActionPlan = (plan: AssistantActionPlan) => {
@@ -67,7 +69,7 @@ export async function saveAssistantActionExecutionResult(
   const result = sanitizeExecutionResult(
     withAssistantActionExecutionReplayMetadata(input.result, false)
   );
-  await db
+  const [inserted] = await db
     .insert(assistantActionExecutions)
     .values({
       idempotencyKey: input.idempotencyKey,
@@ -79,5 +81,50 @@ export async function saveAssistantActionExecutionResult(
     })
     .onConflictDoNothing({
       target: assistantActionExecutions.idempotencyKey,
+    })
+    .returning();
+
+  const execution =
+    inserted ??
+    (
+      await db
+        .select()
+        .from(assistantActionExecutions)
+        .where(eq(assistantActionExecutions.idempotencyKey, input.idempotencyKey))
+    )[0];
+
+  if (!execution || !input.undoItems?.length) return;
+
+  await db
+    .insert(assistantActionUndoItems)
+    .values(
+      input.undoItems.map((item) => ({
+        executionId: execution.id,
+        actionId: item.actionId,
+        actionType: item.actionType,
+        operation: item.operation,
+        resourceType: item.resourceType,
+        resourceId: item.resourceId,
+        resourceKey: item.resourceKey,
+        resourceLabel: item.resourceLabel,
+        createdByAssistant: item.createdByAssistant,
+        undoStrategy: item.undoStrategy,
+        status: item.status,
+        dependencyKeys: item.dependencyKeys,
+        publicImpact: item.publicImpact,
+        beforeSnapshot: item.beforeSnapshot,
+        afterSnapshot: item.afterSnapshot,
+        afterFingerprint: item.afterFingerprint,
+        metadata: item.metadata,
+        updatedAt: new Date(),
+      }))
+    )
+    .onConflictDoNothing({
+      target: [
+        assistantActionUndoItems.executionId,
+        assistantActionUndoItems.actionId,
+        assistantActionUndoItems.resourceType,
+        assistantActionUndoItems.resourceKey,
+      ],
     });
 }

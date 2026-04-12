@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 15 tasks
-- **In Progress:** 5 tasks
-- **Done:** 833 tasks
+- **To Do:** 13 tasks
+- **In Progress:** 6 tasks
+- **Done:** 834 tasks
 
 ---
 
@@ -45,8 +45,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-174 | LLM Guide Created Resource Undo and Cleanup | High | Large | Manifest-scoped cleanup for resources created by assistant runs |
-| TASK-174-01 | Provenance Undo Manifest and Persistence | High | Large | Persist assistant-created resource provenance and undo metadata |
 | TASK-174-02 | Cleanup Dry-Run Planner and Dependency Order | High | Large | Build reviewable cleanup plans from persisted undo manifests |
 | TASK-174-03 | Create Resource Delete Adapters | High | Large | Delete/archive assistant-created resource records safely |
 | TASK-174-04 | Inverse Patch and Attach Adapters | High | Large | Detach/restore assistant-owned patches and references |
@@ -65,6 +63,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
+| TASK-174 | LLM Guide Created Resource Undo and Cleanup | High | Large | In progress: provenance persistence complete; cleanup planner is next |
 
 ---
 
@@ -120,6 +119,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-173-05 | Observability, Audit, and Admin Diagnostics | Medium | Medium | Done: assistant metrics aggregate action execution, failures, and replay counts |
 | TASK-173-06 | Docs Corpus Capability Limits and Closure | High | Medium | Done: docs/corpus now state LLM Guide supported capabilities, gated gaps, and read-only docs-only behavior |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Done: readiness matrix, recovery UX, idempotency diagnostics, gates, metrics, and docs closure completed for the declared capability set |
+| TASK-174-01 | Provenance Undo Manifest and Persistence | High | Large | Done: assistant executions persist sanitized undo manifest items with DB migration artifacts |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | Done: docs-only remains read-only and legacy `llm-rag` input is normalized into `llm-guide` |

@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + Reliability + Admin/UI  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170, TASK-172, TASK-173  
-**Status:** To Do
+**Status:** In Progress (2026-04-12)
 
 ---
 
@@ -176,3 +176,7 @@ await executeUndoPlan({
 3. Unsafe cleanup states are blocked with machine-readable conflicts and clear UI copy.
 4. Cleanup is idempotent, audited, rate-limited, CSRF-protected, and permission-checked per resource.
 5. Existing domain services own resource deletion/restoration behavior; no assistant-only direct DB write bypass is introduced.
+
+## Progress Notes
+
+- 2026-04-12: Completed `TASK-174-01`; fresh assistant action executions now persist sanitized undo manifest items for later cleanup planning.

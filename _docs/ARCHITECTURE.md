@@ -386,6 +386,7 @@ Execution registry and idempotency:
 - Powtorzony klucz idempotency dla tego samego actor/plan/hash zwraca zapisany wynik; konflikt actor/plan/hash zwraca machine-readable idempotency conflict.
 - Execute responses include idempotency diagnostics with `replayed` and `scope=actor_plan_hash`; no raw stored payload is exposed.
 - Assistant metrics track action execution count, failed action count, and idempotency replay count for support diagnostics.
+- Fresh assistant action executions also persist sanitized undo manifest items in `assistant_action_undo_items`; those items record action/resource provenance, undo strategy, dependency keys, public impact metadata, and stable after-state fingerprints for later cleanup planning.
 
 Declared capability boundary:
 - `docs-only` pozostaje read-only i nie zwraca executable action plans.

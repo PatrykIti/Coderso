@@ -351,6 +351,13 @@
       "when": 1775991688308,
       "tag": "0049_assistant_action_executions",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1776021718514,
+      "tag": "0050_first_mikhail_rasputin",
+      "breakpoints": true
     }
   ]
 }

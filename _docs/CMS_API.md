@@ -2788,6 +2788,7 @@ Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fie
 
 `idempotencyKey` is persisted for successful executions. Reusing the same key with a different actor/plan/hash returns `assistant_action_idempotency_conflict` (HTTP 409).
 Successful execute responses may include `idempotency: { "replayed": boolean, "scope": "actor_plan_hash" }` so support can distinguish fresh execution from safe replay without exposing stored payload internals.
+Fresh successful executions also persist sanitized undo manifest items server-side. The manifest records assistant-owned resource provenance and fingerprints for future cleanup planning; no cleanup endpoint is exposed in this slice.
 
 Site-kit action plan fragment:
 

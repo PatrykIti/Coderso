@@ -284,6 +284,8 @@ Rotacja klucza:
   - ponowne uzycie idempotency key z innym actor/plan/hash zwraca `assistant_action_idempotency_conflict`,
   - execute response idempotency diagnostics expose only `replayed` plus `scope=actor_plan_hash`,
   - assistant action metrics are aggregate-only and track execute count, failed action count, and replay count without storing action payloads,
+  - fresh execute persistence writes sanitized undo manifest items with resource provenance and fingerprints for future cleanup planning,
+  - undo manifest snapshots are redacted before persistence and must not store provider keys, sessions, CSRF tokens, API keys, form submissions, or secret-like settings,
   - metadata akcji trafia do audit log przez `assistant.actions.execute`
 - Declared production capability set:
   - `docs-only` remains read-only and cannot mutate resources,

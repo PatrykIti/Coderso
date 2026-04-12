@@ -5,7 +5,7 @@
 **Category:** Assistant/Core + DB + Reliability  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-174  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -109,3 +109,22 @@ await saveAssistantUndoItems(executionId, sanitizeUndoItems([undoItem]));
 2. Undo manifest persistence is idempotent for replayed executions.
 3. Snapshots/fingerprints are sufficient for later safety checks.
 4. DB migration artifacts are complete: SQL migration, snapshot, and journal update.
+
+## Completion Notes (2026-04-12)
+
+- Added `assistant_action_undo_items` with full migration artifacts.
+- Added a Bun-free undo manifest builder with:
+  - resource provenance,
+  - undo operation and strategy,
+  - assistant-created ownership flag,
+  - dependency keys,
+  - public impact metadata,
+  - sanitized snapshots and stable fingerprints.
+- Fresh assistant execute persistence now stores undo items alongside the idempotency result.
+- Replay does not duplicate undo items because replay returns the persisted execution result before save.
+- Validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-undo-manifest.test.ts`
+  - `bun test tests/unit/assistant/actionExecutorService.test.ts`
+  - `set -a && source .env && set +a && bun test tests/unit/assistant/actionExecutorService.db.test.ts` skipped because the configured remote Render Postgres host was not reachable from the sandbox and reviewer approval for remote migration was rejected.

@@ -104,6 +104,7 @@ import {
   withAssistantActionExecutionReplayMetadata,
 } from "./actionExecutionStore";
 import { recordAssistantActionMetric } from "./assistantMetrics";
+import { buildAssistantUndoManifestItems } from "./actionUndoManifest";
 
 type ExecutionCacheEntry = {
   result: AssistantActionExecuteResult;
@@ -2325,6 +2326,7 @@ export const executeAssistantActionPlan = async (
     idempotency,
     summary,
   };
+  const undoItems = buildAssistantUndoManifestItems({ plan, preview, results });
 
   if (deps.saveExecutionResult) {
     await deps.saveExecutionResult({
@@ -2333,6 +2335,7 @@ export const executeAssistantActionPlan = async (
       planId: plan.id,
       planHash,
       result,
+      undoItems,
     });
   } else {
     executionCache.set(input.idempotencyKey, {

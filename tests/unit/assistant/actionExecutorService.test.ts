@@ -17,6 +17,7 @@ import {
   validateGuidedSiteBuilderRun,
 } from "../../../core/services/assistant/siteBuilderExecutor";
 import type { AssistantActionPlan } from "../../../core/services/assistant/actionPlanTypes";
+import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 
 const createDeps = () => {
@@ -1471,6 +1472,7 @@ test("executeAssistantActionPlan replays persisted idempotency result", async ()
         planId: string;
         planHash: string;
         result: Awaited<ReturnType<typeof executeAssistantActionPlan>>;
+        undoItems?: AssistantUndoManifestItem[];
       }
     | null = null;
 
@@ -1498,6 +1500,7 @@ test("executeAssistantActionPlan replays persisted idempotency result", async ()
       planId: string;
       planHash: string;
       result: Awaited<ReturnType<typeof executeAssistantActionPlan>>;
+      undoItems?: AssistantUndoManifestItem[];
     }) => {
       saved = input;
     },
@@ -1522,6 +1525,15 @@ test("executeAssistantActionPlan replays persisted idempotency result", async ()
 
   expect(saved?.planId).toBe(plan.id);
   expect(saved?.result.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
+  expect(saved?.undoItems?.length).toBe(first.results.length);
+  expect(
+    saved?.undoItems?.some(
+      (item) =>
+        item.actionType === "content-type.upsert" &&
+        item.resourceType === "content-type" &&
+        item.undoStrategy === "delete"
+    )
+  ).toBe(true);
   expect(first.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
   expect(second.summary).toEqual(first.summary);
   expect(second.results).toEqual(first.results);

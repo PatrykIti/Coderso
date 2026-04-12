@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "../../../core/db/client";
-import { assistantActionExecutions, users } from "../../../core/db/schema";
+import { assistantActionExecutions, assistantActionUndoItems, users } from "../../../core/db/schema";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { executeAssistantActionPlan } from "../../../core/services/assistant/actionExecutorService";
@@ -20,11 +20,17 @@ const testIfDb = hasDb ? test : test.skip;
 async function canConnect() {
   try {
     const result = await db.execute(sql`
-      select to_regclass('public.assistant_action_executions') as table_name
+      select
+        to_regclass('public.assistant_action_executions') as executions_table,
+        to_regclass('public.assistant_action_undo_items') as undo_table
     `);
     const rows = Array.isArray(result) ? result : [];
-    const first = rows[0] as { table_name?: string | null } | undefined;
-    return first?.table_name === "assistant_action_executions";
+    const first =
+      rows[0] as { executions_table?: string | null; undo_table?: string | null } | undefined;
+    return (
+      first?.executions_table === "assistant_action_executions" &&
+      first.undo_table === "assistant_action_undo_items"
+    );
   } catch {
     return false;
   }
@@ -238,6 +244,28 @@ testIfDb(
     expect(first.summary.failed).toBe(0);
     expect(first.summary.create).toBeGreaterThan(0);
 
+    const [firstExecution] = await db
+      .select()
+      .from(assistantActionExecutions)
+      .where(eq(assistantActionExecutions.idempotencyKey, `assistant-action-${token}-1`));
+    expect(firstExecution?.id).toBeTruthy();
+    const firstUndoItems = firstExecution
+      ? await db
+          .select()
+          .from(assistantActionUndoItems)
+          .where(eq(assistantActionUndoItems.executionId, firstExecution.id))
+      : [];
+    expect(firstUndoItems.length).toBe(first.results.length);
+    expect(
+      firstUndoItems.some(
+        (item) =>
+          item.actionType === "content-type.upsert" &&
+          item.resourceType === "content-type" &&
+          item.undoStrategy === "delete" &&
+          item.createdByAssistant
+      )
+    ).toBe(true);
+
     const contentType = await getContentTypeBySlug(contentTypeSlug);
     expect(contentType?.slug).toBe(contentTypeSlug);
 
@@ -268,6 +296,18 @@ testIfDb(
     expect(second.summary.failed).toBe(0);
     expect(second.summary.create).toBe(0);
 
+    const [secondExecution] = await db
+      .select()
+      .from(assistantActionExecutions)
+      .where(eq(assistantActionExecutions.idempotencyKey, `assistant-action-${token}-2`));
+    const secondUndoItems = secondExecution
+      ? await db
+          .select()
+          .from(assistantActionUndoItems)
+          .where(eq(assistantActionUndoItems.executionId, secondExecution.id))
+      : [];
+    expect(secondUndoItems.length).toBe(second.results.length);
+
     const queriesAfterSecond = await listListingQueries();
     const templatesAfterSecond = await listListingTemplates();
     const screensAfterSecond = await listCustomScreens();
@@ -292,6 +332,13 @@ testIfDb(
     expect(replay.results).toEqual(second.results);
     expect(second.idempotency).toEqual({ replayed: false, scope: "actor_plan_hash" });
     expect(replay.idempotency).toEqual({ replayed: true, scope: "actor_plan_hash" });
+    const secondUndoItemsAfterReplay = secondExecution
+      ? await db
+          .select()
+          .from(assistantActionUndoItems)
+          .where(eq(assistantActionUndoItems.executionId, secondExecution.id))
+      : [];
+    expect(secondUndoItemsAfterReplay).toHaveLength(secondUndoItems.length);
 
     const refinementPlan = planAssistantActions({
       prompt: "dodaj filtr po metrazu i liczbie pokoi",

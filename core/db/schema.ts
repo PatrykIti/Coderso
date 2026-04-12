@@ -472,6 +472,45 @@ export const assistantActionExecutions = pgTable(
   })
 );
 
+export const assistantActionUndoItems = pgTable(
+  "assistant_action_undo_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    executionId: uuid("execution_id")
+      .notNull()
+      .references(() => assistantActionExecutions.id, { onDelete: "cascade" }),
+    actionId: text("action_id").notNull(),
+    actionType: text("action_type").notNull(),
+    operation: text("operation").notNull(),
+    resourceType: text("resource_type").notNull(),
+    resourceId: text("resource_id"),
+    resourceKey: text("resource_key").notNull(),
+    resourceLabel: text("resource_label"),
+    createdByAssistant: boolean("created_by_assistant").notNull().default(false),
+    undoStrategy: text("undo_strategy").notNull(),
+    status: text("status").notNull().default("available"),
+    dependencyKeys: jsonb("dependency_keys").notNull().default([]),
+    publicImpact: jsonb("public_impact").notNull().default([]),
+    beforeSnapshot: jsonb("before_snapshot"),
+    afterSnapshot: jsonb("after_snapshot"),
+    afterFingerprint: text("after_fingerprint"),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    executionIdx: index("assistant_action_undo_items_execution_idx").on(t.executionId),
+    resourceIdx: index("assistant_action_undo_items_resource_idx").on(
+      t.resourceType,
+      t.resourceId
+    ),
+    statusIdx: index("assistant_action_undo_items_status_idx").on(t.status),
+    executionActionResourceIdx: uniqueIndex(
+      "assistant_action_undo_items_execution_action_resource_idx"
+    ).on(t.executionId, t.actionId, t.resourceType, t.resourceKey),
+  })
+);
+
 export const backups = pgTable(
   "backups",
   {
