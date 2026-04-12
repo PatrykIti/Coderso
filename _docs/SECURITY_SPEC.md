@@ -272,6 +272,7 @@ Rotacja klucza:
   - `form.automation.upsert` is internal-only, requires `forms:write` for execute, supports safe non-webhook form actions first, and leaves webhook automation disabled until secret handling is explicit,
   - lead capture blueprint creates public forms through existing Forms runtime; it does not add a new public write endpoint or bypass form nonce/access hardening,
   - booking blueprint is gated as `needs_input` and does not create booking resources until booking action adapters and public booking hardening are explicit,
+  - product inquiry blueprint can create public inquiry forms through existing Forms runtime; checkout/payment remains gated until commerce/payment adapters are explicit,
   - dry-run and execute routes request per-action permissions from `actionFamilyContracts.ts` before delegating to executor services,
   - contract-only families declare intended schema owners, permissions, anti-abuse notes, and secret-handling rules before implementation,
   - preview metadata strings from `actionDiffService.ts` redact secret-like `key=value` fragments before they are returned to admin UI/API clients,

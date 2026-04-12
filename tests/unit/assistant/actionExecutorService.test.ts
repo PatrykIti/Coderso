@@ -5,6 +5,7 @@ import { buildCatalogFamilyPlan } from "../../../core/services/assistant/bluepri
 import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import { buildLeadCaptureSitePlan } from "../../../core/services/assistant/blueprints/leadCaptureBlueprint";
+import { buildProductInquiryCatalogPlan } from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
 import {
   dryRunAssistantActionPlan,
   executeAssistantActionPlan,
@@ -1672,6 +1673,27 @@ test("executeAssistantActionPlan adds inquiry form without creating duplicate pa
   const form = deps.__state.forms[0];
   if (!form) throw new Error("missing_form");
   expect(deps.__state.formFields.get(form.id)?.length).toBeGreaterThan(0);
+  const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
+  expect(pageBlocks.some((block) => block.type === "form-embed")).toBe(true);
+});
+
+test("executeAssistantActionPlan creates product inquiry catalog and form", async () => {
+  const deps = createDeps();
+  const plan = buildProductInquiryCatalogPlan();
+
+  const result = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-product-inquiry",
+    },
+    deps
+  );
+
+  expect(result.summary.failed).toBe(0);
+  expect(deps.__state.contentTypes.some((entry) => entry.slug === "products")).toBe(true);
+  expect(deps.__state.forms[0]?.slug).toBe("product-catalog-inquiry");
+  expect(deps.__state.pages[0]?.slug).toBe("/produkty");
   const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
   expect(pageBlocks.some((block) => block.type === "form-embed")).toBe(true);
 });

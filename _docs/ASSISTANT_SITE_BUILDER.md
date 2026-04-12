@@ -24,6 +24,10 @@ Current implemented guide blueprint:
   - simple landing page with form embed
 - booking service business pack:
   - registered as gated until booking action adapters are implemented
+- product inquiry catalog pack:
+  - product catalog
+  - public inquiry form
+  - checkout/payment remains gated
 - site-kit guide actions:
   - `site-kit.recommend`
   - `site-kit.install`

@@ -24,6 +24,10 @@ import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
 import { buildBookingServiceNeedsInputPlan } from "./blueprints/bookingServiceBlueprint";
 import { buildLeadCaptureSitePlan } from "./blueprints/leadCaptureBlueprint";
+import {
+  buildProductCheckoutNeedsInputPlan,
+  buildProductInquiryCatalogPlan,
+} from "./blueprints/productInquiryBlueprint";
 import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
 import { buildCatalogFamilyPlan } from "./blueprints/catalogFamilyBlueprint";
 import {
@@ -63,18 +67,37 @@ const layoutKeywords = [
 
 const priceKeywords = ["cena", "cene", "cenę", "cenie", "price", "pricing"];
 const statusKeywords = ["status", "statuses"];
+const inquiryKeywords = ["formularz", "form", "zapytania", "inquiry", "quote", "lead"];
+const checkoutKeywords = [
+  "checkout",
+  "payment",
+  "payments",
+  "cart",
+  "koszyk",
+  "platnosc",
+  "płatność",
+  "platnosci",
+  "płatności",
+];
 
 const buildReadyPlanForIntentFamily = (
   intentFamily: AssistantIntentFamily,
   options: {
     promptKind: AssistantPromptKind;
     intentFamily: AssistantIntentFamily;
+    normalizedPrompt?: string;
   }
 ) => {
   switch (intentFamily) {
     case "catalog_showcase":
       return buildHouseProjectsCatalogPlan(options);
     case "product_catalog":
+      if (includesAny(options.normalizedPrompt ?? "", checkoutKeywords)) {
+        return buildProductCheckoutNeedsInputPlan({ promptKind: options.promptKind });
+      }
+      if (includesAny(options.normalizedPrompt ?? "", inquiryKeywords)) {
+        return buildProductInquiryCatalogPlan(options);
+      }
       return buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, options);
     case "portfolio_projects":
       return buildCatalogFamilyPlan(PORTFOLIO_PROJECTS_PRESET, options);
@@ -95,6 +118,7 @@ const buildRefinementPlanForIntentFamily = (
   options: {
     promptKind: AssistantPromptKind;
     intentFamily: AssistantIntentFamily;
+    normalizedPrompt?: string;
   }
 ) => {
   const preset = CATALOG_FAMILY_PRESETS[intentFamily as keyof typeof CATALOG_FAMILY_PRESETS];
@@ -475,6 +499,7 @@ export const planAssistantActions = (
     const readyPlan = buildReadyPlanForIntentFamily(intentFamily, {
       promptKind: classification.promptKind,
       intentFamily,
+      normalizedPrompt: classification.normalizedPrompt,
     });
     if (readyPlan) return normalizeAssistantActionPlan(readyPlan);
   }

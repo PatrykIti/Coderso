@@ -8,6 +8,10 @@ import {
 } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import { buildHouseProjectsCatalogPlan } from "../../../core/services/assistant/blueprints/houseProjectsCatalogBlueprint";
 import {
+  buildProductCheckoutNeedsInputPlan,
+  buildProductInquiryCatalogPlan,
+} from "../../../core/services/assistant/blueprints/productInquiryBlueprint";
+import {
   getBusinessBlueprintPack,
   listBusinessBlueprintPacks,
 } from "../../../core/services/assistant/blueprints/businessBlueprintTypes";
@@ -151,6 +155,37 @@ test("lead capture business blueprint pack builds page and form plan", () => {
       formName: "Lead Capture Inquiry",
     },
   });
+});
+
+test("product inquiry blueprint adds inquiry form without checkout", () => {
+  const plan = buildProductInquiryCatalogPlan({
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.actions.map((action) => action.type)).toEqual([
+    "setting.content-route.upsert",
+    "content-type.upsert",
+    "custom-screen.upsert",
+    "listing-query.upsert",
+    "listing-template.upsert",
+    "form.upsert",
+    "page.upsert",
+  ]);
+  expect(plan.actions.find((action) => action.type === "form.upsert")?.input).toMatchObject({
+    slug: "product-catalog-inquiry",
+    submissionAccess: "public",
+  });
+  expect(plan.assumptions.join(" ")).toContain("not checkout");
+});
+
+test("product checkout blueprint remains gated", () => {
+  const plan = buildProductCheckoutNeedsInputPlan({ promptKind: "setup_request" });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("product-checkout-needs-prerequisite");
+  expect(plan.actions).toEqual([]);
 });
 
 test("business blueprint pack builds strict plans without changing catalog output", () => {

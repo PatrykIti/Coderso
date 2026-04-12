@@ -5,7 +5,7 @@
 **Category:** Assistant/Product + Commerce + Catalogs  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-172-01, TASK-170-01-03  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -75,3 +75,10 @@ return needsInput("Checkout setup needs explicit commerce/payment scope.");
 1. Inquiry/catalog mode is honest and executable.
 2. Checkout/payment is not implied unless explicitly implemented and tested.
 3. Product catalog follow-ups reuse existing setup.
+
+## Completion Notes (2026-04-12)
+
+- Added `Product Inquiry Catalog` blueprint for product catalog prompts that explicitly ask for inquiry/lead capture.
+- The plan creates the normal product catalog surfaces and adds a public product inquiry form embedded into the catalog page.
+- Added checkout/payment detection that returns a typed `needs_input` plan instead of pretending checkout or payment providers are configured.
+- No commerce checkout/payment services were touched.

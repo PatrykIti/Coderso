@@ -98,6 +98,18 @@ const productCatalogKeywords = [
   "sklep",
 ];
 
+const productCheckoutKeywords = [
+  "checkout",
+  "payment",
+  "payments",
+  "cart",
+  "koszyk",
+  "platnosc",
+  "płatność",
+  "platnosci",
+  "płatności",
+];
+
 const portfolioKeywords = [
   "portfolio",
   "case study",
@@ -215,6 +227,9 @@ export const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
   if (includesAny(normalized, houseProjectsRefinementKeywords)) return "catalog_showcase";
   if (isLikelyProductCatalogPrompt(normalized)) return "product_catalog";
   if (includesAny(normalized, productRefinementKeywords)) return "product_catalog";
+  if (includesAny(normalized, productCatalogKeywords) && includesAny(normalized, productCheckoutKeywords)) {
+    return "product_catalog";
+  }
   if (isLikelyServicesDirectoryPrompt(normalized)) return "services_directory";
   if (includesAny(normalized, servicesRefinementKeywords)) return "services_directory";
   if (isLikelyPortfolioProjectsPrompt(normalized)) return "portfolio_projects";
@@ -235,7 +250,7 @@ export const classifyAssistantPrompt = (prompt: string) => {
   let promptKind: AssistantPromptKind = "unknown";
   if (hasDocsSignal && !hasSetupSignal) {
     promptKind = "docs_question";
-  } else if (hasRefinementSignal && !(hasSetupSignal && intentFamily === "lead_capture_site")) {
+  } else if (hasRefinementSignal && !hasSetupSignal) {
     promptKind = "refinement_request";
   } else if (hasSetupSignal || intentFamily !== "unknown") {
     promptKind = "setup_request";

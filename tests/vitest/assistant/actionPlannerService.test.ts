@@ -105,6 +105,45 @@ test("planAssistantActions routes non-house-project setup prompts into generic n
   expect(docsQuestionPlan.intentId).toBe("product-catalog");
 });
 
+test("planAssistantActions builds product inquiry catalog for catalog plus form prompts", () => {
+  const plan = planAssistantActions({
+    prompt: "potrzebuje katalogu produktow dla sklepu z formularzem zapytania",
+    context: {
+      page: "/admin/coderso/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentFamily).toBe("product_catalog");
+  expect(plan.intentId).toBe("product-inquiry-catalog");
+  expect(plan.actions.map((action) => action.type)).toEqual([
+    "setting.content-route.upsert",
+    "content-type.upsert",
+    "custom-screen.upsert",
+    "listing-query.upsert",
+    "listing-template.upsert",
+    "form.upsert",
+    "page.upsert",
+  ]);
+  expect(plan.summary).toContain("inquiry form");
+});
+
+test("planAssistantActions returns needs-input for checkout/payment prompts", () => {
+  const plan = planAssistantActions({
+    prompt: "potrzebuje sklep z checkoutem koszykiem i platnosciami",
+    context: {
+      page: "/admin/coderso/commerce",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentFamily).toBe("product_catalog");
+  expect(plan.intentId).toBe("product-checkout-needs-prerequisite");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActions builds ready portfolio and services plans for routed families", () => {
   const portfolioPlan = planAssistantActions({
     prompt: "stworz portfolio projektow dla agencji architektonicznej",
