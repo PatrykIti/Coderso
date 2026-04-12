@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-03
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -59,3 +59,14 @@ Requirements:
 ## Documentation Updates Required
 
 - Covered by parent closure unless public schema docs change.
+
+## Completion Notes (2026-04-12)
+
+- Added `actionPlanSchema.ts` with strict plan/action/input validation.
+- Existing `isAssistantActionPlan` now delegates to strict validation.
+- Planner returns normalized plans through `normalizeAssistantActionPlan`.
+- Covered ready/needs-input invariants, per-action input validation, unknown-field rejection, and confidence clamping.
+
+## Validation (2026-04-12)
+
+- `bunx vitest run tests/vitest/assistant/action-plan-schema.test.ts --config vitest.config.ts`

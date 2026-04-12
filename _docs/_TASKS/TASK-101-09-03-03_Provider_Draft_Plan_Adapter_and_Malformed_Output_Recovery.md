@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + LLM Provider Safety
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-03-01, TASK-101-09-03-02
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -59,3 +59,14 @@ return normalizeAssistantActionPlan(repaired);
 ## Documentation Updates Required
 
 - `_docs/SECURITY_SPEC.md` if provider draft behavior is wired into production planner.
+
+## Completion Notes (2026-04-12)
+
+- Added `actionPlanProviderAdapter.ts`.
+- Adapter maps mocked provider draft JSON through strict local schema.
+- Malformed drafts, unknown fields/actions, missing actions, and secret-like keys recover to typed `needs_input` questions.
+- No live provider/network calls were introduced.
+
+## Validation (2026-04-12)
+
+- `bunx vitest run tests/vitest/assistant/action-plan-provider-adapter.test.ts --config vitest.config.ts`

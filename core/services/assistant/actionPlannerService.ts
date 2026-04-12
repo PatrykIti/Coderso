@@ -7,6 +7,13 @@ import type {
   AssistantSiteKitPlanInput,
 } from "./actionPlanTypes";
 import { buildAssistantAdminContext } from "./adminContextService";
+import { normalizeAssistantActionPlan } from "./actionPlanSchema";
+import {
+  classifyAssistantPrompt,
+  includesAny,
+  normalizeAssistantPlannerPrompt,
+  resolveContextualRefinementFamily,
+} from "./actionPlanHeuristics";
 import { buildGuidedSiteBuilderPlanResult } from "./siteBuilderPlanAdapter";
 import { buildCatalogFamilyRefinementPlan } from "./blueprints/catalogFamilyBlueprint";
 import { buildHouseProjectsCatalogPlan } from "./blueprints/houseProjectsCatalogBlueprint";
@@ -18,132 +25,11 @@ import {
   SERVICES_DIRECTORY_PRESET,
 } from "./blueprints/catalogFamilyPresets";
 
-const normalizePrompt = (value: string) =>
-  value
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
-
-const houseProjectKeywords = [
-  "projekt",
-  "projekty",
-  "dom",
-  "domow",
-  "domów",
-  "house",
-  "houses",
-  "home design",
-  "home designs",
-];
-
-const catalogKeywords = [
-  "katalog",
-  "catalog",
-  "showcase",
-  "prezentowac",
-  "present",
-  "listing",
-];
-
-const setupKeywords = [
-  "potrzebuje",
-  "chce",
-  "potrzebuję",
-  "stworz",
-  "stwórz",
-  "zrob",
-  "zrób",
-  "utworz",
-  "utwórz",
-  "build",
-  "create",
-  "set up",
-];
-
-const refinementKeywords = [
-  "dodaj",
-  "dorzuc",
-  "dołóż",
-  "zmien",
-  "zmień",
-  "update",
-  "adjust",
-  "refine",
-  "expand",
-  "extend",
-  "filtr",
-  "filter",
-  "formularz",
-  "form",
-  "layout",
-  "uklad",
-  "układ",
-  "status",
-  "price",
-  "cene",
-  "cenę",
-];
-
-const docsQuestionKeywords = [
-  "gdzie",
-  "where",
-  "jak",
-  "how",
-  "which screen",
-  "where can i find",
-  "ustawienia",
-  "settings",
-  "kolory",
-  "colors",
-  "configure",
-];
-
-const productCatalogKeywords = [
-  "produkt",
-  "produkty",
-  "produktow",
-  "produktów",
-  "product",
-  "products",
-  "shop",
-  "sklep",
-];
-
-const portfolioKeywords = [
-  "portfolio",
-  "case study",
-  "case studies",
-  "realizacja",
-  "realizacje",
-  "showreel",
-];
-
-const serviceDirectoryKeywords = [
-  "uslugi",
-  "usługi",
-  "uslug",
-  "usług",
-  "services",
-  "service",
-  "directory",
-  "katalog uslug",
-  "katalog usług",
-  "katalogu uslug",
-  "katalogu usług",
-  "provider",
-  "providers",
-];
-
-const leadCaptureKeywords = [
-  "lead",
-  "leady",
-  "kontakt",
-  "contact",
-  "formularz kontaktowy",
-  "contact form",
-  "wycena",
-  "quote",
-];
+export {
+  classifyAssistantPrompt,
+  isLikelyGuidePlanningPrompt,
+  isLikelyHouseProjectsCatalogPrompt,
+} from "./actionPlanHeuristics";
 
 const filterKeywords = [
   "filtr",
@@ -166,84 +52,8 @@ const layoutKeywords = [
   "minimal",
 ];
 
-const priceKeywords = ["cena", "cene", "cenę", "price", "pricing"];
+const priceKeywords = ["cena", "cene", "cenę", "cenie", "price", "pricing"];
 const statusKeywords = ["status", "statuses"];
-const houseProjectsRefinementKeywords = [
-  "metraz",
-  "metraż",
-  "pokoi",
-  "rooms",
-  "bathrooms",
-  "floors",
-];
-const productRefinementKeywords = [
-  "sku",
-  "stock",
-  "magazyn",
-  "inventory",
-  "category",
-  "kategoria",
-];
-const servicesRefinementKeywords = [
-  "response time",
-  "czas odpowiedzi",
-  "service type",
-  "typ uslugi",
-  "typ usługi",
-];
-const portfolioRefinementKeywords = [
-  "client",
-  "klient",
-  "delivery year",
-  "rok realizacji",
-  "realizacja",
-];
-
-const includesAny = (value: string, candidates: string[]) =>
-  candidates.some((candidate) => value.includes(candidate));
-
-export const isLikelyHouseProjectsCatalogPrompt = (prompt: string) => {
-  const normalized = normalizePrompt(prompt);
-  return (
-    includesAny(normalized, catalogKeywords) &&
-    includesAny(normalized, houseProjectKeywords)
-  );
-};
-
-const isLikelyProductCatalogPrompt = (prompt: string) => {
-  const normalized = normalizePrompt(prompt);
-  if (isLikelyHouseProjectsCatalogPrompt(normalized)) return false;
-  return (
-    includesAny(normalized, productCatalogKeywords) &&
-    includesAny(normalized, catalogKeywords)
-  );
-};
-
-const isLikelyPortfolioProjectsPrompt = (prompt: string) => {
-  const normalized = normalizePrompt(prompt);
-  if (isLikelyHouseProjectsCatalogPrompt(normalized)) return false;
-  return includesAny(normalized, portfolioKeywords);
-};
-
-const isLikelyServicesDirectoryPrompt = (prompt: string) => {
-  const normalized = normalizePrompt(prompt);
-  return includesAny(normalized, serviceDirectoryKeywords);
-};
-
-const resolveIntentFamily = (prompt: string): AssistantIntentFamily => {
-  const normalized = normalizePrompt(prompt);
-  if (isLikelyHouseProjectsCatalogPrompt(normalized)) return "catalog_showcase";
-  if (includesAny(normalized, houseProjectsRefinementKeywords)) return "catalog_showcase";
-  if (isLikelyProductCatalogPrompt(normalized)) return "product_catalog";
-  if (includesAny(normalized, productRefinementKeywords)) return "product_catalog";
-  if (isLikelyServicesDirectoryPrompt(normalized)) return "services_directory";
-  if (includesAny(normalized, servicesRefinementKeywords)) return "services_directory";
-  if (isLikelyPortfolioProjectsPrompt(normalized)) return "portfolio_projects";
-  if (includesAny(normalized, portfolioRefinementKeywords)) return "portfolio_projects";
-  if (includesAny(normalized, leadCaptureKeywords)) return "lead_capture_site";
-  if (includesAny(normalized, catalogKeywords)) return "catalog_showcase";
-  return "unknown";
-};
 
 const buildReadyPlanForIntentFamily = (
   intentFamily: AssistantIntentFamily,
@@ -277,7 +87,7 @@ const buildRefinementPlanForIntentFamily = (
   const preset = CATALOG_FAMILY_PRESETS[intentFamily as keyof typeof CATALOG_FAMILY_PRESETS];
   if (!preset) return null;
 
-  const normalizedPrompt = normalizePrompt(prompt);
+  const normalizedPrompt = normalizeAssistantPlannerPrompt(prompt);
   const selectedFacets = preset.refinement.availableFacets.filter((facet) => {
     const label = facet.label.toLowerCase();
     const field = facet.field?.toLowerCase() ?? "";
@@ -468,58 +278,6 @@ const buildRefinementPlanForIntentFamily = (
   });
 };
 
-const resolveContextualRefinementFamily = (
-  context: ReturnType<typeof buildAssistantAdminContext>,
-  fallback: AssistantIntentFamily
-): AssistantIntentFamily => {
-  const route = normalizePrompt(context.route ?? "");
-  if (!route) return fallback;
-  if (route.includes("projekty-domow") || route.includes("house-projects")) {
-    return "catalog_showcase";
-  }
-  if (route.includes("produkty") || route.includes("products")) {
-    return "product_catalog";
-  }
-  if (route.includes("portfolio")) {
-    return "portfolio_projects";
-  }
-  if (route.includes("uslugi") || route.includes("services")) {
-    return "services_directory";
-  }
-  return fallback;
-};
-
-export const classifyAssistantPrompt = (prompt: string) => {
-  const normalized = normalizePrompt(prompt);
-  const intentFamily = resolveIntentFamily(normalized);
-  const hasSetupSignal = includesAny(normalized, setupKeywords);
-  const hasRefinementSignal = includesAny(normalized, refinementKeywords);
-  const hasDocsSignal = includesAny(normalized, docsQuestionKeywords);
-
-  let promptKind: AssistantPromptKind = "unknown";
-  if (hasDocsSignal && !hasSetupSignal) {
-    promptKind = "docs_question";
-  } else if (hasRefinementSignal) {
-    promptKind = "refinement_request";
-  } else if (hasSetupSignal || intentFamily !== "unknown") {
-    promptKind = "setup_request";
-  }
-
-  return {
-    normalizedPrompt: normalized,
-    promptKind,
-    intentFamily,
-  };
-};
-
-export const isLikelyGuidePlanningPrompt = (prompt: string) => {
-  const classification = classifyAssistantPrompt(prompt);
-  return (
-    classification.promptKind === "setup_request" ||
-    classification.promptKind === "refinement_request"
-  );
-};
-
 const buildClarifyingPlan = (
   prompt: string,
   context: ReturnType<typeof buildAssistantAdminContext>,
@@ -654,7 +412,7 @@ export const planAssistantActions = (
 ): AssistantActionPlan => {
   const context = buildAssistantAdminContext(input.context);
   if (input.context?.siteKit) {
-    return buildSiteKitActionPlan(input.context.siteKit);
+    return normalizeAssistantActionPlan(buildSiteKitActionPlan(input.context.siteKit));
   }
 
   const classification = classifyAssistantPrompt(input.prompt);
@@ -664,7 +422,9 @@ export const planAssistantActions = (
       : classification.intentFamily;
   const routedClassification = { ...classification, intentFamily };
   if (!classification.normalizedPrompt) {
-    return buildClarifyingPlan(input.prompt, context, routedClassification);
+    return normalizeAssistantActionPlan(
+      buildClarifyingPlan(input.prompt, context, routedClassification)
+    );
   }
 
   if (
@@ -675,7 +435,7 @@ export const planAssistantActions = (
       promptKind: classification.promptKind,
       intentFamily,
     });
-    if (readyPlan) return readyPlan;
+    if (readyPlan) return normalizeAssistantActionPlan(readyPlan);
   }
 
   if (
@@ -690,8 +450,10 @@ export const planAssistantActions = (
         intentFamily,
       }
     );
-    if (refinementPlan) return refinementPlan;
+    if (refinementPlan) return normalizeAssistantActionPlan(refinementPlan);
   }
 
-  return buildClarifyingPlan(input.prompt, context, routedClassification);
+  return normalizeAssistantActionPlan(
+    buildClarifyingPlan(input.prompt, context, routedClassification)
+  );
 };

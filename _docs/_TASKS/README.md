@@ -29,9 +29,9 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 9 tasks
-- **In Progress:** 16 tasks
-- **Done:** 772 tasks
+- **To Do:** 7 tasks
+- **In Progress:** 13 tasks
+- **Done:** 777 tasks
 
 ---
 
@@ -43,8 +43,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-054-21 | Coderso Multilingual and i18n Suite | High | Large | Locales, translated content, and localized routing |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
 | TASK-105-09 | QA, Docs, Changelog, and Closure | Medium | Medium | Final metrics, docs, board, and changelog closure |
-| TASK-101-09-03-03 | Provider Draft Plan Adapter and Malformed Output Recovery | High | Medium | Normalize mocked provider plan drafts into local strict drafts without bypassing schema/repair |
-| TASK-101-09-03-04 | Planner Test, Docs, and Closure | Medium | Small | Run planner schema/heuristics/provider regression suites and close docs/changelog/board |
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
@@ -57,14 +55,11 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | In progress: user-facing LLM Guide labeling, action gating, and single-flow site-kit convergence shipped; canonical `llm-rag` -> `llm-guide` transport migration remains open |
 | TASK-101-09-01-01 | Docs Assistant Mode Guardrails and Backward Compatibility | High | Small | In progress: docs-only action guard shipped; full legacy transport alias/migration remains open |
-| TASK-101-09-03 | LLM Guide Planner and Typed Plan Schema | High | Large | In progress: current typed planner exists; remaining scope is strict nested schema, context-aware repair, provider draft adapter, and orchestration cleanup |
-| TASK-101-09-03-01 | Prompt Normalization, Intent Extraction, and Strict Plan Schema | High | Medium | In progress: typed plan model exists; strict nested schema ownership and per-action input validation remain open |
-| TASK-101-09-03-02 | Local Heuristics, Plan Repair, and Missing Context Questions | High | Medium | In progress: deterministic routing/refinement exists; separate context-aware repair module using resource/runtime context remains open |
 | TASK-101-09-04 | Typed Action Registry, Dry-Run, and Execution Pipeline | High | Large | In progress: dry-run/execute pipeline shipped through centralized executor switch; formal action registry and broader conflict model remain open |
 | TASK-101-09-04-01 | Action Registry, Dry-Run Diff, and Conflict Model | High | Medium | In progress: diff objects shipped through `actionDiffService`; formal registry and conflict-code model remain open |
 | TASK-101-09-04-02 | Execution, Idempotency, Revisions, and Audit Hooks | High | Medium | In progress: execute path, audit event, and process-local idempotency shipped; persisted idempotency and broader revision hooks remain open |
 | TASK-101-09-04-03 | Existing Service Adapters and Installer Extraction | High | Medium | In progress: executor reuses existing services and site-kit installer adapter; broader formal adapter extraction remains open |
-| TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: floating assistant now supports typed planning, dry-run, and execute for the house-projects catalog business flow through existing content/listing/page/custom-screen services |
+| TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | In progress: typed planning, context snapshots, resource catalogs, dry-run, and execute are shipped; action registry/idempotency hardening remains open |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -77,6 +72,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-101-09-03 | LLM Guide Planner and Typed Plan Schema | High | Large | Done: strict nested schema, context heuristics, provider draft adapter, and planner regression coverage are shipped |
+| TASK-101-09-03-04 | Planner Test, Docs, and Closure | Medium | Small | Done: planner schema/heuristics/provider tests, docs, changelog, and board sync are complete |
+| TASK-101-09-03-03 | Provider Draft Plan Adapter and Malformed Output Recovery | High | Medium | Done: untrusted mocked provider drafts map through local strict schema or recover to typed questions |
+| TASK-101-09-03-02 | Local Heuristics, Plan Repair, and Missing Context Questions | High | Medium | Done: prompt/context heuristics are split into a pure module and use resource/runtime context for refinement routing |
+| TASK-101-09-03-01 | Prompt Normalization, Intent Extraction, and Strict Plan Schema | High | Medium | Done: strict nested action plan schema validates per-action input and planner output |
 | TASK-101-09-02 | Admin Context Snapshot and Safe Surface Observers | High | Large | Done: route/module, resource catalog, runtime snapshot, selected resource, and advisory permission/action hints are available to LLM Guide planning |
 | TASK-101-09-02-01 | Admin Runtime Context Snapshot and Permission Affordances | High | Large | Done: AssistantPanel now sends route-derived runtime snapshot and server normalization keeps it advisory-only |
 | TASK-101-09-02-01-03 | Runtime Context Test, Docs, and Closure | Medium | Small | Done: runtime context validation, docs, changelog, and board sync are complete |

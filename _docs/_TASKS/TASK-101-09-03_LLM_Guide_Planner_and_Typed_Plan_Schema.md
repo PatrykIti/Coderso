@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-101-09-01, TASK-101-09-02
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -198,11 +198,15 @@ Must cover:
 - `_docs/CMS_API.md` if action plan schema/route payload changes
 - `_docs/SECURITY_SPEC.md`
 
-## Audit Notes (2026-04-12)
+## Completion Notes (2026-04-12)
 
-- Typed plans, local classification, catalog family presets, state-aware refinement, site-kit actions, resource catalog context, and runtime snapshot context are shipped.
-- Remaining open scope:
-  - strict nested plan schema ownership,
-  - separate heuristic/repair module,
-  - provider draft adapter with malformed output recovery,
-  - planner service simplification into orchestration.
+- Added strict nested action-plan schema/normalizer.
+- Moved prompt/context heuristics into `actionPlanHeuristics.ts`.
+- Added provider draft adapter that treats provider output as untrusted and recovers malformed output into typed questions.
+- `planAssistantActions` now normalizes returned plans through strict schema.
+- Existing catalog family, refinement, site-kit, resource catalog, and runtime snapshot planner paths remain covered by regression tests.
+
+## Validation (2026-04-12)
+
+- `bunx vitest run tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/action-plan-heuristics.test.ts tests/vitest/assistant/action-plan-provider-adapter.test.ts tests/vitest/assistant/actionPlannerService.test.ts --config vitest.config.ts`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

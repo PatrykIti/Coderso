@@ -251,6 +251,8 @@ Rotacja klucza:
   - brak public write surface,
   - brak arbitralnego kodu,
   - plan payload przechodzi strict top-level validation i wewnetrzna walidacje typed planu,
+  - planner output przechodzi strict nested `actionPlanSchema` przed dry-run/execute,
+  - provider draft output jest untrusted: unknown fields/actions, malformed draft i secret-like keys sa odzyskiwane jako typed questions,
   - `context.includeResourceCatalog=true` hydratuje tylko server-side bounded/redacted resource catalog,
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
   - resource catalog nie zawiera form submissions, entry values, provider credentials, API key material ani secret-like config keys,

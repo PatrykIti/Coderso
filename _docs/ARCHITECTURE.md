@@ -326,7 +326,10 @@ Warstwa Admin UI:
 
 Pierwszy runtime slice `TASK-101-09` nie buduje osobnego toru zapisu.
 Zamiast tego:
-- `core/services/assistant/actionPlannerService.ts` mapuje prompt do typed planu,
+- `core/services/assistant/actionPlannerService.ts` orkiestruje prompt -> typed plan,
+- `core/services/assistant/actionPlanSchema.ts` waliduje strict nested action-plan schema,
+- `core/services/assistant/actionPlanHeuristics.ts` trzyma pure prompt/context heuristics,
+- `core/services/assistant/actionPlanProviderAdapter.ts` mapuje untrusted provider draft JSON do lokalnego strict planu albo typed questions,
 - `core/services/assistant/actionExecutorService.ts` reuse’uje obecne serwisy domenowe,
 - `core/server/routes/assistantRoutes.ts` wystawia internal action endpoints,
 - `core/admin/ui/assistant/components/ActionPlanReview.tsx` i `ActionExecutionResult.tsx`
@@ -355,6 +358,11 @@ Runtime admin context:
   - advisory permission hints wymagane dla widocznych akcji.
 - Snapshot nie jest autoryzacja; execute/dry-run dalej polegaja na route/domain permission checks.
 - Snapshot nie zawiera user PII, roli, sesji, raw permissions ani tokenow.
+
+Planner schema/recovery:
+- Planner output jest normalizowany przez strict schema przed zwroceniem z `planAssistantActions`.
+- Provider draft output jest traktowany jako untrusted input; unknown fields/actions, secret-like keys i malformed drafts wracaja jako typed `needs_input` questions zamiast executable actions.
+- Provider adapter nie wykonuje network calli i nie omija lokalnej walidacji akcji.
 
 Aktualnie zaimplementowany biznesowy flow:
 - prompt o katalog projektow domow,

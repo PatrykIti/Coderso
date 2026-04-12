@@ -5,7 +5,7 @@
 **Category:** QA + Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-101-09-03-01, TASK-101-09-03-02, TASK-101-09-03-03
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -36,3 +36,16 @@ Domknac planner strict schema/repair/provider adapter slice: testy, docs, change
 - `_docs/ARCHITECTURE.md`
 - `_docs/CMS_API.md` if public API contract changes
 - `_docs/SECURITY_SPEC.md`
+
+## Completion Notes (2026-04-12)
+
+- Updated architecture and security docs.
+- Updated task board and changelog.
+- No public API request/response shape changed, so `_docs/CMS_API.md` did not require schema changes.
+
+## Validation (2026-04-12)
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bunx vitest run tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/action-plan-heuristics.test.ts tests/vitest/assistant/action-plan-provider-adapter.test.ts tests/vitest/assistant/actionPlannerService.test.ts --config vitest.config.ts`
+- `bun test tests/integration/routes/assistant.test.ts`

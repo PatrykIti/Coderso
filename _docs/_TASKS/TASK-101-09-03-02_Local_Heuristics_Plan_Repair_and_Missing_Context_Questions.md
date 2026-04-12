@@ -5,7 +5,7 @@
 **Category:** Core/Assistant
 **Estimated Effort:** Medium
 **Dependencies:** TASK-101-09-03-01, TASK-101-09-02
-**Status:** In Progress (2026-04-12)
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -52,3 +52,13 @@ return buildPlanFromRepairedDraft(repair);
 ## Documentation Updates Required
 
 - Covered by parent closure.
+
+## Completion Notes (2026-04-12)
+
+- Added `actionPlanHeuristics.ts` with prompt classification and context-aware refinement family resolution.
+- Heuristics now consider route, runtime selected resource, and resource catalog summaries.
+- Planner imports heuristics instead of owning prompt classification inline.
+
+## Validation (2026-04-12)
+
+- `bunx vitest run tests/vitest/assistant/action-plan-heuristics.test.ts tests/vitest/assistant/actionPlannerService.test.ts --config vitest.config.ts`

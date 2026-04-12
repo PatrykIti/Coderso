@@ -10,6 +10,7 @@ import type {
   GuidedSiteBuilderValidationResult,
 } from "./siteBuilderExecutor";
 import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
+import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
 export type AssistantPromptKind =
@@ -362,66 +363,6 @@ export type AssistantActionExecuteResult = {
   };
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-const isStringArray = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((entry) => typeof entry === "string");
-
-const isActionType = (value: unknown): value is AssistantPlannedAction["type"] =>
-  value === "setting.content-route.upsert" ||
-  value === "content-type.upsert" ||
-  value === "custom-screen.upsert" ||
-  value === "listing-query.upsert" ||
-  value === "listing-template.upsert" ||
-  value === "form.upsert" ||
-  value === "page.upsert" ||
-  value === "site-kit.recommend" ||
-  value === "site-kit.install" ||
-  value === "site-kit.validate";
-
 export const isAssistantActionPlan = (
   value: unknown
-): value is AssistantActionPlan => {
-  if (!isRecord(value)) return false;
-  if (typeof value.id !== "string") return false;
-  if (typeof value.intentId !== "string") return false;
-  if (value.status !== "ready" && value.status !== "needs_input") return false;
-  if (
-    value.promptKind !== undefined &&
-    value.promptKind !== "docs_question" &&
-    value.promptKind !== "setup_request" &&
-    value.promptKind !== "refinement_request" &&
-    value.promptKind !== "unknown"
-  ) {
-    return false;
-  }
-  if (
-    value.intentFamily !== undefined &&
-    value.intentFamily !== "catalog_showcase" &&
-    value.intentFamily !== "product_catalog" &&
-    value.intentFamily !== "portfolio_projects" &&
-    value.intentFamily !== "services_directory" &&
-    value.intentFamily !== "lead_capture_site" &&
-    value.intentFamily !== "site_kit" &&
-    value.intentFamily !== "unknown"
-  ) {
-    return false;
-  }
-  if (typeof value.title !== "string") return false;
-  if (typeof value.answer !== "string") return false;
-  if (typeof value.summary !== "string") return false;
-  if (typeof value.confidence !== "number") return false;
-  if (!isStringArray(value.assumptions)) return false;
-  if (!Array.isArray(value.questions)) return false;
-  if (!Array.isArray(value.actions)) return false;
-
-  return value.actions.every((action) => {
-    if (!isRecord(action)) return false;
-    if (typeof action.id !== "string") return false;
-    if (!isActionType(action.type)) return false;
-    if (typeof action.title !== "string") return false;
-    if (typeof action.description !== "string") return false;
-    return isRecord(action.input);
-  });
-};
+): value is AssistantActionPlan => isAssistantActionPlanStrict(value);
