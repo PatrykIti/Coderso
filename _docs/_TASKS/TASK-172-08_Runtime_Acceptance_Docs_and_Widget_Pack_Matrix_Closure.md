@@ -5,7 +5,7 @@
 **Category:** QA/Assistant + Docs + Runtime  
 **Estimated Effort:** Medium  
 **Dependencies:** TASK-172-02, TASK-172-03, TASK-172-04, TASK-172-05, TASK-172-06, TASK-172-07  
-**Status:** To Do
+**Status:** Done (2026-04-12)
 
 ---
 
@@ -78,3 +78,11 @@ for (const pack of implementedBlueprintPacks) {
 1. Every implemented pack has runtime acceptance coverage.
 2. Docs describe capabilities and limits.
 3. Pack matrix stays synchronized with product-ready surfaces.
+
+## Completion Notes (2026-04-12)
+
+- Revalidated existing DB-backed public runtime acceptance for the shipped house-projects catalog pack.
+- Revalidated planner/blueprint coverage for all current business packs.
+- Revalidated Bun executor coverage for lead capture, product inquiry, and editorial hub packs.
+- Booking and solution-kit refinement packs remain gated and do not require public runtime acceptance until adapters land.
+- No widget pack matrix changes were required because the packs reuse existing registered widgets already represented in the matrix.

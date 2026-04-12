@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 614 | 2026-04-12 | TASK-172 business blueprint packs closure | Assistant/Product |
 | 613 | 2026-04-12 | TASK-172-07 gated solution-kit refinements | Assistant/Product |
 | 612 | 2026-04-12 | TASK-172-06 editorial content hub pack | Assistant/Product |
 | 611 | 2026-04-12 | TASK-172-05 portfolio case study pack | Assistant/Product |
