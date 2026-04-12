@@ -5,7 +5,7 @@
 **Category:** Core/Assistant + Core/Services  
 **Estimated Effort:** Large  
 **Dependencies:** TASK-170-01, TASK-170-02  
-**Status:** To Do
+**Status:** In Progress (2026-04-12)
 
 ---
 
@@ -15,7 +15,10 @@ Implement execution for selected new action families by delegating to existing d
 
 ## Sub-Tasks
 
-Create child leaves per adapter family once `TASK-170-01-*` chooses the first executable actions.
+- `TASK-170-03-01_Entry_Draft_Action_Executor_Adapters.md`
+- `TASK-170-03-02_Menu_SEO_Media_Action_Executor_Adapters.md`
+- `TASK-170-03-03_Form_Page_Listing_Patch_Executor_Adapters.md`
+- `TASK-170-03-04_Executor_Adapter_Docs_Tests_and_Closure.md`
 
 ## Pseudocode
 
@@ -77,3 +80,7 @@ async function executeAction(action, deps, actor) {
 1. New writes go through existing domain services.
 2. Known errors are machine-readable at service level and mapped at route boundary.
 3. Idempotency replay remains stable after result shape changes.
+
+## Progress Notes
+
+- 2026-04-12: Split executor adapter work into entry, menu/SEO/media, form/page/listing patch, and closure leaves before implementation.

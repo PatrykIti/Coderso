@@ -29,8 +29,8 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 36 tasks
-- **In Progress:** 6 tasks
+- **To Do:** 39 tasks
+- **In Progress:** 7 tasks
 - **Done:** 790 tasks
 
 ---
@@ -49,7 +49,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | Provider-backed draft planning through strict local schema and recovery |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | More concrete business outcomes beyond the current catalog/site-kit slice |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
-| TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | Execute new actions through existing domain services only |
+| TASK-170-03-01 | Entry Draft Action Executor Adapters | High | Medium | First executable `entry.*` draft adapter through existing content services |
+| TASK-170-03-02 | Menu, SEO, and Media Action Executor Adapters | High | Large | Navigation, SEO, and media reference adapters after entry pattern lands |
+| TASK-170-03-03 | Form, Page, and Listing Patch Executor Adapters | High | Large | Non-destructive form/page/listing patch adapters |
+| TASK-170-03-04 | Executor Adapter Docs, Tests, and Closure | High | Medium | Final route/security/docs/test closure for executor adapter wave |
 | TASK-170-04 | Admin Review UI for Expanded Actions | Medium | Medium | Review/result UI for new action families |
 | TASK-170-05 | Route Security, Tests, Docs, and Closure | High | Medium | Route validation, security coverage, docs, and changelog closure |
 | TASK-171-01 | Provider Prompt Context Packaging and Redaction | High | Medium | Bounded/redacted context package for provider planning |
@@ -88,6 +91,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
 | TASK-170 | LLM Guide Action Family Expansion | High | Large | In progress: contract and preview metadata slices complete; executor adapters are next |
+| TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | In progress: split into adapter-family leaves before implementation |
 
 ---
 
