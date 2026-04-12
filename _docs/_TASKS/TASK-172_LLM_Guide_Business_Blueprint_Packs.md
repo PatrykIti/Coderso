@@ -60,6 +60,30 @@ Rules:
 - pack-specific schemas must stay deterministic and reject unknown fields,
 - refinement flows must prefer updating existing resources over creating duplicates.
 
+## Pseudocode
+
+```ts
+const pack = resolveBusinessBlueprintPack(prompt, context);
+
+if (!pack || !pack.prerequisitesSatisfied(context)) {
+  return buildNeedsInputPlan(pack?.missingRequirements ?? []);
+}
+
+return normalizeAssistantActionPlan(pack.buildActions({ prompt, context }));
+```
+
+## Files to Change
+
+- `core/services/assistant/actionPlannerService.ts`
+- `core/services/assistant/blueprints/catalogFamilyBlueprint.ts`
+- `core/services/assistant/blueprints/catalogFamilyPresets.ts`
+- `core/services/assistant/blueprints/houseProjectsCatalogBlueprint.ts`
+- possible new `core/services/assistant/blueprints/businessBlueprintTypes.ts`
+- `core/services/assistant/adminContextCatalogs.ts`
+- `core/services/assistant/actionExecutorService.ts`
+- `core/services/assistant/actionDiffService.ts`
+- domain services touched by each pack leaf
+
 ## Security Contract
 
 - Visibility: internal only under existing `/admin/api/assistant/actions/*`.
@@ -82,7 +106,22 @@ Rules:
 
 ## Sub-Tasks
 
-No physical subtask files are created yet. This umbrella should later be split by blueprint pack and by prerequisite action-family/domain support.
+- `TASK-172-01_Blueprint_Pack_Contract_and_Shared_Builder_Expansion.md`
+- `TASK-172-02_Lead_Capture_Site_Pack.md`
+- `TASK-172-03_Booking_Service_Business_Pack.md`
+- `TASK-172-04_Product_Inquiry_and_Ecommerce_Starter_Pack.md`
+- `TASK-172-05_Portfolio_Case_Study_Pack.md`
+- `TASK-172-06_Editorial_Content_Hub_Pack.md`
+- `TASK-172-07_Solution_Kit_Refinement_Packs_and_No_Reinstall_Flow.md`
+- `TASK-172-08_Runtime_Acceptance_Docs_and_Widget_Pack_Matrix_Closure.md`
+
+## Implementation Order
+
+1. Freeze the shared pack contract in `TASK-172-01`.
+2. Implement packs whose action families already exist or land first under `TASK-170`.
+3. Keep booking/commerce packs gated by safe domain-service reuse.
+4. Add solution-kit refinements after installed-kit state is audited.
+5. Close with runtime acceptance, docs corpus, and widget pack matrix sync in `TASK-172-08`.
 
 ## Testing Requirements
 

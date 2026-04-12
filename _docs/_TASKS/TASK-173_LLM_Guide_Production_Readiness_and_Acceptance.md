@@ -59,6 +59,32 @@ Rules:
 - security scanner/gate changes require owner, reason, expiry, and ticket notes,
 - docs must state unsupported scenarios clearly instead of implying unlimited assistant intelligence.
 
+## Pseudocode
+
+```ts
+for (const capability of declaredGuideCapabilities) {
+  await assertPlanDryRunExecuteAcceptance(capability);
+  await assertSecurityNegativeCases(capability);
+  await assertDocsDescribeCapabilityAndLimits(capability);
+}
+```
+
+## Files to Change
+
+- `core/services/assistant/actionExecutionStore.ts`
+- `core/services/assistant/actionExecutorService.ts`
+- `core/services/assistant/actionDiffService.ts`
+- `core/services/assistant/assistantMetrics.ts`
+- `core/services/assistant/assistantRedaction.ts`
+- `core/server/routes/assistantRoutes.ts`
+- `core/admin/ui/assistant/components/ActionPlanReview.tsx`
+- `core/admin/ui/assistant/components/ActionExecutionResult.tsx`
+- `tests/vitest/assistant/*`
+- `tests/vitest/ui/assistant*.test.tsx`
+- `tests/unit/assistant/*`
+- `tests/integration/routes/assistant.test.ts`
+- `tests/integration/server/*assistant*`
+
 ## Security Contract
 
 - Visibility: internal-only action endpoints remain under `/admin/api/assistant/actions/*`.
@@ -75,7 +101,23 @@ Rules:
 
 ## Sub-Tasks
 
-No physical subtask files are created yet. This umbrella should later be split by readiness lane: acceptance matrix, security validation, observability/audit diagnostics, admin UX recovery, docs/corpus updates, and release gates.
+- `TASK-173-01_Acceptance_Matrix_and_Flow_Inventory.md`
+  - `TASK-173-01-01_Docs_Only_Cannot_Mutate_Regression.md`
+  - `TASK-173-01-02_Action_Family_Route_Error_Matrix.md`
+- `TASK-173-02_Partial_Success_and_Recovery_UX.md`
+- `TASK-173-03_Idempotency_Replay_Diagnostics_and_Support_Metadata.md`
+- `TASK-173-04_Security_and_Performance_Gates_for_Action_Endpoints.md`
+- `TASK-173-05_Observability_Audit_and_Admin_Diagnostics.md`
+- `TASK-173-06_Docs_Corpus_Capability_Limits_and_Closure.md`
+
+## Implementation Order
+
+1. Build the acceptance matrix and route/security negative cases in `TASK-173-01`.
+2. Improve partial-success and recovery UX in `TASK-173-02`.
+3. Harden idempotency diagnostics in `TASK-173-03`.
+4. Add security/performance gates in `TASK-173-04`.
+5. Add observability/audit diagnostics only where current signals are insufficient in `TASK-173-05`.
+6. Close with docs corpus, architecture/security docs, board, and changelog in `TASK-173-06`.
 
 ## Testing Requirements
 

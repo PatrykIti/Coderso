@@ -60,6 +60,29 @@ Rules:
 - local schema/registry remains the source of truth,
 - failure, timeout, no-hit, and unsafe-output paths must return explainable `needs_input` or fallback behavior.
 
+## Pseudocode
+
+```ts
+const promptPackage = buildRedactedProviderPlanningPrompt({ prompt, context, docs });
+const providerDraft = await provider.tryCreateActionPlanDraft(promptPackage);
+const adapted = adaptProviderDraftToStrictPlan(providerDraft);
+
+return adapted.ok ? adapted.plan : buildNeedsInputPlan(adapted.questions);
+```
+
+## Files to Change
+
+- `core/services/assistant/actionPlannerService.ts`
+- `core/services/assistant/actionPlanProviderAdapter.ts`
+- `core/services/assistant/actionPlanHeuristics.ts`
+- `core/services/assistant/actionPlanSchema.ts`
+- `core/services/assistant/providers/*`
+- `core/services/assistant/assistantQuota.ts`
+- `core/services/assistant/assistantMetrics.ts`
+- `core/services/assistant/assistantRedaction.ts`
+- `core/server/routes/assistantRoutes.ts`
+- `core/admin/ui/assistant/components/ActionPlanReview.tsx` if plan explanation metadata changes
+
 ## Security Contract
 
 - Visibility: internal only through existing `/admin/api/assistant/actions/plan`.
@@ -84,7 +107,21 @@ Rules:
 
 ## Sub-Tasks
 
-No physical subtask files are created yet. This umbrella should later be split into leaves for prompt packaging, provider draft execution, schema repair, fallback behavior, observability, and evaluation coverage.
+- `TASK-171-01_Provider_Prompt_Context_Packaging_and_Redaction.md`
+  - `TASK-171-01-01_Docs_and_Runtime_Context_Budgeting.md`
+  - `TASK-171-01-02_Secret_Redaction_and_Audit_Safe_Payloads.md`
+- `TASK-171-02_Provider_Draft_Execution_and_Fallback_Control.md`
+- `TASK-171-03_Schema_Repair_and_Clarification_Questions.md`
+- `TASK-171-04_Plan_Confidence_Assumptions_and_UX_Explanation.md`
+- `TASK-171-05_Provider_Planner_Evaluation_Fixtures_and_Route_Coverage.md`
+
+## Implementation Order
+
+1. Build bounded/redacted provider prompt context in `TASK-171-01`.
+2. Add controlled provider draft execution and fallback in `TASK-171-02`.
+3. Harden schema repair and typed questions in `TASK-171-03`.
+4. Surface assumptions/confidence in review UI in `TASK-171-04`.
+5. Close with deterministic fixtures and route coverage in `TASK-171-05`.
 
 ## Testing Requirements
 

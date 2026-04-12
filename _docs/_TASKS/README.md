@@ -29,7 +29,7 @@ Task board for project work. Keep task files and this board in sync.
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
 ## Statistics
-- **To Do:** 11 tasks
+- **To Do:** 42 tasks
 - **In Progress:** 5 tasks
 - **Done:** 785 tasks
 
@@ -50,6 +50,37 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-171 | LLM Guide Provider Planner Intelligence | High | Large | Provider-backed draft planning through strict local schema and recovery |
 | TASK-172 | LLM Guide Business Blueprint Packs | High | Large | More concrete business outcomes beyond the current catalog/site-kit slice |
 | TASK-173 | LLM Guide Production Readiness and Acceptance | High | Large | Acceptance, security, observability, and docs hardening for declared guide capabilities |
+| TASK-170-01 | Action Family Contract and Permission Model | High | Medium | Contract, permissions, and schema ownership before executor work |
+| TASK-170-01-01 | Entry Action Contracts | High | Medium | Safe draft/sample entry action schema and field validation |
+| TASK-170-01-02 | Menu, SEO, and Media Action Contracts | High | Medium | Navigation, SEO, and media reference action contracts |
+| TASK-170-01-03 | Form, Page, and Listing Expansion Contracts | High | Medium | Non-destructive patch contracts for current surface actions |
+| TASK-170-02 | Registry, Diff, and Preview Metadata Expansion | High | Medium | Conflicts/dependencies/warnings for expanded action families |
+| TASK-170-03 | Executor Adapters and Domain Service Reuse | High | Large | Execute new actions through existing domain services only |
+| TASK-170-04 | Admin Review UI for Expanded Actions | Medium | Medium | Review/result UI for new action families |
+| TASK-170-05 | Route Security, Tests, Docs, and Closure | High | Medium | Route validation, security coverage, docs, and changelog closure |
+| TASK-171-01 | Provider Prompt Context Packaging and Redaction | High | Medium | Bounded/redacted context package for provider planning |
+| TASK-171-01-01 | Docs and Runtime Context Budgeting | High | Medium | Deterministic docs/resource/runtime context budgets |
+| TASK-171-01-02 | Secret Redaction and Audit-Safe Payloads | High | Medium | Shared provider prompt/draft/audit redaction policy |
+| TASK-171-02 | Provider Draft Execution and Fallback Control | High | Large | Controlled provider draft call with deterministic fallback |
+| TASK-171-03 | Schema Repair and Clarification Questions | High | Medium | Safe partial draft repair and typed questions |
+| TASK-171-04 | Plan Confidence, Assumptions, and UX Explanation | Medium | Medium | Review UI explanation for provider/local planner assumptions |
+| TASK-171-05 | Provider Planner Evaluation Fixtures and Route Coverage | High | Medium | Deterministic fixtures and plan route coverage without live network |
+| TASK-172-01 | Blueprint Pack Contract and Shared Builder Expansion | High | Medium | Typed pack interface for business blueprint outcomes |
+| TASK-172-02 | Lead Capture Site Pack | High | Large | Landing page plus hardened inquiry form blueprint |
+| TASK-172-03 | Booking Service Business Pack | High | Large | Booking setup pack gated by safe booking service reuse |
+| TASK-172-04 | Product Inquiry and Ecommerce Starter Pack | High | Large | Product catalog/inquiry pack without overclaiming checkout scope |
+| TASK-172-05 | Portfolio Case Study Pack | Medium | Medium | Portfolio/case-study list/detail blueprint |
+| TASK-172-06 | Editorial Content Hub Pack | Medium | Large | Posts/pages/listings hub respecting posts domain split |
+| TASK-172-07 | Solution Kit Refinement Packs and No-Reinstall Flow | High | Large | Installed-kit refinements without duplicate reinstall |
+| TASK-172-08 | Runtime Acceptance, Docs, and Widget Pack Matrix Closure | High | Medium | Runtime acceptance and docs/matrix sync for implemented packs |
+| TASK-173-01 | Acceptance Matrix and Flow Inventory | High | Medium | Declared capability matrix with Bun/Vitest ownership |
+| TASK-173-01-01 | Docs-Only Cannot Mutate Regression | High | Small | Regression proving docs-only stays read-only |
+| TASK-173-01-02 | Action Family Route Error Matrix | High | Medium | Route errors, permissions, CSRF, and idempotency per action family |
+| TASK-173-02 | Partial Success and Recovery UX | Medium | Medium | Clear failed/partial execution state and retry guidance |
+| TASK-173-03 | Idempotency Replay Diagnostics and Support Metadata | High | Medium | Replay/conflict diagnostics without secret leakage |
+| TASK-173-04 | Security and Performance Gates for Action Endpoints | High | Medium | Security/perf gates for expanded assistant actions |
+| TASK-173-05 | Observability, Audit, and Admin Diagnostics | Medium | Medium | Support-useful redacted metrics/audit diagnostics |
+| TASK-173-06 | Docs Corpus Capability Limits and Closure | High | Medium | Honest docs/corpus/board/changelog readiness closure |
 
 ---
 

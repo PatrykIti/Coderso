@@ -63,6 +63,31 @@ Rules:
 - no production fallback only to satisfy tests,
 - no public write endpoint unless a separate task explicitly justifies it with nonce/HMAC/captcha hardening.
 
+## Pseudocode
+
+```ts
+for (const plannedFamily of selectedActionFamilies) {
+  const contract = defineStrictActionContract(plannedFamily);
+  registerAssistantActionHandler(contract.type, {
+    preview: (input) => previewThroughDomainService(contract, input),
+    execute: (input, actor) => executeThroughDomainService(contract, input, actor),
+  });
+}
+```
+
+## Files to Change
+
+- `core/services/assistant/actionPlanTypes.ts`
+- `core/services/assistant/actionPlanSchema.ts`
+- `core/services/assistant/actionRegistry.ts`
+- `core/services/assistant/actionDiffService.ts`
+- `core/services/assistant/actionExecutorService.ts`
+- `core/server/routes/assistantRoutes.ts`
+- `core/admin/services/assistantClient.ts`
+- `core/admin/ui/assistant/components/ActionPlanReview.tsx`
+- `core/admin/ui/assistant/components/ActionExecutionResult.tsx`
+- relevant domain services selected by leaf contracts
+
 ## Security Contract
 
 - Visibility: internal only under existing `/admin/api/assistant/actions/*`.
@@ -83,7 +108,22 @@ Rules:
 
 ## Sub-Tasks
 
-No physical subtask files are created yet. This umbrella should later be split into leaf tasks by action family and dependency order, starting with the families that already have clean domain services and Bun-free schema helpers.
+- `TASK-170-01_Action_Family_Contract_and_Permission_Model.md`
+  - `TASK-170-01-01_Entry_Action_Contracts.md`
+  - `TASK-170-01-02_Menu_SEO_Media_Action_Contracts.md`
+  - `TASK-170-01-03_Form_Page_Listing_Expansion_Contracts.md`
+- `TASK-170-02_Registry_Diff_and_Preview_Metadata_Expansion.md`
+- `TASK-170-03_Executor_Adapters_and_Domain_Service_Reuse.md`
+- `TASK-170-04_Admin_Review_UI_for_Expanded_Actions.md`
+- `TASK-170-05_Route_Security_Tests_Docs_and_Closure.md`
+
+## Implementation Order
+
+1. Freeze action contracts and permission model in `TASK-170-01`.
+2. Add preview/registry metadata in `TASK-170-02`.
+3. Implement executor adapters through existing domain services in `TASK-170-03`.
+4. Update review/result UI in `TASK-170-04`.
+5. Close with route security, docs, changelog, and validation in `TASK-170-05`.
 
 ## Testing Requirements
 
