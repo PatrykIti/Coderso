@@ -163,6 +163,12 @@ const mapAssistantError = (error: unknown) => {
         message: "Assistant action dependency could not be resolved",
         status: 409,
       };
+    case "assistant_action_dependency_conflict":
+      return {
+        code: "assistant_action_dependency_conflict",
+        message: "Assistant action dependency conflict",
+        status: 409,
+      };
     case "site_builder_kit_not_found":
       return {
         code: "site_builder_kit_not_found",

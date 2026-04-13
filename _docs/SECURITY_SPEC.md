@@ -214,6 +214,7 @@ Rotacja klucza:
   - `assistant_action_idempotency_required`
   - `assistant_action_actor_required`
   - `assistant_action_dependency_missing`
+  - `assistant_action_dependency_conflict`
   - mapped errors zawieraja `requestId` w payload `error.details.requestId`
 - Chat response telemetry:
   - przy sukcesie `llm-guide` odpowiedz zawiera `llm.provider`, `llm.model`, `llm.providerRequestId`, `llm.usage`
@@ -268,6 +269,7 @@ Rotacja klucza:
   - `widget-template.delete` is internal-only, requires active widget template context plus `widgets:write` for execute, and revalidates target id/name/status/category before deletion,
   - `entry.delete` is internal-only, requires active entry route context plus `content:write` and `content:publish` for execute, and revalidates optional content type/title/slug/status expectations before deletion,
   - `content-type.delete` is internal-only, requires exact server-side catalog target resolution and blocks when the catalog reports existing entries,
+  - `listing-query.delete` and `listing-template.delete` are internal-only, require active context or exact server-side catalog target resolution plus `content:write` for execute, and block when reviewed page/widget-template reference scans find surviving references,
   - `entry.upsert-draft` is the first promoted future action; it is internal-only, draft-only, requires `content:write` for execute, and delegates to existing entry services without publishing,
   - `menu.item.upsert` is internal-only, requires `menus:write` for execute, rejects unsafe/external hrefs, and delegates to existing menu services,
   - `seo.document.upsert` is internal-only, requires `content:write` for execute, validates explicit `page`/`entry` targets, and delegates to existing SEO services,

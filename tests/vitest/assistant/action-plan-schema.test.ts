@@ -296,6 +296,46 @@ test("normalizeAssistantActionPlan accepts listing query filter patch actions", 
   expect(normalized.actions[0]?.type).toBe("listing-query.filters.patch");
 });
 
+test("normalizeAssistantActionPlan accepts listing delete actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "listing-query-delete",
+        type: "listing-query.delete",
+        title: "Delete listing query",
+        description: "Delete product listing query.",
+        input: {
+          id: "query-1",
+          name: "Products Catalog Query",
+        },
+      },
+      {
+        id: "listing-template-delete",
+        type: "listing-template.delete",
+        title: "Delete listing template",
+        description: "Delete product listing template.",
+        input: {
+          id: "template-1",
+          name: "Products Grid",
+          slug: "products-grid",
+          expectedLayout: "grid",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions.map((action) => action.type)).toEqual([
+    "listing-query.delete",
+    "listing-template.delete",
+  ]);
+});
+
 test("normalizeAssistantActionPlan accepts listing template card patch actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -498,6 +538,50 @@ test("normalizeAssistantActionPlan rejects malformed listing query filter patche
             listingQueryName: "Products Catalog Query",
             filters: [],
             debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects malformed listing delete actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "listing-query-delete",
+          type: "listing-query.delete",
+          title: "Delete listing query",
+          description: "Delete product listing query.",
+          input: {
+            id: "query-1",
+            name: "Products Catalog Query",
+            debug: true,
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "listing-template-delete",
+          type: "listing-template.delete",
+          title: "Delete listing template",
+          description: "Delete product listing template.",
+          input: {
+            id: "template-1",
+            name: "Products Grid",
           },
         },
       ],

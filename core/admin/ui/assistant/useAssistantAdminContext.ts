@@ -143,6 +143,9 @@ const selectedResourceFromRoute = (
   if (segments[1] === "widgets" && segments[2] === "templates" && segments[3]) {
     return { kind: "widget-template", id: safeDecode(segments[3]) ?? segments[3] };
   }
+  if (segments[1] === "listings" && segments[2] && segments[2] !== "new") {
+    return { kind: "listing-query", id: safeDecode(segments[2]) ?? segments[2] };
+  }
   return null;
 };
 

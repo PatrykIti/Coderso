@@ -292,6 +292,17 @@ export type AssistantListingQueryUpsertAction = {
   };
 };
 
+export type AssistantListingQueryDeleteAction = {
+  id: string;
+  type: "listing-query.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+  };
+};
+
 export type AssistantListingTemplateUpsertAction = {
   id: string;
   type: "listing-template.upsert";
@@ -303,6 +314,19 @@ export type AssistantListingTemplateUpsertAction = {
     description: string | null;
     layout: "grid" | "list" | "table" | "calendar" | "map";
     config: Record<string, unknown>;
+  };
+};
+
+export type AssistantListingTemplateDeleteAction = {
+  id: string;
+  type: "listing-template.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    slug: string;
+    expectedLayout?: string | null;
   };
 };
 
@@ -540,7 +564,9 @@ export type AssistantPlannedAction =
   | AssistantCustomScreenUpsertAction
   | AssistantCustomScreenDeleteAction
   | AssistantListingQueryUpsertAction
+  | AssistantListingQueryDeleteAction
   | AssistantListingTemplateUpsertAction
+  | AssistantListingTemplateDeleteAction
   | AssistantFormUpsertAction
   | AssistantEntryUpsertDraftAction
   | AssistantEntryDeleteAction

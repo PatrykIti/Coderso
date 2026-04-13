@@ -41,6 +41,8 @@ import {
 import type {
   AssistantContentTypeSummary,
   AssistantCustomScreenSummary,
+  AssistantListingQuerySummary,
+  AssistantListingTemplateSummary,
 } from "./adminContextTypes";
 
 export {
@@ -138,6 +140,24 @@ const contentTypeDeleteKeywords = [
   "typ treści",
   "model tresci",
   "model treści",
+];
+
+const listingQueryDeleteKeywords = [
+  "listing query",
+  "listing queries",
+  "query listingu",
+  "zapytanie listingu",
+  "zapytanie listingowe",
+  "kwerenda listingowa",
+];
+
+const listingTemplateDeleteKeywords = [
+  "listing template",
+  "listing templates",
+  "template listingu",
+  "template listingowy",
+  "szablon listingu",
+  "szablon listingowy",
 ];
 
 const countWords = new Map<string, number>([
@@ -651,6 +671,221 @@ const buildContentTypeDeletePlan = (
   };
 };
 
+const sortListingQueriesByName = (queries: AssistantListingQuerySummary[]) =>
+  [...queries].sort((left, right) => left.name.localeCompare(right.name));
+
+const sortListingTemplatesBySlug = (templates: AssistantListingTemplateSummary[]) =>
+  [...templates].sort((left, right) => left.slug.localeCompare(right.slug));
+
+const buildListingQueryDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-listing-query-delete-needs-input",
+  status: "needs_input",
+  intentId: "listing-query-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Listing query delete needs a safe target",
+  answer: [
+    "I can delete listing queries only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Open the listing query editor or provide an exact listing query name.",
+  ].join("\n"),
+  summary: "Listing query deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "listing-query-delete-target",
+      label: "Which exact listing query should I delete?",
+      description: "Provide an exact listing query name so I can build a reviewed dry-run plan.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildListingTemplateDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-listing-template-delete-needs-input",
+  status: "needs_input",
+  intentId: "listing-template-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Listing template delete needs a safe target",
+  answer: [
+    "I can delete listing templates only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Provide an exact listing template name or slug.",
+  ].join("\n"),
+  summary: "Listing template deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "listing-template-delete-target",
+      label: "Which exact listing template should I delete?",
+      description: "Provide an exact listing template name or slug for review.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const findListingQueryDeleteTargets = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const selected = context.runtimeSnapshot?.selectedResource;
+  const queries = context.resourceCatalog?.listings.queries ?? [];
+  if (selected?.kind === "listing-query") {
+    const match = queries.find((entry) => entry.id === selected.id) ?? null;
+    return match ? [match] : [];
+  }
+  const target = extractQuotedPrefix(prompt);
+  if (!target) return [];
+  const normalizedTarget = normalizeAssistantPlannerPrompt(target);
+  return sortListingQueriesByName(queries).filter((entry) =>
+    [entry.id, entry.name]
+      .map((value) => normalizeAssistantPlannerPrompt(value))
+      .includes(normalizedTarget)
+  );
+};
+
+const findListingTemplateDeleteTargets = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const selected = context.runtimeSnapshot?.selectedResource;
+  const templates = context.resourceCatalog?.listings.templates ?? [];
+  if (selected?.kind === "listing-template") {
+    const match = templates.find((entry) => entry.id === selected.id) ?? null;
+    return match ? [match] : [];
+  }
+  const target = extractQuotedPrefix(prompt);
+  if (!target) return [];
+  const normalizedTarget = normalizeAssistantPlannerPrompt(target);
+  return sortListingTemplatesBySlug(templates).filter((entry) =>
+    [entry.id, entry.name, entry.slug]
+      .map((value) => normalizeAssistantPlannerPrompt(value))
+      .includes(normalizedTarget)
+  );
+};
+
+const buildListingQueryDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    !isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, listingQueryDeleteKeywords)
+  ) {
+    return null;
+  }
+  const targets = findListingQueryDeleteTargets(prompt, context);
+  if (targets.length !== 1) {
+    return buildListingQueryDeleteNeedsInputPlan(
+      prompt,
+      targets.length > 1
+        ? "The prompt matched more than one listing query."
+        : "The prompt did not resolve to one exact listing query from active context or the server-side catalog."
+    );
+  }
+  const target = targets[0];
+  if (!target) return null;
+  return {
+    id: `plan-listing-query-delete-${target.id}`,
+    status: "ready",
+    intentId: "listing-query-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Delete ${target.name}`,
+    answer: "I can delete the selected listing query through the reviewed LLM Guide action flow.",
+    summary: `Delete listing query "${target.name}".`,
+    confidence: 0.82,
+    assumptions: [
+      "The target listing query is resolved from active context or the server-side resource catalog.",
+      "Dry-run checks page and widget template references before deletion.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `listing-query-delete-${target.id}`,
+        type: "listing-query.delete",
+        title: `Delete ${target.name}`,
+        description: "Delete a listing query selected from trusted admin context.",
+        input: {
+          id: target.id,
+          name: target.name,
+        },
+      },
+    ],
+  };
+};
+
+const buildListingTemplateDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    !isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, listingTemplateDeleteKeywords)
+  ) {
+    return null;
+  }
+  const targets = findListingTemplateDeleteTargets(prompt, context);
+  if (targets.length !== 1) {
+    return buildListingTemplateDeleteNeedsInputPlan(
+      prompt,
+      targets.length > 1
+        ? "The prompt matched more than one listing template."
+        : "The prompt did not resolve to one exact listing template from active context or the server-side catalog."
+    );
+  }
+  const target = targets[0];
+  if (!target) return null;
+  return {
+    id: `plan-listing-template-delete-${target.id}`,
+    status: "ready",
+    intentId: "listing-template-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Delete ${target.name}`,
+    answer:
+      "I can delete the selected listing template through the reviewed LLM Guide action flow.",
+    summary: `Delete listing template "${target.name}" (${target.slug}).`,
+    confidence: 0.82,
+    assumptions: [
+      "The target listing template is resolved from active context or the server-side resource catalog.",
+      "Dry-run checks page and widget template references before deletion.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `listing-template-delete-${target.id}`,
+        type: "listing-template.delete",
+        title: `Delete ${target.name}`,
+        description: "Delete a listing template selected from trusted admin context.",
+        input: {
+          id: target.id,
+          name: target.name,
+          slug: target.slug,
+          expectedLayout: target.layout,
+        },
+      },
+    ],
+  };
+};
+
 const buildReadyPlanForIntentFamily = (
   intentFamily: AssistantIntentFamily,
   options: {
@@ -1077,6 +1312,18 @@ export const planAssistantActions = (
     classification.normalizedPrompt
   );
   if (pageDeletePlan) return normalizeAssistantActionPlan(pageDeletePlan);
+  const listingQueryDeletePlan = buildListingQueryDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (listingQueryDeletePlan) return normalizeAssistantActionPlan(listingQueryDeletePlan);
+  const listingTemplateDeletePlan = buildListingTemplateDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (listingTemplateDeletePlan) return normalizeAssistantActionPlan(listingTemplateDeletePlan);
   const widgetTemplateDeletePlan = buildWidgetTemplateDeletePlan(
     input.prompt,
     context,

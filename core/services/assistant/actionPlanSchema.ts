@@ -256,6 +256,14 @@ const normalizeListingQueryInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeListingQueryDeleteInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+  };
+};
+
 const normalizeListingTemplateInput = (input: JsonRecord) => {
   assertKeys(input, new Set(["name", "slug", "description", "layout", "config"]));
   return {
@@ -264,6 +272,18 @@ const normalizeListingTemplateInput = (input: JsonRecord) => {
     description: readOptionalText(input.description),
     layout: readEnum(input.layout, new Set(["grid", "list", "table", "calendar", "map"])),
     config: assertRecord(input.config),
+  };
+};
+
+const normalizeListingTemplateDeleteInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "slug", "expectedLayout"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    slug: readText(input.slug),
+    ...(input.expectedLayout !== undefined
+      ? { expectedLayout: readOptionalText(input.expectedLayout) }
+      : {}),
   };
 };
 
@@ -670,8 +690,12 @@ const normalizeActionInput = (
       return normalizeCustomScreenDeleteInput(record);
     case "listing-query.upsert":
       return normalizeListingQueryInput(record);
+    case "listing-query.delete":
+      return normalizeListingQueryDeleteInput(record);
     case "listing-template.upsert":
       return normalizeListingTemplateInput(record);
+    case "listing-template.delete":
+      return normalizeListingTemplateDeleteInput(record);
     case "form.upsert":
       return normalizeFormInput(record);
     case "entry.upsert-draft":

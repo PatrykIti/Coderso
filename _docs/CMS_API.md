@@ -2456,6 +2456,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-174-03-02` promuje `page.delete` do executable typed action dla aktywnej strony; execute ponownie sprawdza id/title/slug/status przed usunieciem.
 `TASK-174-03-03` promuje `widget-template.delete` do executable typed action dla aktywnego reusable widget template; dry-run ostrzega o blast radius, a execute sprawdza id/name/status/category przed usunieciem.
 `TASK-174-03-04` promuje `entry.delete` i `content-type.delete` do executable typed actions; content type delete jest blokowany, gdy server-side catalog raportuje istniejace entries.
+`TASK-174-03-05` promuje `listing-query.delete` i `listing-template.delete` do executable typed actions; dry-run/execute blokuje usuniecie, gdy page/widget-template reference scan nadal widzi zalezne referencje.
 `TASK-172-02` dodaje lead capture blueprint pack: prompt o stronie kontaktowej/leadowej moze zwrocic plan `form.upsert` + prosty `page.upsert` z embedem formularza.
 `TASK-172-03` dodaje gated booking blueprint pack: prompt bookingowy zwraca `needs_input`, dopoki nie powstana dedykowane booking action adapters.
 `TASK-172-04` dodaje product inquiry pack: produktowy katalog z formularzem zapytania jest executable, ale checkout/payment prompt zwraca `needs_input` do czasu dedykowanych adapterow commerce.
@@ -2849,6 +2850,7 @@ Error codes:
 - `assistant_action_idempotency_conflict`
 - `assistant_action_actor_required`
 - `assistant_action_dependency_missing`
+- `assistant_action_dependency_conflict`
 - `site_builder_kit_not_found`
 - `site_builder_run_not_found`
 - `validation_error` (payload schema mismatch)

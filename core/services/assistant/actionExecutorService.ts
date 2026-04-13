@@ -15,11 +15,13 @@ import {
 import type { CustomScreenBinding } from "../customScreens/customScreenSchemas";
 import {
   createListingQuery,
+  deleteListingQuery,
   listListingQueries,
   updateListingQuery,
 } from "../content/listingQueriesService";
 import {
   createListingTemplate,
+  deleteListingTemplate,
   listListingTemplates,
   updateListingTemplate,
 } from "../content/listingTemplatesService";
@@ -35,6 +37,7 @@ import {
   deletePage,
   getPage,
   getPageBySlug,
+  listPages,
   publishPage,
   updatePage,
 } from "../pages/pageService";
@@ -45,6 +48,7 @@ import {
 import {
   deleteWidgetTemplate,
   getWidgetTemplate,
+  listWidgetTemplates,
 } from "../widgets/widgetTemplateService";
 import {
   createForm,
@@ -85,8 +89,10 @@ import type {
   AssistantFormUpsertAction,
   AssistantFormAutomationUpsertAction,
   AssistantListingQueryFiltersPatchAction,
+  AssistantListingQueryDeleteAction,
   AssistantListingQueryUpsertAction,
   AssistantListingTemplateCardPatchAction,
+  AssistantListingTemplateDeleteAction,
   AssistantListingTemplateUpsertAction,
   AssistantMediaReferenceAttachAction,
   AssistantMenuItemUpsertAction,
@@ -207,6 +213,106 @@ const readFormEmbedSource = (page: unknown) => {
   }
 
   return null;
+};
+
+type ListingResourceReferenceTarget = {
+  listingQueryId?: string | null;
+  listingTemplateId?: string | null;
+};
+
+type ListingResourceReference = {
+  containerType: "page" | "widget-template";
+  containerId: string;
+  containerName: string;
+  adminHref: string;
+};
+
+const valueReferencesListingResource = (
+  value: unknown,
+  target: ListingResourceReferenceTarget
+) => {
+  const visited = new WeakSet<object>();
+  let inspected = 0;
+  const maxInspected = 5_000;
+
+  const walk = (node: unknown): boolean => {
+    inspected += 1;
+    if (inspected > maxInspected) return false;
+    if (!node || typeof node !== "object") return false;
+    if (visited.has(node)) return false;
+    visited.add(node);
+
+    if (Array.isArray(node)) {
+      return node.some(walk);
+    }
+
+    const record = node as Record<string, unknown>;
+    const listingQueryId = readString(record.listingQueryId);
+    const listingTemplateId = readString(record.listingTemplateId);
+    if (target.listingQueryId && listingQueryId === target.listingQueryId) return true;
+    if (target.listingTemplateId && listingTemplateId === target.listingTemplateId) return true;
+
+    return Object.values(record).some(walk);
+  };
+
+  return walk(value);
+};
+
+const collectListingResourceReferences = async (
+  target: ListingResourceReferenceTarget,
+  deps: ActionExecutorDeps
+) => {
+  const references: ListingResourceReference[] = [];
+  const pages = await deps.listPages();
+  const pageRecords = await Promise.all(pages.map((page) => deps.getPage(page.id)));
+  for (const page of pageRecords) {
+    if (!page) continue;
+    const currentData = isRecord(page.currentData) ? page.currentData : null;
+    const publishedData = isRecord(page.publishedData) ? page.publishedData : null;
+    if (
+      valueReferencesListingResource(currentData, target) ||
+      valueReferencesListingResource(publishedData, target)
+    ) {
+      references.push({
+        containerType: "page",
+        containerId: page.id,
+        containerName: page.title,
+        adminHref: `/admin/pages/${encodeURIComponent(page.id)}`,
+      });
+    }
+  }
+
+  const widgetTemplates = await deps.listWidgetTemplates();
+  for (const template of widgetTemplates) {
+    if (
+      valueReferencesListingResource(template.blocks, target) ||
+      valueReferencesListingResource(template.settings, target)
+    ) {
+      references.push({
+        containerType: "widget-template",
+        containerId: template.id,
+        containerName: template.name,
+        adminHref: `/admin/coderso/widgets/templates/${encodeURIComponent(template.id)}`,
+      });
+    }
+  }
+
+  return references;
+};
+
+const formatListingReferenceSummary = (references: ListingResourceReference[]) => {
+  const pageCount = references.filter((entry) => entry.containerType === "page").length;
+  const templateCount = references.filter(
+    (entry) => entry.containerType === "widget-template"
+  ).length;
+  return [
+    pageCount > 0 ? `${pageCount} page${pageCount === 1 ? "" : "s"}` : null,
+    templateCount > 0
+      ? `${templateCount} widget template${templateCount === 1 ? "" : "s"}`
+      : null,
+  ]
+    .filter((entry): entry is string => Boolean(entry))
+    .join(" and ");
 };
 
 const buildCatalogPageData = (input: {
@@ -427,17 +533,21 @@ type ActionExecutorDeps = {
   deleteCustomScreen: typeof deleteCustomScreen;
   listListingQueries: typeof listListingQueries;
   createListingQuery: typeof createListingQuery;
+  deleteListingQuery: typeof deleteListingQuery;
   updateListingQuery: typeof updateListingQuery;
   listListingTemplates: typeof listListingTemplates;
   createListingTemplate: typeof createListingTemplate;
+  deleteListingTemplate: typeof deleteListingTemplate;
   updateListingTemplate: typeof updateListingTemplate;
   getPageBySlug: typeof getPageBySlug;
   getPage: typeof getPage;
+  listPages: typeof listPages;
   createPage: typeof createPage;
   deletePage: typeof deletePage;
   updatePage: typeof updatePage;
   publishPage: typeof publishPage;
   getWidgetTemplate: typeof getWidgetTemplate;
+  listWidgetTemplates: typeof listWidgetTemplates;
   deleteWidgetTemplate: typeof deleteWidgetTemplate;
   listForms: typeof listForms;
   createForm: typeof createForm;
@@ -477,17 +587,21 @@ const defaultDeps: ActionExecutorDeps = {
   deleteCustomScreen,
   listListingQueries,
   createListingQuery,
+  deleteListingQuery,
   updateListingQuery,
   listListingTemplates,
   createListingTemplate,
+  deleteListingTemplate,
   updateListingTemplate,
   getPageBySlug,
   getPage,
+  listPages,
   createPage,
   deletePage,
   updatePage,
   publishPage,
   getWidgetTemplate,
+  listWidgetTemplates,
   deleteWidgetTemplate,
   listForms,
   createForm,
@@ -693,6 +807,53 @@ const buildListingQueryPreview = async (
   });
 };
 
+const buildListingQueryDeletePreview = async (
+  action: AssistantListingQueryDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listListingQueries()).find((entry) => entry.id === action.input.id) ?? null;
+  const matches = existing?.name === action.input.name;
+  const references = existing
+    ? await collectListingResourceReferences({ listingQueryId: existing.id }, deps)
+    : [];
+  const referenceSummary = formatListingReferenceSummary(references);
+
+  return createPreviewChange({
+    action,
+    targetType: "listing-query",
+    targetKey: action.input.name,
+    operation: "delete",
+    summary: `Delete listing query "${action.input.name}"`,
+    warnings:
+      references.length > 0
+        ? [`This listing query is still referenced by ${referenceSummary}.`]
+        : [],
+    conflicts:
+      existing && matches && references.length === 0
+        ? []
+        : [
+            {
+              code:
+                references.length > 0
+                  ? "assistant_action_dependency_conflict"
+                  : "assistant_action_dependency_missing",
+              severity: "error",
+              message:
+                references.length > 0
+                  ? "Listing query is still referenced by reviewed page or widget template data."
+                  : existing
+                    ? "Listing query no longer matches the planned delete target."
+                    : "Listing query was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? { id: existing.id, name: existing.name, description: existing.description }
+      : null,
+    nextValue: null,
+  });
+};
+
 const buildListingQueryFiltersPatchPreview = async (
   action: AssistantListingQueryFiltersPatchAction,
   deps: ActionExecutorDeps
@@ -741,6 +902,62 @@ const buildListingTemplatePreview = async (
     summary: `${existing ? "Update" : "Create"} listing template "${action.input.name}"`,
     beforeValue: existing,
     nextValue: action.input,
+  });
+};
+
+const buildListingTemplateDeletePreview = async (
+  action: AssistantListingTemplateDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing =
+    (await deps.listListingTemplates()).find((entry) => entry.id === action.input.id) ?? null;
+  const expectedLayout = action.input.expectedLayout?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    existing.slug === action.input.slug &&
+    (!expectedLayout || existing.layout === expectedLayout);
+  const references = existing
+    ? await collectListingResourceReferences({ listingTemplateId: existing.id }, deps)
+    : [];
+  const referenceSummary = formatListingReferenceSummary(references);
+
+  return createPreviewChange({
+    action,
+    targetType: "listing-template",
+    targetKey: action.input.slug,
+    operation: "delete",
+    summary: `Delete listing template "${action.input.name}"`,
+    warnings:
+      references.length > 0
+        ? [`This listing template is still referenced by ${referenceSummary}.`]
+        : [],
+    conflicts:
+      existing && matches && references.length === 0
+        ? []
+        : [
+            {
+              code:
+                references.length > 0
+                  ? "assistant_action_dependency_conflict"
+                  : "assistant_action_dependency_missing",
+              severity: "error",
+              message:
+                references.length > 0
+                  ? "Listing template is still referenced by reviewed page or widget template data."
+                  : existing
+                    ? "Listing template no longer matches the planned delete target."
+                    : "Listing template was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          slug: existing.slug,
+          layout: existing.layout,
+        }
+      : null,
+    nextValue: null,
   });
 };
 
@@ -1712,6 +1929,39 @@ const executeListingQueryAction = async (
   };
 };
 
+const executeListingQueryDeleteAction = async (
+  action: AssistantListingQueryDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing =
+    (await deps.listListingQueries()).find((entry) => entry.id === action.input.id) ?? null;
+  if (!existing || existing.name !== action.input.name) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const references = await collectListingResourceReferences({ listingQueryId: existing.id }, deps);
+  if (references.length > 0) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const deleted = await deps.deleteListingQuery(existing.id);
+  if (!deleted) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "listing-query",
+    targetKey: action.input.name,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: "/admin/coderso/listings",
+    publicHref: null,
+    message: `Deleted listing query "${existing.name}".`,
+  };
+};
+
 const executeListingQueryFiltersPatchAction = async (
   action: AssistantListingQueryFiltersPatchAction,
   preview: AssistantActionPreviewChange,
@@ -1788,6 +2038,47 @@ const executeListingTemplateAction = async (
       preview.operation === "noop"
         ? "Listing template already matched the plan."
         : "Grid template is ready for house project cards.",
+  };
+};
+
+const executeListingTemplateDeleteAction = async (
+  action: AssistantListingTemplateDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing =
+    (await deps.listListingTemplates()).find((entry) => entry.id === action.input.id) ?? null;
+  const expectedLayout = action.input.expectedLayout?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    existing.slug !== action.input.slug ||
+    (expectedLayout && existing.layout !== expectedLayout)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const references = await collectListingResourceReferences({
+    listingTemplateId: existing.id,
+  }, deps);
+  if (references.length > 0) {
+    throw new Error("assistant_action_dependency_conflict");
+  }
+  const deleted = await deps.deleteListingTemplate(existing.id);
+  if (!deleted) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "listing-template",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: "/admin/coderso/listings",
+    publicHref: null,
+    message: `Deleted listing template "${deleted.name}".`,
   };
 };
 
@@ -2487,6 +2778,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeListingQueryAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
+  "listing-query.delete": {
+    preview: (action, ctx) =>
+      action.type === "listing-query.delete"
+        ? buildListingQueryDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "listing-query.delete"
+        ? executeListingQueryDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "listing-query.filters.patch": {
     preview: (action, ctx) =>
       action.type === "listing-query.filters.patch"
@@ -2505,6 +2806,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "listing-template.upsert"
         ? executeListingTemplateAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "listing-template.delete": {
+    preview: (action, ctx) =>
+      action.type === "listing-template.delete"
+        ? buildListingTemplateDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "listing-template.delete"
+        ? executeListingTemplateDeleteAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "listing-template.card.patch": {

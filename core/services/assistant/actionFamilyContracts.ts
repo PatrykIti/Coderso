@@ -192,10 +192,42 @@ export const assistantActionFamilyContracts = [
     ["name", "contentTypeSlug", "fields", "includeDrafts", "limit", "sort"]
   ),
   executableContract(
+    "listing-query.delete",
+    "listing",
+    "core/services/content/listingQueriesService.ts",
+    ["id", "name"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: [
+        "Deletes one exact listing query after page/widget references are checked.",
+      ],
+    }
+  ),
+  executableContract(
     "listing-template.upsert",
     "listing",
     "core/services/content/listingTemplatesService.ts",
     ["name", "slug", "layout", "config"]
+  ),
+  executableContract(
+    "listing-template.delete",
+    "listing",
+    "core/services/content/listingTemplatesService.ts",
+    ["id", "name", "slug"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: [
+        "Deletes one exact listing template after page/widget references are checked.",
+      ],
+    }
   ),
   executableContract(
     "form.upsert",

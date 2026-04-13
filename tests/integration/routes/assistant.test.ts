@@ -528,6 +528,14 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
     actions: [
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
+      { id: "listing-query", type: "listing-query.delete", title: "Listing query", description: "Listing query", input: {} },
+      {
+        id: "listing-template",
+        type: "listing-template.delete",
+        title: "Listing template",
+        description: "Listing template",
+        input: {},
+      },
       {
         id: "content-type",
         type: "content-type.delete",
@@ -697,6 +705,14 @@ test("assistant action execute route enforces per-action write permissions", asy
     actions: [
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
       { id: "entry", type: "entry.delete", title: "Entry", description: "Entry", input: {} },
+      { id: "listing-query", type: "listing-query.delete", title: "Listing query", description: "Listing query", input: {} },
+      {
+        id: "listing-template",
+        type: "listing-template.delete",
+        title: "Listing template",
+        description: "Listing template",
+        input: {},
+      },
       {
         id: "content-type",
         type: "content-type.delete",

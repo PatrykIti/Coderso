@@ -5,7 +5,7 @@
 **Category:** Assistant/Delete + Listings
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02, TASK-174-03
-**Status:** To Do
+**Status:** Done (2026-04-13)
 
 ---
 
@@ -65,3 +65,19 @@ No child task files.
 1. Assistant can delete exact listing queries/templates after review.
 2. Referenced resources are not silently removed.
 3. Existing listing domain services own deletion.
+
+## Completion Notes
+
+- Added executable `listing-query.delete` and `listing-template.delete`.
+- Planner resolves listing query delete from active listing query route context or exact server-side catalog name.
+- Planner resolves listing template delete from exact server-side catalog name/slug.
+- Dry-run scans page data and widget template blocks/settings for surviving references and emits dependency conflicts.
+- Execute revalidates id/name/slug/layout expectations and reference state before calling existing listing domain delete services.
+
+## Validation
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/ui/assistant-panel.test.tsx`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

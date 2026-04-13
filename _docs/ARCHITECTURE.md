@@ -413,6 +413,7 @@ Action family contract registry:
 - `widget-template.delete` is executable for active-context reusable template delete requests; dry-run warns about reusable template blast radius and execute rechecks id/name/status/category before deletion.
 - `entry.delete` is executable for active entry route context and rechecks optional content type/title/slug/status expectations before deletion.
 - `content-type.delete` is executable for exact server-side catalog targets and is blocked when the catalog reports existing entries.
+- `listing-query.delete` and `listing-template.delete` are executable for active/exact catalog listing targets; dry-run and execute scan page data plus widget template blocks/settings for surviving references before deletion.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
 - `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
 - `media.reference.attach` is executable for `entry` targets and uses existing media/entry services to attach existing media ids without accepting upload bytes.

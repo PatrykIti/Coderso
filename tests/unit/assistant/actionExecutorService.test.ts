@@ -61,6 +61,7 @@ const createDeps = () => {
     slug: string;
     status: string;
     currentData: Record<string, unknown>;
+    publishedData: Record<string, unknown> | null;
   }> = [];
   const forms: Array<{
     id: string;
@@ -275,6 +276,12 @@ const createDeps = () => {
       if (input.query !== undefined) existing.query = input.query;
       return existing;
     },
+    deleteListingQuery: async (id: string) => {
+      const index = listingQueries.findIndex((entry) => entry.id === id);
+      if (index < 0) return null;
+      const [deleted] = listingQueries.splice(index, 1);
+      return deleted ?? null;
+    },
     listListingTemplates: async () => listingTemplates,
     createListingTemplate: async (input: {
       name: string;
@@ -316,10 +323,25 @@ const createDeps = () => {
       if (input.config !== undefined) existing.config = input.config;
       return existing;
     },
+    deleteListingTemplate: async (id: string) => {
+      const index = listingTemplates.findIndex((entry) => entry.id === id);
+      if (index < 0) return null;
+      const [deleted] = listingTemplates.splice(index, 1);
+      return deleted ?? null;
+    },
     getPageBySlug: async (slug: string) =>
       pages.find((entry) => entry.slug === slug) ?? null,
     getPage: async (id: string) =>
       pages.find((entry) => entry.id === id) ?? null,
+    listPages: async () =>
+      pages.map((page) => ({
+        id: page.id,
+        title: page.title,
+        slug: page.slug,
+        status: page.status as "draft" | "published" | "scheduled" | "archived",
+        updatedAt: new Date("2026-04-10T12:00:00.000Z"),
+        author: null,
+      })),
     createPage: async (input: {
       title: string;
       slug: string;
@@ -332,6 +354,7 @@ const createDeps = () => {
         slug: input.slug,
         status: "draft",
         currentData: input.data,
+        publishedData: null,
       };
       pages.push(record);
       return record;
@@ -357,12 +380,14 @@ const createDeps = () => {
       const existing = pages.find((entry) => entry.id === id) ?? null;
       if (!existing) return null;
       existing.status = "published";
+      existing.publishedData = existing.currentData;
       return existing as unknown as Awaited<
         ReturnType<(typeof import("../../../core/services/pages/pageService"))["publishPage"]>
       >;
     },
     getWidgetTemplate: async (id: string) =>
       widgetTemplates.find((entry) => entry.id === id) ?? null,
+    listWidgetTemplates: async () => widgetTemplates,
     deleteWidgetTemplate: async (id: string) => {
       const index = widgetTemplates.findIndex((entry) => entry.id === id);
       if (index < 0) return null;
@@ -1078,6 +1103,171 @@ test("executeAssistantActionPlan deletes widget templates through explicit delet
   expect(executed.summary.delete).toBe(1);
   expect(executed.results[0]?.message).toBe('Deleted widget template "Contact CTA".');
   expect(await deps.getWidgetTemplate("template-1")).toBeNull();
+});
+
+test("executeAssistantActionPlan deletes listing queries and templates through explicit delete actions", async () => {
+  const deps = createDeps();
+  const query = await deps.createListingQuery({
+    name: "Products Catalog Query",
+    description: "Product listing",
+    query: {
+      source: "entries",
+      sourceConfig: {
+        contentTypeId: "ct-products",
+      },
+      filters: [],
+      sort: [],
+      pagination: { limit: 12, offset: 0 },
+      fields: ["title"],
+    },
+  });
+  const template = await deps.createListingTemplate({
+    name: "Products Grid",
+    slug: "products-grid",
+    description: "Product cards",
+    layout: "grid",
+    config: { fields: [] },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-listing-delete",
+    status: "ready",
+    intentId: "listing-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete listing resources",
+    answer: "I can delete selected listing resources.",
+    summary: "Delete listing query and template.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "listing-query-delete-1",
+        type: "listing-query.delete",
+        title: "Delete Products Catalog Query",
+        description: "Delete selected listing query.",
+        input: {
+          id: query.id,
+          name: "Products Catalog Query",
+        },
+      },
+      {
+        id: "listing-template-delete-1",
+        type: "listing-template.delete",
+        title: "Delete Products Grid",
+        description: "Delete selected listing template.",
+        input: {
+          id: template.id,
+          name: "Products Grid",
+          slug: "products-grid",
+          expectedLayout: "grid",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes.map((change) => change.operation)).toEqual(["delete", "delete"]);
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-listing-delete-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.delete).toBe(2);
+  expect(deps.__state.listingQueries).toHaveLength(0);
+  expect(deps.__state.listingTemplates).toHaveLength(0);
+});
+
+test("executeAssistantActionPlan blocks listing deletes when page references remain", async () => {
+  const deps = createDeps();
+  const query = await deps.createListingQuery({
+    name: "Products Catalog Query",
+    description: "Product listing",
+    query: {
+      source: "entries",
+      sourceConfig: {
+        contentTypeId: "ct-products",
+      },
+      filters: [],
+      sort: [],
+      pagination: { limit: 12, offset: 0 },
+      fields: ["title"],
+    },
+  });
+  const template = await deps.createListingTemplate({
+    name: "Products Grid",
+    slug: "products-grid",
+    description: "Product cards",
+    layout: "grid",
+    config: { fields: [] },
+  });
+  await deps.createPage({
+    title: "Products",
+    slug: "/products",
+    data: {
+      blocks: [
+        {
+          id: "catalog-list",
+          type: "content-list",
+          data: {
+            source: {
+              listingQueryId: query.id,
+              listingTemplateId: template.id,
+            },
+          },
+        },
+      ],
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-listing-delete-blocked",
+    status: "ready",
+    intentId: "listing-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete listing query",
+    answer: "I can delete selected listing query.",
+    summary: "Delete listing query.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "listing-query-delete-1",
+        type: "listing-query.delete",
+        title: "Delete Products Catalog Query",
+        description: "Delete selected listing query.",
+        input: {
+          id: query.id,
+          name: "Products Catalog Query",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.warnings[0]).toContain("referenced by 1 page");
+  expect(preview.changes[0]?.conflicts[0]?.code).toBe(
+    "assistant_action_dependency_conflict"
+  );
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-listing-delete-blocked-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.failed).toBe(1);
+  expect(executed.results[0]?.errorCode).toBe("assistant_action_dependency_conflict");
+  expect(deps.__state.listingQueries).toHaveLength(1);
 });
 
 test("executeAssistantActionPlan upserts menu items without duplicates", async () => {

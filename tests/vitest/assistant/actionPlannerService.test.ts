@@ -393,6 +393,179 @@ test("planAssistantActions blocks content type delete when entries exist", () =>
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions builds listing query delete plan from active listing route", () => {
+  const plan = planAssistantActions({
+    prompt: "usun ten listing query",
+    context: {
+      page: "/admin/coderso/listings/query-1",
+      locale: "pl-PL",
+      runtimeSnapshot: {
+        schemaVersion: 1,
+        route: "/admin/coderso/listings/query-1",
+        activeHref: "/admin/coderso/listings/query-1",
+        area: "coderso",
+        codersoModule: "listings",
+        selectedResource: { kind: "listing-query", id: "query-1" },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          requiredForVisibleActions: [],
+          reason: "frontend_user_has_no_permissions",
+        },
+      },
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-13T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-1",
+              name: "Products Catalog Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("listing-query-delete");
+  expect(plan.actions[0]).toMatchObject({
+    id: "listing-query-delete-query-1",
+    type: "listing-query.delete",
+    input: {
+      id: "query-1",
+      name: "Products Catalog Query",
+    },
+  });
+});
+
+test("planAssistantActions builds listing template delete plan from exact slug", () => {
+  const plan = planAssistantActions({
+    prompt: "usun listing template 'products-grid'",
+    context: {
+      page: "/admin/coderso/listings",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-13T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: {
+          queries: [],
+          templates: [
+            {
+              id: "template-1",
+              name: "Products Grid",
+              slug: "products-grid",
+              description: null,
+              layout: "grid",
+              configKeys: [],
+            },
+          ],
+        },
+        forms: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("listing-template-delete");
+  expect(plan.actions[0]).toMatchObject({
+    id: "listing-template-delete-template-1",
+    type: "listing-template.delete",
+    input: {
+      id: "template-1",
+      name: "Products Grid",
+      slug: "products-grid",
+      expectedLayout: "grid",
+    },
+  });
+});
+
+test("planAssistantActions asks for exact listing query when name is ambiguous", () => {
+  const plan = planAssistantActions({
+    prompt: "usun listing query 'Products Catalog Query'",
+    context: {
+      page: "/admin/coderso/listings",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-13T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [],
+        customScreens: [],
+        listings: {
+          queries: [
+            {
+              id: "query-1",
+              name: "Products Catalog Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+            {
+              id: "query-2",
+              name: "Products Catalog Query",
+              description: null,
+              source: "entries",
+              contentTypeId: "ct-products",
+              taxonomyId: null,
+              includeDrafts: false,
+              fields: ["title"],
+              sort: [],
+              limit: 12,
+            },
+          ],
+          templates: [],
+        },
+        forms: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("listing-query-delete-needs-input");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActions routes non-house-project setup prompts into generic needs-input family", () => {
   const docsQuestionPlan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",

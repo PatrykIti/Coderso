@@ -209,3 +209,4 @@ await executeAssistantActionPlan({ plan, idempotencyKey, actorId });
 - 2026-04-13: Completed `TASK-174-03-02`; active page deletion is available as reviewed `page.delete`.
 - 2026-04-13: Completed `TASK-174-03-03`; active widget template deletion is available as reviewed `widget-template.delete`.
 - 2026-04-13: Completed `TASK-174-03-04`; active entry deletion and guarded content type deletion are available as reviewed typed actions.
+- 2026-04-13: Completed `TASK-174-03-05`; listing query/template deletion is available as reviewed typed actions with page/widget-template reference conflict checks.
