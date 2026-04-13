@@ -28,7 +28,7 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 13 tasks
+- **To Do:** 31 tasks
 - **In Progress:** 6 tasks
 - **Done:** 836 tasks
 
@@ -45,11 +45,29 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-021 | Store Backend Core | High | Large | Public API + signing |
 | TASK-022 | Store Publish Pipeline and Security Scans | High | Large | Publish validation + scans |
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
-| TASK-174-02 | Cleanup Dry-Run Planner and Dependency Order | High | Large | Build reviewable cleanup plans from persisted undo manifests |
-| TASK-174-03 | Create Resource Delete Adapters | High | Large | Delete/archive assistant-created resource records safely |
-| TASK-174-04 | Inverse Patch and Attach Adapters | High | Large | Detach/restore assistant-owned patches and references |
-| TASK-174-05 | Site-Kit Rollback Bridge | High | Medium | Route assistant cleanup through existing solution-kit rollback |
-| TASK-174-06 | Admin Undo Review and Execution UI | High | Large | Review and execute cleanup without autonomous deletion |
+| TASK-174-02 | Active Admin Surface Context and Inspection | High | Large | Give LLM Guide bounded active page/screen/template/canvas context |
+| TASK-174-02-01 | Active Page Canvas Context | High | Medium | Capture active page id, selected block, and bounded canvas summary |
+| TASK-174-02-02 | Active Widget Template Context | High | Medium | Capture active widget template id, settings summary, and selected block |
+| TASK-174-02-03 | Active Custom Screen Context | High | Medium | Capture active custom screen, bindings, capabilities, and selected entry |
+| TASK-174-02-04 | Server-Side Context Hydration and Redaction | High | Medium | Rehydrate active resources server-side and redact provider/browser context |
+| TASK-174-03 | Resource Delete Adapters | High | Large | Delete/archive supported user-created and assistant-created resources safely |
+| TASK-174-03-02 | Page Delete Action | High | Medium | Delete exact pages through reviewed typed action flow |
+| TASK-174-03-03 | Widget Template Delete Action | High | Medium | Delete exact reusable widget templates with blast-radius warnings |
+| TASK-174-03-04 | Content Type and Entry Delete Actions | High | Large | Delete entries and safely block/handle content type dependency deletion |
+| TASK-174-03-05 | Listing Query and Template Delete Actions | High | Medium | Delete listing queries/templates with reference checks |
+| TASK-174-03-06 | Form Delete or Archive Action | High | Medium | Delete empty forms or archive/block forms with submissions |
+| TASK-174-03-07 | Menu and SEO Delete Actions | Medium | Medium | Delete menu items and SEO documents through domain services |
+| TASK-174-04 | Resource Edit and Widget Patch Adapters | High | Large | Edit pages, widgets, templates, screens, entries, forms, listings, menus, and SEO through typed actions |
+| TASK-174-04-01 | Page Metadata and Settings Edit Actions | High | Medium | Edit page metadata/settings/status through page domain service |
+| TASK-174-04-02 | Page Widget Block Patch Actions | High | Large | Patch selected page widget blocks while preserving unrelated blocks |
+| TASK-174-04-03 | Widget Template Edit Actions | High | Large | Edit reusable widget template metadata/settings/blocks |
+| TASK-174-04-04 | Custom Screen Edit Actions | High | Medium | Edit custom screen metadata, bindings, and selected screen widgets |
+| TASK-174-04-05 | Content, Form, Listing, Menu, and SEO Edit Actions | High | Large | Add remaining domain resource edit adapters |
+| TASK-174-05 | Widget Template and Page Canvas Context Bridge | High | Large | Inspect template-section references and nested widget template blocks before editing |
+| TASK-174-05-01 | Template Section Reference Inspection | High | Medium | Extract template-section refs and hydrate referenced template summaries |
+| TASK-174-05-02 | Page Instance vs Template Target Resolution | High | Medium | Ask/route whether edits affect page instance or reusable template |
+| TASK-174-06 | Admin Resource Operations Review UI | High | Large | Review and execute edit/delete/resource operations without autonomous mutation |
+| TASK-174-06-01 | Resource Operation Review UI States | High | Medium | Render edit/delete/archive/detach/restore/blocked operation review states |
 | TASK-174-07 | Security Gates, Docs, and Closure | High | Medium | Security/perf/docs/changelog closure for assistant cleanup |
 
 ---
@@ -63,7 +81,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
 | TASK-105-06 | Widget Editor New Tests Wave | High | Large | In progress: widget editors are now 100% lines in the full-lane report; remaining work is branch-only hardening plus barrel import ownership noise |
 | TASK-054 | Coderso Modular Admin IA | High | Large | Umbrella section + IA + routing compatibility; remaining product work tracked in 054-20 and 054-21 |
-| TASK-174 | LLM Guide Created Resource Undo and Cleanup | High | Large | In progress: provenance persistence complete; cleanup planner is next |
+| TASK-174 | LLM Guide Resource Operations and Active Context | High | Large | In progress: provenance and custom-screen delete are complete; active surface context is next |
 
 ---
 
