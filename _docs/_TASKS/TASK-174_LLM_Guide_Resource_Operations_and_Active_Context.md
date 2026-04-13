@@ -205,3 +205,4 @@ await executeAssistantActionPlan({ plan, idempotencyKey, actorId });
 - 2026-04-13: Completed `TASK-174-02-01`; the assistant receives bounded active page canvas context from `PageEditor`.
 - 2026-04-13: Completed `TASK-174-02-02`; the assistant receives bounded active widget template context from `WidgetTemplateEditorPage`.
 - 2026-04-13: Completed `TASK-174-02-03`; the assistant receives bounded active custom screen context from custom screen builder/list/editor surfaces.
+- 2026-04-13: Completed `TASK-174-02-04`; active surface context is server-hydrated before planning and included in redacted provider planning packages.

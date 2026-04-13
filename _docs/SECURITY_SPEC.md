@@ -260,6 +260,7 @@ Rotacja klucza:
   - client-supplied `context.resourceCatalog` i inne unknown context fields sa odrzucane,
   - resource catalog nie zawiera form submissions, entry values, provider credentials, API key material ani secret-like config keys,
   - `context.runtimeSnapshot` jest advisory-only i nie moze zastapic RBAC w route/domain services,
+  - active admin surface context is server-hydrated before planning; page/custom-screen hydration requires `content:read`, widget-template hydration requires `widgets:read`, and missing resources clear the active surface context,
   - runtime snapshot nie zawiera user email/name, role names, raw permissions, session ids, cookies, CSRF tokens ani access logs,
   - contract-only future action families in `actionFamilyContracts.ts` are documentation/type contracts only; they are rejected by strict action plan schema/provider draft adaptation until preview/execute adapters and route/domain permission checks land,
   - `custom-screen.delete` is internal-only, requires server-side resource catalog planning context plus `content:write` for execute, and revalidates target id/name/prefix before deletion,

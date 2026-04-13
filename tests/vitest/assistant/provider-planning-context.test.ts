@@ -141,11 +141,60 @@ test("buildProviderPlanningPromptPackage creates bounded deterministic context",
   expect(prompt.resources?.contentTypes).toHaveLength(1);
   expect(prompt.resources?.forms).toHaveLength(1);
   expect(prompt.resources?.widgets).toHaveLength(1);
+  expect(prompt.activeSurface).toBeNull();
   expect(prompt.warnings).toEqual([
     "docs_truncated",
     "doc_content_truncated",
     "content_types_truncated",
   ]);
+});
+
+test("buildProviderPlanningPromptPackage includes redacted active surface summaries", () => {
+  const prompt = buildProviderPlanningPromptPackage({
+    prompt: "Edit current template block",
+    context: {
+      page: "/admin/coderso/widgets/templates/template-1",
+      activeSurface: {
+        kind: "widget-template",
+        template: {
+          id: "template-1",
+          name: "Contact Template",
+          status: "published",
+          category: "Marketing",
+        },
+        selectedBlockId: "cta-1",
+        blocks: [
+          {
+            id: "cta-1",
+            type: "cta-banner",
+            label: "apiKey should be hidden",
+            path: "0",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+        ],
+        settings: {
+          wrapperContainer: "default",
+          sectionGap: "md",
+          hasBackgroundMedia: false,
+        },
+        warnings: [],
+      },
+    },
+  });
+
+  expect(prompt.activeSurface).toMatchObject({
+    kind: "widget-template",
+    template: {
+      id: "template-1",
+      name: "Contact Template",
+    },
+    selectedBlockId: "cta-1",
+  });
+  expect(JSON.stringify(prompt)).not.toContain("apiKey should be hidden");
+  expect(prompt.activeSurface?.kind === "widget-template" ? prompt.activeSurface.blocks[0]?.label : null).toBeNull();
 });
 
 test("buildProviderPlanningPromptPackage redacts secret-like prompt data", () => {

@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 627 | 2026-04-13 | TASK-174-02-04 active surface hydration and redaction | Assistant/Core |
 | 626 | 2026-04-13 | TASK-174-02-03 active custom screen context | Assistant/Admin |
 | 625 | 2026-04-13 | TASK-174-02-02 active widget template context | Assistant/Admin |
 | 624 | 2026-04-13 | TASK-174-02-01 active page canvas context | Assistant/Admin |

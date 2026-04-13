@@ -20,6 +20,7 @@ import {
   executeAssistantActionPlan,
 } from "../../services/assistant/actionExecutorService";
 import { buildAssistantResourceCatalogSnapshotWithDefaultDeps } from "../../services/assistant/adminContextCatalogs";
+import { hydrateAssistantActiveSurfaceContext } from "../../services/assistant/activeSurfaceHydration";
 import type {
   AssistantActionContext,
   AssistantActionPlan,
@@ -52,6 +53,9 @@ type AssistantRouteService = {
   dryRunActions: typeof dryRunAssistantActionPlan;
   executeActions: typeof executeAssistantActionPlan;
   buildResourceCatalog: typeof buildAssistantResourceCatalogSnapshotWithDefaultDeps;
+  hydrateActiveSurface: (
+    context: AssistantActionContext | undefined
+  ) => Promise<AssistantActionContext | undefined>;
 };
 
 const defaultService: AssistantRouteService = {
@@ -62,6 +66,18 @@ const defaultService: AssistantRouteService = {
   dryRunActions: dryRunAssistantActionPlan,
   executeActions: executeAssistantActionPlan,
   buildResourceCatalog: buildAssistantResourceCatalogSnapshotWithDefaultDeps,
+  hydrateActiveSurface: async (context) => {
+    const [pageService, widgetTemplateService, customScreenService] = await Promise.all([
+      import("../../services/pages/pageService"),
+      import("../../services/widgets/widgetTemplateService"),
+      import("../../services/customScreens/customScreenService"),
+    ]);
+    return hydrateAssistantActiveSurfaceContext(context, {
+      getPage: pageService.getPage,
+      getWidgetTemplate: widgetTemplateService.getWidgetTemplate,
+      getCustomScreen: customScreenService.getCustomScreen,
+    });
+  },
 };
 
 export type AssistantRouteDeps = {
@@ -211,6 +227,12 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const hasSiteKitContext = (value: unknown) =>
   isRecord(value) && isRecord(value.siteKit);
 
+const activeSurfaceKind = (value: unknown) => {
+  if (!isRecord(value) || !isRecord(value.activeSurface)) return null;
+  const kind = value.activeSurface.kind;
+  return typeof kind === "string" ? kind : null;
+};
+
 const hasSiteKitActions = (plan: unknown) => {
   if (!isRecord(plan) || !Array.isArray(plan.actions)) return false;
   return plan.actions.some(
@@ -315,16 +337,24 @@ export function registerAssistantRoutes(router: Router, deps: AssistantRouteDeps
       if (hasSiteKitContext(body.context)) {
         await requirePermission("solution-kits:read")(ctx);
       }
+      const surfaceKind = activeSurfaceKind(body.context);
+      if (surfaceKind === "widget-template") {
+        await requirePermission("widgets:read")(ctx);
+      }
+      if (surfaceKind === "page" || surfaceKind === "custom-screen") {
+        await requirePermission("content:read")(ctx);
+      }
       return withAssistantErrors(ctx.requestId, async () => {
         if (hasSiteKitContext(body.context) || includeResourceCatalog) {
           await ensureLlmGuideAvailable();
         }
-        const context: AssistantActionContext | undefined = includeResourceCatalog
+        const contextWithCatalog: AssistantActionContext | undefined = includeResourceCatalog
           ? {
               ...(body.context ?? {}),
               resourceCatalog: await service.buildResourceCatalog({}),
             }
           : body.context;
+        const context = await service.hydrateActiveSurface(contextWithCatalog);
         return service.planActions({
           prompt: body.prompt,
           context,

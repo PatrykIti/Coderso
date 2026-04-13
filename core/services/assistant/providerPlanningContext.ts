@@ -62,6 +62,7 @@ export type AssistantProviderPlanningPromptPackage = {
     widgets: AssistantResourceCatalogSnapshot["widgets"];
     warnings: string[];
   } | null;
+  activeSurface: AssistantActionContext["activeSurface"];
   warnings: string[];
 };
 
@@ -195,6 +196,7 @@ export const buildProviderPlanningPromptPackage = (
     runtime: buildRuntime(context.runtimeSnapshot),
     docs: buildDocs(input.evidence, maxDocs, maxCharsPerDoc, warnings),
     resources: buildResources(context.resourceCatalog, maxResourceItemsPerGroup, warnings),
+    activeSurface: context.activeSurface,
     warnings,
   };
 

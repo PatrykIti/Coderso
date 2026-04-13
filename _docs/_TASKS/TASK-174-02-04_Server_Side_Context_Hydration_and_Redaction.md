@@ -5,7 +5,7 @@
 **Category:** Assistant/Context + Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02-01, TASK-174-02-02, TASK-174-02-03
-**Status:** To Do
+**Status:** Done (2026-04-13)
 
 ---
 
@@ -60,3 +60,20 @@ No child task files.
 1. Active context is server-hydrated before mutation planning.
 2. Provider packages receive bounded, redacted summaries only.
 3. Route tests cover validation and permission boundaries.
+
+## Completion Notes (2026-04-13)
+
+- Added `hydrateAssistantActiveSurfaceContext`.
+- `/assistant/actions/plan` now rehydrates active surface identity before planning:
+  - pages through `pageService.getPage`,
+  - widget templates through `widgetTemplateService.getWidgetTemplate`,
+  - custom screens through `customScreenService.getCustomScreen`.
+- Plan route requests additional read permissions for active surfaces:
+  - `content:read` for active pages/custom screens,
+  - `widgets:read` for active widget templates.
+- Provider planning prompt packages now include redacted active surface summaries.
+- Validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/active-surface-hydration.test.ts tests/vitest/assistant/provider-planning-context.test.ts tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/assistant/admin-context-service.test.ts`
+  - `bun test tests/integration/routes/assistant.test.ts`

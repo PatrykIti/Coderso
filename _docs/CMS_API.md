@@ -2665,6 +2665,7 @@ Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fie
 When the active admin surface is `Pages > :id`, `activeSurface` may include a bounded page canvas summary with page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and warnings such as unsaved local changes. The server normalizes/redacts this context before planning.
 When the active admin surface is `Coderso > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
 When the active admin surface is `Coderso > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
+Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active widget templates require `widgets:read`. If the server-side resource is missing, active surface context is dropped.
 
 `context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
 
