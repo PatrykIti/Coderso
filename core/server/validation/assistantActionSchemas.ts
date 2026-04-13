@@ -165,6 +165,82 @@ const runtimeSnapshotSchema = {
   },
 } as const;
 
+const activeSurfaceBlockSchema = {
+  type: "object",
+  required: [
+    "id",
+    "type",
+    "label",
+    "path",
+    "childCount",
+    "slotKeys",
+    "templateId",
+    "templateName",
+  ],
+  additionalProperties: false,
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 120 },
+    type: { type: "string", minLength: 1, maxLength: 120 },
+    label: { anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }] },
+    path: { type: "string", minLength: 1, maxLength: 240 },
+    childCount: { type: "integer", minimum: 0, maximum: 999 },
+    slotKeys: {
+      type: "array",
+      maxItems: 20,
+      items: { type: "string", minLength: 1, maxLength: 120 },
+      uniqueItems: true,
+    },
+    templateId: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+    },
+    templateName: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+    },
+  },
+} as const;
+
+const activeSurfaceSchema = {
+  anyOf: [
+    {
+      type: "object",
+      required: ["kind", "page", "selectedBlockId", "blocks", "warnings"],
+      additionalProperties: false,
+      properties: {
+        kind: { enum: ["page"] },
+        page: {
+          type: "object",
+          required: ["id", "title", "slug", "status", "template"],
+          additionalProperties: false,
+          properties: {
+            id: { type: "string", minLength: 1, maxLength: 160 },
+            title: { type: "string", minLength: 1, maxLength: 240 },
+            slug: { type: "string", minLength: 1, maxLength: 240 },
+            status: { type: "string", minLength: 1, maxLength: 80 },
+            template: {
+              anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+            },
+          },
+        },
+        selectedBlockId: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
+        },
+        blocks: {
+          type: "array",
+          maxItems: 80,
+          items: activeSurfaceBlockSchema,
+        },
+        warnings: {
+          type: "array",
+          maxItems: 20,
+          items: { type: "string", minLength: 1, maxLength: 160 },
+          uniqueItems: true,
+        },
+      },
+    },
+    { type: "null" },
+  ],
+} as const;
+
 export const assistantActionPlanRequestSchema = {
   type: "object",
   required: ["prompt"],
@@ -184,6 +260,7 @@ export const assistantActionPlanRequestSchema = {
         siteKit: siteKitPlanContextSchema,
         includeResourceCatalog: { type: "boolean" },
         runtimeSnapshot: runtimeSnapshotSchema,
+        activeSurface: activeSurfaceSchema,
       },
     },
   },

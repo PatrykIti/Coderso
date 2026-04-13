@@ -7,11 +7,13 @@ import {
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import type {
   AssistantActionContext,
+  AssistantActiveSurfaceContext,
   AssistantAdminRuntimeActionKind,
   AssistantAdminRuntimeSelectedResource,
   AssistantAdminRuntimeSnapshot,
   AssistantAdminRuntimeVisibleAction,
 } from "../../../services/assistant/actionPlanTypes";
+import { useActiveAssistantSurfaceContext } from "./activeSurfaceContext";
 
 type AssistantAdminContextOptions = {
   activeHref?: string | null;
@@ -46,6 +48,14 @@ const readBrowserPath = () => {
 const readBrowserLocale = () => {
   if (typeof navigator === "undefined") return undefined;
   return navigator.language || undefined;
+};
+
+const activeSurfaceMatchesRoute = (
+  activeSurface: AssistantActiveSurfaceContext | null,
+  selectedResource: AssistantAdminRuntimeSelectedResource | null
+) => {
+  if (!activeSurface || activeSurface.kind !== "page") return false;
+  return selectedResource?.kind === "page" && selectedResource.id === activeSurface.page.id;
 };
 
 const resolveSurface = (route: string | null): RuntimeSurface => {
@@ -284,18 +294,31 @@ export const useAssistantAdminContext = (
   options: AssistantAdminContextOptions = {}
 ): AssistantActionContext => {
   const router = useOptionalAdminRouter();
+  const activeSurface = useActiveAssistantSurfaceContext();
   const route = router?.path ?? readBrowserPath();
   const activeHref = options.activeHref ?? route;
+  const runtimeSnapshot = useMemo(
+    () =>
+      buildAssistantAdminRuntimeSnapshot({
+        route,
+        activeHref,
+      }),
+    [activeHref, route]
+  );
+  const resolvedActiveSurface = activeSurfaceMatchesRoute(
+    activeSurface,
+    runtimeSnapshot.selectedResource
+  )
+    ? activeSurface
+    : null;
 
   return useMemo(
     () => ({
       page: normalizePath(route) ?? undefined,
       locale: readBrowserLocale(),
-      runtimeSnapshot: buildAssistantAdminRuntimeSnapshot({
-        route,
-        activeHref,
-      }),
+      runtimeSnapshot,
+      activeSurface: resolvedActiveSurface,
     }),
-    [activeHref, route]
+    [resolvedActiveSurface, route, runtimeSnapshot]
   );
 };

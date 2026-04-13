@@ -71,6 +71,7 @@ export type AssistantActionContext = {
   includeResourceCatalog?: boolean;
   resourceCatalog?: AssistantResourceCatalogSnapshot;
   runtimeSnapshot?: AssistantAdminRuntimeSnapshot;
+  activeSurface?: AssistantActiveSurfaceContext | null;
 };
 
 export type AssistantAdminRuntimeActionKind =
@@ -112,11 +113,39 @@ export type AssistantAdminRuntimeSnapshot = {
   permissionHints: AssistantAdminRuntimePermissionHints;
 };
 
+export type AssistantActiveSurfaceBlockSummary = {
+  id: string;
+  type: string;
+  label: string | null;
+  path: string;
+  childCount: number;
+  slotKeys: string[];
+  templateId: string | null;
+  templateName: string | null;
+};
+
+export type AssistantActivePageSurfaceContext = {
+  kind: "page";
+  page: {
+    id: string;
+    title: string;
+    slug: string;
+    status: string;
+    template: string | null;
+  };
+  selectedBlockId: string | null;
+  blocks: AssistantActiveSurfaceBlockSummary[];
+  warnings: string[];
+};
+
+export type AssistantActiveSurfaceContext = AssistantActivePageSurfaceContext;
+
 export type AssistantAdminContext = {
   route: string | null;
   locale: string | null;
   resourceCatalog: AssistantResourceCatalogSnapshot | null;
   runtimeSnapshot: AssistantAdminRuntimeSnapshot | null;
+  activeSurface: AssistantActiveSurfaceContext | null;
   area: "dashboard" | "pages" | "posts" | "coderso" | "settings" | "other";
   codersoModule:
     | "engine"

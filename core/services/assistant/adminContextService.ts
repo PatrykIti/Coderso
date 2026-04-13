@@ -1,5 +1,7 @@
 import type {
   AssistantActionContext,
+  AssistantActiveSurfaceBlockSummary,
+  AssistantActiveSurfaceContext,
   AssistantAdminContext,
   AssistantAdminRuntimeActionKind,
   AssistantAdminRuntimePermissionHints,
@@ -172,6 +174,74 @@ const normalizeRuntimeSnapshot = (
   };
 };
 
+const normalizeStringArray = (value: unknown, maxItems = 20, maxLength = 120) => {
+  if (!Array.isArray(value)) return [];
+  const output: string[] = [];
+  for (const item of value) {
+    const text = normalizeText(item, maxLength);
+    if (text) output.push(text);
+    if (output.length >= maxItems) break;
+  }
+  return [...new Set(output)].sort((left, right) => left.localeCompare(right));
+};
+
+const normalizeSurfaceBlock = (value: unknown): AssistantActiveSurfaceBlockSummary | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const id = normalizeText(record.id, 120);
+  const type = normalizeText(record.type, 120);
+  const path = normalizeText(record.path, 240) ?? id;
+  if (!id || !type || !path) return null;
+  const childCount =
+    typeof record.childCount === "number" && Number.isFinite(record.childCount)
+      ? Math.max(0, Math.min(999, Math.floor(record.childCount)))
+      : 0;
+  return {
+    id,
+    type,
+    label: normalizeText(record.label, 160),
+    path,
+    childCount,
+    slotKeys: normalizeStringArray(record.slotKeys),
+    templateId: normalizeText(record.templateId, 160),
+    templateName: normalizeText(record.templateName, 160),
+  };
+};
+
+const normalizeActiveSurface = (
+  value: AssistantActionContext["activeSurface"] | undefined
+): AssistantActiveSurfaceContext | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (value.kind !== "page") return null;
+  const page = value.page;
+  if (!page || typeof page !== "object" || Array.isArray(page)) return null;
+  const id = normalizeText(page.id, 160);
+  const title = normalizeText(page.title, 240);
+  const slug = normalizeText(page.slug, 240);
+  const status = normalizeText(page.status, 80);
+  if (!id || !title || !slug || !status) return null;
+  const blocks = Array.isArray(value.blocks)
+    ? value.blocks
+        .map(normalizeSurfaceBlock)
+        .filter((block): block is AssistantActiveSurfaceBlockSummary => Boolean(block))
+        .slice(0, 80)
+    : [];
+
+  return {
+    kind: "page",
+    page: {
+      id,
+      title,
+      slug,
+      status,
+      template: normalizeText(page.template, 160),
+    },
+    selectedBlockId: normalizeText(value.selectedBlockId, 120),
+    blocks,
+    warnings: normalizeStringArray(value.warnings, 20, 160),
+  };
+};
+
 export const buildAssistantAdminContext = (
   input: AssistantActionContext | undefined
 ): AssistantAdminContext => {
@@ -186,6 +256,7 @@ export const buildAssistantAdminContext = (
     locale,
     resourceCatalog: input?.resourceCatalog ?? null,
     runtimeSnapshot: normalizeRuntimeSnapshot(input?.runtimeSnapshot, route),
+    activeSurface: normalizeActiveSurface(input?.activeSurface),
     area: resolveArea(route),
     codersoModule: resolveCodersoModule(route),
   };

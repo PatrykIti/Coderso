@@ -5,7 +5,7 @@
 **Category:** Assistant/Context + Pages
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02
-**Status:** To Do
+**Status:** Done (2026-04-13)
 
 ---
 
@@ -62,3 +62,21 @@ No child task files.
 1. Assistant context includes active page identity and bounded canvas block summary.
 2. Selected block identity is available when the UI has one.
 3. Context remains advisory, redacted, and permission-safe.
+
+## Completion Notes (2026-04-13)
+
+- Added a small assistant active-surface context store for the admin UI.
+- `PageEditor` now publishes bounded active page context:
+  - page id/title/slug/status/template,
+  - selected block id,
+  - block id/type/path summaries,
+  - slot keys and template-section references,
+  - unsaved-change warning metadata.
+- `useAssistantAdminContext` includes active page surface only when it matches the current route selected resource.
+- Assistant plan route schema accepts the bounded `activeSurface` payload.
+- Server-side `buildAssistantAdminContext` normalizes and redacts active page surface context.
+- Validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/assistant/admin-context-service.test.ts`
+  - `bun test tests/integration/routes/assistant.test.ts`

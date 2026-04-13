@@ -6,6 +6,10 @@ import { expect, test } from "vitest";
 
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import {
+  clearActiveAssistantSurfaceContext,
+  setActiveAssistantSurfaceContext,
+} from "../../../core/admin/ui/assistant/activeSurfaceContext";
+import {
   buildAssistantAdminRuntimeSnapshot,
   useAssistantAdminContext,
 } from "../../../core/admin/ui/assistant/useAssistantAdminContext";
@@ -35,6 +39,13 @@ const readContextFromHtml = (html: string) => {
         reason: string;
       };
     };
+    activeSurface?: {
+      kind: "page";
+      page: { id: string; title: string; slug: string; status: string; template: string | null };
+      selectedBlockId: string | null;
+      blocks: Array<{ id: string; type: string; templateId: string | null }>;
+      warnings: string[];
+    } | null;
   };
 };
 
@@ -107,4 +118,97 @@ test("buildAssistantAdminRuntimeSnapshot derives entry and widget-template resou
       route: "/admin/coderso/widgets/templates/template-1",
     }).selectedResource
   ).toEqual({ kind: "widget-template", id: "template-1" });
+});
+
+test("useAssistantAdminContext includes matching active page surface context", () => {
+  setActiveAssistantSurfaceContext({
+    kind: "page",
+    page: {
+      id: "page-1",
+      title: "Contact",
+      slug: "/contact",
+      status: "draft",
+      template: "landing",
+    },
+    selectedBlockId: "hero-1",
+    blocks: [
+      {
+        id: "hero-1",
+        type: "hero",
+        label: "Contact hero",
+        path: "0",
+        childCount: 0,
+        slotKeys: [],
+        templateId: null,
+        templateName: null,
+      },
+      {
+        id: "template-1",
+        type: "template-section",
+        label: null,
+        path: "1",
+        childCount: 0,
+        slotKeys: [],
+        templateId: "tpl-1",
+        templateName: "Contact CTA",
+      },
+    ],
+    warnings: ["page_has_unsaved_changes"],
+  });
+
+  try {
+    const html = renderToString(
+      <AdminRouterProvider initialPath="/admin/pages/page-1">
+        <SnapshotProbe activeHref="/admin/pages/page-1" />
+      </AdminRouterProvider>
+    );
+    const context = readContextFromHtml(html);
+
+    expect(context.activeSurface).toMatchObject({
+      kind: "page",
+      page: {
+        id: "page-1",
+        title: "Contact",
+        slug: "/contact",
+        template: "landing",
+      },
+      selectedBlockId: "hero-1",
+      blocks: [
+        { id: "hero-1", type: "hero", templateId: null },
+        { id: "template-1", type: "template-section", templateId: "tpl-1" },
+      ],
+      warnings: ["page_has_unsaved_changes"],
+    });
+  } finally {
+    clearActiveAssistantSurfaceContext();
+  }
+});
+
+test("useAssistantAdminContext drops active page surface for a different route", () => {
+  setActiveAssistantSurfaceContext({
+    kind: "page",
+    page: {
+      id: "page-1",
+      title: "Contact",
+      slug: "/contact",
+      status: "draft",
+      template: null,
+    },
+    selectedBlockId: null,
+    blocks: [],
+    warnings: [],
+  });
+
+  try {
+    const html = renderToString(
+      <AdminRouterProvider initialPath="/admin/pages/page-2">
+        <SnapshotProbe activeHref="/admin/pages/page-2" />
+      </AdminRouterProvider>
+    );
+    const context = readContextFromHtml(html);
+
+    expect(context.activeSurface).toBeNull();
+  } finally {
+    clearActiveAssistantSurfaceContext();
+  }
 });

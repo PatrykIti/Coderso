@@ -30,6 +30,10 @@ import { EditorShell } from "@/ui/layouts/EditorShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { DeviceSwitcher } from "@/ui/pages/DeviceSwitcher";
 import { RuntimePreviewDialog, type RuntimePreviewDeviceId } from "@/ui/preview/RuntimePreviewDialog";
+import {
+  clearActiveAssistantSurfaceContext,
+  setActiveAssistantSurfaceContext,
+} from "@/ui/assistant/activeSurfaceContext";
 
 import { BlockList } from "./builder/BlockList";
 import { BlockSettings } from "./builder/BlockSettings";
@@ -77,6 +81,70 @@ const resolvePageId = (pathname: string) => {
   const pageIndex = parts.findIndex((segment) => segment === "pages");
   if (pageIndex === -1) return null;
   return parts[pageIndex + 1] ?? null;
+};
+
+const readBlockDataText = (block: Block, key: string) => {
+  const data = block.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const value = (data as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+};
+
+const summarizePageBlocksForAssistant = (
+  blocks: Block[],
+  options: { maxBlocks?: number } = {}
+) => {
+  const maxBlocks = options.maxBlocks ?? 80;
+  const result: Array<{
+    id: string;
+    type: string;
+    label: string | null;
+    path: string;
+    childCount: number;
+    slotKeys: string[];
+    templateId: string | null;
+    templateName: string | null;
+  }> = [];
+
+  const visit = (items: Block[], pathPrefix: string) => {
+    items.forEach((block, index) => {
+      if (result.length >= maxBlocks) return;
+      const path = pathPrefix ? `${pathPrefix}.${index}` : String(index);
+      const slotEntries =
+        block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+          ? Object.entries(block.slots)
+          : [];
+      const childBlocks = Array.isArray(block.children) ? block.children : [];
+      const slotChildCount = slotEntries.reduce(
+        (count, [, value]) => count + (Array.isArray(value) ? value.length : 0),
+        0
+      );
+      result.push({
+        id: block.id,
+        type: block.type,
+        label: readBlockDataText(block, "title") ?? readBlockDataText(block, "headline"),
+        path,
+        childCount: childBlocks.length + slotChildCount,
+        slotKeys: slotEntries.map(([key]) => key).sort((left, right) => left.localeCompare(right)),
+        templateId: block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
+        templateName: block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
+      });
+
+      if (result.length >= maxBlocks) return;
+      if (childBlocks.length > 0) {
+        visit(childBlocks, `${path}.children`);
+      }
+      for (const [slotId, value] of slotEntries) {
+        if (result.length >= maxBlocks) break;
+        if (Array.isArray(value)) {
+          visit(value as Block[], `${path}.slots.${slotId}`);
+        }
+      }
+    });
+  };
+
+  visit(blocks, "");
+  return result;
 };
 
 const normalizeBlocks = (data?: Record<string, unknown> | null) => {
@@ -282,6 +350,31 @@ export function PageEditor({ pageId: initialPageId, initialPage }: PageEditorPro
     backgroundSize: wrapperBackgroundImage ? "cover" : undefined,
     backgroundPosition: wrapperBackgroundImage ? "center" : undefined,
   };
+
+  useEffect(() => {
+    if (!page || !pageId) {
+      clearActiveAssistantSurfaceContext();
+      return undefined;
+    }
+
+    setActiveAssistantSurfaceContext({
+      kind: "page",
+      page: {
+        id: page.id,
+        title: page.title,
+        slug: page.slug,
+        status: page.status,
+        template: pageSettings.template || null,
+      },
+      selectedBlockId: selectedId,
+      blocks: summarizePageBlocksForAssistant(blocks),
+      warnings: hasUnsavedChanges ? ["page_has_unsaved_changes"] : [],
+    });
+
+    return () => {
+      clearActiveAssistantSurfaceContext();
+    };
+  }, [blocks, hasUnsavedChanges, page, pageId, pageSettings.template, selectedId]);
 
   const applyPage = useCallback(
     (result: PageDetail, options?: { preserveSelection?: boolean }) => {

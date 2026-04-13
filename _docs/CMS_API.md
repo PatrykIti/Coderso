@@ -2662,6 +2662,7 @@ corpus.
 Snapshot obejmuje content types, custom screens, listings, forms i widgets/templates.
 Nie jest przyjmowany jako client-supplied `resourceCatalog`; unknown context fields sa odrzucane.
 `runtimeSnapshot` jest advisory planning context; nie zastepuje route/domain RBAC.
+When the active admin surface is `Pages > :id`, `activeSurface` may include a bounded page canvas summary with page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and warnings such as unsaved local changes. The server normalizes/redacts this context before planning.
 
 `context.siteKit` moze byc uzyty przez AI Site Wizard jako guided entry point do tego samego action flow:
 

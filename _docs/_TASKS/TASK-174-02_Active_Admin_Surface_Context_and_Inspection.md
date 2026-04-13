@@ -22,6 +22,10 @@ This is the foundation for prompts like "I have Contact open; change this widget
 - `TASK-174-02-03_Active_Custom_Screen_Context.md`
 - `TASK-174-02-04_Server_Side_Context_Hydration_and_Redaction.md`
 
+## Progress Notes
+
+- 2026-04-13: Completed `TASK-174-02-01`; active page editor context now includes page identity, selected block id, bounded canvas block summaries, and template-section references.
+
 ## Architecture
 
 Active surface context must be split into two layers:

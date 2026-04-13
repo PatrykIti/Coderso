@@ -121,3 +121,69 @@ test("buildAssistantAdminContext drops unsafe selected resource data", () => {
 
   expect(context.runtimeSnapshot?.selectedResource).toBeNull();
 });
+
+test("buildAssistantAdminContext normalizes active page surface context", () => {
+  const context = buildAssistantAdminContext({
+    page: "/admin/pages/page-1",
+    activeSurface: {
+      kind: "page",
+      page: {
+        id: "page-1",
+        title: "Contact",
+        slug: "/contact",
+        status: "draft",
+        template: "landing",
+      },
+      selectedBlockId: "hero-1",
+      blocks: [
+        {
+          id: "hero-1",
+          type: "hero",
+          label: "token secret label",
+          path: "0",
+          childCount: 0,
+          slotKeys: [],
+          templateId: null,
+          templateName: null,
+        },
+        {
+          id: "template-1",
+          type: "template-section",
+          label: "CTA",
+          path: "1",
+          childCount: 0,
+          slotKeys: [],
+          templateId: "tpl-1",
+          templateName: "Contact CTA",
+        },
+      ],
+      warnings: ["page_has_unsaved_changes"],
+    },
+  });
+
+  expect(context.activeSurface).toMatchObject({
+    kind: "page",
+    page: {
+      id: "page-1",
+      title: "Contact",
+      slug: "/contact",
+      template: "landing",
+    },
+    selectedBlockId: "hero-1",
+    blocks: [
+      {
+        id: "hero-1",
+        type: "hero",
+        label: null,
+      },
+      {
+        id: "template-1",
+        type: "template-section",
+        label: "CTA",
+        templateId: "tpl-1",
+        templateName: "Contact CTA",
+      },
+    ],
+    warnings: ["page_has_unsaved_changes"],
+  });
+});
