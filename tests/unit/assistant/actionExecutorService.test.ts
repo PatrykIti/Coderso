@@ -134,6 +134,17 @@ const createDeps = () => {
     createdBy: string | null;
     createdAt: Date;
   }> = [];
+  const widgetTemplates: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    category: string;
+    status: "draft" | "published";
+    blocks: Array<Record<string, unknown>>;
+    settings: Record<string, unknown>;
+    createdAt: Date;
+    updatedAt: Date;
+  }> = [];
   const formFields = new Map<string, Array<Record<string, unknown>>>();
   const deps = {
     getSetting: async (key: string) => {
@@ -343,6 +354,14 @@ const createDeps = () => {
       return existing as unknown as Awaited<
         ReturnType<(typeof import("../../../core/services/pages/pageService"))["publishPage"]>
       >;
+    },
+    getWidgetTemplate: async (id: string) =>
+      widgetTemplates.find((entry) => entry.id === id) ?? null,
+    deleteWidgetTemplate: async (id: string) => {
+      const index = widgetTemplates.findIndex((entry) => entry.id === id);
+      if (index < 0) return null;
+      const [deleted] = widgetTemplates.splice(index, 1);
+      return deleted ?? null;
     },
     listForms: async () => forms,
     createForm: async (input: {
@@ -652,6 +671,7 @@ const createDeps = () => {
       menuItemsByMenu,
       seoDocuments,
       mediaAssets,
+      widgetTemplates,
       formFields,
     },
   });
@@ -860,6 +880,69 @@ test("executeAssistantActionPlan deletes pages through explicit delete actions",
   expect(executed.summary.delete).toBe(1);
   expect(executed.results[0]?.message).toBe('Deleted page "Contact".');
   expect(await deps.getPage(page.id)).toBeNull();
+});
+
+test("executeAssistantActionPlan deletes widget templates through explicit delete actions", async () => {
+  const deps = createDeps();
+  const now = new Date("2026-04-10T12:00:00.000Z");
+  deps.__state.widgetTemplates.push({
+    id: "template-1",
+    name: "Contact CTA",
+    description: null,
+    category: "Marketing",
+    status: "published",
+    blocks: [],
+    settings: {},
+    createdAt: now,
+    updatedAt: now,
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-delete-contact-template",
+    status: "ready",
+    intentId: "widget-template-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete Contact CTA",
+    answer: "I can delete the selected widget template.",
+    summary: "Delete active widget template Contact CTA.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "widget-template-delete-contact",
+        type: "widget-template.delete",
+        title: "Delete Contact CTA",
+        description: "Delete selected widget template.",
+        input: {
+          id: "template-1",
+          name: "Contact CTA",
+          expectedStatus: "published",
+          expectedCategory: "Marketing",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("delete");
+  expect(preview.changes[0]?.warnings).toContain(
+    "This reusable widget template may be referenced by pages or other templates."
+  );
+  expect(preview.changes[0]?.warnings).toContain("This widget template is published.");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-widget-template-delete-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.delete).toBe(1);
+  expect(executed.results[0]?.message).toBe('Deleted widget template "Contact CTA".');
+  expect(await deps.getWidgetTemplate("template-1")).toBeNull();
 });
 
 test("executeAssistantActionPlan upserts menu items without duplicates", async () => {

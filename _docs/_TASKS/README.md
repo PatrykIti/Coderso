@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 26 tasks
+- **To Do:** 25 tasks
 - **In Progress:** 6 tasks
-- **Done:** 841 tasks
+- **Done:** 842 tasks
 
 ---
 
@@ -47,7 +47,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-023 | Store Auth and Publisher Accounts | Medium | Medium | Authors + tokens |
 | TASK-174-02 | Active Admin Surface Context and Inspection | High | Large | Give LLM Guide bounded active page/screen/template/canvas context |
 | TASK-174-03 | Resource Delete Adapters | High | Large | Delete/archive supported user-created and assistant-created resources safely |
-| TASK-174-03-03 | Widget Template Delete Action | High | Medium | Delete exact reusable widget templates with blast-radius warnings |
 | TASK-174-03-04 | Content Type and Entry Delete Actions | High | Large | Delete entries and safely block/handle content type dependency deletion |
 | TASK-174-03-05 | Listing Query and Template Delete Actions | High | Medium | Delete listing queries/templates with reference checks |
 | TASK-174-03-06 | Form Delete or Archive Action | High | Medium | Delete empty forms or archive/block forms with submissions |
@@ -139,6 +138,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-02-03 | Active Custom Screen Context | High | Medium | Done: Assistant context includes active custom screen id, bindings, capabilities, selected block, and selected entry |
 | TASK-174-02-04 | Server-Side Context Hydration and Redaction | High | Medium | Done: plan route rehydrates active page/template/screen identity and provider packages include redacted active surface summaries |
 | TASK-174-03-02 | Page Delete Action | High | Medium | Done: `page.delete` deletes active-context pages through reviewed typed action flow |
+| TASK-174-03-03 | Widget Template Delete Action | High | Medium | Done: `widget-template.delete` deletes active-context reusable templates with blast-radius warnings |
 | TASK-175 | Solution Kit Module Focus and Screens Convergence | High | Medium | Done: active kit focus keeps Screens visible and expands module dependencies from the registry |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |

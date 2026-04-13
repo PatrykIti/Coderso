@@ -5,7 +5,7 @@
 **Category:** Assistant/Delete + Widget Templates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02, TASK-174-03
-**Status:** To Do
+**Status:** Done (2026-04-13)
 
 ---
 
@@ -63,3 +63,17 @@ No child task files.
 1. Assistant can delete exact widget templates after dry-run/review.
 2. Reusable template blast radius is shown before execute.
 3. Existing widget template domain service owns deletion.
+
+## Completion Notes (2026-04-13)
+
+- Added executable `widget-template.delete`.
+- Planner can build a reviewed widget template delete plan from active widget template context.
+- Planner returns `needs_input` when widget template deletion is requested without active template context.
+- Dry-run emits `delete` operation plus reusable-template blast-radius warnings.
+- Execute rechecks template id/name/status/category before calling `widgetTemplateService.deleteWidgetTemplate`.
+- Route per-action permissions include `widgets:read` and `widgets:write` for widget template deletion.
+- Validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/ui/assistant-panel.test.tsx`
+  - `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

@@ -530,6 +530,13 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
       { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
       { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
       { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
+      {
+        id: "template",
+        type: "widget-template.delete",
+        title: "Template",
+        description: "Template",
+        input: {},
+      },
     ],
   };
 
@@ -562,6 +569,7 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
   expect(requestedPermissions).toContain("menus:read");
   expect(requestedPermissions).toContain("forms:read");
   expect(requestedPermissions).toContain("media:read");
+  expect(requestedPermissions).toContain("widgets:read");
 });
 
 test("assistant action dry-run route maps unsupported actions to invalid plan error", async () => {
@@ -682,6 +690,14 @@ test("assistant action execute route enforces per-action write permissions", asy
       { id: "menu", type: "menu.item.upsert", title: "Menu", description: "Menu", input: {} },
       { id: "form", type: "form.automation.upsert", title: "Form", description: "Form", input: {} },
       { id: "media", type: "media.reference.attach", title: "Media", description: "Media", input: {} },
+      { id: "page", type: "page.delete", title: "Page", description: "Page", input: {} },
+      {
+        id: "template",
+        type: "widget-template.delete",
+        title: "Template",
+        description: "Template",
+        input: {},
+      },
     ],
   };
 
@@ -726,6 +742,7 @@ test("assistant action execute route enforces per-action write permissions", asy
   expect(requestedPermissions).toContain("media:read");
   expect(requestedPermissions).toContain("content:write");
   expect(requestedPermissions).toContain("content:publish");
+  expect(requestedPermissions).toContain("widgets:write");
 });
 
 test("assistant action execute route enforces kit permission for site-kit plans", async () => {

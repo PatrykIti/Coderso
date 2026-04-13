@@ -104,6 +104,19 @@ const pageDeleteKeywords = [
   "stronie",
 ];
 
+const widgetTemplateDeleteKeywords = [
+  "widget template",
+  "widget templates",
+  "template widget",
+  "template widgets",
+  "szablon widgetu",
+  "szablon widgetów",
+  "szablony widgetow",
+  "szablony widgetów",
+  "template",
+  "templates",
+];
+
 const countWords = new Map<string, number>([
   ["jeden", 1],
   ["jedna", 1],
@@ -325,6 +338,87 @@ const buildPageDeletePlan = (
           title: page.title,
           slug: page.slug,
           expectedStatus: page.status,
+        },
+      },
+    ],
+  };
+};
+
+const buildWidgetTemplateDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-widget-template-delete-needs-input",
+  status: "needs_input",
+  intentId: "widget-template-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Widget template delete needs an active template",
+  answer: [
+    "I can delete widget templates only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Open the widget template you want to delete or provide an exact template target.",
+  ].join("\n"),
+  summary: "Widget template deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "widget-template-delete-target",
+      label: "Which exact widget template should I delete?",
+      description: "Open the template in the editor or provide an exact template target.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildWidgetTemplateDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    !isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, widgetTemplateDeleteKeywords)
+  ) {
+    return null;
+  }
+  if (context.activeSurface?.kind !== "widget-template") {
+    return buildWidgetTemplateDeleteNeedsInputPlan(
+      prompt,
+      "The prompt asks to delete a widget template, but there is no active widget template context."
+    );
+  }
+  const template = context.activeSurface.template;
+  return {
+    id: `plan-widget-template-delete-${template.id}`,
+    status: "ready",
+    intentId: "widget-template-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Delete ${template.name}`,
+    answer: "I can delete the active widget template through the reviewed LLM Guide action flow.",
+    summary: `Delete active widget template "${template.name}".`,
+    confidence: 0.86,
+    assumptions: [
+      "The target widget template is resolved from the active admin template context.",
+      "Dry-run must be reviewed before deletion because reusable templates can affect multiple pages.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `widget-template-delete-${template.id}`,
+        type: "widget-template.delete",
+        title: `Delete ${template.name}`,
+        description: "Delete the active reusable widget template selected from admin context.",
+        input: {
+          id: template.id,
+          name: template.name,
+          expectedStatus: template.status,
+          expectedCategory: template.category,
         },
       },
     ],
@@ -757,6 +851,12 @@ export const planAssistantActions = (
     classification.normalizedPrompt
   );
   if (pageDeletePlan) return normalizeAssistantActionPlan(pageDeletePlan);
+  const widgetTemplateDeletePlan = buildWidgetTemplateDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (widgetTemplateDeletePlan) return normalizeAssistantActionPlan(widgetTemplateDeletePlan);
 
   if (
     classification.promptKind === "setup_request" &&

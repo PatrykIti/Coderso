@@ -21,6 +21,7 @@ export const assistantActionTypes = [
   "form.automation.upsert",
   "page.upsert",
   "page.delete",
+  "widget-template.delete",
   "site-kit.recommend",
   "site-kit.install",
   "site-kit.validate",

@@ -41,6 +41,10 @@ import {
   upsertSeoDocument,
 } from "../seo/seoService";
 import {
+  deleteWidgetTemplate,
+  getWidgetTemplate,
+} from "../widgets/widgetTemplateService";
+import {
   createForm,
   listForms,
   setFormFields,
@@ -85,6 +89,7 @@ import type {
   AssistantPageWidgetPatchAction,
   AssistantPageUpsertAction,
   AssistantPageDeleteAction,
+  AssistantWidgetTemplateDeleteAction,
   AssistantPlannedAction,
   AssistantSeoDocumentUpsertAction,
   AssistantSiteKitInstallAction,
@@ -427,6 +432,8 @@ type ActionExecutorDeps = {
   deletePage: typeof deletePage;
   updatePage: typeof updatePage;
   publishPage: typeof publishPage;
+  getWidgetTemplate: typeof getWidgetTemplate;
+  deleteWidgetTemplate: typeof deleteWidgetTemplate;
   listForms: typeof listForms;
   createForm: typeof createForm;
   updateForm: typeof updateForm;
@@ -473,6 +480,8 @@ const defaultDeps: ActionExecutorDeps = {
   deletePage,
   updatePage,
   publishPage,
+  getWidgetTemplate,
+  deleteWidgetTemplate,
   listForms,
   createForm,
   updateForm,
@@ -1227,6 +1236,51 @@ const buildPageDeletePreview = async (
           title: existing.title,
           slug: existing.slug,
           status: existing.status,
+        }
+      : null,
+    nextValue: null,
+  });
+};
+
+const buildWidgetTemplateDeletePreview = async (
+  action: AssistantWidgetTemplateDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getWidgetTemplate(action.input.id);
+  const matches = existing?.name === action.input.name;
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const expectedCategory = action.input.expectedCategory?.trim() ?? "";
+  const statusMatches = !expectedStatus || existing?.status === expectedStatus;
+  const categoryMatches = !expectedCategory || existing?.category === expectedCategory;
+
+  return createPreviewChange({
+    action,
+    targetType: "widget-template",
+    targetKey: action.input.name,
+    operation: "delete",
+    summary: `Delete widget template "${action.input.name}"`,
+    warnings: [
+      "This reusable widget template may be referenced by pages or other templates.",
+      ...(existing?.status === "published" ? ["This widget template is published."] : []),
+    ],
+    conflicts:
+      existing && matches && statusMatches && categoryMatches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Widget template no longer matches the planned delete target."
+                : "Widget template was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          status: existing.status,
+          category: existing.category,
         }
       : null,
     nextValue: null,
@@ -2083,6 +2137,42 @@ const executePageDeleteAction = async (
   };
 };
 
+const executeWidgetTemplateDeleteAction = async (
+  action: AssistantWidgetTemplateDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getWidgetTemplate(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const expectedCategory = action.input.expectedCategory?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    (expectedStatus && existing.status !== expectedStatus) ||
+    (expectedCategory && existing.category !== expectedCategory)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const deleted = await deps.deleteWidgetTemplate(existing.id);
+  if (!deleted) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "widget-template",
+    targetKey: action.input.name,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: "/admin/coderso/widgets",
+    publicHref: null,
+    message: `Deleted widget template "${deleted.name}".`,
+  };
+};
+
 const executeSiteKitRecommendAction = async (
   action: AssistantSiteKitRecommendAction,
   preview: AssistantActionPreviewChange,
@@ -2345,6 +2435,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "page.delete"
         ? executePageDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "widget-template.delete": {
+    preview: (action, ctx) =>
+      action.type === "widget-template.delete"
+        ? buildWidgetTemplateDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "widget-template.delete"
+        ? executeWidgetTemplateDeleteAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "site-kit.recommend": {

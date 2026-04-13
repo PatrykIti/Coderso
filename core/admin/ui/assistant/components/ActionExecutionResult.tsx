@@ -27,6 +27,8 @@ const actionTypeLabels: Record<string, string> = {
   "page.widget.patch": "Page widget",
   "form.automation.upsert": "Form automation",
   "page.upsert": "Page",
+  "page.delete": "Page",
+  "widget-template.delete": "Widget template",
   "site-kit.recommend": "Site kit recommendation",
   "site-kit.install": "Site kit install",
   "site-kit.validate": "Site kit validation",

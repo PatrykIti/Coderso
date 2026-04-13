@@ -465,6 +465,19 @@ export type AssistantPageDeleteAction = {
   };
 };
 
+export type AssistantWidgetTemplateDeleteAction = {
+  id: string;
+  type: "widget-template.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    expectedCategory?: string | null;
+  };
+};
+
 export type AssistantSiteKitRecommendAction = {
   id: string;
   type: "site-kit.recommend";
@@ -511,6 +524,7 @@ export type AssistantPlannedAction =
   | AssistantFormAutomationUpsertAction
   | AssistantPageUpsertAction
   | AssistantPageDeleteAction
+  | AssistantWidgetTemplateDeleteAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction
   | AssistantSiteKitValidateAction;
@@ -530,7 +544,8 @@ export type AssistantActionContractFamily =
   | "entry"
   | "menu"
   | "seo"
-  | "media";
+  | "media"
+  | "widget-template";
 
 export type AssistantActionPermissionModel = {
   plan: readonly string[];

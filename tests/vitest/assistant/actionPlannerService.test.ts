@@ -212,6 +212,64 @@ test("planAssistantActions asks for active page context before page deletion", (
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions builds widget template delete plan from active template context", () => {
+  const plan = planAssistantActions({
+    prompt: "usun ten widget template Contact CTA",
+    context: {
+      page: "/admin/coderso/widgets/templates/template-1",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "widget-template",
+        template: {
+          id: "template-1",
+          name: "Contact CTA",
+          status: "published",
+          category: "Marketing",
+        },
+        selectedBlockId: "cta-1",
+        blocks: [],
+        settings: {
+          wrapperContainer: "default",
+          sectionGap: "md",
+          hasBackgroundMedia: false,
+        },
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("widget-template-delete");
+  expect(plan.actions).toEqual([
+    {
+      id: "widget-template-delete-template-1",
+      type: "widget-template.delete",
+      title: "Delete Contact CTA",
+      description: "Delete the active reusable widget template selected from admin context.",
+      input: {
+        id: "template-1",
+        name: "Contact CTA",
+        expectedStatus: "published",
+        expectedCategory: "Marketing",
+      },
+    },
+  ]);
+});
+
+test("planAssistantActions asks for active widget template context before template deletion", () => {
+  const plan = planAssistantActions({
+    prompt: "usun widget template Contact CTA",
+    context: {
+      page: "/admin/coderso/widgets",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("widget-template-delete-needs-input");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActions routes non-house-project setup prompts into generic needs-input family", () => {
   const docsQuestionPlan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",

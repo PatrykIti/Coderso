@@ -326,6 +326,22 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "widget-template.delete",
+    "widget-template",
+    "core/services/widgets/widgetTemplateService.ts",
+    ["id", "name"],
+    {
+      permissions: {
+        plan: ["widgets:read"],
+        dryRun: ["widgets:read"],
+        execute: ["widgets:write"],
+      },
+      notes: [
+        "Deletes one reusable widget template by id after matching expected name/status/category from active or server-side context.",
+      ],
+    }
+  ),
+  executableContract(
     "site-kit.recommend",
     "site-kit",
     "core/services/assistant/siteBuilderPlanAdapter.ts",
@@ -471,6 +487,7 @@ const readFamily = (value: unknown): AssistantActionContractFamily => {
     "menu",
     "seo",
     "media",
+    "widget-template",
   ]);
   if (!knownFamilies.has(family as AssistantActionContractFamily)) fail();
   return family as AssistantActionContractFamily;
