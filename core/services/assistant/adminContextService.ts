@@ -9,6 +9,7 @@ import type {
   AssistantAdminRuntimeSnapshot,
   AssistantAdminRuntimeVisibleAction,
 } from "./actionPlanTypes";
+import type { AssistantCustomScreenBindingSummary } from "./adminContextTypes";
 
 const actionKinds = new Set<AssistantAdminRuntimeActionKind>([
   "navigate",
@@ -208,6 +209,28 @@ const normalizeSurfaceBlock = (value: unknown): AssistantActiveSurfaceBlockSumma
   };
 };
 
+const normalizeCustomScreenBindingSummary = (
+  value: unknown
+): AssistantCustomScreenBindingSummary | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const widgetId = normalizeText(record.widgetId, 120);
+  const field = normalizeText(record.field, 120);
+  const propPath = normalizeText(record.propPath, 160);
+  const mode = record.mode;
+  if (!widgetId || !field || !propPath) return null;
+  const normalizedMode: AssistantCustomScreenBindingSummary["mode"] =
+    mode === "read" || mode === "write" || mode === "readwrite"
+      ? mode
+      : "readwrite";
+  return {
+    widgetId,
+    field,
+    propPath,
+    mode: normalizedMode,
+  };
+};
+
 const normalizeActiveSurface = (
   value: AssistantActionContext["activeSurface"] | undefined
 ): AssistantActiveSurfaceContext | null => {
@@ -264,6 +287,42 @@ const normalizeActiveSurface = (
         sectionGap: normalizeText(settings.sectionGap, 80),
         hasBackgroundMedia: settings.hasBackgroundMedia === true,
       },
+      warnings: normalizeStringArray(value.warnings, 20, 160),
+    };
+  }
+
+  if (value.kind === "custom-screen") {
+    const screen = value.screen;
+    if (!screen || typeof screen !== "object" || Array.isArray(screen)) return null;
+    const id = normalizeText(screen.id, 160);
+    const name = normalizeText(screen.name, 240);
+    const status = normalizeText(screen.status, 80);
+    const contentTypeId = normalizeText(screen.contentTypeId, 160);
+    const mode = normalizeText(screen.mode, 80);
+    if (!id || !name || !status || !contentTypeId || !mode) return null;
+    const bindings = Array.isArray(value.bindings)
+      ? value.bindings
+          .map(normalizeCustomScreenBindingSummary)
+          .filter((binding): binding is AssistantCustomScreenBindingSummary => Boolean(binding))
+          .slice(0, 80)
+      : [];
+
+    return {
+      kind: "custom-screen",
+      screen: {
+        id,
+        name,
+        status,
+        contentTypeId,
+        showInSidebar: screen.showInSidebar === true,
+        sidebarLabel: normalizeText(screen.sidebarLabel, 160),
+        mode,
+      },
+      selectedEntryId: normalizeText(value.selectedEntryId, 160),
+      selectedBlockId: normalizeText(value.selectedBlockId, 120),
+      blocks,
+      bindings,
+      writableBindingFields: normalizeStringArray(value.writableBindingFields, 80, 120),
       warnings: normalizeStringArray(value.warnings, 20, 160),
     };
   }

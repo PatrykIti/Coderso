@@ -29,6 +29,10 @@ import {
   type EntrySummary,
 } from "@/services/entriesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import {
+  clearActiveAssistantSurfaceContext,
+  setActiveAssistantSurfaceContext,
+} from "@/ui/assistant/activeSurfaceContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { AdminLink } from "@/ui/shared/AdminLink";
@@ -36,6 +40,7 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { EntryCreateDrawer } from "../entries/EntryCreateDrawer";
+import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { resolveCustomScreenId } from "./routeParams";
 
 const formatDate = (value: string) => {
@@ -239,6 +244,24 @@ export function CustomScreenEntriesPage() {
       }),
     [screen]
   );
+
+  useEffect(() => {
+    if (!screen || !screenId) {
+      clearActiveAssistantSurfaceContext();
+      return undefined;
+    }
+
+    setActiveAssistantSurfaceContext(
+      buildCustomScreenAssistantSurface({
+        screen,
+        capabilities: screenCapabilities,
+      })
+    );
+
+    return () => {
+      clearActiveAssistantSurfaceContext();
+    };
+  }, [screen, screenCapabilities, screenId]);
 
   const refresh = useCallback(
     async (force = false) => {

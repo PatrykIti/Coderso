@@ -64,6 +64,14 @@ const activeSurfaceMatchesRoute = (
       selectedResource.id === activeSurface.template.id
     );
   }
+  if (activeSurface.kind === "custom-screen") {
+    if (selectedResource.kind === "custom-screen") {
+      return selectedResource.id === activeSurface.screen.id;
+    }
+    if (selectedResource.kind === "custom-screen-entry") {
+      return selectedResource.id === activeSurface.selectedEntryId;
+    }
+  }
   return false;
 };
 

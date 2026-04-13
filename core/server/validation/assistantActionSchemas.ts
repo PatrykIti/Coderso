@@ -284,6 +284,85 @@ const activeSurfaceSchema = {
         },
       },
     },
+    {
+      type: "object",
+      required: [
+        "kind",
+        "screen",
+        "selectedEntryId",
+        "selectedBlockId",
+        "blocks",
+        "bindings",
+        "writableBindingFields",
+        "warnings",
+      ],
+      additionalProperties: false,
+      properties: {
+        kind: { enum: ["custom-screen"] },
+        screen: {
+          type: "object",
+          required: [
+            "id",
+            "name",
+            "status",
+            "contentTypeId",
+            "showInSidebar",
+            "sidebarLabel",
+            "mode",
+          ],
+          additionalProperties: false,
+          properties: {
+            id: { type: "string", minLength: 1, maxLength: 160 },
+            name: { type: "string", minLength: 1, maxLength: 240 },
+            status: { type: "string", minLength: 1, maxLength: 80 },
+            contentTypeId: { type: "string", minLength: 1, maxLength: 160 },
+            showInSidebar: { type: "boolean" },
+            sidebarLabel: {
+              anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+            },
+            mode: { type: "string", minLength: 1, maxLength: 80 },
+          },
+        },
+        selectedEntryId: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+        },
+        selectedBlockId: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
+        },
+        blocks: {
+          type: "array",
+          maxItems: 80,
+          items: activeSurfaceBlockSchema,
+        },
+        bindings: {
+          type: "array",
+          maxItems: 80,
+          items: {
+            type: "object",
+            required: ["widgetId", "field", "propPath", "mode"],
+            additionalProperties: false,
+            properties: {
+              widgetId: { type: "string", minLength: 1, maxLength: 120 },
+              field: { type: "string", minLength: 1, maxLength: 120 },
+              propPath: { type: "string", minLength: 1, maxLength: 160 },
+              mode: { type: "string", enum: ["read", "write", "readwrite"] },
+            },
+          },
+        },
+        writableBindingFields: {
+          type: "array",
+          maxItems: 80,
+          items: { type: "string", minLength: 1, maxLength: 120 },
+          uniqueItems: true,
+        },
+        warnings: {
+          type: "array",
+          maxItems: 20,
+          items: { type: "string", minLength: 1, maxLength: 160 },
+          uniqueItems: true,
+        },
+      },
+    },
     { type: "null" },
   ],
 } as const;

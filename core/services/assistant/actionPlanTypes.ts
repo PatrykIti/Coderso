@@ -11,7 +11,10 @@ import type {
   GuidedSiteBuilderPlanResult,
   GuidedSiteBuilderValidationResult,
 } from "./siteBuilderExecutor";
-import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
+import type {
+  AssistantCustomScreenBindingSummary,
+  AssistantResourceCatalogSnapshot,
+} from "./adminContextTypes";
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 
 export type AssistantActionPlanStatus = "ready" | "needs_input";
@@ -156,9 +159,29 @@ export type AssistantActiveWidgetTemplateSurfaceContext = {
   warnings: string[];
 };
 
+export type AssistantActiveCustomScreenSurfaceContext = {
+  kind: "custom-screen";
+  screen: {
+    id: string;
+    name: string;
+    status: string;
+    contentTypeId: string;
+    showInSidebar: boolean;
+    sidebarLabel: string | null;
+    mode: string;
+  };
+  selectedEntryId: string | null;
+  selectedBlockId: string | null;
+  blocks: AssistantActiveSurfaceBlockSummary[];
+  bindings: AssistantCustomScreenBindingSummary[];
+  writableBindingFields: string[];
+  warnings: string[];
+};
+
 export type AssistantActiveSurfaceContext =
   | AssistantActivePageSurfaceContext
-  | AssistantActiveWidgetTemplateSurfaceContext;
+  | AssistantActiveWidgetTemplateSurfaceContext
+  | AssistantActiveCustomScreenSurfaceContext;
 
 export type AssistantAdminContext = {
   route: string | null;

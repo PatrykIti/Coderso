@@ -24,12 +24,17 @@ import {
   type EntryDetail,
 } from "@/services/entriesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import {
+  clearActiveAssistantSurfaceContext,
+  setActiveAssistantSurfaceContext,
+} from "@/ui/assistant/activeSurfaceContext";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { CustomScreenPreview } from "./CustomScreenPreview";
+import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { resolveCustomScreenEntryParams } from "./routeParams";
 import { collectWritableBindingFields } from "../../../services/customScreens/bindingResolver";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
@@ -200,6 +205,29 @@ export function CustomScreenEntryEditor() {
   const canEditInScreen = screenCapabilities.mode === "editor";
   const isDashboardScreen = screenCapabilities.mode === "dashboard";
   const isCollectionOnlyScreen = screenCapabilities.mode === "collection-only";
+
+  useEffect(() => {
+    if (!screen || !screenId || !entryId) {
+      clearActiveAssistantSurfaceContext();
+      return undefined;
+    }
+
+    setActiveAssistantSurfaceContext(
+      buildCustomScreenAssistantSurface({
+        screen,
+        capabilities: screenCapabilities,
+        selectedEntryId: entryId,
+        warnings: [
+          ...(hasUnsavedChanges ? ["custom_screen_entry_has_unsaved_changes"] : []),
+          ...(remoteUpdatePending ? ["custom_screen_entry_remote_update_pending"] : []),
+        ],
+      })
+    );
+
+    return () => {
+      clearActiveAssistantSurfaceContext();
+    };
+  }, [entryId, hasUnsavedChanges, remoteUpdatePending, screen, screenCapabilities, screenId]);
 
   const applyLoadedState = useCallback(
     (

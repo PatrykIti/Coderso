@@ -40,11 +40,23 @@ const readContextFromHtml = (html: string) => {
       };
     };
     activeSurface?: {
-      kind: "page" | "widget-template";
+      kind: "page" | "widget-template" | "custom-screen";
       page?: { id: string; title: string; slug: string; status: string; template: string | null };
       template?: { id: string; name: string; status: string; category: string };
+      screen?: {
+        id: string;
+        name: string;
+        status: string;
+        contentTypeId: string;
+        showInSidebar: boolean;
+        sidebarLabel: string | null;
+        mode: string;
+      };
+      selectedEntryId?: string | null;
       selectedBlockId: string | null;
       blocks: Array<{ id: string; type: string; templateId: string | null }>;
+      bindings?: Array<{ widgetId: string; field: string; propPath: string; mode: string }>;
+      writableBindingFields?: string[];
       settings?: { wrapperContainer: string | null; sectionGap: string | null; hasBackgroundMedia: boolean };
       warnings: string[];
     } | null;
@@ -269,6 +281,111 @@ test("useAssistantAdminContext includes matching active widget template context"
         hasBackgroundMedia: false,
       },
       warnings: ["template_remote_update_pending"],
+    });
+  } finally {
+    clearActiveAssistantSurfaceContext();
+  }
+});
+
+test("useAssistantAdminContext includes active custom screen context on screen routes", () => {
+  setActiveAssistantSurfaceContext({
+    kind: "custom-screen",
+    screen: {
+      id: "screen-1",
+      name: "House Projects",
+      status: "active",
+      contentTypeId: "type-1",
+      showInSidebar: true,
+      sidebarLabel: "House Projects",
+      mode: "editor",
+    },
+    selectedEntryId: null,
+    selectedBlockId: "header-1",
+    blocks: [
+      {
+        id: "header-1",
+        type: "screen-record-header",
+        label: "Project header",
+        path: "0",
+        childCount: 0,
+        slotKeys: [],
+        templateId: null,
+        templateName: null,
+      },
+    ],
+    bindings: [
+      {
+        widgetId: "header-1",
+        field: "title",
+        propPath: "title",
+        mode: "readwrite",
+      },
+    ],
+    writableBindingFields: ["title"],
+    warnings: ["custom_screen_has_unsaved_changes"],
+  });
+
+  try {
+    const html = renderToString(
+      <AdminRouterProvider initialPath="/admin/coderso/custom-screens/screen-1">
+        <SnapshotProbe activeHref="/admin/coderso/custom-screens/screen-1" />
+      </AdminRouterProvider>
+    );
+    const context = readContextFromHtml(html);
+
+    expect(context.activeSurface).toMatchObject({
+      kind: "custom-screen",
+      screen: {
+        id: "screen-1",
+        name: "House Projects",
+        mode: "editor",
+      },
+      selectedEntryId: null,
+      selectedBlockId: "header-1",
+      blocks: [{ id: "header-1", type: "screen-record-header" }],
+      bindings: [{ widgetId: "header-1", field: "title", propPath: "title", mode: "readwrite" }],
+      writableBindingFields: ["title"],
+    });
+  } finally {
+    clearActiveAssistantSurfaceContext();
+  }
+});
+
+test("useAssistantAdminContext includes custom screen context on record editor routes", () => {
+  setActiveAssistantSurfaceContext({
+    kind: "custom-screen",
+    screen: {
+      id: "screen-1",
+      name: "House Projects",
+      status: "active",
+      contentTypeId: "type-1",
+      showInSidebar: true,
+      sidebarLabel: "House Projects",
+      mode: "editor",
+    },
+    selectedEntryId: "entry-1",
+    selectedBlockId: null,
+    blocks: [],
+    bindings: [],
+    writableBindingFields: [],
+    warnings: [],
+  });
+
+  try {
+    const html = renderToString(
+      <AdminRouterProvider initialPath="/admin/coderso/custom-screens/screen-1/entries/entry-1">
+        <SnapshotProbe activeHref="/admin/coderso/custom-screens/screen-1/entries/entry-1" />
+      </AdminRouterProvider>
+    );
+    const context = readContextFromHtml(html);
+
+    expect(context.runtimeSnapshot?.selectedResource).toEqual({
+      kind: "custom-screen-entry",
+      id: "entry-1",
+    });
+    expect(context.activeSurface).toMatchObject({
+      kind: "custom-screen",
+      selectedEntryId: "entry-1",
     });
   } finally {
     clearActiveAssistantSurfaceContext();

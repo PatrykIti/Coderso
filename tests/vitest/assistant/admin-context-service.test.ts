@@ -255,3 +255,73 @@ test("buildAssistantAdminContext normalizes active widget template surface conte
     warnings: ["template_remote_update_pending"],
   });
 });
+
+test("buildAssistantAdminContext normalizes active custom screen surface context", () => {
+  const context = buildAssistantAdminContext({
+    page: "/admin/coderso/custom-screens/screen-1/entries/entry-1",
+    activeSurface: {
+      kind: "custom-screen",
+      screen: {
+        id: "screen-1",
+        name: "House Projects",
+        status: "active",
+        contentTypeId: "type-1",
+        showInSidebar: true,
+        sidebarLabel: "House Projects",
+        mode: "editor",
+      },
+      selectedEntryId: "entry-1",
+      selectedBlockId: "header-1",
+      blocks: [
+        {
+          id: "header-1",
+          type: "screen-record-header",
+          label: "Project header",
+          path: "0",
+          childCount: 0,
+          slotKeys: [],
+          templateId: null,
+          templateName: null,
+        },
+      ],
+      bindings: [
+        {
+          widgetId: "header-1",
+          field: "title",
+          propPath: "token.secret",
+          mode: "readwrite",
+        },
+        {
+          widgetId: "header-1",
+          field: "summary",
+          propPath: "subtitle",
+          mode: "read",
+        },
+      ],
+      writableBindingFields: ["title", "session_secret"],
+      warnings: ["custom_screen_entry_has_unsaved_changes"],
+    },
+  });
+
+  expect(context.activeSurface).toMatchObject({
+    kind: "custom-screen",
+    screen: {
+      id: "screen-1",
+      name: "House Projects",
+      mode: "editor",
+    },
+    selectedEntryId: "entry-1",
+    selectedBlockId: "header-1",
+    blocks: [{ id: "header-1", type: "screen-record-header" }],
+    bindings: [
+      {
+        widgetId: "header-1",
+        field: "summary",
+        propPath: "subtitle",
+        mode: "read",
+      },
+    ],
+    writableBindingFields: ["title"],
+    warnings: ["custom_screen_entry_has_unsaved_changes"],
+  });
+});

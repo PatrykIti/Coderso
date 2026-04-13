@@ -5,7 +5,7 @@
 **Category:** Assistant/Context + Custom Screens
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02
-**Status:** To Do
+**Status:** Done (2026-04-13)
 
 ---
 
@@ -61,3 +61,23 @@ No child task files.
 1. Assistant context identifies the active custom screen and selected entry.
 2. Bindings/capabilities are available for planning safe screen edits.
 3. No raw entry values leak into provider/browser context.
+
+## Completion Notes (2026-04-13)
+
+- Added `custom-screen` active surface context support.
+- Custom screen builder, records list, and record editor now publish bounded screen context:
+  - screen id/name/status/contentTypeId/sidebar metadata,
+  - screen capabilities mode,
+  - selected entry id when applicable,
+  - selected block id when applicable,
+  - bounded block summaries,
+  - bindings and writable field names,
+  - unsaved/remote-update warning metadata.
+- `useAssistantAdminContext` includes custom screen active surface only when it matches the current route selected resource.
+- Assistant plan route schema accepts the bounded custom screen `activeSurface` payload.
+- Server-side `buildAssistantAdminContext` normalizes and redacts active custom screen context.
+- Validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/assistant/admin-context-service.test.ts`
+  - `bun test tests/integration/routes/assistant.test.ts`

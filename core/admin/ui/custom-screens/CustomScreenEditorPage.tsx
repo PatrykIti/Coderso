@@ -37,6 +37,10 @@ import {
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
+import {
+  clearActiveAssistantSurfaceContext,
+  setActiveAssistantSurfaceContext,
+} from "@/ui/assistant/activeSurfaceContext";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
@@ -49,6 +53,7 @@ import { CustomScreenShell } from "./CustomScreenShell";
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { FieldBindingPanel } from "./FieldBindingPanel";
 import { resolveCustomScreenId } from "./routeParams";
+import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { BlockList } from "@/ui/pages/builder/BlockList";
 import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
 import {
@@ -220,6 +225,55 @@ export function CustomScreenEditorPage() {
   const selectedWidget = selectedBlock
     ? widgetRegistry.find((item) => item.type === selectedBlock.type)
     : undefined;
+
+  useEffect(() => {
+    if (isCreateMode || !screen || !screenId) {
+      clearActiveAssistantSurfaceContext();
+      return undefined;
+    }
+
+    setActiveAssistantSurfaceContext(
+      buildCustomScreenAssistantSurface({
+        screen: {
+          ...screen,
+          name: name.trim() || screen.name,
+          contentTypeId: contentTypeId || screen.contentTypeId,
+          status,
+          showInSidebar,
+          sidebarLabel: sidebarLabel.trim() || null,
+          blocks,
+          bindings,
+        },
+        blocks,
+        bindings,
+        capabilities: previewCapabilities,
+        selectedBlockId: selectedId,
+        warnings: [
+          ...(hasUnsavedChanges ? ["custom_screen_has_unsaved_changes"] : []),
+          ...(remoteUpdatePending ? ["custom_screen_remote_update_pending"] : []),
+        ],
+      })
+    );
+
+    return () => {
+      clearActiveAssistantSurfaceContext();
+    };
+  }, [
+    bindings,
+    blocks,
+    contentTypeId,
+    hasUnsavedChanges,
+    isCreateMode,
+    name,
+    previewCapabilities,
+    remoteUpdatePending,
+    screen,
+    screenId,
+    selectedId,
+    showInSidebar,
+    sidebarLabel,
+    status,
+  ]);
 
   const markDirty = useCallback(() => {
     setHasUnsavedChanges(true);
