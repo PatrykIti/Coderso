@@ -158,6 +158,60 @@ test("planAssistantActions builds custom screen delete plan from resource catalo
   ]);
 });
 
+test("planAssistantActions builds page delete plan from active page context", () => {
+  const plan = planAssistantActions({
+    prompt: "usun te strone contact",
+    context: {
+      page: "/admin/pages/page-contact",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-contact",
+          title: "Contact",
+          slug: "/contact",
+          status: "published",
+          template: "landing",
+        },
+        selectedBlockId: "hero-1",
+        blocks: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-delete");
+  expect(plan.actions).toEqual([
+    {
+      id: "page-delete-page-contact",
+      type: "page.delete",
+      title: "Delete Contact",
+      description: "Delete the active page selected from admin context.",
+      input: {
+        id: "page-contact",
+        title: "Contact",
+        slug: "/contact",
+        expectedStatus: "published",
+      },
+    },
+  ]);
+});
+
+test("planAssistantActions asks for active page context before page deletion", () => {
+  const plan = planAssistantActions({
+    prompt: "usun strone contact",
+    context: {
+      page: "/admin/pages",
+      locale: "pl-PL",
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("page-delete-needs-input");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActions routes non-house-project setup prompts into generic needs-input family", () => {
   const docsQuestionPlan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",

@@ -319,6 +319,12 @@ const createDeps = () => {
       pages.push(record);
       return record;
     },
+    deletePage: async (id: string) => {
+      const index = pages.findIndex((entry) => entry.id === id);
+      if (index < 0) return null;
+      const [deleted] = pages.splice(index, 1);
+      return deleted ?? null;
+    },
     updatePage: async (
       id: string,
       input: { title?: string; slug?: string; data?: Record<string, unknown> }
@@ -797,6 +803,63 @@ test("executeAssistantActionPlan deletes custom screens through explicit delete 
   expect(executed.summary.delete).toBe(1);
   expect(executed.results[0]?.message).toBe('Deleted custom screen "House Projects Archive".');
   expect(await deps.getCustomScreen(screen.id)).toBeNull();
+});
+
+test("executeAssistantActionPlan deletes pages through explicit delete actions", async () => {
+  const deps = createDeps();
+  const page = await deps.createPage({
+    title: "Contact",
+    slug: "/contact",
+    data: { blocks: [] },
+    authorId: "user-1",
+  });
+  await deps.publishPage(page.id, "user-1", { blocks: [] });
+  const plan: AssistantActionPlan = {
+    id: "plan-delete-contact-page",
+    status: "ready",
+    intentId: "page-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete Contact",
+    answer: "I can delete the selected page.",
+    summary: "Delete active page Contact.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "page-delete-contact",
+        type: "page.delete",
+        title: "Delete Contact",
+        description: "Delete selected page.",
+        input: {
+          id: page.id,
+          title: "Contact",
+          slug: "/contact",
+          expectedStatus: "published",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("delete");
+  expect(preview.changes[0]?.warnings).toContain(
+    "This page is published and may be visible on the public site."
+  );
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-page-delete-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.delete).toBe(1);
+  expect(executed.results[0]?.message).toBe('Deleted page "Contact".');
+  expect(await deps.getPage(page.id)).toBeNull();
 });
 
 test("executeAssistantActionPlan upserts menu items without duplicates", async () => {

@@ -30,6 +30,7 @@ import {
 } from "../content/entryService";
 import {
   createPage,
+  deletePage,
   getPage,
   getPageBySlug,
   publishPage,
@@ -83,6 +84,7 @@ import type {
   AssistantMenuItemUpsertAction,
   AssistantPageWidgetPatchAction,
   AssistantPageUpsertAction,
+  AssistantPageDeleteAction,
   AssistantPlannedAction,
   AssistantSeoDocumentUpsertAction,
   AssistantSiteKitInstallAction,
@@ -422,6 +424,7 @@ type ActionExecutorDeps = {
   getPageBySlug: typeof getPageBySlug;
   getPage: typeof getPage;
   createPage: typeof createPage;
+  deletePage: typeof deletePage;
   updatePage: typeof updatePage;
   publishPage: typeof publishPage;
   listForms: typeof listForms;
@@ -467,6 +470,7 @@ const defaultDeps: ActionExecutorDeps = {
   getPageBySlug,
   getPage,
   createPage,
+  deletePage,
   updatePage,
   publishPage,
   listForms,
@@ -1182,6 +1186,50 @@ const buildPagePreview = async (
         }
       : null,
     nextValue,
+  });
+};
+
+const buildPageDeletePreview = async (
+  action: AssistantPageDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getPage(action.input.id);
+  const matches =
+    existing?.title === action.input.title && existing.slug === action.input.slug;
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const statusMatches = !expectedStatus || existing?.status === expectedStatus;
+
+  return createPreviewChange({
+    action,
+    targetType: "page",
+    targetKey: action.input.slug,
+    operation: "delete",
+    summary: `Delete page "${action.input.title}"`,
+    warnings:
+      existing?.status === "published"
+        ? ["This page is published and may be visible on the public site."]
+        : [],
+    conflicts:
+      existing && matches && statusMatches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Page no longer matches the planned delete target."
+                : "Page was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          title: existing.title,
+          slug: existing.slug,
+          status: existing.status,
+        }
+      : null,
+    nextValue: null,
   });
 };
 
@@ -2000,6 +2048,41 @@ const executePageAction = async (
   };
 };
 
+const executePageDeleteAction = async (
+  action: AssistantPageDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getPage(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  if (
+    !existing ||
+    existing.title !== action.input.title ||
+    existing.slug !== action.input.slug ||
+    (expectedStatus && existing.status !== expectedStatus)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  const deleted = await deps.deletePage(existing.id);
+  if (!deleted) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "page",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: "/admin/pages",
+    publicHref: null,
+    message: `Deleted page "${deleted.title}".`,
+  };
+};
+
 const executeSiteKitRecommendAction = async (
   action: AssistantSiteKitRecommendAction,
   preview: AssistantActionPreviewChange,
@@ -2252,6 +2335,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "page.upsert"
         ? executePageAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
+  "page.delete": {
+    preview: (action, ctx) =>
+      action.type === "page.delete"
+        ? buildPageDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "page.delete"
+        ? executePageDeleteAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "site-kit.recommend": {

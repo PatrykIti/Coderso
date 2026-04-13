@@ -452,6 +452,19 @@ export type AssistantPageUpsertAction = {
   };
 };
 
+export type AssistantPageDeleteAction = {
+  id: string;
+  type: "page.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    title: string;
+    slug: string;
+    expectedStatus?: string | null;
+  };
+};
+
 export type AssistantSiteKitRecommendAction = {
   id: string;
   type: "site-kit.recommend";
@@ -497,6 +510,7 @@ export type AssistantPlannedAction =
   | AssistantPageWidgetPatchAction
   | AssistantFormAutomationUpsertAction
   | AssistantPageUpsertAction
+  | AssistantPageDeleteAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction
   | AssistantSiteKitValidateAction;

@@ -310,6 +310,22 @@ export const assistantActionFamilyContracts = [
     ["title", "slug", "status", "listingQueryName", "listingTemplateSlug"]
   ),
   executableContract(
+    "page.delete",
+    "page",
+    "core/services/pages/pageService.ts",
+    ["id", "title", "slug"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write", "content:publish"],
+      },
+      notes: [
+        "Deletes one existing page by id after matching the expected title and slug from active/server-side context.",
+      ],
+    }
+  ),
+  executableContract(
     "site-kit.recommend",
     "site-kit",
     "core/services/assistant/siteBuilderPlanAdapter.ts",

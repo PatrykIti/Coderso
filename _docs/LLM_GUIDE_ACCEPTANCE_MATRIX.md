@@ -50,6 +50,7 @@ Rules:
 | `listing-query.filters.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `query.filters` only |
 | `listing-template.card.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `config.card` only |
 | `page.widget.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Top-level `upsert-block` only |
+| `page.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context pages after review |
 | `form.automation.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` | Safe non-webhook actions only |
 | `site-kit.recommend/install/validate` | Vitest + Bun | Bun executor | Bun executor | `solution-kits:read/write` + LLM availability gate | Existing unified site-kit action flow |
 

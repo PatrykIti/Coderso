@@ -2453,6 +2453,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-170-03-03-04` promuje `form.automation.upsert` do executable typed action dla bezpiecznych non-webhook form actions; webhook automation pozostaje poza zakresem do czasu jawnej obslugi sekretow.
 `TASK-170-03-04` domyka executor adapter wave: `/assistant/actions/dry-run` i `/assistant/actions/execute` egzekwuja action-specific permissions z registry kontraktow poza bazowymi permissions endpointu.
 `TASK-174-03-01` promuje `custom-screen.delete` do executable typed action dla custom screenow rozwiazanych z server-side resource catalog context; execute ponownie sprawdza id/name/prefix przed usunieciem.
+`TASK-174-03-02` promuje `page.delete` do executable typed action dla aktywnej strony; execute ponownie sprawdza id/title/slug/status przed usunieciem.
 `TASK-172-02` dodaje lead capture blueprint pack: prompt o stronie kontaktowej/leadowej moze zwrocic plan `form.upsert` + prosty `page.upsert` z embedem formularza.
 `TASK-172-03` dodaje gated booking blueprint pack: prompt bookingowy zwraca `needs_input`, dopoki nie powstana dedykowane booking action adapters.
 `TASK-172-04` dodaje product inquiry pack: produktowy katalog z formularzem zapytania jest executable, ale checkout/payment prompt zwraca `needs_input` do czasu dedykowanych adapterow commerce.

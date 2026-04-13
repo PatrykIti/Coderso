@@ -525,6 +525,18 @@ const normalizePageInput = (input: JsonRecord) => {
   };
 };
 
+const normalizePageDeleteInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "title", "slug", "expectedStatus"]));
+  return {
+    id: readText(input.id),
+    title: readText(input.title),
+    slug: readText(input.slug),
+    ...(input.expectedStatus !== undefined
+      ? { expectedStatus: readOptionalText(input.expectedStatus) }
+      : {}),
+  };
+};
+
 const normalizeSiteKitPlanBase = (input: JsonRecord) => ({
   businessType: readText(input.businessType),
   goals: readStringArray(input.goals),
@@ -630,6 +642,8 @@ const normalizeActionInput = (
       return normalizeFormAutomationUpsertInput(record);
     case "page.upsert":
       return normalizePageInput(record);
+    case "page.delete":
+      return normalizePageDeleteInput(record);
     case "site-kit.recommend":
       return normalizeSiteKitRecommendInput(record);
     case "site-kit.install":

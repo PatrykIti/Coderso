@@ -20,6 +20,7 @@ export const assistantActionTypes = [
   "page.widget.patch",
   "form.automation.upsert",
   "page.upsert",
+  "page.delete",
   "site-kit.recommend",
   "site-kit.install",
   "site-kit.validate",

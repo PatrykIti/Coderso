@@ -94,6 +94,16 @@ const screenDeleteKeywords = [
   "custom screens",
 ];
 
+const pageDeleteKeywords = [
+  "page",
+  "pages",
+  "strona",
+  "strone",
+  "stronę",
+  "strony",
+  "stronie",
+];
+
 const countWords = new Map<string, number>([
   ["jeden", 1],
   ["jedna", 1],
@@ -240,6 +250,84 @@ const buildCustomScreenDeletePlan = (
         expectedNamePrefix: prefix,
       },
     })),
+  };
+};
+
+const buildPageDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-page-delete-needs-input",
+  status: "needs_input",
+  intentId: "page-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Page delete needs an active page",
+  answer: [
+    "I can delete pages only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Open the page you want to delete or provide an exact page target.",
+  ].join("\n"),
+  summary: "Page deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "page-delete-target",
+      label: "Which exact page should I delete?",
+      description: "Open the page in the editor or provide an exact page target.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildPageDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!isLikelyDeletePrompt(normalizedPrompt) || !includesAny(normalizedPrompt, pageDeleteKeywords)) {
+    return null;
+  }
+  if (context.activeSurface?.kind !== "page") {
+    return buildPageDeleteNeedsInputPlan(
+      prompt,
+      "The prompt asks to delete a page, but there is no active page context."
+    );
+  }
+  const page = context.activeSurface.page;
+  return {
+    id: `plan-page-delete-${page.id}`,
+    status: "ready",
+    intentId: "page-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Delete ${page.title}`,
+    answer: "I can delete the active page through the reviewed LLM Guide action flow.",
+    summary: `Delete active page "${page.title}" (${page.slug}).`,
+    confidence: 0.86,
+    assumptions: [
+      "The target page is resolved from the active admin page context.",
+      "Dry-run must be reviewed before deletion.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `page-delete-${page.id}`,
+        type: "page.delete",
+        title: `Delete ${page.title}`,
+        description: "Delete the active page selected from admin context.",
+        input: {
+          id: page.id,
+          title: page.title,
+          slug: page.slug,
+          expectedStatus: page.status,
+        },
+      },
+    ],
   };
 };
 
@@ -663,6 +751,12 @@ export const planAssistantActions = (
     classification.normalizedPrompt
   );
   if (deletePlan) return normalizeAssistantActionPlan(deletePlan);
+  const pageDeletePlan = buildPageDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (pageDeletePlan) return normalizeAssistantActionPlan(pageDeletePlan);
 
   if (
     classification.promptKind === "setup_request" &&

@@ -5,7 +5,7 @@
 **Category:** Assistant/Delete + Pages
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02, TASK-174-03
-**Status:** To Do
+**Status:** Done (2026-04-13)
 
 ---
 
@@ -65,3 +65,17 @@ No child task files.
 1. Assistant can plan reviewed deletion of the active page or exact page match.
 2. Deletion goes through `pageService.deletePage`.
 3. Public impact is visible before execute.
+
+## Completion Notes (2026-04-13)
+
+- Added executable `page.delete`.
+- Planner can build a reviewed page delete plan from active page context.
+- Planner returns `needs_input` when page deletion is requested without active page context.
+- Dry-run emits `delete` operation and published/public warning.
+- Execute rechecks page id/title/slug/status before calling `pageService.deletePage`.
+- Route per-action permissions include `content:read`, `content:write`, and `content:publish` for page deletion.
+- Validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+  - `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`
