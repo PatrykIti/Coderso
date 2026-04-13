@@ -364,6 +364,7 @@ Runtime admin context:
   - route-derived visible action hints,
   - advisory permission hints wymagane dla widocznych akcji.
 - `PageEditor` publishes bounded active page surface context for assistant planning: page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and unsaved-change warnings.
+- `WidgetTemplateEditorPage` publishes bounded active widget template surface context: template identity, selected block id, block id/type/path summaries, slot keys, template-section references, and template settings summary.
 - Snapshot nie jest autoryzacja; execute/dry-run dalej polegaja na route/domain permission checks.
 - Snapshot nie zawiera user PII, roli, sesji, raw permissions ani tokenow.
 

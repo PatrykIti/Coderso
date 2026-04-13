@@ -203,3 +203,4 @@ await executeAssistantActionPlan({ plan, idempotencyKey, actorId });
 - 2026-04-12: Completed `TASK-174-01`; fresh assistant action executions now persist sanitized undo manifest items for later cleanup/operation planning.
 - 2026-04-12: Completed `TASK-174-03-01`; custom screen delete requests can now produce executable reviewed `custom-screen.delete` plans when targets are resolved from server-side resource catalog context.
 - 2026-04-13: Completed `TASK-174-02-01`; the assistant receives bounded active page canvas context from `PageEditor`.
+- 2026-04-13: Completed `TASK-174-02-02`; the assistant receives bounded active widget template context from `WidgetTemplateEditorPage`.

@@ -187,3 +187,71 @@ test("buildAssistantAdminContext normalizes active page surface context", () => 
     warnings: ["page_has_unsaved_changes"],
   });
 });
+
+test("buildAssistantAdminContext normalizes active widget template surface context", () => {
+  const context = buildAssistantAdminContext({
+    page: "/admin/coderso/widgets/templates/template-1",
+    activeSurface: {
+      kind: "widget-template",
+      template: {
+        id: "template-1",
+        name: "Contact Template",
+        status: "published",
+        category: "Marketing",
+      },
+      selectedBlockId: "cta-1",
+      blocks: [
+        {
+          id: "cta-1",
+          type: "cta-banner",
+          label: "CTA",
+          path: "0",
+          childCount: 0,
+          slotKeys: [],
+          templateId: null,
+          templateName: null,
+        },
+        {
+          id: "secret",
+          type: "token-secret-widget",
+          label: "Secret",
+          path: "1",
+          childCount: 0,
+          slotKeys: [],
+          templateId: null,
+          templateName: null,
+        },
+      ],
+      settings: {
+        wrapperContainer: "default",
+        sectionGap: "md",
+        hasBackgroundMedia: true,
+      },
+      warnings: ["template_remote_update_pending"],
+    },
+  });
+
+  expect(context.activeSurface).toMatchObject({
+    kind: "widget-template",
+    template: {
+      id: "template-1",
+      name: "Contact Template",
+      status: "published",
+      category: "Marketing",
+    },
+    selectedBlockId: "cta-1",
+    blocks: [
+      {
+        id: "cta-1",
+        type: "cta-banner",
+        label: "CTA",
+      },
+    ],
+    settings: {
+      wrapperContainer: "default",
+      sectionGap: "md",
+      hasBackgroundMedia: true,
+    },
+    warnings: ["template_remote_update_pending"],
+  });
+});

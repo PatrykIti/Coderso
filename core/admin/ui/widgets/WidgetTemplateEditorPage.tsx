@@ -41,6 +41,10 @@ import {
   type WidgetTemplateCategory,
 } from "@/services/widgetTemplateCategoriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import {
+  clearActiveAssistantSurfaceContext,
+  setActiveAssistantSurfaceContext,
+} from "@/ui/assistant/activeSurfaceContext";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
@@ -165,6 +169,70 @@ const resolveTemplateId = (pathname: string) => {
   return parts[index + 2] ?? null;
 };
 
+const readBlockDataText = (block: Block, key: string) => {
+  const data = block.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const value = (data as Record<string, unknown>)[key];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+};
+
+const summarizeTemplateBlocksForAssistant = (
+  blocks: Block[],
+  options: { maxBlocks?: number } = {}
+) => {
+  const maxBlocks = options.maxBlocks ?? 80;
+  const result: Array<{
+    id: string;
+    type: string;
+    label: string | null;
+    path: string;
+    childCount: number;
+    slotKeys: string[];
+    templateId: string | null;
+    templateName: string | null;
+  }> = [];
+
+  const visit = (items: Block[], pathPrefix: string) => {
+    items.forEach((block, index) => {
+      if (result.length >= maxBlocks) return;
+      const path = pathPrefix ? `${pathPrefix}.${index}` : String(index);
+      const slotEntries =
+        block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+          ? Object.entries(block.slots)
+          : [];
+      const childBlocks = Array.isArray(block.children) ? block.children : [];
+      const slotChildCount = slotEntries.reduce(
+        (count, [, value]) => count + (Array.isArray(value) ? value.length : 0),
+        0
+      );
+      result.push({
+        id: block.id,
+        type: block.type,
+        label: readBlockDataText(block, "title") ?? readBlockDataText(block, "headline"),
+        path,
+        childCount: childBlocks.length + slotChildCount,
+        slotKeys: slotEntries.map(([key]) => key).sort((left, right) => left.localeCompare(right)),
+        templateId: block.type === "template-section" ? readBlockDataText(block, "templateId") : null,
+        templateName: block.type === "template-section" ? readBlockDataText(block, "templateName") : null,
+      });
+
+      if (result.length >= maxBlocks) return;
+      if (childBlocks.length > 0) {
+        visit(childBlocks, `${path}.children`);
+      }
+      for (const [slotId, value] of slotEntries) {
+        if (result.length >= maxBlocks) break;
+        if (Array.isArray(value)) {
+          visit(value as Block[], `${path}.slots.${slotId}`);
+        }
+      }
+    });
+  };
+
+  visit(blocks, "");
+  return result;
+};
+
 export function WidgetTemplateEditorPage() {
   const adminBasePath = useAdminBasePath();
   const { navigate } = useAdminRouter();
@@ -262,6 +330,47 @@ export function WidgetTemplateEditorPage() {
     if (!selectedBlock) return undefined;
     return getWidgetRegistry().find((widget) => widget.type === selectedBlock.type);
   }, [selectedBlock]);
+
+  useEffect(() => {
+    if (isNew || !templateId) {
+      clearActiveAssistantSurfaceContext();
+      return undefined;
+    }
+
+    setActiveAssistantSurfaceContext({
+      kind: "widget-template",
+      template: {
+        id: templateId,
+        name: name.trim() || "Untitled template",
+        status,
+        category: category.trim() || "uncategorized",
+      },
+      selectedBlockId: selectedId,
+      blocks: summarizeTemplateBlocksForAssistant(blocks),
+      settings: {
+        wrapperContainer: templateLayout.wrapper.container,
+        sectionGap: templateLayout.sections.gap,
+        hasBackgroundMedia: templateLayout.wrapper.background.media.type !== "none",
+      },
+      warnings: remoteUpdatePending ? ["template_remote_update_pending"] : [],
+    });
+
+    return () => {
+      clearActiveAssistantSurfaceContext();
+    };
+  }, [
+    blocks,
+    category,
+    isNew,
+    name,
+    remoteUpdatePending,
+    selectedId,
+    status,
+    templateId,
+    templateLayout.sections.gap,
+    templateLayout.wrapper.background.media.type,
+    templateLayout.wrapper.container,
+  ]);
 
   const filteredWidgets = useMemo(() => {
     return widgets.filter((widget) => {

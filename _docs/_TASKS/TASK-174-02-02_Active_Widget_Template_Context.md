@@ -5,7 +5,7 @@
 **Category:** Assistant/Context + Widget Templates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-174-02
-**Status:** To Do
+**Status:** Done (2026-04-13)
 
 ---
 
@@ -60,3 +60,22 @@ No child task files.
 1. Assistant context includes active widget template identity and block summary.
 2. Assistant can distinguish a reusable template target from a page-instance target.
 3. Context is bounded and redacted.
+
+## Completion Notes (2026-04-13)
+
+- Added `widget-template` active surface context support.
+- `WidgetTemplateEditorPage` now publishes bounded template context:
+  - template id/name/status/category,
+  - selected block id,
+  - block id/type/path summaries,
+  - slot keys and template-section refs,
+  - wrapper container, section gap, and background-media presence,
+  - remote-update warning metadata.
+- `useAssistantAdminContext` includes widget template active surface only when it matches the current route selected resource.
+- Assistant plan route schema accepts the bounded widget template `activeSurface` payload.
+- Server-side `buildAssistantAdminContext` normalizes and redacts active widget template context.
+- Validation:
+  - `bun --cwd core lint`
+  - `bun --cwd core lint:types`
+  - `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/use-assistant-admin-context.test.tsx tests/vitest/assistant/admin-context-service.test.ts`
+  - `bun test tests/integration/routes/assistant.test.ts`

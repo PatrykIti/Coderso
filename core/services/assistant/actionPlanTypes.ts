@@ -138,7 +138,27 @@ export type AssistantActivePageSurfaceContext = {
   warnings: string[];
 };
 
-export type AssistantActiveSurfaceContext = AssistantActivePageSurfaceContext;
+export type AssistantActiveWidgetTemplateSurfaceContext = {
+  kind: "widget-template";
+  template: {
+    id: string;
+    name: string;
+    status: string;
+    category: string;
+  };
+  selectedBlockId: string | null;
+  blocks: AssistantActiveSurfaceBlockSummary[];
+  settings: {
+    wrapperContainer: string | null;
+    sectionGap: string | null;
+    hasBackgroundMedia: boolean;
+  };
+  warnings: string[];
+};
+
+export type AssistantActiveSurfaceContext =
+  | AssistantActivePageSurfaceContext
+  | AssistantActiveWidgetTemplateSurfaceContext;
 
 export type AssistantAdminContext = {
   route: string | null;

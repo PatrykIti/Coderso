@@ -25,6 +25,7 @@ This is the foundation for prompts like "I have Contact open; change this widget
 ## Progress Notes
 
 - 2026-04-13: Completed `TASK-174-02-01`; active page editor context now includes page identity, selected block id, bounded canvas block summaries, and template-section references.
+- 2026-04-13: Completed `TASK-174-02-02`; active widget template editor context now includes template identity, selected block id, bounded block summaries, and template settings summary.
 
 ## Architecture
 

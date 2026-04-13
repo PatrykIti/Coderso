@@ -54,8 +54,17 @@ const activeSurfaceMatchesRoute = (
   activeSurface: AssistantActiveSurfaceContext | null,
   selectedResource: AssistantAdminRuntimeSelectedResource | null
 ) => {
-  if (!activeSurface || activeSurface.kind !== "page") return false;
-  return selectedResource?.kind === "page" && selectedResource.id === activeSurface.page.id;
+  if (!activeSurface || !selectedResource) return false;
+  if (activeSurface.kind === "page") {
+    return selectedResource.kind === "page" && selectedResource.id === activeSurface.page.id;
+  }
+  if (activeSurface.kind === "widget-template") {
+    return (
+      selectedResource.kind === "widget-template" &&
+      selectedResource.id === activeSurface.template.id
+    );
+  }
+  return false;
 };
 
 const resolveSurface = (route: string | null): RuntimeSurface => {

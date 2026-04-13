@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 625 | 2026-04-13 | TASK-174-02-02 active widget template context | Assistant/Admin |
 | 624 | 2026-04-13 | TASK-174-02-01 active page canvas context | Assistant/Admin |
 | 623 | 2026-04-12 | TASK-174-03-01 custom screen delete action | Assistant/Core |
 | 622 | 2026-04-12 | TASK-175 solution kit screens and module focus convergence | Admin/IA |

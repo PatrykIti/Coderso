@@ -40,10 +40,12 @@ const readContextFromHtml = (html: string) => {
       };
     };
     activeSurface?: {
-      kind: "page";
-      page: { id: string; title: string; slug: string; status: string; template: string | null };
+      kind: "page" | "widget-template";
+      page?: { id: string; title: string; slug: string; status: string; template: string | null };
+      template?: { id: string; name: string; status: string; category: string };
       selectedBlockId: string | null;
       blocks: Array<{ id: string; type: string; templateId: string | null }>;
+      settings?: { wrapperContainer: string | null; sectionGap: string | null; hasBackgroundMedia: boolean };
       warnings: string[];
     } | null;
   };
@@ -208,6 +210,66 @@ test("useAssistantAdminContext drops active page surface for a different route",
     const context = readContextFromHtml(html);
 
     expect(context.activeSurface).toBeNull();
+  } finally {
+    clearActiveAssistantSurfaceContext();
+  }
+});
+
+test("useAssistantAdminContext includes matching active widget template context", () => {
+  setActiveAssistantSurfaceContext({
+    kind: "widget-template",
+    template: {
+      id: "template-1",
+      name: "Contact Template",
+      status: "published",
+      category: "Marketing",
+    },
+    selectedBlockId: "cta-1",
+    blocks: [
+      {
+        id: "cta-1",
+        type: "cta-banner",
+        label: "Contact CTA",
+        path: "0",
+        childCount: 0,
+        slotKeys: [],
+        templateId: null,
+        templateName: null,
+      },
+    ],
+    settings: {
+      wrapperContainer: "default",
+      sectionGap: "md",
+      hasBackgroundMedia: false,
+    },
+    warnings: ["template_remote_update_pending"],
+  });
+
+  try {
+    const html = renderToString(
+      <AdminRouterProvider initialPath="/admin/coderso/widgets/templates/template-1">
+        <SnapshotProbe activeHref="/admin/coderso/widgets/templates/template-1" />
+      </AdminRouterProvider>
+    );
+    const context = readContextFromHtml(html);
+
+    expect(context.activeSurface).toMatchObject({
+      kind: "widget-template",
+      template: {
+        id: "template-1",
+        name: "Contact Template",
+        status: "published",
+        category: "Marketing",
+      },
+      selectedBlockId: "cta-1",
+      blocks: [{ id: "cta-1", type: "cta-banner", templateId: null }],
+      settings: {
+        wrapperContainer: "default",
+        sectionGap: "md",
+        hasBackgroundMedia: false,
+      },
+      warnings: ["template_remote_update_pending"],
+    });
   } finally {
     clearActiveAssistantSurfaceContext();
   }
