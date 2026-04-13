@@ -1,6 +1,7 @@
 import { getSetting, setSetting, type ContentRouteSetting } from "../settings/settingsService";
 import {
   createContentType,
+  deleteContentType,
   getContentTypeBySlug,
   updateContentType,
 } from "../content/typeService";
@@ -24,6 +25,7 @@ import {
 } from "../content/listingTemplatesService";
 import {
   createEntry,
+  deleteEntry,
   getEntry,
   getEntryBySlug,
   updateEntry,
@@ -75,9 +77,11 @@ import type {
   AssistantActionPreviewChange,
   AssistantContentRouteUpsertAction,
   AssistantContentTypeUpsertAction,
+  AssistantContentTypeDeleteAction,
   AssistantCustomScreenUpsertAction,
   AssistantCustomScreenDeleteAction,
   AssistantEntryUpsertDraftAction,
+  AssistantEntryDeleteAction,
   AssistantFormUpsertAction,
   AssistantFormAutomationUpsertAction,
   AssistantListingQueryFiltersPatchAction,
@@ -414,6 +418,7 @@ type ActionExecutorDeps = {
   setSetting: typeof setSetting;
   getContentTypeBySlug: typeof getContentTypeBySlug;
   createContentType: typeof createContentType;
+  deleteContentType: typeof deleteContentType;
   updateContentType: typeof updateContentType;
   listCustomScreens: typeof listCustomScreens;
   createCustomScreen: typeof createCustomScreen;
@@ -442,6 +447,7 @@ type ActionExecutorDeps = {
   setFormActions: typeof setFormActions;
   getEntryBySlug: typeof getEntryBySlug;
   createEntry: typeof createEntry;
+  deleteEntry: typeof deleteEntry;
   updateEntry: typeof updateEntry;
   getEntry: typeof getEntry;
   listMenuItems: typeof listMenuItems;
@@ -462,6 +468,7 @@ const defaultDeps: ActionExecutorDeps = {
   setSetting,
   getContentTypeBySlug,
   createContentType,
+  deleteContentType,
   updateContentType,
   listCustomScreens,
   createCustomScreen,
@@ -490,6 +497,7 @@ const defaultDeps: ActionExecutorDeps = {
   setFormActions,
   getEntryBySlug,
   createEntry,
+  deleteEntry,
   updateEntry,
   getEntry,
   listMenuItems,
@@ -561,6 +569,48 @@ const buildContentTypePreview = async (
         }
       : null,
     nextValue: action.input,
+  });
+};
+
+const buildContentTypeDeletePreview = async (
+  action: AssistantContentTypeDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getContentTypeBySlug(action.input.slug);
+  const matches = existing?.id === action.input.id && existing.name === action.input.name;
+  const entryCount = Math.max(0, Math.floor(action.input.expectedEntryCount ?? 0));
+  return createPreviewChange({
+    action,
+    targetType: "content-type",
+    targetKey: action.input.slug,
+    operation: "delete",
+    summary: `Delete content type "${action.input.name}"`,
+    warnings:
+      entryCount > 0
+        ? [`This content type has ${entryCount} entries and cannot be safely deleted alone.`]
+        : [],
+    conflicts:
+      existing && matches && entryCount === 0
+        ? []
+        : [
+            {
+              code:
+                entryCount > 0
+                  ? "assistant_action_dependency_conflict"
+                  : "assistant_action_dependency_missing",
+              severity: "error",
+              message:
+                entryCount > 0
+                  ? "Content type still has entries and needs a broader reviewed delete plan."
+                  : existing
+                    ? "Content type no longer matches the planned delete target."
+                    : "Content type was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? { id: existing.id, name: existing.name, slug: existing.slug }
+      : null,
+    nextValue: null,
   });
 };
 
@@ -884,6 +934,55 @@ const buildEntryUpsertDraftPreview = async (
       slug: action.input.slug,
       data: action.input.values,
     },
+  });
+};
+
+const buildEntryDeletePreview = async (
+  action: AssistantEntryDeleteAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getEntry(action.input.id);
+  const contentType =
+    action.input.contentTypeSlug ? await deps.getContentTypeBySlug(action.input.contentTypeSlug) : null;
+  const matches =
+    Boolean(existing) &&
+    (!action.input.expectedTitle || existing?.title === action.input.expectedTitle) &&
+    (!action.input.expectedSlug || existing?.slug === action.input.expectedSlug) &&
+    (!action.input.expectedStatus || existing?.status === action.input.expectedStatus) &&
+    (!contentType || existing?.typeId === contentType.id);
+
+  return createPreviewChange({
+    action,
+    targetType: "entry",
+    targetKey: action.input.expectedSlug ?? action.input.id,
+    operation: "delete",
+    summary: `Delete entry "${action.input.expectedTitle ?? action.input.id}"`,
+    warnings:
+      existing?.status === "published"
+        ? ["This entry is published and may be visible on the public site."]
+        : [],
+    conflicts:
+      matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Entry no longer matches the planned delete target."
+                : "Entry was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          title: existing.title,
+          slug: existing.slug,
+          status: existing.status,
+          typeId: existing.typeId,
+        }
+      : null,
+    nextValue: null,
   });
 };
 
@@ -1441,6 +1540,32 @@ const executeContentTypeAction = async (
   };
 };
 
+const executeContentTypeDeleteAction = async (
+  action: AssistantContentTypeDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const entryCount = Math.max(0, Math.floor(action.input.expectedEntryCount ?? 0));
+  const existing = await deps.getContentTypeBySlug(action.input.slug);
+  if (!existing || existing.id !== action.input.id || existing.name !== action.input.name || entryCount > 0) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const deleted = await deps.deleteContentType(existing.id);
+  if (!deleted) throw new Error("assistant_action_dependency_missing");
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "content-type",
+    targetKey: action.input.slug,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: "/admin/coderso/engine",
+    publicHref: null,
+    message: `Deleted content type "${deleted.name}".`,
+  };
+};
+
 const executeCustomScreenAction = async (
   action: AssistantCustomScreenUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -1881,6 +2006,41 @@ const executeEntryUpsertDraftAction = async (
   };
 };
 
+const executeEntryDeleteAction = async (
+  action: AssistantEntryDeleteAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getEntry(action.input.id);
+  const contentType =
+    action.input.contentTypeSlug ? await deps.getContentTypeBySlug(action.input.contentTypeSlug) : null;
+  if (
+    !existing ||
+    (action.input.expectedTitle && existing.title !== action.input.expectedTitle) ||
+    (action.input.expectedSlug && existing.slug !== action.input.expectedSlug) ||
+    (action.input.expectedStatus && existing.status !== action.input.expectedStatus) ||
+    (contentType && existing.typeId !== contentType.id)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const deleted = await deps.deleteEntry(existing.id);
+  if (!deleted) throw new Error("assistant_action_dependency_missing");
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "entry",
+    targetKey: action.input.expectedSlug ?? action.input.id,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: deleted.id,
+    adminHref: action.input.contentTypeSlug
+      ? `/admin/coderso/entries/${encodeURIComponent(action.input.contentTypeSlug)}`
+      : "/admin/coderso/entries",
+    publicHref: null,
+    message: `Deleted entry "${deleted.title}".`,
+  };
+};
+
 const executeMenuItemAction = async (
   action: AssistantMenuItemUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -2287,6 +2447,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeContentTypeAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
+  "content-type.delete": {
+    preview: (action, ctx) =>
+      action.type === "content-type.delete"
+        ? buildContentTypeDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "content-type.delete"
+        ? executeContentTypeDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
   "custom-screen.upsert": {
     preview: (action, ctx) =>
       action.type === "custom-screen.upsert"
@@ -2385,6 +2555,16 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "entry.upsert-draft"
         ? executeEntryUpsertDraftAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
+  "entry.delete": {
+    preview: (action, ctx) =>
+      action.type === "entry.delete"
+        ? buildEntryDeletePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "entry.delete"
+        ? executeEntryDeleteAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "menu.item.upsert": {

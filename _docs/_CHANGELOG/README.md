@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 630 | 2026-04-13 | TASK-174-03-04 content and entry delete actions | Assistant/Core |
 | 629 | 2026-04-13 | TASK-174-03-03 widget template delete action | Assistant/Core |
 | 628 | 2026-04-13 | TASK-174-03-02 page delete action | Assistant/Core |
 | 627 | 2026-04-13 | TASK-174-02-04 active surface hydration and redaction | Assistant/Core |

@@ -38,7 +38,10 @@ import {
   PRODUCT_CATALOG_PRESET,
   SERVICES_DIRECTORY_PRESET,
 } from "./blueprints/catalogFamilyPresets";
-import type { AssistantCustomScreenSummary } from "./adminContextTypes";
+import type {
+  AssistantContentTypeSummary,
+  AssistantCustomScreenSummary,
+} from "./adminContextTypes";
 
 export {
   classifyAssistantPrompt,
@@ -115,6 +118,26 @@ const widgetTemplateDeleteKeywords = [
   "szablony widgetów",
   "template",
   "templates",
+];
+
+const entryDeleteKeywords = [
+  "entry",
+  "entries",
+  "record",
+  "records",
+  "wpis",
+  "wpisy",
+  "rekord",
+  "rekordy",
+];
+
+const contentTypeDeleteKeywords = [
+  "content type",
+  "content model",
+  "typ tresci",
+  "typ treści",
+  "model tresci",
+  "model treści",
 ];
 
 const countWords = new Map<string, number>([
@@ -419,6 +442,209 @@ const buildWidgetTemplateDeletePlan = (
           name: template.name,
           expectedStatus: template.status,
           expectedCategory: template.category,
+        },
+      },
+    ],
+  };
+};
+
+const readRouteSegmentsFromContext = (context: ReturnType<typeof buildAssistantAdminContext>) =>
+  (context.route ?? "")
+    .split("/")
+    .filter(Boolean);
+
+const readActiveEntryTarget = (context: ReturnType<typeof buildAssistantAdminContext>) => {
+  const selected = context.runtimeSnapshot?.selectedResource;
+  if (selected?.kind !== "entry" && selected?.kind !== "custom-screen-entry") return null;
+  const segments = readRouteSegmentsFromContext(context);
+  const entriesIndex = segments.findIndex((segment) => segment === "entries");
+  const contentTypeSlug =
+    selected.kind === "entry" && entriesIndex >= 0 ? segments[entriesIndex + 1] ?? null : null;
+  return {
+    id: selected.id,
+    contentTypeSlug,
+  };
+};
+
+const buildEntryDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-entry-delete-needs-input",
+  status: "needs_input",
+  intentId: "entry-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Entry delete needs an active record",
+  answer: [
+    "I can delete entries only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Open the entry you want to delete or provide an exact record target.",
+  ].join("\n"),
+  summary: "Entry deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "entry-delete-target",
+      label: "Which exact entry should I delete?",
+      description: "Open the entry in the editor or provide an exact record target.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildEntryDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!isLikelyDeletePrompt(normalizedPrompt) || !includesAny(normalizedPrompt, entryDeleteKeywords)) {
+    return null;
+  }
+  const target = readActiveEntryTarget(context);
+  if (!target) {
+    return buildEntryDeleteNeedsInputPlan(
+      prompt,
+      "The prompt asks to delete an entry, but there is no active entry context."
+    );
+  }
+  return {
+    id: `plan-entry-delete-${target.id}`,
+    status: "ready",
+    intentId: "entry-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete active entry",
+    answer: "I can delete the active entry through the reviewed LLM Guide action flow.",
+    summary: "Delete the active entry.",
+    confidence: 0.82,
+    assumptions: [
+      "The target entry is resolved from the active admin route context.",
+      "Dry-run must be reviewed before deletion.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `entry-delete-${target.id}`,
+        type: "entry.delete",
+        title: "Delete active entry",
+        description: "Delete the active entry selected from admin context.",
+        input: {
+          id: target.id,
+          contentTypeSlug: target.contentTypeSlug,
+        },
+      },
+    ],
+  };
+};
+
+const sortContentTypesByName = (types: AssistantContentTypeSummary[]) =>
+  [...types].sort((left, right) => left.name.localeCompare(right.name));
+
+const buildContentTypeDeleteNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-content-type-delete-needs-input",
+  status: "needs_input",
+  intentId: "content-type-delete-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Content type delete needs a safe target",
+  answer: [
+    "I can delete content types only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Provide an exact content type name/slug or remove dependent entries first.",
+  ].join("\n"),
+  summary: "Content type deletion could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "content-type-delete-target",
+      label: "Which exact content type should I delete?",
+      description:
+        "Provide an exact content type name/slug and make sure dependencies are handled.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const findContentTypeDeleteTarget = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>
+) => {
+  const selected = context.runtimeSnapshot?.selectedResource;
+  const contentTypes = context.resourceCatalog?.contentTypes ?? [];
+  if (selected?.kind === "content-type") {
+    return contentTypes.find((entry) => entry.id === selected.id) ?? null;
+  }
+  const target = extractQuotedPrefix(prompt);
+  if (!target) return null;
+  const normalizedTarget = normalizeAssistantPlannerPrompt(target);
+  return (
+    sortContentTypesByName(contentTypes).find((entry) =>
+      [entry.id, entry.slug, entry.name]
+        .map((value) => normalizeAssistantPlannerPrompt(value))
+        .includes(normalizedTarget)
+    ) ?? null
+  );
+};
+
+const buildContentTypeDeletePlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (!isLikelyDeletePrompt(normalizedPrompt) || !includesAny(normalizedPrompt, contentTypeDeleteKeywords)) {
+    return null;
+  }
+  const target = findContentTypeDeleteTarget(prompt, context);
+  if (!target) {
+    return buildContentTypeDeleteNeedsInputPlan(
+      prompt,
+      "The prompt did not resolve to one exact content type from the server-side catalog."
+    );
+  }
+  if ((target.entryCount ?? 0) > 0) {
+    return buildContentTypeDeleteNeedsInputPlan(
+      prompt,
+      `Content type "${target.name}" still has ${target.entryCount} entries.`
+    );
+  }
+  return {
+    id: `plan-content-type-delete-${target.id}`,
+    status: "ready",
+    intentId: "content-type-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Delete ${target.name}`,
+    answer: "I can delete the selected content type through the reviewed LLM Guide action flow.",
+    summary: `Delete content type "${target.name}" (${target.slug}).`,
+    confidence: 0.82,
+    assumptions: [
+      "The target content type is resolved from the server-side resource catalog.",
+      "The catalog reports zero entries for this content type.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `content-type-delete-${target.id}`,
+        type: "content-type.delete",
+        title: `Delete ${target.name}`,
+        description: "Delete a content type selected from the server-side resource catalog.",
+        input: {
+          id: target.id,
+          name: target.name,
+          slug: target.slug,
+          expectedEntryCount: target.entryCount ?? 0,
         },
       },
     ],
@@ -857,6 +1083,18 @@ export const planAssistantActions = (
     classification.normalizedPrompt
   );
   if (widgetTemplateDeletePlan) return normalizeAssistantActionPlan(widgetTemplateDeletePlan);
+  const entryDeletePlan = buildEntryDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (entryDeletePlan) return normalizeAssistantActionPlan(entryDeletePlan);
+  const contentTypeDeletePlan = buildContentTypeDeletePlan(
+    input.prompt,
+    context,
+    classification.normalizedPrompt
+  );
+  if (contentTypeDeletePlan) return normalizeAssistantActionPlan(contentTypeDeletePlan);
 
   if (
     classification.promptKind === "setup_request" &&

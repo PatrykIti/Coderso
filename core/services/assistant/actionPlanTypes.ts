@@ -235,6 +235,19 @@ export type AssistantContentTypeUpsertAction = {
   };
 };
 
+export type AssistantContentTypeDeleteAction = {
+  id: string;
+  type: "content-type.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    slug: string;
+    expectedEntryCount?: number | null;
+  };
+};
+
 export type AssistantCustomScreenUpsertAction = {
   id: string;
   type: "custom-screen.upsert";
@@ -319,6 +332,20 @@ export type AssistantEntryUpsertDraftAction = {
     title: string;
     slug: string;
     values: Record<string, unknown>;
+  };
+};
+
+export type AssistantEntryDeleteAction = {
+  id: string;
+  type: "entry.delete";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    contentTypeSlug?: string | null;
+    expectedTitle?: string | null;
+    expectedSlug?: string | null;
+    expectedStatus?: string | null;
   };
 };
 
@@ -509,12 +536,14 @@ export type AssistantSiteKitValidateAction = {
 export type AssistantPlannedAction =
   | AssistantContentRouteUpsertAction
   | AssistantContentTypeUpsertAction
+  | AssistantContentTypeDeleteAction
   | AssistantCustomScreenUpsertAction
   | AssistantCustomScreenDeleteAction
   | AssistantListingQueryUpsertAction
   | AssistantListingTemplateUpsertAction
   | AssistantFormUpsertAction
   | AssistantEntryUpsertDraftAction
+  | AssistantEntryDeleteAction
   | AssistantMenuItemUpsertAction
   | AssistantSeoDocumentUpsertAction
   | AssistantMediaReferenceAttachAction

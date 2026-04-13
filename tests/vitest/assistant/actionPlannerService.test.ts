@@ -270,6 +270,129 @@ test("planAssistantActions asks for active widget template context before templa
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions builds entry delete plan from active entry route", () => {
+  const plan = planAssistantActions({
+    prompt: "usun ten wpis",
+    context: {
+      page: "/admin/coderso/entries/products/entry-1",
+      locale: "pl-PL",
+      runtimeSnapshot: {
+        schemaVersion: 1,
+        route: "/admin/coderso/entries/products/entry-1",
+        activeHref: "/admin/coderso/entries/products/entry-1",
+        area: "coderso",
+        codersoModule: "entries",
+        selectedResource: { kind: "entry", id: "entry-1" },
+        visibleActions: [],
+        permissionHints: {
+          known: false,
+          requiredForVisibleActions: [],
+          reason: "frontend_user_has_no_permissions",
+        },
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("entry-delete");
+  expect(plan.actions).toEqual([
+    {
+      id: "entry-delete-entry-1",
+      type: "entry.delete",
+      title: "Delete active entry",
+      description: "Delete the active entry selected from admin context.",
+      input: {
+        id: "entry-1",
+        contentTypeSlug: "products",
+      },
+    },
+  ]);
+});
+
+test("planAssistantActions builds content type delete plan from resource catalog", () => {
+  const plan = planAssistantActions({
+    prompt: "usun content type 'products'",
+    context: {
+      page: "/admin/coderso/engine",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-13T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 0,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("content-type-delete");
+  expect(plan.actions[0]).toMatchObject({
+    id: "content-type-delete-ct-products",
+    type: "content-type.delete",
+    input: {
+      id: "ct-products",
+      name: "Products",
+      slug: "products",
+      expectedEntryCount: 0,
+    },
+  });
+});
+
+test("planAssistantActions blocks content type delete when entries exist", () => {
+  const plan = planAssistantActions({
+    prompt: "usun content type 'products'",
+    context: {
+      page: "/admin/coderso/engine",
+      locale: "pl-PL",
+      resourceCatalog: {
+        schemaVersion: 1,
+        generatedAt: "2026-04-13T10:00:00.000Z",
+        budget: {
+          maxItemsPerGroup: 50,
+          maxFieldsPerResource: 24,
+          truncated: false,
+        },
+        contentTypes: [
+          {
+            id: "ct-products",
+            slug: "products",
+            name: "Products",
+            entryCount: 2,
+            fields: [],
+          },
+        ],
+        customScreens: [],
+        listings: { queries: [], templates: [] },
+        forms: [],
+        widgets: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("content-type-delete-needs-input");
+  expect(plan.summary).toContain("Content type deletion");
+  expect(plan.actions).toEqual([]);
+});
+
 test("planAssistantActions routes non-house-project setup prompts into generic needs-input family", () => {
   const docsQuestionPlan = planAssistantActions({
     prompt: "potrzebuje katalogu produktow dla sklepu z meblami",

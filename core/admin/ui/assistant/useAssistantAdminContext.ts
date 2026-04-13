@@ -122,6 +122,9 @@ const selectedResourceFromRoute = (
     return { kind: "post", id: safeDecode(segments[1]) ?? segments[1] };
   }
   if (segments[0] !== "coderso") return null;
+  if (segments[1] === "engine" && segments[2]) {
+    return { kind: "content-type", id: safeDecode(segments[2]) ?? segments[2] };
+  }
   if (segments[1] === "posts" && segments[2]) {
     return { kind: "post", id: safeDecode(segments[2]) ?? segments[2] };
   }

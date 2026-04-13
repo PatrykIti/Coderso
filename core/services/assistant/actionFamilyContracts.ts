@@ -150,6 +150,20 @@ export const assistantActionFamilyContracts = [
     ["slug", "name", "schema"]
   ),
   executableContract(
+    "content-type.delete",
+    "content",
+    "core/services/content/typeService.ts",
+    ["id", "name", "slug"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Deletes one content type only after dependency checks pass."],
+    }
+  ),
+  executableContract(
     "custom-screen.upsert",
     "custom-screen",
     "core/services/customScreens/customScreenService.ts",
@@ -201,6 +215,20 @@ export const assistantActionFamilyContracts = [
         execute: ["content:write"],
       },
       notes: ["Draft-only entry upsert; publishing requires a separate explicit action."],
+    }
+  ),
+  executableContract(
+    "entry.delete",
+    "entry",
+    "core/services/content/entryService.ts",
+    ["id"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write", "content:publish"],
+      },
+      notes: ["Deletes one exact entry after active context/catalog target resolution."],
     }
   ),
   executableContract(

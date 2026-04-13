@@ -86,7 +86,7 @@ const createDeps = () => {
     typeId: string;
     title: string;
     slug: string;
-    status: "draft";
+    status: "draft" | "published";
     data: Record<string, unknown>;
     authorId: string | null;
     createdAt: Date;
@@ -179,6 +179,12 @@ const createDeps = () => {
       if (input.slug !== undefined) existing.slug = input.slug;
       if (input.schema !== undefined) existing.schema = input.schema;
       return existing;
+    },
+    deleteContentType: async (id: string) => {
+      const index = contentTypes.findIndex((entry) => entry.id === id);
+      if (index < 0) return null;
+      const [deleted] = contentTypes.splice(index, 1);
+      return deleted ?? null;
     },
     listCustomScreens: async () => customScreens,
     getCustomScreen: async (id: string) =>
@@ -465,6 +471,14 @@ const createDeps = () => {
       entries.push(record);
       return record as unknown as Awaited<
         ReturnType<(typeof import("../../../core/services/content/entryService"))["createEntry"]>
+      >;
+    },
+    deleteEntry: async (id: string) => {
+      const index = entries.findIndex((entry) => entry.id === id);
+      if (index < 0) return null;
+      const [deleted] = entries.splice(index, 1);
+      return deleted as unknown as Awaited<
+        ReturnType<(typeof import("../../../core/services/content/entryService"))["deleteEntry"]>
       >;
     },
     updateEntry: async (
@@ -756,6 +770,127 @@ test("executeAssistantActionPlan creates and reuses draft entry actions", async 
 
   const replayPreview = await dryRunAssistantActionPlan({ plan }, deps);
   expect(replayPreview.changes[0]?.operation).toBe("noop");
+});
+
+test("executeAssistantActionPlan deletes entries through explicit delete actions", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        title: { type: "string" },
+      },
+    },
+  });
+  const entry = await deps.createEntry(contentType.id, {
+    title: "Sample Product",
+    slug: "sample-product",
+    data: { title: "Sample Product" },
+    authorId: "user-1",
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-entry-delete",
+    status: "ready",
+    intentId: "entry-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete entry",
+    answer: "I can delete the active entry.",
+    summary: "Delete active entry.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "entry-delete-1",
+        type: "entry.delete",
+        title: "Delete Sample Product",
+        description: "Delete selected entry.",
+        input: {
+          id: entry.id,
+          contentTypeSlug: "products",
+          expectedTitle: "Sample Product",
+          expectedSlug: "sample-product",
+          expectedStatus: "draft",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("delete");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-entry-delete-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.delete).toBe(1);
+  expect(executed.results[0]?.message).toBe('Deleted entry "Sample Product".');
+  expect(await deps.getEntry(entry.id)).toBeNull();
+});
+
+test("executeAssistantActionPlan deletes content types when dependency count is zero", async () => {
+  const deps = createDeps();
+  const contentType = await deps.createContentType({
+    name: "Products",
+    slug: "products",
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {},
+    },
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-content-type-delete",
+    status: "ready",
+    intentId: "content-type-delete",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Delete content type",
+    answer: "I can delete the selected content type.",
+    summary: "Delete content type.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "content-type-delete-1",
+        type: "content-type.delete",
+        title: "Delete Products",
+        description: "Delete selected content type.",
+        input: {
+          id: contentType.id,
+          name: "Products",
+          slug: "products",
+          expectedEntryCount: 0,
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("delete");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-content-type-delete-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.delete).toBe(1);
+  expect(executed.results[0]?.message).toBe('Deleted content type "Products".');
+  expect(await deps.getContentTypeBySlug("products")).toBeNull();
 });
 
 test("executeAssistantActionPlan deletes custom screens through explicit delete actions", async () => {

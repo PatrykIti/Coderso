@@ -185,6 +185,18 @@ const normalizeContentTypeInput = (input: JsonRecord) => {
   };
 };
 
+const normalizeContentTypeDeleteInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "slug", "expectedEntryCount"]));
+  return {
+    id: readText(input.id),
+    name: readText(input.name),
+    slug: readText(input.slug),
+    ...(input.expectedEntryCount !== undefined
+      ? { expectedEntryCount: readOptionalFiniteNumber(input.expectedEntryCount) }
+      : {}),
+  };
+};
+
 const normalizeCustomScreenInput = (input: JsonRecord) => {
   assertKeys(
     input,
@@ -286,6 +298,28 @@ const normalizeEntryUpsertDraftInput = (input: JsonRecord) => {
     title: readText(input.title),
     slug: readText(input.slug),
     values: assertRecord(input.values),
+  };
+};
+
+const normalizeEntryDeleteInput = (input: JsonRecord) => {
+  assertKeys(
+    input,
+    new Set(["id", "contentTypeSlug", "expectedTitle", "expectedSlug", "expectedStatus"])
+  );
+  return {
+    id: readText(input.id),
+    ...(input.contentTypeSlug !== undefined
+      ? { contentTypeSlug: readOptionalText(input.contentTypeSlug) }
+      : {}),
+    ...(input.expectedTitle !== undefined
+      ? { expectedTitle: readOptionalText(input.expectedTitle) }
+      : {}),
+    ...(input.expectedSlug !== undefined
+      ? { expectedSlug: readOptionalText(input.expectedSlug) }
+      : {}),
+    ...(input.expectedStatus !== undefined
+      ? { expectedStatus: readOptionalText(input.expectedStatus) }
+      : {}),
   };
 };
 
@@ -628,6 +662,8 @@ const normalizeActionInput = (
       return normalizeContentRouteInput(record);
     case "content-type.upsert":
       return normalizeContentTypeInput(record);
+    case "content-type.delete":
+      return normalizeContentTypeDeleteInput(record);
     case "custom-screen.upsert":
       return normalizeCustomScreenInput(record);
     case "custom-screen.delete":
@@ -640,6 +676,8 @@ const normalizeActionInput = (
       return normalizeFormInput(record);
     case "entry.upsert-draft":
       return normalizeEntryUpsertDraftInput(record);
+    case "entry.delete":
+      return normalizeEntryDeleteInput(record);
     case "menu.item.upsert":
       return normalizeMenuItemUpsertInput(record);
     case "seo.document.upsert":

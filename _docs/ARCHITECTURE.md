@@ -411,6 +411,8 @@ Action family contract registry:
 - `custom-screen.delete` is executable for explicit delete requests resolved from server-side resource catalog context; execute rechecks target id/name/prefix before calling the custom screen domain delete service.
 - `page.delete` is executable for active-context page delete requests; execute rechecks target id/title/slug/status before calling the page domain delete service.
 - `widget-template.delete` is executable for active-context reusable template delete requests; dry-run warns about reusable template blast radius and execute rechecks id/name/status/category before deletion.
+- `entry.delete` is executable for active entry route context and rechecks optional content type/title/slug/status expectations before deletion.
+- `content-type.delete` is executable for exact server-side catalog targets and is blocked when the catalog reports existing entries.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
 - `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
 - `media.reference.attach` is executable for `entry` targets and uses existing media/entry services to attach existing media ids without accepting upload bytes.
