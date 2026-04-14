@@ -37,6 +37,8 @@ test("assistantActionTypes lists every supported action type once", () => {
     "page.update",
     "page.delete",
     "widget-template.delete",
+    "widget-template.update",
+    "widget-template.block.patch",
     "site-kit.recommend",
     "site-kit.install",
     "site-kit.validate",
@@ -91,6 +93,8 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("form.automation.upsert")).toBe(true);
   expect(isAssistantActionType("page.update")).toBe(true);
   expect(isAssistantActionType("page.delete")).toBe(true);
+  expect(isAssistantActionType("widget-template.update")).toBe(true);
+  expect(isAssistantActionType("widget-template.block.patch")).toBe(true);
   expect(isAssistantActionType("entry.sample.create")).toBe(false);
   expect(isAssistantActionType("database.drop")).toBe(false);
   expect(getAssistantActionHandler(registry, "site-kit.install").label).toBe(

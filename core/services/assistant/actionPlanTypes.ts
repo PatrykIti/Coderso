@@ -619,6 +619,45 @@ export type AssistantWidgetTemplateDeleteAction = {
   };
 };
 
+export type AssistantWidgetTemplateUpdateAction = {
+  id: string;
+  type: "widget-template.update";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    expectedCategory?: string | null;
+    patch: {
+      name?: string;
+      description?: string | null;
+      category?: string;
+      status?: "draft" | "published";
+      settings?: {
+        wrapperContainer?: "default" | "narrow" | "full";
+        sectionGap?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+      };
+    };
+  };
+};
+
+export type AssistantWidgetTemplateBlockPatchAction = {
+  id: string;
+  type: "widget-template.block.patch";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    blockId: string;
+    expectedBlockType?: string | null;
+    dataPath: string[];
+    value: string | number | boolean | null;
+  };
+};
+
 export type AssistantSiteKitRecommendAction = {
   id: string;
   type: "site-kit.recommend";
@@ -675,6 +714,8 @@ export type AssistantPlannedAction =
   | AssistantPageUpdateAction
   | AssistantPageDeleteAction
   | AssistantWidgetTemplateDeleteAction
+  | AssistantWidgetTemplateUpdateAction
+  | AssistantWidgetTemplateBlockPatchAction
   | AssistantSiteKitRecommendAction
   | AssistantSiteKitInstallAction
   | AssistantSiteKitValidateAction;

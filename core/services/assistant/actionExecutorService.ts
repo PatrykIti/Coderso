@@ -52,7 +52,9 @@ import {
   deleteWidgetTemplate,
   getWidgetTemplate,
   listWidgetTemplates,
+  updateWidgetTemplate,
 } from "../widgets/widgetTemplateService";
+import { normalizeWidgetTemplateSettings } from "../widgets/widgetTemplateSettings";
 import {
   countFormSubmissions,
   createForm,
@@ -111,6 +113,8 @@ import type {
   AssistantPageUpsertAction,
   AssistantPageDeleteAction,
   AssistantWidgetTemplateDeleteAction,
+  AssistantWidgetTemplateUpdateAction,
+  AssistantWidgetTemplateBlockPatchAction,
   AssistantPlannedAction,
   AssistantSeoDocumentDeleteAction,
   AssistantSeoDocumentUpsertAction,
@@ -563,6 +567,7 @@ type ActionExecutorDeps = {
   getWidgetTemplate: typeof getWidgetTemplate;
   listWidgetTemplates: typeof listWidgetTemplates;
   deleteWidgetTemplate: typeof deleteWidgetTemplate;
+  updateWidgetTemplate: typeof updateWidgetTemplate;
   getForm: typeof getForm;
   listForms: typeof listForms;
   countFormSubmissions: typeof countFormSubmissions;
@@ -624,6 +629,7 @@ const defaultDeps: ActionExecutorDeps = {
   getWidgetTemplate,
   listWidgetTemplates,
   deleteWidgetTemplate,
+  updateWidgetTemplate,
   getForm,
   listForms,
   countFormSubmissions,
@@ -1981,6 +1987,161 @@ const buildWidgetTemplateDeletePreview = async (
   });
 };
 
+const applyWidgetTemplateSettingsPatch = (
+  settings: unknown,
+  patch: NonNullable<AssistantWidgetTemplateUpdateAction["input"]["patch"]["settings"]>
+) => {
+  const normalized = normalizeWidgetTemplateSettings(settings);
+  return {
+    ...normalized,
+    layout: {
+      ...normalized.layout,
+      wrapper: {
+        ...normalized.layout.wrapper,
+        ...(patch.wrapperContainer !== undefined
+          ? { container: patch.wrapperContainer }
+          : {}),
+      },
+      sections: {
+        ...normalized.layout.sections,
+        ...(patch.sectionGap !== undefined ? { gap: patch.sectionGap } : {}),
+      },
+    },
+  };
+};
+
+const applyWidgetTemplateUpdatePatch = (
+  existing: Awaited<ReturnType<typeof getWidgetTemplate>>,
+  patch: AssistantWidgetTemplateUpdateAction["input"]["patch"]
+) => {
+  if (!existing) return null;
+  return {
+    name: patch.name ?? existing.name,
+    description:
+      patch.description !== undefined ? patch.description : existing.description ?? null,
+    category: patch.category ?? existing.category,
+    status: (patch.status ?? existing.status) as "draft" | "published",
+    settings: patch.settings
+      ? applyWidgetTemplateSettingsPatch(existing.settings, patch.settings)
+      : existing.settings,
+  };
+};
+
+const buildWidgetTemplateUpdatePreview = async (
+  action: AssistantWidgetTemplateUpdateAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getWidgetTemplate(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const expectedCategory = action.input.expectedCategory?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    (!expectedStatus || existing.status === expectedStatus) &&
+    (!expectedCategory || existing.category === expectedCategory);
+  const nextValue = applyWidgetTemplateUpdatePatch(existing, action.input.patch);
+
+  return createPreviewChange({
+    action,
+    targetType: "widget-template",
+    targetKey: action.input.name,
+    summary: `Update widget template "${action.input.name}"`,
+    warnings:
+      existing?.status === "published" || action.input.patch.status === "published"
+        ? ["This reusable widget template may affect pages that reference it."]
+        : [],
+    conflicts:
+      existing && matches
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: existing
+                ? "Widget template no longer matches the planned update target."
+                : "Widget template was not found.",
+            },
+          ],
+    beforeValue: existing
+      ? {
+          id: existing.id,
+          name: existing.name,
+          description: existing.description,
+          category: existing.category,
+          status: existing.status,
+          settings: existing.settings,
+        }
+      : null,
+    nextValue,
+  });
+};
+
+const buildWidgetTemplateBlockPatchPreview = async (
+  action: AssistantWidgetTemplateBlockPatchAction,
+  deps: ActionExecutorDeps
+) => {
+  const existing = await deps.getWidgetTemplate(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const matches =
+    existing?.name === action.input.name &&
+    (!expectedStatus || existing.status === expectedStatus);
+  const patch =
+    existing && matches
+      ? applyPageWidgetDataPatch(existing.blocks, {
+          blockId: action.input.blockId,
+          expectedBlockType: action.input.expectedBlockType,
+          dataPath: action.input.dataPath,
+          value: action.input.value,
+        })
+      : null;
+  const conflictMessage =
+    patch?.status === "missing_block"
+      ? "Selected widget template block was not found."
+      : patch?.status === "type_mismatch"
+        ? "Selected widget template block type changed."
+        : patch?.status === "missing_path"
+          ? "Selected widget template block data path does not exist."
+          : existing
+            ? "Widget template no longer matches the planned block patch target."
+            : "Widget template was not found.";
+
+  return createPreviewChange({
+    action,
+    targetType: "widget-template",
+    targetKey: `${action.input.name}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
+    summary: `Patch widget template block "${action.input.blockId}"`,
+    warnings:
+      existing?.status === "published"
+        ? ["This reusable widget template may affect pages that reference it."]
+        : [],
+    conflicts:
+      existing && matches && patch?.status === "ok"
+        ? []
+        : [
+            {
+              code: "assistant_action_dependency_missing",
+              severity: "error",
+              message: conflictMessage,
+            },
+          ],
+    beforeValue:
+      existing && patch?.status === "ok"
+        ? {
+            blockId: action.input.blockId,
+            dataPath: action.input.dataPath,
+            value: patch.beforeValue,
+          }
+        : null,
+    nextValue:
+      existing && patch?.status === "ok"
+        ? {
+            blockId: action.input.blockId,
+            dataPath: action.input.dataPath,
+            value: patch.nextValue,
+          }
+        : null,
+  });
+};
+
 const buildSiteKitRecommendPreview = async (
   action: AssistantSiteKitRecommendAction,
   deps: ActionExecutorDeps
@@ -3222,6 +3383,110 @@ const executeWidgetTemplateDeleteAction = async (
   };
 };
 
+const executeWidgetTemplateUpdateAction = async (
+  action: AssistantWidgetTemplateUpdateAction,
+  preview: AssistantActionPreviewChange,
+  actorId: string,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getWidgetTemplate(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  const expectedCategory = action.input.expectedCategory?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    (expectedStatus && existing.status !== expectedStatus) ||
+    (expectedCategory && existing.category !== expectedCategory)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const nextValue = applyWidgetTemplateUpdatePatch(existing, action.input.patch);
+  if (!nextValue) throw new Error("assistant_action_dependency_missing");
+  const updated =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateWidgetTemplate(
+          existing.id,
+          {
+            name: nextValue.name,
+            description: nextValue.description,
+            category: nextValue.category,
+            status: nextValue.status,
+            settings: nextValue.settings,
+          },
+          actorId
+        );
+  if (!updated) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "widget-template",
+    targetKey: action.input.name,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: updated.id,
+    adminHref: `/admin/coderso/widgets/templates/${encodeURIComponent(updated.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Widget template already matched the planned patch."
+        : `Updated widget template "${updated.name}".`,
+  };
+};
+
+const executeWidgetTemplateBlockPatchAction = async (
+  action: AssistantWidgetTemplateBlockPatchAction,
+  preview: AssistantActionPreviewChange,
+  actorId: string,
+  deps: ActionExecutorDeps
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getWidgetTemplate(action.input.id);
+  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
+  if (
+    !existing ||
+    existing.name !== action.input.name ||
+    (expectedStatus && existing.status !== expectedStatus)
+  ) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const patch = applyPageWidgetDataPatch(existing.blocks, {
+    blockId: action.input.blockId,
+    expectedBlockType: action.input.expectedBlockType,
+    dataPath: action.input.dataPath,
+    value: action.input.value,
+  });
+  if (patch.status !== "ok") throw new Error("assistant_action_dependency_missing");
+  normalizeAssistantPagePatchBlock(patch.block!);
+  const updated =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateWidgetTemplate(
+          existing.id,
+          {
+            blocks: patch.blocks,
+          },
+          actorId
+        );
+  if (!updated) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "widget-template",
+    targetKey: `${action.input.name}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: updated.id,
+    adminHref: `/admin/coderso/widgets/templates/${encodeURIComponent(updated.id)}`,
+    publicHref: null,
+    message:
+      preview.operation === "noop"
+        ? "Widget template block already matched the planned patch."
+        : `Patched widget template block "${action.input.blockId}".`,
+  };
+};
+
 const executeSiteKitRecommendAction = async (
   action: AssistantSiteKitRecommendAction,
   preview: AssistantActionPreviewChange,
@@ -3584,6 +3849,26 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "widget-template.delete"
         ? executeWidgetTemplateDeleteAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "widget-template.update": {
+    preview: (action, ctx) =>
+      action.type === "widget-template.update"
+        ? buildWidgetTemplateUpdatePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "widget-template.update"
+        ? executeWidgetTemplateUpdateAction(action, preview, ctx.actorId, ctx.deps)
+        : unexpectedAction(),
+  },
+  "widget-template.block.patch": {
+    preview: (action, ctx) =>
+      action.type === "widget-template.block.patch"
+        ? buildWidgetTemplateBlockPatchPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "widget-template.block.patch"
+        ? executeWidgetTemplateBlockPatchAction(action, preview, ctx.actorId, ctx.deps)
         : unexpectedAction(),
   },
   "site-kit.recommend": {

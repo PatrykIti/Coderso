@@ -5,7 +5,7 @@
 **Category:** Assistant/Edit + Widget Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-174-02, TASK-174-04, TASK-174-05
-**Status:** To Do
+**Status:** Done (2026-04-14)
 
 ---
 
@@ -63,3 +63,20 @@ No child task files.
 1. Assistant can edit reusable widget template metadata/settings/blocks after review.
 2. Page-instance vs reusable-template ambiguity is handled explicitly.
 3. Existing widget template service owns persistence.
+
+## Completion Notes
+
+- Added executable `widget-template.update`.
+- Added executable `widget-template.block.patch`.
+- Planner resolves metadata/settings edits and selected block patches from active widget template context.
+- Planner returns explicit `needs_input` when a reusable template edit is requested outside reusable template context.
+- Executor updates metadata/settings/blocks through `widgetTemplateService.updateWidgetTemplate`.
+- Block patching reuses selected-block `dataPath[]` semantics and preserves unrelated blocks/settings.
+
+## Validation
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/assistant/action-registry.test.ts tests/vitest/assistant/action-family-contracts.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/assistant-panel.test.tsx`
+- `bun test tests/unit/assistant/actionExecutorService.test.ts tests/integration/routes/assistant.test.ts`

@@ -404,6 +404,28 @@ const createDeps = () => {
       const [deleted] = widgetTemplates.splice(index, 1);
       return deleted ?? null;
     },
+    updateWidgetTemplate: async (
+      id: string,
+      input: {
+        name?: string;
+        description?: string | null;
+        category?: string;
+        status?: "draft" | "published";
+        blocks?: Array<Record<string, unknown>>;
+        settings?: Record<string, unknown>;
+      }
+    ) => {
+      const existing = widgetTemplates.find((entry) => entry.id === id) ?? null;
+      if (!existing) return null;
+      if (input.name !== undefined) existing.name = input.name;
+      if (input.description !== undefined) existing.description = input.description;
+      if (input.category !== undefined) existing.category = input.category;
+      if (input.status !== undefined) existing.status = input.status;
+      if (input.blocks !== undefined) existing.blocks = input.blocks;
+      if (input.settings !== undefined) existing.settings = input.settings;
+      existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
+      return existing;
+    },
     listForms: async () => forms,
     getForm: async (id: string) =>
       forms.find((entry) => entry.id === id) ?? null,
@@ -1285,6 +1307,161 @@ test("executeAssistantActionPlan deletes widget templates through explicit delet
   expect(executed.summary.delete).toBe(1);
   expect(executed.results[0]?.message).toBe('Deleted widget template "Contact CTA".');
   expect(await deps.getWidgetTemplate("template-1")).toBeNull();
+});
+
+test("executeAssistantActionPlan updates widget template metadata and preserves blocks", async () => {
+  const deps = createDeps();
+  const now = new Date("2026-04-10T12:00:00.000Z");
+  deps.__state.widgetTemplates.push({
+    id: "template-1",
+    name: "Contact CTA",
+    description: null,
+    category: "Marketing",
+    status: "draft",
+    blocks: [{ id: "hero-1", type: "hero", data: { headline: "Hello" } }],
+    settings: {
+      layout: {
+        wrapper: {
+          container: "full",
+          padding: { top: "none", bottom: "none" },
+          background: { color: "transparent", media: { type: "none", source: "external", src: null } },
+        },
+        sections: {
+          gap: "none",
+          defaults: {
+            container: "default",
+            padding: { top: "xl", bottom: "xl" },
+            margin: { top: "none", bottom: "none" },
+          },
+        },
+        applyDefaultsToNewBlocks: false,
+      },
+    },
+    createdAt: now,
+    updatedAt: now,
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-update-contact-template",
+    status: "ready",
+    intentId: "widget-template-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Update Contact CTA",
+    answer: "I can update the selected widget template.",
+    summary: "Update active widget template.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "widget-template-update-contact",
+        type: "widget-template.update",
+        title: "Update Contact CTA",
+        description: "Update selected widget template.",
+        input: {
+          id: "template-1",
+          name: "Contact CTA",
+          expectedStatus: "draft",
+          expectedCategory: "Marketing",
+          patch: {
+            name: "Contact CTA Updated",
+            status: "published",
+            settings: {
+              wrapperContainer: "narrow",
+              sectionGap: "md",
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  const executed = await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-widget-template-update-1",
+    },
+    deps
+  );
+
+  expect(executed.summary.update).toBe(1);
+  expect(executed.results[0]?.message).toBe('Updated widget template "Contact CTA Updated".');
+  expect(deps.__state.widgetTemplates[0]?.name).toBe("Contact CTA Updated");
+  expect(deps.__state.widgetTemplates[0]?.status).toBe("published");
+  expect(deps.__state.widgetTemplates[0]?.blocks[0]?.id).toBe("hero-1");
+  expect(
+    (deps.__state.widgetTemplates[0]?.settings.layout as { wrapper?: { container?: string } })
+      ?.wrapper?.container
+  ).toBe("narrow");
+});
+
+test("executeAssistantActionPlan patches widget template block data and preserves siblings", async () => {
+  const deps = createDeps();
+  const now = new Date("2026-04-10T12:00:00.000Z");
+  deps.__state.widgetTemplates.push({
+    id: "template-1",
+    name: "Hero Template",
+    description: null,
+    category: "Marketing",
+    status: "draft",
+    blocks: [
+      { id: "hero-1", type: "hero", data: { headline: "Old headline", body: "Keep body" } },
+      { id: "text-1", type: "rich-text-section", data: { title: "Keep sibling" } },
+    ],
+    settings: {},
+    createdAt: now,
+    updatedAt: now,
+  });
+  const plan: AssistantActionPlan = {
+    id: "plan-template-block-patch",
+    status: "ready",
+    intentId: "widget-template-block-patch",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: "Patch template hero",
+    answer: "I can patch the selected widget template block.",
+    summary: "Patch template hero headline.",
+    confidence: 0.9,
+    assumptions: [],
+    questions: [],
+    actions: [
+      {
+        id: "widget-template-block-patch-hero",
+        type: "widget-template.block.patch",
+        title: "Patch hero headline",
+        description: "Patch selected template block.",
+        input: {
+          id: "template-1",
+          name: "Hero Template",
+          expectedStatus: "draft",
+          blockId: "hero-1",
+          expectedBlockType: "hero",
+          dataPath: ["headline"],
+          value: "New headline",
+        },
+      },
+    ],
+  };
+
+  const preview = await dryRunAssistantActionPlan({ plan }, deps);
+  expect(preview.changes[0]?.operation).toBe("update");
+
+  await executeAssistantActionPlan(
+    {
+      plan,
+      actorId: "user-1",
+      idempotencyKey: "assistant-widget-template-block-patch-1",
+    },
+    deps
+  );
+
+  expect(deps.__state.widgetTemplates[0]?.blocks[0]?.data.headline).toBe("New headline");
+  expect(deps.__state.widgetTemplates[0]?.blocks[0]?.data.body).toBe("Keep body");
+  expect(deps.__state.widgetTemplates[0]?.blocks[1]?.data.title).toBe("Keep sibling");
 });
 
 test("executeAssistantActionPlan deletes listing queries and templates through explicit delete actions", async () => {

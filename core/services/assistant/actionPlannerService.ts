@@ -782,6 +782,192 @@ const buildWidgetTemplateDeletePlan = (
   };
 };
 
+const widgetTemplateEditKeywords = [
+  "widget template",
+  "template widget",
+  "szablon widgetu",
+  "reusable template",
+  "template",
+  "szablon",
+];
+
+const buildWidgetTemplateEditNeedsInputPlan = (
+  prompt: string,
+  reason: string
+): AssistantActionPlan => ({
+  id: "plan-widget-template-edit-needs-input",
+  status: "needs_input",
+  intentId: "widget-template-edit-needs-input",
+  promptKind: "refinement_request",
+  intentFamily: "unknown",
+  title: "Widget template edit needs an active template",
+  answer: [
+    "I can edit reusable widget templates only through a reviewed typed action plan.",
+    "",
+    reason,
+    "",
+    "Open the widget template editor and provide one exact metadata/settings or selected block change.",
+  ].join("\n"),
+  summary: "Widget template edit could not be planned safely from the current context.",
+  confidence: 0.4,
+  assumptions: [`Original prompt: ${prompt.trim() || "empty prompt"}`],
+  questions: [
+    {
+      id: "widget-template-edit-target",
+      label: "Should I edit the reusable template or the page instance?",
+      description:
+        "Open the reusable template editor for template-wide changes, or stay on the page editor for page-instance changes.",
+      required: true,
+    },
+  ],
+  actions: [],
+});
+
+const buildWidgetTemplateMetadataPatch = (prompt: string, normalizedPrompt: string) => {
+  const quoted = extractFirstQuotedText(prompt);
+  const patch: {
+    name?: string;
+    description?: string | null;
+    category?: string;
+    status?: "draft" | "published";
+    settings?: {
+      wrapperContainer?: "default" | "narrow" | "full";
+      sectionGap?: "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
+    };
+  } = {};
+  if (quoted && (/\bname\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["nazwa", "nazwe", "nazwę"]))) {
+    patch.name = quoted;
+  } else if (quoted && (/\bdescription\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["opis"]))) {
+    patch.description = quoted;
+  } else if (quoted && (/\bcategory\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["kategoria", "kategorię"]))) {
+    patch.category = quoted;
+  } else if (quoted && (/\bcontainer\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["szerokosc", "szerokość"]))) {
+    if (quoted === "default" || quoted === "narrow" || quoted === "full") {
+      patch.settings = { ...(patch.settings ?? {}), wrapperContainer: quoted };
+    }
+  } else if (quoted && (/\bgap\b/.test(normalizedPrompt) || includesAny(normalizedPrompt, ["odstep", "odstęp"]))) {
+    if (["none", "xs", "sm", "md", "lg", "xl", "2xl"].includes(quoted)) {
+      patch.settings = {
+        ...(patch.settings ?? {}),
+        sectionGap: quoted as "none" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl",
+      };
+    }
+  }
+  if (includesAny(normalizedPrompt, ["publish", "published", "opublikuj"])) {
+    patch.status = "published";
+  }
+  if (includesAny(normalizedPrompt, ["draft", "szkic"])) {
+    patch.status = "draft";
+  }
+  return Object.keys(patch).length > 0 ? patch : null;
+};
+
+const buildWidgetTemplateEditPlan = (
+  prompt: string,
+  context: ReturnType<typeof buildAssistantAdminContext>,
+  normalizedPrompt: string
+): AssistantActionPlan | null => {
+  if (
+    isLikelyDeletePrompt(normalizedPrompt) ||
+    !includesAny(normalizedPrompt, widgetTemplateEditKeywords)
+  ) {
+    return null;
+  }
+  if (context.activeSurface?.kind !== "widget-template") {
+    return buildWidgetTemplateEditNeedsInputPlan(
+      prompt,
+      "The prompt asks to edit a reusable template, but there is no active widget template context."
+    );
+  }
+
+  const template = context.activeSurface.template;
+  const selectedBlockId = context.activeSurface.selectedBlockId;
+  const block = selectedBlockId
+    ? context.activeSurface.blocks.find((entry) => entry.id === selectedBlockId) ?? null
+    : null;
+  const dataPath =
+    selectedBlockId && includesAny(normalizedPrompt, pageWidgetPatchKeywords)
+      ? resolvePageWidgetPatchPath(normalizedPrompt, block?.type)
+      : null;
+  const value = dataPath ? extractFirstQuotedText(prompt) : null;
+  if (selectedBlockId && block && dataPath && value) {
+    return {
+      id: `plan-widget-template-block-patch-${template.id}-${selectedBlockId}`,
+      status: "ready",
+      intentId: "widget-template-block-patch",
+      promptKind: "refinement_request",
+      intentFamily: "unknown",
+      title: `Patch ${block.label ?? selectedBlockId}`,
+      answer:
+        "I can patch the selected reusable widget template block through the reviewed LLM Guide action flow.",
+      summary: `Patch selected block "${block.label ?? selectedBlockId}" in reusable template "${template.name}".`,
+      confidence: 0.78,
+      assumptions: [
+        "The target reusable widget template is resolved from active template context.",
+        "The selected block must still exist and the data path must already exist at dry-run/execute time.",
+      ],
+      questions: [],
+      actions: [
+        {
+          id: `widget-template-block-patch-${selectedBlockId}`,
+          type: "widget-template.block.patch",
+          title: `Patch ${block.label ?? selectedBlockId}`,
+          description: "Patch selected reusable widget template block data.",
+          input: {
+            id: template.id,
+            name: template.name,
+            expectedStatus: template.status,
+            blockId: selectedBlockId,
+            expectedBlockType: block.type,
+            dataPath,
+            value,
+          },
+        },
+      ],
+    };
+  }
+
+  const patch = buildWidgetTemplateMetadataPatch(prompt, normalizedPrompt);
+  if (!patch) {
+    return buildWidgetTemplateEditNeedsInputPlan(
+      prompt,
+      "The prompt did not include a supported reusable template metadata/settings or selected block patch."
+    );
+  }
+  return {
+    id: `plan-widget-template-update-${template.id}`,
+    status: "ready",
+    intentId: "widget-template-update",
+    promptKind: "refinement_request",
+    intentFamily: "unknown",
+    title: `Update ${template.name}`,
+    answer:
+      "I can update the active reusable widget template through the reviewed LLM Guide action flow.",
+    summary: `Update metadata/settings for reusable widget template "${template.name}".`,
+    confidence: 0.82,
+    assumptions: [
+      "The target reusable widget template is resolved from active template context.",
+      "The update preserves unrelated blocks and settings.",
+    ],
+    questions: [],
+    actions: [
+      {
+        id: `widget-template-update-${template.id}`,
+        type: "widget-template.update",
+        title: `Update ${template.name}`,
+        description: "Update reusable widget template metadata/settings.",
+        input: {
+          id: template.id,
+          name: template.name,
+          expectedStatus: template.status,
+          expectedCategory: template.category,
+          patch,
+        },
+      },
+    ],
+  };
+};
+
 const readRouteSegmentsFromContext = (context: ReturnType<typeof buildAssistantAdminContext>) =>
   (context.route ?? "")
     .split("/")
@@ -1976,6 +2162,12 @@ export const planAssistantActions = (
   );
   if (pageDeletePlan) return normalizeAssistantActionPlan(pageDeletePlan);
   if (classification.promptKind === "refinement_request") {
+    const widgetTemplateEditPlan = buildWidgetTemplateEditPlan(
+      input.prompt,
+      context,
+      classification.normalizedPrompt
+    );
+    if (widgetTemplateEditPlan) return normalizeAssistantActionPlan(widgetTemplateEditPlan);
     const pageWidgetPatchPlan = buildPageWidgetPatchPlan(
       input.prompt,
       context,

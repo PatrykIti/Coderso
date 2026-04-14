@@ -508,6 +508,59 @@ test("normalizeAssistantActionPlan accepts page update actions", () => {
   expect(normalized.actions[0]?.type).toBe("page.update");
 });
 
+test("normalizeAssistantActionPlan accepts widget template update and block patch actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "template-update",
+        type: "widget-template.update",
+        title: "Update template",
+        description: "Update reusable widget template.",
+        input: {
+          id: "template-1",
+          name: "Hero Template",
+          expectedStatus: "draft",
+          expectedCategory: "Marketing",
+          patch: {
+            name: "Hero Template Updated",
+            status: "published",
+            settings: {
+              wrapperContainer: "narrow",
+              sectionGap: "md",
+            },
+          },
+        },
+      },
+      {
+        id: "template-block-patch",
+        type: "widget-template.block.patch",
+        title: "Patch template block",
+        description: "Patch reusable widget template block.",
+        input: {
+          id: "template-1",
+          name: "Hero Template",
+          expectedStatus: "draft",
+          blockId: "hero-1",
+          expectedBlockType: "hero",
+          dataPath: ["headline"],
+          value: "New headline",
+        },
+      },
+    ],
+  });
+
+  expect(normalized.actions.map((action) => action.type)).toEqual([
+    "widget-template.update",
+    "widget-template.block.patch",
+  ]);
+});
+
 test("normalizeAssistantActionPlan accepts safe form automation upsert actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
@@ -744,6 +797,57 @@ test("normalizeAssistantActionPlan rejects malformed page update actions", () =>
             patch: {
               blocks: [],
             },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects malformed widget template edit actions", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "template-update",
+          type: "widget-template.update",
+          title: "Update template",
+          description: "Update reusable widget template.",
+          input: {
+            id: "template-1",
+            name: "Hero Template",
+            patch: {
+              settings: {
+                wrapperContainer: "wide",
+              },
+            },
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "template-block-patch",
+          type: "widget-template.block.patch",
+          title: "Patch template block",
+          description: "Patch reusable widget template block.",
+          input: {
+            id: "template-1",
+            name: "Hero Template",
+            blockId: "hero-1",
+            dataPath: ["constructor"],
+            value: "Nope",
           },
         },
       ],

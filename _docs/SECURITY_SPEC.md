@@ -274,6 +274,7 @@ Rotacja klucza:
   - `menu.item.delete` is internal-only, requires exact server-side catalog target resolution plus `menus:write` for execute, deletes through the menu tree service, and preserves unrelated menu items,
   - `seo.document.delete` is internal-only, requires exact server-side catalog target resolution plus `content:write` for execute, deletes only the SEO document, and never deletes the page or entry target,
   - `page.update` is internal-only, requires active page context plus `content:write` and `content:publish` for execute, revalidates page id/title/slug/status, and preserves unrelated page data/blocks,
+  - `widget-template.update` and `widget-template.block.patch` are internal-only, require active widget template context plus `widgets:write` for execute, revalidate template id/name/status/category where applicable, and preserve unrelated reusable template blocks/settings,
   - `entry.upsert-draft` is the first promoted future action; it is internal-only, draft-only, requires `content:write` for execute, and delegates to existing entry services without publishing,
   - `menu.item.upsert` is internal-only, requires `menus:write` for execute, rejects unsafe/external hrefs, and delegates to existing menu services,
   - `seo.document.upsert` is internal-only, requires `content:write` for execute, validates explicit `page`/`entry` targets, and delegates to existing SEO services,

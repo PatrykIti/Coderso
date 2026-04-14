@@ -25,6 +25,7 @@ Project Change Log.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 636 | 2026-04-14 | TASK-174-04-03 widget template edit actions | Assistant/Core |
 | 635 | 2026-04-14 | TASK-174-04-02 page widget patch action | Assistant/Core |
 | 634 | 2026-04-14 | TASK-174-04-01 page update action | Assistant/Core |
 | 633 | 2026-04-14 | TASK-174-03-07 menu SEO delete actions | Assistant/Core |

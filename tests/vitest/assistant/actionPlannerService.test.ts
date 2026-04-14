@@ -422,6 +422,129 @@ test("planAssistantActions asks for active widget template context before templa
   expect(plan.actions).toEqual([]);
 });
 
+test("planAssistantActions builds widget template update plan from active template context", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien nazwe widget template na 'Contact CTA Updated'",
+    context: {
+      page: "/admin/coderso/widgets/templates/template-1",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "widget-template",
+        template: {
+          id: "template-1",
+          name: "Contact CTA",
+          status: "draft",
+          category: "Marketing",
+        },
+        selectedBlockId: null,
+        blocks: [],
+        settings: {
+          wrapperContainer: "default",
+          sectionGap: "md",
+          hasBackgroundMedia: false,
+        },
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("widget-template-update");
+  expect(plan.actions[0]).toMatchObject({
+    id: "widget-template-update-template-1",
+    type: "widget-template.update",
+    input: {
+      id: "template-1",
+      name: "Contact CTA",
+      expectedStatus: "draft",
+      expectedCategory: "Marketing",
+      patch: {
+        name: "Contact CTA Updated",
+      },
+    },
+  });
+});
+
+test("planAssistantActions builds widget template block patch plan from selected block", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien tytuł wybranego bloku widget template na 'New headline'",
+    context: {
+      page: "/admin/coderso/widgets/templates/template-1",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "widget-template",
+        template: {
+          id: "template-1",
+          name: "Hero Template",
+          status: "draft",
+          category: "Marketing",
+        },
+        selectedBlockId: "hero-1",
+        blocks: [
+          {
+            id: "hero-1",
+            type: "hero",
+            label: "Hero",
+            path: "0",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+        ],
+        settings: {
+          wrapperContainer: "default",
+          sectionGap: "md",
+          hasBackgroundMedia: false,
+        },
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("widget-template-block-patch");
+  expect(plan.actions[0]).toMatchObject({
+    id: "widget-template-block-patch-hero-1",
+    type: "widget-template.block.patch",
+    input: {
+      id: "template-1",
+      name: "Hero Template",
+      expectedStatus: "draft",
+      blockId: "hero-1",
+      expectedBlockType: "hero",
+      dataPath: ["headline"],
+      value: "New headline",
+    },
+  });
+});
+
+test("planAssistantActions asks for explicit template target outside reusable template context", () => {
+  const plan = planAssistantActions({
+    prompt: "zmien nazwe widget template na 'Contact CTA Updated'",
+    context: {
+      page: "/admin/pages/page-1",
+      locale: "pl-PL",
+      activeSurface: {
+        kind: "page",
+        page: {
+          id: "page-1",
+          title: "Home",
+          slug: "/",
+          status: "draft",
+          template: "landing",
+        },
+        selectedBlockId: null,
+        blocks: [],
+        warnings: [],
+      },
+    },
+  });
+
+  expect(plan.status).toBe("needs_input");
+  expect(plan.intentId).toBe("widget-template-edit-needs-input");
+});
+
 test("planAssistantActions builds entry delete plan from active entry route", () => {
   const plan = planAssistantActions({
     prompt: "usun ten wpis",

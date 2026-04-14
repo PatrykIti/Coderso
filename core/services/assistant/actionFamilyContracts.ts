@@ -482,6 +482,38 @@ export const assistantActionFamilyContracts = [
     }
   ),
   executableContract(
+    "widget-template.update",
+    "widget-template",
+    "core/services/widgets/widgetTemplateService.ts",
+    ["id", "name", "patch"],
+    {
+      permissions: {
+        plan: ["widgets:read"],
+        dryRun: ["widgets:read"],
+        execute: ["widgets:write"],
+      },
+      notes: [
+        "Updates reusable widget template metadata/settings and preserves unrelated blocks.",
+      ],
+    }
+  ),
+  executableContract(
+    "widget-template.block.patch",
+    "widget-template",
+    "core/services/widgets/widgetTemplateService.ts",
+    ["id", "name", "blockId", "dataPath", "value"],
+    {
+      permissions: {
+        plan: ["widgets:read"],
+        dryRun: ["widgets:read"],
+        execute: ["widgets:write"],
+      },
+      notes: [
+        "Patches one existing reusable template block data path and preserves unrelated blocks.",
+      ],
+    }
+  ),
+  executableContract(
     "site-kit.recommend",
     "site-kit",
     "core/services/assistant/siteBuilderPlanAdapter.ts",

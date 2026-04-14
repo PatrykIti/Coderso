@@ -61,6 +61,8 @@ Rules:
 | `page.widget.patch` | Vitest `action-plan-schema` + pure patch helper | Bun executor | Bun executor | `content:read/write` | Top-level `upsert-block` and selected block `patch-data` |
 | `page.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context pages after review |
 | `widget-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Deletes active-context reusable widget templates after review |
+| `widget-template.update` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Edits reusable template metadata/settings |
+| `widget-template.block.patch` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Patches selected reusable template block data paths |
 | `form.automation.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` | Safe non-webhook actions only |
 | `site-kit.recommend/install/validate` | Vitest + Bun | Bun executor | Bun executor | `solution-kits:read/write` + LLM availability gate | Existing unified site-kit action flow |
 

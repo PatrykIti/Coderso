@@ -54,6 +54,8 @@ const actionTypeLabels: Record<string, string> = {
   "page.update": "Page",
   "page.delete": "Page",
   "widget-template.delete": "Widget template",
+  "widget-template.update": "Widget template",
+  "widget-template.block.patch": "Widget template block",
   "site-kit.recommend": "Site kit recommendation",
   "site-kit.install": "Site kit install",
   "site-kit.validate": "Site kit validation",

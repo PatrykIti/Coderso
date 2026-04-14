@@ -31,6 +31,8 @@ export const assistantActionTypes = [
   "page.update",
   "page.delete",
   "widget-template.delete",
+  "widget-template.update",
+  "widget-template.block.patch",
   "site-kit.recommend",
   "site-kit.install",
   "site-kit.validate",

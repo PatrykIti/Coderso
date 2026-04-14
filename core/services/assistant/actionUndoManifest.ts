@@ -50,6 +50,7 @@ const patchActionTypes = new Set<AssistantPlannedAction["type"]>([
   "listing-query.filters.patch",
   "listing-template.card.patch",
   "page.widget.patch",
+  "widget-template.block.patch",
   "form.automation.upsert",
 ]);
 
@@ -58,6 +59,7 @@ const restoreOnlyActionTypes = new Set<AssistantPlannedAction["type"]>([
   "listing-query.filters.patch",
   "listing-template.card.patch",
   "page.widget.patch",
+  "widget-template.block.patch",
 ]);
 
 const nonMutatingActionTypes = new Set<AssistantPlannedAction["type"]>([

@@ -559,6 +559,20 @@ test("assistant action dry-run route enforces per-action read permissions", asyn
         description: "Template",
         input: {},
       },
+      {
+        id: "template-update",
+        type: "widget-template.update",
+        title: "Template update",
+        description: "Template update",
+        input: {},
+      },
+      {
+        id: "template-block",
+        type: "widget-template.block.patch",
+        title: "Template block",
+        description: "Template block",
+        input: {},
+      },
     ],
   };
 
@@ -738,6 +752,20 @@ test("assistant action execute route enforces per-action write permissions", asy
         type: "widget-template.delete",
         title: "Template",
         description: "Template",
+        input: {},
+      },
+      {
+        id: "template-update",
+        type: "widget-template.update",
+        title: "Template update",
+        description: "Template update",
+        input: {},
+      },
+      {
+        id: "template-block",
+        type: "widget-template.block.patch",
+        title: "Template block",
+        description: "Template block",
         input: {},
       },
     ],

@@ -28,9 +28,9 @@ Task board for project work. Keep task files and this board in sync.
 ## Changelog link
 - Every completed task must have a matching entry in `_docs/_CHANGELOG/` and list the task ID there.
 
-- **To Do:** 19 tasks
+- **To Do:** 18 tasks
 - **In Progress:** 6 tasks
-- **Done:** 848 tasks
+- **Done:** 849 tasks
 
 ---
 
@@ -48,7 +48,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-02 | Active Admin Surface Context and Inspection | High | Large | Give LLM Guide bounded active page/screen/template/canvas context |
 | TASK-174-03 | Resource Delete Adapters | High | Large | Delete/archive supported user-created and assistant-created resources safely |
 | TASK-174-04 | Resource Edit and Widget Patch Adapters | High | Large | Edit pages, widgets, templates, screens, entries, forms, listings, menus, and SEO through typed actions |
-| TASK-174-04-03 | Widget Template Edit Actions | High | Large | Edit reusable widget template metadata/settings/blocks |
 | TASK-174-04-04 | Custom Screen Edit Actions | High | Medium | Edit custom screen metadata, bindings, and selected screen widgets |
 | TASK-174-04-05 | Content, Form, Listing, Menu, and SEO Edit Actions | High | Large | Add remaining domain resource edit adapters |
 | TASK-174-05 | Widget Template and Page Canvas Context Bridge | High | Large | Inspect template-section references and nested widget template blocks before editing |
@@ -139,6 +138,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-174-03-07 | Menu and SEO Delete Actions | Medium | Medium | Done: `menu.item.delete` and `seo.document.delete` use reviewed typed action flow |
 | TASK-174-04-01 | Page Metadata and Settings Edit Actions | High | Medium | Done: `page.update` edits active page metadata/settings while preserving page data |
 | TASK-174-04-02 | Page Widget Block Patch Actions | High | Large | Done: `page.widget.patch` edits selected block data paths and preserves unrelated blocks |
+| TASK-174-04-03 | Widget Template Edit Actions | High | Large | Done: `widget-template.update` and `widget-template.block.patch` edit reusable templates |
 | TASK-175 | Solution Kit Module Focus and Screens Convergence | High | Medium | Done: active kit focus keeps Screens visible and expands module dependencies from the registry |
 | TASK-101-09 | Assistant Action Engine (LLM Guide + Typed Actions) | High | Large | Done: docs-only vs LLM Guide split, context snapshots, planner/schema, actions, registry, idempotency, and tests are complete for the shipped scope |
 | TASK-101-09-01 | Assistant Mode Split and Runtime Contracts | High | Medium | Done: canonical transport/settings/client mode is `llm-guide`; legacy `llm-rag` is normalized as input alias only |
