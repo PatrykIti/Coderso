@@ -182,6 +182,16 @@ Rotacja klucza:
   - trzymane poza frontendem i poza plain text w logach,
   - redagowane w audit metadata oraz error payloadach.
 
+## Post rich-text rendering
+
+- Post editor previews and public post runtime must not pass raw user HTML to
+  React `dangerouslySetInnerHTML`.
+- Rich-text content is normalized through `sanitizePostRichTextHtml` and rendered
+  as React nodes through the post rich-text renderer.
+- Allowed formatting is limited by `postRichTextSchema.ts`; scripts, event
+  handlers, unsafe URLs, forbidden elements, and malformed unsupported tags are
+  stripped before render.
+
 ## Assistant security baseline (v1)
 
 - Konfiguracja limitow asystenta jest trzymana w global settings:

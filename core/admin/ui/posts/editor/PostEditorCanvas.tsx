@@ -40,6 +40,7 @@ import {
   postRichTextToPlainText,
   serializePostRichText,
 } from "../../../../services/posts/editor/postRichTextSerializer";
+import { renderPostRichTextHtml } from "../../../../services/posts/runtime/postRichTextReactRenderer";
 import {
   createWritingCanvasContentFromEditorHtml,
   serializeWritingCanvasContentToHtml,
@@ -213,8 +214,9 @@ const renderHtmlPreview = (value: unknown, emptyLabel: string) => {
   return (
     <div
       className="post-editor-richtext prose prose-slate max-w-none text-lg leading-relaxed text-slate-700"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    >
+      {renderPostRichTextHtml(html)}
+    </div>
   );
 };
 

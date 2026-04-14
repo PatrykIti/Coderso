@@ -5,6 +5,7 @@ import type {
 } from "./postBlockRuntimeMapper";
 import { postRichTextToPlainText } from "../editor/postRichTextSerializer";
 import { buildPostImageLayoutClasses } from "../postImageWrapLayout";
+import { renderPostRichTextHtml } from "./postRichTextReactRenderer";
 
 const cx = (...parts: Array<string | false | null | undefined>) =>
   parts.filter(Boolean).join(" ");
@@ -148,21 +149,21 @@ const renderWritingHeadingNode = (
   anchorId?: string
 ) => {
   if (level === 1) {
-    return <h1 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h1 id={anchorId} className={className}>{renderPostRichTextHtml(html)}</h1>;
   }
   if (level === 2) {
-    return <h2 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h2 id={anchorId} className={className}>{renderPostRichTextHtml(html)}</h2>;
   }
   if (level === 3) {
-    return <h3 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h3 id={anchorId} className={className}>{renderPostRichTextHtml(html)}</h3>;
   }
   if (level === 4) {
-    return <h4 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h4 id={anchorId} className={className}>{renderPostRichTextHtml(html)}</h4>;
   }
   if (level === 5) {
-    return <h5 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+    return <h5 id={anchorId} className={className}>{renderPostRichTextHtml(html)}</h5>;
   }
-  return <h6 id={anchorId} className={className} dangerouslySetInnerHTML={{ __html: html }} />;
+  return <h6 id={anchorId} className={className}>{renderPostRichTextHtml(html)}</h6>;
 };
 
 const renderWritingCanvasNode = (
@@ -179,8 +180,9 @@ const renderWritingCanvasNode = (
           textScaleClass[block.layout.textScale],
           nodeAlignClass
         )}
-        dangerouslySetInnerHTML={{ __html: node.html }}
-      />
+      >
+        {renderPostRichTextHtml(node.html)}
+      </div>
     );
   }
 
@@ -212,8 +214,9 @@ const renderWritingCanvasNode = (
             "overflow-x-auto rounded-lg border bg-[var(--color-surface)] p-4 text-sm leading-6",
             nodeAlignClass
           )}
-          dangerouslySetInnerHTML={{ __html: node.html }}
-        />
+        >
+          {renderPostRichTextHtml(node.html)}
+        </pre>
       );
     }
 
@@ -225,8 +228,9 @@ const renderWritingCanvasNode = (
           textScaleClass[block.layout.textScale],
           nodeAlignClass
         )}
-        dangerouslySetInnerHTML={{ __html: node.html }}
-      />
+      >
+        {renderPostRichTextHtml(node.html)}
+      </blockquote>
     );
   }
 
@@ -244,7 +248,7 @@ const renderWritingCanvasNode = (
         )}
       >
         {node.items.map((item, index) => (
-          <li key={`${node.id}-${index}`} dangerouslySetInnerHTML={{ __html: item }} />
+          <li key={`${node.id}-${index}`}>{renderPostRichTextHtml(item)}</li>
         ))}
       </ListTag>
     );
@@ -299,8 +303,9 @@ const renderBlockContent = (block: PostRuntimeMappedBlock) => {
           textScaleClass[block.layout.textScale],
           block.layout.highlight && "rounded-lg border border-amber-300/40 bg-amber-50/40 px-4 py-3"
         )}
-        dangerouslySetInnerHTML={{ __html: block.content.html ?? "" }}
-      />
+      >
+        {renderPostRichTextHtml(block.content.html)}
+      </div>
     );
   }
 
@@ -320,7 +325,7 @@ const renderBlockContent = (block: PostRuntimeMappedBlock) => {
         )}
       >
         {items.map((item, index) => (
-          <li key={`${block.id}-${index}`} dangerouslySetInnerHTML={{ __html: item }} />
+          <li key={`${block.id}-${index}`}>{renderPostRichTextHtml(item)}</li>
         ))}
       </ListTag>
     );
@@ -334,8 +339,9 @@ const renderBlockContent = (block: PostRuntimeMappedBlock) => {
           textScaleClass[block.layout.textScale],
           block.layout.highlight && "bg-[var(--color-surface)]/60 py-2 pr-3"
         )}
-        dangerouslySetInnerHTML={{ __html: block.content.html ?? "" }}
-      />
+      >
+        {renderPostRichTextHtml(block.content.html)}
+      </blockquote>
     );
   }
 
@@ -395,8 +401,9 @@ const renderBlockContent = (block: PostRuntimeMappedBlock) => {
           textScaleClass[block.layout.textScale],
           calloutToneClass[tone]
         )}
-        dangerouslySetInnerHTML={{ __html: block.content.html ?? "" }}
-      />
+      >
+        {renderPostRichTextHtml(block.content.html)}
+      </aside>
     );
   }
 

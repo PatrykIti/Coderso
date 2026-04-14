@@ -570,6 +570,47 @@ test("PostEditorCanvas routes rich-text block adapter callbacks to paragraph blo
   }
 });
 
+test("PostEditorCanvas previews rich text through sanitized React rendering", async () => {
+  const { PostEditorCanvas } = await import(
+    "../../../core/admin/ui/posts/editor/PostEditorCanvas"
+  );
+
+  const view = mount(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "paragraph-1",
+            type: "paragraph",
+            attrs: {},
+            content:
+              '<p onclick="evil()">Safe <strong>copy</strong><script>alert(1)</script><a href="javascript:alert(1)">bad</a></p>',
+          },
+        ],
+      }}
+      title="Canvas"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+
+  try {
+    expect(view.container.innerHTML).toContain("<strong>copy</strong>");
+    expect(view.container.innerHTML).toContain('href="#"');
+    expect(view.container.innerHTML).not.toContain("script");
+    expect(view.container.innerHTML).not.toContain("onclick");
+    expect(view.container.innerHTML).not.toContain("javascript:alert");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PostEditorCanvas selected controls update button, embed, list, and code blocks", async () => {
   const { PostEditorCanvas } = await import(
     "../../../core/admin/ui/posts/editor/PostEditorCanvas"
