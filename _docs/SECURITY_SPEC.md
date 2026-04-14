@@ -59,6 +59,15 @@ trivy fs --severity HIGH,CRITICAL --ignore-unfixed .
 gitleaks detect --config .gitleaks.toml
 ```
 
+Convenience package scripts wrap the same scanner commands when the CLIs are
+available on `PATH`:
+```bash
+bun run scan:security
+bun run scan:semgrep
+bun run scan:trivy
+bun run scan:gitleaks
+```
+
 ### Konfiguracja runtime (Admin UI)
 
 - Wszystkie ustawienia middleware sa trzymane w DB (`settings.key = security.settings`).
